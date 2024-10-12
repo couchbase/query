@@ -86,7 +86,18 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 						users = users + " " + strings.Join(usernames(fmt.Sprintf("%s", v)), "")
 					}
 					werr = printSET(name, "["+users+"]")
-
+				} else if name == "natural_cred" {
+					// hide passwords
+					var vals []string
+					for _, v := range *value {
+						val := v.ToString()
+						n := strings.Index(val, ":")
+						if n > -1 {
+							val = val[:n+1] + "***"
+						}
+						vals = append(vals, val)
+					}
+					werr = printSET(name, fmt.Sprintf("%v", vals))
 				} else {
 					werr = printSET(name, fmt.Sprintf("%v", *value))
 				}

@@ -764,6 +764,9 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	if nlquery == "" {
 		return false, true
 	}
+	oldState := request.State()
+	request.SetState(PREPROCESSING)
+	defer request.SetState(oldState)
 
 	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_NATURAL_LANG_REQ) {
 		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_REQ_FEAT_DISABLED))
@@ -771,7 +774,10 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		return true, false
 	}
 
-	elems, err = algebra.ValidateAndGetPaths(request.NaturalContext(), request.QueryContext())
+	elems, err = algebra.ParseAndValidatePathList(request.NaturalContext(), "default", request.QueryContext())
+	if err == nil && len(elems) > natural.MAX_KEYSPACES {
+		err = errors.NewNaturalLanguageRequestError(errors.E_NL_TOO_MANY_KEYSPACES)
+	}
 	if err != nil {
 		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
 		request.Failed(this)
@@ -2121,7 +2127,7 @@ const (
 func RunningRequests(before time.Time) int {
 	count := 0
 	ActiveRequestsForEach(func(id string, request Request) bool {
-		if request.State() == RUNNING || request.State() == SUBMITTED {
+		if request.State() == RUNNING || request.State() == SUBMITTED || request.State() == PREPROCESSING {
 			if before.IsZero() || request.RequestTime().Before(before) {
 				count++
 			}

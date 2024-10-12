@@ -939,6 +939,10 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		fmt.Fprintf(buf, ",%s\"warningCount\": %d", newPrefix, this.GetWarningCount())
 	}
 
+	if nt := this.NaturalTime(); nt > 0 {
+		fmt.Fprintf(buf, ",%s\"naturalLanguageProcessingTime\": \"%s\"", newPrefix, util.FormatDuration(nt, this.DurationStyle()))
+	}
+
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
 		this.writer.truncate(beforeMetrics)
 		return false

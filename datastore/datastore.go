@@ -601,7 +601,7 @@ func getNamespace(parts ...string) (Namespace, errors.Error) {
 
 	l := len(parts)
 	if l == 0 {
-		return nil, errors.NewDatastoreInvalidPathError("empty path")
+		return nil, errors.NewDatastoreInvalidPathError("empty path", nil)
 	}
 	namespace := parts[0]
 	if namespace == SYSTEM_NAMESPACE {

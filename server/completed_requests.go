@@ -96,6 +96,7 @@ type RequestLogEntry struct {
 	Analysis                 []interface{}
 	SqlID                    string
 	NaturalLanguage          string
+	NaturalTime              time.Duration
 }
 
 type qualifier interface {
@@ -693,6 +694,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 
 	if natural := request.Natural(); natural != "" {
 		re.NaturalLanguage = natural
+		re.NaturalTime = request.NaturalTime()
 	}
 
 	clientId := request.ClientID().String()
@@ -776,6 +778,9 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	}
 	if request.TransactionRemainingTime > 0 {
 		reqMap["transactionRemainingTime"] = util.FormatDuration(request.TransactionRemainingTime, durStyle)
+	}
+	if request.NaturalTime != 0 {
+		reqMap["naturalLanguageProcessingTime"] = util.FormatDuration(request.NaturalTime, durStyle)
 	}
 	reqMap["resultCount"] = request.ResultCount
 	reqMap["resultSize"] = request.ResultSize

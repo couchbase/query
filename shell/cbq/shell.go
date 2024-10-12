@@ -612,7 +612,7 @@ func main() {
 			err = nil
 		} else {
 			// If no -p option then prompt for the password
-			password, err = promptPassword(command.PWDMSG)
+			password, err = command.PromptPassword(command.PWDMSG)
 		}
 
 		if err == nil {
@@ -754,7 +754,7 @@ func main() {
 				// only prompt once for the password; the same user & password is used with all listed servers
 				var err error
 				if len(newPassp) == 0 {
-					newPassp, err = promptPassword(command.PASSPMSG)
+					newPassp, err = command.PromptPassword(command.PASSPMSG)
 				}
 				if err == nil {
 					n1ql.SetPrivateKeyPassphrase(newPassp)

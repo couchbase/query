@@ -37,6 +37,7 @@ type State int32
 
 const (
 	SUBMITTED State = iota
+	PREPROCESSING
 	RUNNING
 	SUCCESS
 	ERRORS
@@ -50,6 +51,7 @@ const (
 
 var states = [...]string{
 	"submitted",
+	"pre-processing",
 	"running",
 	"success",
 	"errors",
@@ -177,6 +179,7 @@ type Request interface {
 	Expire(state State, timeout time.Duration)
 	SortCount() uint64
 	State() State
+	SetState(State)
 	Halted() bool
 	Credentials() *auth.Credentials
 	SetCredentials(credentials *auth.Credentials)
@@ -227,6 +230,7 @@ type Request interface {
 	Halt(err errors.Error)
 
 	Format(util.DurationStyle, bool, bool, bool) map[string]interface{}
+	NaturalTime() time.Duration
 }
 
 type RequestID interface {
@@ -832,7 +836,7 @@ func (this *BaseRequest) Halted() bool {
 	// if we mistakenly report the State as RUNNING,
 	// we'll catch the right state in other places...
 	state := State(atomic.LoadInt32((*int32)(&this.state)))
-	return state != RUNNING && state != SUBMITTED
+	return state != RUNNING && state != SUBMITTED && state != PREPROCESSING
 }
 
 func (this *BaseRequest) Credentials() *auth.Credentials {
@@ -1784,5 +1788,18 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 		}
 	}
 
+	if n := this.Natural(); n != "" {
+		item["naturalLanguagePrompt"] = util.Redacted(n, redact)
+		if nt := this.NaturalTime(); nt != 0 {
+			item["naturalLanguageProcessingTime"] = util.FormatDuration(nt, durStyle)
+		}
+	}
+
 	return item
+}
+
+func (this *BaseRequest) NaturalTime() time.Duration {
+	return time.Duration(this.phaseStats[execution.NLPARSE].duration + this.phaseStats[execution.GETJWT].duration +
+		this.phaseStats[execution.INFERSCHEMA].duration + this.phaseStats[execution.CHATCOMPLETIONSREQ].duration +
+		this.phaseStats[execution.NLWAIT].duration)
 }

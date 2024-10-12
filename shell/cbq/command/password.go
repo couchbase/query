@@ -6,19 +6,18 @@
 //  software will be governed by the Apache License, Version 2.0, included in
 //  the file licenses/APL2.txt.
 
-package main
+package command
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/couchbase/query/shell/cbq/command"
 	"golang.org/x/term"
 )
 
-func promptPassword(prompt string) ([]byte, error) {
+func PromptPassword(prompt string) ([]byte, error) {
 	s := fmt.Sprintln(prompt)
-	_, err := command.OUTPUT.WriteString(s)
+	_, err := OUTPUT.WriteString(s)
 	if err != nil {
 		return nil, err
 	}

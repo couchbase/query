@@ -152,7 +152,7 @@ type virtualKeyspace struct {
 
 func NewVirtualKeyspace(namespace datastore.Namespace, path []string) (datastore.Keyspace, errors.Error) {
 	if len(path) != 2 && len(path) != 4 {
-		return nil, errors.NewDatastoreInvalidPathError("")
+		return nil, errors.NewDatastoreInvalidPathError("", nil)
 	}
 
 	rv := &virtualKeyspace{

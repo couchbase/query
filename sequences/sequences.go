@@ -94,7 +94,7 @@ func trimPrefixAndScopeUid(key string) string {
 
 func validateScope(path *algebra.Path) (errors.Error, string) {
 	if path.Namespace() == datastore.SYSTEM_NAMESPACE {
-		return errors.NewDatastoreInvalidPathError("system namespace not permitted"), ""
+		return errors.NewDatastoreInvalidPathError("system namespace not permitted", "sequence name"), ""
 	}
 
 	store := datastore.GetDatastore()

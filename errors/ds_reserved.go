@@ -12,9 +12,15 @@ import "fmt"
 
 // Couchbase datastore path parsing errors
 
-func NewDatastoreInvalidPathError(w string) Error {
+func NewDatastoreInvalidPathError(w string, context interface{}) Error {
+	var c interface{}
+	if context != nil {
+		m := make(map[string]interface{})
+		m["context"] = context
+		c = m
+	}
 	return &err{level: EXCEPTION, ICode: E_DATASTORE_INVALID_BUCKET_PARTS, IKey: "datastore.generic.path_error",
-		InternalMsg: "Invalid path specified: " + w, InternalCaller: CallerN(1)}
+		InternalMsg: "Invalid path specified: " + w, InternalCaller: CallerN(1), cause: c}
 }
 
 func partsToPath(parts ...string) string {

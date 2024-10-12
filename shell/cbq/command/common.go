@@ -436,6 +436,15 @@ func PushOrSet(args []string, pushvalue bool) (errors.ErrorCode, string) {
 
 		args_str := strings.Join(args[1:], " ")
 
+		if vble == "natural_cred" && strings.Index(args_str, ":") == -1 {
+			// special processing for natural_cred to provide a means of hiding the password
+			pw, err := PromptPassword("Enter password for \"natural_cred\":")
+			if err != nil {
+				return errors.E_SHELL_WRITER_OUTPUT, err.Error()
+			}
+			args_str = string(append([]byte(args_str+":"), pw...))
+		}
+
 		err_code, err_str := PushValue_Helper(pushvalue, QueryParam, vble, args_str)
 
 		if err_code != 0 {

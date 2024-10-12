@@ -23,10 +23,9 @@ const (
 
 var naturalErrMap = map[ErrorCode][2]string{
 
-	E_NL_CREATE_SESSIONS_REQ: {SESSIONS_IKEY, "Failed to create a new request to %v"},
-	E_NL_SEND_SESSIONS_REQ:   {SESSIONS_IKEY, "Failed to send the request to %v to get JWT"},
-	E_NL_SESSIONS_AUTH: {SESSIONS_IKEY, "Sessions API Authorization failed: " +
-		" \"natural_cred\" is not authorized"},
+	E_NL_CREATE_SESSIONS_REQ:              {SESSIONS_IKEY, "Failed to create a new request to %v"},
+	E_NL_SEND_SESSIONS_REQ:                {SESSIONS_IKEY, "Failed to send the request to %v to get JWT"},
+	E_NL_SESSIONS_AUTH:                    {SESSIONS_IKEY, "Authorization failed when establishing natural language session"},
 	E_NL_SESSIONS_RESP_READ:               {SESSIONS_IKEY, "Error reading the response from %v"},
 	E_NL_SESSIONS_RESP_UNMARSHAL:          {SESSIONS_IKEY, "Unmarshalling response from %v failed: "},
 	E_NL_SESSIONS_PARSE_EXPIRE_TIME:       {SESSIONS_IKEY, "Error parsing \"expiresAt\": %v "},
@@ -40,14 +39,15 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_ERR_CHATCOMPLETIONS_RESP:         {CHATCOMPLTIONS_IKEY, "LLM error: %v"},
 	E_NL_MISSING_NL_PARAM:                 {NLPARAM_IKEY, "Natural Language request expects %s request parameter to be set"},
 	E_NL_PARSE_GENERATED_STMT:             {PARSE_IKEY, "Error parsing generated statement: %v"},
-	E_NL_CONTEXT:                          {NLCONTEXT_IKEY, "Incorrect \"natural_context\""},
-	E_NL_ORG_NOT_FOUND:                    {CHATCOMPLTIONS_IKEY, "Organization: %v not found"},
-	E_NL_ORG_UNAUTH: {CHATCOMPLTIONS_IKEY, "Access to organisation '%v' is not authorized." +
-		" Or collison in JWT refresh due to an external client"},
-	E_NL_CREATE_CHATCOMPLETIONS_REQ: {CHATCOMPLTIONS_IKEY, "Failed to create a new request to %v"},
+	E_NL_CONTEXT:                          {NLCONTEXT_IKEY, "Error in keyspace list provided for natural language processing"},
+	E_NL_ORG_NOT_FOUND:                    {CHATCOMPLTIONS_IKEY, "Organization \"%v\" not found"},
+	E_NL_ORG_UNAUTH: {CHATCOMPLTIONS_IKEY, "Access to organisation '%v' is not authorized " +
+		"or collison in JWT refresh with an external client"},
+	E_NL_CREATE_CHATCOMPLETIONS_REQ: {CHATCOMPLTIONS_IKEY, "Failed to create a new request to \"%v\""},
 	E_NL_TOO_MANY_WAITERS:           {RATE_LIMIT, "Too many waiters, dropping the request"},
 	E_NL_TIMEOUT:                    {RATE_LIMIT, "Timed out waiting to be processed."},
 	E_NL_REQ_FEAT_DISABLED:          {SERVE_NATURAL, "Natural language request processing is disabled."},
+	E_NL_TOO_MANY_KEYSPACES:         {NLCONTEXT_IKEY, "Too many keyspaces specified."},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {

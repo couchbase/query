@@ -44,6 +44,7 @@ func getCompletionsApi(orgid string) string {
 }
 
 const _CACHE_LIMIT = 65536
+const MAX_KEYSPACES = 4
 
 const (
 	// Models
@@ -266,19 +267,18 @@ func newPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prom
 	if err != nil {
 		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
 	}
-	keyspaceInfoData := string(binKeyspacesInfo)
 	userMessageBuf.WriteString("Information about keyspaces:\n\n")
-	userMessageBuf.WriteString(keyspaceInfoData)
+	userMessageBuf.WriteString(string(binKeyspacesInfo))
 	userMessageBuf.WriteString("\n\nPrompt: \"")
 	userMessageBuf.WriteString(naturalPrompt)
-	userMessageBuf.WriteString("\"\n\nBased on the above Information, write valid SQL++ only and with no explanation.")
-	userMessageBuf.WriteString("\n\nNote query context is unset.")
-	userMessageBuf.WriteString("\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias.")
-	userMessageBuf.WriteString("\n\nAlias is for ease of use.")
-	userMessageBuf.WriteString("\n\nIf keyspace from user prompt is not in keyspace information, say")
-	userMessageBuf.WriteString("\"#ERR:\" keyspace not found in the natural context.\n\n")
-	userMessageBuf.WriteString("Finally if you're sure the Prompt can't be used to generate a query, say")
-	userMessageBuf.WriteString("\"#ERR:\" and then explain why not.")
+	userMessageBuf.WriteString("\"\n\nBased on the above Information, write valid SQL++ only and with no explanation." +
+		"\n\nNote query context is unset." +
+		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
+		"\n\nAlias is for ease of use." +
+		"\n\nQuote aliases with grave accent characters." +
+		"\n\nReturn only a single SQL++ statement on a single line." +
+		"\n\nIf you're sure the Prompt can't be used to generate a query, say " +
+		"\n#ERR:\" and then explain why not without prefix.\n\n")
 	userMessage = userMessageBuf.String()
 	rv.Messages = []message{
 		message{
@@ -403,8 +403,9 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 
 	content := chatComplRes.Choices[0].Message.Content
 
-	if content[:4] == "#ERR" {
-		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, content[6:])
+	if n := strings.Index(content, "#ERR"); n != -1 {
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP,
+			strings.TrimRight(content[n+6:], "\n `"))
 	}
 
 	sqlstmt := strings.TrimPrefix(content, "```sql\n")
@@ -523,7 +524,6 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path,
 
 	getJwt := util.Now()
 	jwt, err := getJWTFromSessionsApi(nlCred, false)
-	// _, err := getJWTFromSessionsApi(nlCred, false)
 	record(execution.GETJWT, util.Since(getJwt))
 	if err != nil {
 		return nil, "", err

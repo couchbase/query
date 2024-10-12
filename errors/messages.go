@@ -720,7 +720,8 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Use POST to submit write statements and ensure the ˝readonly˝ request parameter is not set or is set to false.",
-			"Ensure ˝auto_execute˝ is false when ˝readonly˝ is true (or when using the GET method) and preparing statements that modify data.",
+			"Ensure ˝auto_execute˝ is false when ˝readonly˝ is true (or when using the GET method) and preparing statements " +
+				"that modify data.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -777,7 +778,8 @@ var errData = []ErrData{
 		symbol:      "E_SERVICE_BAD_VALUE",
 		Description: "Error processing «message»",
 		Reason: []string{
-			"There was an error in processing as detailed in the message.\ne.g. a non-numeric string value passed as the value for a request parameter that is expected to be numeric.",
+			"There was an error in processing as detailed in the message.\n" +
+				"e.g. a non-numeric string value passed as the value for a request parameter that is expected to be numeric.",
 		},
 		Action: []string{
 			"Where the error is derived from user controlled data, correct the data.",
@@ -794,7 +796,8 @@ var errData = []ErrData{
 			"A value was not supplied for the required parameter.",
 		},
 		Action: []string{
-			"Provide valid values for all required parameters.\ne.g. ensure a user and password are supplied for all requests and a scan_vector is supplied for requests using AT_PLUS consistency level.",
+			"Provide valid values for all required parameters.\ne.g. ensure a user and password are supplied for all " +
+				"requests and a scan_vector is supplied for requests using AT_PLUS consistency level.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -1603,7 +1606,8 @@ var errData = []ErrData{
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",
 		Action: []string{
-			"Correct the syntax and re-submit the request.  Look for incorrectly spelled keywords, use of reserved words as identifiers, incorrect or omitted punctuation and delimiters or invalid grammar.",
+			"Correct the syntax and re-submit the request.  Look for incorrectly spelled keywords, use of reserved words " +
+				"as identifiers, incorrect or omitted punctuation and delimiters or invalid grammar.",
 			"If using the cbq-shell, the \\syntax command may help with grammar issues.",
 		},
 		IsUser: YES,
@@ -1624,10 +1628,12 @@ var errData = []ErrData{
 		symbol:      "E_PARSE_INVALID_ESCAPE_SEQUENCE",
 		Description: "invalid escape sequence",
 		Reason: []string{
-			"An invalid escape sequence was encountered whilst parsing a string value.  Escape sequences are introduced with a backslash (Reverse Solidus, U+005C) and literal backslashes must be escaped.",
+			"An invalid escape sequence was encountered whilst parsing a string value.  Escape sequences are introduced " +
+				"with a backslash (Reverse Solidus, U+005C) and literal backslashes must be escaped.",
 		},
 		Action: []string{
-			"Valid escape sequences are: \\b, \\f, \\n, \\r, \\t, \\/, \\\\, \\\", \\`, \\u#### (where #### is a Unicode symbol number in hexadecimal).",
+			"Valid escape sequences are: \\b, \\f, \\n, \\r, \\t, \\/, \\\\, \\\", \\`, \\u#### (where #### is a Unicode " +
+				"symbol number in hexadecimal).",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -1675,7 +1681,8 @@ var errData = []ErrData{
 		symbol:      "E_AMBIGUOUS_REFERENCE",
 		Description: "Ambiguous reference to field «field»",
 		Reason: []string{
-			"A field reference in the statement was not fully qualified and there were multiple keyspaces it could have referred to.\ne.g. SELECT a FROM b, c WHERE ...",
+			"A field reference in the statement was not fully qualified and there were multiple keyspaces it could have " +
+				"referred to.\ne.g. SELECT a FROM b, c WHERE ...",
 		},
 		Action: []string{
 			"Fully qualify references when the potential for ambiguity exists.\ne.g. SELECT b.a FROM b,c WHERE ... ",
@@ -1803,7 +1810,8 @@ var errData = []ErrData{
 		symbol:      "E_MERGE_INSERT_NO_KEY",
 		Description: "MERGE with ON KEY clause cannot have document key specification in INSERT action.",
 		Reason: []string{
-			"A lookup merge statement specified a document key.\ne.g. MERGE INTO default USING [{},{}] AS source ON KEY 'aaa' WHEN NOT MATCHED THEN INSERT ('key',{})",
+			"A lookup merge statement specified a document key.\n" +
+				"e.g. MERGE INTO default USING [{},{}] AS source ON KEY 'aaa' WHEN NOT MATCHED THEN INSERT ('key',{})",
 		},
 		Action: []string{
 			"Refer to the documentation for lookup merge statements.",
@@ -1818,7 +1826,8 @@ var errData = []ErrData{
 		symbol:      "E_MERGE_INSERT_MISSING_KEY",
 		Description: "MERGE with ON clause must have document key specification in INSERT action",
 		Reason: []string{
-			"An ANSI merge statement did not include the document key specification.\ne.g. MERGE INTO default USING [{},{}] AS source ON default.id IS VALUED WHEN NOT MATCHED THEN INSERT ({})",
+			"An ANSI merge statement did not include the document key specification.\n" +
+				"e.g. MERGE INTO default USING [{},{}] AS source ON default.id IS VALUED WHEN NOT MATCHED THEN INSERT ({})",
 		},
 		Action: []string{
 			"Refer to the documentation for ANSI merge statements.",
@@ -1841,7 +1850,8 @@ var errData = []ErrData{
 		symbol:      "E_MERGE_NO_INDEX_HINT",
 		Description: "MERGE with ON KEY clause cannot have USE INDEX hint specified on target.",
 		Reason: []string{
-			"The USE INDEX hint is not supported with lookup merge statement targets.\ne.g. MERGE INTO default USE INDEX (ix) USING [{},{}] AS source ON KEY 'aaa' WHEN NOT MATCHED THEN INSERT ({})",
+			"The USE INDEX hint is not supported with lookup merge statement targets.\n" +
+				"e.g. MERGE INTO default USE INDEX (ix) USING [{},{}] AS source ON KEY 'aaa' WHEN NOT MATCHED THEN INSERT ({})",
 		},
 		Action: []string{
 			"Refer to the documentation for lookup merge statements.",
@@ -1871,7 +1881,8 @@ var errData = []ErrData{
 		symbol:      "E_MIXED_JOIN",
 		Description: "Cannot mix «op1» on «alias1» with «op2» on «alias2».",
 		Reason: []string{
-			"Mixing ANSI and non-ANSI joins.\ne.g. SELECT * FROM default d1 JOIN default d2 ON d1.id = d2.id JOIN default d3 ON KEYS 'aaa'",
+			"Mixing ANSI and non-ANSI joins.\ne.g. SELECT * FROM default d1 JOIN default d2 ON d1.id = d2.id " +
+				"JOIN default d3 ON KEYS 'aaa'",
 			"Mixing ANSI and non-ANSI NEST statements.",
 		},
 		Action: []string{
@@ -2064,7 +2075,8 @@ var errData = []ErrData{
 		Reason: []string{
 			"An attempt was made to create a GSI index and INCLUDE MISSING was specified for a non-leading key.",
 			"An attempt was made to create a non-GSI index and INCLUDE MISSING was specified.",
-			"An attempt was made to create an index using FLATTEN_KEYS, and INCLUDE MISSING was specified for an argument other than the initial argument.",
+			"An attempt was made to create an index using FLATTEN_KEYS, and INCLUDE MISSING was specified for an argument " +
+				"other than the initial argument.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -2194,7 +2206,8 @@ var errData = []ErrData{
 		symbol:      "E_ANCHOR_RECURSIVE_REF",
 		Description: "Anchor Clause cannot have recursive reference in FROM Expression : «alias»",
 		Reason: []string{
-			"The statement includes a recursive common table expression that references itself in the first branch of the defining UNION.\ne.g. WITH RECURSIVE rcte AS (SELECT * FROM rcte UNION SELECT * FROM rcte) SELECT 1",
+			"The statement includes a recursive common table expression that references itself in the first branch of the " +
+				"defining UNION.\ne.g. WITH RECURSIVE rcte AS (SELECT * FROM rcte UNION SELECT * FROM rcte) SELECT 1",
 		},
 		Action: []string{
 			"Correct the recursive common table expression definition.",
@@ -2209,7 +2222,9 @@ var errData = []ErrData{
 		symbol:      "E_MORE_THAN_ONE_RECURSIVE_REF",
 		Description: "Recursive reference «alias» must not appear more than once in the FROM clause",
 		Reason: []string{
-			"The statement includes a recursive common table expression that references itself more than once in the recursive branch of the defining UNION.\ne.g. WITH RECURSIVE rcte AS (SELECT * FROM default UNION SELECT * FROM rcte, rcte) SELECT 1",
+			"The statement includes a recursive common table expression that references itself more than once in the " +
+				"recursive branch of the defining UNION.\n" +
+				"e.g. WITH RECURSIVE rcte AS (SELECT * FROM default UNION SELECT * FROM rcte, rcte) SELECT 1",
 		},
 		Action: []string{
 			"Revise the statement removing the duplicate reference.",
@@ -2224,7 +2239,8 @@ var errData = []ErrData{
 		symbol:      "E_CONFIG_INVALID_OPTION",
 		Description: "Invalid config option «option»",
 		Reason: []string{
-			"The statement includes a recursive common table expression with an OPTIONS clause object containing an invalid option.\ne.g. WITH RECURSIVE rcte AS (SELECT * FROM default UNION SELECT * FROM rcte) OPTIONS {'bad':1} SELECT 1",
+			"The statement includes a recursive common table expression with an OPTIONS clause object containing an invalid " +
+				"option.\ne.g. WITH RECURSIVE rcte AS (SELECT * FROM default UNION SELECT * FROM rcte) OPTIONS {'bad':1} SELECT 1",
 		},
 		Action: []string{
 			"Refer to the documentation for permitted options.",
@@ -2256,10 +2272,12 @@ var errData = []ErrData{
 		symbol:      "E_RECURSIVE_IMPLICIT_DOC_LIMIT",
 		Description: "Recursive WITH «alias» limited to «limit» documents as no explicit document count limit or memory quota set",
 		Reason: []string{
-			"The request without a memory quota set contained a recursive common table expression without an explicit document limit that produced more results than the implicit limit and was stopped.",
+			"The request without a memory quota set contained a recursive common table expression without an explicit document " +
+				"limit that produced more results than the implicit limit and was stopped.",
 		},
 		Action: []string{
-			"Review the statement and its control of the recursion.\nUse a memory quota to guard against runaway recursion or specify an explicit document limit for the common table expression.",
+			"Review the statement and its control of the recursion.\nUse a memory quota to guard against runaway recursion or " +
+				"specify an explicit document limit for the common table expression.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -2271,10 +2289,12 @@ var errData = []ErrData{
 		symbol:      "E_RECURSIVE_IMPLICIT_DEPTH_LIMIT",
 		Description: "Recursive WITH «alias» stopped at «depth» level as no explicit level limit or memory quota set",
 		Reason: []string{
-			"The request without a memory quota set contained a recursive common table expression without an explicit level limit exceeded the implicit limit and was stopped.",
+			"The request without a memory quota set contained a recursive common table expression without an explicit level " +
+				"limit exceeded the implicit limit and was stopped.",
 		},
 		Action: []string{
-			"Review the statement and its control of the recursion.\nUse a memory quota to guard against runaway recursion or specify an explicit level limit for the common table expression.",
+			"Review the statement and its control of the recursion.\nUse a memory quota to guard against runaway recursion or " +
+				"specify an explicit level limit for the common table expression.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -2301,7 +2321,8 @@ var errData = []ErrData{
 		symbol:      "E_VECTOR_SEMANTIC",
 		Description: "Semantic error in query with vector search function: <<msg>>.",
 		Reason: []string{
-			"A vector search function cannot be used together with certain features of a query, e.g. GROUP BY clause or Window function.",
+			"A vector search function cannot be used together with certain features of a query, e.g. GROUP BY clause or " +
+				"Window function.",
 		},
 		Action: []string{
 			"Revise the statement to remove the offending features of the query.",
@@ -2417,11 +2438,13 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_VECTOR_CONSTANT_INDEX_KEY, // 3408
-		symbol:      "E_VECTOR_CONSTANT_INDEX_KEY",
-		Description: "Cannot use a constant construct (object or array) in an index key with VECTOR attribute in CREATE INDEX statement.",
+		Code:   E_VECTOR_CONSTANT_INDEX_KEY, // 3408
+		symbol: "E_VECTOR_CONSTANT_INDEX_KEY",
+		Description: "Cannot use a constant construct (object or array) in an index key with VECTOR attribute in " +
+			"CREATE INDEX statement.",
 		Reason: []string{
-			"An index key (<<name>>) with VECTOR attribute is specified as an object construct or array construct in CREATE INDEX statement.",
+			"An index key (<<name>>) with VECTOR attribute is specified as an object construct or array construct in " +
+				"CREATE INDEX statement.",
 		},
 		Action: []string{
 			"Revise the statement to not use a constant construct in index key with VECTOR attribute.",
@@ -2545,9 +2568,10 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_SUBQUERY_PRIMARY_DOCS_EXCEEDED, // 4036
-		symbol:      "E_SUBQUERY_PRIMARY_DOCS_EXCEEDED",
-		Description: "Correlated subquery's keyspace «keyspace» cannot have more than «number» documents without appropriate secondary index",
+		Code:   E_SUBQUERY_PRIMARY_DOCS_EXCEEDED, // 4036
+		symbol: "E_SUBQUERY_PRIMARY_DOCS_EXCEEDED",
+		Description: "Correlated subquery's keyspace «keyspace» cannot have more than «number» documents without " +
+			"appropriate secondary index",
 		Reason: []string{
 			"A primary scan supporting a correlated sub-query returned more keys than permitted.",
 		},
@@ -2668,7 +2692,8 @@ var errData = []ErrData{
 		symbol:      "E_PREDEFINED_PREPARED_NAME",
 		Description: "Prepared name «name» is predefined (reserved).",
 		Action: []string{
-			"Don't use predefined names for prepared statements.\nPredefined names have a double underscore ('__') prefix and include: '__get','__insert','__upsert','__update' and '__delete'.",
+			"Don't use predefined names for prepared statements.\nPredefined names have a double underscore ('__') " +
+				"prefix and include: '__get','__insert','__upsert','__update' and '__delete'.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -2695,7 +2720,8 @@ var errData = []ErrData{
 		symbol:      "E_USE_KEYS_USE_INDEXES",
 		Description: "From Expression Term cannot have USE KEYS or USE INDEX Clause",
 		Reason: []string{
-			"An expression term in a from clause specifies USE KEYS or USE INDEX.\ne.g. SELECT * FROM (SELECT * FROM default) a USE KEYS['key']",
+			"An expression term in a from clause specifies USE KEYS or USE INDEX.\n" +
+				"e.g. SELECT * FROM (SELECT * FROM default) a USE KEYS['key']",
 		},
 		Action: []string{
 			"Revise the statement removing the invalid clauses or expression term.",
@@ -2721,9 +2747,10 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NO_PRIMARY_INDEX, // 4120
-		symbol:      "E_NO_PRIMARY_INDEX",
-		Description: "No index available on keyspace «keyspace» that matches your query. Use CREATE PRIMARY INDEX ON «keyspace» to create a primary index, or check that your expected index is online.",
+		Code:   E_NO_PRIMARY_INDEX, // 4120
+		symbol: "E_NO_PRIMARY_INDEX",
+		Description: "No index available on keyspace «keyspace» that matches your query. Use CREATE PRIMARY INDEX ON " +
+			"«keyspace» to create a primary index, or check that your expected index is online.",
 		Reason: []string{
 			"The statement was attempting to scan the keyspace but there was no index available to support the scan.",
 		},
@@ -2764,7 +2791,8 @@ var errData = []ErrData{
 		symbol:      "E_NOT_GROUP_KEY_OR_AGG",
 		Description: "Expression «expression» must depend only on group keys or aggregates.",
 		Reason: []string{
-			"The statement contained grouping and an expression in the projection referenced a value that was not a grouping key or an aggregate.\ne.g. SELECT a FROM b GROUP BY c",
+			"The statement contained grouping and an expression in the projection referenced a value that was not a " +
+				"grouping key or an aggregate.\ne.g. SELECT a FROM b GROUP BY c",
 		},
 		Action: []string{
 			"Revise the statement to use only grouping keys or aggregates in the projection.",
@@ -2902,7 +2930,9 @@ var errData = []ErrData{
 		symbol:      "W_GSI_TRANSIENT",
 		Description: "A transient error occurred in GSI",
 		Action: []string{
-			"Review the error details for possible user actions.\nGSI will typically handle this condition and retry the operation automatically when appropriate.\nThe state of index build operations can be monitored via the GSI endpoint or system:indexes collection.",
+			"Review the error details for possible user actions.\n" +
+				"GSI will typically handle this condition and retry the operation automatically when appropriate.\n" +
+				"The state of index build operations can be monitored via the GSI endpoint or system:indexes collection.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -3252,7 +3282,8 @@ var errData = []ErrData{
 		symbol:      "W_DATE_INVALID_DATE_STRING",
 		Description: "Date error: Invalid date string",
 		Reason: []string{
-			"A date function converting a string to a date encountered an invalid element in the string, such as a numeric month outside the range 1-12.",
+			"A date function converting a string to a date encountered an invalid element in the string, such as a numeric " +
+				"month outside the range 1-12.",
 		},
 		Action: []string{
 			"Correct the date string value.",
@@ -3335,7 +3366,8 @@ var errData = []ErrData{
 			"A date value or function argument includes an unknown or invalid timezone.",
 		},
 		Action: []string{
-			"Correct the timezone in the date value or function argument.\nAbsolute offsets are recommended in place of time zone names.",
+			"Correct the timezone in the date value or function argument.\n" +
+				"Absolute offsets are recommended in place of time zone names.",
 		},
 		IsUser:    YES,
 		IsWarning: true,
@@ -3459,7 +3491,8 @@ var errData = []ErrData{
 		symbol:      "E_INSERT_KEY_TYPE",
 		Description: "Cannot INSERT non-string key «key» of type «type»",
 		Reason: []string{
-			"The statement includes an INSERT operation with a non-string key value.\ne.g. INSERT INTO default VALUES(1,{'the':'value'})",
+			"The statement includes an INSERT operation with a non-string key value.\n" +
+				"e.g. INSERT INTO default VALUES(1,{'the':'value'})",
 		},
 		Action: []string{
 			"Revise the statement to ensure keys are always string values.",
@@ -3474,7 +3507,8 @@ var errData = []ErrData{
 		symbol:      "E_INSERT_OPTIONS_TYPE",
 		Description: "Cannot INSERT non-OBJECT options «options» of type «type»",
 		Reason: []string{
-			"The statement includes an INSERT operation with a non-OBJECT options value.\ne.g. INSERT INTO default VALUES('the_key',{'the':'value'},null)",
+			"The statement includes an INSERT operation with a non-OBJECT options value.\n" +
+				"e.g. INSERT INTO default VALUES('the_key',{'the':'value'},null)",
 		},
 		Action: []string{
 			"Revise the statement to ensure insert options are always provided as an object value or omitted if unneeded.",
@@ -3500,7 +3534,8 @@ var errData = []ErrData{
 		symbol:      "E_UPSERT_KEY_ALREADY_MUTATED",
 		Description: "Cannot act on the same key multiple times in an UPSERT statement",
 		Reason: []string{
-			"The UPSERT statement was trying to modify the same key multiple times.\ne.g. UPSERT INTO default VALUES ('key0',{}),('key0',{})",
+			"The UPSERT statement was trying to modify the same key multiple times.\n" +
+				"e.g. UPSERT INTO default VALUES ('key0',{}),('key0',{})",
 		},
 		Action: []string{
 			"Revise the statement to ensure that keys are unique.",
@@ -3526,7 +3561,8 @@ var errData = []ErrData{
 		symbol:      "E_UPSERT_KEY_TYPE",
 		Description: "Cannot UPSERT non-string key «key» of type «type».",
 		Reason: []string{
-			"The statement includes an UPSERT operation with a non-string key value.\ne.g. UPSERT INTO default VALUES(1,{'the':'value'})",
+			"The statement includes an UPSERT operation with a non-string key value.\n" +
+				"e.g. UPSERT INTO default VALUES(1,{'the':'value'})",
 		},
 		Action: []string{
 			"Revise the statement to ensure keys are always string values.",
@@ -3626,9 +3662,10 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS, // 5190
-		symbol:      "E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS",
-		Description: "The scan_vector parameter should not be used for queries accessing more than one keyspace.  Use scan_vectors instead. Keyspaces: «list»",
+		Code:   E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS, // 5190
+		symbol: "E_SCAN_VECTOR_TOO_MANY_SCANNED_BUCKETS",
+		Description: "The scan_vector parameter should not be used for queries accessing more than one keyspace.  Use " +
+			"scan_vectors instead. Keyspaces: «list»",
 		Reason: []string{
 			"The request parameter ˝scan_vector˝ was specified for the request which references multiple keyspaces.",
 		},
@@ -3821,8 +3858,10 @@ var errData = []ErrData{
 		symbol:      "E_ROLE_TAKES_NO_KEYSPACE",
 		Description: "Role «role» does not take a keyspace.",
 		Reason: []string{
-			"A keyspace qualification has been provided for a role that isn't qualified by keyspace in a grant or revoke role statement.",
-			"A keyspace qualification has been provided for a role that isn't qualified by keyspace in a group create or alter statement.",
+			"A keyspace qualification has been provided for a role that isn't qualified by keyspace in a grant or revoke role " +
+				"statement.",
+			"A keyspace qualification has been provided for a role that isn't qualified by keyspace in a group create or alter " +
+				"statement.",
 		},
 		Action: []string{
 			"Remove the qualification from the role that isn't qualified by keyspace.",
@@ -3985,7 +4024,9 @@ var errData = []ErrData{
 		symbol:      "E_MERGE_MULTI_INSERT",
 		Description: "Multiple INSERT of the same document (document key «key») in a MERGE statement",
 		Reason: []string{
-			"The INSERT action of the MERGE statement had previously inserted the noted key.\ne.g. MERGE INTO default\n     USING [{},{}] AS source\n     ON default.id IS VALUED\n     WHEN NOT MATCHED THEN\n     INSERT ('key',{})\n     ;",
+			"The INSERT action of the MERGE statement had previously inserted the noted key.\ne.g. MERGE INTO default" +
+				"\n     USING [{},{}] AS source\n     ON default.id IS VALUED\n     WHEN NOT MATCHED THEN\n     INSERT ('key',{})" +
+				"\n     ;",
 		},
 		Action: []string{
 			"Revise the statement logic to ensure only unique keys are produced.",
@@ -4159,11 +4200,13 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_JOIN_ON_PRIMARY_DOCS_EXCEEDED, // 5420
-		symbol:      "E_JOIN_ON_PRIMARY_DOCS_EXCEEDED",
-		Description: "Inner of nested-loop join «keyspace» cannot have more than 1000 documents without appropriate secondary index",
+		Code:   E_JOIN_ON_PRIMARY_DOCS_EXCEEDED, // 5420
+		symbol: "E_JOIN_ON_PRIMARY_DOCS_EXCEEDED",
+		Description: "Inner of nested-loop join «keyspace» cannot have more than 1000 documents without appropriate " +
+			"secondary index",
 		Reason: []string{
-			"A nested loop join using a primary scan produced more than 1000 documents.\nThis limit is imposed for resource usage and performance considerations as the inner leg of such a join may be executed repeatedly.",
+			"A nested loop join using a primary scan produced more than 1000 documents.\nThis limit is imposed for " +
+				"resource usage and performance considerations as the inner leg of such a join may be executed repeatedly.",
 		},
 		Action: []string{
 			"Limit the number of documents accessed in this manner or create an appropriate secondary index to support the join.",
@@ -4270,7 +4313,8 @@ var errData = []ErrData{
 			"The indicated action was attempted a number of times without success.",
 		},
 		Action: []string{
-			"If the associated error indicates an infrastructure issue, verify all cluster resources are accessible, available and online.",
+			"If the associated error indicates an infrastructure issue, verify all cluster resources are accessible, available " +
+				"and online.",
 			"Contact support.",
 		},
 		AppliesTo: []string{
@@ -4353,7 +4397,8 @@ var errData = []ErrData{
 			"The request processing requires date be temporarily spilled to disk and the temporary file creation failed.",
 		},
 		Action: []string{
-			"Review the Query service temporary data directory and validate the filesystem is in good order with sufficient space to support the node's temporary data requirements.",
+			"Review the Query service temporary data directory and validate the filesystem is in good order with sufficient " +
+				"space to support the node's temporary data requirements.",
 			"Review the request memory quota, if in effect, and increase it if appropriate to avoid spilling.",
 			"Contact support.",
 		},
@@ -4539,7 +4584,8 @@ var errData = []ErrData{
 			"A string value was passed as the ˝flags˝ option to INFER and it did not parse as a number.",
 		},
 		Action: []string{
-			"Revise the statement to pass a valid number, a string that parsed as a number (e.g. ˝0x10˝) or an array of valid flag-name strings.",
+			"Revise the statement to pass a valid number, a string that parsed as a number (e.g. ˝0x10˝) or an array of " +
+				"valid flag-name strings.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{
@@ -4574,7 +4620,8 @@ var errData = []ErrData{
 		symbol:      "E_INFER_NO_RANDOM_ENTRY",
 		Description: "Keyspace does not support random document retrieval.",
 		Reason: []string{
-			"An INFER statement attempted to use a random entry document interface to sample the data but this was not supported by the datastore.",
+			"An INFER statement attempted to use a random entry document interface to sample the data but this was not " +
+				"supported by the datastore.",
 		},
 		Action: []string{
 			"Ensure flags permit other document sampling mechanisms to be tried.",
@@ -4590,7 +4637,8 @@ var errData = []ErrData{
 		symbol:      "E_INFER_NO_RANDOM_DOCS",
 		Description: "Keyspace will not return random documents.",
 		Reason: []string{
-			"An INFER statement attempted to use a random document interface to sample the data but this was not returning any documents.",
+			"An INFER statement attempted to use a random document interface to sample the data but this was not returning " +
+				"any documents.",
 		},
 		Action: []string{
 			"Ensure flags permit other document sampling mechanisms to be tried.",
@@ -4755,7 +4803,8 @@ var errData = []ErrData{
 		symbol:      "W_INFER_INDEX",
 		Description: "Index scanning only; document sample may not be representative.",
 		Reason: []string{
-			"An INFER statement used only index access for document sampling and as these may not contain all keys, the sampling was only of a sub-set of the data.",
+			"An INFER statement used only index access for document sampling and as these may not contain all keys, the " +
+				"sampling was only of a sub-set of the data.",
 		},
 		IsWarning: true,
 		AppliesTo: []string{
@@ -4798,7 +4847,8 @@ var errData = []ErrData{
 		symbol:      "E_INFER_NO_SEQUENTIAL_SCAN",
 		Description: "Sequential scan not available.",
 		Reason: []string{
-			"An INFER statement attempted to use a sequential scan to sample the data but no available scan mechanism was available in the data store.",
+			"An INFER statement attempted to use a sequential scan to sample the data but no available scan mechanism was " +
+				"available in the data store.",
 		},
 		Action: []string{
 			"Ensure flags permit other document sampling mechanisms to be tried.",
@@ -4814,7 +4864,8 @@ var errData = []ErrData{
 		symbol:      "E_INFER_NO_RETRIEVERS",
 		Description: "No document retrievers available.",
 		Reason: []string{
-			"An INFER statement's options, possibly combined with a lack of suitable indexes, meant that there was no document sampling mechanism available.",
+			"An INFER statement's options, possibly combined with a lack of suitable indexes, meant that there was no document " +
+				"sampling mechanism available.",
 		},
 		Action: []string{
 			"Ensure flags permit at least one supported document sampling mechanism and that any required indexes are available.",
@@ -5115,9 +5166,10 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_LIBRARY_PATH_ERROR, // 10114
-		symbol:      "E_LIBRARY_PATH_ERROR",
-		Description: "Invalid javascript library path: «path». Use a root level path, the same path as the function scope, or a local path ('./library')",
+		Code:   E_LIBRARY_PATH_ERROR, // 10114
+		symbol: "E_LIBRARY_PATH_ERROR",
+		Description: "Invalid javascript library path: «path». Use a root level path, the same path as the function scope, " +
+			"or a local path ('./library')",
 		Reason: []string{
 			"The path specified in a Javascript function creation statement was invalid.",
 		},
@@ -5225,7 +5277,8 @@ var errData = []ErrData{
 		symbol:      "E_BUCKET_UPDATER_MAX_ERRORS",
 		Description: "Max failures reached. Last error: «error»",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket in the node encountered more failures than the maximum tolerated.",
+			"The process responsible for synchronising changes to the bucket in the node encountered more failures than the " +
+				"maximum tolerated.",
 			"The bucket was dropped outside of the node and the synchronisation endpoint was no longer available.",
 		},
 		Action: []string{
@@ -5241,7 +5294,8 @@ var errData = []ErrData{
 		symbol:      "E_BUCKET_UPDATER_NO_HEALTHY_NODES",
 		Description: "No healthy nodes found.",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket was unable to find a healthy node on which to find the bucket.",
+			"The process responsible for synchronising changes to the bucket was unable to find a healthy node on which to find " +
+				"the bucket.",
 		},
 		Action: []string{
 			"Contact support.",
@@ -5255,7 +5309,8 @@ var errData = []ErrData{
 		symbol:      "E_BUCKET_UPDATER_STREAM_ERROR",
 		Description: "Streaming error",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket encountered an error reading the information stream from the orchestrator.",
+			"The process responsible for synchronising changes to the bucket encountered an error reading the information " +
+				"stream from the orchestrator.",
 		},
 		Action: []string{
 			"Contact support.",
@@ -5308,7 +5363,8 @@ var errData = []ErrData{
 		symbol:      "E_BUCKET_UPDATER_EP_NOT_FOUND",
 		Description: "Streaming endpoint not found",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket in the node was unable to find the orchestrator endpoint for the bucket.",
+			"The process responsible for synchronising changes to the bucket in the node was unable to find the orchestrator " +
+				"endpoint for the bucket.",
 			"The bucket was dropped outside of the node and the synchronisation endpoint was no longer available.",
 		},
 		Action: []string{
@@ -5558,11 +5614,14 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        W_SYSTEM_FILTERED_ROWS, // 11011
-		symbol:      "W_SYSTEM_FILTERED_ROWS",
-		Description: "One or more documents were excluded from the «namespace» bucket because of insufficient user permissions. In an EE system, add the query_system_catalog role to see all rows. In a CE system, add the administrator role to see all rows.",
+		Code:   W_SYSTEM_FILTERED_ROWS, // 11011
+		symbol: "W_SYSTEM_FILTERED_ROWS",
+		Description: "One or more documents were excluded from the «namespace» bucket because of insufficient user permissions. " +
+			"In an EE system, add the query_system_catalog role to see all rows. In a CE system, add the administrator role to " +
+			"see all rows.",
 		Reason: []string{
-			"The request attempted to access the contents of a restricted access system keyspace and the user was not permitted to see all data.",
+			"The request attempted to access the contents of a restricted access system keyspace and the user was not permitted " +
+				"to see all data.",
 		},
 		Action: []string{
 			"Ensure the request is run as a user with the correct privileges.",
@@ -6687,7 +6746,8 @@ var errData = []ErrData{
 			"A sorted sequential scan needed to spill data to disk temporarily but could not do so.",
 		},
 		Action: []string{
-			"Review the Query service temporary data directory and validate the filesystem is in good order with sufficient space to support the node's temporary data requirements.",
+			"Review the Query service temporary data directory and validate the filesystem is in good order with sufficient " +
+				"space to support the node's temporary data requirements.",
 			"Contact support",
 		},
 		AppliesTo: []string{
@@ -6905,7 +6965,8 @@ var errData = []ErrData{
 		symbol:      "E_SCAS_MISMATCH",
 		Description: "«op» cas (actual: «actual», expected:«expected») mismatch for key: «key»",
 		Reason: []string{
-			"The operation encountered a check-and-set value mismatch for the noted key.\nThis indicates another update was successful between the document being read and this update operation.",
+			"The operation encountered a check-and-set value mismatch for the noted key.\n" +
+				"This indicates another update was successful between the document being read and this update operation.",
 		},
 		Action: []string{
 			"Review the transaction operations and concurrent activity.",
@@ -6984,7 +7045,8 @@ var errData = []ErrData{
 		symbol:      "E_TRANSACTION_QUEUE_FULL",
 		Description: "Transaction queue is full",
 		Reason: []string{
-			"Another request for the transaction was executing and server could not queue any more transaction requests when this request was received.",
+			"Another request for the transaction was executing and server could not queue any more transaction requests when " +
+				"this request was received.",
 		},
 		Action: []string{
 			"Revise the concurrent requests submitted for a single transaction.",
@@ -7435,7 +7497,8 @@ var errData = []ErrData{
 		symbol:      "E_SEQUENCE_READ_ONLY_REQ",
 		Description: "Sequences cannot be used in read-only requests",
 		Reason: []string{
-			"A read-only request attempted to use a sequence.\nUse of a sequence updates meta-data contravening the read-only request specification.",
+			"A read-only request attempted to use a sequence.\n" +
+				"Use of a sequence updates meta-data contravening the read-only request specification.",
 		},
 		Action: []string{
 			"Avoid sequences in read-only requests.",
@@ -7450,7 +7513,8 @@ var errData = []ErrData{
 		symbol:      "W_SEQUENCE_CACHE_SIZE",
 		Description: "Cache size «size» below recommended minimum",
 		Reason: []string{
-			"A sequence cache value below the recommended minimum size was specified.\nSequences with smaller caches result in higher I/O and may suffer with increased latency as a result.",
+			"A sequence cache value below the recommended minimum size was specified.\n" +
+				"Sequences with smaller caches result in higher I/O and may suffer with increased latency as a result.",
 		},
 		Action: []string{
 			"Review your sequence requirements and adjust the cache size as required.",
@@ -7491,10 +7555,12 @@ var errData = []ErrData{
 		symbol:      "W_SEQUENCE_NO_PREV_VALUE",
 		Description: "Sequence previous value cannot be accessed before next value generation.",
 		Reason: []string{
-			"A statement attempted to access the previous sequence value before the first value has been generated for it on the Query service node.",
+			"A statement attempted to access the previous sequence value before the first value has been generated for it on the " +
+				"Query service node.",
 		},
 		Action: []string{
-			"Review your logic and if necessary ensure that sequences generate values before attempting to access the previous value.",
+			"Review your logic and if necessary ensure that sequences generate values before attempting to access the previous " +
+				"value.",
 		},
 		IsUser:    YES,
 		IsWarning: true,
@@ -7521,10 +7587,11 @@ var errData = []ErrData{
 	{
 		Code:        E_NL_SESSIONS_AUTH, // 19202
 		symbol:      "E_NL_SESSIONS_AUTH",
-		Description: "Sessions API Authorization failed: \"natural_cred\" is not authorized",
+		Description: "Authorization failed when establishing natural language session",
 		IsUser:      YES,
 		Action: []string{
-			"Create a Couchbase cloud account",
+			"Verify the natural language processing credentials supplied in the request.",
+			"Create a Couchbase cloud account if necessary.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7589,7 +7656,7 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Status 429: Retry later.",
-			"Status 404: Verify the credentials in the \"natural_cred\" parameter.",
+			"Status 404: Verify the credentials provided for natural language processing.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7617,8 +7684,8 @@ var errData = []ErrData{
 		Description: "LLM error: «err»",
 		IsUser:      MAYBE,
 		Reason: []string{
-			"\"natural\" parameter doesn't prompt for a SELECT query.",
-			"\"natural\" parameter is not a valid prompt.",
+			"\"natural\" parameter is not a valid prompt or doesn't prompt for a SELECT query.",
+			"The natural language statement is not a valid prompt or doesn't prompt for a SELECT query.",
 		},
 		Action: []string{
 			"Try rewording your request.",
@@ -7635,6 +7702,8 @@ var errData = []ErrData{
 		Reason: []string{
 			"\"natural_cred\", \"natural_context\" and \"natural_orgid\" parameters are required when sending a request " +
 				"using the \"natural\" parameter",
+			"The options \"cred\", \"keyspaces\" and \"orgid\" are required in the statement when the \"natural_\" parameters " +
+				"are not supplied.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7649,7 +7718,8 @@ var errData = []ErrData{
 			"Syntax error in generated statement.",
 		},
 		Action: []string{
-			"Examine the \"generated_stmt\" field in the response, adjust and re-submit as a direct statement execution request.",
+			"Examine the \"generated_statement\" field in the response, adjust and re-submit as a direct statement " +
+				"execution request.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7658,13 +7728,15 @@ var errData = []ErrData{
 	{
 		Code:        E_NL_CONTEXT, // 19215
 		symbol:      "E_NL_CONTEXT",
-		Description: "incorrect natural_context",
+		Description: "Error in keyspace list provided for natural language processing",
 		IsUser:      YES,
 		Reason: []string{
-			"argument fails to meet validation for natural_context path(s)",
+			"Validation of the \"natural_context\" parameter failed for the reason specified.",
+			"Validation of the \"keyspaces\" option failed for the reason specified.",
 		},
 		Action: []string{
 			"Revise the \"natural_context\" parameter.",
+			"Revise the \"keyspaces\" option.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7676,10 +7748,10 @@ var errData = []ErrData{
 		Description: "Schema inferring failed for keyspace «keyspace»",
 		IsUser:      YES,
 		Reason: []string{
-			"A collection passed in the \"natural_context\" doesn't exist in the cluster.",
+			"A keyspace the list of keyspaces passed for natural language processing doesn't exist in the cluster.",
 		},
 		Action: []string{
-			"Ensure all collections passed in the \"natural_context\" exist.",
+			"Ensure all keyspaces provided for natural language processing exist.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7688,10 +7760,11 @@ var errData = []ErrData{
 	{
 		Code:        E_NL_ORG_NOT_FOUND, // 19217
 		symbol:      "E_NL_ORG_NOT_FOUND",
-		Description: "Organization: «organization» not found",
+		Description: "Organization «organization» not found",
 		IsUser:      YES,
 		Reason: []string{
 			"The organisation specified in the \"natural_orgid\" parameter was not found by the chat completions API.",
+			"The organisation specified in the \"orgid\" option was not found by the chat completions API.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7700,11 +7773,11 @@ var errData = []ErrData{
 	{
 		Code:   E_NL_ORG_UNAUTH, // 19218
 		symbol: "E_NL_ORG_UNAUTH",
-		Description: "Access to organisation «organization» is not authorized." +
-			" Or collison in JWT refresh due to an external client",
+		Description: "Access to organisation «organization» is not authorized " +
+			"or collison in JWT refresh with an external client",
 		IsUser: MAYBE,
 		Reason: []string{
-			"Organisation exists but the \"natural_creds\" credentials lack permission to access it.",
+			"Organisation exists but the natural language processing credentials lack permission to access it.",
 			"Concurrent JWT refresh by external clients.",
 		},
 		AppliesTo: []string{
@@ -7724,10 +7797,10 @@ var errData = []ErrData{
 		symbol:      "E_NL_TOO_MANY_WAITERS",
 		Description: "Too many waiters, dropping the request",
 		Reason: []string{
-			"natural language requests are throttled as there are no more free slots in the waiting queue",
+			"Natural language requests are throttled as there are no more free slots in the waiting queue",
 		},
 		Action: []string{
-			"retry after sometime",
+			"Retry the request later.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7738,10 +7811,10 @@ var errData = []ErrData{
 		symbol:      "E_NL_TIMEOUT",
 		Description: "Timed out waiting to be processed.",
 		Reason: []string{
-			"natural language request timedout waiting to be processed",
+			"Natural language request timed out waiting to be processed",
 		},
 		Action: []string{
-			"retry after sometime",
+			"Retry the request later.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7762,6 +7835,22 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_TOO_MANY_KEYSPACES, // 19223
+		symbol:      "E_NL_TOO_MANY_KEYSPACES",
+		Description: "Too many keyspaces specified.",
+		IsUser:      YES,
+		Reason: []string{
+			"The \"natural_context\" parameter specifies more than the maximum permitted number of keyspaces.",
+			"The \"keyspaces\" option specifies more than the maximum permitted number of keyspaces.",
+		},
+		Action: []string{
+			"Revise the \"natural_context\" parameter or \"keyspaces\" option.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
 		symbol:      "E_AUS_NOT_SUPPORTED",
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",
@@ -7776,11 +7865,13 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_AUS_NOT_INITIALIZED, // 20001
-		symbol:      "E_AUS_NOT_INITIALIZED",
-		Description: "Auto Update Statistics is not initialized for the node. It is only available on clusters migrated to a supported version.",
+		Code:   E_AUS_NOT_INITIALIZED, // 20001
+		symbol: "E_AUS_NOT_INITIALIZED",
+		Description: "Auto Update Statistics is not initialized for the node. It is only available on clusters migrated to " +
+			"a supported version.",
 		Reason: []string{
-			"An Auto Update Statistics related operation was attempted on a cluster that is not fully migrated to a version that supports it.",
+			"An Auto Update Statistics related operation was attempted on a cluster that is not fully migrated to a version " +
+				"that supports it.",
 		},
 		Action: []string{
 			"Migrate the Couchbase cluster to a version that supports Auto Update Statistics.",
@@ -7805,7 +7896,8 @@ var errData = []ErrData{
 		symbol:      "E_AUS_INVALID_DOCUMENT_SCHEMA",
 		Description: "Invalid schema detected in the Auto Update Statistics settings document.",
 		Reason: []string{
-			"The schema validation check failed when an attempt was made to INSERT/UPSERT/UPDATE a document in system:aus or system:aus_settings.",
+			"The schema validation check failed when an attempt was made to INSERT/UPSERT/UPDATE a document in system:aus " +
+				"or system:aus_settings.",
 		},
 		Action: []string{
 			"Consult the documentation on the valid schema for Auto Update Statistics settings documents.",
@@ -7831,7 +7923,8 @@ var errData = []ErrData{
 		symbol:      "E_AUS_STORAGE_INVALID_KEY",
 		Description: "Invalid document key «key» for Auto Update Statistics document",
 		Reason: []string{
-			"An invalid document key was detected when an operation or SQL++ statement was run against system:aus or system:aus_settings.",
+			"An invalid document key was detected when an operation or SQL++ statement was run against system:aus or " +
+				"system:aus_settings.",
 		},
 		Action: []string{
 			"Consult the documentation on the valid document key format for Auto Update Statistics settings documents.",
@@ -7871,7 +7964,8 @@ var errData = []ErrData{
 		symbol:      "E_AUS_EVALUATION_PHASE",
 		Description: "Auto Update Statistics task's Evaluation phase for «keyspace» encountered an error.",
 		Action: []string{
-			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, contact support.",
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. " +
+				"If it occurs frequently, contact support.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7882,7 +7976,8 @@ var errData = []ErrData{
 		symbol:      "E_AUS_UPDATE_PHASE",
 		Description: "Auto Update Statistics task's Update phase for «keyspace» encountered an error.",
 		Action: []string{
-			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, contact support.",
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. " +
+				"If it occurs frequently, contact support.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7893,10 +7988,14 @@ var errData = []ErrData{
 		symbol:      "E_AUS_TASK_NOT_STARTED",
 		Description: "The Auto Update Statistics task was not started due to existing load on the node.",
 		Reason: []string{
-			"The Auto Update Statistics task was not started as the load factor of the Query node was too high to handle the additional workload of the task.",
+			"The Auto Update Statistics task was not started as the load factor of the Query node was too high to handle " +
+				"the additional workload of the task.",
 		},
 		Action: []string{
-			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, the set schedule for Auto Update Statistics might not be suitable for the workload. Approach revising the schedule. Or contact support.",
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, " +
+				"the set schedule for Auto Update Statistics might not be suitable for the workload.",
+			"Approach revising the schedule. ",
+			"Contact support.",
 		},
 		AppliesTo: []string{
 			"Server",
@@ -7907,7 +8006,9 @@ var errData = []ErrData{
 		symbol:      "E_AUS_TASK_TIMEOUT",
 		Description: "Scheduled window of the Auto Update Statistics task exceeded.",
 		Action: []string{
-			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, the set scheduled window for Auto Update Statistics might not be long enough. Approach revising the start and end time of the schedule.",
+			"Observe if the error occurs again in future runs of the Auto Update Statistics task. If it occurs frequently, " +
+				"the set scheduled window for Auto Update Statistics might not be long enough. Approach revising the start and " +
+				"end time of the schedule.",
 		},
 		AppliesTo: []string{
 			"Server",

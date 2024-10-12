@@ -11,12 +11,11 @@ package algebra
 import (
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 )
-
-const _MAX_PATHS = 4
 
 // A keyspace path. Supported forms:
 //
@@ -139,7 +138,7 @@ func NewPathWithContext(keyspace, namespace, queryContext string) *Path {
 func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path, errors.Error) {
 	res, parts := validatePathOrContext(keyspace)
 	if res != "" || parts == 0 {
-		return nil, errors.NewDatastoreInvalidPathError(keyspace)
+		return nil, errors.NewDatastoreInvalidPathError(keyspace, nil)
 	}
 	switch parts {
 	case 1:
@@ -148,7 +147,7 @@ func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path
 		// 3 means either [namespace]:bucket.scope or ident.ident
 		// if no : then try to see if it's a valid scope + keyspace
 		if strings.IndexByte(keyspace, ':') >= 0 {
-			return nil, errors.NewDatastoreInvalidPathError(keyspace)
+			return nil, errors.NewDatastoreInvalidPathError(keyspace, nil)
 		}
 		elems := parsePathOrContext(keyspace)
 		return NewPathFromElementsWithContext(elems[1:2], namespace, queryContext)
@@ -161,109 +160,144 @@ func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path
 	}
 }
 
-// Parses natural language context and query context to extract
-// and validate paths, returning a slice of algebra.Path objects or an error
+// Parse a string with a list of comma-separated paths reporting errors
+// Each individual path is resolved using the default namespace and query_context as appropriate
+func ParseAndValidatePathList(pathsStr string, defaultNamespace string, queryContext string) ([]*Path, errors.Error) {
 
-// `nlcontext` is expected to follow a specific format:
-// paths is separated by a comma
-// paths may also be enclosed in backticks for escaping.
-// a path can have up to three parts, separated by periods
-// maximum of 4 paths
-func ValidateAndGetPaths(nlcontext string, queryContext string) ([]*Path, errors.Error) {
-	elems := []*Path{}
+	var paths []*Path
 
-	pErr := func(message string, args ...interface{}) errors.Error {
-		return errors.NewDatastoreInvalidPathError(fmt.Sprintf(message, args...))
+	qc := ParseQueryContext(queryContext)
+	if len(qc) == 1 && qc[0] == "" {
+		qc = nil
+	} else if qc[0] == "" {
+		qc[0] = defaultNamespace
 	}
 
-	inBackticks := false
-	lastbacktick := -1
-	lastcomma := -1
+	var parts []string
+	namespace := ""
+	mustBeDelim := false
+	quotes := false
 	start := 0
-	var keyspace string
-
-	comma := false
-	for i, s := range nlcontext {
+	end := -1
+	pathsStr = strings.TrimSpace(pathsStr)
+	if !strings.HasSuffix(pathsStr, ",") {
+		pathsStr += ","
+	} else {
+		return nil, errors.NewDatastoreInvalidPathError("empty path", "last path")
+	}
+	for i, r := range pathsStr {
 		switch {
-		case s == ',':
-			if inBackticks {
-				continue
+		case r == '`':
+			if mustBeDelim {
+				return nil, errors.NewDatastoreInvalidPathError("invalid element quoting", fmt.Sprintf("path %d", len(paths)+1))
 			}
-
-			if comma {
-				return nil, pErr("unexpected comma at %v", i)
+			if !quotes && start != i {
+				return nil, errors.NewDatastoreInvalidPathError("invalid element quoting", fmt.Sprintf("path %d", len(paths)+1))
+			} else if quotes {
+				mustBeDelim = true
+				start++
+				end = i
 			}
-
-			if start == i {
-				return nil, pErr("leading comma at %v", i)
+			quotes = !quotes
+		case quotes == true:
+			// do nothing
+		case r == ':':
+			mustBeDelim = false
+			if len(parts) != 0 {
+				return nil, errors.NewDatastoreInvalidPathError("namespace must be the first element",
+					fmt.Sprintf("path %d", len(paths)+1))
 			}
-
-			if len(elems) == _MAX_PATHS {
-				return nil, pErr("more than %v paths found", _MAX_PATHS)
-			}
-
-			keyspace = strings.TrimSpace(nlcontext[start:i])
-			p, err := NewVariablePathWithContext(keyspace, "default", queryContext)
-			if err != nil {
-				return nil, err
-			}
-
-			if len(p.Parts()) > 4 {
-				return nil, pErr("more than 4 parts for path %v", keyspace)
-			}
-			elems = append(elems, p)
+			namespace = pathsStr[start:end]
 			start = i + 1
-
-			comma = true
-			lastcomma = i
-		case s == '`':
-			inBackticks = !inBackticks
-			lastbacktick = i
-
-			if comma {
-				comma = false
+			end = -1
+		case r == '.':
+			mustBeDelim = false
+			if len(parts) == 0 {
+				parts = append(parts, namespace)
 			}
-
-		case s == ' ':
-			if comma {
-				continue
+			parts = append(parts, pathsStr[start:end])
+			start = i + 1
+			end = -1
+		case r == ',':
+			mustBeDelim = false
+			if start != i {
+				if len(parts) == 0 {
+					parts = append(parts, namespace)
+				}
+				parts = append(parts, pathsStr[start:end])
 			}
-
-			if inBackticks {
-				continue
+			switch len(parts) {
+			case 0:
+				return nil, errors.NewDatastoreInvalidPathError("empty path", fmt.Sprintf("path %d", len(paths)+1))
+			case 1:
+				// impossible
+				return nil, errors.NewDatastoreInvalidPathError("internal error", fmt.Sprintf("path %d", len(paths)+1))
+			case 2:
+				if parts[0] != "" {
+					paths = append(paths, &Path{elements: parts})
+				} else {
+					switch len(qc) {
+					case 0:
+						parts[0] = defaultNamespace
+						paths = append(paths, &Path{elements: parts})
+					case 1: // namespace:
+						parts[0] = qc[0]
+						paths = append(paths, &Path{elements: parts})
+					case 2: // namespace:bucket
+						return nil, errors.NewDatastoreInvalidPathError("missing scope", fmt.Sprintf("path %d", len(paths)+1))
+					case 3: // namespace:bucket.scope
+						paths = append(paths, &Path{elements: []string{qc[0], qc[1], qc[2], parts[1]}})
+					default:
+						return nil, errors.NewDatastoreInvalidPathError("too many elements", fmt.Sprintf("path %d", len(paths)+1))
+					}
+				}
+			case 3:
+				switch {
+				case len(qc) == 0 || len(qc) == 1 || parts[0] != "":
+					return nil, errors.NewDatastoreInvalidPathError("missing collection", fmt.Sprintf("path %d", len(paths)+1))
+				case len(qc) == 2: // namespace:bucket
+					paths = append(paths, &Path{elements: []string{qc[0], qc[1], parts[1], parts[2]}})
+				default:
+					// both the qc + path is more than 4 elements
+					return nil, errors.NewDatastoreInvalidPathError("too many elements", fmt.Sprintf("path %d", len(paths)+1))
+				}
+			case 4:
+				if parts[0] == "" {
+					// do not consider the query_context once bucket, scope & collection have been specified
+					parts[0] = defaultNamespace
+				}
+				paths = append(paths, &Path{elements: parts})
+			default:
+				return nil, errors.NewDatastoreInvalidPathError("too many elements", fmt.Sprintf("path %d", len(paths)+1))
 			}
-
+			start = i + 1
+			end = -1
+			namespace = ""
+			parts = nil
 		default:
-			if comma {
-				comma = false
+			if unicode.IsSpace(r) {
+				// trim space as we go
+				if end == -1 {
+					start++
+				} else {
+					// once we've started collecting non-space characters, the only thing that can come after subsequent spaces is
+					// the end of the element
+					mustBeDelim = true
+				}
+			} else if mustBeDelim {
+				return nil, errors.NewDatastoreInvalidPathError("invalid or missing element quoting",
+					fmt.Sprintf("path %d", len(paths)+1))
+			} else {
+				end = i + 1
 			}
 		}
 	}
-
-	if inBackticks {
-		return nil, pErr("unclosed backtick at %v", lastbacktick)
+	if quotes {
+		return nil, errors.NewDatastoreInvalidPathError("missing closing quote", fmt.Sprintf("path %d", len(paths)+1))
+	} else if start < len(pathsStr) {
+		return nil, errors.NewDatastoreInvalidPathError("internal error", fmt.Sprintf("path %d", len(paths)+1))
 	}
-
-	if comma {
-		return nil, pErr("trailing comma at %v", lastcomma)
-	}
-
-	if len(elems) == _MAX_PATHS {
-		return nil, pErr("more than %v paths found", _MAX_PATHS)
-	}
-
-	keyspace = strings.TrimSpace(nlcontext[start:])
-	p, err := NewVariablePathWithContext(keyspace, "default", queryContext)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(p.Parts()) > 4 {
-		return nil, pErr("more than 4 parts for path %v", keyspace)
-	}
-	elems = append(elems, p)
-
-	return elems, nil
+	return paths, nil
 }
 
 func NewPathFromElements(elems []string) *Path {
