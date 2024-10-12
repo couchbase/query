@@ -214,6 +214,9 @@ type awrCB struct {
 	reporterDone           *sync.WaitGroup
 	current                map[string]*awrUniqueStmt
 	ts                     time.Time
+	requests               uint64
+	snapshots              uint64
+	start                  time.Time
 }
 
 func (this *awrCB) Config() map[string]interface{} {
@@ -225,6 +228,30 @@ func (this *awrCB) Config() map[string]interface{} {
 	m["threshold"] = util.OutputDuration(this.config.Threshold())
 	m["interval"] = util.OutputDuration(this.config.Interval())
 	return m
+}
+
+func (this *awrCB) Vitals(m map[string]interface{}) {
+	if this.enabled {
+		v := make(map[string]interface{}, 7)
+		if this.state == _AWR_QUIESCENT {
+			v["state"] = "quiescent"
+		} else {
+			v["state"] = "active"
+			if this.queueFullOmissions > 0 {
+				v["omissions.queue_full"] = this.queueFullOmissions
+			}
+			if this.maxStmtOmissions > 0 {
+				v["omissions.max_statements"] = this.maxStmtOmissions
+			}
+			if this.statementDataOmissions > 0 {
+				v["omissions.statement_data"] = this.statementDataOmissions
+			}
+			v["requests"] = this.requests
+			v["snapshots"] = this.snapshots
+			v["start"] = this.start.Format(util.DEFAULT_FORMAT)
+		}
+		m["awr"] = v
+	}
 }
 
 func (this *awrCB) setQuiescent(quiescent bool) {
@@ -397,6 +424,8 @@ func (this *awrCB) Start() error {
 	this.Lock()
 	this.state = _AWR_QUIESCENT
 	this.activeConfig = this.config
+	this.snapshots = 0
+	this.requests = 0
 	this.queueFullOmissions = 0
 	this.maxStmtOmissions = 0
 	this.statementDataOmissions = 0
@@ -410,6 +439,7 @@ func (this *awrCB) Start() error {
 	go this.worker()
 	go this.worker()
 	go this.reporter()
+	this.start = time.Now()
 	this.enabled = true
 	this.Unlock()
 	logging.Infof(_AWR_MSG+"Started. Config: %v", this.Config())
@@ -657,6 +687,7 @@ func (this *awrCB) processData(data *awrData) {
 	stmt.record(_STAT_PRI_SCAN_OPS, uint64(data.phaseStats[execution.PRIMARY_SCAN_GSI].operators))
 	stmt.record(_STAT_SEQ_SCAN_OPS, uint64(data.phaseStats[execution.PRIMARY_SCAN_SEQ].operators+
 		data.phaseStats[execution.INDEX_SCAN_SEQ].operators))
+	atomic.AddUint64(&this.requests, 1)
 }
 
 func (this *awrCB) worker() {
@@ -808,6 +839,7 @@ func (this *awrCB) reporter() {
 					logging.Warnf(_AWR_MSG+"Failed to insert statement snapshot: %v", errs)
 				}
 			}
+			atomic.AddUint64(&this.snapshots, uint64(ins))
 			logging.Infof(_AWR_MSG+"Saved %d statement snapshot(s) for %d requests. Key prefix: \"%s\"", ins, tot, keybase)
 		} else {
 			logging.Infof(_AWR_MSG+"Discarded %v statement snapshot(s).", len(loc))
