@@ -89,6 +89,7 @@ type Error interface {
 	AddErrorContext(ctx string)
 	Repeat()
 	GetRepeats() int
+	GetErrorCause() Error
 }
 
 type AbortError struct {
@@ -334,6 +335,7 @@ func (e *err) UnmarshalJSON(body []byte) error {
 		Retry   Tristate    `json:"retry"`
 		Cause   interface{} `json:"cause"`
 		Repeats int         `json:"repeats"`
+		Level   string      `json:"_level"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -341,6 +343,11 @@ func (e *err) UnmarshalJSON(body []byte) error {
 		return unmarshalErr
 	}
 
+	for k, v := range levelNames {
+		if v == _unmarshalled.Level {
+			e.level = k
+		}
+	}
 	e.ICode = ErrorCode(_unmarshalled.Code)
 	e.IKey = _unmarshalled.Key
 	e.InternalMsg = _unmarshalled.Message
@@ -624,7 +631,61 @@ func getErrorForCause(e error) interface{} {
 	case interface{ MarshalJSON() ([]byte, error) }:
 		return e
 	case error:
-		return e.Error()
+		s := e.Error()
+		var i interface{}
+		if json.Unmarshal([]byte(s), &i) == nil {
+			return i
+		}
+		return s
+	default:
+		return e
 	}
-	return e
+}
+
+func FromObject(m map[string]interface{}) Error {
+	b, e := json.Marshal(m)
+	if e != nil {
+		return nil
+	}
+	return FromBytes(b)
+}
+
+func FromBytes(b []byte) Error {
+	rv := &err{}
+	if e := rv.UnmarshalJSON(b); e != nil {
+		return nil
+	}
+	return rv
+}
+
+func (this *err) GetErrorCause() Error {
+	if c, ok := this.cause.(map[string]interface{}); ok {
+		if _, ok := c["code"]; ok {
+			rv := FromObject(c)
+			if rv != nil {
+				return rv
+			}
+		}
+		if e, ok := c["cause"]; ok {
+			switch t := e.(type) {
+			case map[string]interface{}:
+				return FromObject(t)
+			case string:
+				return FromBytes([]byte(t))
+			case []byte:
+				return FromBytes(t)
+			}
+		}
+		if e, ok := c["error"]; ok {
+			switch t := e.(type) {
+			case map[string]interface{}:
+				return FromObject(t)
+			case string:
+				return FromBytes([]byte(t))
+			case []byte:
+				return FromBytes(t)
+			}
+		}
+	}
+	return nil
 }
