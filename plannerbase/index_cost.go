@@ -92,7 +92,10 @@ func (this *IndexCost) FetchCost() float64 {
 }
 
 func (this *IndexCost) ScanCost() float64 {
-	return this.cost + this.fetchCost
+	if this.cost > 0.0 && this.fetchCost > 0.0 {
+		return this.cost + this.fetchCost
+	}
+	return this.cost
 }
 
 func (this *IndexCost) SetCost(cost float64) {
