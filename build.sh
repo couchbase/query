@@ -25,6 +25,7 @@ then
     |sed 's/-.*/-local_build/'`
 fi
 
+cwd1=`pwd`
 PRODUCT_VERSION=${PRODUCT_VERSION:-$DEF_VERSION}
 export PRODUCT_VERSION
 
@@ -344,6 +345,7 @@ if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag != 0) ]]; then
     fi
 fi
 
+cd $cwd1
 echo cd parser/n1ql
 cd parser/n1ql
 ./build.sh $*
