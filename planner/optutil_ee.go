@@ -132,6 +132,9 @@ func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, 
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
 		tfetchCost, _, _ := optutil.CalcFetchCost(alias, tcard)
+		if tcost <= 0.0 || tsel <= 0.0 || tcard <= 0.0 || tfrCost <= 0.0 || tfetchCost <= 0.0 {
+			return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
+		}
 		icost := base.NewIndexCost(index, tcost, tcard, tsel, tsize, tfrCost, tfetchCost, skipKeys)
 		indexes = append(indexes, icost)
 		spanMap[icost] = span
