@@ -179,11 +179,7 @@ func decodePSElem(buf []byte, i io.Reader, o io.StringWriter) bool {
 		if !readVal(buf, i, o) {
 			return false
 		}
-		o.WriteString("\",\"~children\":[")
-		if !readElems(buf, i, o) {
-			return false
-		}
-		o.WriteString("]}")
+		o.WriteString("\"}")
 	case planshape.INDEXSCAN2:
 		return simpleIndex(buf, i, o, "IndexScan2")
 	case planshape.INDEXSCAN3:

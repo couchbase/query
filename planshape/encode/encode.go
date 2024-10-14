@@ -70,13 +70,6 @@ func (this *planShape) VisitIndexScan(op *execution.IndexScan) (interface{}, err
 	this.add(planshape.INDEXSCAN)
 	this.adds(plan.Index().Id())
 	this.adds(plan.Index().Name())
-	for _, o := range op.Children() {
-		_, e := o.Accept(this)
-		if e != nil {
-			return nil, e
-		}
-	}
-	this.addNUL()
 	return nil, nil
 }
 
