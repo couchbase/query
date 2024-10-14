@@ -700,6 +700,9 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, namespace, bucket, scope st
 	inferschema := util.Now()
 	collSchema, err = inferSchemaForKeyspaces(collSchema, namespace, bucket, scope, inferKeyspaceNames,
 		context)
+	if err != nil {
+		return nil, "", "", err
+	}
 
 	if len(collSchema) == 0 {
 		collnames, err = getCollNames(namespace, bucket, scope)
