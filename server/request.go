@@ -225,6 +225,8 @@ type Request interface {
 	SessionMemory() uint64
 
 	Halt(err errors.Error)
+
+	Format(util.DurationStyle, bool, bool, bool) map[string]interface{}
 }
 
 type RequestID interface {
@@ -1666,4 +1668,121 @@ func (this *BaseRequest) SetNaturalStatement(nlstmt algebra.Statement) {
 
 func (this *BaseRequest) NaturalStatement() algebra.Statement {
 	return this.nlStatement
+}
+
+func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof bool, redact bool) map[string]interface{} {
+	item := make(map[string]interface{}, 32)
+	item["requestId"] = this.Id().String()
+	item["requestTime"] = this.RequestTime().Format(util.DEFAULT_FORMAT)
+	item["elapsedTime"] = util.FormatDuration(time.Since(this.RequestTime()), durStyle)
+	if this.ServiceTime().IsZero() {
+		item["executionTime"] = util.FormatDuration(0, durStyle)
+	} else {
+		item["executionTime"] = util.FormatDuration(time.Since(this.ServiceTime()), durStyle)
+	}
+	item["state"] = this.State().StateName()
+	item["scanConsistency"] = this.ScanConsistency()
+	item["n1qlFeatCtrl"] = this.FeatureControls()
+	if cId := this.ClientID().String(); cId != "" {
+		item["clientContextID"] = cId
+	}
+	if this.Statement() != "" {
+		item["statement"] = this.RedactedStatement()
+	}
+	if this.Type() != "" {
+		item["statementType"] = this.Type()
+	}
+	if this.QueryContext() != "" {
+		item["queryContext"] = this.QueryContext()
+	}
+	if this.UseFts() {
+		item["useFts"] = this.UseFts()
+	}
+	if this.UseCBO() {
+		item["useCBO"] = this.UseCBO()
+	}
+	if this.UseReplica() == value.TRUE {
+		item["useReplica"] = value.TristateToString(this.UseReplica())
+	}
+	if this.TxId() != "" {
+		item["txid"] = this.TxId()
+	}
+	if !this.TransactionStartTime().IsZero() {
+		item["transactionElapsedTime"] = util.FormatDuration(time.Since(this.TransactionStartTime()), durStyle)
+		remTime := this.TxTimeout() - time.Since(this.TransactionStartTime())
+		if remTime > 0 {
+			item["transactionRemainingTime"] = util.FormatDuration(remTime, durStyle)
+		}
+	}
+	if this.ThrottleTime() > time.Duration(0) {
+		item["throttleTime"] = util.FormatDuration(this.ThrottleTime(), durStyle)
+	}
+	if this.CpuTime() > time.Duration(0) {
+		item["cpuTime"] = util.FormatDuration(this.CpuTime(), durStyle)
+	}
+	if this.IoTime() > time.Duration(0) {
+		item["ioTime"] = util.FormatDuration(this.IoTime(), durStyle)
+	}
+	if this.WaitTime() > time.Duration(0) {
+		item["waitTime"] = util.FormatDuration(this.WaitTime(), durStyle)
+	}
+	p := this.FmtPhaseCounts()
+	if p != nil {
+		item["phaseCounts"] = p
+	}
+	p = this.FmtPhaseOperators()
+	if p != nil {
+		item["phaseOperators"] = p
+	}
+	p = this.FmtPhaseTimes(durStyle)
+	if p != nil {
+		item["phaseTimes"] = p
+	}
+	if usedMemory := this.UsedMemory(); usedMemory != 0 {
+		item["usedMemory"] = usedMemory
+	}
+	if sessionMemory := this.SessionMemory(); sessionMemory != 0 {
+		item["sessionMemory"] = sessionMemory
+	}
+
+	if p := this.Prepared(); p != nil {
+		item["preparedName"] = p.Name()
+		item["preparedText"] = p.Text()
+	}
+	if credsString := datastore.CredsString(this.Credentials()); credsString != "" {
+		item["users"] = credsString
+	}
+	if remoteAddr := this.RemoteAddr(); remoteAddr != "" {
+		item["remoteAddr"] = remoteAddr
+	}
+	if userAgent := this.UserAgent(); userAgent != "" {
+		item["userAgent"] = userAgent
+	}
+	if memoryQuota := this.MemoryQuota(); memoryQuota != 0 {
+		item["memoryQuota"] = memoryQuota
+	}
+
+	if prof {
+		timings := this.GetTimings()
+		if timings != nil {
+			item["timings"] = value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings))
+			p := this.FmtOptimizerEstimates(timings)
+			if p != nil {
+				item["optimizerEstimates"] = value.NewValue(p)
+			}
+		}
+	}
+
+	if controls {
+		na := this.RedactedNamedArgs()
+		if na != nil {
+			item["namedArgs"] = util.InterfaceRedacted(na, redact)
+		}
+		pa := this.RedactedPositionalArgs()
+		if pa != nil {
+			item["positionalArgs"] = util.InterfaceRedacted(pa, redact)
+		}
+	}
+
+	return item
 }

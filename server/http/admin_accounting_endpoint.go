@@ -34,7 +34,6 @@ import (
 	dictionary "github.com/couchbase/query/datastore/couchbase"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
 	functionsBridge "github.com/couchbase/query/functions/bridge"
@@ -1852,149 +1851,23 @@ func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName str
 func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, profiling bool, redact bool,
 	durStyle util.DurationStyle) interface{} {
 
-	reqMap := map[string]interface{}{
-		"requestId": request.Id().String(),
-	}
-	cId := request.ClientID().String()
-	if cId != "" {
-		reqMap["clientContextID"] = cId
-	}
-	if request.Statement() != "" {
-		reqMap["statement"] = util.Redacted(request.Statement(), redact)
-	}
-	if request.Type() != "" {
-		reqMap["statementType"] = request.Type()
-	}
-	if request.QueryContext() != "" {
-		reqMap["queryContext"] = request.QueryContext()
-	}
-	if request.Prepared() != nil {
-		p := request.Prepared()
-		reqMap["preparedName"] = p.Name()
-		reqMap["preparedText"] = p.Text()
-	}
-	if request.TxId() != "" {
-		reqMap["txid"] = request.TxId()
-	}
-	reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
-	reqMap["elapsedTime"] = util.FormatDuration(time.Since(request.RequestTime()), durStyle)
-	if request.ServiceTime().IsZero() {
-		reqMap["executionTime"] = util.FormatDuration(0, durStyle)
-	} else {
-		reqMap["executionTime"] = util.FormatDuration(time.Since(request.ServiceTime()), durStyle)
-	}
-	if !request.TransactionStartTime().IsZero() {
-		reqMap["transactionElapsedTime"] = util.FormatDuration(time.Since(request.TransactionStartTime()), durStyle)
-		remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
-		if remTime > 0 {
-			reqMap["transactionRemainingTime"] = util.FormatDuration(remTime, durStyle)
-		}
-	}
-	reqMap["state"] = request.State().StateName()
-	reqMap["scanConsistency"] = request.ScanConsistency()
-	if request.UseFts() {
-		reqMap["useFts"] = request.UseFts()
-	}
-	if request.UseCBO() {
-		reqMap["useCBO"] = request.UseCBO()
-	}
-	if request.UseReplica() == value.TRUE {
-		reqMap["useReplica"] = value.TristateToString(request.UseReplica())
-	}
-	reqMap["n1qlFeatCtrl"] = request.FeatureControls()
-
-	p := request.Output().FmtPhaseCounts()
-	if p != nil {
-		reqMap["phaseCounts"] = p
-	}
-	p = request.Output().FmtPhaseOperators()
-	if p != nil {
-		reqMap["phaseOperators"] = p
-	}
-	p = request.Output().FmtPhaseTimes(durStyle)
-	if p != nil {
-		reqMap["phaseTimes"] = p
-	}
-	usedMemory := request.UsedMemory()
-	if usedMemory != 0 {
-		reqMap["usedMemory"] = usedMemory
-	}
-	sessionMemory := request.SessionMemory()
-	if usedMemory != 0 {
-		reqMap["sessionMemory"] = sessionMemory
-	}
+	prof := false
+	ctrl := false
 	if profiling {
+		p := request.Profile()
+		if p == server.ProfUnset {
+			p = endpoint.server.Profile()
+		}
+		prof = (p == server.ProfOn || p == server.ProfBench) && !request.Sensitive()
 
-		prof := request.Profile()
-		if prof == server.ProfUnset {
-			prof = endpoint.server.Profile()
-		}
-
-		// TODO - check lifetime of entry
-		// by the time we marshal, is this still valid?
-		if (prof == server.ProfOn || prof == server.ProfBench) && !request.Sensitive() {
-			timings := request.GetTimings()
-			if timings != nil {
-				reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings))
-				p = request.Output().FmtOptimizerEstimates(timings)
-				if p != nil {
-					reqMap["optimizerEstimates"] = value.NewValue(p)
-				}
-			}
-		}
-		cpuTime := request.CpuTime()
-		if cpuTime > time.Duration(0) {
-			reqMap["cpuTime"] = util.FormatDuration(cpuTime, durStyle)
-		}
-		ioTime := request.IoTime()
-		if ioTime > time.Duration(0) {
-			reqMap["ioTime"] = util.FormatDuration(ioTime, durStyle)
-		}
-		waitTime := request.WaitTime()
-		if waitTime > time.Duration(0) {
-			reqMap["waitTime"] = util.FormatDuration(waitTime, durStyle)
-		}
-
-		var ctrl bool
 		ctr := request.Controls()
 		if ctr == value.NONE {
 			ctrl = endpoint.server.Controls()
 		} else {
 			ctrl = (ctr == value.TRUE)
 		}
-		if ctrl {
-			na := request.RedactedNamedArgs()
-			if na != nil {
-				reqMap["namedArgs"] = util.InterfaceRedacted(na, redact)
-			}
-			pa := request.RedactedPositionalArgs()
-			if pa != nil {
-				reqMap["positionalArgs"] = util.InterfaceRedacted(pa, redact)
-			}
-			memoryQuota := request.MemoryQuota()
-			if memoryQuota != 0 {
-				reqMap["memoryQuota"] = memoryQuota
-			}
-		}
 	}
-	credsString := datastore.CredsString(request.Credentials())
-	if credsString != "" {
-		reqMap["users"] = util.Redacted(credsString, redact)
-	}
-	remoteAddr := request.RemoteAddr()
-	if remoteAddr != "" {
-		reqMap["remoteAddr"] = remoteAddr
-	}
-	userAgent := request.UserAgent()
-	if userAgent != "" {
-		reqMap["userAgent"] = userAgent
-	}
-	throttleTime := request.ThrottleTime()
-	if throttleTime > time.Duration(0) {
-		reqMap["throttleTime"] = util.FormatDuration(throttleTime, durStyle)
-	}
-
-	return reqMap
+	return request.Format(durStyle, ctrl, prof, redact)
 }
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (

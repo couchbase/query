@@ -9,8 +9,6 @@
 package system
 
 import (
-	"time"
-
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -146,142 +144,30 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					return
 				}
 
-				et := context.FormatDuration(0)
-				if !request.ServiceTime().IsZero() {
-					et = context.FormatDuration(time.Since(request.ServiceTime()))
-				}
-
-				item = value.NewAnnotatedValue(map[string]interface{}{
-					"requestId":       localKey,
-					"requestTime":     request.RequestTime().Format(expression.DEFAULT_FORMAT),
-					"elapsedTime":     context.FormatDuration(time.Since(request.RequestTime())),
-					"executionTime":   et,
-					"state":           request.State().StateName(),
-					"scanConsistency": request.ScanConsistency(),
-					"n1qlFeatCtrl":    request.FeatureControls(),
-				})
-				if node != "" {
-					item.SetField("node", node)
-				}
-				cId := request.ClientID().String()
-				if cId != "" {
-					item.SetField("clientContextID", cId)
-				}
-				if request.Statement() != "" {
-					item.SetField("statement", request.RedactedStatement())
-				}
-				if request.Type() != "" {
-					item.SetField("statementType", request.Type())
-				}
-				if request.QueryContext() != "" {
-					item.SetField("queryContext", request.QueryContext())
-				}
-				if request.UseFts() {
-					item.SetField("useFts", request.UseFts())
-				}
-				if request.UseCBO() {
-					item.SetField("useCBO", request.UseCBO())
-				}
-				if request.UseReplica() == value.TRUE {
-					item.SetField("useReplica", value.TristateToString(request.UseReplica()))
-				}
-				if request.TxId() != "" {
-					item.SetField("txid", request.TxId())
-				}
-				if !request.TransactionStartTime().IsZero() {
-					item.SetField("transactionElapsedTime", context.FormatDuration(time.Since(request.TransactionStartTime())))
-					remTime := request.TxTimeout() - time.Since(request.TransactionStartTime())
-					if remTime > 0 {
-						item.SetField("transactionRemainingTime", context.FormatDuration(remTime))
-					}
-				}
-				if request.ThrottleTime() > time.Duration(0) {
-					item.SetField("throttleTime", context.FormatDuration(request.ThrottleTime()))
-				}
-				if request.CpuTime() > time.Duration(0) {
-					item.SetField("cpuTime", context.FormatDuration(request.CpuTime()))
-				}
-				if request.IoTime() > time.Duration(0) {
-					item.SetField("ioTime", context.FormatDuration(request.IoTime()))
-				}
-				if request.WaitTime() > time.Duration(0) {
-					item.SetField("waitTime", context.FormatDuration(request.WaitTime()))
-				}
-				p := request.Output().FmtPhaseCounts()
-				if p != nil {
-					item.SetField("phaseCounts", p)
-				}
-				p = request.Output().FmtPhaseOperators()
-				if p != nil {
-					item.SetField("phaseOperators", p)
-				}
-				p = request.Output().FmtPhaseTimes(context.DurationStyle())
-				if p != nil {
-					item.SetField("phaseTimes", p)
-				}
-				usedMemory := request.UsedMemory()
-				if usedMemory != 0 {
-					item.SetField("usedMemory", usedMemory)
-				}
-				sessionMemory := request.SessionMemory()
-				if sessionMemory != 0 {
-					item.SetField("sessionMemory", sessionMemory)
-				}
-
-				if request.Prepared() != nil {
-					p := request.Prepared()
-					item.SetField("preparedName", p.Name())
-					item.SetField("preparedText", p.Text())
-				}
-				credsString := datastore.CredsString(request.Credentials())
-				if credsString != "" {
-					item.SetField("users", credsString)
-				}
-				remoteAddr := request.RemoteAddr()
-				if remoteAddr != "" {
-					item.SetField("remoteAddr", remoteAddr)
-				}
-				userAgent := request.UserAgent()
-				if userAgent != "" {
-					item.SetField("userAgent", userAgent)
-				}
-				memoryQuota := request.MemoryQuota()
-				if memoryQuota != 0 {
-					item.SetField("memoryQuota", memoryQuota)
-				}
-
-				var ctrl bool
+				ctrl := false
 				ctr := request.Controls()
 				if ctr == value.NONE {
 					ctrl = server.GetControls()
 				} else {
 					ctrl = (ctr == value.TRUE)
 				}
-				if ctrl {
-					na := request.RedactedNamedArgs()
-					if na != nil {
-						item.SetField("namedArgs", na)
-					}
-					pa := request.RedactedPositionalArgs()
-					if pa != nil {
-						item.SetField("positionalArgs", pa)
-					}
-				}
 
+				itemMap := request.Format(context.DurationStyle(), ctrl, !request.Sensitive(), false)
+				item = value.NewAnnotatedValue(itemMap)
+				item.SetField("requestId", localKey)
+				if node != "" {
+					item.SetField("node", node)
+				}
 				item.SetMetaField(value.META_KEYSPACE, b.fullName)
 
-				if !request.Sensitive() {
-					timings := request.GetTimings()
-					if timings != nil {
-						item.SetMetaField(value.META_PLAN, value.ApplyDurationStyleToValue(context.DurationStyle(),
-							value.NewMarshalledValue(timings)))
-						optEstimates := request.Output().FmtOptimizerEstimates(timings)
-						if optEstimates != nil {
-							item.SetMetaField(value.META_OPT_ESTIMATES, value.NewMarshalledValue(optEstimates))
-						}
-					}
+				if v, ok := item.Field("timings"); ok {
+					item.SetMetaField(value.META_PLAN, v)
+					item.UnsetField("timings")
 				}
-
+				if v, ok := item.Field("optimizerEstimates"); ok {
+					item.SetMetaField(value.META_OPT_ESTIMATES, v)
+					item.UnsetField("optimizerEstimates")
+				}
 				item.SetId(key)
 			})
 			if err != nil {
