@@ -129,9 +129,6 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 			}
 
-		case KEYSPACE_NAME_AUS, KEYSPACE_NAME_AUS_SETTINGS:
-			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
-
 		// system read for everything else
 		default:
 			privs.Add(fullname, auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
