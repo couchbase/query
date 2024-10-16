@@ -67,6 +67,74 @@
             ]
         }
     ]
+    },
+    {
+        "testcase": "MB-63918",
+        "statements":"MERGE INTO purchase p USING (SELECT customerId, ARRAY_AGG(productId) productIds FROM orders WHERE productId IS NOT NULL GROUP BY customerId) o ON p.customerId = o.customerId AND ANY pd IN p.lineItems SATISFIES pd.product IN o.productIds END WHEN MATCHED THEN UPDATE set po.count = po.count + 1 FOR po IN p.lineItems WHEN po.product IN o.productIds END",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "Check result of previous MERGE statement",
+        "statements":"SELECT p.customerId, p.lineItems FROM (SELECT customerId, ARRAY_AGG(productId) productIds FROM orders WHERE productId IS NOT NULL GROUP BY customerId) o JOIN purchase p ON o.customerId = p.customerId AND ANY pd IN p.lineItems SATISFIES pd.product IN o.productIds END ORDER BY p.customerId",
+        "ordered": true,
+        "results": [
+        {
+            "customerId": "customer112",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product26"
+                }
+            ]
+        },
+        {
+            "customerId": "customer736",
+            "lineItems": [
+                {
+                    "count": 5,
+                    "product": "product477"
+                },
+                {
+                    "count": 6,
+                    "product": "product10"
+                },
+                {
+                    "count": 2,
+                    "product": "product216"
+                },
+                {
+                    "count": 7,
+                    "product": "product363"
+                }
+            ]
+        },
+        {
+            "customerId": "customer947",
+            "lineItems": [
+                {
+                    "count": 7,
+                    "product": "product414"
+                }
+            ]
+        },
+        {
+            "customerId": "customer947",
+            "lineItems": [
+                {
+                    "count": 2,
+                    "product": "product400"
+                },
+                {
+                    "count": 6,
+                    "product": "product586"
+                },
+                {
+                    "count": 1,
+                    "product": "product340"
+                }
+            ]
+        }
+    ]
     }
 ]
-
