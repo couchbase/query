@@ -441,7 +441,7 @@ func getUnnestIndexSargKeys(keys datastore.IndexKeys, sargKey expression.Express
 			rv = append(rv, &datastore.IndexKey{op, attr})
 		}
 	} else {
-		rv = append(rv, &datastore.IndexKey{sargKey, datastore.IK_NONE})
+		rv = append(rv, &datastore.IndexKey{sargKey, keys[0].Attributes})
 	}
 	isArrays = make([]bool, len(rv))
 	for i := 0; i < len(rv); i++ {
