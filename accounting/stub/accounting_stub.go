@@ -11,8 +11,6 @@
 package accounting_stub
 
 import (
-	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/couchbase/query/accounting"
@@ -42,10 +40,6 @@ func (AccountingStoreStub) URL() string {
 
 func (AccountingStoreStub) MetricRegistry() accounting.MetricRegistry {
 	return MetricRegistryStub{}
-}
-
-func (AccountingStoreStub) MetricReporter() accounting.MetricReporter {
-	return MetricReporterStub{}
 }
 
 func (AccountingStoreStub) Vitals(util.DurationStyle) (map[string]interface{}, errors.Error) {
@@ -222,25 +216,3 @@ func (MetricRegistryStub) Timers() map[string]accounting.Timer {
 func (MetricRegistryStub) Histograms() map[string]accounting.Histogram {
 	return nil
 }
-
-// Periodically report all registered metrics to a source (console, log, service)
-type MetricReporterStub struct{}
-
-func (MetricReporterStub) MetricRegistry() accounting.MetricRegistry {
-	return MetricRegistryStub{}
-}
-
-func statsHandler(w http.ResponseWriter, req *http.Request) {
-	// NOP: write empty stats body
-	fmt.Fprintf(w, "{}")
-}
-
-func (MetricReporterStub) Start(interval int64, unit time.Duration) {
-	http.HandleFunc("/query/stats/", statsHandler)
-}
-
-func (MetricReporterStub) Stop() {}
-
-func (MetricReporterStub) Report() {}
-
-func (MetricReporterStub) RateUnit() time.Duration { return 0 }

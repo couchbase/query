@@ -11,8 +11,6 @@
 package accounting_gm
 
 import (
-	"expvar"
-	"fmt"
 	"runtime"
 	"sync"
 	"time"
@@ -31,7 +29,6 @@ import (
 type gometricsAccountingStore struct {
 	sync.Mutex
 	registry      accounting.MetricRegistry
-	reporter      accounting.MetricReporter
 	stats         *system.SystemStats
 	lastUtime     int64
 	lastStime     int64
@@ -45,7 +42,6 @@ func NewAccountingStore() (accounting.AccountingStore, errors.Error) {
 	var err error
 	rv := &gometricsAccountingStore{
 		registry: &goMetricRegistry{},
-		reporter: &goMetricReporter{},
 	}
 
 	// open sigar for stats
@@ -75,10 +71,6 @@ func (g *gometricsAccountingStore) URL() string {
 
 func (g *gometricsAccountingStore) MetricRegistry() accounting.MetricRegistry {
 	return g.registry
-}
-
-func (g *gometricsAccountingStore) MetricReporter() accounting.MetricReporter {
-	return g.reporter
 }
 
 func (g *gometricsAccountingStore) CompletedRequests() int64 {
@@ -298,118 +290,4 @@ func (g *goMetricRegistry) Histograms() map[string]accounting.Histogram {
 		}
 	})
 	return histograms
-}
-
-type goMetricReporter struct {
-}
-
-func (g *goMetricReporter) MetricRegistry() accounting.MetricRegistry {
-	return &goMetricRegistry{}
-}
-
-func (g *goMetricReporter) Start(interval int64, unit time.Duration) {
-	// Expose the metrics to expvars
-	publish_expvars(metrics.DefaultRegistry)
-}
-
-func (g *goMetricReporter) Stop() {
-	// Stop exposing the metrics to expvars
-}
-
-func (g *goMetricReporter) Report() {
-}
-
-func (g *goMetricReporter) RateUnit() time.Duration {
-	// Redundant: RateUnit determined by client of expvars
-	// (i.e. whatever is polling expvars endpoint)
-	return 0
-}
-
-// publish_expvars: expose each metric in the given registry to expvars
-func publish_expvars(r metrics.Registry) {
-	du := float64(time.Nanosecond)
-	percentiles := []float64{0.50, 0.75, 0.95, 0.99, 0.999}
-	r.Each(func(name string, i interface{}) {
-		switch m := i.(type) {
-		case metrics.Counter:
-			expvar.Publish(fmt.Sprintf("%s.Count", name), expvar.Func(func() interface{} {
-				return m.Count()
-			}))
-		case metrics.Meter:
-			expvar.Publish(fmt.Sprintf("%s.Rate1", name), expvar.Func(func() interface{} {
-				return m.Rate1()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Rate5", name), expvar.Func(func() interface{} {
-				return m.Rate5()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Rate15", name), expvar.Func(func() interface{} {
-				return m.Rate15()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Mean", name), expvar.Func(func() interface{} {
-				return m.RateMean()
-			}))
-		case metrics.Histogram:
-			expvar.Publish(fmt.Sprintf("%s.Count", name), expvar.Func(func() interface{} {
-				return m.Count()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Mean", name), expvar.Func(func() interface{} {
-				return m.Mean()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Min", name), expvar.Func(func() interface{} {
-				return m.Min()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Max", name), expvar.Func(func() interface{} {
-				return m.Max()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.StdDev", name), expvar.Func(func() interface{} {
-				return m.StdDev()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Variance", name), expvar.Func(func() interface{} {
-				return m.Variance()
-			}))
-			for _, p := range percentiles {
-				expvar.Publish(fmt.Sprintf("%s.Percentile%2.3f", name, p), expvar.Func(func() interface{} {
-					return m.Percentile(p)
-				}))
-			}
-		case metrics.Timer:
-			expvar.Publish(fmt.Sprintf("%s.Rate1", name), expvar.Func(func() interface{} {
-				return m.Rate1()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Rate5", name), expvar.Func(func() interface{} {
-				return m.Rate5()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Rate15", name), expvar.Func(func() interface{} {
-				return m.Rate15()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.RateMean", name), expvar.Func(func() interface{} {
-				return m.RateMean()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Mean", name), expvar.Func(func() interface{} {
-				return du * m.Mean()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Min", name), expvar.Func(func() interface{} {
-				return int64(du) * m.Min()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Max", name), expvar.Func(func() interface{} {
-				return int64(du) * m.Max()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.StdDev", name), expvar.Func(func() interface{} {
-				return du * m.StdDev()
-			}))
-			expvar.Publish(fmt.Sprintf("%s.Variance", name), expvar.Func(func() interface{} {
-				return du * m.Variance()
-			}))
-			for _, p := range percentiles {
-				expvar.Publish(fmt.Sprintf("%s.Percentile%2.3f", name, p), expvar.Func(func() interface{} {
-					return m.Percentile(p)
-				}))
-			}
-		}
-	})
-	expvar.Publish("time", expvar.Func(now))
-}
-
-func now() interface{} {
-	return time.Now().Format(time.RFC3339Nano)
 }

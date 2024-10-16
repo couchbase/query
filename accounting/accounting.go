@@ -23,7 +23,6 @@ type AccountingStore interface {
 	Id() string                                                       // Id of this AccountingStore
 	URL() string                                                      // URL to this AccountingStore
 	MetricRegistry() MetricRegistry                                   // The MetricRegistry that this AccountingStore is managing
-	MetricReporter() MetricReporter                                   // The MetricReporter that this AccountingStore is using
 	Vitals(util.DurationStyle) (map[string]interface{}, errors.Error) // The Vital Signs of the entity that this AccountingStore
 	ExternalVitals(map[string]interface{}) map[string]interface{}     // Vitals comeing from outside
 	NewCounter() Counter                                              // Create individual metrics
@@ -129,24 +128,6 @@ type MetricRegistry interface {
 	Meters() map[string]Meter         // all registered meters
 	Timers() map[string]Timer         // all registered timers
 	Histograms() map[string]Histogram // all registered histograms
-}
-
-// Periodically report all registered metrics to a source (console, log, service)
-type MetricReporter interface {
-	MetricRegistry() MetricRegistry // The Metrics Registry being reported on
-
-	// Start reporting at the given interval and unit
-	// (e.g. interval=10, unit=Second => report every 10 seconds)
-	Start(interval int64, unit time.Duration)
-
-	// Stop reporting
-	Stop()
-
-	// Report current values of all metrics in the registry
-	Report()
-
-	// The rate unit to use for reporting
-	RateUnit() time.Duration
 }
 
 // define metrics mnemonics

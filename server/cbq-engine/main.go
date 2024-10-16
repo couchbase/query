@@ -322,8 +322,6 @@ func main() {
 	} else {
 		// Create the metrics we are interested in
 		accounting.RegisterMetrics(acctstore)
-		// Make metrics available
-		acctstore.MetricReporter().Start(1, 1)
 	}
 
 	// Start the completed requests log
