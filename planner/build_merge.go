@@ -45,6 +45,11 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 
 	onclause := stmt.On()
 	if !stmt.IsOnKey() {
+		this.arrayId, err = expression.AssignArrayId(onclause, this.arrayId)
+		if err != nil {
+			return nil, err
+		}
+
 		if !outer {
 			// setup usable predicate from ON-clause for source scan
 			_, err = this.processPredicate(onclause, true)
@@ -53,11 +58,6 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 			}
 
 			this.pushableOnclause = onclause
-		}
-
-		this.arrayId, err = expression.AssignArrayId(onclause, this.arrayId)
-		if err != nil {
-			return nil, err
 		}
 	}
 
