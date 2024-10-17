@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -51,8 +50,6 @@ const (
 	GPT4o_2024_05_13 = "gpt-4o-2024-05-13"
 )
 
-var _NLCONTEXT_REGEX *regexp.Regexp
-
 const (
 	maxconcurrency = 4
 	maxWaiters     = 16
@@ -86,26 +83,6 @@ func (this *naturalReqThrottler) nlgate() chan bool {
 }
 
 func init() {
-	bucketOrScopeIdentifier := `[^\x60,\.\[\]]+`
-	bucketscopecollection := fmt.Sprintf("(%s|\\`%s\\`)", bucketOrScopeIdentifier,
-		bucketOrScopeIdentifier)
-
-	coll1 := bucketscopecollection
-	coll2 := fmt.Sprintf("%s\\,%s", bucketscopecollection, bucketscopecollection)
-	coll3 := fmt.Sprintf("%s\\,%s\\,%s", bucketscopecollection, bucketscopecollection,
-		bucketscopecollection)
-	coll4 := fmt.Sprintf("%s\\,%s\\,%s\\,%s", bucketscopecollection, bucketscopecollection,
-		bucketscopecollection, bucketscopecollection)
-
-	collList := fmt.Sprintf("\\[(%s|%s|%s|%s)\\]", coll1, coll2, coll3, coll4)
-	optcollList := fmt.Sprintf("(\\.%s)?", collList)
-
-	namespace := bucketscopecollection
-	optnamespace := fmt.Sprintf("(%s\\:)?", namespace)
-
-	pattern := fmt.Sprintf("^%s%s\\.%s%s$", optnamespace, bucketscopecollection,
-		bucketscopecollection, optcollList)
-	_NLCONTEXT_REGEX = regexp.MustCompile(pattern)
 
 	nlreqThrottler = naturalReqThrottler{
 		gate:       make(chan bool, maxconcurrency),
@@ -115,19 +92,6 @@ func init() {
 	for i := 0; i < maxconcurrency; i++ {
 		nlreqThrottler.nlgate() <- true
 	}
-}
-
-// Accept
-// bucket.scope
-// bucket.scope.[<upto_4_collections>]
-// namespace:bucket.scope
-// namespace:bucket.scope.[<upto_4_collections>]
-func ValidateNaturalContext(naturalContext string) errors.Error {
-
-	if !_NLCONTEXT_REGEX.MatchString(naturalContext) {
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT)
-	}
-	return nil
 }
 
 type NaturalContext interface {
@@ -229,7 +193,7 @@ func getJWTFromSessionsApi(nlCred string, refresh bool) (string, errors.Error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SESSIONS_AUTH, nlCred)
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SESSIONS_AUTH)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -256,51 +220,6 @@ func getJWTFromSessionsApi(nlCred string, refresh bool) (string, errors.Error) {
 	return entry.token, nil
 }
 
-func ParseNaturalLanguageContext(naturalLanguageContext string) (namespace, bucket, scope string,
-	inferKeyspaceNames []string) {
-	matches := _NLCONTEXT_REGEX.FindStringSubmatch(naturalLanguageContext)
-
-	if len(matches) > 0 {
-		namespace = matches[2]
-		bucket = matches[3]
-		scope = matches[4]
-
-		addUnique := func(slice []string, strs ...string) []string {
-			uniqueMap := make(map[string]bool)
-			// Add new strings if they are not already in the slice
-			for _, s := range strs {
-				if !uniqueMap[s] && s != "" {
-					slice = append(slice, s)
-					uniqueMap[s] = true
-				}
-			}
-
-			return slice
-		}
-		if matches[13] != "" {
-			coll1name := matches[13]
-			coll2name := matches[14]
-			coll3name := matches[15]
-			coll4name := matches[16]
-			inferKeyspaceNames = addUnique(inferKeyspaceNames, coll1name, coll2name, coll3name, coll4name)
-		} else if matches[10] != "" {
-			coll1name := matches[10]
-			coll2name := matches[11]
-			coll3name := matches[12]
-			inferKeyspaceNames = addUnique(inferKeyspaceNames, coll1name, coll2name, coll3name)
-		} else if matches[8] != "" {
-			coll1name := matches[8]
-			coll2name := matches[9]
-			inferKeyspaceNames = addUnique(inferKeyspaceNames, coll1name, coll2name)
-		} else if matches[7] != "" {
-			coll1name := matches[7]
-			inferKeyspaceNames = addUnique(inferKeyspaceNames, coll1name)
-		}
-	}
-
-	return
-}
-
 // Prompt
 type message struct {
 	Role    string `json:"role"`
@@ -322,8 +241,7 @@ type prompt struct {
 	Messages           []message          `json:"messages"`
 }
 
-func newPrompt(collSchema map[string]map[string]string, collnames []string, bucket, scope string,
-	naturalPrompt string) (*prompt, errors.Error) {
+func newPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -343,84 +261,25 @@ func newPrompt(collSchema map[string]map[string]string, collnames []string, buck
 
 	var userMessage string
 	var userMessageBuf strings.Builder
-	if len(collSchema) == 0 {
 
-		var collnamesString string
-		b := strings.Builder{}
-		end := len(collnames) - 1
-		for _, c := range collnames[:end] {
-			b.WriteString("\"")
-			b.WriteString(c)
-			b.WriteString("\"")
-		}
-		b.WriteString("\"")
-		b.WriteString(collnames[end])
-		b.WriteString("\"")
-
-		collnamesString = b.String()
-
-		userMessageBuf.WriteString("Your minimum task is to CREATE a COLLECTION. Consider the below Information")
-		userMessageBuf.WriteString(" to determine whether this task can be accomplished:\n\nInformation:")
-		userMessageBuf.WriteString("\n\n- Prompt: \"")
-		userMessageBuf.WriteString(naturalPrompt)
-		userMessageBuf.WriteString("\"")
-		userMessageBuf.WriteString("\n\n- Bucket: ")
-		userMessageBuf.WriteString(bucket)
-		userMessageBuf.WriteString("\n\n- Scope: ")
-		userMessageBuf.WriteString(scope)
-		userMessageBuf.WriteString("\n\n- Taken collection names: ")
-		userMessageBuf.WriteString(collnamesString)
-		userMessageBuf.WriteString("\n\nHaving considered the above Information, follow these steps:")
-		userMessageBuf.WriteString("\n\n1. Ask yourself: is the user prompt relevant to the task at hand? If not,")
-		userMessageBuf.WriteString(" first write \"#ERR:\" and politely explain why not.")
-		userMessageBuf.WriteString("\n\n2. If the task can't be accomplished, say \"#ERR:\" and politely explain why not.")
-		userMessageBuf.WriteString("\n\n3. Output valid SQL++ only and with no explanation.")
-
-		userMessage = userMessageBuf.String()
-	} else if len(collSchema) == 1 {
-		for coll, schema := range collSchema {
-			binSchemaData, err := json.Marshal(schema)
-			if err != nil {
-				return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
-			}
-			schemaData := string(binSchemaData)
-
-			userMessageBuf.WriteString("Information:\n\nCollection: ")
-			userMessageBuf.WriteString(coll)
-			userMessageBuf.WriteString("\n\nCollection's schema: ")
-			userMessageBuf.WriteString(schemaData)
-			userMessageBuf.WriteString("\n\nPrompt: \"")
-			userMessageBuf.WriteString(naturalPrompt)
-			userMessageBuf.WriteString("\"\n\nThe query context is set.")
-			userMessageBuf.WriteString(" \n\nBased on the above Information, write valid SQL++ only and with no explanation.")
-			userMessageBuf.WriteString(" For retrieval, use aliases.")
-			userMessageBuf.WriteString("\n\nIf you're sure the Prompt can't be used to generate a query,")
-			userMessageBuf.WriteString(" first say \"#ERR:\" and then explain why not.")
-
-			userMessage = userMessageBuf.String()
-			break
-		}
-
-	} else if len(collSchema) > 1 {
-		binSchemaData, err := json.Marshal(collSchema)
-		if err != nil {
-			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
-		}
-		schemaData := string(binSchemaData)
-
-		userMessageBuf.WriteString("Information:\n\nPrompt: \"")
-		userMessageBuf.WriteString(naturalPrompt)
-		userMessageBuf.WriteString("\"\n\nAvailable collections and their schemas:\n\n")
-		userMessageBuf.WriteString(schemaData)
-		userMessageBuf.WriteString("\"\n\nThe query context is set.")
-		userMessageBuf.WriteString("\n\nBased on the above Information, write valid SQL++ only and with no explanation.")
-		userMessageBuf.WriteString(" For retrieval, use aliases.")
-		userMessageBuf.WriteString("\n\nIf you're sure the Prompt can't be used to generate a query, first say")
-		userMessageBuf.WriteString("\"#ERR:\" and then explain why not.")
-
-		userMessage = userMessageBuf.String()
+	binKeyspacesInfo, err := json.Marshal(keyspaceInfo)
+	if err != nil {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
 	}
-
+	keyspaceInfoData := string(binKeyspacesInfo)
+	userMessageBuf.WriteString("Information about keyspaces:\n\n")
+	userMessageBuf.WriteString(keyspaceInfoData)
+	userMessageBuf.WriteString("\n\nPrompt: \"")
+	userMessageBuf.WriteString(naturalPrompt)
+	userMessageBuf.WriteString("\"\n\nBased on the above Information, write valid SQL++ only and with no explanation.")
+	userMessageBuf.WriteString("\n\nNote query context is unset.")
+	userMessageBuf.WriteString("\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias.")
+	userMessageBuf.WriteString("\n\nAlias is for ease of use.")
+	userMessageBuf.WriteString("\n\nIf keyspace from user prompt is not in keyspace information, say")
+	userMessageBuf.WriteString("\"#ERR:\" keyspace not found in the natural context.\n\n")
+	userMessageBuf.WriteString("Finally if you're sure the Prompt can't be used to generate a query, say")
+	userMessageBuf.WriteString("\"#ERR:\" and then explain why not.")
+	userMessage = userMessageBuf.String()
 	rv.Messages = []message{
 		message{
 			Role:    "user",
@@ -598,10 +457,9 @@ func collectSchemaForPromptFromInfer(schema map[string]string, inferSchema value
 	return schema
 }
 
-func inferSchema(schema map[string]string, namespace, bucket, scope, coll string,
-	context NaturalContext) (map[string]string, errors.Error) {
+func inferSchema(schema map[string]string, p *algebra.Path, context NaturalContext) (map[string]string, errors.Error) {
 
-	keyspace, err := datastore.GetKeyspace(namespace, bucket, scope, coll)
+	keyspace, err := datastore.GetKeyspace(p.Parts()...)
 	if err != nil {
 		return nil, err
 	}
@@ -622,57 +480,33 @@ func inferSchema(schema map[string]string, namespace, bucket, scope, coll string
 	return schema, nil
 }
 
-func inferSchemaForKeyspaces(keyspaceSchemas map[string]map[string]string, namespace, bucket, scope string, keyspaces []string,
-	context NaturalContext) (map[string]map[string]string, errors.Error) {
+func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebra.Path,
+	context NaturalContext) (map[string]interface{}, errors.Error) {
 
-	for _, keyspace := range keyspaces {
+	var err errors.Error
+	for _, p := range elems {
 		schema := map[string]string{}
-		schema, err := inferSchema(schema, namespace, bucket, scope, keyspace, context)
+		schema, err = inferSchema(schema, p, context)
+
 		if err != nil {
-			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_INFER, keyspace, err)
+			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_INFER, p.ProtectedString(), err)
 		}
-		keyspaceSchemas[keyspace] = schema
+		info := map[string]interface{}{}
+		info["schema"] = schema
+		fullpath := p.ProtectedString()
+		info["fullpath"] = fullpath[strings.Index(fullpath, ":"):]
+
+		keyspaceInfo[p.Keyspace()] = info
 	}
 
-	return keyspaceSchemas, nil
+	return keyspaceInfo, nil
 }
 
-func getCollNames(namespace, bucket, scope string) ([]string, errors.Error) {
-	if namespace == "" {
-		namespace = "default"
-	}
-	ns, err := datastore.GetDatastore().NamespaceById(namespace)
-	if err != nil {
-		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_COLLNAMES,
-			namespace+":"+"`"+bucket+"`.`"+scope+"`", err)
-	}
-
-	b, err := ns.BucketByName(bucket)
-	if err != nil {
-		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_COLLNAMES,
-			namespace+":"+"`"+bucket+"`.`"+scope+"`", err)
-	}
-
-	s, err := b.ScopeByName(scope)
-	if err != nil {
-		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_COLLNAMES,
-			namespace+":"+"`"+bucket+"`.`"+scope+"`", err)
-	}
-
-	collnames, err := s.KeyspaceNames()
-	if err != nil {
-		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_COLLNAMES,
-			namespace+":"+"`"+bucket+"`.`"+scope+"`", err)
-	}
-
-	return collnames, nil
-}
-
-func ProcessRequest(nlCred, nlOrgId, nlquery string, namespace, bucket, scope string, inferKeyspaceNames []string,
-	context NaturalContext, record func(execution.Phases, time.Duration)) (algebra.Statement, string, string, errors.Error) {
+func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path,
+	context NaturalContext, record func(execution.Phases, time.Duration)) (algebra.Statement, string, errors.Error) {
 
 	if err := nlreqThrottler.getWaiter(); err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 	defer nlreqThrottler.releaseWaiter()
 
@@ -684,60 +518,45 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, namespace, bucket, scope st
 			nlreqThrottler.nlgate() <- true
 		}()
 	case <-time.After(WaitTimeout):
-		return nil, "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_TIMEOUT)
+		return nil, "", errors.NewNaturalLanguageRequestError(errors.E_NL_TIMEOUT)
 	}
 
 	getJwt := util.Now()
 	jwt, err := getJWTFromSessionsApi(nlCred, false)
+	// _, err := getJWTFromSessionsApi(nlCred, false)
 	record(execution.GETJWT, util.Since(getJwt))
 	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 
-	collSchema := make(map[string]map[string]string, len(inferKeyspaceNames))
-	var collnames []string
-
+	keyspaceInfo := make(map[string]interface{}, len(elems))
 	inferschema := util.Now()
-	collSchema, err = inferSchemaForKeyspaces(collSchema, namespace, bucket, scope, inferKeyspaceNames,
-		context)
+	keyspaceInfo, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context)
 	if err != nil {
-		return nil, "", "", err
-	}
-
-	if len(collSchema) == 0 {
-		collnames, err = getCollNames(namespace, bucket, scope)
+		return nil, "", err
 	}
 	record(execution.INFERSCHEMA, util.Since(inferschema))
 
+	prompt, err := newPrompt(keyspaceInfo, nlquery)
 	if err != nil {
-		return nil, "", "", err
-	}
-
-	prompt, err := newPrompt(collSchema, collnames, bucket, scope, nlquery)
-	if err != nil {
-		return nil, "", "", err
+		return nil, "", err
 	}
 
 	chatcompletionreq := util.Now()
 	sqlstmt, err := doChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
 	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
 	if err != nil {
-		return nil, "", "", err
-	}
-
-	queryContext := bucket + "." + scope
-	if namespace != "" {
-		queryContext = namespace + ":" + queryContext
+		return nil, "", err
 	}
 
 	var parseErr error
 	parse := util.Now()
 	var nlAlgebraStmt algebra.Statement
-	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(sqlstmt, namespace, queryContext)
+	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(sqlstmt, "default", "")
 	record(execution.NLPARSE, util.Since(parse))
 	if parseErr != nil {
-		return nil, "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_PARSE_GENERATED_STMT, sqlstmt, parseErr)
+		return nil, "", errors.NewNaturalLanguageRequestError(errors.E_NL_PARSE_GENERATED_STMT, sqlstmt, parseErr)
 	}
 
-	return nlAlgebraStmt, sqlstmt, queryContext, nil
+	return nlAlgebraStmt, sqlstmt, nil
 }

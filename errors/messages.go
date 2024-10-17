@@ -7521,7 +7521,7 @@ var errData = []ErrData{
 	{
 		Code:        E_NL_SESSIONS_AUTH, // 19202
 		symbol:      "E_NL_SESSIONS_AUTH",
-		Description: "Sessions API Authorization failed: \"natural_cred\" «natural_cred» is not authorized",
+		Description: "Sessions API Authorization failed: \"natural_cred\" is not authorized",
 		IsUser:      YES,
 		Action: []string{
 			"Create a Couchbase cloud account",
@@ -7628,22 +7628,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_PROMPT_COLLNAMES, // 19213
-		symbol:      "E_NL_PROMPT_COLLNAMES",
-		Description: "Couldn't get keyspace names in «namespace:bucket.scope» for the prompt",
-		IsUser:      MAYBE,
-		Reason: []string{
-			"Failed to load namespace, bucket or scope from the datastore",
-		},
-		Action: []string{
-			"Ensure the validity of the information passed in the \"natural_context\" parameter.",
-		},
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
-		Code:        E_NL_MISSING_NL_PARAM, // 19214
+		Code:        E_NL_MISSING_NL_PARAM, // 19213
 		symbol:      "E_NL_MISSING_NL_PARAM",
 		Description: "Natural Language request expects «param» request parameter to be set",
 		IsUser:      YES,
@@ -7656,7 +7641,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_PARSE_GENERATED_STMT, // 19215
+		Code:        E_NL_PARSE_GENERATED_STMT, // 19214
 		symbol:      "E_NL_PARSE_GENERATED_STMT",
 		Description: "Error parsing generated statement: «generated_statement»",
 		IsUser:      MAYBE,
@@ -7671,13 +7656,12 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:   E_NL_CONTEXT, // 19216
-		symbol: "E_NL_CONTEXT",
-		Description: "Invalid format for \"natural_context\" request parameter: " +
-			"argument doesn't resemble [«namespace»:]«bucket».«scope»[.[«up_to_4_collections»]]",
-		IsUser: YES,
+		Code:        E_NL_CONTEXT, // 19215
+		symbol:      "E_NL_CONTEXT",
+		Description: "incorrect natural_context",
+		IsUser:      YES,
 		Reason: []string{
-			"The required format is <<bucket>>.<<scope>> or <<bucket>>.<<scope>>.[<<list of up to 4 collections>>>].",
+			"argument fails to meet validation for natural_context path(s)",
 		},
 		Action: []string{
 			"Revise the \"natural_context\" parameter.",
@@ -7687,7 +7671,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_PROMPT_INFER, // 19217
+		Code:        E_NL_PROMPT_INFER, // 19216
 		symbol:      "E_NL_PROMPT_INFER",
 		Description: "Schema inferring failed for keyspace «keyspace»",
 		IsUser:      YES,
@@ -7702,7 +7686,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_ORG_NOT_FOUND, // 19218
+		Code:        E_NL_ORG_NOT_FOUND, // 19217
 		symbol:      "E_NL_ORG_NOT_FOUND",
 		Description: "Organization: «organization» not found",
 		IsUser:      YES,
@@ -7714,7 +7698,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:   E_NL_ORG_UNAUTH, // 19219
+		Code:   E_NL_ORG_UNAUTH, // 19218
 		symbol: "E_NL_ORG_UNAUTH",
 		Description: "Access to organisation «organization» is not authorized." +
 			" Or collison in JWT refresh due to an external client",
@@ -7728,7 +7712,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CREATE_CHATCOMPLETIONS_REQ, // 19220
+		Code:        E_NL_CREATE_CHATCOMPLETIONS_REQ, // 19219
 		symbol:      "E_NL_CREATE_CHATCOMPLETIONS_REQ",
 		Description: "Failed to create a new request to «chat completions api»",
 		AppliesTo: []string{
@@ -7736,7 +7720,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_TOO_MANY_WAITERS, // 19221
+		Code:        E_NL_TOO_MANY_WAITERS, // 19220
 		symbol:      "E_NL_TOO_MANY_WAITERS",
 		Description: "Too many waiters, dropping the request",
 		Reason: []string{
@@ -7750,7 +7734,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_TIMEOUT, // 19222
+		Code:        E_NL_TIMEOUT, // 19221
 		symbol:      "E_NL_TIMEOUT",
 		Description: "Timed out waiting to be processed.",
 		Reason: []string{
@@ -7764,7 +7748,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_REQ_FEAT_DISABLED, // 19223
+		Code:        E_NL_REQ_FEAT_DISABLED, // 19222
 		symbol:      "E_NL_REQ_FEAT_DISABLED",
 		Description: "Natural language request processing is disabled.",
 		Reason: []string{

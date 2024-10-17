@@ -26,12 +26,11 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_CREATE_SESSIONS_REQ: {SESSIONS_IKEY, "Failed to create a new request to %v"},
 	E_NL_SEND_SESSIONS_REQ:   {SESSIONS_IKEY, "Failed to send the request to %v to get JWT"},
 	E_NL_SESSIONS_AUTH: {SESSIONS_IKEY, "Sessions API Authorization failed: " +
-		" \"natural_cred\" %v is not authorized"},
+		" \"natural_cred\" is not authorized"},
 	E_NL_SESSIONS_RESP_READ:               {SESSIONS_IKEY, "Error reading the response from %v"},
 	E_NL_SESSIONS_RESP_UNMARSHAL:          {SESSIONS_IKEY, "Unmarshalling response from %v failed: "},
 	E_NL_SESSIONS_PARSE_EXPIRE_TIME:       {SESSIONS_IKEY, "Error parsing \"expiresAt\": %v "},
 	E_NL_PROMPT_SCHEMA_MARSHAL:            {PROMPT_IKEY, "Error marshalling schema information for prompt:"},
-	E_NL_PROMPT_COLLNAMES:                 {PROMPT_IKEY, "Couldn't get keyspace names in %v for the prompt"},
 	E_NL_PROMPT_INFER:                     {PROMPT_IKEY, "Schema inferring failed for keyspace %v"},
 	E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL:   {CHATCOMPLTIONS_IKEY, "Error marshalling prompt for chat completions API request"},
 	E_NL_SEND_CHATCOMPLETIONS_REQ:         {CHATCOMPLTIONS_IKEY, "Couldn't send chat completions request to %v"},
@@ -41,9 +40,8 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_ERR_CHATCOMPLETIONS_RESP:         {CHATCOMPLTIONS_IKEY, "LLM error: %v"},
 	E_NL_MISSING_NL_PARAM:                 {NLPARAM_IKEY, "Natural Language request expects %s request parameter to be set"},
 	E_NL_PARSE_GENERATED_STMT:             {PARSE_IKEY, "Error parsing generated statement: %v"},
-	E_NL_CONTEXT: {NLCONTEXT_IKEY, "Invalid format for \"natural_context\" request parameter: " +
-		"argument doesn't resemble [<namespace>:]<bucket>.<scope>[.[<up_to_4_collections>]]"},
-	E_NL_ORG_NOT_FOUND: {CHATCOMPLTIONS_IKEY, "Organization: %v not found"},
+	E_NL_CONTEXT:                          {NLCONTEXT_IKEY, "Incorrect \"natural_context\""},
+	E_NL_ORG_NOT_FOUND:                    {CHATCOMPLTIONS_IKEY, "Organization: %v not found"},
 	E_NL_ORG_UNAUTH: {CHATCOMPLTIONS_IKEY, "Access to organisation '%v' is not authorized." +
 		" Or collison in JWT refresh due to an external client"},
 	E_NL_CREATE_CHATCOMPLETIONS_REQ: {CHATCOMPLTIONS_IKEY, "Failed to create a new request to %v"},

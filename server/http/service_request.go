@@ -31,7 +31,6 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/memory"
-	"github.com/couchbase/query/natural"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -158,8 +157,27 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	if err == nil {
-		if rv.stmtCnt == 0 && rv.Natural() == "" {
-			err = errors.NewServiceErrorMissingValue("statement or prepared")
+		if rv.stmtCnt == 0 {
+			if rv.Natural() == "" {
+				err = errors.NewServiceErrorMissingValue("statement or prepared")
+			} else if rv.Natural() != "" {
+				missingForNatural := []string{}
+				if rv.NaturalContext() == "" {
+					missingForNatural = append(missingForNatural, "\"natural_context\"")
+				}
+
+				if rv.NaturalCred() == "" {
+					missingForNatural = append(missingForNatural, "\"natural_cred\"")
+				}
+
+				if rv.NaturalOrganizationId() == "" {
+					missingForNatural = append(missingForNatural, "\"natural_orgid\"")
+				}
+				if len(missingForNatural) > 0 {
+					missingParams := strings.Join(missingForNatural, ",")
+					err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, missingParams)
+				}
+			}
 		} else if rv.stmtCnt > 1 {
 			err = errors.NewServiceErrorMultipleValues("statement and prepared")
 		}
@@ -2443,10 +2461,7 @@ func handleNaturalOrgId(rv *httpRequest, httpArgs httpRequestArgs, parm string, 
 func handleNaturalContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	naturalContext, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
-		err = natural.ValidateNaturalContext(naturalContext)
-		if err == nil {
-			rv.SetNaturalContext(naturalContext)
-		}
+		rv.SetNaturalContext(naturalContext)
 	}
 	return err
 }

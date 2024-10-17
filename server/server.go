@@ -757,12 +757,8 @@ func processNaturalReqArgs(request Request) (nlcontext, nlCred, nlOrgId string, 
 }
 
 func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
-	var nlcontext string
-	var nlCred string
-	var nlOrgId string
-	var namespace, bucket, scope string
-	var inferKeyspaceNames []string
 	var err errors.Error
+	var elems []*algebra.Path
 
 	nlquery := request.Natural()
 	if nlquery == "" {
@@ -775,38 +771,22 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		return true, false
 	}
 
-	nlcontext, nlCred, nlOrgId, err = processNaturalReqArgs(request)
+	elems, err = algebra.ValidateAndGetPaths(request.NaturalContext(), request.QueryContext())
 	if err != nil {
-		request.Fail(err)
+		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
 		request.Failed(this)
 		return true, false
 	}
-
-	namespace, bucket, scope, inferKeyspaceNames = natural.ParseNaturalLanguageContext(nlcontext)
-	if namespace != "" && namespace[0] == '`' {
-		namespace = namespace[1 : len(namespace)-1]
-	} else {
-		namespace = "default"
-	}
-
-	if bucket[0] == '`' {
-		bucket = bucket[1 : len(bucket)-1]
-	}
-
-	if scope[0] == '`' {
-		scope = scope[1 : len(scope)-1]
-	}
-	request.SetNamespace(namespace)
 
 	if !this.setupRequestContext(request) {
 		request.Failed(this)
 		return true, false
 	}
 
-	var sqlStmt, queryContext string
+	var sqlStmt string
 	var nlstmt algebra.Statement
-	nlstmt, sqlStmt, queryContext, err = natural.ProcessRequest(nlCred, nlOrgId,
-		nlquery, namespace, bucket, scope, inferKeyspaceNames, request.ExecutionContext(),
+	nlstmt, sqlStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
+		nlquery, elems, request.ExecutionContext(),
 		request.Output().AddPhaseTime)
 
 	if err != nil {
@@ -816,7 +796,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	request.SetStatement(sqlStmt)
-	request.SetQueryContext(queryContext)
+	request.SetQueryContext("")
 	request.IncrementStatementCount()
 	request.SetNaturalStatement(nlstmt)
 

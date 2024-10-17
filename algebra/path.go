@@ -9,11 +9,14 @@
 package algebra
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 )
+
+const _MAX_PATHS = 4
 
 // A keyspace path. Supported forms:
 //
@@ -156,6 +159,111 @@ func NewVariablePathWithContext(keyspace, namespace, queryContext string) (*Path
 		}
 		return &Path{elements: elems}, nil
 	}
+}
+
+// Parses natural language context and query context to extract
+// and validate paths, returning a slice of algebra.Path objects or an error
+
+// `nlcontext` is expected to follow a specific format:
+// paths is separated by a comma
+// paths may also be enclosed in backticks for escaping.
+// a path can have up to three parts, separated by periods
+// maximum of 4 paths
+func ValidateAndGetPaths(nlcontext string, queryContext string) ([]*Path, errors.Error) {
+	elems := []*Path{}
+
+	pErr := func(message string, args ...interface{}) errors.Error {
+		return errors.NewDatastoreInvalidPathError(fmt.Sprintf(message, args...))
+	}
+
+	inBackticks := false
+	lastbacktick := -1
+	lastcomma := -1
+	start := 0
+	var keyspace string
+
+	comma := false
+	for i, s := range nlcontext {
+		switch {
+		case s == ',':
+			if inBackticks {
+				continue
+			}
+
+			if comma {
+				return nil, pErr("unexpected comma at %v", i)
+			}
+
+			if start == i {
+				return nil, pErr("leading comma at %v", i)
+			}
+
+			if len(elems) == _MAX_PATHS {
+				return nil, pErr("more than %v paths found", _MAX_PATHS)
+			}
+
+			keyspace = strings.TrimSpace(nlcontext[start:i])
+			p, err := NewVariablePathWithContext(keyspace, "default", queryContext)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(p.Parts()) > 4 {
+				return nil, pErr("more than 4 parts for path %v", keyspace)
+			}
+			elems = append(elems, p)
+			start = i + 1
+
+			comma = true
+			lastcomma = i
+		case s == '`':
+			inBackticks = !inBackticks
+			lastbacktick = i
+
+			if comma {
+				comma = false
+			}
+
+		case s == ' ':
+			if comma {
+				continue
+			}
+
+			if inBackticks {
+				continue
+			}
+
+		default:
+			if comma {
+				comma = false
+			}
+		}
+	}
+
+	if inBackticks {
+		return nil, pErr("unclosed backtick at %v", lastbacktick)
+	}
+
+	if comma {
+		return nil, pErr("trailing comma at %v", lastcomma)
+	}
+
+	if len(elems) == _MAX_PATHS {
+		return nil, pErr("more than %v paths found", _MAX_PATHS)
+	}
+
+	keyspace = strings.TrimSpace(nlcontext[start:])
+	p, err := NewVariablePathWithContext(keyspace, "default", queryContext)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(p.Parts()) > 4 {
+		return nil, pErr("more than 4 parts for path %v", keyspace)
+	}
+	elems = append(elems, p)
+
+	return elems, nil
 }
 
 func NewPathFromElements(elems []string) *Path {
