@@ -50,8 +50,7 @@ const (
 )
 
 func InitAWR() {
-	thisNode := ""
-	process := func(val []byte) {
+	process := func(val []byte, thisNode string) {
 		var m map[string]interface{}
 		if err := json.Unmarshal(val, &m); err == nil {
 			if n, ok := m["node"]; ok && n != thisNode {
@@ -64,22 +63,20 @@ func InitAWR() {
 		}
 	}
 	val, _, err := metakv.Get(_AWR_MKV_CONFIG)
-	if err != nil {
+	if err != nil || len(val) == 0 {
 		// save initial config if not already there
 		err := metakv.Add(_AWR_MKV_CONFIG, AwrCB.distribConfig())
 		if err != nil && err != metakv.ErrRevMismatch {
-			logging.Errorf(_AWR_MSG+"Unable to initialize monitor: %v", err)
+			logging.Errorf(_AWR_MSG+"Unable to initialize common configuration: %v", err)
 		}
 	} else {
 		// make sure we process initial settings immediately
-		process(val)
+		process(val, "")
 	}
-	// after the initial settings, we'll only process updates from other nodes
-	thisNode = distributed.RemoteAccess().WhoAmI()
 	// monitor entry
 	go metakv.RunObserveChildren(_AWR_PATH, func(kve metakv.KVEntry) error {
 		if kve.Path == _AWR_MKV_CONFIG {
-			process(kve.Value)
+			process(kve.Value, distributed.RemoteAccess().WhoAmI())
 		}
 		return nil
 	}, make(chan struct{}))
