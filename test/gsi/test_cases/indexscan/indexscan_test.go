@@ -101,6 +101,7 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX iax5 ON orders(ALL ARRAY (ALL ARRAY [v2.id,v1, c1] FOR v2 IN v1.aa END)  FOR v1 IN a4 END,c1,c2) "+
 		"WHERE test_id = \"ua\"")
 	runStmt(qc, "CREATE INDEX iax6 ON orders(ALL ARRAY v1.val FOR v1 IN a3 WHEN v1.type = \"n\" END,c1,c2) WHERE test_id = \"ua\"")
+	runStmt(qc, "CREATE INDEX iax7 ON orders(ALL ARRAY v1.val FOR v1 IN a3 WHEN v1.type = \"n\" END DESC,c1,c2) WHERE test_id = \"ua\"")
 
 	runMatch("case_array_index_unnest_scan.json", false, true, qc, t)
 	runMatch("case_array_index_unnest_scan2.json", false, true, qc, t)
@@ -111,6 +112,7 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "DROP INDEX orders.iax4")
 	runStmt(qc, "DROP INDEX orders.iax5")
 	runStmt(qc, "DROP INDEX orders.iax6")
+	runStmt(qc, "DROP INDEX orders.iax7")
 
 	// Create skip ranges
 	runStmt(qc, "CREATE INDEX is01 ON orders (c0,c1,c2,DISTINCT a1,c3,c4) WHERE test_id = \"skipranges\"")
