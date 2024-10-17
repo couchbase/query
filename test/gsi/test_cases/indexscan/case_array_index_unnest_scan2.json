@@ -437,7 +437,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 2 END"
         },
         "statements":"SELECT a1 FROM orders AS o UNNEST o.a1 WHERE o.test_id = \"ua\" AND (a1 = 1 OR a1 = 2) ORDER BY a1",
-        "Results": [
+        "results": [
         {
             "a1": 1
         },
@@ -465,7 +465,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ARRAY_LENGTH(v.scans) = 2 END"
         },
         "statements":"SELECT a3.id, a3.val FROM orders AS o UNNEST o.a3 WHERE o.test_id = \"ua\" AND a3.type = \"n\" AND (a3.id = 1 OR a3.val = 111) ORDER BY a3.id, a3.val",
-        "Results": [
+        "results": [
         {
             "id": 1,
             "val": 101
