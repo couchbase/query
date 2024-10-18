@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -84,8 +85,15 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	switch aggregates := aggregates.(type) {
 	case map[string]value.Value:
 		for _, agg := range this.plan.Aggregates() {
+			// we can cache agg.String() and reuse it here as the aggregate expression isn't re-evaluated during this processing
 			a := agg.String()
 			pv := aggregates[a]
+			if pv == nil {
+				// Log an error and explicitly panic
+				// If we attempt to recover from this situation here we'll probably be producing inaccurate results - better to halt
+				logging.Severef("Aggregate '%s' not found for FinalGroup in aggregates (%v) for group key '%v'", a, aggregates, gk)
+				panic("Aggregate not found")
+			}
 			v, e := agg.ComputeFinal(pv, &this.operatorCtx)
 			if e != nil {
 				context.Fatal(errors.NewGroupUpdateError(e, "Error updating final GROUP value."))
@@ -97,7 +105,6 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 			}
 			aggregates[a] = v
 		}
-
 		return true
 	default:
 		context.Fatal(errors.NewInvalidValueError(fmt.Sprintf("Invalid or missing aggregates of type %T.", aggregates)))

@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -98,8 +99,16 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 	}
 
 	for _, agg := range this.plan.Aggregates() {
+		// we can cache agg.String() and reuse it here as the aggregate expression isn't re-evaluated during this processing
 		a := agg.String()
 		pv := cumulative[a]
+		if pv == nil {
+			// Log an error and explicitly panic
+			// If we attempt to recover from this situation here we'll probably be producing inaccurate results - better to halt
+			logging.Severef("Aggregate '%s' not found for IntermediateGroup in aggregates (%v) for group key '%v'",
+				a, cumulative, gk)
+			panic("Aggregate not found")
+		}
 		v, e := agg.CumulateIntermediate(part[a], pv, &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewGroupUpdateError(e, "Error updating intermediate GROUP value."))

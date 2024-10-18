@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -98,8 +99,15 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	}
 
 	for _, agg := range this.plan.Aggregates() {
+		// WARNING: do not cache agg.String() - it may change during CumulateInitial
 		a := agg.String()
 		pv := aggregates[a]
+		if pv == nil {
+			// Log an error and explicitly panic
+			// If we attempt to recover from this situation here we'll probably be producing inaccurate results - better to halt
+			logging.Severef("Aggregate '%s' not found for InitialGroup in aggregates (%v) for group key '%v'", a, aggregates, gk)
+			panic("Aggregate not found")
+		}
 		v, e := agg.CumulateInitial(item, pv, &this.operatorCtx)
 		if e != nil {
 			context.Fatal(errors.NewGroupUpdateError(e, "Error updating initial GROUP value."))
@@ -111,7 +119,12 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 			v.Track()
 			pv.Recycle()
 		}
-		aggregates[a] = v
+		b := agg.String()
+		aggregates[b] = v
+		// delete the previous key if agg.String() has changed
+		if a != b {
+			delete(aggregates, a)
+		}
 	}
 
 	// Update the Group Key's entry in the Map with the Group As field in the item
