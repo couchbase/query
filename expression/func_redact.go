@@ -140,7 +140,7 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 							} else if ru == '\\' {
 								escaped = true
 							} else if ru == '|' {
-								ru, _, err := r.ReadRune()
+								ru, _, err = r.ReadRune()
 								if err != nil {
 									break
 								}
