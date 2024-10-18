@@ -1125,18 +1125,20 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				return nil, err1
 			}
 		}
-
-		var m map[string]interface{}
-		err1 := json.Unmarshal(awr, &m)
-		if err1 != nil {
-			return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
-		}
-		// Note: the "keyspace" is not remapped and has to be updated manually
-		err1 = server.AwrCB.SetConfig(m, true)
-		if err1 != nil {
-			return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
-		}
 		iState.Release()
+
+		if awr != nil { // non-nil if a suitable backup image version
+			var m map[string]interface{}
+			err1 := json.Unmarshal(awr, &m)
+			if err1 != nil {
+				return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
+			}
+			// Note: the "keyspace" is not remapped and has to be updated manually
+			err1 = server.AwrCB.SetConfig(m, true)
+			if err1 != nil {
+				return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
+			}
+		}
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
