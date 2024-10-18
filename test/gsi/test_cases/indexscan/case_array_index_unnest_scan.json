@@ -437,7 +437,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND ARRAY_LENGTH(v.spans) = 2 END"
         },
         "statements":"SELECT v1 FROM orders AS o UNNEST o.a1 AS v1 WHERE o.test_id = \"ua\" AND (v1 = 1 OR v1 = 2) ORDER BY v1",
-        "Results": [
+        "results": [
         {
             "v1": 1
         },
@@ -465,7 +465,7 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ARRAY_LENGTH(v.scans) = 2 END"
         },
         "statements":"SELECT v1.id, v1.val FROM orders AS o UNNEST o.a3 AS v1 WHERE o.test_id = \"ua\" AND v1.type = \"n\" AND (v1.id = 1 OR v1.val = 111) ORDER BY v1.id, v1.val",
-        "Results": [
+        "results": [
         {
             "id": 1,
             "val": 101
@@ -481,6 +481,34 @@
         {
             "id": 11,
             "val": 111
+        }
+    ]
+    },
+    {
+        "testcase": "MB-63920",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "statements":"SELECT v1.val FROM orders AS o UNNEST o.a3 AS v1 WHERE o.test_id = \"ua\" AND v1.type = \"n\" AND v1.val > 1 and o.c1 = 10 ORDER BY v1.val DESC LIMIT 4",
+        "results": [
+        {
+            "val": 105
+        },
+        {
+            "val": 104
+        },
+        {
+            "val": 103
+        },
+        {
+            "val": 102
         }
     ]
     }
