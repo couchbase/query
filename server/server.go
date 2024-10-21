@@ -1341,6 +1341,7 @@ const (
 	_ADMISSION_CHECK_INTERVAL_2 = time.Millisecond * 200
 	_ADMISSION_CHECK_INTERVAL_3 = time.Millisecond * 50
 	_ADMISSION_CHECK_INTERVAL_4 = time.Millisecond * 100
+	_ADMISSION_ERROR_INTERVAL   = time.Second * 5
 
 	_ADMISSION_CHECK_GC_THRESHOLD = time.Millisecond * 250 // if usage is high and the GC hasn't run in this interval, run it
 	_ADMISSION_MIN_FFDC_INTERVAL  = time.Second * 60       // minimum interval between FFDC runs for memory threshold
@@ -1358,6 +1359,7 @@ const (
 func (this *Server) admissions() {
 	triggered := false
 	lastFFDC := int64(0)
+	lastError := int64(0)
 	ticker := time.NewTicker(_ADMISSION_CHECK_TIME_UNIT)
 	waitInterval := _ADMISSION_CHECK_INTERVAL
 	for {
@@ -1380,19 +1382,33 @@ func (this *Server) admissions() {
 		}
 		mu, mf, lastGC := this.MemoryUsage(true)
 		if triggered || mf < _ADMISSION_MIN_FREE_MEM_PERCENT {
+			logging.Debugf(_ADMISSION_MSG_PREFIX+"triggered: %v mf: %v", triggered, mf)
 			this.requestGate.bypass = false
 			if !triggered {
-				logging.Errorf(_ADMISSION_MSG_PREFIX+"Free memory (%d%%) below limit", mf)
+				// don't flood the log with errors
+				if n := util.Now().UnixNano(); n-int64(lastError) >= int64(_ADMISSION_ERROR_INTERVAL) {
+					logging.Errorf(_ADMISSION_MSG_PREFIX+"Free memory (%d%%) below limit", mf)
+					lastError = n
+				}
 				ffdc.Capture(ffdc.MemoryLimit)
+			} else if lastError != 0 {
+				logging.Infof(_ADMISSION_MSG_PREFIX+"Free memory: %d%%", mf)
+				lastError = 0
 			}
 			triggered = this.controlActiveProcessing(mf)
 			waitInterval = _ADMISSION_CHECK_INTERVAL_4
+			logging.Debugf(_ADMISSION_MSG_PREFIX+"triggered: %v", triggered)
 			continue
 		} else {
+			if lastError != 0 {
+				logging.Infof(_ADMISSION_MSG_PREFIX+"Free memory: %d%%", mf)
+				lastError = 0
+			}
 			ffdc.Reset(ffdc.MemoryLimit)
 		}
 		this.requestGate.bypass = (mu < _ADMISSION_BYPASS_MEMORY_PERCENT)
 		if !this.requestGate.bypass {
+			logging.Debugf(_ADMISSION_MSG_PREFIX+"mu: %v", mu)
 			ffdc.Capture(ffdc.MemoryThreshold)
 			lastFFDC = util.Now().UnixNano()
 		} else {
@@ -1403,6 +1419,7 @@ func (this *Server) admissions() {
 		}
 		w := this.requestGate.waiters()
 		if this.requestGate.bypass && w > 0 {
+			logging.Debugf(_ADMISSION_MSG_PREFIX+"w: %v", w)
 			this.requestGate.releaseOne()
 			if mu < _ADMISSION_MEMORY_THRESHOLD_1 && w > 1 {
 				this.requestGate.releaseOne()
@@ -1417,6 +1434,7 @@ func (this *Server) admissions() {
 				waitInterval = _ADMISSION_CHECK_INTERVAL_3
 			}
 		} else if !this.requestGate.bypass && util.Now().UnixNano()-int64(lastGC) > int64(_ADMISSION_CHECK_GC_THRESHOLD) {
+			logging.Debugf(_ADMISSION_MSG_PREFIX+"w: %v, lastGC: %v", w, lastGC)
 			runtime.GC()
 		}
 	}
@@ -1459,6 +1477,7 @@ func (this *Server) controlActiveProcessing(perc uint64) bool {
 	}
 
 	if len(reqs) == 0 {
+		logging.Debugf(_ADMISSION_MSG_PREFIX + "No requests stopped. Running GC.")
 		debug.FreeOSMemory()
 		return false
 	} else if len(reqs) > 1 {
@@ -1501,6 +1520,7 @@ func (this *Server) controlActiveProcessing(perc uint64) bool {
 		rv = released != 0
 		if !rv {
 			debug.FreeOSMemory()
+			logging.Debugf(_ADMISSION_MSG_PREFIX + "No request pipelines to resume.")
 		} else {
 			logging.Infof(_ADMISSION_MSG_PREFIX+"Request pipeline(s) resumed: %d", released)
 		}
