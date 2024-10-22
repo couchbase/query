@@ -63,6 +63,7 @@ type Builder interface {
 	NoExecute() bool
 	SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo
 	SkipCoverTransform() bool
+	CoverSubSelect(sub *algebra.Subselect, subqUnderJoin bool) error
 }
 
 func (this *builder) GetBaseKeyspaces() map[string]*base.BaseKeyspace {
@@ -636,6 +637,8 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 			return err
 		}
 		op.SetKeys(newKeys)
+	case *plan.With:
+		return this.opCoveringTransformation(op.Child(), covers)
 
 		// case *plan.Limit, *plan.Offset:
 	}
@@ -716,6 +719,8 @@ func (this *builder) RemoveFromSubqueries(ops ...plan.Operator) {
 			this.RemoveFromSubqueries(op.Child())
 		case *plan.HashNest:
 			this.RemoveFromSubqueries(op.Child())
+		case *plan.With:
+			this.RemoveFromSubqueries(op.Child())
 		}
 	}
 }
@@ -729,11 +734,51 @@ func (this *builder) SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo 
 }
 
 func (this *builder) SkipCoverTransform() bool {
-	return this.joinEnum() || this.subqUnderJoin() || this.advisorRecommend()
+	return this.joinEnum() || this.subqInJoinEnum() || this.subqUnderJoin() || this.advisorRecommend()
 }
 
 type CoveringSubqInfo interface {
 	SubqTermPlans() []*subqTermPlan
 	AddSubqTermPlan(subPlan *subqTermPlan)
 	CoveringScans() []plan.CoveringOperator
+	SubqueryTerms() []*algebra.SubqueryTerm
+}
+
+func (this *builder) CoverSubSelect(sub *algebra.Subselect, subqUnderJoin bool) (err error) {
+
+	if info, ok := this.subqCoveringInfo[sub]; ok && info != nil {
+		for _, subqTermPlan := range info.SubqTermPlans() {
+			if (subqUnderJoin && !subqTermPlan.IsUnderJoin()) ||
+				(!subqUnderJoin && !subqTermPlan.IsJoinEnum()) {
+				continue
+			}
+			err = this.DoCoveringTransformation([]plan.Operator{subqTermPlan.Operator()}, info.CoveringScans())
+			if err != nil {
+				return err
+			}
+		}
+		subqTerms := info.SubqueryTerms()
+		if len(subqTerms) > 0 {
+			err = this.coverSubqTerms(subqTerms, subqUnderJoin)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (this *builder) coverSubqTerms(subqTerms []*algebra.SubqueryTerm, subqUnderJoin bool) (err error) {
+
+	for _, subqTerm := range subqTerms {
+		for _, sub := range subqTerm.Subquery().Subselects() {
+			err = this.CoverSubSelect(sub, subqUnderJoin)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
