@@ -45,7 +45,7 @@ func (this *sarg) VisitLE(pred *expression.LE) (interface{}, error) {
 			range2.SetFlag(plan.RANGE_DERIVED_FROM_LIKE)
 		}
 	} else if pred.DependsOn(this.key) {
-		return _VALUED_SPANS, nil
+		return getDependsSpans(pred)
 	} else {
 		return nil, nil
 	}

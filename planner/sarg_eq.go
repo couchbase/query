@@ -30,7 +30,7 @@ func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
 	} else if pred.Second().EquivalentTo(this.key) {
 		expr = this.getSarg(pred.First())
 	} else if pred.DependsOn(this.key) {
-		return _VALUED_SPANS, nil
+		return getDependsSpans(pred)
 	} else {
 		return nil, nil
 	}
