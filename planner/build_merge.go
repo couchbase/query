@@ -24,7 +24,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.subChildren = make([]plan.Operator, 0, 8)
 	source := stmt.Source()
 
-	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, _MAP_KEYSPACE_CAP)
+	this.baseKeyspaces = make(map[string]*base.BaseKeyspace, 2)
 	if source.From() != nil {
 		path = source.From().Path()
 	}
@@ -34,6 +34,16 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	targetKeyspace, duration := base.NewBaseKeyspace(stmt.KeyspaceRef().Alias(), stmt.KeyspaceRef().Path(), nil, 2)
 	this.recordSubTime("keyspace.metadata", duration)
 	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
+	srcKeyspace := sourceKeyspace.Keyspace()
+	if srcKeyspace != "" {
+		sourceKeyspace.SetDocCount(optDocCount(srcKeyspace))
+		sourceKeyspace.SetHasDocCount()
+	}
+	tgtKeyspace := targetKeyspace.Keyspace()
+	if tgtKeyspace != "" {
+		targetKeyspace.SetDocCount(optDocCount(tgtKeyspace))
+		targetKeyspace.SetHasDocCount()
+	}
 	this.collectKeyspaceNames()
 
 	this.skipKeyspace = targetKeyspace.Keyspace()

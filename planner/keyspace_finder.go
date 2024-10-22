@@ -49,7 +49,12 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias string, path *algebra.Path,
 	this.metadataDuration += duration
 	newBaseKeyspace.SetOuterlevel(this.outerlevel)
 	this.baseKeyspaces[alias] = newBaseKeyspace
-	this.keyspaceMap[alias] = newBaseKeyspace.Keyspace()
+	keyspace := newBaseKeyspace.Keyspace()
+	this.keyspaceMap[alias] = keyspace
+	if keyspace != "" {
+		newBaseKeyspace.SetDocCount(optDocCount(keyspace))
+		newBaseKeyspace.SetHasDocCount()
+	}
 	return nil
 }
 

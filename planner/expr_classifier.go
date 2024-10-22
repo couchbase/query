@@ -26,15 +26,6 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 		return nil, errors.NewPlanError(nil, "ClassifyExpr: invalid argument baseKeyspaces")
 	}
 
-	// make sure document count is available
-	for _, baseKeyspace := range baseKeyspaces {
-		keyspace := baseKeyspace.Keyspace()
-		if keyspace != "" && !baseKeyspace.HasDocCount() {
-			baseKeyspace.SetDocCount(optDocCount(keyspace))
-			baseKeyspace.SetHasDocCount()
-		}
-	}
-
 	return ClassifyExprKeyspace(expr, baseKeyspaces, keyspaceNames, "", isOnclause, doSelec, advisorValidate, context)
 }
 
