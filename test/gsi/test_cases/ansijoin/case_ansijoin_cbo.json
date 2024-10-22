@@ -197,6 +197,149 @@
                 "c22": 30
             }
         ]
+    },
+    {
+        "testcase": "MB-63947, part 1",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'ph' END"
+        },
+        "queryParams": {"use_cbo": true},
+	"ordered": true,
+        "statements":"SELECT o.ordersId, p.purchaseId FROM orders o LEFT JOIN (SELECT /*+ ORDERED */ c.customerId, ph.purchaseId FROM (SELECT customerId, firstName, lastName FROM customer WHERE lastName IN [ \"Quitzon\", \"Gibson\" ]) AS c LEFT JOIN purchase ph ON c.customerId = ph.customerId) AS p ON o.customerId = p.customerId WHERE o.customerId IS VALUED ORDER BY o.ordersId, p.purchaseId LIMIT 10",
+        "results": [
+            {
+                "ordersId": "orders1",
+                "purchaseId": "purchase2682"
+            },
+            {
+                "ordersId": "orders2",
+                "purchaseId": "purchase2682"
+            },
+            {
+                "ordersId": "orders3",
+                "purchaseId": "purchase2682"
+            },
+            {
+                "ordersId": "orders4",
+                "purchaseId": "purchase2682"
+            },
+            {
+                "ordersId": "orders5",
+                "purchaseId": "purchase3545"
+            },
+            {
+                "ordersId": "orders5",
+                "purchaseId": "purchase6299"
+            },
+            {
+                "ordersId": "orders6",
+                "purchaseId": "purchase3545"
+            },
+            {
+                "ordersId": "orders6",
+                "purchaseId": "purchase6299"
+            }
+        ]
+    },
+    {
+        "testcase": "MB-63947, part 2",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries` SATISFIES v.`correlated` = true AND ANY u WITHIN v.plan.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`as` = 'ph' END END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT o.ordersId, (SELECT c.firstName, c.lastName, c.customerId, ph.purchaseId FROM customer AS c LEFT JOIN purchase ph ON c.customerId = ph.customerId WHERE c.customerId = o.customerId) AS p FROM (SELECT ordersId, customerId FROM orders o WHERE o.customerId IS VALUED) AS o ORDER BY o.ordersId LIMIT 10",
+        "results": [
+            {
+                "ordersId": "orders1",
+                "p": [
+                    {
+                        "customerId": "customer736",
+                        "firstName": "Rashawn",
+                        "lastName": "Quitzon",
+                        "purchaseId": "purchase2682"
+                    }
+                ]
+            },
+            {
+                "ordersId": "orders2",
+                "p": [
+                    {
+                        "customerId": "customer736",
+                        "firstName": "Rashawn",
+                        "lastName": "Quitzon",
+                        "purchaseId": "purchase2682"
+                    }
+                ]
+            },
+            {
+                "ordersId": "orders3",
+                "p": [
+                    {
+                        "customerId": "customer736",
+                        "firstName": "Rashawn",
+                        "lastName": "Quitzon",
+                        "purchaseId": "purchase2682"
+                    }
+                ]
+            },
+            {
+                "ordersId": "orders4",
+                "p": [
+                    {
+                        "customerId": "customer736",
+                        "firstName": "Rashawn",
+                        "lastName": "Quitzon",
+                        "purchaseId": "purchase2682"
+                    }
+                ]
+            },
+            {
+                "ordersId": "orders5",
+                "p": [
+                    {
+                        "customerId": "customer947",
+                        "firstName": "Israel",
+                        "lastName": "Gibson",
+                        "purchaseId": "purchase3545"
+                    },
+                    {
+                        "customerId": "customer947",
+                        "firstName": "Israel",
+                        "lastName": "Gibson",
+                        "purchaseId": "purchase6299"
+                    }
+                ]
+            },
+            {
+                "ordersId": "orders6",
+                "p": [
+                    {
+                        "customerId": "customer947",
+                        "firstName": "Israel",
+                        "lastName": "Gibson",
+                        "purchaseId": "purchase3545"
+                    },
+                    {
+                        "customerId": "customer947",
+                        "firstName": "Israel",
+                        "lastName": "Gibson",
+                        "purchaseId": "purchase6299"
+                    }
+                ]
+            }
+        ]
     }
 ]
 

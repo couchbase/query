@@ -45,6 +45,6 @@ i=test_cases/$TEST
 source ./exportval.sh
 cd $i
 # strip indexer client info-level messages to retain some utility in the output
-(go test -v -p 1 -tags enterprise ./... 2>&1) | grep -v "\[Info\]"
+(go test -v -p 1 -tags enterprise ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
 cd ../..
 source ./resetval.sh

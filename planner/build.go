@@ -190,12 +190,13 @@ const (
 	BUILDER_UNDER_HASH
 	BUILDER_ORDER_MODIFIED
 	BUILDER_SUBQTERM_UNDER_JOIN
+	BUILDER_SUBQTERM_IN_JOIN_ENUM
 	BUILDER_NO_EXECUTE
 	BUILDER_WHERE_DEPENDS_ON_LET
 )
 
 const BUILDER_PRESERVED_FLAGS = (BUILDER_PLAN_HAS_ORDER | BUILDER_HAS_EARLY_ORDER | BUILDER_ORDER_MODIFIED)
-const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_JOIN_ENUM | BUILDER_SUBQTERM_UNDER_JOIN | BUILDER_NO_EXECUTE)
+const BUILDER_PASSTHRU_FLAGS = (BUILDER_PLAN_SUBQUERY | BUILDER_SUBQTERM_UNDER_JOIN | BUILDER_SUBQTERM_IN_JOIN_ENUM | BUILDER_NO_EXECUTE)
 
 type builder struct {
 	indexPushDowns
@@ -440,6 +441,24 @@ func (this *builder) restoreSubqUnderJoin(subqUnderJoin bool) {
 	}
 }
 
+func (this *builder) subqInJoinEnum() bool {
+	return (this.builderFlags & BUILDER_SUBQTERM_IN_JOIN_ENUM) != 0
+}
+
+func (this *builder) setSubqInJoinEnum() bool {
+	subqInJoinEnum := this.hasBuilderFlag(BUILDER_SUBQTERM_IN_JOIN_ENUM)
+	if !subqInJoinEnum {
+		this.setBuilderFlag(BUILDER_SUBQTERM_IN_JOIN_ENUM)
+	}
+	return subqInJoinEnum
+}
+
+func (this *builder) restoreSubqInJoinEnum(subqInJoinEnum bool) {
+	if !subqInJoinEnum {
+		this.unsetBuilderFlag(BUILDER_SUBQTERM_IN_JOIN_ENUM)
+	}
+}
+
 func (this *builder) hasBuilderFlag(flag uint64) bool {
 	return (this.builderFlags & flag) != 0
 }
@@ -608,6 +627,7 @@ func (this *subqTermPlan) IsUnderJoin() bool {
 type coveringSubqInfo struct {
 	subqTermPlans []*subqTermPlan
 	coveringScans []plan.CoveringOperator
+	subqueryTerms []*algebra.SubqueryTerm
 }
 
 func (this *coveringSubqInfo) SubqTermPlans() []*subqTermPlan {
@@ -622,16 +642,15 @@ func (this *coveringSubqInfo) CoveringScans() []plan.CoveringOperator {
 	return this.coveringScans
 }
 
+func (this *coveringSubqInfo) SubqueryTerms() []*algebra.SubqueryTerm {
+	return this.subqueryTerms
+}
+
+func (this *coveringSubqInfo) addSubqueryTerm(subqTerm *algebra.SubqueryTerm) {
+	this.subqueryTerms = append(this.subqueryTerms, subqTerm)
+}
+
 func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operator) error {
-	if this.advisorRecommend() {
-		// no need to do cover transformation
-		return nil
-	}
-
-	if this.subqCoveringInfo == nil {
-		this.subqCoveringInfo = make(map[*algebra.Subselect]CoveringSubqInfo, len(this.baseKeyspaces))
-	}
-
 	flags := int32(0)
 	if this.subqUnderJoin() {
 		if !this.NoExecute() {
@@ -639,7 +658,7 @@ func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operat
 			return nil
 		}
 		flags |= _SUBQPLAN_UNDER_JOIN
-	} else if this.joinEnum() {
+	} else if this.subqInJoinEnum() {
 		// only set JOIN_ENUM flag if UNDER_JOIN is not on (follow UNDER_JOIN first)
 		flags |= _SUBQPLAN_JOIN_ENUM
 
@@ -649,7 +668,24 @@ func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operat
 		if err != nil {
 			return err
 		}
+	} else {
+		// no need to do cover transformation
+		return nil
 	}
+
+	if this.subqCoveringInfo == nil {
+		this.subqCoveringInfo = make(map[*algebra.Subselect]CoveringSubqInfo, len(this.baseKeyspaces))
+	}
+
+	// if there are SubqueryTerms, add those too such that when we do cover transformation
+	// at the end of join enumeration we can find the nested subqueries
+	var subqTerms []*algebra.SubqueryTerm
+	for _, ks := range this.baseKeyspaces {
+		if subqTerm, ok := ks.Node().(*algebra.SubqueryTerm); ok {
+			subqTerms = append(subqTerms, subqTerm)
+		}
+	}
+
 	subqTermPlan := &subqTermPlan{
 		op:    op,
 		flags: flags,
@@ -657,10 +693,13 @@ func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operat
 	if info, ok := this.subqCoveringInfo[node]; ok {
 		if len(this.coveringScans) != len(info.CoveringScans()) {
 			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible coveringScans")
+		} else if len(subqTerms) != len(info.SubqueryTerms()) {
+			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible nested SubqueryTerms")
 		}
 	} else {
 		this.subqCoveringInfo[node] = &coveringSubqInfo{
 			coveringScans: this.coveringScans,
+			subqueryTerms: subqTerms,
 		}
 	}
 	this.subqCoveringInfo[node].AddSubqTermPlan(subqTermPlan)
