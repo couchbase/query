@@ -49,7 +49,7 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 
 	if !pred.First().EquivalentTo(this.key) {
 		if pred.DependsOn(this.key) {
-			return _VALUED_SPANS, nil
+			return getDependsSpans(pred)
 		} else {
 			return nil, nil
 		}
