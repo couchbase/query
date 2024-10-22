@@ -45,7 +45,7 @@ func (this *sarg) VisitLT(pred *expression.LT) (interface{}, error) {
 		range2.Selec1 = selec
 		range2.Selec2 = OPT_SELEC_NOT_AVAIL
 	} else if pred.DependsOn(this.key) {
-		return _VALUED_SPANS, nil
+		return getDependsSpans(pred)
 	} else {
 		return nil, nil
 	}

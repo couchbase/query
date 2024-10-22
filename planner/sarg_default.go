@@ -36,3 +36,14 @@ func (this *sarg) visitDefault(pred expression.Expression) (SargSpans, error) {
 
 	return nil, nil
 }
+
+func getDependsSpans(pred expression.Expression) (SargSpans, error) {
+	propMissing := pred.PropagatesMissing()
+	propNull := pred.PropagatesNull()
+	if propMissing && propNull {
+		return _VALUED_SPANS, nil
+	} else if propNull && !propMissing {
+		return _FULL_SPANS, nil
+	}
+	return nil, nil
+}
