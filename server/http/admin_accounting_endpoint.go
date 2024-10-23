@@ -29,6 +29,7 @@ import (
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/audit"
+	"github.com/couchbase/query/aus"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	dictionary "github.com/couchbase/query/datastore/couchbase"
@@ -1078,7 +1079,13 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return makeBackupHeaderV2(data, nil, nil), nil
 		}
 		awr := server.AwrCB.Config()
-		return makeBackupHeader(data, nil, nil, awr), nil
+
+		// Backup global AUS settings
+		aus, err := aus.FetchAus()
+		if err != nil {
+			aus = nil
+		}
+		return makeBackupHeader(data, nil, nil, awr, aus, nil), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1095,7 +1102,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, err
 		}
 
-		fns, _, _, awr, e := checkBackupHeader(bytes)
+		fns, _, _, awr, ausGlobal, _, e := checkBackupHeader(bytes)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1139,6 +1146,20 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
 			}
 		}
+
+		// Restore global AUS settings
+		if ausGlobal != nil { // non-nil if a suitable backup image version
+			var mAus map[string]interface{}
+			err2 := json.Unmarshal(ausGlobal, &mAus)
+			if err2 != nil {
+				return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
+			}
+
+			err2, _ = aus.SetAus(mAus, true)
+			if err2 != nil {
+				return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
+			}
+		}
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -1175,7 +1196,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		// do not archive functions if the metadata is already stored in KV
 		snapshot := func(name string, v value.Value) error {
 			path := algebra.ParsePath(name)
-			if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude) {
+			if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude, false) {
 				fns = append(fns, v)
 			}
 			return nil
@@ -1194,7 +1215,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 		seqs, err := sequences.BackupSequences("default", bucket, func(name string) bool {
 			path := algebra.ParsePath(name)
-			return filterEval(path, include, exclude)
+			return filterEval(path, include, exclude, false)
 		})
 		if err != nil {
 			return nil, err
@@ -1213,7 +1234,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				parts := strings.Split(key, "::")
 				path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
 				p := algebra.ParsePath(path)
-				if !filterEval(p, include, exclude) {
+				if !filterEval(p, include, exclude, false) {
 					return nil
 				}
 				keys[0] = key
@@ -1242,7 +1263,17 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if version == datastore.BACKUP_VERSION_2 {
 			return makeBackupHeaderV2(fns, seqs, cbo), nil
 		}
-		return makeBackupHeader(fns, seqs, cbo, nil), nil
+
+		// Backup keyspace level AUS settings
+		ausSettings, err := aus.BackupAusSettings("default", bucket, func(pathParts []string) bool {
+			return filterEval(pathParts, include, exclude, true)
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		return makeBackupHeader(fns, seqs, cbo, nil, nil, ausSettings), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1258,7 +1289,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if err != nil {
 			return nil, err
 		}
-		fns, seqs, cbo, _, e := checkBackupHeader(body)
+		fns, seqs, cbo, _, _, ausSettings, e := checkBackupHeader(body)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1392,6 +1423,38 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			iState.Release()
 		}
 
+		// Restore keyspace level AUS settings
+		if ausSettings != nil {
+			remap, err = newRemapper(req.FormValue("remap"), "aus setting")
+
+			if err != nil {
+				return nil, err
+			}
+			index = 0
+			json.SetIndexState(&iState, ausSettings)
+			for {
+				v, err := iState.FindIndex(index)
+				if err != nil {
+					iState.Release()
+					return nil, errors.NewServiceErrorBadValue(err, "restore aus setting")
+				}
+
+				if string(v) == "" {
+					break
+				}
+
+				index++
+
+				err1 := doAusSettingsRestore(v, bucket, include, exclude, remap)
+				if err1 != nil {
+					iState.Release()
+					return nil, err1
+				}
+			}
+			iState.Release()
+
+		}
+
 		// after restoring cleanup any stale entries in the system collection
 		go dictionary.CleanupSystemCollection("default", bucket)
 
@@ -1413,8 +1476,11 @@ const _UDF_KEY = "udfs"
 const _SEQ_KEY = "seqs"
 const _CBO_KEY = "cbo"
 const _AWR_KEY = "awr"
+const _AUS_KEY = "aus"                   // Global AUS settings in system:aus
+const _AUS_SETTINGS_KEY = "aus_settings" // Keyspace level AUS settings in system:aus_settings
 
-func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}) interface{} {
+func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}, aus interface{},
+	ausSettings interface{}) interface{} {
 	data := make(map[string]interface{}, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION
@@ -1422,6 +1488,8 @@ func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}
 	data[_SEQ_KEY] = s
 	data[_CBO_KEY] = c
 	data[_AWR_KEY] = a
+	data[_AUS_KEY] = aus
+	data[_AUS_SETTINGS_KEY] = ausSettings
 	return data
 }
 
@@ -1443,31 +1511,31 @@ func makeBackupHeaderV1(v interface{}) interface{} {
 	return data
 }
 
-func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, errors.Error) {
+func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte, errors.Error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, d)
 	magic, err := oState.FindKey(_MAGIC_KEY)
 	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
 		oState.Release()
-		return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
+		return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
 	}
 	version, err := oState.FindKey(_VERSION_KEY)
 	var ver uint64
 	if err == nil {
 		trimmed := strings.Trim(string(version), "\"")
 		if !strings.HasPrefix(trimmed, "0x") || len(trimmed) <= 2 {
-			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
+			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
 		}
 		ver, err = strconv.ParseUint(trimmed[2:], 16, 64)
 	}
 	if err != nil || ver < _VERSION_MIN || ver > _VERSION_MAX {
 		oState.Release()
-		return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
+		return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
 	}
 	udfs, err := oState.FindKey(_UDF_KEY)
 	if err != nil {
 		oState.Release()
-		return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
+		return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
 	}
 	// only expect sequences & cbo for version 2+ backup images
 	var seqs []byte
@@ -1476,24 +1544,39 @@ func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, errors.Error) 
 		seqs, err = oState.FindKey(_SEQ_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
+			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
 		}
 		cbo, err = oState.FindKey(_CBO_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
+			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
 		}
 	}
 	var awr []byte
+	var aus []byte
+	var ausSettings []byte
 	if ver >= 3 {
 		awr, err = oState.FindKey(_AWR_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing awr field")
+			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing awr field")
 		}
+
+		aus, err = oState.FindKey(_AUS_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus field")
+		}
+
+		ausSettings, err = oState.FindKey(_AUS_SETTINGS_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus_settings field")
+		}
+
 	}
 	oState.Release()
-	return udfs, seqs, cbo, awr, nil
+	return udfs, seqs, cbo, awr, aus, ausSettings, nil
 }
 
 type matcher map[string]map[string]bool
@@ -1569,28 +1652,48 @@ func newFilter(p string) (matcher, errors.Error) {
 	return m, nil
 }
 
-func (f matcher) match(p []string) bool {
+// matchCollections: Whether collection matching should be attempted
+func (f matcher) match(p []string, matchCollections bool) bool {
+	// Only paths with parts containing a scope can be matched
+	if len(p) != 3 && len(p) != 4 {
+		return false
+	}
+
 	scope, ok := f[p[2]]
 	if !ok {
 		return false
 	}
+
+	// Attempt to only match scope
 	if len(scope) == 0 {
 		return true
 	}
 
-	// any collections matches are ignored
-	return false
+	if !matchCollections {
+		// No scope match found. Any collections matches are ignored
+		return false
+	} else {
+		// Check collection matches
+		if len(p) == 4 {
+			if _, ok := scope[p[3]]; ok {
+				return true
+			}
+		}
+
+		return false
+	}
+
 }
 
-func filterEval(path []string, include, exclude matcher) bool {
+func filterEval(path []string, include, exclude matcher, matchCollections bool) bool {
 	if len(include) == 0 && len(exclude) == 0 {
 		return true
 	}
 	if len(include) > 0 {
-		return include.match(path)
+		return include.match(path, matchCollections)
 	}
 	if len(exclude) > 0 {
-		return !exclude.match(path)
+		return !exclude.match(path, matchCollections)
 	}
 
 	// should never reach this
@@ -1643,15 +1746,40 @@ func newRemapper(p string, serv string) (remapper, errors.Error) {
 	return m, nil
 }
 
-func (r remapper) remap(bucket string, path []string) {
-	if bucket == "" || len(path) != 4 {
+// Remapping of scopes and collections
+// remapCollections: Whether collection remapping should be attempted
+func (r remapper) remap(bucket string, path []string, remapCollections bool) {
+
+	// Only paths with scope can be remapped
+	if bucket == "" || (len(path) != 3 && len(path) != 4) {
 		return
 	}
+
 	path[1] = bucket
 	scope, ok := r[path[2]]
 
-	// in order to remap functions, we must be remapping scopes, not individual collections
 	if ok {
+		if remapCollections {
+			// Attempt collection remap
+			if len(path) == 4 {
+
+				// Get the collection's remap
+				remap, okC := scope[path[3]]
+				if okC {
+					// Collection's remap should contain the name of the scope and collection to be remapped to
+					if len(remap) == 2 {
+						path[2] = remap[0]
+						path[3] = remap[1]
+						return
+					}
+				}
+			}
+		}
+
+		// Attempt to perform scope remap, if remapCollections=false or collection has no remap specified
+		// in order to remap functions, sequences we must be remapping scopes, not individual collections
+
+		// Get the scope's remap
 		target, ok := scope[""]
 		if ok {
 			path[2] = target[0]
@@ -1699,8 +1827,8 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 		return nil
 	}
 
-	if l == 2 || filterEval(path, include, exclude) {
-		remap.remap(b, path)
+	if l == 2 || filterEval(path, include, exclude, false) {
+		remap.remap(b, path, false)
 
 		name, err1 := functionsBridge.NewFunctionName(path, path[0], "")
 		if err1 != nil {
@@ -2566,8 +2694,8 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 	if err != nil {
 		return errors.NewServiceErrorBadValue(err, "sequence restore: min invalid")
 	}
-	if filterEval(path, include, exclude) {
-		remap.remap(b, path)
+	if filterEval(path, include, exclude, false) {
+		remap.remap(b, path, false)
 		m := make(map[string]interface{}, 2)
 		m[sequences.OPT_CACHE] = cache
 		m[sequences.OPT_CYCLE] = cycle
@@ -2611,10 +2739,10 @@ func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap r
 	path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
 	fullPath := "default:" + b + "." + path
 	p := algebra.ParsePath(fullPath)
-	if !filterEval(p, include, exclude) {
+	if !filterEval(p, include, exclude, false) {
 		return "", false
 	}
-	remap.remap(b, p)
+	remap.remap(b, p, false)
 	return algebra.NewPathFromElements(p).SimpleString(), true
 }
 
@@ -2651,11 +2779,11 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	if len(p) != 4 {
 		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
 	}
-	if !filterEval(p, include, exclude) {
+	if !filterEval(p, include, exclude, false) {
 		return nil
 	}
 
-	remap.remap(b, p)
+	remap.remap(b, p, false)
 	key = strings.Replace(key, path, p[2]+"."+p[3], 1)
 	uid, err := datastore.GetScopeUid(p[:3]...)
 	if err != nil {
@@ -2674,6 +2802,74 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	pairs[0].Name = key
 	pairs[0].Value = value.NewValue(raw)
 	_, _, errs := systemCollection.Upsert(pairs, datastore.NULL_QUERY_CONTEXT, true)
+	if errs != nil && len(errs) > 0 {
+		return errs[0]
+	}
+
+	return nil
+}
+
+func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, remap remapper) errors.Error {
+
+	var oState json.KeyState
+	json.SetKeyState(&oState, v)
+
+	aPath, err := oState.FindKey("identity")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "aus settings restore: identity")
+	}
+
+	aEnable, err := oState.FindKey("enable")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "aus settings restore: enable")
+	}
+
+	aChange, err := oState.FindKey("change_percentage")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "aus settings restore: change_percentage")
+	}
+	oState.Release()
+
+	path := strings.Trim(string(aPath), "\"")
+	if path == "" {
+		return errors.NewServiceErrorBadValue(err, "aus settings restore: identity invalid")
+	}
+	parts := algebra.ParsePath(path)
+
+	// Check for inclusion/ exclusion of the path. If qualifies to be restored, remap the path
+	qualifies := filterEval(parts, include, exclude, true)
+	if qualifies {
+		remap.remap(bucket, parts, true)
+	} else {
+		return nil
+	}
+
+	doc := make(map[string]interface{}, 2)
+
+	if aEnable != nil {
+		enable, parseErr := strconv.ParseBool(strings.Trim(string(aEnable), "\""))
+		if parseErr != nil {
+			return errors.NewServiceErrorBadValue(parseErr, "aus settings restore: enable invalid")
+		}
+		doc["enable"] = enable
+	}
+
+	if aChange != nil {
+		changePercentage, parseErr := strconv.ParseInt(strings.Trim(string(aChange), "\""), 10, 0)
+		if parseErr != nil {
+			return errors.NewServiceErrorBadValue(parseErr, "aus settings restore: change_percentage invalid")
+		}
+		doc["change_percentage"] = changePercentage
+	}
+
+	var pair value.Pair
+	pair.Name = algebra.PathFromParts(parts...)
+	pair.Value = value.NewValue(doc)
+
+	_, _, errs := aus.MutateAusSettings(aus.MOP_UPSERT, pair, datastore.NULL_QUERY_CONTEXT, false)
 	if errs != nil && len(errs) > 0 {
 		return errs[0]
 	}

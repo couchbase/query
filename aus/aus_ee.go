@@ -658,7 +658,7 @@ func ScanAusSettings(bucket string, f func(path string) error) errors.Error {
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 
 			// Convert the KV document key into a path
-			path := key2path(key, systemCollection.NamespaceId(), bucket)
+			path, _ := key2path(key, systemCollection.NamespaceId(), bucket)
 			if path == "" {
 				return nil
 			}
@@ -775,7 +775,7 @@ func MutateAusSettings(op MutateOp, pair value.Pair, queryContext datastore.Quer
 	return 0, nil, nil
 }
 
-// Returns the keyspace path from the KV document key.
+// Returns the keyspace path and path parts from the KV document key.
 // If it returns an empty string, the key is not from system:aus_settings
 // Format is like so:
 // 1. Bucket level document:
@@ -784,23 +784,23 @@ func MutateAusSettings(op MutateOp, pair value.Pair, queryContext datastore.Quer
 // aus::scope_id::scope_name
 // 3. Collection level document:
 // aus::scope_id::collection_id::scope_name.collection_name
-func key2path(key, namespace, bucket string) string {
+func key2path(key, namespace, bucket string) (string, []string) {
 	// strip prefix and scope (and collection) UIDs from the scope (and collection) names
 	parts := strings.Split(key, "::")
 
 	// Check if the key is in right bucket/ scope/ collection level document key format
 	if len(parts) < 2 || len(parts) > 4 {
-		return ""
+		return "", nil
 	}
 
 	// check if the key is prefixed by "aus::"
 	if parts[0] != "aus" {
-		return ""
+		return "", nil
 	}
 
 	// check if the key was for the bucket
 	if parts[1] == "bucket" {
-		return algebra.PathFromParts(namespace, bucket)
+		return algebra.PathFromParts(namespace, bucket), []string{namespace, bucket}
 	}
 
 	// the last element in the parts array post-splitting will be the actual path with the scope & collection names
@@ -809,11 +809,13 @@ func key2path(key, namespace, bucket string) string {
 
 	// if '.' is not present then the key is for a scope level document
 	if dot < 0 {
-		return algebra.PathFromParts(namespace, bucket, ks)
+		pathParts := []string{namespace, bucket, ks}
+		return algebra.PathFromParts(pathParts...), pathParts
 	}
 
 	// Otherwise the key is for a collection level document
-	return algebra.PathFromParts(namespace, bucket, ks[:dot], ks[dot+1:])
+	pathParts := []string{namespace, bucket, ks[:dot], ks[dot+1:]}
+	return algebra.PathFromParts(pathParts...), pathParts
 }
 
 // Validates the input path and returns the KV document key and the path parts.
@@ -977,6 +979,57 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 			}
 			return nil
 		}, nil)
+}
+
+// Backup related functions
+
+func BackupAusSettings(namespace string, bucket string, filter func([]string) bool) ([]interface{}, errors.Error) {
+	rv := make([]interface{}, 0)
+	keys := make([]string, 1)
+
+	err := datastore.ScanSystemCollection(bucket, AUS_DOC_PREFIX, nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+
+			// Convert the KV document key into a path
+			path, parts := key2path(key, namespace, bucket)
+
+			if path == "" {
+				return nil
+			}
+
+			if filter == nil || filter(parts) {
+
+				// Fetch the document
+				fetchMap := _STRING_ANNOTATED_POOL.Get()
+				defer _STRING_ANNOTATED_POOL.Put(fetchMap)
+
+				keys[0] = key
+				errs := systemCollection.Fetch(keys, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+				if errs != nil && len(errs) > 0 {
+					return errs[0]
+				}
+				av, ok := fetchMap[key]
+
+				if ok && av != nil {
+					setting := make(map[string]interface{})
+					setting["identity"] = path
+					v, ok1 := av.Field("enable")
+					if ok1 {
+						setting["enable"] = v.ToString()
+					}
+
+					v, ok1 = av.Field("change_percentage")
+					if ok1 {
+						setting["change_percentage"] = v.ToString()
+					}
+
+					rv = append(rv, setting)
+				}
+			}
+			return nil
+		}, nil)
+
+	return rv, err
 }
 
 // Scheduling related functions

@@ -60,3 +60,9 @@ func DropScope(namespace string, bucket string, scope string, scopeUid string) {
 func DropCollection(namespace string, bucket string, scope string, scopeUid string, collection string, collectionUid string) {
 	// do nothing
 }
+
+// Backup related functions
+
+func BackupAusSettings(namespace string, bucket string, filter func([]string) bool) ([]interface{}, errors.Error) {
+	return nil, nil
+}
