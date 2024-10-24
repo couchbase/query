@@ -267,7 +267,10 @@ func (this *reason) capture(ch chan bool) {
 		if e != nil {
 			logging.Stackf(logging.ERROR, "Panic capturing \"%v\" FFDC: %v", this.event, e)
 		}
-		ch <- ret
+		select {
+		case ch <- ret:
+		default:
+		}
 		close(ch)
 		if locked {
 			this.Unlock()
