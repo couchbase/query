@@ -36,7 +36,7 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_CHATCOMPLETIONS_REQ_FAILED:       {CHATCOMPLTIONS_IKEY, "Chat completions request failed with status %v"},
 	E_NL_CHATCOMPLETIONS_READ_RESP_STREAM: {CHATCOMPLTIONS_IKEY, "Error reading response stream from chat completion API %v"},
 	E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL:   {CHATCOMPLTIONS_IKEY, "Error unmarshalling chat completions response"},
-	E_NL_ERR_CHATCOMPLETIONS_RESP:         {CHATCOMPLTIONS_IKEY, "LLM error: %v"},
+	E_NL_ERR_CHATCOMPLETIONS_RESP:         {CHATCOMPLTIONS_IKEY, "LLM processing failed"},
 	E_NL_MISSING_NL_PARAM:                 {NLPARAM_IKEY, "Natural Language request expects %s request parameter to be set"},
 	E_NL_PARSE_GENERATED_STMT:             {PARSE_IKEY, "Error parsing generated statement: %v"},
 	E_NL_CONTEXT:                          {NLCONTEXT_IKEY, "Error in keyspace list provided for natural language processing"},

@@ -405,7 +405,7 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 
 	if n := strings.Index(content, "#ERR"); n != -1 {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP,
-			strings.TrimRight(content[n+6:], "\n `"))
+			fmt.Errorf("%s", strings.TrimRight(content[n+6:], "\n `")))
 	}
 
 	sqlstmt := strings.TrimPrefix(content, "```sql\n")

@@ -7681,14 +7681,15 @@ var errData = []ErrData{
 	{
 		Code:        E_NL_ERR_CHATCOMPLETIONS_RESP, // 19212
 		symbol:      "E_NL_ERR_CHATCOMPLETIONS_RESP",
-		Description: "LLM error: «err»",
+		Description: "LLM processing failed",
 		IsUser:      MAYBE,
 		Reason: []string{
 			"\"natural\" parameter is not a valid prompt or doesn't prompt for a SELECT query.",
 			"The natural language statement is not a valid prompt or doesn't prompt for a SELECT query.",
 		},
 		Action: []string{
-			"Try rewording your request.",
+			"Review the embedded \"reason\" field for more information on the failure.",
+			"Try rewording your request or revising the keyspace information provided.",
 		},
 		AppliesTo: []string{
 			"Server",
