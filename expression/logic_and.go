@@ -108,8 +108,8 @@ func (this *And) EquivalentTo(other Expression) bool {
 		return true
 	}
 	if a2, ok := other.(*And); ok {
-		a1, _ := FlattenAnd(this)
-		a2, _ = FlattenAnd(a2)
+		a1, _ := FlattenAndNoDedup(this)
+		a2, _ = FlattenAndNoDedup(a2)
 		return a1.CommutativeFunctionBase.doEquivalentTo(a2)
 	} else {
 		return false
