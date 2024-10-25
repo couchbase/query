@@ -8,6 +8,10 @@
 
 package expression
 
+import (
+	"github.com/couchbase/query/util"
+)
+
 func FlattenOr(or *Or) (*Or, bool) {
 	length, flatten, truth := orLength(or)
 	if !flatten || truth {
@@ -15,9 +19,9 @@ func FlattenOr(or *Or) (*Or, bool) {
 	}
 
 	buffer := make(Expressions, 0, length)
-	terms := _STRING_EXPRESSION_POOL.Get()
-	defer _STRING_EXPRESSION_POOL.Put(terms)
+	terms := _STRING_BOOL_POOL.Get()
 	buffer = orTerms(or, buffer, terms)
+	_STRING_BOOL_POOL.Put(terms)
 
 	return NewOr(buffer...), false
 }
@@ -29,9 +33,33 @@ func FlattenAnd(and *And) (*And, bool) {
 	}
 
 	buffer := make(Expressions, 0, length)
-	terms := _STRING_EXPRESSION_POOL.Get()
-	defer _STRING_EXPRESSION_POOL.Put(terms)
+	terms := _STRING_BOOL_POOL.Get()
 	buffer = andTerms(and, buffer, terms)
+	_STRING_BOOL_POOL.Put(terms)
+
+	return NewAnd(buffer...), true
+}
+
+func FlattenOrNoDedup(or *Or) (*Or, bool) {
+	length, flatten, truth := orLength(or)
+	if !flatten || truth {
+		return or, truth
+	}
+
+	buffer := make(Expressions, 0, length)
+	buffer = orTerms(or, buffer, nil)
+
+	return NewOr(buffer...), false
+}
+
+func FlattenAndNoDedup(and *And) (*And, bool) {
+	length, flatten, truth := andLength(and)
+	if !flatten || !truth {
+		return and, truth
+	}
+
+	buffer := make(Expressions, 0, length)
+	buffer = andTerms(and, buffer, nil)
 
 	return NewAnd(buffer...), true
 }
@@ -93,8 +121,7 @@ func andLength(and *And) (length int, flatten, truth bool) {
 	return
 }
 
-func orTerms(or *Or, buffer Expressions,
-	terms map[string]Expression) Expressions {
+func orTerms(or *Or, buffer Expressions, terms map[string]bool) Expressions {
 	for _, op := range or.Operands() {
 		switch op := op.(type) {
 		case *Or:
@@ -102,10 +129,14 @@ func orTerms(or *Or, buffer Expressions,
 		default:
 			val := op.Value()
 			if val == nil || val.Truth() {
-				str := op.String()
-				if _, found := terms[str]; !found {
-					terms[str] = op
+				if terms == nil {
 					buffer = append(buffer, op)
+				} else {
+					str := op.String()
+					if _, found := terms[str]; !found {
+						terms[str] = true
+						buffer = append(buffer, op)
+					}
 				}
 			}
 		}
@@ -114,8 +145,7 @@ func orTerms(or *Or, buffer Expressions,
 	return buffer
 }
 
-func andTerms(and *And, buffer Expressions,
-	terms map[string]Expression) Expressions {
+func andTerms(and *And, buffer Expressions, terms map[string]bool) Expressions {
 	for _, op := range and.Operands() {
 		switch op := op.(type) {
 		case *And:
@@ -123,10 +153,14 @@ func andTerms(and *And, buffer Expressions,
 		default:
 			val := op.Value()
 			if val == nil || !val.Truth() {
-				str := op.String()
-				if _, found := terms[str]; !found {
-					terms[str] = op
+				if terms == nil {
 					buffer = append(buffer, op)
+				} else {
+					str := op.String()
+					if _, found := terms[str]; !found {
+						terms[str] = true
+						buffer = append(buffer, op)
+					}
 				}
 			}
 		}
@@ -135,4 +169,4 @@ func andTerms(and *And, buffer Expressions,
 	return buffer
 }
 
-var _STRING_EXPRESSION_POOL = NewStringExpressionPool(1024)
+var _STRING_BOOL_POOL = util.NewStringBoolPool(32)

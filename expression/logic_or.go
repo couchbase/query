@@ -233,8 +233,8 @@ func (this *Or) EquivalentTo(other Expression) bool {
 		return true
 	}
 	if o2, ok := other.(*Or); ok {
-		o1, _ := FlattenOr(this)
-		o2, _ = FlattenOr(o2)
+		o1, _ := FlattenOrNoDedup(this)
+		o2, _ = FlattenOrNoDedup(o2)
 		return o1.CommutativeFunctionBase.doEquivalentTo(o2)
 	} else {
 		return false

@@ -19,6 +19,8 @@ func (this *subset) VisitOr(expr *expression.Or) (interface{}, error) {
 		return value2.Truth(), nil
 	}
 
+	expr, _ = expression.FlattenOrNoDedup(expr)
+
 	if expr.EquivalentTo(expr2) {
 		return true, nil
 	}
