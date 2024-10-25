@@ -56,7 +56,7 @@ func (this *KeyScan) MarshalJSON() ([]byte, error) {
 
 func (this *KeyScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "KeyScan"}
-	r["keys"] = expression.NewStringer().Visit(this.keys)
+	r["keys"] = this.keys.String()
 	if this.distinct {
 		r["distinct"] = this.distinct
 	}

@@ -127,7 +127,7 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 
 		expr := term.Result().Expression()
 		if expr != nil {
-			t["expr"] = expression.NewStringer().Visit(expr)
+			t["expr"] = expr.String()
 		}
 
 		s = append(s, t)
@@ -282,7 +282,7 @@ func (this *IndexCountProject) MarshalBase(f func(map[string]interface{})) map[s
 
 		expr := term.Result().Expression()
 		if expr != nil {
-			t["expr"] = expression.NewStringer().Visit(expr)
+			t["expr"] = expr.String()
 		}
 
 		s = append(s, t)

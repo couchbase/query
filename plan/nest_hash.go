@@ -106,7 +106,7 @@ func (this *HashNest) MarshalJSON() ([]byte, error) {
 
 func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "HashNest"}
-	r["on_clause"] = expression.NewStringer().Visit(this.onclause)
+	r["on_clause"] = this.onclause.String()
 
 	if this.outer {
 		r["outer"] = this.outer
@@ -114,20 +114,20 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 
 	buildList := make([]string, 0, len(this.buildExprs))
 	for _, build := range this.buildExprs {
-		buildList = append(buildList, expression.NewStringer().Visit(build))
+		buildList = append(buildList, build.String())
 	}
 	r["build_exprs"] = buildList
 
 	probeList := make([]string, 0, len(this.probeExprs))
 	for _, probe := range this.probeExprs {
-		probeList = append(probeList, expression.NewStringer().Visit(probe))
+		probeList = append(probeList, probe.String())
 	}
 	r["probe_exprs"] = probeList
 
 	r["build_alias"] = this.buildAlias
 
 	if this.filter != nil {
-		r["filter"] = expression.NewStringer().Visit(this.filter)
+		r["filter"] = this.filter.String()
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

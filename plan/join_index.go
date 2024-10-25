@@ -123,7 +123,7 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "IndexJoin"}
 	this.term.MarshalKeyspace(r)
-	r["on_key"] = expression.NewStringer().Visit(this.term.JoinKeys())
+	r["on_key"] = this.term.JoinKeys().String()
 	r["for"] = this.keyFor
 	if len(this.subPaths) > 0 {
 		r["subpaths"] = this.subPaths

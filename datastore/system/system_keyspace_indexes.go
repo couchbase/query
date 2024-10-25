@@ -388,48 +388,51 @@ func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
 		keys := index2.RangeKey2()
 		rv = make([]string, len(keys))
 		for i, kp := range keys {
-			s := expression.NewStringer().Visit(kp.Expr)
+			stringer := expression.NewStringer()
+			stringer.VisitShared(kp.Expr)
 			if i == 0 && kp.HasAttribute(datastore.IK_MISSING) {
-				s += " INCLUDE MISSING"
+				stringer.WriteString(" INCLUDE MISSING")
 			}
 			if kp.HasAttribute(datastore.IK_DESC) {
-				s += " DESC"
+				stringer.WriteString(" DESC")
 			}
 
 			if kp.HasAttribute(datastore.IK_VECTOR) {
-				s += " VECTOR"
+				stringer.WriteString(" VECTOR")
 			}
-			rv[i] = s
+			rv[i] = stringer.String()
 		}
 
 	} else {
 		rv = make([]string, len(index.RangeKey()))
 		for i, kp := range index.RangeKey() {
-			rv[i] = expression.NewStringer().Visit(kp)
+			rv[i] = kp.String()
 		}
 	}
 	return
 }
 
-func indexPartitionToString(index datastore.Index) (rv string) {
+func indexPartitionToString(index datastore.Index) string {
 	index3, ok3 := index.(datastore.Index3)
 	if !ok3 {
-		return
+		return ""
 	}
 	partition, _ := index3.PartitionKeys()
 	if partition == nil || partition.Strategy == datastore.NO_PARTITION {
-		return
+		return ""
 	}
 
-	rv = string(partition.Strategy) + "("
+	stringer := expression.NewStringer()
+	stringer.WriteString(string(partition.Strategy))
+	stringer.WriteString("(")
 	for i, expr := range partition.Exprs {
 		if i > 0 {
-			rv += ","
+			stringer.WriteString(",")
 		}
-		rv += expression.NewStringer().Visit(expr)
+		stringer.VisitShared(expr)
 	}
-	rv += ")"
-	return
+	stringer.WriteString(")")
+	return stringer.String()
 }
 
 func datastoreObjectToJSONSafe(catobj interface{}) interface{} {

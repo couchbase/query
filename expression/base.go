@@ -88,8 +88,7 @@ func (this *ExpressionBase) String() string {
 }
 
 func (this *ExpressionBase) MarshalJSON() ([]byte, error) {
-	s := NewStringer().Visit(this.expr)
-	return json.Marshal(s)
+	return json.Marshal(NewStringer().Visit(this.expr))
 }
 
 /*

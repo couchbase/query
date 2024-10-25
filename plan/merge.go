@@ -129,7 +129,7 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 	this.ref.MarshalKeyspace(r)
 
 	if this.key != nil {
-		r["key"] = expression.NewStringer().Visit(this.key)
+		r["key"] = this.key.String()
 	}
 
 	if this.ref.As() != "" {

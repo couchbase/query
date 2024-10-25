@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
 
@@ -51,7 +50,7 @@ func (this *WindowAggregate) MarshalBase(f func(map[string]interface{})) map[str
 	r := map[string]interface{}{"#operator": "WindowAggregate"}
 	s := make([]interface{}, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
-		s = append(s, expression.NewStringer().Visit(agg))
+		s = append(s, agg.String())
 	}
 	r["aggregates"] = s
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

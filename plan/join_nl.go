@@ -87,7 +87,7 @@ func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]inter
 	r := map[string]interface{}{"#operator": "NestedLoopJoin"}
 	r["alias"] = this.alias
 	if this.onclause != nil {
-		r["on_clause"] = expression.NewStringer().Visit(this.onclause)
+		r["on_clause"] = this.onclause.String()
 	}
 
 	if this.outer {
@@ -95,7 +95,7 @@ func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]inter
 	}
 
 	if this.filter != nil {
-		r["filter"] = expression.NewStringer().Visit(this.filter)
+		r["filter"] = this.filter.String()
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

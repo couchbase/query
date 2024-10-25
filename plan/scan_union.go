@@ -194,11 +194,11 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 	r := map[string]interface{}{"#operator": "UnionScan"}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if this.offset != nil {
-		r["offset"] = expression.NewStringer().Visit(this.offset)
+		r["offset"] = this.offset.String()
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

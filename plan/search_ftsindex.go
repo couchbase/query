@@ -366,23 +366,23 @@ func (this *FTSSearchInfo) MarshalBase(f func(map[string]interface{})) map[strin
 	r := make(map[string]interface{}, 7)
 
 	if this.field != nil {
-		r["field"] = expression.NewStringer().Visit(this.field)
+		r["field"] = this.field.String()
 	}
 
 	if this.query != nil {
-		r["query"] = expression.NewStringer().Visit(this.query)
+		r["query"] = this.query.String()
 	}
 
 	if this.options != nil {
-		r["options"] = expression.NewStringer().Visit(this.options)
+		r["options"] = this.options.String()
 	}
 
 	if this.offset != nil {
-		r["offset"] = expression.NewStringer().Visit(this.offset)
+		r["offset"] = this.offset.String()
 	}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 	if len(this.order) > 0 {
 		r["order"] = this.order

@@ -87,7 +87,7 @@ func (this *PrimaryScan) MarshalBase(f func(map[string]interface{})) map[string]
 	}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if this.hasDeltaKeyspace {

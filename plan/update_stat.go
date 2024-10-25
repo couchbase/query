@@ -60,14 +60,14 @@ func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[st
 	if len(this.node.Terms()) > 0 {
 		terms := make([]interface{}, 0, len(this.node.Terms()))
 		for _, term := range this.node.Terms() {
-			terms = append(terms, expression.NewStringer().Visit(term))
+			terms = append(terms, term.String())
 		}
 		r["terms"] = terms
 	}
 	if len(this.node.Indexes()) > 0 {
 		indexes := make([]interface{}, 0, len(this.node.Indexes()))
 		for _, index := range this.node.Indexes() {
-			indexes = append(indexes, expression.NewStringer().Visit(index))
+			indexes = append(indexes, index.String())
 		}
 		r["indexes"] = indexes
 		r["using"] = this.node.Using()

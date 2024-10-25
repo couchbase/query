@@ -208,7 +208,7 @@ Marshals input into byte array.
 */
 func (this *UnsetTerm) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 2)
-	r["path"] = expression.NewStringer().Visit(this.path)
+	r["path"] = this.path.String()
 	if this.updateFor != nil {
 		r["path_for"] = this.updateFor
 	}

@@ -85,7 +85,7 @@ func (this *UpdateFor) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, 2)
 	r["bindings"] = this.bindings
 	if this.when != nil {
-		r["when"] = expression.NewStringer().Visit(this.when)
+		r["when"] = this.when.String()
 	}
 
 	return json.Marshal(r)

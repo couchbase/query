@@ -177,7 +177,8 @@ func (this *SortTerm) Copy() *SortTerm {
 Representation as a N1QL string.
 */
 func (this *SortTerm) String() string {
-	s := expression.NewStringer().Visit(this.expr)
+	stringer := expression.NewStringer()
+	stringer.VisitShared(this.expr)
 
 	d := false
 	dDynamic := false
@@ -187,11 +188,12 @@ func (this *SortTerm) String() string {
 		// if the Value() is not nil, then it is a Constant and the direction can be evaluated at this stage.
 		if dExpr.Value() != nil {
 			if this.Descending(nil, nil) {
-				s += " DESC"
+				stringer.WriteString(" DESC")
 				d = true
 			}
 		} else {
-			s += " " + dExpr.String()
+			stringer.WriteString(" ")
+			stringer.VisitShared(dExpr)
 			dDynamic = true
 		}
 	}
@@ -210,24 +212,25 @@ func (this *SortTerm) String() string {
 			if !dDynamic {
 				if nEval {
 					if !d {
-						s += " NULLS LAST"
+						stringer.WriteString(" NULLS LAST")
 					}
 				} else if d {
-					s += " NULLS FIRST"
+					stringer.WriteString(" NULLS FIRST")
 				}
 			} else {
 				if nEval {
-					s += " NULLS LAST"
+					stringer.WriteString(" NULLS LAST")
 				} else {
-					s += " NULLS FIRST"
+					stringer.WriteString(" NULLS FIRST")
 				}
 			}
 		} else {
-			s += " NULLS " + nExpr.String()
+			stringer.WriteString(" NULLS ")
+			stringer.VisitShared(nExpr)
 		}
 
 	}
-	return s
+	return stringer.String()
 }
 
 /*

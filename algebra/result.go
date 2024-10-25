@@ -462,7 +462,7 @@ func (this *ResultTerm) MarshalJSON() ([]byte, error) {
 	r["alias"] = this.alias
 	r["as"] = this.as
 	if this.expr != nil {
-		r["expr"] = expression.NewStringer().Visit(this.expr)
+		r["expr"] = this.expr.String()
 	}
 	r["star"] = this.star
 	r["self"] = this.self

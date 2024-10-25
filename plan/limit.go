@@ -47,7 +47,7 @@ func (this *Limit) MarshalJSON() ([]byte, error) {
 
 func (this *Limit) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Limit"}
-	r["expr"] = expression.NewStringer().Visit(this.expr)
+	r["expr"] = this.expr.String()
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}

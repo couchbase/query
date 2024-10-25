@@ -43,7 +43,7 @@ func (this *IndexGroupKey) MarshalBase(f func(map[string]interface{})) map[strin
 
 	r["id"] = this.EntryKeyId
 	r["keypos"] = this.KeyPos
-	r["expr"] = expression.NewStringer().Visit(this.Expr)
+	r["expr"] = this.Expr.String()
 	if len(this.Depends) > 0 {
 		r["depends"] = this.Depends
 	}
@@ -121,7 +121,7 @@ func (this *IndexAggregate) MarshalBase(f func(map[string]interface{})) map[stri
 	}
 
 	r["keypos"] = this.KeyPos
-	r["expr"] = expression.NewStringer().Visit(this.Expr)
+	r["expr"] = this.Expr.String()
 	if len(this.Depends) > 0 {
 		r["depends"] = this.Depends
 	}

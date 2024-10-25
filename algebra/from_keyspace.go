@@ -597,14 +597,14 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "keyspaceTerm"}
 	r["as"] = this.as
 	if this.joinKeys != nil {
-		r["keys"] = expression.NewStringer().Visit(this.joinKeys)
+		r["keys"] = this.joinKeys.String()
 	} else if this.keys != nil {
-		r["keys"] = expression.NewStringer().Visit(this.keys)
+		r["keys"] = this.keys.String()
 	}
 	if this.path != nil {
 		r["path"] = this.path
 	} else {
-		r["fromExpr"] = this.fromExpr
+		r["fromExpr"] = this.fromExpr.String()
 	}
 	return json.Marshal(r)
 }

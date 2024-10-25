@@ -96,7 +96,7 @@ func (this *Nest) MarshalJSON() ([]byte, error) {
 func (this *Nest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Nest"}
 	this.term.MarshalKeyspace(r)
-	r["on_keys"] = expression.NewStringer().Visit(this.term.JoinKeys())
+	r["on_keys"] = this.term.JoinKeys().String()
 	if len(this.subPaths) > 0 {
 		r["subpaths"] = this.subPaths
 	}
@@ -110,7 +110,7 @@ func (this *Nest) MarshalBase(f func(map[string]interface{})) map[string]interfa
 	}
 
 	if this.onFilter != nil {
-		r["on_filter"] = expression.NewStringer().Visit(this.onFilter)
+		r["on_filter"] = this.onFilter.String()
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

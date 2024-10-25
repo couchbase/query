@@ -82,12 +82,12 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 	r := map[string]interface{}{"#operator": "InitialGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
-		keylist = append(keylist, expression.NewStringer().Visit(key))
+		keylist = append(keylist, key.String())
 	}
 	r["group_keys"] = keylist
 	s := make([]interface{}, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
-		s = append(s, expression.NewStringer().Visit(agg))
+		s = append(s, agg.String())
 	}
 	r["aggregates"] = s
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -210,12 +210,12 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 	r := map[string]interface{}{"#operator": "IntermediateGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
-		keylist = append(keylist, expression.NewStringer().Visit(key))
+		keylist = append(keylist, key.String())
 	}
 	r["group_keys"] = keylist
 	s := make([]interface{}, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
-		s = append(s, expression.NewStringer().Visit(agg))
+		s = append(s, agg.String())
 	}
 	r["aggregates"] = s
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -327,12 +327,12 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 	r := map[string]interface{}{"#operator": "FinalGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
-		keylist = append(keylist, expression.NewStringer().Visit(key))
+		keylist = append(keylist, key.String())
 	}
 	r["group_keys"] = keylist
 	s := make([]interface{}, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
-		s = append(s, expression.NewStringer().Visit(agg))
+		s = append(s, agg.String())
 	}
 	r["aggregates"] = s
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

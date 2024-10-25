@@ -11,6 +11,7 @@ package algebra
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/couchbase/query/expression"
 )
@@ -240,26 +241,31 @@ func (this *WindowTerm) Expressions() expression.Expressions {
 /*
 String representantion
 */
-func (this *WindowTerm) String() (s string) {
+func (this *WindowTerm) String() string {
 	return this.wnameString(false)
 }
 
-func (this *WindowTerm) wnameString(flag bool) (s string) {
+func (this *WindowTerm) wnameString(flag bool) string {
+	var sb strings.Builder
 	if flag {
-		s += " " + this.AsWindowName() + " AS"
+		sb.WriteRune(' ')
+		sb.WriteString(this.AsWindowName())
+		sb.WriteString(" AS")
 	} else {
-		s += " OVER"
+		sb.WriteString(" OVER")
 	}
-	s += " ("
+	sb.WriteString(" (")
 	if flag && this.WindowName() != "" {
-		s += " " + this.WindowName() + " "
+		sb.WriteRune(' ')
+		sb.WriteString(this.WindowName())
+		sb.WriteRune(' ')
 	}
 
 	pby := this.PartitionBy()
 
 	// PARTITION BY
 	if len(pby) > 0 {
-		s += "PARTITION BY "
+		sb.WriteString("PARTITION BY ")
 		/*
 		   order of PARTITION BY expressions are no-impact.
 		   Ordered them by names so that it can be comparable
@@ -273,26 +279,26 @@ func (this *WindowTerm) wnameString(flag bool) (s string) {
 
 		for i, _ := range names {
 			if i != 0 {
-				s += ", "
+				sb.WriteString(", ")
 			}
-			s += names[i]
+			sb.WriteString(names[i])
 		}
 	}
 
 	// ORDER BY
 	oby := this.OrderBy()
 	if oby != nil {
-		s += oby.String()
+		sb.WriteString(oby.String())
 	}
 
 	// window clause
 	windowFrame := this.WindowFrame()
 	if windowFrame != nil {
-		s += windowFrame.String()
+		sb.WriteString(windowFrame.String())
 	}
-	s += ")"
+	sb.WriteRune(')')
 
-	return s
+	return sb.String()
 }
 
 /*

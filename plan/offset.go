@@ -47,7 +47,7 @@ func (this *Offset) MarshalJSON() ([]byte, error) {
 
 func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "Offset"}
-	r["expr"] = expression.NewStringer().Visit(this.expr)
+	r["expr"] = this.expr.String()
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}

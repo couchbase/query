@@ -9,7 +9,6 @@
 package algebra
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/couchbase/query/errors"
@@ -226,54 +225,56 @@ func (this *AggregateBase) IsCumulateDone(cumulative value.Value, context Contex
 Returns string representation of aggregate
 */
 func (this *AggregateBase) String() string {
-	var buf bytes.Buffer
+	// we write directly to the stringer so that we're not needlessly copying strings about (performance)
 	stringer := expression.NewStringer()
+	this.WriteToStringer(stringer)
+	return stringer.String()
+}
 
-	buf.WriteString(this.Name())
-	buf.WriteString("(")
+func (this *AggregateBase) WriteToStringer(stringer *expression.Stringer) {
+	stringer.WriteString(this.Name())
+	stringer.WriteString("(")
 
 	if this.Distinct() {
-		buf.WriteString("DISTINCT ")
+		stringer.WriteString("DISTINCT ")
 	}
 
 	for i, op := range this.Operands() {
 		if i > 0 {
-			buf.WriteString(", ")
+			stringer.WriteString(", ")
 		}
 
 		// special case: convert count() to count(*)
 		if op == nil && this.Name() == "count" {
-			buf.WriteString("*")
+			stringer.WriteString("*")
 		} else {
-			buf.WriteString(stringer.Visit(op))
+			stringer.VisitShared(op)
 		}
 	}
 
-	buf.WriteString(")")
+	stringer.WriteString(")")
 
 	if this.Filter() != nil {
-		buf.WriteString(" FILTER (WHERE ")
-		buf.WriteString(stringer.Visit(this.Filter()))
-		buf.WriteString(")")
+		stringer.WriteString(" FILTER (WHERE ")
+		stringer.VisitShared(this.Filter())
+		stringer.WriteString(")")
 	}
 
 	// Handle [FROM FIRST|LAST]. FROM FIRST is default of ""
 	if this.HasFlags(AGGREGATE_FROMLAST) {
-		buf.WriteString(" FROM LAST")
+		stringer.WriteString(" FROM LAST")
 	}
 
 	// Handle [RESPECT|IGNORE NULLS]. RESPECT NULLS is default of ""
 	if this.HasFlags(AGGREGATE_IGNORENULLS) {
-		buf.WriteString(" IGNORE NULLS")
+		stringer.WriteString(" IGNORE NULLS")
 	}
 
 	// Handle window term
 	wTerm := this.WindowTerm()
 	if wTerm != nil {
-		buf.WriteString(wTerm.String())
+		stringer.WriteString(wTerm.String())
 	}
-
-	return buf.String()
 }
 
 /*

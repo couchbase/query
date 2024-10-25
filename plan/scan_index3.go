@@ -443,11 +443,11 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 	}
 
 	if this.offset != nil {
-		r["offset"] = expression.NewStringer().Visit(this.offset)
+		r["offset"] = this.offset.String()
 	}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if this.groupAggs != nil {
@@ -476,7 +476,7 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 	}
 
 	if this.filter != nil {
-		r["filter"] = expression.NewStringer().Visit(this.filter)
+		r["filter"] = this.filter.String()
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {

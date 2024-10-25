@@ -199,7 +199,7 @@ func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]in
 	}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if len(this.covers) > 0 {

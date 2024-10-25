@@ -71,13 +71,13 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 		r["outer"] = this.term.Outer()
 	}
 
-	r["expr"] = expression.NewStringer().Visit(this.term.Expression())
+	r["expr"] = this.term.Expression().String()
 	if this.alias != "" {
 		r["as"] = this.alias
 	}
 
 	if this.filter != nil {
-		r["filter"] = expression.NewStringer().Visit(this.filter)
+		r["filter"] = this.filter.String()
 	}
 
 	if this.HasBuildBitFilter() {

@@ -177,7 +177,7 @@ func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[strin
 	r := map[string]interface{}{"#operator": "IntersectScan"}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if this.allScan {

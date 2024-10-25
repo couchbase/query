@@ -198,7 +198,7 @@ Marshals input unnest terms into byte array.
 func (this *Unnest) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "unnest"}
 	r["left"] = this.left
-	r["expr"] = expression.NewStringer().Visit(this.expr)
+	r["expr"] = this.expr.String()
 	r["as"] = this.as
 	r["outer"] = this.outer
 	return json.Marshal(r)

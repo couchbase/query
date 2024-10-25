@@ -212,11 +212,11 @@ func (this *IndexScan2) MarshalBase(f func(map[string]interface{})) map[string]i
 	}
 
 	if this.offset != nil {
-		r["offset"] = expression.NewStringer().Visit(this.offset)
+		r["offset"] = this.offset.String()
 	}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if len(this.covers) > 0 {

@@ -94,7 +94,7 @@ func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
 
 func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "ExpressionScan"}
-	r["expr"] = expression.NewStringer().Visit(this.fromExpr)
+	r["expr"] = this.fromExpr.String()
 	r["alias"] = this.alias
 	if !this.correlated {
 		r["uncorrelated"] = !this.correlated
@@ -103,7 +103,7 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 		r["nested_loop"] = this.nested_loop
 	}
 	if this.filter != nil {
-		r["filter"] = expression.NewStringer().Visit(this.filter)
+		r["filter"] = this.filter.String()
 	}
 	if this.HasBuildBitFilter() {
 		this.marshalBuildBitFilters(r)

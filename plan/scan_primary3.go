@@ -143,11 +143,11 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 	}
 
 	if this.offset != nil {
-		r["offset"] = expression.NewStringer().Visit(this.offset)
+		r["offset"] = this.offset.String()
 	}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if this.groupAggs != nil {

@@ -165,7 +165,7 @@ func (this *OrderedIntersectScan) MarshalBase(f func(map[string]interface{})) ma
 	r := map[string]interface{}{"#operator": "OrderedIntersectScan"}
 
 	if this.limit != nil {
-		r["limit"] = expression.NewStringer().Visit(this.limit)
+		r["limit"] = this.limit.String()
 	}
 
 	if this.allScan {

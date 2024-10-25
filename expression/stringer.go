@@ -9,9 +9,7 @@
 package expression
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"sort"
 	"strconv"
 
@@ -19,447 +17,380 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const _INIT_BUF = 128
+
 type Stringer struct {
-	replacee string
-	replacer string
-	omit     bool
+	buf []byte
+}
+
+func (this *Stringer) WriteString(s string) {
+	if this.buf == nil {
+		this.buf = make([]byte, 0, _INIT_BUF)
+	}
+	this.buf = append(this.buf, s...)
+}
+
+func (this *Stringer) String() string {
+	rv := util.ByteToString(this.buf)
+	this.buf = nil
+	return rv
 }
 
 func NewStringer() *Stringer { return &Stringer{} }
 
-/*
-To replace the identifier in expression with the user-defined replacement:
-
-	replacee: identifier to be replaced
-	replacer: replacement for the identifier to be replaced
-	omit: flag for the expression to skip the identifier replacement or not
-	E.g.:
-	replacee: `a`, replacer: `self`, omit: false:
-	`a`.`b` -> `self`.`b`
-	`a`.`a`.`b` -> `self`.`a`.`b`
-	replacee: `a`, replacer: `self`, omit: true
-	`a`.`a`.`b` -> `a`.`b`
-*/
-func (this *Stringer) SetReplace(replacee, replacer string, omit bool) {
-	this.replacee = replacee
-	this.replacer = replacer
-	this.omit = omit
-}
-
 func (this *Stringer) Visit(expr Expression) string {
-	s, err := expr.Accept(this)
+	_, err := expr.Accept(this)
 	if err != nil {
 		panic(fmt.Sprintf("Unexpected error in Stringer. expr: %v, error: %v", expr, err))
 	}
+	return this.String()
+}
 
-	switch s := s.(type) {
-	case []byte:
-		return string(s)
+// this supresses returning the buffer so more can be written to it afterwards
+func (this *Stringer) VisitShared(expr Expression) {
+	_, err := expr.Accept(this)
+	if err != nil {
+		panic(fmt.Sprintf("Unexpected error in Stringer. expr: %v, error: %v", expr, err))
 	}
-
-	return s.(string)
 }
 
 // Arithmetic
 
 func (this *Stringer) VisitAdd(expr *Add) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-
+	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
-			buf.WriteString(" + ")
+			this.WriteString(" + ")
 		}
-
-		buf.WriteString(this.Visit(op))
+		this.VisitShared(op)
 	}
-
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitDiv(expr *Div) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" / ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" / ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitMod(expr *Mod) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" % ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" % ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitMult(expr *Mult) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-
+	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
-			buf.WriteString(" * ")
+			this.WriteString(" * ")
 		}
-
-		buf.WriteString(this.Visit(op))
+		this.VisitShared(op)
 	}
-
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitNeg(expr *Neg) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(-")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(-")
+	this.VisitShared(expr.Operand())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitSub(expr *Sub) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" - ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" - ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 // Case
 
 func (this *Stringer) VisitSearchedCase(expr *SearchedCase) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("case")
-
+	this.WriteString("case")
 	for _, when := range expr.whenTerms {
-		buf.WriteString(" when ")
-		buf.WriteString(this.Visit(when.When))
-		buf.WriteString(" then ")
-		buf.WriteString(this.Visit(when.Then))
+		this.WriteString(" when ")
+		this.VisitShared(when.When)
+		this.WriteString(" then ")
+		this.VisitShared(when.Then)
 	}
-
 	if expr.elseTerm != nil {
-		buf.WriteString(" else ")
-		buf.WriteString(this.Visit(expr.elseTerm))
+		this.WriteString(" else ")
+		this.VisitShared(expr.elseTerm)
 	}
-
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString(" end")
+	return nil, nil
 }
 
 func (this *Stringer) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("case ")
-	buf.WriteString(this.Visit(expr.searchTerm))
-
+	this.WriteString("case ")
+	this.VisitShared(expr.searchTerm)
 	for _, when := range expr.whenTerms {
-		buf.WriteString(" when ")
-		buf.WriteString(this.Visit(when.When))
-		buf.WriteString(" then ")
-		buf.WriteString(this.Visit(when.Then))
+		this.WriteString(" when ")
+		this.VisitShared(when.When)
+		this.WriteString(" then ")
+		this.VisitShared(when.Then)
 	}
-
 	if expr.elseTerm != nil {
-		buf.WriteString(" else ")
-		buf.WriteString(this.Visit(expr.elseTerm))
+		this.WriteString(" else ")
+		this.VisitShared(expr.elseTerm)
 	}
-
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString(" end")
+	return nil, nil
 }
 
 // Collection
 
 func (this *Stringer) VisitAny(expr *Any) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("any ")
-	this.visitBindings(expr.bindings, &buf, " in ", " within ")
-	buf.WriteString(" satisfies ")
-	buf.WriteString(this.Visit(expr.satisfies))
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString("any ")
+	this.visitBindings(expr.bindings, " in ", " within ")
+	this.WriteString(" satisfies ")
+	this.VisitShared(expr.satisfies)
+	this.WriteString(" end")
+	return nil, nil
 }
 
 func (this *Stringer) VisitEvery(expr *Every) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("every ")
-	this.visitBindings(expr.bindings, &buf, " in ", " within ")
-	buf.WriteString(" satisfies ")
-	buf.WriteString(this.Visit(expr.satisfies))
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString("every ")
+	this.visitBindings(expr.bindings, " in ", " within ")
+	this.WriteString(" satisfies ")
+	this.VisitShared(expr.satisfies)
+	this.WriteString(" end")
+	return nil, nil
 }
 
 func (this *Stringer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("any and every ")
-	this.visitBindings(expr.bindings, &buf, " in ", " within ")
-	buf.WriteString(" satisfies ")
-	buf.WriteString(this.Visit(expr.satisfies))
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString("any and every ")
+	this.visitBindings(expr.bindings, " in ", " within ")
+	this.WriteString(" satisfies ")
+	this.VisitShared(expr.satisfies)
+	this.WriteString(" end")
+	return nil, nil
 }
 
 func (this *Stringer) VisitArray(expr *Array) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("array ")
-	buf.WriteString(this.Visit(expr.valueMapping))
-	buf.WriteString(" for ")
-	this.visitBindings(expr.bindings, &buf, " in ", " within ")
-
+	this.WriteString("array ")
+	this.VisitShared(expr.valueMapping)
+	this.WriteString(" for ")
+	this.visitBindings(expr.bindings, " in ", " within ")
 	if expr.when != nil {
-		buf.WriteString(" when ")
-		buf.WriteString(this.Visit(expr.when))
+		this.WriteString(" when ")
+		this.VisitShared(expr.when)
 	}
-
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString(" end")
+	return nil, nil
 }
 
 func (this *Stringer) VisitFirst(expr *First) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("first ")
-	buf.WriteString(this.Visit(expr.valueMapping))
-	buf.WriteString(" for ")
-	this.visitBindings(expr.bindings, &buf, " in ", " within ")
-
+	this.WriteString("first ")
+	this.VisitShared(expr.valueMapping)
+	this.WriteString(" for ")
+	this.visitBindings(expr.bindings, " in ", " within ")
 	if expr.when != nil {
-		buf.WriteString(" when ")
-		buf.WriteString(this.Visit(expr.when))
+		this.WriteString(" when ")
+		this.VisitShared(expr.when)
 	}
-
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString(" end")
+	return nil, nil
 }
 
 func (this *Stringer) VisitObject(expr *Object) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("object ")
-	buf.WriteString(this.Visit(expr.nameMapping))
-	buf.WriteString(" : ")
-	buf.WriteString(this.Visit(expr.valueMapping))
-	buf.WriteString(" for ")
-	this.visitBindings(expr.bindings, &buf, " in ", " within ")
-
+	this.WriteString("object ")
+	this.VisitShared(expr.nameMapping)
+	this.WriteString(" : ")
+	this.VisitShared(expr.valueMapping)
+	this.WriteString(" for ")
+	this.visitBindings(expr.bindings, " in ", " within ")
 	if expr.when != nil {
-		buf.WriteString(" when ")
-		buf.WriteString(this.Visit(expr.when))
+		this.WriteString(" when ")
+		this.VisitShared(expr.when)
 	}
-
-	buf.WriteString(" end")
-	return buf.String(), nil
+	this.WriteString(" end")
+	return nil, nil
 }
 
 func (this *Stringer) VisitExists(expr *Exists) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(exists ")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(exists ")
+	this.VisitShared(expr.Operand())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitIn(expr *In) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" in ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" in ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitWithin(expr *Within) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" within ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" within ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 // Comparison
 
 func (this *Stringer) VisitBetween(expr *Between) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" between ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(" and ")
-	buf.WriteString(this.Visit(expr.Third()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" between ")
+	this.VisitShared(expr.Second())
+	this.WriteString(" and ")
+	this.VisitShared(expr.Third())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitEq(expr *Eq) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" = ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" = ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitLE(expr *LE) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" <= ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" <= ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitLike(expr *Like) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" like ")
-	buf.WriteString(this.Visit(expr.Second()))
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" like ")
+	this.VisitShared(expr.Second())
 	if !expr.IsDefaultEscape() {
-		buf.WriteString(" escape ")
-		buf.WriteString(this.Visit(expr.Escape()))
+		this.WriteString(" escape ")
+		this.VisitShared(expr.Escape())
 	}
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitLT(expr *LT) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString(" < ")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(" < ")
+	this.VisitShared(expr.Second())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitIsMissing(expr *IsMissing) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(" is missing)")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.Operand())
+	this.WriteString(" is missing)")
+	return nil, nil
 }
 
 func (this *Stringer) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(" is not missing)")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.Operand())
+	this.WriteString(" is not missing)")
+	return nil, nil
 }
 
 func (this *Stringer) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(" is not null)")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.Operand())
+	this.WriteString(" is not null)")
+	return nil, nil
 }
 
 func (this *Stringer) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(" is not valued)")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.Operand())
+	this.WriteString(" is not valued)")
+	return nil, nil
 }
 
 func (this *Stringer) VisitIsNull(expr *IsNull) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(" is null)")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.Operand())
+	this.WriteString(" is null)")
+	return nil, nil
 }
 
 func (this *Stringer) VisitIsValued(expr *IsValued) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(" is valued)")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.Operand())
+	this.WriteString(" is valued)")
+	return nil, nil
 }
 
 // Concat
 func (this *Stringer) VisitConcat(expr *Concat) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-
+	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
-			buf.WriteString(" || ")
+			this.WriteString(" || ")
 		}
-
-		buf.WriteString(this.Visit(op))
+		this.VisitShared(op)
 	}
-
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 // Constant
 func (this *Stringer) VisitConstant(expr *Constant) (interface{}, error) {
 	if expr.value.Type() == value.MISSING {
-		return expr.value.String(), nil
+		this.WriteString(expr.value.String())
+	} else {
+		b, _ := expr.value.MarshalJSON()
+		this.WriteString(string(b))
 	}
-
-	b, _ := expr.value.MarshalJSON()
-	return string(b), nil
+	return nil, nil
 }
 
 // Identifier
 func (this *Stringer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	identifier := expr.identifier
-
-	if this.replacee != "" && this.replacee == identifier {
-		identifier = this.replacer
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, len(expr.identifier)+3))
-	buf.WriteString("`")
-	buf.WriteString(identifier)
-	buf.WriteString("`")
-
+	this.WriteString("`")
+	this.WriteString(identifier)
+	this.WriteString("`")
 	if expr.CaseInsensitive() {
-		buf.WriteString("i")
+		this.WriteString("i")
 	}
-
-	return buf.String(), nil
+	return nil, nil
 }
 
 // Construction
 
 func (this *Stringer) VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("[")
-
+	this.WriteString("[")
 	for i, op := range expr.operands {
 		if i > 0 {
-			buf.WriteString(", ")
+			this.WriteString(", ")
 		}
-
-		buf.WriteString(this.Visit(op))
+		this.VisitShared(op)
 	}
-
-	buf.WriteString("]")
-	return buf.String(), nil
+	this.WriteString("]")
+	return nil, nil
 }
 
 func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("{")
-
+	this.WriteString("{")
 	// Sort names
 	var nameBuf [_NAME_CAP]string
 	var names []string
@@ -469,330 +400,281 @@ func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, 
 		names = _NAME_POOL.GetCapped(len(expr.bindings))
 		defer _NAME_POOL.Put(names)
 	}
-
 	for name, _ := range expr.bindings {
 		names = append(names, name)
 	}
-
 	sort.Strings(names)
 
 	i := 0
 	for _, n := range names {
 		if i > 0 {
-			buf.WriteString(", ")
+			this.WriteString(", ")
 		}
-
 		// MB-21231 value.stringvalue.String() marshals strings already,
 		// so string values have quotes prepepended.
 		// We must avoid re-marshalling or we'll enter quoting hell.
-		buf.WriteString(n)
-		buf.WriteString(": ")
+		this.WriteString(n)
+		this.WriteString(": ")
 		v := expr.bindings[n]
-		buf.WriteString(this.Visit(v))
+		this.VisitShared(v)
 		i++
 	}
-
-	buf.WriteString("}")
-	return buf.String(), nil
+	this.WriteString("}")
+	return nil, nil
 }
 
 // Logic
 
 func (this *Stringer) VisitAnd(expr *And) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-
+	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
-			buf.WriteString(" and ")
+			this.WriteString(" and ")
 		}
-
-		buf.WriteString(this.Visit(op))
+		this.VisitShared(op)
 	}
-
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitNot(expr *Not) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(not ")
-	buf.WriteString(this.Visit(expr.Operand()))
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString("(not ")
+	this.VisitShared(expr.Operand())
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitOr(expr *Or) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-
+	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
-			buf.WriteString(" or ")
+			this.WriteString(" or ")
 		}
-
-		buf.WriteString(this.Visit(op))
+		this.VisitShared(op)
 	}
-
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 // Navigation
 
 func (this *Stringer) VisitElement(expr *Element) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.First()))
-	buf.WriteString("[")
-	buf.WriteString(this.Visit(expr.Second()))
-	buf.WriteString("])")
-	return buf.String(), nil
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString("[")
+	this.VisitShared(expr.Second())
+	this.WriteString("])")
+	return nil, nil
 }
 
 func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-
-	if first, ok := expr.First().(*Identifier); !ok || this.replacee == "" ||
-		first.identifier != this.replacee || !this.omit {
-		buf.WriteString(this.Visit(expr.First()))
-		buf.WriteString(".")
-	}
-
+	this.WriteString("(")
+	this.VisitShared(expr.First())
+	this.WriteString(".")
 	_, ok := expr.Second().(*FieldName)
 	if !ok {
-		buf.WriteString("[")
+		this.WriteString("[")
 	}
-
-	buf.WriteString(this.Visit(expr.Second()))
-
+	this.VisitShared(expr.Second())
 	if !ok {
-		buf.WriteString("]")
+		this.WriteString("]")
 		if expr.CaseInsensitive() {
-			buf.WriteString("i")
+			this.WriteString("i")
 		}
 	}
-
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 func (this *Stringer) VisitFieldName(expr *FieldName) (interface{}, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, len(expr.name)+3))
-	buf.WriteString("`")
-	buf.WriteString(expr.name)
-	buf.WriteString("`")
-
+	this.WriteString("`")
+	this.WriteString(expr.name)
+	this.WriteString("`")
 	if expr.CaseInsensitive() {
-		buf.WriteString("i")
+		this.WriteString("i")
 	}
-
-	return buf.String(), nil
+	return nil, nil
 }
 
 func (this *Stringer) VisitSlice(expr *Slice) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString("(")
-	buf.WriteString(this.Visit(expr.Operands()[0]))
-	buf.WriteString("[")
+	this.WriteString("(")
+	this.VisitShared(expr.Operands()[0])
+	this.WriteString("[")
 	if e := expr.Start(); e != nil {
-		buf.WriteString(this.Visit(e))
+		this.VisitShared(e)
 	}
-	buf.WriteString(" : ")
-
+	this.WriteString(" : ")
 	if e := expr.End(); e != nil {
-		buf.WriteString(this.Visit(e))
+		this.VisitShared(e)
 	}
-
-	buf.WriteString("])")
-	return buf.String(), nil
+	this.WriteString("])")
+	return nil, nil
 }
 
 // Self
 func (this *Stringer) VisitSelf(expr *Self) (interface{}, error) {
-	return "self", nil
+	this.WriteString("self")
+	return nil, nil
 }
 
 // Function
 func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 	if expr.Aggregate() {
-		return expr.String(), nil
+		if ab, ok := expr.(interface{ WriteToStringer(*Stringer) }); ok {
+			ab.WriteToStringer(this)
+		} else {
+			this.WriteString(expr.String())
+		}
+		return nil, nil
 	}
-	var buf bytes.Buffer
-
 	switch t := expr.(type) {
 	case *FlattenKeys:
 		return this.visitFlattenKeys(t)
 	case *SequenceOperation:
-		buf.WriteString("(")
-		buf.WriteString(t.Operator())
-		buf.WriteString(")")
-		return buf.String(), nil
+		this.WriteString("(")
+		this.WriteString(t.Operator())
+		this.WriteString(")")
+		return nil, nil
 	case *CurrentUser:
 		op := t.Operator()
 		if op != "" {
-			buf.WriteString("(")
-			buf.WriteString(op)
-			buf.WriteString(")")
-			return buf.String(), nil
+			this.WriteString("(")
+			this.WriteString(op)
+			this.WriteString(")")
+			return nil, nil
 		}
 	case UnaryFunction:
 		op := t.Operator()
 		if op != "" {
-			buf.WriteString("(")
-			buf.WriteString(this.Visit(t.Operand()))
-			buf.WriteString(op)
-			buf.WriteString(")")
-			return buf.String(), nil
+			this.WriteString("(")
+			this.VisitShared(t.Operand())
+			this.WriteString(op)
+			this.WriteString(")")
+			return nil, nil
 		}
 	case BinaryFunction:
 		op := t.Operator()
 		if op != "" {
-			buf.WriteString("(")
-			buf.WriteString(this.Visit(t.First()))
-			buf.WriteString(op)
-			buf.WriteString(this.Visit(t.Second()))
-			buf.WriteString(")")
-			return buf.String(), nil
+			this.WriteString("(")
+			this.VisitShared(t.First())
+			this.WriteString(op)
+			this.VisitShared(t.Second())
+			this.WriteString(")")
+			return nil, nil
 		}
 	}
 
 	if udf, ok := expr.(*UserDefinedFunction); ok {
-		buf.WriteString(udf.ProtectedName())
+		this.WriteString(udf.ProtectedName())
 	} else {
-		buf.WriteString(expr.Name())
+		this.WriteString(expr.Name())
 	}
-	buf.WriteString("(")
+	this.WriteString("(")
 
 	if expr.Distinct() {
-		buf.WriteString("distinct ")
+		this.WriteString("distinct ")
 	}
-
 	for i, op := range expr.Operands() {
 		if i > 0 {
-			buf.WriteString(", ")
+			this.WriteString(", ")
 		}
-
 		if op == nil {
-			buf.WriteString("*") // for count(*)
+			this.WriteString("*") // for count(*)
 		} else {
-			buf.WriteString(this.Visit(op))
+			this.VisitShared(op)
 		}
 	}
-
-	buf.WriteString(")")
-
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 // Subquery
 func (this *Stringer) VisitSubquery(expr Subquery) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString(expr.String())
-	return buf.String(), nil
+	this.WriteString(expr.String())
+	return nil, nil
 }
 
 // InferUnderParenthesis
 func (this *Stringer) VisitParenInfer(expr ParenInfer) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString(expr.String())
-	return buf.String(), nil
+	this.WriteString(expr.String())
+	return nil, nil
 }
 
 // NamedParameter
 func (this *Stringer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
-	return "$" + expr.Name(), nil
+	this.WriteString("$" + expr.Name())
+	return nil, nil
 }
 
 // PositionalParameter
 func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
-	return "$" + strconv.Itoa(expr.Position()), nil
+	this.WriteString("$" + strconv.Itoa(expr.Position()))
+	return nil, nil
 }
 
 // Cover
 func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
-	var buf bytes.Buffer
 	if expr.FullCover() {
-		buf.WriteString("cover (")
+		this.WriteString("cover (")
 	} else if expr.IsIndexKey() {
-		buf.WriteString("_index_key (")
+		this.WriteString("_index_key (")
 	} else if expr.IsIndexCond() {
-		buf.WriteString("_index_condition (")
+		this.WriteString("_index_condition (")
 	} else {
 		return nil, fmt.Errorf("VisitCover: unexpected cover type")
 	}
-	buf.WriteString(expr.Text())
-	buf.WriteString(")")
-	return buf.String(), nil
+	this.WriteString(expr.Text())
+	this.WriteString(")")
+	return nil, nil
 }
 
 // All
 func (this *Stringer) VisitAll(expr *All) (interface{}, error) {
-	var buf bytes.Buffer
 	if expr.Distinct() {
-		buf.WriteString("(distinct (")
+		this.WriteString("(distinct (")
 	} else {
-		buf.WriteString("(all (")
+		this.WriteString("(all (")
 	}
-	buf.WriteString(this.Visit(expr.Array()))
-	buf.WriteString("))")
-	return buf.String(), nil
+	this.VisitShared(expr.Array())
+	this.WriteString("))")
+	return nil, nil
 }
 
 // Bindings
-func (this *Stringer) visitBindings(bindings Bindings, w io.Writer, in, within string) {
+func (this *Stringer) visitBindings(bindings Bindings, in string, within string) {
 	for i, b := range bindings {
 		if i > 0 {
-			io.WriteString(w, ", ")
+			this.WriteString(", ")
 		}
-
 		if b.nameVariable != "" {
-			io.WriteString(w, "`")
-			io.WriteString(w, b.nameVariable)
-			io.WriteString(w, "` : ")
+			this.WriteString("`")
+			this.WriteString(b.nameVariable)
+			this.WriteString("` : ")
 		}
-
-		io.WriteString(w, "`")
-		io.WriteString(w, b.variable)
-		io.WriteString(w, "`")
-
+		this.WriteString("`")
+		this.WriteString(b.variable)
+		this.WriteString("`")
 		if b.descend {
-			io.WriteString(w, within)
+			this.WriteString(within)
 		} else {
-			io.WriteString(w, in)
+			this.WriteString(in)
 		}
-
-		io.WriteString(w, this.Visit(b.expr))
+		this.VisitShared(b.expr)
 	}
 }
 
 func (this *Stringer) visitFlattenKeys(fk *FlattenKeys) (interface{}, error) {
-	var buf bytes.Buffer
-	buf.WriteString(fk.Name())
-	buf.WriteString("(")
+	this.WriteString(fk.Name())
+	this.WriteString("(")
 	for i, op := range fk.Operands() {
 		if i > 0 {
-			buf.WriteString(", ")
+			this.WriteString(", ")
 		}
-
-		buf.WriteString(this.Visit(op))
-		buf.WriteString(fk.AttributeString(i))
+		this.VisitShared(op)
+		this.WriteString(fk.AttributeString(i))
 	}
-
-	buf.WriteString(")")
-	return buf.String(), nil
-}
-
-func (this *Stringer) visitSequenceOp(so *SequenceOperation) (interface{}, error) {
-	var buf bytes.Buffer
-	if so.next {
-		buf.WriteString("next value for ")
-	} else {
-		buf.WriteString("prev value for ")
-	}
-	buf.WriteString(so.FullName())
-	return buf.String(), nil
+	this.WriteString(")")
+	return nil, nil
 }
 
 type PathToString struct {
@@ -803,17 +685,14 @@ type PathToString struct {
 }
 
 func NewPathToString() *PathToString {
-	rv := &PathToString{}
 	stringer := NewStringer()
-
+	rv := &PathToString{}
 	rv.SetMapper(rv)
 	rv.SetMapFunc(func(expr Expression) (Expression, error) {
-
 		switch expr2 := expr.(type) {
 		case *Identifier:
 			rv.alias = expr2.Alias()
 			return expr, nil
-
 		case *Field:
 			var sv string
 			second := expr2.Second().Value()
@@ -833,7 +712,6 @@ func NewPathToString() *PathToString {
 					return expr, nil
 				}
 			}
-
 		case *Element:
 			_, err := rv.Map(expr2.First())
 			if err == nil {
@@ -854,7 +732,6 @@ func PathString(expr Expression) (alias, path string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-
 	return rv.alias, rv.path, err
 }
 

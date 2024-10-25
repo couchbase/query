@@ -86,14 +86,14 @@ func (this *NLNest) MarshalJSON() ([]byte, error) {
 func (this *NLNest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "NestedLoopNest"}
 	r["alias"] = this.alias
-	r["on_clause"] = expression.NewStringer().Visit(this.onclause)
+	r["on_clause"] = this.onclause.String()
 
 	if this.outer {
 		r["outer"] = this.outer
 	}
 
 	if this.filter != nil {
-		r["filter"] = expression.NewStringer().Visit(this.filter)
+		r["filter"] = this.filter.String()
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
