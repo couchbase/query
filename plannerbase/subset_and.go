@@ -19,6 +19,8 @@ func (this *subset) VisitAnd(expr *expression.And) (interface{}, error) {
 		return value2.Truth(), nil
 	}
 
+	expr, _ = expression.FlattenAndNoDedup(expr)
+
 	if expr.EquivalentTo(expr2) {
 		return true, nil
 	}

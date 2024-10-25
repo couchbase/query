@@ -22,6 +22,12 @@ func SubsetOf(expr1, expr2 expression.Expression) bool {
 		return true
 	}
 
+	if and, ok := expr2.(*expression.And); ok {
+		expr2, _ = expression.FlattenAndNoDedup(and)
+	} else if or, ok := expr2.(*expression.Or); ok {
+		expr2, _ = expression.FlattenOrNoDedup(or)
+	}
+
 	s := &subset{expr2}
 	result, _ := expr1.Accept(s)
 	return result.(bool)
