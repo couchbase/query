@@ -394,7 +394,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 
 func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vpred expression.Expression,
 	primaryKey expression.Expressions, formalizer *expression.Formalizer,
-	ubs expression.Bindings, join bool) (
+	ubs expression.Bindings, join bool, baseKeyspace *base.BaseKeyspace) (
 	sargables, arrays, flex map[datastore.Index]*indexEntry, err error) {
 
 	flexPred := pred
@@ -460,8 +460,15 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 					return
 				}
 
-				if !base.SubsetOf(subset, cond) && (origCond == nil || !base.SubsetOf(subset, origCond)) {
+				indexId := index.Id()
+				if baseKeyspace.IsNonSubsetIndex(indexId) {
 					continue
+				} else if !baseKeyspace.IsSubsetIndex(indexId) {
+					if !base.SubsetOf(subset, cond) && (origCond == nil || !base.SubsetOf(subset, origCond)) {
+						baseKeyspace.AddNonSubsetIndex(indexId)
+						continue
+					}
+					baseKeyspace.AddSubsetIndex(indexId)
 				}
 			}
 

@@ -59,6 +59,8 @@ type BaseKeyspace struct {
 	cardinality   float64
 	size          int64
 	projection    []string
+	subsetIndexes map[string]bool
+	nonSubsetIdxs map[string]bool
 }
 
 func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTerm, optBit int32) (*BaseKeyspace, time.Duration) {
@@ -107,11 +109,13 @@ func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTer
 	}
 
 	return &BaseKeyspace{
-		name:     name,
-		keyspace: keyspace,
-		ksFlags:  ksFlags,
-		node:     node,
-		optBit:   optBit,
+		name:          name,
+		keyspace:      keyspace,
+		ksFlags:       ksFlags,
+		node:          node,
+		optBit:        optBit,
+		subsetIndexes: make(map[string]bool),
+		nonSubsetIdxs: make(map[string]bool),
 	}, duration
 }
 
@@ -223,7 +227,7 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 	dest := make(map[string]*BaseKeyspace, len(src))
 
 	for _, kspace := range src {
-		dest[kspace.name] = &BaseKeyspace{
+		baseKeyspaceCopy := &BaseKeyspace{
 			name:       kspace.name,
 			keyspace:   kspace.keyspace,
 			ksFlags:    kspace.ksFlags,
@@ -232,18 +236,19 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 			node:       kspace.node,
 			optBit:     kspace.optBit,
 		}
+		dest[kspace.name] = baseKeyspaceCopy
 		if len(kspace.unnests) > 0 {
-			dest[kspace.name].unnests = make(map[string]string, len(kspace.unnests))
+			baseKeyspaceCopy.unnests = make(map[string]string, len(kspace.unnests))
 			for a, k := range kspace.unnests {
-				dest[kspace.name].unnests[a] = k
+				baseKeyspaceCopy.unnests[a] = k
 			}
 			if len(kspace.unnestIndexes) > 0 {
-				dest[kspace.name].unnestIndexes = make(map[datastore.Index]*UnnestIndexInfo, len(kspace.unnestIndexes))
+				baseKeyspaceCopy.unnestIndexes = make(map[datastore.Index]*UnnestIndexInfo, len(kspace.unnestIndexes))
 				for i, idxInfo := range kspace.unnestIndexes {
 					if idxInfo != nil {
 						a2 := make([]string, len(idxInfo.aliases))
 						copy(a2, idxInfo.aliases)
-						dest[kspace.name].unnestIndexes[i] = &UnnestIndexInfo{
+						baseKeyspaceCopy.unnestIndexes[i] = &UnnestIndexInfo{
 							selec:   idxInfo.selec,
 							aliases: a2,
 						}
@@ -262,36 +267,44 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 			for _, hint := range kspace.indexHints {
 				indexHints = append(indexHints, hint)
 			}
-			dest[kspace.name].indexHints = indexHints
+			baseKeyspaceCopy.indexHints = indexHints
 		}
 		if len(kspace.joinHints) > 0 {
 			joinHints := make([]algebra.OptimHint, 0, len(kspace.joinHints))
 			for _, hint := range kspace.joinHints {
 				joinHints = append(joinHints, hint)
 			}
-			dest[kspace.name].joinHints = joinHints
+			baseKeyspaceCopy.joinHints = joinHints
 		}
 		if len(kspace.joinFltrHints) > 0 {
 			joinFltrHints := make([]algebra.OptimHint, 0, len(kspace.joinFltrHints))
 			for _, hint := range kspace.joinFltrHints {
 				joinFltrHints = append(joinFltrHints, hint)
 			}
-			dest[kspace.name].joinFltrHints = joinFltrHints
+			baseKeyspaceCopy.joinFltrHints = joinFltrHints
 		}
 		if len(kspace.projection) > 0 {
-			dest[kspace.name].projection = make([]string, len(kspace.projection))
-			copy(dest[kspace.name].projection, kspace.projection)
+			baseKeyspaceCopy.projection = make([]string, len(kspace.projection))
+			copy(baseKeyspaceCopy.projection, kspace.projection)
 		}
 		if copyFilter {
 			if len(kspace.filters) > 0 {
-				dest[kspace.name].filters = kspace.filters.Copy()
+				baseKeyspaceCopy.filters = kspace.filters.Copy()
 			}
 			if len(kspace.joinfilters) > 0 {
-				dest[kspace.name].joinfilters = kspace.joinfilters.Copy()
+				baseKeyspaceCopy.joinfilters = kspace.joinfilters.Copy()
 			}
 		}
 		if len(kspace.vectorfilters) > 0 {
-			dest[kspace.name].vectorfilters = kspace.vectorfilters.Copy()
+			baseKeyspaceCopy.vectorfilters = kspace.vectorfilters.Copy()
+		}
+		baseKeyspaceCopy.subsetIndexes = make(map[string]bool, len(kspace.subsetIndexes))
+		for k, v := range kspace.subsetIndexes {
+			baseKeyspaceCopy.subsetIndexes[k] = v
+		}
+		baseKeyspaceCopy.nonSubsetIdxs = make(map[string]bool, len(kspace.nonSubsetIdxs))
+		for k, v := range kspace.nonSubsetIdxs {
+			baseKeyspaceCopy.nonSubsetIdxs[k] = v
 		}
 	}
 
@@ -775,6 +788,24 @@ func (this *BaseKeyspace) GetVectorPred() expression.Expression {
 		}
 	}
 	return vpred
+}
+
+func (this *BaseKeyspace) AddSubsetIndex(indexId string) {
+	this.subsetIndexes[indexId] = true
+}
+
+func (this *BaseKeyspace) AddNonSubsetIndex(indexId string) {
+	this.nonSubsetIdxs[indexId] = true
+}
+
+func (this *BaseKeyspace) IsSubsetIndex(indexId string) bool {
+	_, ok := this.subsetIndexes[indexId]
+	return ok
+}
+
+func (this *BaseKeyspace) IsNonSubsetIndex(indexId string) bool {
+	_, ok := this.nonSubsetIdxs[indexId]
+	return ok
 }
 
 func GetKeyspaceName(baseKeyspaces map[string]*BaseKeyspace, alias string) string {

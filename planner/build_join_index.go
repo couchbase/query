@@ -135,14 +135,15 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 	}
 
 	subset := pred
-	if kspace, ok := this.baseKeyspaces[node.Alias()]; ok {
-		err = CombineFilters(kspace, false)
+	baseKeyspace, ok := this.baseKeyspaces[node.Alias()]
+	if ok {
+		err = CombineFilters(baseKeyspace, false)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		if kspace.DnfPred() != nil {
-			subset = expression.NewAnd(subset, kspace.DnfPred().Copy())
+		if baseKeyspace.DnfPred() != nil {
+			subset = expression.NewAnd(subset, baseKeyspace.DnfPred().Copy())
 			dnf = base.NewDNF(subset, true, true)
 			subset, err = dnf.Map(subset)
 			if err != nil {
@@ -171,7 +172,7 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 		}
 	}
 
-	sargables, _, _, err := this.sargableIndexes(indexes, pred, subset, nil, primaryKey, formalizer, nil, false)
+	sargables, _, _, err := this.sargableIndexes(indexes, pred, subset, nil, primaryKey, formalizer, nil, false, baseKeyspace)
 	if err != nil {
 		return nil, nil, nil, err
 	}

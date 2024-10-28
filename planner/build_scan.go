@@ -385,7 +385,7 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 	}
 
 	sargables, arrays, flex, err := this.sargableIndexes(indexes, pred, subset, vpred, primaryKey,
-		formalizer, ubs, this.hasBuilderFlag(BUILDER_NL_INNER))
+		formalizer, ubs, this.hasBuilderFlag(BUILDER_NL_INNER), baseKeyspace)
 	if err != nil {
 		return nil, 0, err
 	}
