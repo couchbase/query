@@ -319,14 +319,22 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 		}
 
 		if done {
+			indexKeyNames = indexKeyNames[:len(keys)+len(includes)]
 			break
 		}
 	}
 	if index.IsPrimary() || projection == nil || projection.PrimaryKey {
+		var keyExpr expression.Expression
 		id := expression.NewField(expression.NewMeta(expression.NewIdentifier(alias)),
 			expression.NewFieldName("id", false))
-
-		indexKeyNames = append(indexKeyNames, expression.NewIndexKey(id).String())
+		if cover {
+			keyExpr = expression.NewCover(id)
+		} else {
+			keyExpr = expression.NewIndexKey(id)
+		}
+		indexKeyNames = append(indexKeyNames, keyExpr.String())
+	} else {
+		indexKeyNames = append(indexKeyNames, "")
 	}
 
 	return indexKeyNames, nil
