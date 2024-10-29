@@ -196,9 +196,7 @@ func dispatch_command(line string, interactive bool, liner *liner.State) (errors
 		}
 	}
 
-	// Handle comments here as well. This is useful for the \source
-	// command and the --file and --script options.
-	if strings.HasPrefix(line, "--") || strings.HasPrefix(line, "#") {
+	if strings.HasPrefix(line, "#") || (strings.HasPrefix(line, "--") && strings.Index(line, "\n") == -1) {
 		return 0, ""
 	}
 
@@ -372,8 +370,7 @@ func ExecShellCmd(line string, liner *liner.State) (errors.ErrorCode, string) {
 // Note: if adviseFlag is set but inputFlag is unset - stdin is the file to read from instead of FILE_INPUT
 func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 
-	var newFileReader *bufio.Reader
-	var isEOF = false
+	var input *bufio.Reader
 
 	if adviseFlag && inputFlag == "" {
 		f, e := os.Stdin.Stat()
@@ -388,7 +385,7 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 		}
 
 		// Create a new reader for the file
-		newFileReader = bufio.NewReader(os.Stdin)
+		input = bufio.NewReader(os.Stdin)
 
 	} else {
 		// Read input file
@@ -401,157 +398,160 @@ func readAndExec(liner *liner.State) (errors.ErrorCode, string) {
 		defer inputFile.Close()
 
 		// Create a new reader for the file
-		newFileReader = bufio.NewReader(inputFile)
+		input = bufio.NewReader(inputFile)
 	}
-
-	// Final input command string to be executed
-	final_input := " "
 
 	// Variables for -advise option processing
 	// If there is only 1 query in the file perform ADVISE
-	// If there are > 1 queries in the file perform SELECT ADVISOR[".."]; on all queries
-	// Note - we append any line in the file ( except comments ) to the ADVISOR query.
-	// Syntax checks of the appended lines will be done in the engine.
+	// If there are multiple queries in the file perform SELECT ADVISOR[".."]; on them all
+	// Note - we complete statements in the file to the ADVISOR query.
+	// Syntax checks for complete statements will be performed in the engine.
 
-	adviseQuery := ADVISOR_PREFIX // final advise/ advisor statement to be executed
-	qCount := 0                   // number of queries so far
-	adviseEnd := false            // if all queries have been consumed and we can execute the created ADVISE/ ADVISOR stmt
-	prevQ := ""
-	noAdvise := !adviseFlag
+	var adviseStmts []string
+	var sb bytes.Buffer
 
-	// Loop through th file for every line.
-	for {
-
-		// Read the line until a new line character. If it contains a ;
-		// at the end of the read then that is the query to run. If not
-		// keep appending to the string until you reach the ;\n.
-		path, err := newFileReader.ReadString('\n')
-
-		if err != nil && err != io.EOF {
-			return errors.E_SHELL_READ_FILE, err.Error()
-		}
-
-		// Remove leading and trailing spaces from the input
-		path = strings.TrimSpace(path)
-
-		if err == io.EOF {
-			// Reached end of file. We are done. So break out of the loop.
-			// Do not require the last line on the file to have a \n.
-
-			if path == "" && final_input == " " || path == "" && final_input == ";" {
-				if noAdvise {
-					break
-				}
-				adviseEnd = true
-
-			} else {
-				//This means we have some text on the last line
-				isEOF = true
-			}
-
-		}
-
-		// Process the line read
-		if noAdvise || !adviseEnd {
-			// If any line has a comment, dont count that line for the input,
-			// add it to the history and then discard it.
-
-			if strings.HasPrefix(path, "--") || strings.HasPrefix(path, "#") {
-				errCode, errStr := UpdateHistory(liner, homeDir, path)
-				if errCode != 0 {
-					return errCode, errStr
-				}
+	// read the input file extracting statements to run
+	for eof := false; !eof; {
+		lastStar := false
+		quote := rune(0)
+		comment := rune(0)
+		pr := rune(0)
+		sb.Reset()
+		content := false
+		lineStart := 0
+		lineContent := false
+		for done := false; !done; {
+			r, _, err := input.ReadRune()
+			if err != nil && err != io.EOF {
+				return errors.E_SHELL_READ_FILE, err.Error()
+			} else if err == io.EOF {
+				eof = true
+				done = true
 				continue
 			}
-
-			if strings.HasSuffix(path, ";") {
-				// The full input command has been read.
-				final_input = final_input + " " + path
-			} else {
-				if isEOF {
-					// The last line of the file has been read and it doesnt
-					// contain a ;. Hence append one and then run.
-					final_input = final_input + " " + path + ";"
-
-				} else {
-					// Only part of the command has been read. Hence continue
-					// reading until ; is reached.
-					final_input = final_input + " " + path
-					continue
+			switch {
+			case comment == '#': // script only comment until EOL
+				if r == '\n' {
+					comment = rune(0)
+				}
+				r = rune(0)
+			case comment == '*':
+				if lastStar && r == '/' {
+					comment = rune(0)
+				}
+				// as pr will be rune(0) when the adviseFlag is set, we must independently track seeing a '*' character
+				// specifically for this comment style since it needs the two characters for the terminator
+				lastStar = (r == '*')
+				if adviseFlag {
+					r = rune(0)
+				}
+			case comment == '-':
+				if r == '\n' {
+					comment = rune(0)
+					if !adviseFlag {
+						lineContent = true
+					}
+				}
+				if adviseFlag && r != '\n' {
+					r = rune(0)
+				}
+			case r == quote:
+				quote = rune(0)
+			case quote != rune(0):
+			case r == '`' || r == '\'' || r == '"':
+				quote = r
+			case pr == '/' && r == '*':
+				comment = r
+				lastStar = false
+				if adviseFlag {
+					pr = rune(0)
+					r = rune(0)
+				}
+			case pr == '-' && r == '-':
+				comment = r
+				if adviseFlag {
+					pr = rune(0)
+					r = rune(0)
+				}
+			case r == '#':
+				comment = r
+				r = rune(0)
+			case r == ';':
+				if !lineContent {
+					sb.Truncate(lineStart)
+				}
+				done = true
+			case pr == '\n':
+				if !lineContent && adviseFlag {
+					sb.Truncate(lineStart)
+				}
+				lineStart = sb.Len()
+				lineContent = false
+			default:
+				if pr != rune(0) && !unicode.IsSpace(pr) {
+					content = true
+					lineContent = true
 				}
 			}
+			if pr != rune(0) {
+				sb.WriteRune(pr)
+			}
+			pr = r
+		}
 
-			// Populate the final string to execute
-			final_input = strings.TrimSpace(final_input)
-
-			if final_input == ";" {
+		stmt := strings.TrimSpace(sb.String())
+		if eof && !adviseFlag && (stmt == "" || !content) {
+			break
+		} else if !eof && !adviseFlag && (stmt == "" || !content) {
+			continue
+		} else if adviseFlag {
+			if stmt != "" && content {
+				adviseStmts = append(adviseStmts, stmt)
+			}
+			if !eof {
 				continue
-			}
-
-			// add the queries to the ADVISOR statement
-			if adviseFlag {
-				qCount++
-				// Format specifier %q is used for escaping necessary characters
-				// since each queries will be within ""  in the array of queries in ADVISOR statement
-				if qCount == 1 {
-					adviseQuery += fmt.Sprintf("%q", final_input)
-				} else {
-					adviseQuery += fmt.Sprintf(",%q", final_input)
-				}
-				prevQ = final_input
 			}
 		}
 
 		// Execute the statement
 		// Write statement to shell, write statement to file, etc
-		if noAdvise || adviseEnd {
-
-			if adviseFlag {
-				// if only 1 query in the file - perform ADVISE on it
-				if qCount == 1 {
-					adviseQuery = ADVISE_PREFIX + prevQ
-				} else {
-					// if > 1 query in the file - perfom SELECT ADVISOR([...]) on the list of queries
-					adviseQuery += ADVISOR_SUFFIX
-				}
-				final_input = adviseQuery
-			}
-
-			// Print the query along with printing the results, only if -q isnt specified.
-			if !command.QUIET {
-				command.OUTPUT.EchoCommand(string(final_input))
-			}
-
-			//Remove the ; before sending the query to execute
-			final_input = strings.TrimSuffix(final_input, ";")
-
-			command.OUTPUT.WriteCommand(final_input)
-
-			// If outputting to a file, then add the statement to the file as well.
-
-			errCode, errStr := dispatch_command(final_input, false, liner)
-			if errCode != 0 {
-				s_err := command.HandleError(errCode, errStr)
-				command.PrintError(s_err)
-
-				if *errorExitFlag {
-					_, werr := command.OUTPUT.WriteString(command.EXITONERR)
-					if werr != nil {
-						command.PrintError(command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error()))
+		if adviseFlag {
+			if len(adviseStmts) == 1 {
+				stmt = ADVISE_PREFIX + adviseStmts[0]
+			} else {
+				var adviseStmt strings.Builder
+				adviseStmt.WriteString(ADVISOR_PREFIX)
+				for i := range adviseStmts {
+					if i > 0 {
+						adviseStmt.WriteRune(',')
 					}
-					liner.Close()
-					os.Clearenv()
-					os.Exit(1)
+					adviseStmt.WriteString(fmt.Sprintf("%q", adviseStmts[i]))
 				}
-			}
-			command.OUTPUT.WriteString(command.NEWLINE + command.NEWLINE)
-
-			if adviseEnd {
-				break
+				adviseStmt.WriteString(ADVISOR_SUFFIX)
+				stmt = adviseStmt.String()
 			}
 		}
 
-		final_input = " "
+		if !command.QUIET {
+			command.OUTPUT.EchoCommand(string(stmt) + ";")
+		}
+		command.OUTPUT.WriteCommand(stmt)
+
+		errCode, errStr := dispatch_command(stmt, false, liner)
+		if errCode != 0 {
+			s_err := command.HandleError(errCode, errStr)
+			command.PrintError(s_err)
+			if *errorExitFlag {
+				_, werr := command.OUTPUT.WriteString(command.EXITONERR)
+				if werr != nil {
+					command.PrintError(command.HandleError(errors.E_SHELL_WRITER_OUTPUT, werr.Error()))
+				}
+				liner.Close()
+				os.Clearenv()
+				os.Exit(1)
+			}
+		}
+		command.OUTPUT.WriteString(command.NEWLINE + command.NEWLINE)
 	}
 	return 0, ""
 }
