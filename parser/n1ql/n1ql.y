@@ -3920,7 +3920,7 @@ keyspace_name
 {
     name, err := functionsBridge.NewFunctionName([]string{$1}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     $$ = name
 }
@@ -3944,7 +3944,7 @@ path_part DOT path_part DOT path_part
     name, err := functionsBridge.NewFunctionName([]string{yylex.(*lexer).Namespace(), $1, $3, $5},
         yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     $$ = name
 }
@@ -3955,7 +3955,7 @@ namespace_term keyspace_name
 {
     name, err := functionsBridge.NewFunctionName([]string{$1, $2}, yylex.(*lexer).Namespace(), yylex.(*lexer).QueryContext())
     if err != nil {
-        yylex.Error(err.Error()+yylex.(*lexer).ErrorContext())
+        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
     }
     $$ = name
 }
@@ -5390,11 +5390,15 @@ function_name LPAREN STAR RPAREN opt_filter opt_window_function
 |
 long_func_name LPAREN opt_exprs RPAREN
 {
-    f := expression.GetUserDefinedFunction($1, yylex.(*lexer).UdfCheck())
-    if f != nil {
-        $$ = f.Constructor()($3...)
+    if $1 != nil {
+        f := expression.GetUserDefinedFunction($1, yylex.(*lexer).UdfCheck())
+        if f != nil {
+            $$ = f.Constructor()($3...)
+        } else {
+            return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v", $1.Key()), $<line>1, $<column>1)
+        }
     } else {
-        return yylex.(*lexer).FatalError(fmt.Sprintf("Invalid function %v", $1.Key()), $<line>1, $<column>1)
+        return yylex.(*lexer).FatalError("", -1, -1) // this is just to force parsing to stop with the existing error(s)
     }
 }
 ;

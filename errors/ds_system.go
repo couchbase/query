@@ -17,7 +17,9 @@ import (
 
 func NewSystemDatastoreError(e error, msg string) Error {
 	c := make(map[string]interface{}, 1)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_DATASTORE, IKey: "datastore.system.generic_error", ICause: e,
 		cause: c, InternalMsg: "System datastore error " + msg, InternalCaller: CallerN(1)}
 
@@ -27,7 +29,9 @@ func NewSystemDatastoreError(e error, msg string) Error {
 
 func NewSystemKeyspaceNotFoundError(e error, msg string) Error {
 	c := make(map[string]interface{}, 2)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["message"] = msg
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_KEYSPACE_NOT_FOUND, IKey: "datastore.system.keyspace_not_found", ICause: e,
 		cause: c, InternalMsg: "Keyspace not found " + msg, InternalCaller: CallerN(1)}
@@ -36,7 +40,9 @@ func NewSystemKeyspaceNotFoundError(e error, msg string) Error {
 
 func NewSystemNotImplementedError(e error, msg string) Error {
 	c := make(map[string]interface{}, 2)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["message"] = msg
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_NOT_IMPLEMENTED, IKey: "datastore.system.not_implemented", ICause: e,
 		cause: c, InternalMsg: "System datastore :  Not implemented " + msg, InternalCaller: CallerN(1)}
@@ -45,7 +51,9 @@ func NewSystemNotImplementedError(e error, msg string) Error {
 
 func NewSystemNotSupportedError(e error, msg string) Error {
 	c := make(map[string]interface{}, 2)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["message"] = msg
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_NOT_SUPPORTED, IKey: "datastore.system.not_supported", ICause: e,
 		cause: c, InternalMsg: "System datastore : Not supported " + msg, InternalCaller: CallerN(1)}
@@ -54,7 +62,9 @@ func NewSystemNotSupportedError(e error, msg string) Error {
 
 func NewSystemIdxNotFoundError(e error, msg string) Error {
 	c := make(map[string]interface{}, 2)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["message"] = msg
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_IDX_NOT_FOUND, IKey: "datastore.system.idx_not_found", ICause: e,
 		cause: c, InternalMsg: "System datastore : Index not found " + msg, InternalCaller: CallerN(1)}
@@ -63,7 +73,9 @@ func NewSystemIdxNotFoundError(e error, msg string) Error {
 
 func NewSystemIdxNoDropError(e error, msg string) Error {
 	c := make(map[string]interface{}, 2)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["message"] = msg
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_IDX_NO_DROP, IKey: "datastore.system.idx_no_drop", ICause: e,
 		cause: c, InternalMsg: "System datastore : This index cannot be dropped " + msg, InternalCaller: CallerN(1)}
@@ -71,7 +83,9 @@ func NewSystemIdxNoDropError(e error, msg string) Error {
 
 func NewSystemStmtNotFoundError(e error, msg string) Error {
 	c := make(map[string]interface{}, 2)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["message"] = msg
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_STMT_NOT_FOUND, IKey: "datastore.system.stmt_not_found", ICause: e,
 		cause: c, InternalMsg: "System datastore : Statement not found " + msg, InternalCaller: CallerN(1)}
@@ -79,7 +93,9 @@ func NewSystemStmtNotFoundError(e error, msg string) Error {
 
 func NewSystemRemoteWarning(e error, op string, ks string) Error {
 	c := make(map[string]interface{}, 3)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["operation"] = op
 	c["keyspace"] = ks
 	return &err{level: WARNING, ICode: W_SYSTEM_REMOTE, IKey: "datastore.system.remote_warning", ICause: e,
@@ -99,7 +115,9 @@ func NewSystemRemoteNodeSkippedWarning(node, op string, ks string) Error {
 
 func NewSystemUnableToRetrieveError(e error, what string) Error {
 	c := make(map[string]interface{}, 1)
-	c["error"] = getErrorForCause(e)
+	if ec := getErrorForCause(e); ec != nil {
+		c["error"] = ec
+	}
 	c["data"] = what
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_UNABLE_TO_RETRIEVE, IKey: "datastore.system.unable_to_retrieve", ICause: e,
 		cause: c, InternalMsg: fmt.Sprintf("System datastore : unable to retrieve %s from server", what),
