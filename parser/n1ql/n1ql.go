@@ -275,7 +275,9 @@ func (this *lexer) getContextFor(contextLine, contextColumn int) string {
 func (this *lexer) FatalError(s string) int {
 	this.stop = true
 	this.nex.Stop()
-	this.Error(s)
+	if s != "" {
+		this.Error(s)
+	}
 	return 1
 }
 
