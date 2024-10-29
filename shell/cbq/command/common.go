@@ -442,7 +442,7 @@ func PushOrSet(args []string, pushvalue bool) (errors.ErrorCode, string) {
 			if err != nil {
 				return errors.E_SHELL_WRITER_OUTPUT, err.Error()
 			}
-			args_str = string(append([]byte(args_str+":"), pw...))
+			args_str = string(append([]byte(strings.Trim(args_str, "\"")+":"), pw...))
 		}
 
 		err_code, err_str := PushValue_Helper(pushvalue, QueryParam, vble, args_str)

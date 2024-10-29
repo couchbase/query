@@ -80,6 +80,7 @@ type Request interface {
 	NaturalOrganizationId() string
 	SetNaturalStatement(algebra.Statement)
 	NaturalStatement() algebra.Statement
+	NaturalShowOnly() bool
 	Prepared() *plan.Prepared
 	SetPrepared(prepared *plan.Prepared)
 	Type() string
@@ -428,6 +429,7 @@ type BaseRequest struct {
 	naturalOrgId         string
 	naturalContext       string
 	nlStatement          algebra.Statement
+	nlShowOnly           bool
 }
 
 type requestIDImpl struct {
@@ -1672,6 +1674,14 @@ func (this *BaseRequest) SetNaturalStatement(nlstmt algebra.Statement) {
 
 func (this *BaseRequest) NaturalStatement() algebra.Statement {
 	return this.nlStatement
+}
+
+func (this *BaseRequest) SetNaturalShowOnly(show bool) {
+	this.nlShowOnly = show
+}
+
+func (this *BaseRequest) NaturalShowOnly() bool {
+	return this.nlShowOnly
 }
 
 func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof bool, redact bool) map[string]interface{} {

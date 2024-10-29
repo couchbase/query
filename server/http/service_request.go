@@ -371,6 +371,12 @@ func (this *httpRequest) processNatural() errors.Error {
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
+		case "execute":
+			if b, ok := v.(bool); ok {
+				this.SetNaturalShowOnly(!b)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
 		default:
 			return errors.NewAdminUnknownSettingError(k)
 		}
