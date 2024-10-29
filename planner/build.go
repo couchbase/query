@@ -698,3 +698,27 @@ func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operat
 	this.subqCoveringInfo[node].AddSubqTermPlan(subqTermPlan)
 	return nil
 }
+
+// Inherit the subqCoveringInfo entries that's marked as SubqUnderJoin from builderCopy (used during
+// join enumeration) to builder.
+func (this *builder) inheritSubqCoveringInfo(builderCopy *builder) {
+	for subselect, infoCopy := range builderCopy.subqCoveringInfo {
+		for _, subqTermPlan := range infoCopy.SubqTermPlans() {
+			if subqTermPlan.IsUnderJoin() {
+				info, ok := this.subqCoveringInfo[subselect]
+				if !ok {
+					if this.subqCoveringInfo == nil {
+						this.subqCoveringInfo = make(map[*algebra.Subselect]CoveringSubqInfo,
+							len(builderCopy.subqCoveringInfo))
+					}
+					info = &coveringSubqInfo{
+						coveringScans: infoCopy.CoveringScans(),
+						subqueryTerms: infoCopy.SubqueryTerms(),
+					}
+					this.subqCoveringInfo[subselect] = info
+				}
+				info.AddSubqTermPlan(subqTermPlan)
+			}
+		}
+	}
+}

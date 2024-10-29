@@ -170,6 +170,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		var coveringOps []plan.CoveringOperator
 		var filter expression.Expression
 		var hasOrder bool
+		var builderCopy *builder
 
 		orderedHint := hasOrderedHint(node.OptimHints())
 		if this.useCBO && !this.indexAdvisor && this.context.Optimizer() != nil &&
@@ -191,8 +192,9 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				}
 			}
 
+			builderCopy = this.Copy()
 			optimizer := this.context.Optimizer()
-			ops, subOps, coveringOps, filter, hasOrder, err = optimizer.OptimizeQueryBlock(this.Copy(), node.From(), limit,
+			ops, subOps, coveringOps, filter, hasOrder, err = optimizer.OptimizeQueryBlock(builderCopy, node.From(), limit,
 				offset, order, distinct)
 			if err != nil {
 				return err
@@ -211,6 +213,9 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				this.resetOffsetLimit()
 			} else {
 				this.resetPushDowns()
+			}
+			if this.NoExecute() && len(builderCopy.subqCoveringInfo) > 0 {
+				this.inheritSubqCoveringInfo(builderCopy)
 			}
 		} else {
 			// Use FROM clause in index selection
