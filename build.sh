@@ -56,7 +56,8 @@ set -- $args
 GIT=`which git`
 
 cbranch=`$GIT rev-parse --abbrev-ref HEAD`
-rbranch=`$GIT log -n 5 --pretty=format:"%D"|awk 'NF>0{p=$NF}END{print p}'`
+rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
+  awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
 defbranch="master"
 
 function checkout_if_necessary {
@@ -82,7 +83,17 @@ function checkout_if_necessary {
   do
     branch=$1
     shift
-    if [[ $branch == $current || $branch == $commit ]]
+    if [[ $branch == $current ]]
+    then
+      cmd1="$GIT pull"
+      res=`$cmd1 2>&1`
+      if [[ $res != "Already up to date." ]]
+      then
+        echo -e "${report}${D} -> ${cmd1}:\n${res}\n"
+      fi
+      return
+    fi
+    if [[ $branch == $commit ]]
     then
       return
     fi
@@ -317,7 +328,7 @@ function DevStandaloneSetup {
 }
 
 # turn off go module for non repo sync build or standalone build
-if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag != 0) ]]; then
+if [[ ( ( ! -d ../../../../../cbft || -h ../../../../../cbft ) && "$GOPATH" != "") || ( $sflag != 0) ]]; then
     export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
