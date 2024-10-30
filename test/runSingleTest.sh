@@ -41,7 +41,6 @@ then
   exit $?
 fi
 
-export GO111MODULE=off
 export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include  -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
 export CGO_LDFLAGS="-L$GOPATH/lib ${CGO_LDFLAGS}"
 export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}

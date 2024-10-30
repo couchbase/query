@@ -15,4 +15,3 @@ export NS_SERVER_CBAUTH_RPC_URL="http://127.0.0.1:8091/cbauth-demo"
 export CBAUTH_REVRPC_URL="http://Administrator:password@localhost:8091/n1ql"
 export CBAUTH_TLS_CONFIG="{}"
 export GSI_TEST=true
-export GO111MODULE=off
