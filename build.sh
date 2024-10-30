@@ -16,6 +16,7 @@
 # compatible with source that is being built
 
 PRODUCT_VERSION=${PRODUCT_VERSION:-"7.1.0-local_build"}
+cwd1=`pwd`
 export PRODUCT_VERSION
 
 args=""
@@ -44,7 +45,8 @@ set -- $args
 GIT=`which git`
 
 cbranch=`$GIT rev-parse --abbrev-ref HEAD`
-rbranch=`$GIT log -n 5 --pretty=format:"%D"|awk 'NF>0{p=$NF}END{print p}'`
+rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
+  awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
 defbranch="master"
 
 function checkout_if_necessary {
@@ -70,7 +72,17 @@ function checkout_if_necessary {
   do
     branch=$1
     shift
-    if [[ $branch == $current || $branch == $commit ]]
+    if [[ $branch == $current ]]
+    then
+      cmd1="$GIT pull"
+      res=`$cmd1 2>&1`
+      if [[ $res != "Already up to date." ]]
+      then
+        echo -e "${report}${D} -> ${cmd1}:\n${res}\n"
+      fi
+      return
+    fi
+    if [[ $branch == $commit ]]
     then
       return
     fi
@@ -82,7 +94,7 @@ function checkout_if_necessary {
       ($GIT pull 2>/dev/null 1>/dev/null)  # no need to report status
       res=`$cmd1 2>&1`
     fi
-    if [[ ! $res =~ "is now at" ]]
+    if [[ ! $res =~ "is now at" && ! $res =~ "Switched to a new branch" ]]
     then
       report="${report}${D} -> ${cmd1}:\n${res}\n"
     else
@@ -227,26 +239,20 @@ function repo_setup {
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod hebrew "" $cbranch $rbranch $defbranch
-    repo_by_gomod ../n1fty/go.mod bleve "" $defbranch
-    repo_by_gomod ../n1fty/go.mod bleve "v2" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v11" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v12" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v13" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v14" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v15" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/geo "" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/sear "" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/bleve_index_api "" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/scorch_segment_api "v2" $defbranch
-    repo_by_gomod ../n1fty/go.mod go.etcd.io/bbolt "" $defbranch
-    repo_by_gomod go.mod gocbcore "v10" $defbranch
-    repo_by_gomod ../n1fty/go.mod gocbcore "v9" $defbranch
-    repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch
+    repo_by_gomod go.mod cbftx "" $cbranch $rbranch $defbranch
 }
 
 function DevStandaloneSetup {
 
     repo_setup
+
+    ( dir=`echo $cwd1 |awk -F/ '{print  $(NF-4) "/" $(NF-3) "/" $(NF-2) "/" $(NF-1)}'`;
+      cd $GOPATH/..;
+      ln -s -f $dir/cbgt cbgt;
+      ln -s -f $dir/cbft cbft;
+      ln -s -f $dir/cbftx cbftx;
+      ln -s -f $dir/hebrew hebrew;
+      cd $cwd1)
 
     # indexer generated files
     if [[ -f ~/devbld/protoc-gen-go ]]
@@ -300,20 +306,16 @@ function DevStandaloneSetup {
 }
 
 # turn off go module for non repo sync build or standalone build
-if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag != 0) ]]; then
-    export GO111MODULE=off
+if [[ ( ( ! -d ../../../../../cbft || -h ../../../../../cbft ) && "$GOPATH" != "") || ( $sflag != 0) ]]; then
     export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include"
     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
-    cmd="go get $* $uflag -d -v ./..."
-    echo $cmd
-    $cmd
     if [[ $sflag == 1 ]]; then
         DevStandaloneSetup
-        $cmd
     fi
 fi
 
+cd $cwd1
 echo cd parser/n1ql
 cd parser/n1ql
 ./build.sh $*
@@ -324,7 +326,7 @@ then
   echo go fmt ./...
   go fmt ./...
   if [[ $enterprise == 1 ]]; then
-    (echo go fmt ../query-ee/...; cd ../query-ee; export GO111MODULE=off; go fmt ./...)
+    (echo go fmt ../query-ee/...; cd ../query-ee; go fmt ./...)
   fi
 fi
 

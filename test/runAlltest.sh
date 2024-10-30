@@ -20,7 +20,6 @@ done
 
 set -- $args
 
-export GO111MODULE=off
 export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include $CGO_FLAGS"
 
 go clean -testcache
