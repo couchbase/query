@@ -245,39 +245,25 @@ function repo_setup {
     repo_by_gomod go.mod gometa "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod eventing-ee "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod n1fty "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod regulator "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod sigar "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
-    repo_by_gomod go.mod sigar "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod hebrew "" $cbranch $rbranch $defbranch
-    repo_by_gomod ../regulator/go.mod gocb "v2" $defbranch
-    repo_by_gomod ../n1fty/go.mod bleve "" $defbranch
-    repo_by_gomod ../n1fty/go.mod bleve "v2" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v11" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v12" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v13" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v14" $defbranch
-    repo_by_gomod ../cbft/go.mod zapx "v15" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/geo "" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/sear "" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/bleve_index_api "" $defbranch
-    repo_by_gomod ../n1fty/go.mod blevesearch/scorch_segment_api "v2" $defbranch
-#    repo_by_gomod ../n1fty/go.mod go.etcd.io/bbolt "" $defbranch
-    repo_by_gomod go.mod gocbcore "v10" $defbranch
-    repo_by_gomod go.mod gocbcore "v9" $defbranch
-    repo_by_gomod go.mod x/net "" `go version |  awk -F'[. ]' '{print "release-branch." $3 "." $4}'` $defbranch
-
-    repo_by_gomod go.mod prometheus/common
-    repo_by_gomod go.mod client_model
-    repo_by_gomod go.mod procfs
-    repo_by_gomod go.mod client_golang
-    repo_by_gomod go.mod golang_protobuf_extensions
-    repo_by_gomod go.mod aws-sdk-go-v2
-    repo_by_gomod ../cbft/go.mod tools-common/cloud
+    repo_by_gomod go.mod cbftx "" $cbranch $rbranch $defbranch
 }
 
 function DevStandaloneSetup {
 
     repo_setup
+
+    ( dir=`echo $cwd1 |awk -F/ '{print  $(NF-4) "/" $(NF-3) "/" $(NF-2) "/" $(NF-1)}'`;
+      cd $GOPATH/..;
+      ln -s -f $dir/cbgt cbgt;
+      ln -s -f $dir/cbft cbft;
+      ln -s -f $dir/cbftx cbftx;
+      ln -s -f $dir/hebrew hebrew;
+      cd $cwd1)
 
     # indexer generated files
     if [[ -f ~/devbld/protoc-gen-go ]]
@@ -332,16 +318,11 @@ function DevStandaloneSetup {
 
 # turn off go module for non repo sync build or standalone build
 if [[ ( ! -d ../../../../../cbft && "$GOPATH" != "") || ( $sflag != 0) ]]; then
-    export GO111MODULE=off
     export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
-    cmd="go get $* $uflag -d -v ./..."
-    echo $cmd
-    $cmd
     if [[ $sflag == 1 ]]; then
         DevStandaloneSetup
-        $cmd
     fi
 fi
 
@@ -356,7 +337,7 @@ then
   echo go fmt ./...
   go fmt ./...
   if [[ $enterprise == 1 ]]; then
-    (echo go fmt ../query-ee/...; cd ../query-ee; export GO111MODULE=off; go fmt ./...)
+    (echo go fmt ../query-ee/...; cd ../query-ee; go fmt ./...)
   fi
 fi
 
