@@ -866,7 +866,7 @@ func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 
 func handleSortProjection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	sp, err := httpArgs.getTristateVal(parm, val)
-	if err != nil && sp == value.FALSE {
+	if err != nil || sp == value.FALSE {
 		rv.SetSortProjection(false)
 	} else {
 		rv.SetSortProjection(true)
