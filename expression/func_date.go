@@ -26,6 +26,7 @@ import (
 const (
 	_MIN_MILLIS = -377705073600000 // -9999-01-01 12:00:00.000000000 UTC (min TZ offset = -12h)
 	_MAX_MILLIS = +253402250399999 //  9999-12-31 09:59:59.999000000 UTC (max TZ offset = +14h)
+	_NO_ZONE    = -99              // an impossible time zone hour offset
 )
 
 ///////////////////////////////////////////////////
@@ -2964,7 +2965,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 	day = -1
 	n := 0
 	i := 0
-	zoneh = -1
+	zoneh = _NO_ZONE
 	pm := false
 	h12 := false
 	sign := false
@@ -3452,7 +3453,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 	day = -1
 	n := 0
 	i := 0
-	zoneh = -1
+	zoneh = _NO_ZONE
 	pm := false
 	h12 := false
 	sign := false
@@ -4081,7 +4082,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 	day = -1
 	n := 0
 	i := 0
-	zoneh = -1
+	zoneh = _NO_ZONE
 	pm := false
 	h12 := false
 	sign := true
@@ -4655,7 +4656,7 @@ func validateMonthAndDay(year int, month int, day int) error {
 
 // wrapper for loading a fixed location from a seconds-offset
 func getLocation(h int, m int) *time.Location {
-	if h == -1 {
+	if h == _NO_ZONE {
 		return time.Local
 	}
 	off := h * 60 * 60
