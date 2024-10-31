@@ -296,7 +296,6 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 
 		if useKey {
 			var key expression.Expression
-			var keyExpr expression.Expression
 			if i < len(keys) {
 				key = keys[i].Expr
 			} else {
@@ -308,12 +307,7 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 			if err != nil {
 				return nil, err
 			}
-			if cover {
-				keyExpr = expression.NewCover(key)
-			} else {
-				keyExpr = expression.NewIndexKey(key)
-			}
-			indexKeyNames = append(indexKeyNames, keyExpr.String())
+			indexKeyNames = append(indexKeyNames, key.String())
 		} else {
 			indexKeyNames = append(indexKeyNames, "")
 		}
@@ -324,15 +318,9 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 		}
 	}
 	if index.IsPrimary() || projection == nil || projection.PrimaryKey {
-		var keyExpr expression.Expression
 		id := expression.NewField(expression.NewMeta(expression.NewIdentifier(alias)),
 			expression.NewFieldName("id", false))
-		if cover {
-			keyExpr = expression.NewCover(id)
-		} else {
-			keyExpr = expression.NewIndexKey(id)
-		}
-		indexKeyNames = append(indexKeyNames, keyExpr.String())
+		indexKeyNames = append(indexKeyNames, id.String())
 	} else {
 		indexKeyNames = append(indexKeyNames, "")
 	}
