@@ -157,6 +157,27 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 	return rv
 }
 
+func (this *Formalizer) Copy() *Formalizer {
+	f := NewFormalizer(this.keyspace, nil)
+	if len(this.withs) > 0 {
+		f.withs = make(map[string]*WithInfo, len(this.withs))
+		for with, v := range this.withs {
+			f.withs[with] = v.Copy()
+		}
+	}
+	f.allowed = this.allowed.Copy().(*value.ScopeValue)
+	f.identifiers = this.identifiers.Copy().(*value.ScopeValue)
+	f.aliases = this.aliases.Copy().(*value.ScopeValue)
+	f.flags = this.flags
+	if len(this.correlation) > 0 {
+		f.correlation = make(map[string]uint32, len(this.correlation))
+		for k, v := range this.correlation {
+			f.correlation[k] = v
+		}
+	}
+	return f
+}
+
 func (this *Formalizer) mapSelf() bool {
 	return (this.flags & FORM_MAP_SELF) != 0
 }
@@ -576,21 +597,6 @@ func (this *Formalizer) PopBindings() {
 			}
 		}
 	}
-}
-
-func (this *Formalizer) Copy() *Formalizer {
-	f := NewFormalizer(this.keyspace, nil)
-	if len(this.withs) > 0 {
-		f.withs = make(map[string]*WithInfo, len(this.withs))
-		for with, v := range this.withs {
-			f.withs[with] = v.Copy()
-		}
-	}
-	f.allowed = this.allowed.Copy().(*value.ScopeValue)
-	f.identifiers = this.identifiers.Copy().(*value.ScopeValue)
-	f.aliases = this.aliases.Copy().(*value.ScopeValue)
-	f.flags = this.flags
-	return f
 }
 
 func (this *Formalizer) SetKeyspace(keyspace string) {
