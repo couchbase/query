@@ -23,6 +23,10 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const (
+	_NO_ZONE = -99 // an impossible time zone hour offset
+)
+
 ///////////////////////////////////////////////////
 //
 // ClockMillis
@@ -2914,7 +2918,7 @@ func strToTimeGoFormat(s string, format string) (time.Time, error) {
 	day = -1
 	n := 0
 	i := 0
-	zoneh = -1
+	zoneh = _NO_ZONE
 	pm := false
 	h12 := false
 	for i = 0; i < len(format) && n < len(s); i++ {
@@ -3327,7 +3331,7 @@ func strToTimePercentFormat(s string, format string) (time.Time, error) {
 	day = -1
 	n := 0
 	i := 0
-	zoneh = -1
+	zoneh = _NO_ZONE
 	pm := false
 	h12 := false
 	for i = 0; i < len(format) && n < len(s); i++ {
@@ -3966,7 +3970,7 @@ func strToTimeCommonFormat(s string, format string) (time.Time, error) {
 	day = -1
 	n := 0
 	i := 0
-	zoneh = -1
+	zoneh = _NO_ZONE
 	pm := false
 	h12 := false
 	for i = 0; i < len(format) && n < len(s); i++ {
@@ -4519,7 +4523,7 @@ func validateMonthAndDay(year int, month int, day int) error {
 
 // wrapper for loading a fixed location from a seconds-offset
 func getLocation(h int, m int) *time.Location {
-	if h == -1 {
+	if h == _NO_ZONE {
 		return time.Local
 	}
 	off := h * 60 * 60
