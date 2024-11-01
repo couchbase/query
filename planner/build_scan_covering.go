@@ -548,7 +548,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	indexProjection := this.buildIndexProjection(entry, exprs, id, index.IsPrimary() || arrayIndex || duplicates, idxProj)
 
 	// Check and reset pagination pushdows
-	indexKeyOrders := this.checkResetPaginations(entry, keys)
+	indexKeyOrders := this.checkResetPaginations(entry, keys, id)
 
 	// Build old Aggregates on Index2 only
 	scan := this.buildCoveringPushdDownIndexScan2(entry, node, baseKeyspace, pred, indexProjection,
@@ -653,12 +653,12 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 }
 
 func (this *builder) checkResetPaginations(entry *indexEntry,
-	keys datastore.IndexKeys) (indexKeyOrders plan.IndexKeyOrders) {
+	keys datastore.IndexKeys, id expression.Expression) (indexKeyOrders plan.IndexKeyOrders) {
 
 	// check order pushdown and reset
 	if this.order != nil {
 		if entry.IsPushDownProperty(_PUSHDOWN_ORDER) || entry.IsPushDownProperty(_PUSHDOWN_PARTIAL_ORDER) {
-			_, indexKeyOrders, this.partialSortTermCount = this.useIndexOrder(entry, keys, entry.pushDownProperty)
+			_, indexKeyOrders, this.partialSortTermCount = this.useIndexOrder(entry, keys, id, entry.pushDownProperty)
 			this.maxParallelism = 1
 		} else {
 			this.resetOrderOffsetLimit()

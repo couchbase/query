@@ -47,7 +47,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 			if exact && vector {
 				idxKeys, _ = replaceVectorKey(idxKeys, entry)
 			}
-			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys, pushDownProperty)
+			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys, nil, pushDownProperty)
 			logging.Debugf("indexPushDownProperty: ok: %v, count: %v", ok, partSortCount)
 			if ok {
 				pushDownProperty |= _PUSHDOWN_ORDER
@@ -108,7 +108,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 				if isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER) {
 					pushDownProperty &^= _PUSHDOWN_ORDER
 				}
-				_, _, partSortCount := this.useIndexOrder(entry, idxKeys, pushDownProperty)
+				_, _, partSortCount := this.useIndexOrder(entry, idxKeys, nil, pushDownProperty)
 				if partSortCount > 0 {
 					pushDownProperty |= _PUSHDOWN_PARTIAL_ORDER
 					entry.partialSortTermCount = partSortCount
@@ -523,11 +523,11 @@ func (this *builder) canPushDownProjectionDistinct(entry *indexEntry, projection
 }
 
 func (this *builder) entryUseIndexOrder(entry *indexEntry) (bool, plan.IndexKeyOrders, int) {
-	return this.useIndexOrder(entry, entry.idxKeys, entry.pushDownProperty)
+	return this.useIndexOrder(entry, entry.idxKeys, nil, entry.pushDownProperty)
 }
 
-func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, pushDownProperty PushDownProperties) (
-	bool, plan.IndexKeyOrders, int) {
+func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, id expression.Expression,
+	pushDownProperty PushDownProperties) (bool, plan.IndexKeyOrders, int) {
 
 	// Force the use of sorts on indexes that we know not to be ordered
 	// (for now system indexes)
@@ -575,11 +575,23 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, 
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 	partSortTermCount := 0
 	vectorOrder := false
+	totalLen := len(keys)
+	includeLen := 0
 	if vector && !entry.HasFlag(IE_VECTOR_KEY_SKIP_ORDER) && this.limit != nil {
 		if _, ok := entry.spans.(*TermSpans); ok {
 			vectorOrder = true
+			includeLen = len(entry.includes)
+			totalLen += includeLen
 		}
 	}
+
+	// if there are include columns, check and put meta().id key separately
+	var idKey *datastore.IndexKey
+	if includeLen > 0 && id != nil && len(keys) > 0 && keys[len(keys)-1].Expr.EquivalentTo(id) {
+		idKey = keys[len(keys)-1]
+		keys = keys[:len(keys)-1]
+	}
+
 outer:
 	for _, orderTerm := range this.order.Terms() {
 
@@ -592,16 +604,18 @@ outer:
 			return false, indexOrder, partSortTermCount
 		}
 
+		orderExpr := orderTerm.Expression()
+
 		// orderTerm is constant
-		if orderTerm.Expression().Static() != nil {
+		if orderExpr.Static() != nil {
 			partSortTermCount++
 			continue
 		}
 
 		// non-constant orderTerms are more than index keys
-		if i >= len(keys) {
+		if i >= totalLen {
 			// match with condition EQ terms
-			if equalConditionFilter(filters, orderTerm.Expression().String()) {
+			if equalConditionFilter(filters, orderExpr.String()) {
 				partSortTermCount++
 				continue outer
 			}
@@ -620,10 +634,10 @@ outer:
 			naturalOrder = true
 		}
 		for {
-			projexpr, projalias := hashProj[orderTerm.Expression().Alias()]
-			if indexKeyIsDescCollation(i, keys) == d &&
+			projexpr, projalias := hashProj[orderExpr.Alias()]
+			if i < len(keys) && indexKeyIsDescCollation(i, keys) == d &&
 				(naturalOrder || !entry.spans.CanProduceUnknowns(i)) &&
-				(orderTerm.Expression().EquivalentTo(keys[i].Expr) ||
+				(orderExpr.EquivalentTo(keys[i].Expr) ||
 					(projalias && expression.Equivalent(projexpr, keys[i].Expr))) {
 				// orderTerm matched with index key
 				if vector {
@@ -636,28 +650,42 @@ outer:
 				i++
 				partSortTermCount++
 				continue outer
-			} else if equalConditionFilter(filters, orderTerm.Expression().String()) {
+			} else if equalConditionFilter(filters, orderExpr.String()) {
 				// orderTerm matched with Condition EQ
 				partSortTermCount++
 				continue outer
 			} else if eq, _ := entry.spans.EquivalenceRangeAt(i); eq {
 				// orderTerm not yet matched, but can skip equivalence range key, don't add to indexOrder
 				i++
-				if i < len(keys) {
+				if i < totalLen {
 					continue
 				}
 			} else if vector && vectorOrder && isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) {
-				if tspans, ok := entry.spans.(*TermSpans); ok && tspans.ValidRangeAt(i) {
-					// when vector key order is present, the indexer uses max heap
-					// and can accommodate non-eq ranges
-					// this assume LIMIT can be pushed down, if for whatever reason
-					// LIMIT cannot be pushed down, this function will be called
-					// a second time with vectorOrder == false
-					if _, ok := keys[i].Expr.(*expression.Ann); !ok {
-						i++
-						if i < len(keys) {
-							continue
+				// when vector key order is present, the indexer uses max heap
+				// and can accommodate non-eq ranges or include columns
+				// this assume LIMIT can be pushed down, if for whatever reason
+				// LIMIT cannot be pushed down, this function will be called
+				// a second time with vectorOrder == false
+				if i < len(keys) {
+					if tspans, ok := entry.spans.(*TermSpans); ok && tspans.ValidRangeAt(i) {
+						if _, ok := keys[i].Expr.(*expression.Ann); !ok {
+							i++
+							if i < len(keys) {
+								continue
+							}
 						}
+					}
+				}
+				if includeLen > 0 && i < totalLen {
+					pos := includePos(orderExpr, entry.includes)
+					if pos >= 0 {
+						indexOrder = append(indexOrder, plan.NewIndexKeyOrders(len(keys)+pos, d))
+						partSortTermCount++
+						continue outer
+					} else if idKey != nil && orderExpr.EquivalentTo(idKey.Expr) && !d {
+						indexOrder = append(indexOrder, plan.NewIndexKeyOrders(totalLen-1, d))
+						partSortTermCount++
+						continue outer
 					}
 				}
 			}
@@ -679,4 +707,13 @@ func equalConditionFilter(filters map[string]value.Value, str string) bool {
 
 func indexKeyIsDescCollation(keypos int, indexKeys datastore.IndexKeys) bool {
 	return len(indexKeys) > 0 && keypos < len(indexKeys) && indexKeys[keypos].HasAttribute(datastore.IK_DESC)
+}
+
+func includePos(expr expression.Expression, includes expression.Expressions) int {
+	for i, include := range includes {
+		if expr.EquivalentTo(include) {
+			return i
+		}
+	}
+	return -1
 }
