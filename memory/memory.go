@@ -69,10 +69,10 @@ func Config(maxMiB uint64, valPercent uint, servicers []int) {
 		c += uint64(v) * _MEMORY_TOKEN
 	}
 	if manager.max > 0 && manager.max < c {
+		logging.Infof("Amending memory manager max from requested %d%% of %d MiB (%s) to %s", valPercent, maxMiB,
+			logging.HumanReadableSize(int64(manager.max), false), logging.HumanReadableSize(int64(c), false))
 		manager.max = c
 		manager.setting = c / _MEMORY_TOKEN
-		logging.Infof("Amending memory manager max from requested %v MiB to %v", maxMiB,
-			logging.HumanReadableSize(int64(manager.setting), false))
 	}
 	atomic.AddUint64(&manager.curr, ^(manager.reserved - 1))
 	atomic.AddUint64(&manager.curr, c)
