@@ -11,7 +11,7 @@ package util
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"sync"
 
 	"github.com/couchbase/query/logging"
@@ -32,13 +32,13 @@ func SetTemp(loc string, quota int64) error {
 	if quota < 0 {
 		quota = 0
 	}
-	if !path.IsAbs(loc) {
-		logging.Errorf("Attempt to set relative temporary path: %v", loc)
+	if !filepath.IsAbs(loc) {
 		tempMutex.Unlock()
+		logging.Errorf("Attempt to set relative temporary path: %v", loc)
 		return fmt.Errorf("Attempt to set relative temporary path")
 	} else if _, err := os.Stat(loc); err != nil {
-		logging.Errorf("Attempt to set invalid or inaccessible temporary path: %v (%v)", loc, err)
 		tempMutex.Unlock()
+		logging.Errorf("Attempt to set invalid or inaccessible temporary path: %v (%v)", loc, err)
 		return fmt.Errorf("Attempt to set invalid or inaccessible temporary path")
 	}
 	if tempInfo.loc != loc {
@@ -85,7 +85,7 @@ func CreateTemp(pattern string, autoRemove bool) (*os.File, error) {
 
 func UseTemp(pathname string, sz int64) bool {
 	rv := true
-	loc := path.Dir(pathname)
+	loc := filepath.Dir(pathname)
 	tempMutex.Lock()
 	if tempInfo.quota > 0 && (pathname == "" || loc == tempInfo.loc) {
 		tempInfo.inuse += sz
@@ -101,7 +101,7 @@ func UseTemp(pathname string, sz int64) bool {
 }
 
 func ReleaseTemp(pathname string, sz int64) {
-	loc := path.Dir(pathname)
+	loc := filepath.Dir(pathname)
 	tempMutex.Lock()
 	if tempInfo.quota > 0 && (pathname == "" || loc == tempInfo.loc) {
 		tempInfo.inuse -= sz
