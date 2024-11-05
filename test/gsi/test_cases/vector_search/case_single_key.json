@@ -1,0 +1,35 @@
+[
+    {
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+	"namedArgs": {"qvec": [6.0, 7.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 14.0, 102.0, 41.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0, 45.0, 84.0, 52.0, 1.0, 0.0, 0.0, 1.0, 3.0, 23.0, 6.0, 20.0, 1.0, 0.0, 1.0, 2.0, 64.0, 11.0, 0.0, 1.0, 1.0, 0.0, 0.0, 3.0, 135.0, 135.0, 50.0, 5.0, 0.0, 0.0, 0.0, 19.0, 22.0, 57.0, 90.0, 135.0, 49.0, 2.0, 0.0, 6.0, 37.0, 94.0, 15.0, 101.0, 24.0, 0.0, 0.0, 8.0, 61.0, 1.0, 0.0, 2.0, 2.0, 1.0, 0.0, 10.0, 135.0, 4.0, 0.0, 0.0, 0.0, 1.0, 29.0, 135.0, 26.0, 1.0, 0.0, 42.0, 35.0, 102.0, 135.0, 60.0, 17.0, 8.0, 1.0, 41.0, 28.0, 78.0, 81.0, 28.0, 7.0, 0.0, 3.0, 2.0, 1.0, 4.0, 2.0, 12.0, 27.0, 4.0, 3.0, 0.0, 0.0, 3.0, 55.0, 118.0, 1.0, 5.0, 5.0, 0.0, 0.0, 65.0, 135.0, 23.0, 0.0, 5.0, 3.0, 0.0, 0.0, 27.0, 53.0, 3.0]},
+        "statements":"SELECT meta().id FROM vectors ORDER BY approx_vector_distance(vec, $qvec, 'l2_squared', 10) LIMIT 5",
+	"ordered": true,
+        "results": [
+        {
+            "id": "vec_brook_11_4490"
+        },
+        {
+            "id": "vec_puma_11_4457"
+        },
+        {
+            "id": "vec_puma_10_30046"
+        },
+        {
+            "id": "vec_nike_12_30205"
+        },
+        {
+            "id": "vec_hoka_10_30174"
+        }
+    ]
+    }
+]

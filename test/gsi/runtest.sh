@@ -43,6 +43,17 @@ cd $GOPATH/src/github.com/couchbase/query/test/gsi
 i=test_cases/$TEST
 source ./exportval.sh
 cd $i
+if [[ $TEST == "vector_search" ]]
+then
+    dir=`pwd`
+    if [[ `uname` == "Darwin" ]]
+    then
+      /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/product_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport.out
+    elif [[ `uname` == "Linux" ]]
+    then
+      /opt/couchbase/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/product_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport.out
+    fi
+fi
 # strip indexer client info-level messages to retain some utility in the output
 (go test -v -p 1 -tags enterprise ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
 cd ../..

@@ -1,0 +1,11 @@
+[
+    {
+        "statements":"SELECT COUNT(1) AS cnt FROM vectors",
+        "queryParams": {"query_context": "product._default"},
+        "results": [
+        {
+            "cnt": 40000
+        }
+    ]
+    }
+]

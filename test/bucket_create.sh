@@ -23,7 +23,7 @@ do
   fi
 done
 
-collections=('orders,_default,transactions' 'orders,_default,durability' 'orders,_default,flattenkeys' 'orders,_default,lkm' 'orders,_default,ss' 'orders,_default,ts' 'orders,_default,empSmall' 'orders,_default,travelers' 'orders,_default,airports' 'shellTest,_default,cycleTest')
+collections=('orders,_default,transactions' 'orders,_default,durability' 'orders,_default,flattenkeys' 'orders,_default,lkm' 'orders,_default,ss' 'orders,_default,ts' 'orders,_default,empSmall' 'orders,_default,travelers' 'orders,_default,airports' 'shellTest,_default,cycleTest' 'product,_default,vectors')
 for coll in "${collections[@]}"
 do
     collpath=(${coll//,/ })
