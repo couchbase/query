@@ -25,6 +25,7 @@ import (
 
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
+	"github.com/couchbase/query/aus"
 	"github.com/couchbase/query/auth"
 	config_resolver "github.com/couchbase/query/clustering/resolver"
 	"github.com/couchbase/query/datastore"
@@ -300,6 +301,10 @@ var _ALL_USERS = auth.NewCredentials(
 	"shellTestowner", "shellTestpass",
 )
 
+var _TEST_ADMIN_USER = map[string]string{
+	"testAdmin": "testAdminpass",
+}
+
 /*
 This method is used to execute the N1QL query represented by
 the input argument (q) string using the NewBaseRequest method
@@ -526,6 +531,9 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 
 	storage.Migrate()
 	server.MigrateDictionary()
+
+	// Initialize configurations for AUS
+	aus.InitAus(srv)
 
 	mockServer.server = srv
 	mockServer.acctstore = acctstore
@@ -1128,6 +1136,11 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 
 func RunStmt(mockServer *MockServer, q string) *RunResult {
 	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, nil)
+}
+
+// Run a statement with Full Admin credentials
+func RunAdminStmt(mockServer *MockServer, q string) *RunResult {
+	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, _TEST_ADMIN_USER)
 }
 
 func getAdviseResults(subpath string, result []interface{}) []interface{} {

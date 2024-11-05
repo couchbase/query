@@ -28,3 +28,5 @@ Id=${i}owner
 curl --silent -X DELETE -u $Auth $UserSite$Id > /dev/null 
 done
 
+curl --silent -X DELETE -u $Auth $UserSite/testAdmin > /dev/null 
+

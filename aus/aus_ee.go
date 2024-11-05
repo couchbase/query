@@ -46,9 +46,10 @@ const (
 	_AUS_GLOBAL_SETTINGS_PATH    = _AUS_PATH + "global_settings"
 	_AUS_SETTINGS_BUCKET_DOC_KEY = AUS_DOC_PREFIX + "bucket"
 
-	_MAX_RETRY       = 10
-	_RETRY_INTERVAL  = 30 * time.Second
-	_MAX_LOAD_FACTOR = 65
+	_MAX_RETRY                 = 10
+	_RETRY_INTERVAL            = 30 * time.Second
+	_SCHEDULING_RETRY_INTERVAL = 5 * time.Second
+	_MAX_LOAD_FACTOR           = 65
 )
 
 var ausCfg ausConfig
@@ -264,14 +265,7 @@ func callback(kve metakv.KVEntry) error {
 
 		// Schedule next task with the new schedule
 		if reschedule {
-			versionChange, err := ausCfg.schedule(true, true, version, true, true)
-			if versionChange {
-				logging.Infof(AUS_LOG_PREFIX+"Newer global settings with higher internal version received. New task configured"+
-					" from global settings with internal version %v not scheduled.", version)
-			}
-			if err != nil {
-				logging.Errorf(AUS_LOG_PREFIX+"Error scheduling next task run: %v", err)
-			}
+			ausCfg.schedule(true, true, version, true, true)
 		}
 	}
 
@@ -1050,6 +1044,8 @@ func (this *ausConfig) schedule(lock bool, checkVersion bool, version int64, che
 		// If the configuration version is different from the version with which the task is to be scheduled
 		// that means a new configuration was received. Do not re-schedule.
 		if version != this.version {
+			logging.Infof(AUS_LOG_PREFIX+
+				"Detected global settings change. Task configured with internal version %v not scheduled.", version)
 			return true, nil
 		}
 	}
@@ -1070,6 +1066,7 @@ func (this *ausConfig) schedule(lock bool, checkVersion bool, version int64, che
 	task := taskInfo{startTime: start, endTime: end, version: version}
 	err = scheduleTask(task)
 	if err != nil {
+		logging.Errorf(AUS_LOG_PREFIX+"Error scheduling task: %v", err)
 		return false, err
 	}
 
@@ -1142,27 +1139,41 @@ func (this *ausSchedule) findNextWindow(checkToday bool, overlapCheck bool, wind
 }
 
 func scheduleTask(task taskInfo) errors.Error {
-	// Create the session name
-	session, err := util.UUIDV4()
-	if err != nil {
-		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
+	var err errors.Error
+	for retry := 0; retry < _MAX_RETRY; retry++ {
+		if err != nil {
+			time.Sleep(_SCHEDULING_RETRY_INTERVAL)
+		}
+
+		// Create the session name
+		session, errS := util.UUIDV4()
+		if errS != nil {
+			err = errors.NewAusSchedulingError(task.startTime, task.endTime, errS)
+			continue
+		}
+
+		context, errC := newContext(newAusOutput())
+		if errC != nil {
+			err = errors.NewAusSchedulingError(task.startTime, task.endTime, errC)
+			continue
+		}
+
+		parms := make(map[string]interface{}, 1)
+		parms["task"] = task
+
+		after := task.startTime.Sub(time.Now())
+		errT := scheduler.ScheduleStoppableTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "", context)
+		if errT != nil {
+			err = errors.NewAusSchedulingError(task.startTime, task.endTime, errT)
+			continue
+		}
+
+		// Task scheduling successful
+		return nil
 	}
 
-	context, err := newContext(newAusOutput())
-	if err != nil {
-		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
-	}
-
-	parms := make(map[string]interface{}, 1)
-	parms["task"] = task
-
-	after := task.startTime.Sub(time.Now())
-	err = scheduler.ScheduleStoppableTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "", context)
-	if err != nil {
-		return errors.NewAusSchedulingError(task.startTime, task.endTime, err)
-	}
-
-	return nil
+	// Task scheduling unsuccessful
+	return err
 }
 
 func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan bool) (interface{}, []errors.Error) {
@@ -1238,11 +1249,7 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 
 			// End the AUS Evaluation Task
 			// Schedule the next task run. Do not consider "today" in the determination of the window of the next run.
-			_, err := ausCfg.schedule(true, true, task.version, false, false)
-
-			if err != nil {
-				logging.Errorf(AUS_LOG_PREFIX+"Error re-scheduling task: %v", err)
-			}
+			ausCfg.schedule(true, true, task.version, false, false)
 		}()
 
 		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v started.", task.startTime, task.endTime)
@@ -1257,6 +1264,13 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 
 		// Set the current task window information
 		ausCfg.setCurrentWindow(false, task.startTime, task.endTime, task.version)
+
+		ds, ok := datastore.GetDatastore().(datastore.Datastore2)
+		if !ok || ds == nil {
+			// This should not ideally happen as migration should have completed.
+			logging.Errorf(AUS_LOG_PREFIX + "Task not started as cluster is not migrated to a supported version")
+			return nil, []errors.Error{errors.NewAusNotInitialized()}
+		}
 
 		// Get the global information before starting execution. These values will be used for the course of this task run.
 		// This is so that consistent global settings are used during a task's entirety in the case changes to the global settings
@@ -1289,25 +1303,20 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 		var keyspacesUpdated []interface{}
 
 		// Start the AUS Evaluation Task
-		ds, ok := datastore.GetDatastore().(datastore.Datastore2)
-		if !ok || ds == nil {
-			// This should not ideally happen as migration should have completed.
-			errs = append(errs, errors.NewAusNotInitialized())
+		// Keep a list of buckets to do randomized selection against
+		var buckets []datastore.ExtendedBucket
+
+		if allBuckets {
+			ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+				buckets = append(buckets, b)
+			})
 		} else {
+			ds.ForeachBucket(func(b datastore.ExtendedBucket) {
+				buckets = append(buckets, b)
+			})
+		}
 
-			// Keep a list of buckets to do randomized selection against
-			var buckets []datastore.ExtendedBucket
-
-			if allBuckets {
-				ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-					buckets = append(buckets, b)
-				})
-			} else {
-				ds.ForeachBucket(func(b datastore.ExtendedBucket) {
-					buckets = append(buckets, b)
-				})
-			}
-
+		if len(buckets) != 0 {
 			// Attempt to prevent starvation.
 			// By iterating through the list of buckets/ scopes/ collections starting at a random index, we attempt to prevent
 			// always performing AUS on the first keyspaces in the list. As keyspaces at the end of the list will routinely be
@@ -1467,7 +1476,7 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 						// Get collection level setting
 						collSetting := defaultKeyspaceSettings
 						val, errsC := fetchSystemCollection(bucket.Name(),
-							ausSettingsCollectionKey(scope.Uid(), scope.Name(), coll.Name(), coll.Uid()))
+							ausSettingsCollectionKey(scope.Uid(), scope.Name(), coll.Uid(), coll.Name()))
 						if len(errsC) > 0 {
 							logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
 								"Error fetching settings document for collection %v: %v", coll.QualifiedName(), errsC))
@@ -1605,12 +1614,24 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 			errs = append(errs, errors.NewAusTaskTimeoutExceeded())
 		}
 
+		// Cache task history in system:tasks_cache
+		taskRv := make(map[string]interface{}, 4)
+		if len(buckets) == 0 {
+			if allBuckets {
+				s := "No buckets detected in cluster."
+				logging.Infof(AUS_LOG_PREFIX + s)
+				taskRv["info"] = s
+			} else {
+				s := "No buckets loaded on the node."
+				logging.Infof(AUS_LOG_PREFIX + s)
+				taskRv["info"] = s
+			}
+		}
+
 		// Persist task history in the log
 		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces Evaluated: %v", keyspacesEvaluated))
 		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces qualified for Update Phase: %v", keyspacesUpdated))
 
-		// Cache task history in system:tasks_cache
-		taskRv := make(map[string]interface{}, 3)
 		taskRv["Configuration"] = map[string]interface{}{
 			"start_time":        task.startTime.String(),
 			"end_time":          task.endTime.String(),
@@ -1660,7 +1681,7 @@ func stopTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 		}
 
 		if err != nil {
-			return rv, []errors.Error{errors.NewAusTaskError("rescheduling", err)}
+			return rv, []errors.Error{err}
 		}
 
 		return rv, nil
@@ -1698,6 +1719,11 @@ func newContext(output *ausOutput) (*execution.Context, errors.Error) {
 }
 
 func getNodeAdminCreds() (*auth.Credentials, errors.Error) {
+
+	if distributed.RemoteAccess().StandAlone() {
+		return nil, nil
+	}
+
 	node, err := getNodeName()
 	if err != nil {
 		return nil, err

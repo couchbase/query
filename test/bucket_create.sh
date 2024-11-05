@@ -47,11 +47,16 @@ do
   Id=${i}owner
   Name=OwnerOf${i}
   Password=${i}pass
-  Roles=bucket_full_access[${i}],query_manage_global_functions,query_execute_global_functions,query_execute_global_external_functions,query_manage_global_external_functions
+  Roles=bucket_full_access[${i}],query_manage_global_functions,query_execute_global_functions,query_execute_global_external_functions,query_manage_global_external_functions,query_system_catalog,query_manage_system_catalog
   if [ ${i} = "orders" ]
   then
     Roles="${Roles},query_manage_sequences[${i}:seqs],query_use_sequences[${i}:seqs]"
   fi
   curl --silent -X PUT $UsersSite$Id -d name=$Name -d roles=${Roles} -d password=$Password -u $Auth > /dev/null
 done
+
+
+curl --silent -X PUT $UsersSite/testAdmin -d name=QueryTestAdmin -d roles=admin -d password=testAdminpass -u $Auth > /dev/null
+
+
 

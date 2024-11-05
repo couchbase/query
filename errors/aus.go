@@ -63,24 +63,21 @@ func NewAusStorageAccessError(cause error) Error {
 }
 
 func NewAusDocInvalidSettingsValue(setting string, value interface{}) Error {
-	c := make(map[string]interface{}, 2)
-	c["cause"] = fmt.Sprintf("Invalid value '%v' (%T) for setting '%s'", value, value, setting)
-
+	c := make(map[string]interface{}, 1)
 	if help := getSchemaHelp(setting); help != "" {
-		c["help"] = help
+		c["cause"] = help
 	}
 
 	return &err{level: EXCEPTION, ICode: E_AUS_INVALID_DOCUMENT_SCHEMA, IKey: "aus.settings.invalid_schema",
-		InternalMsg: "Invalid schema or semantics detected in the Auto Update Statistics settings document.", cause: c,
+		InternalMsg: "Invalid schema or semantics detected in the Auto Update Statistics settings document." +
+			fmt.Sprintf(" Invalid value '%v' (%T) for setting '%s'.", value, value, setting), cause: c,
 		InternalCaller: CallerN(1)}
 }
 
 func NewAusDocMissingSetting(setting string, defaultVal interface{}) Error {
-	c := make(map[string]interface{}, 3)
-	c["cause"] = fmt.Sprintf("Setting '%s' cannot be missing in the Auto Update Statistics settings document.", setting)
-
+	c := make(map[string]interface{}, 2)
 	if help := getSchemaHelp(setting); help != "" {
-		c["help"] = help
+		c["cause"] = help
 	}
 
 	if defaultVal != nil {
@@ -88,22 +85,22 @@ func NewAusDocMissingSetting(setting string, defaultVal interface{}) Error {
 	}
 
 	return &err{level: EXCEPTION, ICode: E_AUS_INVALID_DOCUMENT_SCHEMA, IKey: "aus.settings.invalid_schema",
-		InternalMsg: "Invalid schema or semantics detected in the Auto Update Statistics settings document.", cause: c,
+		InternalMsg: "Invalid schema or semantics detected in the Auto Update Statistics settings document." +
+			fmt.Sprintf(" Setting '%s' cannot be missing in the document.", setting), cause: c,
 		InternalCaller: CallerN(1)}
 }
 
 func NewAusDocUnknownSetting(setting string) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_INVALID_DOCUMENT_SCHEMA, IKey: "aus.settings.invalid_schema",
-		InternalMsg:    "Invalid schema or semantics detected in the Auto Update Statistics settings document.",
-		cause:          fmt.Sprintf("Unknown setting '%s' detected in the Auto Update Statistics settings document.", setting),
+		InternalMsg: "Invalid schema or semantics detected in the Auto Update Statistics settings document." +
+			fmt.Sprintf(" Unknown setting '%s' detected in the document.", setting),
 		InternalCaller: CallerN(1)}
 }
 
 func NewAusDocInvalidSemantics(setting string) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_INVALID_DOCUMENT_SCHEMA, IKey: "aus.settings.invalid_schema",
-		InternalMsg:    "Invalid schema or semantics detected in the Auto Update Statistics settings document.",
-		cause:          getSemanticsHelp(setting),
-		InternalCaller: CallerN(1)}
+		InternalMsg: "Invalid schema or semantics detected in the Auto Update Statistics settings document. " +
+			getSemanticsHelp(setting), InternalCaller: CallerN(1)}
 }
 
 func NewAusDocEncodingError(isEncode bool, cause error) Error {
@@ -121,7 +118,7 @@ func NewAusDocEncodingError(isEncode bool, cause error) Error {
 
 func NewAusStorageInvalidKey(key string, cause error) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_STORAGE_INVALID_KEY, IKey: "aus.storage.invalid_key",
-		InternalMsg: fmt.Sprintf("Invalid document key '%s' for Auto Update Statistics document.", key), cause: cause,
+		InternalMsg: fmt.Sprintf("Invalid document key '%s' for Auto Update Statistics settings document.", key), cause: cause,
 		InternalCaller: CallerN(1)}
 }
 

@@ -7922,7 +7922,7 @@ var errData = []ErrData{
 	{
 		Code:        E_AUS_STORAGE_INVALID_KEY, // 20005
 		symbol:      "E_AUS_STORAGE_INVALID_KEY",
-		Description: "Invalid document key «key» for Auto Update Statistics document",
+		Description: "Invalid document key «key» for Auto Update Statistics settings document.",
 		Reason: []string{
 			"An invalid document key was detected when an operation or SQL++ statement was run against system:aus or " +
 				"system:aus_settings.",
