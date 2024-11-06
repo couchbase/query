@@ -26,7 +26,6 @@ func TestVectors(t *testing.T) {
 	fmt.Print("\n\nChecking import into vectors collection\n\n")
 	runMatch("check_import.json", false, false, qc, t)
 
-
 	fmt.Println("Running KNN test cases")
 
 	runStmt(qc, "CREATE INDEX ix_prod_id on product._default.vectors(id)")
@@ -46,6 +45,8 @@ func TestVectors(t *testing.T) {
 	runStmt(qc, "CREATE INDEX idx_vec2 on product._default.vectors(size, brand, vec VECTOR, color) WITH {'dimension': 128, 'train_list': 10000, 'description': 'IVF32,SQ8', 'similarity': 'L2'}")
 
 	runMatch("case_composite_nonleading.json", false, true, qc, t)
+
+	runMatch("case_composite_no_pushdown.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX idx_vec2 on product._default.vectors")
 
