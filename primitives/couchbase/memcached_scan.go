@@ -54,6 +54,10 @@ const _SS_KV_CPU_MULTIPLIER = 3.0
 const _SS_WORKER_IDLE_SPIN = 1000
 const _SS_WORKER_IDLE_SLEEP = 10 * time.Millisecond / _SS_WORKER_IDLE_SPIN
 
+func init() {
+	util.RegisterTempPattern(_SS_SPILL_FILE_PATTERN)
+}
+
 /*
  * Bucket functions for driving and consuming a scan.
  */
@@ -1004,7 +1008,7 @@ type vbRangeScan struct {
 	continueExcluding bool
 
 	uuid       []byte
-	spill      *os.File
+	spill      *util.TempFile
 	buffer     []byte
 	offset     uint32
 	keys       []uint32
@@ -1204,7 +1208,7 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 		this.buffer = make([]byte, 0, _SS_KEY_BUFFER)
 	}
 	if this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) && this.spill == nil {
-		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN, true)
+		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN)
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false

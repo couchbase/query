@@ -26,13 +26,17 @@ import (
 const _SPILL_FILE_PATTERN = "av_spill_*"
 const _MAX_PARENTS = 2000
 
+func init() {
+	util.RegisterTempPattern(_SPILL_FILE_PATTERN)
+}
+
 type writerFlusher interface {
 	io.Writer
 	Flush() error
 }
 
 type spillFile struct {
-	f       *os.File
+	f       *util.TempFile
 	reader  io.Reader
 	current AnnotatedValue
 	sz      int64
@@ -294,7 +298,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 		sort.Sort(this)
 	}
 	start := util.Now()
-	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN, true)
+	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}

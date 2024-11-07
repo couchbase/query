@@ -12,10 +12,30 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/couchbase/query/logging"
 )
+
+type TempFile struct {
+	os.File
+}
+
+// On *nix based systems we could just unlink the name immediately after creation but on others we can't, so we wrap the Close
+// method so that we can clean-up automatically (during normal operations).  In the event of an abnormal process exit, the
+// lingering temp files will be cleaned-up when the temporary location is configured again on restart.  This does leave the
+// potential for "lost" files if there is a configuration change after an abnormal exit and before the next restart (highly
+// unlikely); these would have to be cleaned up manually.
+func (this *TempFile) Close() error {
+	err := this.File.Close()
+	if err == nil {
+		os.Remove(this.Name())
+		runtime.SetFinalizer(this, nil)
+	}
+	return err
+}
 
 type tempInfoT struct {
 	loc   string
@@ -32,6 +52,7 @@ func SetTemp(loc string, quota int64) error {
 	if quota < 0 {
 		quota = 0
 	}
+	loc = filepath.Clean(loc)
 	if !filepath.IsAbs(loc) {
 		tempMutex.Unlock()
 		logging.Errorf("Attempt to set relative temporary path: %v", loc)
@@ -43,6 +64,7 @@ func SetTemp(loc string, quota int64) error {
 	}
 	if tempInfo.loc != loc {
 		tempInfo.inuse = 0
+		cleanup(loc) // clean-up the new path before we start, if we're just changing the quota the leave the contents alone
 	}
 	if tempInfo.loc != loc || tempInfo.quota != quota {
 		tempInfo.loc = loc
@@ -75,12 +97,19 @@ func TempQuota() int64 {
 	return rv
 }
 
-func CreateTemp(pattern string, autoRemove bool) (*os.File, error) {
+func CreateTemp(pattern string) (*TempFile, error) {
+	tf := &TempFile{}
 	f, err := os.CreateTemp(TempLocation(), pattern)
-	if autoRemove && err == nil {
-		os.Remove(f.Name())
+	tf.File = *f
+	if logging.LogLevel() == logging.DEBUG {
+		runtime.SetFinalizer(tf, func(i interface{}) {
+			if tf, ok := i.(*TempFile); ok {
+				logging.Debugf("Temp file finaliser for %s called.  Missing close.", tf.Name())
+				tf.Close()
+			}
+		})
 	}
-	return f, err
+	return tf, err
 }
 
 func UseTemp(pathname string, sz int64) bool {
@@ -95,6 +124,8 @@ func UseTemp(pathname string, sz int64) bool {
 		} else if tempInfo.inuse > tempInfo.hwm {
 			tempInfo.hwm = tempInfo.inuse
 		}
+	} else if tempInfo.quota > 0 && logging.LogLevel() == logging.DEBUG {
+		logging.Debugf("UseTemp(%s, %d) - %s not in temp path: %s", pathname, sz, loc, tempInfo.loc)
 	}
 	tempMutex.Unlock()
 	return rv
@@ -119,4 +150,53 @@ func TempStats() (int64, int64) {
 	h := tempInfo.hwm
 	tempMutex.Unlock()
 	return c, h
+}
+
+var prefixes []string
+
+// remove files with registered prefixes from the supplied path
+func cleanup(path string) {
+	if len(prefixes) == 0 || path == "" {
+		return
+	}
+	d, err := os.Open(path)
+	if err != nil {
+		logging.Debugf("%v", err)
+		return
+	}
+	n := 0
+	sz := int64(0)
+	for {
+		ents, err := d.ReadDir(10)
+		if err != nil {
+			break
+		}
+		for i := range ents {
+			logging.Debugf("%s", ents[i].Name())
+			if ents[i].IsDir() {
+				continue
+			}
+			for j := range prefixes {
+				if strings.HasPrefix(ents[i].Name(), prefixes[j]) {
+					if info, err := ents[i].Info(); err == nil {
+						sz += info.Size()
+					}
+					pathname := filepath.Join(path, ents[i].Name())
+					logging.Debugf("%s", pathname)
+					os.Remove(pathname)
+					n++
+					break
+				}
+			}
+		}
+		if len(ents) < 10 {
+			break
+		}
+	}
+	d.Close()
+	logging.Infof("Cleaned up %s in %d temporary file(s) from: %s", logging.HumanReadableSize(sz, false), n, path)
+}
+
+func RegisterTempPattern(pattern string) {
+	prefixes = append(prefixes, strings.TrimSuffix(pattern, "*"))
 }
