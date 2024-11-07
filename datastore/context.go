@@ -165,6 +165,9 @@ type QueryContext interface {
 	ErrorCount() int
 	DurationStyle() util.DurationStyle
 	FormatDuration(time.Duration) string
+	UserAgent() string
+	Users() string
+	RemoteAddr() string
 }
 
 type queryContextImpl struct {
@@ -243,6 +246,18 @@ func (ci *queryContextImpl) IsActive() bool {
 }
 
 func (ci *queryContextImpl) RequestId() string {
+	return ""
+}
+
+func (ci *queryContextImpl) UserAgent() string {
+	return ""
+}
+
+func (ci *queryContextImpl) Users() string {
+	return ""
+}
+
+func (ci *queryContextImpl) RemoteAddr() string {
 	return ""
 }
 

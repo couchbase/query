@@ -73,6 +73,9 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetQueryContext(this.context.QueryContext())
 	prep.SetUseFts(this.context.UseFts())
 	prep.SetUseCBO(this.context.UseCBO())
+	prep.SetUserAgent(this.context.dsContext.UserAgent())
+	prep.SetUsers(this.context.dsContext.Users())
+	prep.SetRemoteAddr(this.context.dsContext.RemoteAddr())
 
 	json_bytes, err := prep.MarshalJSON()
 	if err != nil {

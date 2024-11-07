@@ -686,6 +686,20 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		itemMap["planPreparedTime"] = entry.Prepared.PreparedTime().Format(util.DEFAULT_FORMAT)
 	}
 
+	if entry.Prepared.Users() != "" {
+		itemMap["users"] = util.Redacted(entry.Prepared.Users(), redact)
+	}
+	if entry.Prepared.RemoteAddr() != "" {
+		itemMap["remoteAddr"] = entry.Prepared.RemoteAddr()
+	}
+	if entry.Prepared.UserAgent() != "" {
+		if entry.Prepared.Reprepared() {
+			itemMap["creatingUserAgent"] = entry.Prepared.UserAgent()
+		} else {
+			itemMap["userAgent"] = entry.Prepared.UserAgent()
+		}
+	}
+
 	// only give times for entries that have completed at least one execution
 	if entry.Uses > 0 && entry.RequestTime > 0 {
 		itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)

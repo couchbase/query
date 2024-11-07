@@ -48,6 +48,11 @@ type Prepared struct {
 	keyspaces          []ksVersion
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
+
+	userAgent  string
+	users      string
+	remoteAddr string
+	reprepared bool
 	sync.RWMutex
 }
 
@@ -126,6 +131,20 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	r["namespace"] = this.namespace
 	r["queryContext"] = this.queryContext
 	r["reqType"] = this.reqType
+
+	if this.userAgent != "" {
+		if this.reprepared {
+			r["creatingUserAgent"] = this.userAgent
+		} else {
+			r["userAgent"] = this.userAgent
+		}
+	}
+	if this.users != "" {
+		r["users"] = this.users
+	}
+	if this.remoteAddr != "" {
+		r["remoteAddr"] = this.remoteAddr
+	}
 	if this.useFts {
 		r["useFts"] = this.useFts
 	}
@@ -162,6 +181,10 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
+		UserAgent          string                 `json:"userAgent"`
+		CreatingUserAgent  string                 `json:"creatingUserAgent"`
+		Users              string                 `json:"users"`
+		RemoteAddr         string                 `json:"remoteAddr"`
 	}
 
 	var op_type struct {
@@ -194,6 +217,16 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
+
+	if _unmarshalled.UserAgent != "" {
+		this.userAgent = _unmarshalled.UserAgent
+	}
+	if _unmarshalled.CreatingUserAgent != "" {
+		this.userAgent = _unmarshalled.CreatingUserAgent
+		this.reprepared = true
+	}
+	this.users = _unmarshalled.Users
+	this.remoteAddr = _unmarshalled.RemoteAddr
 	if len(_unmarshalled.IndexScanKeyspaces) > 0 {
 		this.indexScanKeyspaces = make(map[string]bool, len(_unmarshalled.IndexScanKeyspaces))
 		for ks, v := range _unmarshalled.IndexScanKeyspaces {
@@ -275,6 +308,38 @@ func (this *Prepared) SetQueryContext(queryContext string) {
 			this.tenant = path[1]
 		}
 	}
+}
+
+func (this *Prepared) SetUserAgent(userAgent string) {
+	this.userAgent = userAgent
+}
+
+func (this *Prepared) UserAgent() string {
+	return this.userAgent
+}
+
+func (this *Prepared) SetUsers(users string) {
+	this.users = users
+}
+
+func (this *Prepared) Users() string {
+	return this.users
+}
+
+func (this *Prepared) SetRemoteAddr(remoteAddr string) {
+	this.remoteAddr = remoteAddr
+}
+
+func (this *Prepared) RemoteAddr() string {
+	return this.remoteAddr
+}
+
+func (this *Prepared) SetReprepared(reprepared bool) {
+	this.reprepared = reprepared
+}
+
+func (this *Prepared) Reprepared() bool {
+	return this.reprepared
 }
 
 func (this *Prepared) Tenant() string {

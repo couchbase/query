@@ -356,6 +356,10 @@ type Context struct {
 	// Key: unique identifier of the Inline UDF, Value: Info on the function body of Inline UDFs executed in the query
 	inlineUdfEntries map[string]*inlineUdfEntry
 
+	userAgent  string
+	users      string
+	remoteAddr string
+
 	// queryMutex is a pointer and is meant to be shared when we share certain fields
 	// when calling NewQueryContext(). Since the fields are shared the mutex that protect
 	// them also needs to be shared
@@ -477,8 +481,12 @@ func (this *Context) Copy() *Context {
 		subExecTrees:     this.subExecTrees,
 		udfStmtExecTrees: this.udfStmtExecTrees,
 		inlineUdfEntries: this.inlineUdfEntries,
-		subqueryPlans:    this.subqueryPlans,
-		queryMutex:       this.queryMutex,
+
+		userAgent:     this.userAgent,
+		users:         this.users,
+		remoteAddr:    this.remoteAddr,
+		subqueryPlans: this.subqueryPlans,
+		queryMutex:    this.queryMutex,
 	}
 
 	if this.optimizer != nil {
@@ -2180,6 +2188,30 @@ func (this *Context) DurationStyle() util.DurationStyle {
 
 func (this *Context) SetDurationStyle(style util.DurationStyle) {
 	this.durationStyle = style
+}
+
+func (this *Context) SetUserAgent(userAgent string) {
+	this.userAgent = userAgent
+}
+
+func (this *Context) UserAgent() string {
+	return this.userAgent
+}
+
+func (this *Context) SetRemoteAddr(remoteAddr string) {
+	this.remoteAddr = remoteAddr
+}
+
+func (this *Context) RemoteAddr() string {
+	return this.remoteAddr
+}
+
+func (this *Context) SetUsers(users string) {
+	this.users = users
+}
+
+func (this *Context) Users() string {
+	return this.users
 }
 
 func (this *Context) FormatDuration(d time.Duration) string {

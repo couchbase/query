@@ -869,6 +869,9 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetPreserveProjectionOrder(!request.SortProjection())
 	context.SetLogLevel(request.LogLevel())
 	context.SetDurationStyle(request.DurationStyle())
+	context.SetUserAgent(request.UserAgent())
+	context.SetUsers(datastore.CredsString(request.Credentials()))
+	context.SetRemoteAddr(request.RemoteAddr())
 
 	if request.TxId() != "" {
 		err := context.SetTransactionInfo(request.TxId(), request.TxStmtNum())
@@ -1867,6 +1870,9 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 						prepared.SetQueryContext(request.QueryContext())
 						prepared.SetUseFts(request.UseFts())
 						prepared.SetUseCBO(request.UseCBO())
+						prepared.SetUsers(datastore.CredsString(request.Credentials()))
+						prepared.SetUserAgent(request.UserAgent())
+						prepared.SetRemoteAddr(request.RemoteAddr())
 
 						// trigger prepare metrics recording
 						if prepareds.AddAutoPreparePlan(stmt, prepared) {

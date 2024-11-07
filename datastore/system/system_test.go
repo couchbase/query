@@ -127,6 +127,18 @@ func (ci *queryContextImpl) RequestId() string {
 	return ""
 }
 
+func (ci *queryContextImpl) UserAgent() string {
+	return ""
+}
+
+func (ci *queryContextImpl) Users() string {
+	return ""
+}
+
+func (ci *queryContextImpl) RemoteAddr() string {
+	return ""
+}
+
 func (ci *queryContextImpl) Loga(l logging.Level, f func() string)                   {}
 func (ci *queryContextImpl) Debuga(f func() string)                                  {}
 func (ci *queryContextImpl) Tracea(f func() string)                                  {}
