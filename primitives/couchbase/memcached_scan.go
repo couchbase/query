@@ -61,6 +61,10 @@ const _SS_MAX_DOCS_PER_REQUEST = uint32(512)
 const _SS_DOC_BUFFER = 2 * util.MiB        // times 1024 v-buckets is 2 GiB per complete scan
 const _SS_MAX_CACHED_SIZE = 100 * util.MiB // 100 GiB total temp space per scan
 
+func init() {
+	util.RegisterTempPattern(_SS_SPILL_FILE_PATTERN)
+}
+
 /*
  * Bucket functions for driving and consuming a scan.
  */
@@ -1139,7 +1143,7 @@ type vbRangeScan struct {
 	continueExcluding bool
 
 	uuid       []byte
-	spill      *os.File
+	spill      *util.TempFile
 	buffer     []byte
 	offset     uint32
 	keys       []uint32
@@ -1340,7 +1344,7 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 		this.buffer = make([]byte, 0, _SS_KEY_BUFFER)
 	}
 	if this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) && this.spill == nil {
-		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN, true)
+		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN)
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false
@@ -1392,7 +1396,7 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 	}
 	length := uint32(len(key) + 2 + len(doc) + len(meta))
 	if this.offset+length >= uint32(cap(this.buffer)) && this.spill == nil {
-		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN, true)
+		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN)
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false

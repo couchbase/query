@@ -27,13 +27,17 @@ const _SPILL_FILE_PATTERN = "av_spill_*"
 const _MAX_SPILL_FILES = 500
 const _MAX_PARENTS = 2000
 
+func init() {
+	util.RegisterTempPattern(_SPILL_FILE_PATTERN)
+}
+
 type writerFlusher interface {
 	io.Writer
 	Flush() error
 }
 
 type spillFile struct {
-	f       *os.File
+	f       *util.TempFile
 	reader  io.Reader
 	current AnnotatedValue
 	sz      int64
@@ -305,7 +309,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 	if len(this.spill) > _MAX_SPILL_FILES {
 		return errors.NewValueError(errors.E_VALUE_SPILL_MAX_FILES)
 	}
-	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN, logging.LogLevel() != logging.DEBUG)
+	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN)
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
