@@ -27,12 +27,13 @@ type IndexCost struct {
 	selectivity float64
 	size        int64
 	frCost      float64
+	fetchCost   float64
 	idxProperty IdxProperty
 	skipKeys    []bool
 }
 
 func NewIndexCost(index datastore.Index, cost, cardinality, selectivity float64,
-	size int64, frCost float64, skipKeys []bool) *IndexCost {
+	size int64, frCost, fetchCost float64, skipKeys []bool) *IndexCost {
 
 	return &IndexCost{
 		index:       index,
@@ -41,6 +42,7 @@ func NewIndexCost(index datastore.Index, cost, cardinality, selectivity float64,
 		selectivity: selectivity,
 		size:        size,
 		frCost:      frCost,
+		fetchCost:   fetchCost,
 		skipKeys:    skipKeys,
 	}
 }
@@ -53,6 +55,7 @@ func (this *IndexCost) Copy() *IndexCost {
 		selectivity: this.selectivity,
 		size:        this.size,
 		frCost:      this.frCost,
+		fetchCost:   this.fetchCost,
 		idxProperty: this.idxProperty,
 	}
 	rv.skipKeys = make([]bool, len(this.skipKeys))
@@ -84,6 +87,17 @@ func (this *IndexCost) FrCost() float64 {
 	return this.frCost
 }
 
+func (this *IndexCost) FetchCost() float64 {
+	return this.fetchCost
+}
+
+func (this *IndexCost) ScanCost() float64 {
+	if this.cost > 0.0 && this.fetchCost > 0.0 {
+		return this.cost + this.fetchCost
+	}
+	return this.cost
+}
+
 func (this *IndexCost) SetCost(cost float64) {
 	this.cost = cost
 }
@@ -94,6 +108,10 @@ func (this *IndexCost) SetCardinality(cardinality float64) {
 
 func (this *IndexCost) SetSelectivity(selectivity float64) {
 	this.selectivity = selectivity
+}
+
+func (this *IndexCost) SetFetchCost(fetchCost float64) {
+	this.fetchCost = fetchCost
 }
 
 func (this *IndexCost) HasPdOrder() bool {

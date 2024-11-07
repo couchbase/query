@@ -131,7 +131,11 @@ func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, 
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
-		icost := base.NewIndexCost(index, tcost, tcard, tsel, tsize, tfrCost, skipKeys)
+		tfetchCost, _, _ := optutil.CalcFetchCost(alias, tcard)
+		if tcost <= 0.0 || tsel <= 0.0 || tcard <= 0.0 || tfrCost <= 0.0 || tfetchCost <= 0.0 {
+			return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
+		}
+		icost := base.NewIndexCost(index, tcost, tcard, tsel, tsize, tfrCost, tfetchCost, skipKeys)
 		indexes = append(indexes, icost)
 		spanMap[icost] = span
 	}
@@ -414,7 +418,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 			// array index without sargable array index key
 			selectivity, cardinality = optutil.AdjustArraySelec(s, selectivity, cardinality)
 		}
-		icost := base.NewIndexCost(s, e.cost, cardinality, selectivity, e.size, e.frCost, skipKeys)
+		icost := base.NewIndexCost(s, e.cost, cardinality, selectivity, e.size, e.frCost, e.fetchCost, skipKeys)
 		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
 			icost.SetPdOrder()
 			hasPdOrder = true
@@ -533,11 +537,11 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 
 	// first sort the slice
 	sort.Slice(indexes, func(i, j int) bool {
-		return ((indexes[i].Selectivity() < indexes[j].Selectivity()) ||
-			((indexes[i].Selectivity() == indexes[j].Selectivity()) &&
-				(indexes[i].Cost() < indexes[j].Cost())) ||
-			((indexes[i].Selectivity() == indexes[j].Selectivity()) &&
-				(indexes[i].Cost() == indexes[j].Cost()) &&
+		return ((indexes[i].ScanCost() < indexes[j].ScanCost()) ||
+			((indexes[i].ScanCost() == indexes[j].ScanCost()) &&
+				(indexes[i].Selectivity() < indexes[j].Selectivity())) ||
+			((indexes[i].ScanCost() == indexes[j].ScanCost()) &&
+				(indexes[i].Selectivity() == indexes[j].Selectivity()) &&
 				(indexes[i].Cardinality() < indexes[j].Cardinality())))
 	})
 
@@ -580,9 +584,12 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 				}
 				origSel := idx.Selectivity()
 				origCard := idx.Cardinality()
+				origFetchCost := idx.FetchCost()
 				newCard := (origCard / origSel) * sel
+				newFetchCost := (origFetchCost / origSel) * sel
 				idx.SetSelectivity(sel)
 				idx.SetCardinality(newCard)
+				idx.SetFetchCost(newFetchCost)
 			}
 		}
 	}
