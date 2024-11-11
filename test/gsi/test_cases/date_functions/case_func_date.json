@@ -1,1137 +1,1112 @@
 [
   {
-        "statements": "SELECT DATE_PART_STR(\"2004-07-09\", \"year\") AS year, DATE_PART_STR(\"2004-07-09\", \"month\") AS month, DATE_PART_STR( \"2004-07-09\",\"day\") AS day ORDER BY day",
-        "results": [
-        {
-            "day": 9,
-            "month": 7,
-            "year": 2004
-        }
+    "statements": "SELECT DATE_PART_STR(\"2004-07-09\", \"year\") AS year, DATE_PART_STR(\"2004-07-09\", \"month\") AS month, DATE_PART_STR( \"2004-07-09\",\"day\") AS day ORDER BY day",
+    "results": [
+      {
+        "day": 9,
+        "month": 7,
+        "year": 2004
+      }
     ]
-    },
-
-    {
-        "statements": "SELECT DATE_PART_STR(\"11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"11:42:01Z\",\"minute\") AS minute, DATE_PART_STR(\"11:42:01Z\",\"second\") AS second ORDER BY hour",
-        "results": [
-        {
-            "hour": 11,
-            "minute": 42,
-            "second": 1
-        }
+  },
+  {
+    "statements": "SELECT DATE_PART_STR(\"11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"11:42:01Z\",\"minute\") AS minute, DATE_PART_STR(\"11:42:01Z\",\"second\") AS second ORDER BY hour",
+    "results": [
+      {
+        "hour": 11,
+        "minute": 42,
+        "second": 1
+      }
     ]
-    },
-
-    {
-        "statements": "SELECT DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"year\") AS year, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"month\") AS month, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"day\") AS day, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"minute\") AS minute, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"second\") AS second ORDER BY day",
-        "results": [
-        {
-            "day": 9,
-            "hour": 11,
-            "minute": 42,
-            "month": 7,
-            "second": 1,
-            "year": 2004
-        }
+  },
+  {
+    "statements": "SELECT DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"year\") AS year, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"month\") AS month, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"day\") AS day, DATE_PART_STR(\"2004-07-09T11:42:01Z\",\"hour\") AS hour, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"minute\") AS minute, DATE_PART_STR(\"2004-07-09T11:42:01Z\", \"second\") AS second ORDER BY day",
+    "results": [
+      {
+        "day": 9,
+        "hour": 11,
+        "minute": 42,
+        "month": 7,
+        "second": 1,
+        "year": 2004
+      }
     ]
-    },
-
-    {
-        "description": "test fraction seconds",
-        "statements": "SELECT DATE_PART_MILLIS(1.412243464575684768e+12, \"millisecond\")  AS ms ORDER BY ms",
-        "results": [
-        {
-            "ms": 575
-        }
+  },
+  {
+    "description": "test fraction seconds",
+    "statements": "SELECT DATE_PART_MILLIS(1.412243464575684768e+12, \"millisecond\")  AS ms ORDER BY ms",
+    "results": [
+      {
+        "ms": 575
+      }
     ]
-    },
-
-   {
-        "description": "test now_str",
-        "statements": "SELECT DATE_PART_STR(NOW_STR(), \"millennium\") AS millennium WHERE NOW_STR() = NOW_STR() GROUP BY NOW_STR() HAVING NOW_STR() = NOW_STR() ORDER BY millennium",
-        "results": [
-        {
-            "millennium": 3
-        }
+  },
+  {
+    "description": "test now_str",
+    "statements": "SELECT DATE_PART_STR(NOW_STR(), \"millennium\") AS millennium WHERE NOW_STR() = NOW_STR() GROUP BY NOW_STR() HAVING NOW_STR() = NOW_STR() ORDER BY millennium",
+    "results": [
+      {
+        "millennium": 3
+      }
     ]
-    },
-    {
-      "statements": "SELECT DATE_PART_MILLIS((CLOCK_MILLIS()), \"century\")",
-      "results": [
-        {
-            "$1": 21
-        }
-     ]
-    },
-    {
-      "ignore": ["cardinality","cost","optimizer_estimates"],
-      "statements":"EXPLAIN select CLOCK_STR(\"2006-01-02\")",
-      "results": [
-        {
-	"plan":
+  },
+  {
+    "statements": "SELECT DATE_PART_MILLIS((CLOCK_MILLIS()), \"century\")",
+    "results": [
+      {
+        "$1": 21
+      }
+    ]
+  },
+  {
+    "ignore": [
+      "cardinality",
+      "cost",
+      "optimizer_estimates"
+    ],
+    "statements": "EXPLAIN select CLOCK_STR(\"2006-01-02\")",
+    "results": [
+      {
+        "plan": {
+          "#operator": "Sequence",
+          "~children": [
             {
-            "#operator": "Sequence",
-            "~children": [
-                {
-                    "#operator": "DummyScan"
-                },
-                {
-                    "#operator": "Parallel",
-                    "maxParallelism": 1,
-                    "~child": {
-                        "#operator": "Sequence",
-                        "~children": [
-                            {
-                                "#operator": "InitialProject",
-                                "discard_original": true,
-                                "preserve_order": true,
-                                "result_terms": [
-                                    {
-                                        "expr": "clock_str(\"2006-01-02\")"
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                }
-            ]
+              "#operator": "DummyScan"
             },
-        "text": "select CLOCK_STR(\"2006-01-02\")"
-        }
-    ]
-    },
-    {
-      "statements":"select DATE_ADD_STR(\"2006-01-02\" ,1 ,\"year\")",
-      "results": [
-        {
-            "$1": "2007-01-02"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 30-day month to 31-day month",
-      "statements":"SELECT DATE_ADD_STR('2019-04-30', 1, 'month'), DATE_ADD_STR('2019-04-30', 1, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2019-05-30",
-            "$2": "2019-05-31"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 30-day month to 31-day month moving back and test spanning more than a year",
-      "statements":"SELECT DATE_ADD_STR('2019-04-30', -15, 'month'), DATE_ADD_STR('2019-04-30', -15, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2018-01-30",
-            "$2": "2018-01-31"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 30-day month to February",
-      "statements":"SELECT DATE_ADD_STR('2019-04-30', -2, 'month'), DATE_ADD_STR('2019-04-30', -2, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2019-03-02",
-            "$2": "2019-02-28"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 30-day month to February in a leap year",
-      "statements":"SELECT DATE_ADD_STR('2020-04-30', -2, 'month'), DATE_ADD_STR('2020-04-30', -2, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2020-03-01",
-            "$2": "2020-02-29"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 31-day month to 30-day month",
-      "statements":"SELECT DATE_ADD_STR('2021-08-31', 1, 'month'), DATE_ADD_STR('2021-08-31', 1, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2021-10-01",
-            "$2": "2021-09-30"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 31-day month to 30-day month moving back and test spanning a leap year",
-      "statements":"SELECT DATE_ADD_STR('2021-05-31', -61, 'month'), DATE_ADD_STR('2021-05-31', -61, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2016-05-01",
-            "$2": "2016-04-30"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 31-day month to February spanning more than a year",
-      "statements":"SELECT DATE_ADD_STR('2021-01-31', 13, 'month'), DATE_ADD_STR('2021-01-31', 13, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2022-03-03",
-            "$2": "2022-02-28"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of 31-day month to February in a leap year spanning more than a year",
-      "statements":"SELECT DATE_ADD_STR('2021-01-31', 37, 'month'), DATE_ADD_STR('2021-01-31', 37, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2024-03-02",
-            "$2": "2024-02-29"
-        }
-      ]
-    },
-    {
-      "description":"Test other-than-last day of month",
-      "statements":"SELECT DATE_ADD_STR('2021-08-17', 6, 'month'), DATE_ADD_STR('2021-08-17', 6, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2022-02-17",
-            "$2": "2022-02-17"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of February to a 30-day month",
-      "statements":"SELECT DATE_ADD_STR('2021-02-28', 2, 'month'), DATE_ADD_STR('2021-02-28', 2, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2021-04-28",
-            "$2": "2021-04-30"
-        }
-    ]
-    },
-    {
-      "description":"Test last day of February in a leap year to a 31-day month",
-      "statements":"SELECT DATE_ADD_STR('2020-02-29', -2, 'month'), DATE_ADD_STR('2020-02-29', -2, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2019-12-29",
-            "$2": "2019-12-31"
-        }
-    ]
-    },
-    {
-      "description":"Test day beyond end of target month but not last day of source month",
-      "statements":"SELECT DATE_ADD_STR('2021-01-30', 1, 'month'), DATE_ADD_STR('2021-01-30', 1, 'calendar_month')",
-      "results": [
-        {
-            "$1": "2021-03-02",
-            "$2": "2021-02-28"
-        }
-    ]
-    },
-    {
-      "statements":"select DATE_DIFF_STR(\"2006-01-02\" ,\"1998-02-02\" ,\"year\")",
-      "results": [
-        {
-            "$1": 8
-        }
-    ]
-    },
-    {
-       "statements":"select MILLIS_TO_UTC(DATE_TRUNC_MILLIS(1.453505233e+12,\"day\"))",
-       "results": [
-        {
-            "$1": "2016-01-22T00:00:00Z"
-        }
-    ]
-    },
-    {
-       "statements":"select DATE_TRUNC_STR(\"2006-03-01\",\"year\")",
-       "results": [
-        {
-            "$1": "2006-01-01"
-        }
-    ]
-    },
-    {
-       "statements":"select DATE_TRUNC_STR(\"2021-05-13\",\"week\")",
-       "results": [
-        {
-            "$1": "2021-05-09"
-        }
-    ]
-    },
-    {
-       "statements":"select DATE_TRUNC_STR(\"2021-05-13\",\"iso_week\")",
-       "results": [
-        {
-            "$1": "2021-05-10"
-        }
-    ]
-    },
-    {
-       "statements":"select MILLIS_TO_STR(1.453477808e+12,\"2006-01-02\")",
-     "results": [
-        {
-            "$1": "2016-01-22"
-        }
-    ]
-    },
-    {
-       "statements":"select STR_TO_MILLIS(\"2015-01-01T16:00:00-08:00\"), STR_TO_MILLIS(\"01/01/2015 16:00:00-08\",\"02/01/2006 15:04:05-07\")",
-       "results": [
-        {
-            "$1": 1420156800000,
-            "$2": 1420156800000
-        }
-    ]
-    },
-    {
-       "statements":" select MILLIS(\"2015-01-01T16:00:00-08:00\")",
-       "results": [
-        {
-            "$1": 1420156800000
-        }
-    ]
-    },
-    {
-       "statements":"select MILLIS_TO_UTC(1.4201568e+12,\"2006-01-02 15:04:05\")",
-       "results": [
-        {
-            "$1": "2015-01-02 00:00:00"
-        }
-    ]
-    },
-    {
-      "statements":"select DATE_PART_STR(MILLIS_TO_STR(NOW_MILLIS()),\"decade\")",
-      "results": [
-        {
-            "$1": 202
-        }
-    ]
-    },
-    {
-      "statements":"select DATE_PART_STR(NOW_STR(\"2006-01-02 15:04:05\"),\"decade\")",
-      "results": [
-        {
-            "$1": 202
-        }
-    ]
-    },
-    {
-      "statements":"select STR_TO_UTC(\"2006-01-02T15:04:05Z\")",
-      "results": [
-        {
-            "$1": "2006-01-02T15:04:05Z"
-        }
-    ]
-    },
-   {
-     "statements":"select `shipped-on` as a from orders where test_id = \"datefunc\" order by a",
-     "results": [
-        {},
-        {
-            "a": null
-        },
-        {
-            "a": "2012/01/02 00:00:00Z"
-        },
-        {
-            "a": "2016-09-26T11:33:16.209-07:00"
-        }
-    ]
-   },
-   {
-     "description":"date not in correct format gives null",
-     "statements":"select DATE_PART_STR(\"02/01/2012\",\"month\") as a",
-     "results": [
-        {
-            "a": null
-        }
-     ]
-   },
-   {
-     "description":"date in common format parses",
-     "statements":"select DATE_PART_STR(`shipped-on`,\"month\") as a from orders where test_id = \"datefunc\" order by a",
-     "results": [
-        {},
-        {
-            "a": null
-        },
-        {
-            "a": 1
-        },
-        {
-            "a": 9
-        }
-    ]
-   },
-   {
-     "description":"corner cases for date_diff_str",
-     "statements":"select date_diff_str('2014-12-01','2015-01-01', 'quarter')",
-     "results": [
-        {
-            "$1": -1
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2015-01-01','2014-12-01', 'quarter')",
-     "results": [
-        {
-            "$1": 1
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2013-12-01','2015-01-01', 'quarter')",
-     "results": [
-        {
-            "$1": -5
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2013-10-01','2015-01-01', 'quarter')",
-     "results": [
-        {
-            "$1": -5
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2014-12-01','2015-05-30', 'quarter')",
-     "results": [
-        {
-            "$1": -2
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2014-10-01','2014-12-01', 'quarter')",
-     "results": [
-        {
-            "$1": 0
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2015-11-01','2014-10-01', 'month')",
-     "results": [
-        {
-            "$1": 13
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2015-01-01','2014-12-01', 'month')",
-     "results": [
-        {
-            "$1": 1
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2013-12-01','2015-01-01', 'month')",
-     "results": [
-        {
-            "$1": -13
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2013-01-01','2015-01-01', 'month')",
-     "results": [
-        {
-            "$1": -24
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2013-10-01','2015-01-01', 'month')",
-     "results": [
-        {
-            "$1": -15
-        }
-    ]
-   },
-   {
-     "statements":"select date_diff_str('2014-12-01','2015-01-01', 'month')",
-     "results": [
-        {
-            "$1": -1
-        }
-    ]
-   },
-   {
-     "statements":"select DATE_DIFF_MILLIS(1465634581881,1465634581882,'millisecond')",
-     "results": [
-        {
-            "$1": -1
-        }
-    ]
-   },
-   {
-     "statements":"select DATE_DIFF_MILLIS(1465634581881,1465634581880,'millisecond')",
-     "results": [
-        {
-            "$1": 1
-        }
-    ]
-   },
-   {
-    "statements":"select date_range_str('2015-11-30T15:04:05.999', '2017-04-14T15:04:06.998', 'quarter')",
-    "results": [
-        {
-            "$1": [
-                "2015-11-30T15:04:05.999",
-                "2016-03-01T15:04:05.999",
-                "2016-06-01T15:04:05.999",
-                "2016-09-01T15:04:05.999",
-                "2016-12-01T15:04:05.999",
-                "2017-03-01T15:04:05.999"
-            ]
-        }
-    ]
-   },
-   {
-    "statements":"select date_range_str('2016-01-01T15:04:05.999', '2016-04-14T15:04:05.998', 'day', 1)",
-    "results": [
-        {
-            "$1": [
-                "2016-01-01T15:04:05.999",
-                "2016-01-02T15:04:05.999",
-                "2016-01-03T15:04:05.999",
-                "2016-01-04T15:04:05.999",
-                "2016-01-05T15:04:05.999",
-                "2016-01-06T15:04:05.999",
-                "2016-01-07T15:04:05.999",
-                "2016-01-08T15:04:05.999",
-                "2016-01-09T15:04:05.999",
-                "2016-01-10T15:04:05.999",
-                "2016-01-11T15:04:05.999",
-                "2016-01-12T15:04:05.999",
-                "2016-01-13T15:04:05.999",
-                "2016-01-14T15:04:05.999",
-                "2016-01-15T15:04:05.999",
-                "2016-01-16T15:04:05.999",
-                "2016-01-17T15:04:05.999",
-                "2016-01-18T15:04:05.999",
-                "2016-01-19T15:04:05.999",
-                "2016-01-20T15:04:05.999",
-                "2016-01-21T15:04:05.999",
-                "2016-01-22T15:04:05.999",
-                "2016-01-23T15:04:05.999",
-                "2016-01-24T15:04:05.999",
-                "2016-01-25T15:04:05.999",
-                "2016-01-26T15:04:05.999",
-                "2016-01-27T15:04:05.999",
-                "2016-01-28T15:04:05.999",
-                "2016-01-29T15:04:05.999",
-                "2016-01-30T15:04:05.999",
-                "2016-01-31T15:04:05.999",
-                "2016-02-01T15:04:05.999",
-                "2016-02-02T15:04:05.999",
-                "2016-02-03T15:04:05.999",
-                "2016-02-04T15:04:05.999",
-                "2016-02-05T15:04:05.999",
-                "2016-02-06T15:04:05.999",
-                "2016-02-07T15:04:05.999",
-                "2016-02-08T15:04:05.999",
-                "2016-02-09T15:04:05.999",
-                "2016-02-10T15:04:05.999",
-                "2016-02-11T15:04:05.999",
-                "2016-02-12T15:04:05.999",
-                "2016-02-13T15:04:05.999",
-                "2016-02-14T15:04:05.999",
-                "2016-02-15T15:04:05.999",
-                "2016-02-16T15:04:05.999",
-                "2016-02-17T15:04:05.999",
-                "2016-02-18T15:04:05.999",
-                "2016-02-19T15:04:05.999",
-                "2016-02-20T15:04:05.999",
-                "2016-02-21T15:04:05.999",
-                "2016-02-22T15:04:05.999",
-                "2016-02-23T15:04:05.999",
-                "2016-02-24T15:04:05.999",
-                "2016-02-25T15:04:05.999",
-                "2016-02-26T15:04:05.999",
-                "2016-02-27T15:04:05.999",
-                "2016-02-28T15:04:05.999",
-                "2016-02-29T15:04:05.999",
-                "2016-03-01T15:04:05.999",
-                "2016-03-02T15:04:05.999",
-                "2016-03-03T15:04:05.999",
-                "2016-03-04T15:04:05.999",
-                "2016-03-05T15:04:05.999",
-                "2016-03-06T15:04:05.999",
-                "2016-03-07T15:04:05.999",
-                "2016-03-08T15:04:05.999",
-                "2016-03-09T15:04:05.999",
-                "2016-03-10T15:04:05.999",
-                "2016-03-11T15:04:05.999",
-                "2016-03-12T15:04:05.999",
-                "2016-03-13T15:04:05.999",
-                "2016-03-14T15:04:05.999",
-                "2016-03-15T15:04:05.999",
-                "2016-03-16T15:04:05.999",
-                "2016-03-17T15:04:05.999",
-                "2016-03-18T15:04:05.999",
-                "2016-03-19T15:04:05.999",
-                "2016-03-20T15:04:05.999",
-                "2016-03-21T15:04:05.999",
-                "2016-03-22T15:04:05.999",
-                "2016-03-23T15:04:05.999",
-                "2016-03-24T15:04:05.999",
-                "2016-03-25T15:04:05.999",
-                "2016-03-26T15:04:05.999",
-                "2016-03-27T15:04:05.999",
-                "2016-03-28T15:04:05.999",
-                "2016-03-29T15:04:05.999",
-                "2016-03-30T15:04:05.999",
-                "2016-03-31T15:04:05.999",
-                "2016-04-01T15:04:05.999",
-                "2016-04-02T15:04:05.999",
-                "2016-04-03T15:04:05.999",
-                "2016-04-04T15:04:05.999",
-                "2016-04-05T15:04:05.999",
-                "2016-04-06T15:04:05.999",
-                "2016-04-07T15:04:05.999",
-                "2016-04-08T15:04:05.999",
-                "2016-04-09T15:04:05.999",
-                "2016-04-10T15:04:05.999",
-                "2016-04-11T15:04:05.999",
-                "2016-04-12T15:04:05.999",
-                "2016-04-13T15:04:05.999"
-            ]
-        }
-    ]
-   },
-   {
-    "statements":"select date_range_str('2004-01-03','2004-12-03', 'month', 4)",
-    "results": [
-        {
-            "$1": [
-                "2004-01-03",
-                "2004-05-03",
-                "2004-09-03"
-            ]
-        }
-    ]
-   },
-   {
-    "statements":"select date_range_str('2016-01-14T15:04:05.999', '2016-01-01T15:04:06.998', 'day', -1)",
-    "results": [
-        {
-            "$1": [
-                "2016-01-14T15:04:05.999",
-                "2016-01-13T15:04:05.999",
-                "2016-01-12T15:04:05.999",
-                "2016-01-11T15:04:05.999",
-                "2016-01-10T15:04:05.999",
-                "2016-01-09T15:04:05.999",
-                "2016-01-08T15:04:05.999",
-                "2016-01-07T15:04:05.999",
-                "2016-01-06T15:04:05.999",
-                "2016-01-05T15:04:05.999",
-                "2016-01-04T15:04:05.999",
-                "2016-01-03T15:04:05.999",
-                "2016-01-02T15:04:05.999"
-            ]
-        }
-    ]
-   },
-   {
-    "statements":"select date_format_Str('2016-05-15T00:00:23+02:00','1222-11-11 11:11:11')",
-    "results": [
-        {
-            "$1": "2016-05-15 00:00:23"
-        }
-    ]
-   },
-   {
-    "statements":"select date_format_Str('2016-05-15T00:00:00+02:00','1222-11-11')",
-    "results": [
-        {
-            "$1": "2016-05-15"
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_millis(1463284740000,'day','UTC')",
-    "results": [
-        {
-            "$1": 15
-        }
-    ]
-   },
-   {
-    "statements":"select str_to_utc(millis_to_str(1463284740000))",
-    "results": [
-        {
-            "$1": "2016-05-15T03:59:00Z"
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_millis(1463284740000,'day','US/Eastern')",
-    "results": [
-        {
-            "$1": 14
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_millis(1463284740000,'day','Europe/London')",
-    "results": [
-        {
-            "$1": 15
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_millis(1463284740000,'day','Asia/Tokyo')",
-    "results": [
-        {
-            "$1": 15
-        }
-    ]
-   },
-   {
-    "statements":"select DATE_PART_STR(CLOCK_UTC(),'timezone')",
-    "results": [
-        {
-            "$1": 0
-        }
-    ]
-   },
-   {
-    "statements":"select DATE_PART_STR(CLOCK_TZ('US/Arizona'),'timezone')",
-    "results": [
-        {
-            "$1": -25200
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_Str('2016-09-26T11:33:16.209-04:00','timezone')",
-    "results": [
-        {
-            "$1": -14400
-        }
-    ]
-   },
-   {
-    "statements":"select DATE_PART_STR(CLOCK_TZ('UTC'),'timezone')",
-    "results": [
-        {
-            "$1": 0
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_Str('2016-09-26T11:33:16.209-07:00','timezone')",
-    "results": [
-        {
-            "$1": -25200
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_Str(clock_local(),'decade')",
-    "results": [
-        {
-            "$1": 202
-        }
-    ]
-   },
-   {
-    "statements":"select date_part_str(now_local(),'decade')",
-    "results": [
-        {
-            "$1": 202
-        }
-    ]
-   },
-   {
-    "statements":"select DATE_PART_STR(NOW_UTC(),'timezone')",
-    "results": [
-        {
-            "$1": 0
-        }
-    ]
-   },
-   {
-    "statements":"select DATE_PART_STR(NOW_TZ('US/Arizona'),'timezone')",
-    "results": [
-        {
-            "$1": -25200
-        }
-    ]
-   },
-   {
-    "statements":"select MILLIS_TO_LOCAL(1.453477808e+12,'2006-01-02')",
-    "results": [
-        {
-            "$1": "2016-01-22"
-        }
-    ]
-   },
-   {
-    "statements":"select millis_to_zone_name(1.453485008e+12,'UTC')",
-    "results": [
-        {
-            "$1": "2016-01-22T17:50:08Z"
-        }
-    ]
-   },
-   {
-    "statements":"select millis_to_tz(1.453485008e+12,'UTC')",
-    "results": [
-        {
-            "$1": "2016-01-22T17:50:08Z"
-        }
-    ]
-   },
-   {
-    "statements":"select str_to_tz('2016-01-22T09:50:08-08:00', 'UTC')",
-    "results": [
-        {
-            "$1": "2016-01-22T17:50:08Z"
-        }
-    ]
-   },
-   {
-    "statements":"select str_to_zone_name('2016-01-22T09:50:08-08:00', 'UTC')",
-    "results": [
-        {
-            "$1": "2016-01-22T17:50:08Z"
-        }
-    ]
-   },
-   {
-    "statements":"select str_to_tz(`shipped-on`, 'UTC') a from orders where test_id = \"datefunc\" order by a",
-    "results": [
-        {},
-        {
-            "a": null
-        },
-        {
-            "a": "2012/01/02 00:00:00Z"
-        },
-        {
-            "a": "2016-09-26T18:33:16.209Z"
-        }
-    ]
-   },
-   {
-    "statements":"select str_to_zone_name(`shipped-on`, 'UTC'), date_part_millis(STR_TO_MILLIS(`shipped-on`), 'hour', 'US/Pacific') a from orders where test_id = \"datefunc\" order by a",
-    "results": [
-        {},
-        {
-            "$1": null,
-            "a": null
-        },
-        {
-            "$1": "2016-09-26T18:33:16.209Z",
-            "a": 11
-        },
-        {
-            "$1": "2012/01/02 00:00:00Z",
-            "a": 16
-        }
-    ]
-   },
-   {
-    "statements":"select array millis_to_str(a,'2016-12-03') for a in date_range_millis(1480752000000, 1449129600000, 'month', -1) end ",
-    "results": [
-        {
-            "$1": [
-                "2016-12-03",
-                "2016-11-03",
-                "2016-10-03",
-                "2016-09-03",
-                "2016-08-03",
-                "2016-07-03",
-                "2016-06-03",
-                "2016-05-03",
-                "2016-04-03",
-                "2016-03-03",
-                "2016-02-03",
-                "2016-01-03"
-            ]
-        }
-    ]
-   },
-   {
-    "statements":"select date_range_millis(1477382400000, 1461571200000, 'month', -1)",
-    "results": [
-        {
-            "$1": [
-                1477382400000,
-                1474790400000,
-                1472112000000,
-                1469433600000,
-                1466841600000,
-                1464163200000
-            ]
-        }
-    ]
-   },
-   {
-     "statements":"select str_to_millis('2016-12-03T08:00:00Z'), str_to_millis('2015-12-03T08:00:00Z')",
-     "results": [
-        {
-            "$1": 1480752000000,
-            "$2": 1449129600000
-        }
-    ]
-   },
-    {
-        "description": "calendar_month vs month range generation with start as last day of month",
-        "statements": "select DATE_RANGE_STR('2020-01-31','2021-07-01','month',1),DATE_RANGE_STR('2020-01-31','2021-07-01','calendar_month',1)",
-        "results": [
-           {
-            "$1": [
-                "2020-01-31",
-                "2020-03-02",
-                "2020-04-02",
-                "2020-05-02",
-                "2020-06-02",
-                "2020-07-02",
-                "2020-08-02",
-                "2020-09-02",
-                "2020-10-02",
-                "2020-11-02",
-                "2020-12-02",
-                "2021-01-02",
-                "2021-02-02",
-                "2021-03-02",
-                "2021-04-02",
-                "2021-05-02",
-                "2021-06-02"
-            ],
-            "$2": [
-                "2020-01-31",
-                "2020-02-29",
-                "2020-03-31",
-                "2020-04-30",
-                "2020-05-31",
-                "2020-06-30",
-                "2020-07-31",
-                "2020-08-31",
-                "2020-09-30",
-                "2020-10-31",
-                "2020-11-30",
-                "2020-12-31",
-                "2021-01-31",
-                "2021-02-28",
-                "2021-03-31",
-                "2021-04-30",
-                "2021-05-31",
-                "2021-06-30"
-            ]
-           }
-        ]
-    },
-    {
-        "description": "calendar_month vs month range generation with start as last day of month descending order",
-        "statements": "select DATE_RANGE_STR('2020-01-31','2019-07-01','month',-1),DATE_RANGE_STR('2020-01-31','2019-07-01','calendar_month',-1)",
-        "results": [
             {
-              "$1": [
-                  "2020-01-31",
-                  "2019-12-31",
-                  "2019-12-01",
-                  "2019-11-01",
-                  "2019-10-01",
-                  "2019-09-01",
-                  "2019-08-01"
-              ],
-              "$2": [
-                  "2020-01-31",
-                  "2019-12-31",
-                  "2019-11-30",
-                  "2019-10-31",
-                  "2019-09-30",
-                  "2019-08-31",
-                  "2019-07-31"
-              ]
-          }
-        ]
-    },
-    {
-      "description": "calendar_month vs month range generation with start not last day of month",
-      "statements": "select DATE_RANGE_STR('2020-01-30','2020-07-01','month',1),DATE_RANGE_STR('2020-01-30','2020-07-01','calendar_month',1)",
-      "results": [
-        {
-          "$1": [
-              "2020-01-30",
-              "2020-03-01",
-              "2020-04-01",
-              "2020-05-01",
-              "2020-06-01"
-          ],
-          "$2": [
-              "2020-01-30",
-              "2020-02-29",
-              "2020-03-30",
-              "2020-04-30",
-              "2020-05-30",
-              "2020-06-30"
+              "#operator": "Parallel",
+              "maxParallelism": 1,
+              "~child": {
+                "#operator": "Sequence",
+                "~children": [
+                  {
+                    "#operator": "InitialProject",
+                    "discard_original": true,
+                    "preserve_order": true,
+                    "result_terms": [
+                      {
+                        "expr": "clock_str(\"2006-01-02\")"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
           ]
-        }
-      ]
-    },
-    {
-        "statements": "SELECT DATE_RANGE_MILLIS(0, 10000000000, 'millisecond')",
-        "error": "Out of range evaluating DATE_RANGE_MILLIS()."
-    },
-    {
-        "statements": "SELECT WEEKDAY_MILLIS(1486237655742, 'America/Tijuana')",
-        "results": [
-            {
-                "$1": "Saturday"
-            }
+        },
+        "text": "select CLOCK_STR(\"2006-01-02\")"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_ADD_STR(\"2006-01-02\" ,1 ,\"year\")",
+    "results": [
+      {
+        "$1": "2007-01-02"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 30-day month to 31-day month",
+    "statements": "SELECT DATE_ADD_STR('2019-04-30', 1, 'month'), DATE_ADD_STR('2019-04-30', 1, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2019-05-30",
+        "$2": "2019-05-31"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 30-day month to 31-day month moving back and test spanning more than a year",
+    "statements": "SELECT DATE_ADD_STR('2019-04-30', -15, 'month'), DATE_ADD_STR('2019-04-30', -15, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2018-01-30",
+        "$2": "2018-01-31"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 30-day month to February",
+    "statements": "SELECT DATE_ADD_STR('2019-04-30', -2, 'month'), DATE_ADD_STR('2019-04-30', -2, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2019-03-02",
+        "$2": "2019-02-28"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 30-day month to February in a leap year",
+    "statements": "SELECT DATE_ADD_STR('2020-04-30', -2, 'month'), DATE_ADD_STR('2020-04-30', -2, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2020-03-01",
+        "$2": "2020-02-29"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 31-day month to 30-day month",
+    "statements": "SELECT DATE_ADD_STR('2021-08-31', 1, 'month'), DATE_ADD_STR('2021-08-31', 1, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2021-10-01",
+        "$2": "2021-09-30"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 31-day month to 30-day month moving back and test spanning a leap year",
+    "statements": "SELECT DATE_ADD_STR('2021-05-31', -61, 'month'), DATE_ADD_STR('2021-05-31', -61, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2016-05-01",
+        "$2": "2016-04-30"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 31-day month to February spanning more than a year",
+    "statements": "SELECT DATE_ADD_STR('2021-01-31', 13, 'month'), DATE_ADD_STR('2021-01-31', 13, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2022-03-03",
+        "$2": "2022-02-28"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of 31-day month to February in a leap year spanning more than a year",
+    "statements": "SELECT DATE_ADD_STR('2021-01-31', 37, 'month'), DATE_ADD_STR('2021-01-31', 37, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2024-03-02",
+        "$2": "2024-02-29"
+      }
+    ]
+  },
+  {
+    "description": "Test other-than-last day of month",
+    "statements": "SELECT DATE_ADD_STR('2021-08-17', 6, 'month'), DATE_ADD_STR('2021-08-17', 6, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2022-02-17",
+        "$2": "2022-02-17"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of February to a 30-day month",
+    "statements": "SELECT DATE_ADD_STR('2021-02-28', 2, 'month'), DATE_ADD_STR('2021-02-28', 2, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2021-04-28",
+        "$2": "2021-04-30"
+      }
+    ]
+  },
+  {
+    "description": "Test last day of February in a leap year to a 31-day month",
+    "statements": "SELECT DATE_ADD_STR('2020-02-29', -2, 'month'), DATE_ADD_STR('2020-02-29', -2, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2019-12-29",
+        "$2": "2019-12-31"
+      }
+    ]
+  },
+  {
+    "description": "Test day beyond end of target month but not last day of source month",
+    "statements": "SELECT DATE_ADD_STR('2021-01-30', 1, 'month'), DATE_ADD_STR('2021-01-30', 1, 'calendar_month')",
+    "results": [
+      {
+        "$1": "2021-03-02",
+        "$2": "2021-02-28"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_DIFF_STR(\"2006-01-02\" ,\"1998-02-02\" ,\"year\")",
+    "results": [
+      {
+        "$1": 8
+      }
+    ]
+  },
+  {
+    "statements": "select MILLIS_TO_UTC(DATE_TRUNC_MILLIS(1.453505233e+12,\"day\"))",
+    "results": [
+      {
+        "$1": "2016-01-22T00:00:00Z"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2006-03-01\",\"year\")",
+    "results": [
+      {
+        "$1": "2006-01-01"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2021-05-13\",\"week\")",
+    "results": [
+      {
+        "$1": "2021-05-09"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2021-05-13\",\"iso_week\")",
+    "results": [
+      {
+        "$1": "2021-05-10"
+      }
+    ]
+  },
+  {
+    "statements": "select MILLIS_TO_STR(1.453477808e+12,\"2006-01-02\")",
+    "results": [
+      {
+        "$1": "2016-01-22"
+      }
+    ]
+  },
+  {
+    "statements": "select STR_TO_MILLIS(\"2015-01-01T16:00:00-08:00\"), STR_TO_MILLIS(\"01/01/2015 16:00:00-08\",\"02/01/2006 15:04:05-07\")",
+    "results": [
+      {
+        "$1": 1420156800000,
+        "$2": 1420156800000
+      }
+    ]
+  },
+  {
+    "statements": " select MILLIS(\"2015-01-01T16:00:00-08:00\")",
+    "results": [
+      {
+        "$1": 1420156800000
+      }
+    ]
+  },
+  {
+    "statements": "select MILLIS_TO_UTC(1.4201568e+12,\"2006-01-02 15:04:05\")",
+    "results": [
+      {
+        "$1": "2015-01-02 00:00:00"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_PART_STR(MILLIS_TO_STR(NOW_MILLIS()),\"decade\")",
+    "results": [
+      {
+        "$1": 202
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_PART_STR(NOW_STR(\"2006-01-02 15:04:05\"),\"decade\")",
+    "results": [
+      {
+        "$1": 202
+      }
+    ]
+  },
+  {
+    "statements": "select STR_TO_UTC(\"2006-01-02T15:04:05Z\")",
+    "results": [
+      {
+        "$1": "2006-01-02T15:04:05Z"
+      }
+    ]
+  },
+  {
+    "statements": "select `shipped-on` as a from orders where test_id = \"datefunc\" order by a",
+    "results": [
+      {},
+      {
+        "a": null
+      },
+      {
+        "a": "2012/01/02 00:00:00Z"
+      },
+      {
+        "a": "2016-09-26T11:33:16.209-07:00"
+      }
+    ]
+  },
+  {
+    "description": "date not in correct format gives null",
+    "statements": "select DATE_PART_STR(\"02/01/2012\",\"month\") as a",
+    "results": [
+      {
+        "a": null
+      }
+    ]
+  },
+  {
+    "description": "date in common format parses",
+    "statements": "select DATE_PART_STR(`shipped-on`,\"month\") as a from orders where test_id = \"datefunc\" order by a",
+    "results": [
+      {},
+      {
+        "a": null
+      },
+      {
+        "a": 1
+      },
+      {
+        "a": 9
+      }
+    ]
+  },
+  {
+    "description": "corner cases for date_diff_str",
+    "statements": "select date_diff_str('2014-12-01','2015-01-01', 'quarter')",
+    "results": [
+      {
+        "$1": -1
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2015-01-01','2014-12-01', 'quarter')",
+    "results": [
+      {
+        "$1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2013-12-01','2015-01-01', 'quarter')",
+    "results": [
+      {
+        "$1": -5
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2013-10-01','2015-01-01', 'quarter')",
+    "results": [
+      {
+        "$1": -5
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2014-12-01','2015-05-30', 'quarter')",
+    "results": [
+      {
+        "$1": -2
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2014-10-01','2014-12-01', 'quarter')",
+    "results": [
+      {
+        "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2015-11-01','2014-10-01', 'month')",
+    "results": [
+      {
+        "$1": 13
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2015-01-01','2014-12-01', 'month')",
+    "results": [
+      {
+        "$1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2013-12-01','2015-01-01', 'month')",
+    "results": [
+      {
+        "$1": -13
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2013-01-01','2015-01-01', 'month')",
+    "results": [
+      {
+        "$1": -24
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2013-10-01','2015-01-01', 'month')",
+    "results": [
+      {
+        "$1": -15
+      }
+    ]
+  },
+  {
+    "statements": "select date_diff_str('2014-12-01','2015-01-01', 'month')",
+    "results": [
+      {
+        "$1": -1
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_DIFF_MILLIS(1465634581881,1465634581882,'millisecond')",
+    "results": [
+      {
+        "$1": -1
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_DIFF_MILLIS(1465634581881,1465634581880,'millisecond')",
+    "results": [
+      {
+        "$1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select date_range_str('2015-11-30T15:04:05.999', '2017-04-14T15:04:06.998', 'quarter')",
+    "results": [
+      {
+        "$1": [
+          "2015-11-30T15:04:05.999",
+          "2016-03-01T15:04:05.999",
+          "2016-06-01T15:04:05.999",
+          "2016-09-01T15:04:05.999",
+          "2016-12-01T15:04:05.999",
+          "2017-03-01T15:04:05.999"
         ]
-    },
-    {
-        "statements": "SELECT WEEKDAY_STR('2017-02-05')",
-        "results": [
-            {
-                "$1": "Sunday"
-            }
+      }
+    ]
+  },
+  {
+    "statements": "select date_range_str('2016-01-01T15:04:05.999', '2016-04-14T15:04:05.998', 'day', 1)",
+    "results": [
+      {
+        "$1": [
+          "2016-01-01T15:04:05.999",
+          "2016-01-02T15:04:05.999",
+          "2016-01-03T15:04:05.999",
+          "2016-01-04T15:04:05.999",
+          "2016-01-05T15:04:05.999",
+          "2016-01-06T15:04:05.999",
+          "2016-01-07T15:04:05.999",
+          "2016-01-08T15:04:05.999",
+          "2016-01-09T15:04:05.999",
+          "2016-01-10T15:04:05.999",
+          "2016-01-11T15:04:05.999",
+          "2016-01-12T15:04:05.999",
+          "2016-01-13T15:04:05.999",
+          "2016-01-14T15:04:05.999",
+          "2016-01-15T15:04:05.999",
+          "2016-01-16T15:04:05.999",
+          "2016-01-17T15:04:05.999",
+          "2016-01-18T15:04:05.999",
+          "2016-01-19T15:04:05.999",
+          "2016-01-20T15:04:05.999",
+          "2016-01-21T15:04:05.999",
+          "2016-01-22T15:04:05.999",
+          "2016-01-23T15:04:05.999",
+          "2016-01-24T15:04:05.999",
+          "2016-01-25T15:04:05.999",
+          "2016-01-26T15:04:05.999",
+          "2016-01-27T15:04:05.999",
+          "2016-01-28T15:04:05.999",
+          "2016-01-29T15:04:05.999",
+          "2016-01-30T15:04:05.999",
+          "2016-01-31T15:04:05.999",
+          "2016-02-01T15:04:05.999",
+          "2016-02-02T15:04:05.999",
+          "2016-02-03T15:04:05.999",
+          "2016-02-04T15:04:05.999",
+          "2016-02-05T15:04:05.999",
+          "2016-02-06T15:04:05.999",
+          "2016-02-07T15:04:05.999",
+          "2016-02-08T15:04:05.999",
+          "2016-02-09T15:04:05.999",
+          "2016-02-10T15:04:05.999",
+          "2016-02-11T15:04:05.999",
+          "2016-02-12T15:04:05.999",
+          "2016-02-13T15:04:05.999",
+          "2016-02-14T15:04:05.999",
+          "2016-02-15T15:04:05.999",
+          "2016-02-16T15:04:05.999",
+          "2016-02-17T15:04:05.999",
+          "2016-02-18T15:04:05.999",
+          "2016-02-19T15:04:05.999",
+          "2016-02-20T15:04:05.999",
+          "2016-02-21T15:04:05.999",
+          "2016-02-22T15:04:05.999",
+          "2016-02-23T15:04:05.999",
+          "2016-02-24T15:04:05.999",
+          "2016-02-25T15:04:05.999",
+          "2016-02-26T15:04:05.999",
+          "2016-02-27T15:04:05.999",
+          "2016-02-28T15:04:05.999",
+          "2016-02-29T15:04:05.999",
+          "2016-03-01T15:04:05.999",
+          "2016-03-02T15:04:05.999",
+          "2016-03-03T15:04:05.999",
+          "2016-03-04T15:04:05.999",
+          "2016-03-05T15:04:05.999",
+          "2016-03-06T15:04:05.999",
+          "2016-03-07T15:04:05.999",
+          "2016-03-08T15:04:05.999",
+          "2016-03-09T15:04:05.999",
+          "2016-03-10T15:04:05.999",
+          "2016-03-11T15:04:05.999",
+          "2016-03-12T15:04:05.999",
+          "2016-03-13T15:04:05.999",
+          "2016-03-14T15:04:05.999",
+          "2016-03-15T15:04:05.999",
+          "2016-03-16T15:04:05.999",
+          "2016-03-17T15:04:05.999",
+          "2016-03-18T15:04:05.999",
+          "2016-03-19T15:04:05.999",
+          "2016-03-20T15:04:05.999",
+          "2016-03-21T15:04:05.999",
+          "2016-03-22T15:04:05.999",
+          "2016-03-23T15:04:05.999",
+          "2016-03-24T15:04:05.999",
+          "2016-03-25T15:04:05.999",
+          "2016-03-26T15:04:05.999",
+          "2016-03-27T15:04:05.999",
+          "2016-03-28T15:04:05.999",
+          "2016-03-29T15:04:05.999",
+          "2016-03-30T15:04:05.999",
+          "2016-03-31T15:04:05.999",
+          "2016-04-01T15:04:05.999",
+          "2016-04-02T15:04:05.999",
+          "2016-04-03T15:04:05.999",
+          "2016-04-04T15:04:05.999",
+          "2016-04-05T15:04:05.999",
+          "2016-04-06T15:04:05.999",
+          "2016-04-07T15:04:05.999",
+          "2016-04-08T15:04:05.999",
+          "2016-04-09T15:04:05.999",
+          "2016-04-10T15:04:05.999",
+          "2016-04-11T15:04:05.999",
+          "2016-04-12T15:04:05.999",
+          "2016-04-13T15:04:05.999"
         ]
-    },
-    {
-      "statements":"select date_range_str('9990-01-01', '9999-12-31', 'year')",
-      "results": [
-        {
-            "$1": [
-                "9990-01-01",
-                "9991-01-01",
-                "9992-01-01",
-                "9993-01-01",
-                "9994-01-01",
-                "9995-01-01",
-                "9996-01-01",
-                "9997-01-01",
-                "9998-01-01",
-                "9999-01-01"
-            ]
-        }
+      }
     ]
-    },
-    {
-      "statements":"select date_range_millis(str_to_millis('9990-01-01T08:00:00Z'), str_to_millis('9999-12-31T08:00:00Z'), 'year')",
-      "results": [
-        {
-            "$1": [
-                253086796800000,
-                253118332800000,
-                253149868800000,
-                253181491200000,
-                253213027200000,
-                253244563200000,
-                253276099200000,
-                253307721600000,
-                253339257600000,
-                253370793600000
-            ]
-        }
+  },
+  {
+    "statements": "select date_range_str('2004-01-03','2004-12-03', 'month', 4)",
+    "results": [
+      {
+        "$1": [
+          "2004-01-03",
+          "2004-05-03",
+          "2004-09-03"
+        ]
+      }
     ]
-    },
-    {
-      "statements":"select array millis_to_str(a, '9990-01-01') for a in date_range_millis(str_to_millis('9990-01-01'), str_to_millis('9999-12-31'), 'year') end",
-      "results": [
-        {
-            "$1": [
-                "9990-01-01",
-                "9991-01-01",
-                "9992-01-01",
-                "9993-01-01",
-                "9994-01-01",
-                "9995-01-01",
-                "9996-01-01",
-                "9997-01-01",
-                "9998-01-01",
-                "9999-01-01"
-            ]
-        }
+  },
+  {
+    "statements": "select date_range_str('2016-01-14T15:04:05.999', '2016-01-01T15:04:06.998', 'day', -1)",
+    "results": [
+      {
+        "$1": [
+          "2016-01-14T15:04:05.999",
+          "2016-01-13T15:04:05.999",
+          "2016-01-12T15:04:05.999",
+          "2016-01-11T15:04:05.999",
+          "2016-01-10T15:04:05.999",
+          "2016-01-09T15:04:05.999",
+          "2016-01-08T15:04:05.999",
+          "2016-01-07T15:04:05.999",
+          "2016-01-06T15:04:05.999",
+          "2016-01-05T15:04:05.999",
+          "2016-01-04T15:04:05.999",
+          "2016-01-03T15:04:05.999",
+          "2016-01-02T15:04:05.999"
+        ]
+      }
     ]
-    },
-    {
-      "statements":"select DATE_TRUNC_STR(\"2017-05-06 16:33:44+08:00\",\"hour\") as test1",
-      "results": [
-        {
-            "test1": "2017-05-06 16:00:00+08:00"
-        }
+  },
+  {
+    "statements": "select date_format_Str('2016-05-15T00:00:23+02:00','1222-11-11 11:11:11')",
+    "results": [
+      {
+        "$1": "2016-05-15 00:00:23"
+      }
     ]
-    },
-    {
-      "statements":"select DATE_TRUNC_STR(\"2017-05-06 16:33:44+08:00\",\"month\") as test1",
-      "results": [
-        {
-            "test1": "2017-05-01 00:00:00+08:00"
-        }
+  },
+  {
+    "statements": "select date_format_Str('2016-05-15T00:00:00+02:00','1222-11-11')",
+    "results": [
+      {
+        "$1": "2016-05-15"
+      }
     ]
-    },
-    {
-      "statements":"select DATE_TRUNC_STR(\"2017-01-01 16:33:44-08:00\",\"month\") as test1",
-      "results": [
-        {
-            "test1": "2017-01-01 00:00:00-08:00"
-        }
+  },
+  {
+    "statements": "select date_part_millis(1463284740000,'day','UTC')",
+    "results": [
+      {
+        "$1": 15
+      }
     ]
-    },
-    {
-      "statements":"select DATE_TRUNC_STR(\"2017-01-01 16:33:44\",\"month\") as test1",
-      "results": [
-        {
-            "test1": "2017-01-01 00:00:00"
-        }
+  },
+  {
+    "statements": "select str_to_utc(millis_to_str(1463284740000))",
+    "results": [
+      {
+        "$1": "2016-05-15T03:59:00Z"
+      }
     ]
-    },
-    {
-      "statements":"select DATE_TRUNC_STR(\"2017-01-01 15:00:00\",\"year\") as test1",
-      "results": [
-        {
-            "test1": "2017-01-01 00:00:00"
-        }
+  },
+  {
+    "statements": "select date_part_millis(1463284740000,'day','US/Eastern')",
+    "results": [
+      {
+        "$1": 14
+      }
     ]
-    },
-    {
+  },
+  {
+    "statements": "select date_part_millis(1463284740000,'day','Europe/London')",
+    "results": [
+      {
+        "$1": 15
+      }
+    ]
+  },
+  {
+    "statements": "select date_part_millis(1463284740000,'day','Asia/Tokyo')",
+    "results": [
+      {
+        "$1": 15
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_PART_STR(CLOCK_UTC(),'timezone')",
+    "results": [
+      {
+        "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_PART_STR(CLOCK_TZ('US/Arizona'),'timezone')",
+    "results": [
+      {
+        "$1": -25200
+      }
+    ]
+  },
+  {
+    "statements": "select date_part_Str('2016-09-26T11:33:16.209-04:00','timezone')",
+    "results": [
+      {
+        "$1": -14400
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_PART_STR(CLOCK_TZ('UTC'),'timezone')",
+    "results": [
+      {
+        "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "select date_part_Str('2016-09-26T11:33:16.209-07:00','timezone')",
+    "results": [
+      {
+        "$1": -25200
+      }
+    ]
+  },
+  {
+    "statements": "select date_part_Str(clock_local(),'decade')",
+    "results": [
+      {
+        "$1": 202
+      }
+    ]
+  },
+  {
+    "statements": "select date_part_str(now_local(),'decade')",
+    "results": [
+      {
+        "$1": 202
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_PART_STR(NOW_UTC(),'timezone')",
+    "results": [
+      {
+        "$1": 0
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_PART_STR(NOW_TZ('US/Arizona'),'timezone')",
+    "results": [
+      {
+        "$1": -25200
+      }
+    ]
+  },
+  {
+    "statements": "select MILLIS_TO_LOCAL(1.453477808e+12,'2006-01-02')",
+    "results": [
+      {
+        "$1": "2016-01-22"
+      }
+    ]
+  },
+  {
+    "statements": "select millis_to_zone_name(1.453485008e+12,'UTC')",
+    "results": [
+      {
+        "$1": "2016-01-22T17:50:08Z"
+      }
+    ]
+  },
+  {
+    "statements": "select millis_to_tz(1.453485008e+12,'UTC')",
+    "results": [
+      {
+        "$1": "2016-01-22T17:50:08Z"
+      }
+    ]
+  },
+  {
+    "statements": "select str_to_tz('2016-01-22T09:50:08-08:00', 'UTC')",
+    "results": [
+      {
+        "$1": "2016-01-22T17:50:08Z"
+      }
+    ]
+  },
+  {
+    "statements": "select str_to_zone_name('2016-01-22T09:50:08-08:00', 'UTC')",
+    "results": [
+      {
+        "$1": "2016-01-22T17:50:08Z"
+      }
+    ]
+  },
+  {
+    "statements": "select str_to_tz(`shipped-on`, 'UTC') a from orders where test_id = \"datefunc\" order by a",
+    "results": [
+      {},
+      {
+        "a": null
+      },
+      {
+        "a": "2012/01/02 00:00:00Z"
+      },
+      {
+        "a": "2016-09-26T18:33:16.209Z"
+      }
+    ]
+  },
+  {
+    "statements": "select str_to_zone_name(`shipped-on`, 'UTC'), date_part_millis(STR_TO_MILLIS(`shipped-on`), 'hour', 'US/Pacific') a from orders where test_id = \"datefunc\" order by a",
+    "results": [
+      {},
+      {
+        "$1": null,
+        "a": null
+      },
+      {
+        "$1": "2016-09-26T18:33:16.209Z",
+        "a": 11
+      },
+      {
+        "$1": "2012/01/02 00:00:00Z",
+        "a": 16
+      }
+    ]
+  },
+  {
+    "statements": "select array millis_to_str(a,'2016-12-03') for a in date_range_millis(1480752000000, 1449129600000, 'month', -1) end ",
+    "results": [
+      {
+        "$1": [
+          "2016-12-03",
+          "2016-11-03",
+          "2016-10-03",
+          "2016-09-03",
+          "2016-08-03",
+          "2016-07-03",
+          "2016-06-03",
+          "2016-05-03",
+          "2016-04-03",
+          "2016-03-03",
+          "2016-02-03",
+          "2016-01-03"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select date_range_millis(1477382400000, 1461571200000, 'month', -1)",
+    "results": [
+      {
+        "$1": [
+          1477382400000,
+          1474790400000,
+          1472112000000,
+          1469433600000,
+          1466841600000,
+          1464163200000
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select str_to_millis('2016-12-03T08:00:00Z'), str_to_millis('2015-12-03T08:00:00Z')",
+    "results": [
+      {
+        "$1": 1480752000000,
+        "$2": 1449129600000
+      }
+    ]
+  },
+  {
+    "description": "calendar_month vs month range generation with start as last day of month",
+    "statements": "select DATE_RANGE_STR('2020-01-31','2021-07-01','month',1),DATE_RANGE_STR('2020-01-31','2021-07-01','calendar_month',1)",
+    "results": [
+      {
+        "$1": [
+          "2020-01-31",
+          "2020-03-02",
+          "2020-04-02",
+          "2020-05-02",
+          "2020-06-02",
+          "2020-07-02",
+          "2020-08-02",
+          "2020-09-02",
+          "2020-10-02",
+          "2020-11-02",
+          "2020-12-02",
+          "2021-01-02",
+          "2021-02-02",
+          "2021-03-02",
+          "2021-04-02",
+          "2021-05-02",
+          "2021-06-02"
+        ],
+        "$2": [
+          "2020-01-31",
+          "2020-02-29",
+          "2020-03-31",
+          "2020-04-30",
+          "2020-05-31",
+          "2020-06-30",
+          "2020-07-31",
+          "2020-08-31",
+          "2020-09-30",
+          "2020-10-31",
+          "2020-11-30",
+          "2020-12-31",
+          "2021-01-31",
+          "2021-02-28",
+          "2021-03-31",
+          "2021-04-30",
+          "2021-05-31",
+          "2021-06-30"
+        ]
+      }
+    ]
+  },
+  {
+    "description": "calendar_month vs month range generation with start as last day of month descending order",
+    "statements": "select DATE_RANGE_STR('2020-01-31','2019-07-01','month',-1),DATE_RANGE_STR('2020-01-31','2019-07-01','calendar_month',-1)",
+    "results": [
+      {
+        "$1": [
+          "2020-01-31",
+          "2019-12-31",
+          "2019-12-01",
+          "2019-11-01",
+          "2019-10-01",
+          "2019-09-01",
+          "2019-08-01"
+        ],
+        "$2": [
+          "2020-01-31",
+          "2019-12-31",
+          "2019-11-30",
+          "2019-10-31",
+          "2019-09-30",
+          "2019-08-31",
+          "2019-07-31"
+        ]
+      }
+    ]
+  },
+  {
+    "description": "calendar_month vs month range generation with start not last day of month",
+    "statements": "select DATE_RANGE_STR('2020-01-30','2020-07-01','month',1),DATE_RANGE_STR('2020-01-30','2020-07-01','calendar_month',1)",
+    "results": [
+      {
+        "$1": [
+          "2020-01-30",
+          "2020-03-01",
+          "2020-04-01",
+          "2020-05-01",
+          "2020-06-01"
+        ],
+        "$2": [
+          "2020-01-30",
+          "2020-02-29",
+          "2020-03-30",
+          "2020-04-30",
+          "2020-05-30",
+          "2020-06-30"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "SELECT DATE_RANGE_MILLIS(0, 10000000000, 'millisecond')",
+    "error": "Out of range evaluating DATE_RANGE_MILLIS()."
+  },
+  {
+    "statements": "SELECT WEEKDAY_MILLIS(1486237655742, 'America/Tijuana')",
+    "results": [
+      {
+        "$1": "Saturday"
+      }
+    ]
+  },
+  {
+    "statements": "SELECT WEEKDAY_STR('2017-02-05')",
+    "results": [
+      {
+        "$1": "Sunday"
+      }
+    ]
+  },
+  {
+    "statements": "select date_range_str('9990-01-01', '9999-12-31', 'year')",
+    "results": [
+      {
+        "$1": [
+          "9990-01-01",
+          "9991-01-01",
+          "9992-01-01",
+          "9993-01-01",
+          "9994-01-01",
+          "9995-01-01",
+          "9996-01-01",
+          "9997-01-01",
+          "9998-01-01",
+          "9999-01-01"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select date_range_millis(str_to_millis('9990-01-01T08:00:00Z'), str_to_millis('9999-12-31T08:00:00Z'), 'year')",
+    "results": [
+      {
+        "$1": [
+          253086796800000,
+          253118332800000,
+          253149868800000,
+          253181491200000,
+          253213027200000,
+          253244563200000,
+          253276099200000,
+          253307721600000,
+          253339257600000,
+          253370793600000
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select array millis_to_str(a, '9990-01-01') for a in date_range_millis(str_to_millis('9990-01-01'), str_to_millis('9999-12-31'), 'year') end",
+    "results": [
+      {
+        "$1": [
+          "9990-01-01",
+          "9991-01-01",
+          "9992-01-01",
+          "9993-01-01",
+          "9994-01-01",
+          "9995-01-01",
+          "9996-01-01",
+          "9997-01-01",
+          "9998-01-01",
+          "9999-01-01"
+        ]
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2017-05-06 16:33:44+08:00\",\"hour\") as test1",
+    "results": [
+      {
+        "test1": "2017-05-06 16:00:00+08:00"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2017-05-06 16:33:44+08:00\",\"month\") as test1",
+    "results": [
+      {
+        "test1": "2017-05-01 00:00:00+08:00"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2017-01-01 16:33:44-08:00\",\"month\") as test1",
+    "results": [
+      {
+        "test1": "2017-01-01 00:00:00-08:00"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2017-01-01 16:33:44\",\"month\") as test1",
+    "results": [
+      {
+        "test1": "2017-01-01 00:00:00"
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_TRUNC_STR(\"2017-01-01 15:00:00\",\"year\") as test1",
+    "results": [
+      {
+        "test1": "2017-01-01 00:00:00"
+      }
+    ]
+  },
+  {
     "statements": "select DATE_DIFF_STR('2018-09-10 23:59:59','2018-09-11 00:00:01','day') as test1",
     "results": [
-        {
-            "test1": -1
-        }
+      {
+        "test1": -1
+      }
     ]
-    },
-    {
-    "statements": "select DATE_DIFF_STR('2018-09-11 00:00:01','2018-09-10 23:59:59','day') as test1",
-    "results": [
-        {
-            "test1": 1
-        }
-    ]
-    },
-    {
-    "statements": "select DATE_DIFF_ABS_STR('2018-09-10 23:59:59','2018-09-11 00:00:01','day') as test1",
-    "results": [
-        {
-            "test1": 1
-        }
-    ]
-    },
-    {
-    "statements": "select DATE_DIFF_ABS_STR('2018-09-11 00:00:01','2018-09-10 23:59:59','day') as test1",
-    "results": [
-        {
-            "test1": 1
-        }
-    ]
-    },
+  },
   {
-    "statements":"select DATE_DIFF_ABS_MILLIS(str_to_millis('2018-09-10 23:59:59'),str_to_millis('2018-09-11 00:00:01'),'day') as test1",
+    "statements": "select DATE_DIFF_STR('2018-09-11 00:00:01','2018-09-10 23:59:59','day') as test1",
     "results": [
       {
         "test1": 1
@@ -1139,7 +1114,31 @@
     ]
   },
   {
-    "statements":"SELECT DATE_ADD_MILLIS(1463284740000, 3, 'day') as add_3_days,DATE_ADD_MILLIS(1463284740000, 3, 'year') as add_3_years,DATE_ADD_MILLIS(1463284740000, -3, 'day') as sub_3_days,DATE_ADD_MILLIS(1463284740000, -3, 'year') as sub_3_years",
+    "statements": "select DATE_DIFF_ABS_STR('2018-09-10 23:59:59','2018-09-11 00:00:01','day') as test1",
+    "results": [
+      {
+        "test1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_DIFF_ABS_STR('2018-09-11 00:00:01','2018-09-10 23:59:59','day') as test1",
+    "results": [
+      {
+        "test1": 1
+      }
+    ]
+  },
+  {
+    "statements": "select DATE_DIFF_ABS_MILLIS(str_to_millis('2018-09-10 23:59:59'),str_to_millis('2018-09-11 00:00:01'),'day') as test1",
+    "results": [
+      {
+        "test1": 1
+      }
+    ]
+  },
+  {
+    "statements": "SELECT DATE_ADD_MILLIS(1463284740000, 3, 'day') as add_3_days,DATE_ADD_MILLIS(1463284740000, 3, 'year') as add_3_years,DATE_ADD_MILLIS(1463284740000, -3, 'day') as sub_3_days,DATE_ADD_MILLIS(1463284740000, -3, 'year') as sub_3_years",
     "results": [
       {
         "add_3_days": 1463543940000,
@@ -1150,49 +1149,489 @@
     ]
   },
   {
-    "description":"Go-style date format elements - parsing",
-    "statements":"select date_format_str(\"Z 2023 March\", \"Z07 2006 January\", \"%F\") ,date_format_str(\"Z 2023 Nov\", \"Z07 2006 Jan\", \"%F\") ,date_format_str(\"Z 2023 12\", \"Z07 2006 1\", \"%F\") ,date_format_str(\"Z 2023 02\", \"Z07 2006 01\", \"%F\") ,date_format_str(\"Z 2023 Tuesday\", \"Z07 2006 Monday\", \"%F\") ,date_format_str(\"Z 2023 Fri\", \"Z07 2006 Mon\", \"%F\") ,date_format_str(\"Z 2023 15\", \"Z07 2006 2\", \"%F\") ,date_format_str(\"Z 2023 6\", \"Z07 2006 _2\", \"%F\") ,date_format_str(\"Z 2023 23\", \"Z07 2006 02\", \"%F\") ,date_format_str(\"Z 2023 52\", \"Z07 2006 __2\", \"%F\") ,date_format_str(\"Z 2023 052\", \"Z07 2006 002\", \"%F\") ,date_format_str(\"Z 2023 19\", \"Z07 2006 15\", \"%F\") ,date_format_str(\"Z 2023 7\", \"Z07 2006 3\", \"%F\") ,date_format_str(\"Z 2023 05\", \"Z07 2006 03\", \"%F\") ,date_format_str(\"Z 2023 1\", \"Z07 2006 4\", \"%F\") ,date_format_str(\"Z 2023 01\", \"Z07 2006 04\", \"%F\") ,date_format_str(\"Z 2023 2\", \"Z07 2006 5\", \"%F\") ,date_format_str(\"Z 2023 02\", \"Z07 2006 05\", \"%F\") ,date_format_str(\"Z 2023 23\", \"Z07 2006 06\", \"%F\") ,date_format_str(\"Z 2023 AM\", \"Z07 2006 PM\", \"%F\") ,date_format_str(\"Z 2023 am\", \"Z07 2006 pm\", \"%F\") ,date_format_str(\"2023 UTC\", \"2006 MST\", \"%F %Z %^Z\") ,date_format_str(\"2023 Europe/Paris\", \"2006 MST\", \"%F %Z %^Z\") ,date_format_str(\"2023 PST\", \"2006 MST\", \"%F %Z %^Z\") ,date_format_str(\"2023 Z\", \"2006 Z070000\", \"%F %Z %^Z\") ,date_format_str(\"2023 +053000\", \"2006 Z070000\", \"%F %Z %^Z\") ,date_format_str(\"2023 +0530\", \"2006 Z0700\", \"%F %Z %^Z\") ,date_format_str(\"2023 +05\", \"2006 Z07\", \"%F %Z %^Z\") ,date_format_str(\"2023 -06:00:00\", \"2006 Z07:00:00\", \"%F %Z %^Z\") ,date_format_str(\"2023 -06:00\", \"2006 Z07:00\", \"%F %Z %^Z\") ,date_format_str(\"2023 +110000\", \"2006 -070000\", \"%F %Z %^Z\") ,date_format_str(\"2023 +1100\", \"2006 -0700\", \"%F %Z %^Z\") ,date_format_str(\"2023 +11\", \"2006 -07\", \"%F %Z %^Z\") ,date_format_str(\"2023 -10:30:00\", \"2006 -07:00:00\", \"%F %Z %^Z\") ,date_format_str(\"2023 -10:30\", \"2006 -07:00\", \"%F %Z %^Z\") ,date_format_str(\"Z 2023 .012\", \"Z07 2006 .000\", \"%F\") ,date_format_str(\"Z 2023 .012\", \"Z07 2006 .9\", \"%F\") ,date_format_str(\"Z 2023 .012345678901\", \"Z07 2006 .000000000000\", \"%F\")",
+    "description": "Go-style date format elements - parsing",
+    "statements": "select date_format_str(\"Z 2023 March\", \"Z07 2006 January\", \"%F\") ,date_format_str(\"Z 2023 Nov\", \"Z07 2006 Jan\", \"%F\") ,date_format_str(\"Z 2023 12\", \"Z07 2006 1\", \"%F\") ,date_format_str(\"Z 2023 02\", \"Z07 2006 01\", \"%F\") ,date_format_str(\"Z 2023 Tuesday\", \"Z07 2006 Monday\", \"%F\") ,date_format_str(\"Z 2023 Fri\", \"Z07 2006 Mon\", \"%F\") ,date_format_str(\"Z 2023 15\", \"Z07 2006 2\", \"%F\") ,date_format_str(\"Z 2023 6\", \"Z07 2006 _2\", \"%F\") ,date_format_str(\"Z 2023 23\", \"Z07 2006 02\", \"%F\") ,date_format_str(\"Z 2023 52\", \"Z07 2006 __2\", \"%F\") ,date_format_str(\"Z 2023 052\", \"Z07 2006 002\", \"%F\") ,date_format_str(\"Z 2023 19\", \"Z07 2006 15\", \"%F\") ,date_format_str(\"Z 2023 7\", \"Z07 2006 3\", \"%F\") ,date_format_str(\"Z 2023 05\", \"Z07 2006 03\", \"%F\") ,date_format_str(\"Z 2023 1\", \"Z07 2006 4\", \"%F\") ,date_format_str(\"Z 2023 01\", \"Z07 2006 04\", \"%F\") ,date_format_str(\"Z 2023 2\", \"Z07 2006 5\", \"%F\") ,date_format_str(\"Z 2023 02\", \"Z07 2006 05\", \"%F\") ,date_format_str(\"Z 2023 23\", \"Z07 2006 06\", \"%F\") ,date_format_str(\"Z 2023 AM\", \"Z07 2006 PM\", \"%F\") ,date_format_str(\"Z 2023 am\", \"Z07 2006 pm\", \"%F\") ,date_format_str(\"2023 UTC\", \"2006 MST\", \"%F %Z %^Z\") ,date_format_str(\"2023 Europe/Paris\", \"2006 MST\", \"%F %Z %^Z\") ,date_format_str(\"2023 PST\", \"2006 MST\", \"%F %Z %^Z\") ,date_format_str(\"2023 Z\", \"2006 Z070000\", \"%F %Z %^Z\") ,date_format_str(\"2023 +053000\", \"2006 Z070000\", \"%F %Z %^Z\") ,date_format_str(\"2023 +0530\", \"2006 Z0700\", \"%F %Z %^Z\") ,date_format_str(\"2023 +05\", \"2006 Z07\", \"%F %Z %^Z\") ,date_format_str(\"2023 -06:00:00\", \"2006 Z07:00:00\", \"%F %Z %^Z\") ,date_format_str(\"2023 -06:00\", \"2006 Z07:00\", \"%F %Z %^Z\") ,date_format_str(\"2023 +110000\", \"2006 -070000\", \"%F %Z %^Z\") ,date_format_str(\"2023 +1100\", \"2006 -0700\", \"%F %Z %^Z\") ,date_format_str(\"2023 +11\", \"2006 -07\", \"%F %Z %^Z\") ,date_format_str(\"2023 -10:30:00\", \"2006 -07:00:00\", \"%F %Z %^Z\") ,date_format_str(\"2023 -10:30\", \"2006 -07:00\", \"%F %Z %^Z\") ,date_format_str(\"Z 2023 .012\", \"Z07 2006 .000\", \"%F\") ,date_format_str(\"Z 2023 .012\", \"Z07 2006 .9\", \"%F\") ,date_format_str(\"Z 2023 .012345678901\", \"Z07 2006 .000000000000\", \"%F\")",
     "results": [
-          {
-              "$1": "2023-03-01T00:00:00Z",
-              "$2": "2023-11-01T00:00:00Z",
-              "$3": "2023-12-01T00:00:00Z",
-              "$4": "2023-02-01T00:00:00Z",
-              "$5": "2023-01-01T00:00:00Z",
-              "$6": "2023-01-01T00:00:00Z",
-              "$7": "2023-01-15T00:00:00Z",
-              "$8": "2023-01-06T00:00:00Z",
-              "$9": "2023-01-23T00:00:00Z",
-              "$10": "2023-02-21T00:00:00Z",
-              "$11": "2023-02-21T00:00:00Z",
-              "$12": "2023-01-01T19:00:00Z",
-              "$13": "2023-01-01T07:00:00Z",
-              "$14": "2023-01-01T05:00:00Z",
-              "$15": "2023-01-01T00:01:00Z",
-              "$16": "2023-01-01T00:01:00Z",
-              "$17": "2023-01-01T00:00:02Z",
-              "$18": "2023-01-01T00:00:02Z",
-              "$19": "2023-01-01T00:00:00Z",
-              "$20": "2023-01-01T00:00:00Z",
-              "$21": "2023-01-01T00:00:00Z",
-              "$22": "2023-01-01T00:00:00Z UTC UTC",
-              "$23": "2023-01-01T00:00:00+01:00 CET Europe/Paris",
-              "$24": "2023-01-01T00:00:00-08:00 PST PST8PDT",
-              "$25": "2023-01-01T00:00:00Z +0000 +0000",
-              "$26": "2023-01-01T00:00:00+05:30 +0530 +0530",
-              "$27": "2023-01-01T00:00:00+05:30 +0530 +0530",
-              "$28": "2023-01-01T00:00:00+05:00 +0500 +0500",
-              "$29": "2023-01-01T00:00:00-06:00 -0600 -0600",
-              "$30": "2023-01-01T00:00:00-06:00 -0600 -0600",
-              "$31": "2023-01-01T00:00:00+11:00 +1100 +1100",
-              "$32": "2023-01-01T00:00:00+11:00 +1100 +1100",
-              "$33": "2023-01-01T00:00:00+11:00 +1100 +1100",
-              "$34": "2023-01-01T00:00:00-10:30 -1030 -1030",
-              "$35": "2023-01-01T00:00:00-10:30 -1030 -1030",
-              "$36": "2023-01-01T00:00:00.012Z",
-              "$37": "2023-01-01T00:00:00.012Z",
-              "$38": "2023-01-01T00:00:00.012Z"
-          }
-      ]
+      {
+        "$1": "2023-03-01T00:00:00Z",
+        "$2": "2023-11-01T00:00:00Z",
+        "$3": "2023-12-01T00:00:00Z",
+        "$4": "2023-02-01T00:00:00Z",
+        "$5": "2023-01-01T00:00:00Z",
+        "$6": "2023-01-01T00:00:00Z",
+        "$7": "2023-01-15T00:00:00Z",
+        "$8": "2023-01-06T00:00:00Z",
+        "$9": "2023-01-23T00:00:00Z",
+        "$10": "2023-02-21T00:00:00Z",
+        "$11": "2023-02-21T00:00:00Z",
+        "$12": "2023-01-01T19:00:00Z",
+        "$13": "2023-01-01T07:00:00Z",
+        "$14": "2023-01-01T05:00:00Z",
+        "$15": "2023-01-01T00:01:00Z",
+        "$16": "2023-01-01T00:01:00Z",
+        "$17": "2023-01-01T00:00:02Z",
+        "$18": "2023-01-01T00:00:02Z",
+        "$19": "2023-01-01T00:00:00Z",
+        "$20": "2023-01-01T00:00:00Z",
+        "$21": "2023-01-01T00:00:00Z",
+        "$22": "2023-01-01T00:00:00Z UTC UTC",
+        "$23": "2023-01-01T00:00:00+01:00 CET Europe/Paris",
+        "$24": "2023-01-01T00:00:00-08:00 PST PST8PDT",
+        "$25": "2023-01-01T00:00:00Z +0000 +0000",
+        "$26": "2023-01-01T00:00:00+05:30 +0530 +0530",
+        "$27": "2023-01-01T00:00:00+05:30 +0530 +0530",
+        "$28": "2023-01-01T00:00:00+05:00 +0500 +0500",
+        "$29": "2023-01-01T00:00:00-06:00 -0600 -0600",
+        "$30": "2023-01-01T00:00:00-06:00 -0600 -0600",
+        "$31": "2023-01-01T00:00:00+11:00 +1100 +1100",
+        "$32": "2023-01-01T00:00:00+11:00 +1100 +1100",
+        "$33": "2023-01-01T00:00:00+11:00 +1100 +1100",
+        "$34": "2023-01-01T00:00:00-10:30 -1030 -1030",
+        "$35": "2023-01-01T00:00:00-10:30 -1030 -1030",
+        "$36": "2023-01-01T00:00:00.012Z",
+        "$37": "2023-01-01T00:00:00.012Z",
+        "$38": "2023-01-01T00:00:00.012Z"
+      }
+    ]
+  },
+  {
+    "description": "Time zones",
+    "statements": "select tz, str_to_utc('2024-01-01T00:00:00'||tz) from ['-11:00','-10:00','-09:00','-08:00','-07:00','-06:00','-05:00','-04:00', '-03:00','-02:00','-01:00','-00:00','+01:00','+02:00','+03:00','+04:00','+05:00','+06:00','+07:00','+08:00','+09:00','+10:00','+11:00','+12:00','+13:00','+14:00'] tz",
+    "results": [
+      {
+        "tz": "-11:00",
+        "$1": "2024-01-01T11:00:00Z"
+      },
+      {
+        "tz": "-10:00",
+        "$1": "2024-01-01T10:00:00Z"
+      },
+      {
+        "tz": "-09:00",
+        "$1": "2024-01-01T09:00:00Z"
+      },
+      {
+        "tz": "-08:00",
+        "$1": "2024-01-01T08:00:00Z"
+      },
+      {
+        "tz": "-07:00",
+        "$1": "2024-01-01T07:00:00Z"
+      },
+      {
+        "tz": "-06:00",
+        "$1": "2024-01-01T06:00:00Z"
+      },
+      {
+        "tz": "-05:00",
+        "$1": "2024-01-01T05:00:00Z"
+      },
+      {
+        "tz": "-04:00",
+        "$1": "2024-01-01T04:00:00Z"
+      },
+      {
+        "tz": "-03:00",
+        "$1": "2024-01-01T03:00:00Z"
+      },
+      {
+        "tz": "-02:00",
+        "$1": "2024-01-01T02:00:00Z"
+      },
+      {
+        "tz": "-01:00",
+        "$1": "2024-01-01T01:00:00Z"
+      },
+      {
+        "tz": "-00:00",
+        "$1": "2024-01-01T00:00:00Z"
+      },
+      {
+        "tz": "+01:00",
+        "$1": "2023-12-31T23:00:00Z"
+      },
+      {
+        "tz": "+02:00",
+        "$1": "2023-12-31T22:00:00Z"
+      },
+      {
+        "tz": "+03:00",
+        "$1": "2023-12-31T21:00:00Z"
+      },
+      {
+        "tz": "+04:00",
+        "$1": "2023-12-31T20:00:00Z"
+      },
+      {
+        "tz": "+05:00",
+        "$1": "2023-12-31T19:00:00Z"
+      },
+      {
+        "tz": "+06:00",
+        "$1": "2023-12-31T18:00:00Z"
+      },
+      {
+        "tz": "+07:00",
+        "$1": "2023-12-31T17:00:00Z"
+      },
+      {
+        "tz": "+08:00",
+        "$1": "2023-12-31T16:00:00Z"
+      },
+      {
+        "tz": "+09:00",
+        "$1": "2023-12-31T15:00:00Z"
+      },
+      {
+        "tz": "+10:00",
+        "$1": "2023-12-31T14:00:00Z"
+      },
+      {
+        "tz": "+11:00",
+        "$1": "2023-12-31T13:00:00Z"
+      },
+      {
+        "tz": "+12:00",
+        "$1": "2023-12-31T12:00:00Z"
+      },
+      {
+        "tz": "+13:00",
+        "$1": "2023-12-31T11:00:00Z"
+      },
+      {
+        "tz": "+14:00",
+        "$1": "2023-12-31T10:00:00Z"
+      }
+    ]
+  },
+  {
+    "description": "Time zones",
+    "statements": "select tz, str_to_utc('2024-01-01T00:00:00.000'||tz,'%F','%T') from ['-11:00','-10:00','-09:00','-08:00','-07:00','-06:00','-05:00','-04:00','-03:00','-02:00','-01:00','-00:00','+01:00','+02:00','+03:00','+04:00','+05:00','+06:00','+07:00','+08:00','+09:00','+10:00','+11:00','+12:00','+13:00','+14:00'] tz",
+    "results": [
+      {
+        "tz": "-11:00",
+        "$1": "11:00:00"
+      },
+      {
+        "tz": "-10:00",
+        "$1": "10:00:00"
+      },
+      {
+        "tz": "-09:00",
+        "$1": "09:00:00"
+      },
+      {
+        "tz": "-08:00",
+        "$1": "08:00:00"
+      },
+      {
+        "tz": "-07:00",
+        "$1": "07:00:00"
+      },
+      {
+        "tz": "-06:00",
+        "$1": "06:00:00"
+      },
+      {
+        "tz": "-05:00",
+        "$1": "05:00:00"
+      },
+      {
+        "tz": "-04:00",
+        "$1": "04:00:00"
+      },
+      {
+        "tz": "-03:00",
+        "$1": "03:00:00"
+      },
+      {
+        "tz": "-02:00",
+        "$1": "02:00:00"
+      },
+      {
+        "tz": "-01:00",
+        "$1": "01:00:00"
+      },
+      {
+        "tz": "-00:00",
+        "$1": "00:00:00"
+      },
+      {
+        "tz": "+01:00",
+        "$1": "23:00:00"
+      },
+      {
+        "tz": "+02:00",
+        "$1": "22:00:00"
+      },
+      {
+        "tz": "+03:00",
+        "$1": "21:00:00"
+      },
+      {
+        "tz": "+04:00",
+        "$1": "20:00:00"
+      },
+      {
+        "tz": "+05:00",
+        "$1": "19:00:00"
+      },
+      {
+        "tz": "+06:00",
+        "$1": "18:00:00"
+      },
+      {
+        "tz": "+07:00",
+        "$1": "17:00:00"
+      },
+      {
+        "tz": "+08:00",
+        "$1": "16:00:00"
+      },
+      {
+        "tz": "+09:00",
+        "$1": "15:00:00"
+      },
+      {
+        "tz": "+10:00",
+        "$1": "14:00:00"
+      },
+      {
+        "tz": "+11:00",
+        "$1": "13:00:00"
+      },
+      {
+        "tz": "+12:00",
+        "$1": "12:00:00"
+      },
+      {
+        "tz": "+13:00",
+        "$1": "11:00:00"
+      },
+      {
+        "tz": "+14:00",
+        "$1": "10:00:00"
+      }
+    ]
+  },
+  {
+    "description": "Time zones",
+    "statements": "select tz, str_to_utc('2024-01-01T00:00:00'||tz,'2006-01-02T15:04:05-07:00','%T') from ['-11:00','-10:00','-09:00','-08:00','-07:00','-06:00','-05:00','-04:00','-03:00','-02:00','-01:00','-00:00','+01:00','+02:00','+03:00','+04:00','+05:00','+06:00','+07:00','+08:00','+09:00','+10:00','+11:00','+12:00','+13:00','+14:00'] tz",
+    "results": [
+      {
+        "tz": "-11:00",
+        "$1": "11:00:00"
+      },
+      {
+        "tz": "-10:00",
+        "$1": "10:00:00"
+      },
+      {
+        "tz": "-09:00",
+        "$1": "09:00:00"
+      },
+      {
+        "tz": "-08:00",
+        "$1": "08:00:00"
+      },
+      {
+        "tz": "-07:00",
+        "$1": "07:00:00"
+      },
+      {
+        "tz": "-06:00",
+        "$1": "06:00:00"
+      },
+      {
+        "tz": "-05:00",
+        "$1": "05:00:00"
+      },
+      {
+        "tz": "-04:00",
+        "$1": "04:00:00"
+      },
+      {
+        "tz": "-03:00",
+        "$1": "03:00:00"
+      },
+      {
+        "tz": "-02:00",
+        "$1": "02:00:00"
+      },
+      {
+        "tz": "-01:00",
+        "$1": "01:00:00"
+      },
+      {
+        "tz": "-00:00",
+        "$1": "00:00:00"
+      },
+      {
+        "tz": "+01:00",
+        "$1": "23:00:00"
+      },
+      {
+        "tz": "+02:00",
+        "$1": "22:00:00"
+      },
+      {
+        "tz": "+03:00",
+        "$1": "21:00:00"
+      },
+      {
+        "tz": "+04:00",
+        "$1": "20:00:00"
+      },
+      {
+        "tz": "+05:00",
+        "$1": "19:00:00"
+      },
+      {
+        "tz": "+06:00",
+        "$1": "18:00:00"
+      },
+      {
+        "tz": "+07:00",
+        "$1": "17:00:00"
+      },
+      {
+        "tz": "+08:00",
+        "$1": "16:00:00"
+      },
+      {
+        "tz": "+09:00",
+        "$1": "15:00:00"
+      },
+      {
+        "tz": "+10:00",
+        "$1": "14:00:00"
+      },
+      {
+        "tz": "+11:00",
+        "$1": "13:00:00"
+      },
+      {
+        "tz": "+12:00",
+        "$1": "12:00:00"
+      },
+      {
+        "tz": "+13:00",
+        "$1": "11:00:00"
+      },
+      {
+        "tz": "+14:00",
+        "$1": "10:00:00"
+      }
+    ]
+  },
+  {
+    "description": "Time zones",
+    "statements": "select tz, str_to_utc('2024-01-01T00:00:00.000'||tz,'YYYY-MM-DD hh:mm:ss.sssTZD','%T') from ['-11:00','-10:00','-09:00','-08:00','-07:00','-06:00','-05:00','-04:00','-03:00','-02:00','-01:00','-00:00','+01:00','+02:00','+03:00','+04:00','+05:00','+06:00','+07:00','+08:00','+09:00','+10:00','+11:00','+12:00','+13:00','+14:00'] tz",
+    "results": [
+      {
+        "tz": "-11:00",
+        "$1": "11:00:00"
+      },
+      {
+        "tz": "-10:00",
+        "$1": "10:00:00"
+      },
+      {
+        "tz": "-09:00",
+        "$1": "09:00:00"
+      },
+      {
+        "tz": "-08:00",
+        "$1": "08:00:00"
+      },
+      {
+        "tz": "-07:00",
+        "$1": "07:00:00"
+      },
+      {
+        "tz": "-06:00",
+        "$1": "06:00:00"
+      },
+      {
+        "tz": "-05:00",
+        "$1": "05:00:00"
+      },
+      {
+        "tz": "-04:00",
+        "$1": "04:00:00"
+      },
+      {
+        "tz": "-03:00",
+        "$1": "03:00:00"
+      },
+      {
+        "tz": "-02:00",
+        "$1": "02:00:00"
+      },
+      {
+        "tz": "-01:00",
+        "$1": "01:00:00"
+      },
+      {
+        "tz": "-00:00",
+        "$1": "00:00:00"
+      },
+      {
+        "tz": "+01:00",
+        "$1": "23:00:00"
+      },
+      {
+        "tz": "+02:00",
+        "$1": "22:00:00"
+      },
+      {
+        "tz": "+03:00",
+        "$1": "21:00:00"
+      },
+      {
+        "tz": "+04:00",
+        "$1": "20:00:00"
+      },
+      {
+        "tz": "+05:00",
+        "$1": "19:00:00"
+      },
+      {
+        "tz": "+06:00",
+        "$1": "18:00:00"
+      },
+      {
+        "tz": "+07:00",
+        "$1": "17:00:00"
+      },
+      {
+        "tz": "+08:00",
+        "$1": "16:00:00"
+      },
+      {
+        "tz": "+09:00",
+        "$1": "15:00:00"
+      },
+      {
+        "tz": "+10:00",
+        "$1": "14:00:00"
+      },
+      {
+        "tz": "+11:00",
+        "$1": "13:00:00"
+      },
+      {
+        "tz": "+12:00",
+        "$1": "12:00:00"
+      },
+      {
+        "tz": "+13:00",
+        "$1": "11:00:00"
+      },
+      {
+        "tz": "+14:00",
+        "$1": "10:00:00"
+      }
+    ]
   }
 ]
