@@ -571,19 +571,24 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, 
 		}
 	}
 
+	var tspans *TermSpans
+	if spans, ok := entry.spans.(*TermSpans); ok {
+		tspans = spans
+	}
+
 	i := 0
 	indexOrder := make(plan.IndexKeyOrders, 0, len(keys))
 	partSortTermCount := 0
 	vectorOrder := false
 	totalLen := len(keys)
 	includeLen := 0
-	if vector && !entry.HasFlag(IE_VECTOR_KEY_SKIP_ORDER) && this.limit != nil {
-		if _, ok := entry.spans.(*TermSpans); ok {
-			vectorOrder = true
-			includeLen = len(entry.includes)
-			totalLen += includeLen
-		}
+	if vector && !entry.HasFlag(IE_VECTOR_KEY_SKIP_ORDER) && this.limit != nil && tspans != nil {
+		vectorOrder = true
+		includeLen = len(entry.includes)
+		totalLen += includeLen
 	}
+
+	topK := vector && vectorOrder && isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS)
 
 	// if there are include columns, check and put meta().id key separately
 	var idKey *datastore.IndexKey
@@ -605,6 +610,9 @@ outer:
 		}
 
 		orderExpr := orderTerm.Expression()
+		if projexpr, projalias := hashProj[orderExpr.Alias()]; projalias && projexpr != nil {
+			orderExpr = projexpr
+		}
 
 		// orderTerm is constant
 		if orderExpr.Static() != nil {
@@ -634,11 +642,10 @@ outer:
 			naturalOrder = true
 		}
 		for {
-			projexpr, projalias := hashProj[orderExpr.Alias()]
-			if i < len(keys) && indexKeyIsDescCollation(i, keys) == d &&
+			if !topK && i < len(keys) && indexKeyIsDescCollation(i, keys) == d &&
 				(naturalOrder || !entry.spans.CanProduceUnknowns(i)) &&
-				(orderExpr.EquivalentTo(keys[i].Expr) ||
-					(projalias && expression.Equivalent(projexpr, keys[i].Expr))) {
+				orderExpr.EquivalentTo(keys[i].Expr) {
+
 				// orderTerm matched with index key
 				if vector {
 					// check whether vector index key can have order
@@ -660,30 +667,30 @@ outer:
 				if i < totalLen {
 					continue
 				}
-			} else if vector && vectorOrder && isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) {
+			} else if topK {
 				// when vector key order is present, the indexer uses max heap
 				// and can accommodate non-eq ranges or include columns
 				// this assume LIMIT can be pushed down, if for whatever reason
 				// LIMIT cannot be pushed down, this function will be called
 				// a second time with vectorOrder == false
-				if i < len(keys) {
-					if tspans, ok := entry.spans.(*TermSpans); ok && tspans.ValidRangeAt(i) {
-						if _, ok := keys[i].Expr.(*expression.Ann); !ok {
-							i++
-							if i < len(keys) {
-								continue
-							}
+				// Note in case of topK, we don't maintain i (since index keys can be
+				// used out-of-order), if i > 0, it means we have leading index keys
+				// that has either equalConditionFilter or EquivalentRange (both
+				// checked and incremented above)
+				pos := indexKeyIncludePos(orderExpr, keys, entry.includes, idKey)
+				if pos >= 0 && pos < totalLen {
+					valid := true
+					for j := i; j < pos; j++ {
+						if j >= len(keys) {
+							break
+						}
+						if !tspans.ValidRangeAt(j) {
+							valid = false
+							break
 						}
 					}
-				}
-				if includeLen > 0 && i < totalLen {
-					pos := includePos(orderExpr, entry.includes)
-					if pos >= 0 {
-						indexOrder = append(indexOrder, plan.NewIndexKeyOrders(len(keys)+pos, d))
-						partSortTermCount++
-						continue outer
-					} else if idKey != nil && orderExpr.EquivalentTo(idKey.Expr) && !d {
-						indexOrder = append(indexOrder, plan.NewIndexKeyOrders(totalLen-1, d))
+					if valid {
+						indexOrder = append(indexOrder, plan.NewIndexKeyOrders(pos, d))
 						partSortTermCount++
 						continue outer
 					}
@@ -709,11 +716,20 @@ func indexKeyIsDescCollation(keypos int, indexKeys datastore.IndexKeys) bool {
 	return len(indexKeys) > 0 && keypos < len(indexKeys) && indexKeys[keypos].HasAttribute(datastore.IK_DESC)
 }
 
-func includePos(expr expression.Expression, includes expression.Expressions) int {
-	for i, include := range includes {
-		if expr.EquivalentTo(include) {
+func indexKeyIncludePos(expr expression.Expression, keys datastore.IndexKeys, includes expression.Expressions,
+	idKey *datastore.IndexKey) int {
+	for i, key := range keys {
+		if expr.EquivalentTo(key.Expr) {
 			return i
 		}
+	}
+	for i, include := range includes {
+		if expr.EquivalentTo(include) {
+			return i + len(keys)
+		}
+	}
+	if idKey != nil && expr.EquivalentTo(idKey.Expr) {
+		return len(keys) + len(includes)
 	}
 	return -1
 }
