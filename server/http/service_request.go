@@ -359,7 +359,6 @@ func (this *httpRequest) processNatural() errors.Error {
 					}
 				}
 				this.SetNaturalCred(fmt.Sprintf("%s:%s", u, p))
-				logging.Debugf("natural_creds:%s:%s", u, p)
 			} else if s, ok := v.(string); ok {
 				this.SetNaturalCred(s)
 			} else {
@@ -374,6 +373,12 @@ func (this *httpRequest) processNatural() errors.Error {
 		case "execute":
 			if b, ok := v.(bool); ok {
 				this.SetNaturalShowOnly(!b)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		case "output":
+			if s, ok := v.(string); ok {
+				this.SetNaturalOutput(s)
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
@@ -1101,6 +1106,7 @@ const ( // Request argument names
 	NATURAL_CRED       = "natural_cred"
 	NATURAL_ORGID      = "natural_orgid"
 	NATURAL_CONTEXT    = "natural_context"
+	NATURAL_OUTPUT     = "natural_output"
 )
 
 type argHandler struct {
@@ -1165,6 +1171,7 @@ var _PARAMETERS = map[string]*argHandler{
 	NATURAL_CRED:    {handleNaturalCred, false},
 	NATURAL_ORGID:   {handleNaturalOrgId, false},
 	NATURAL_CONTEXT: {handleNaturalContext, false},
+	NATURAL_OUTPUT:  {handleNaturalOutput, false},
 }
 
 // common storage for the httpArgs implementations
@@ -2574,6 +2581,14 @@ func handleNaturalContext(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	naturalContext, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalContext(naturalContext)
+	}
+	return err
+}
+
+func handleNaturalOutput(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalOutput, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetNaturalOutput(naturalOutput)
 	}
 	return err
 }

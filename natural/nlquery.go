@@ -25,7 +25,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
-	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -61,6 +60,38 @@ type naturalReqThrottler struct {
 	gate       chan bool
 	waiters    int32
 	maxwaiters int32
+}
+
+type naturalOutput int
+
+const (
+	SQL naturalOutput = iota
+	JSUDF
+	UNDEFINED_NATURAL_OUTPUT
+)
+
+func NewNaturalOutput(s string) naturalOutput {
+	switch strings.ToUpper(s) {
+	case "SQL":
+		return SQL
+	case "JSUDF":
+		return JSUDF
+	default:
+		return UNDEFINED_NATURAL_OUTPUT
+	}
+}
+
+func (n naturalOutput) String() string {
+	var s string
+	switch n {
+	case SQL:
+		s = "SQL"
+	case JSUDF:
+		s = "JSUDF"
+	default:
+		s = "UNDEFINED_NATURAL_OUTPUT"
+	}
+	return s
 }
 
 var nlreqThrottler naturalReqThrottler
@@ -242,7 +273,7 @@ type prompt struct {
 	Messages           []message          `json:"messages"`
 }
 
-func newPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prompt, errors.Error) {
+func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -287,6 +318,68 @@ func newPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prom
 		},
 	}
 
+	return rv, nil
+}
+
+func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prompt, errors.Error) {
+	rv := &prompt{
+		InitMessages: []message{
+			message{
+				Role: "system",
+				Content: "You are a couchbase Capella expert. Your task is to write valid Javascript user defined functions" +
+					" based on the provided information." +
+					"\n\nApproach this task step-by-step and take your time.",
+			},
+		}, CompletionSettings: completionSettings{
+			Model:       GPT4o_2024_05_13,
+			Temperature: 0,
+			Seed:        1,
+			Stream:      false,
+		},
+	}
+
+	var userMessage string
+	var userMessageBuf strings.Builder
+
+	binKeyspacesInfo, err := json.Marshal(keyspaceInfo)
+	if err != nil {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
+	}
+	userMessageBuf.WriteString("Information about keyspaces:\n\n")
+	userMessageBuf.WriteString(string(binKeyspacesInfo))
+	userMessageBuf.WriteString("\n\nPrompt: \"")
+	userMessageBuf.WriteString(naturalPrompt)
+	userMessageBuf.WriteString("\"\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
+		" no explanation that implements the request in the Prompt." +
+		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
+		"\n\nPrompt may request for something trivial such as string manipulation, mathematical calculations, etc." +
+		" Which are not related to the information provided but must always instruct to generate a function." +
+		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ mangaed user defined function." +
+		"As Capella does not currently support a way to create or manage an external library" +
+		"\n\nExamples:" +
+		"\n\nExample1) shows an example for a request that doesn't use the information provided, example prompt:" +
+		"add 2 numbers. Statement to create a function for the request would be: CREATE FUNCTION add(a,b) LANGUAGE JAVASCRIPT AS" +
+		" 'function add(a,b) { return(a+b);}'" +
+		"\n\nExample2) shows an example for a request that uses the information provided, example prompt:" +
+		"select airlines given country as an argument. Statement to create a function for the request would be: CREATE FUNCTION" +
+		" selectAirline(country) LANGUAGE JAVASCRIPT AS 'function selectAirline(country)" +
+		" {var q = SELECT name as airline_name, callsign as airline_callsign FROM `travel-sample`.`inventory`.`airline` " +
+		"WHERE country = $country; var res = []; for (const doc of q) { var airline = {}; airline.name = doc.airline_name;" +
+		"airline.callsign = doc.airline_callsign; res.push(airline);} return res;}" +
+		"\n\nNote query context is unset." +
+		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
+		"\n\nAlias is for ease of use." +
+		"\n\nQuote aliases with grave accent characters." +
+		"\n\nReturn only a single CREATE FUNCTION statement on a single line." +
+		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
+		"\n#ERR:\" and then explain why not without prefix.\n\n")
+	userMessage = userMessageBuf.String()
+	rv.Messages = []message{
+		message{
+			Role:    "user",
+			Content: userMessage,
+		},
+	}
 	return rv, nil
 }
 
@@ -408,14 +501,7 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 			fmt.Errorf("%s", strings.TrimRight(content[n+6:], "\n `")))
 	}
 
-	sqlstmt := strings.TrimPrefix(content, "```sql\n")
-	sqlstmt = strings.TrimSuffix(sqlstmt, "\n```")
-	if end := len(sqlstmt) - 1; sqlstmt[end] == ';' {
-		sqlstmt = sqlstmt[:end]
-	}
-
-	sqlstmt = strings.TrimSpace(sqlstmt)
-	return sqlstmt, nil
+	return content, nil
 }
 
 func collectSchemaForPromptFromInfer(schema map[string]string, inferSchema value.Value) map[string]string {
@@ -503,60 +589,87 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 	return keyspaceInfo, nil
 }
 
-func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path,
-	context NaturalContext, record func(execution.Phases, time.Duration)) (algebra.Statement, string, errors.Error) {
-
+func throttleRequest() errors.Error {
 	if err := nlreqThrottler.getWaiter(); err != nil {
-		return nil, "", err
+		return err
 	}
 	defer nlreqThrottler.releaseWaiter()
 
-	waitTime := util.Now()
 	select {
 	case <-nlreqThrottler.nlgate():
-		record(execution.NLWAIT, util.Since(waitTime))
 		defer func() {
 			nlreqThrottler.nlgate() <- true
 		}()
+		return nil
 	case <-time.After(WaitTimeout):
-		return nil, "", errors.NewNaturalLanguageRequestError(errors.E_NL_TIMEOUT)
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_TIMEOUT)
 	}
+}
+
+func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nloutputOpt naturalOutput,
+	context NaturalContext, record func(execution.Phases, time.Duration)) (string, errors.Error) {
+
+	waitTime := util.Now()
+	throttleRequest()
+	record(execution.NLWAIT, util.Since(waitTime))
 
 	getJwt := util.Now()
 	jwt, err := getJWTFromSessionsApi(nlCred, false)
 	record(execution.GETJWT, util.Since(getJwt))
 	if err != nil {
-		return nil, "", err
+		return "", err
 	}
 
 	keyspaceInfo := make(map[string]interface{}, len(elems))
 	inferschema := util.Now()
 	keyspaceInfo, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context)
-	if err != nil {
-		return nil, "", err
-	}
 	record(execution.INFERSCHEMA, util.Since(inferschema))
-
-	prompt, err := newPrompt(keyspaceInfo, nlquery)
 	if err != nil {
-		return nil, "", err
+		return "", err
+	}
+
+	var prompt *prompt
+	switch nloutputOpt {
+	case SQL:
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery)
+	case JSUDF:
+		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery)
+	default:
+		err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
+	}
+	if err != nil {
+		return "", err
 	}
 
 	chatcompletionreq := util.Now()
-	sqlstmt, err := doChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
+	content, err := doChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
 	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
-	if err != nil {
-		return nil, "", err
-	}
+	return content, err
+}
 
-	var parseErr error
-	parse := util.Now()
-	var nlAlgebraStmt algebra.Statement
-	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(sqlstmt, "default", "")
-	record(execution.NLPARSE, util.Since(parse))
-	if parseErr != nil {
-		return nil, "", errors.NewNaturalLanguageRequestError(errors.E_NL_PARSE_GENERATED_STMT, sqlstmt, parseErr)
+func GetStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {
+	switch nloutputOpt {
+	case SQL:
+		return getSQLContent(content), nil
+	case JSUDF:
+		return getJsContent(content), nil
+	default:
+		return "", errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 	}
+}
 
-	return nlAlgebraStmt, sqlstmt, nil
+func getSQLContent(content string) string {
+	sqlstmt := strings.TrimPrefix(content, "```sql\n")
+	sqlstmt = strings.TrimSuffix(sqlstmt, "\n```")
+	if end := len(sqlstmt) - 1; sqlstmt[end] == ';' {
+		sqlstmt = sqlstmt[:end]
+	}
+	sqlstmt = strings.TrimSpace(sqlstmt)
+	return sqlstmt
+}
+
+func getJsContent(content string) string {
+	return strings.TrimSpace(
+		strings.TrimSuffix(
+			strings.TrimPrefix(content, "```javascript"), "\n```"))
 }

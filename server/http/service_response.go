@@ -205,6 +205,7 @@ func (this *httpRequest) completedNaturalRequestJSON(srvr *server.Server) {
 	this.writeErrors(prefix, indent)
 	this.writeWarnings(prefix, indent)
 	this.writeState(this.State(), prefix)
+
 	this.writeGeneratedStatement(prefix, indent)
 
 	this.markTimeOfCompletion(time.Now())

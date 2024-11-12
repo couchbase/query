@@ -737,25 +737,6 @@ func (this *Server) IsHealthy() bool {
 	return !this.unboundQueue.isFull() && !this.plusQueue.isFull()
 }
 
-func processNaturalReqArgs(request Request) (nlcontext, nlCred, nlOrgId string, err errors.Error) {
-	if nlcontext = request.NaturalContext(); nlcontext == "" {
-		err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_context\"")
-		return
-	}
-
-	if nlCred = request.NaturalCred(); nlCred == "" {
-		err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_cred\"")
-		return
-	}
-
-	if nlOrgId = request.NaturalOrganizationId(); nlOrgId == "" {
-		err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_orgid\"")
-		return
-	}
-
-	return
-}
-
 func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	var err errors.Error
 	var elems []*algebra.Path
@@ -789,24 +770,56 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		return true, false
 	}
 
-	var sqlStmt string
-	var nlstmt algebra.Statement
-	nlstmt, sqlStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
-		nlquery, elems, request.ExecutionContext(),
-		request.Output().AddPhaseTime)
+	nloutputOpt := natural.SQL
+	if nloutput := request.NaturalOutput(); nloutput != "" {
+		nloutputOpt = natural.NewNaturalOutput(nloutput)
+		switch nloutputOpt {
+		case natural.UNDEFINED_NATURAL_OUTPUT:
+			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutput)
+		case natural.SQL:
+			nloutputOpt = natural.SQL
+		case natural.JSUDF:
+			nloutputOpt = natural.JSUDF
+		}
+	}
+	if err != nil {
+		request.Fail(err)
+		request.Failed(this)
+		return true, false
+	}
+	request.SetNaturalOutput(nloutputOpt.String())
 
+	content, err := natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
+		nlquery, elems, nloutputOpt, request.ExecutionContext(),
+		request.Output().AddPhaseTime)
 	if err != nil {
 		request.Fail(err)
 		request.Failed(this)
 		return true, false
 	}
 
-	request.SetStatement(sqlStmt)
+	parse := util.Now()
+	stmt, err := natural.GetStatement(content, nloutputOpt)
+	if err != nil {
+		request.Fail(err)
+		request.Failed(this)
+		return true, false
+	}
+	var parseErr error
+	var nlAlgebraStmt algebra.Statement
+	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
+	request.Output().AddPhaseTime(execution.NLPARSE, util.Since(parse))
+	if parseErr != nil {
+		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_PARSE_GENERATED_STMT, stmt, parseErr))
+		request.Failed(this)
+		return true, false
+	}
+	request.SetStatement(stmt)
 	request.SetQueryContext("")
 	request.IncrementStatementCount()
-	request.SetNaturalStatement(nlstmt)
+	request.SetNaturalStatement(nlAlgebraStmt)
 
-	if nlstmt.Type() != "SELECT" || request.NaturalShowOnly() {
+	if nlAlgebraStmt.Type() != "SELECT" || request.NaturalShowOnly() {
 		request.CompletedNaturalRequest(this)
 		return true, false
 	}

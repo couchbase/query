@@ -96,6 +96,7 @@ type RequestLogEntry struct {
 	Analysis                 []interface{}
 	SqlID                    string
 	NaturalLanguage          string
+	NaturalOutput            string
 	NaturalTime              time.Duration
 }
 
@@ -694,6 +695,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 
 	if natural := request.Natural(); natural != "" {
 		re.NaturalLanguage = natural
+		re.NaturalOutput = request.NaturalOutput()
 		re.NaturalTime = request.NaturalTime()
 	}
 

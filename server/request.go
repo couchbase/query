@@ -81,6 +81,8 @@ type Request interface {
 	SetNaturalStatement(algebra.Statement)
 	NaturalStatement() algebra.Statement
 	NaturalShowOnly() bool
+	SetNaturalOutput(n string)
+	NaturalOutput() string
 	Prepared() *plan.Prepared
 	SetPrepared(prepared *plan.Prepared)
 	Type() string
@@ -430,6 +432,7 @@ type BaseRequest struct {
 	naturalContext       string
 	nlStatement          algebra.Statement
 	nlShowOnly           bool
+	nloutput             string
 }
 
 type requestIDImpl struct {
@@ -1691,6 +1694,14 @@ func (this *BaseRequest) SetNaturalShowOnly(show bool) {
 
 func (this *BaseRequest) NaturalShowOnly() bool {
 	return this.nlShowOnly
+}
+
+func (this *BaseRequest) SetNaturalOutput(n string) {
+	this.nloutput = n
+}
+
+func (this *BaseRequest) NaturalOutput() string {
+	return this.nloutput
 }
 
 func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof bool, redact bool) map[string]interface{} {
