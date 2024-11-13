@@ -355,17 +355,9 @@ func (this *builder) coverFromSubqueries(ops ...plan.Operator) (err error) {
 		case *plan.ExpressionScan:
 			if subq, ok := op.FromExpr().(*algebra.Subquery); ok && op.SubqueryPlan() != nil {
 				for _, sub := range subq.Select().Subselects() {
-					if info, ok := this.subqCoveringInfo[sub]; ok {
-						for _, subqTermPlan := range info.SubqTermPlans() {
-							if !subqTermPlan.IsUnderJoin() {
-								continue
-							}
-							err = this.DoCoveringTransformation([]plan.Operator{subqTermPlan.Operator()},
-								info.CoveringScans())
-							if err != nil {
-								return err
-							}
-						}
+					err = this.CoverSubSelect(sub, true)
+					if err != nil {
+						return err
 					}
 				}
 			}
@@ -387,6 +379,8 @@ func (this *builder) coverFromSubqueries(ops ...plan.Operator) (err error) {
 			err = this.coverFromSubqueries(op.First(), op.Second())
 		case *plan.ExceptAll:
 			err = this.coverFromSubqueries(op.First(), op.Second())
+		case *plan.With:
+			err = this.coverFromSubqueries(op.Child())
 		}
 		if err != nil {
 			return err

@@ -170,9 +170,11 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 		var coveringOps []plan.CoveringOperator
 		var filter expression.Expression
 		var hasOrder bool
+		var builderCopy *builder
 
 		orderedHint := hasOrderedHint(node.OptimHints())
-		if this.useCBO && !this.indexAdvisor && this.context.Optimizer() != nil && !orderedHint &&
+		if this.useCBO && !this.indexAdvisor && this.context.Optimizer() != nil &&
+			!orderedHint && len(this.baseKeyspaces) > 1 &&
 			util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_JOIN_ENUMERATION) {
 			var limit, offset expression.Expression
 			var order *algebra.Order
@@ -190,8 +192,9 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				}
 			}
 
+			builderCopy = this.Copy()
 			optimizer := this.context.Optimizer()
-			ops, subOps, coveringOps, filter, hasOrder, err = optimizer.OptimizeQueryBlock(this.Copy(), node.From(), limit,
+			ops, subOps, coveringOps, filter, hasOrder, err = optimizer.OptimizeQueryBlock(builderCopy, node.From(), limit,
 				offset, order, distinct)
 			if err != nil {
 				return err
@@ -210,6 +213,9 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				this.resetOffsetLimit()
 			} else {
 				this.resetPushDowns()
+			}
+			if this.NoExecute() && len(builderCopy.subqCoveringInfo) > 0 {
+				this.inheritSubqCoveringInfo(builderCopy)
 			}
 		} else {
 			// Use FROM clause in index selection
@@ -510,18 +516,22 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	} else {
 		sa := this.subquery
 		this.subquery = true
-		var subqUnderJoin bool
+		var subqUnderJoin, subqInJoinEnum bool
 		if this.hasBuilderFlag(BUILDER_NL_INNER) {
 			// here we assume that if SubqueryTerm is on right-hand side of a join,
 			// we will use hash join if available, i.e. we can perform cover
 			// transformation in hash join directly
 			subqUnderJoin = this.setSubqUnderJoin()
+		} else if this.joinEnum() {
+			subqInJoinEnum = this.setSubqInJoinEnum()
 		}
 		subquery := node.Subquery()
 		qp, err := subquery.Accept(this)
 		this.subquery = sa
 		if this.hasBuilderFlag(BUILDER_NL_INNER) {
 			this.restoreSubqUnderJoin(subqUnderJoin)
+		} else if this.joinEnum() {
+			this.restoreSubqInJoinEnum(subqInJoinEnum)
 		}
 		if err != nil {
 			this.processadviseJF(alias)
