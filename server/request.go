@@ -1216,23 +1216,32 @@ func (this *BaseRequest) CloseResults() {
 }
 
 func (this *BaseRequest) Errors() []errors.Error {
-	return this.errors
+	this.RLock()
+	rv := make([]errors.Error, len(this.errors))
+	copy(rv, this.errors)
+	this.RUnlock()
+	return rv
 }
 
 func (this *BaseRequest) Warnings() []errors.Error {
-	return this.warnings
+	this.RLock()
+	rv := make([]errors.Error, len(this.warnings))
+	copy(rv, this.warnings)
+	this.RUnlock()
+	return rv
 }
 
 func (this *BaseRequest) NotifyStop(o execution.Operator) {
 	this.Lock()
-	defer this.Unlock()
 	this.stopOperator = o
+	this.Unlock()
 }
 
 func (this *BaseRequest) StopNotify() execution.Operator {
 	this.RLock()
-	defer this.RUnlock()
-	return this.stopOperator
+	rv := this.stopOperator
+	this.RUnlock()
+	return rv
 }
 
 func (this *BaseRequest) StopExecute() chan bool {
