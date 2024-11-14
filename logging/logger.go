@@ -176,6 +176,60 @@ type _filter struct {
 	exclude bool
 }
 
+// Debug filters are optional regular expressions which are matched against a string constructed from the colon separated path name
+// and line number of the calling function.  These allow filtering of DEBUG level messages to avoid flooding the output and thereby
+// making DEBUG level logging easier to process (you can concentrate on just the files you're interested in, or exclude ones you're
+// not).
+// Debug filters are specified as part of the LOGLEVEL=debug value but can only be set via an individual node's REST API; none of
+// the cluster tools (UI, couchbase-cli, etc.) will accept debug filters in the LOGLEVEL specification.
+// To specify an include filter, list the pattern after "debug:" in the LOGLEVEL setting value.  To specify an exclude filter, begin
+// the filter with a minus sign (to start an include pattern with a minus sign, use backslash to escape it).
+// Multiple semi-colon separated filters can be specified, and the specification of include & exclude filters can be mixed but only
+// the first matching filter is applied.
+// In addition to regular filters, commands may be embedded in the debug specification.  Commands are specified just like filters
+// but their first character must be an exclamation point; they do not filter DEBUG level messages.
+// INFO level messages are logged when filters are added (no messages are logged when they're removed; the LOGLEVEL change messages
+// imply a reset of the filters).
+//
+//
+// Examples:
+//
+// LOGLEVEL=debug
+//
+// Regular common level setting with no filters.
+//
+// LOGLEVEL=debug:memcached
+//
+// Only output where the file info matches "memcached".  e.g. a message at "/path/to/serverstats.go:264" will not be logged since
+// the pattern won't match but "/path/to/go_memcached_test.go:123" will.
+//
+// LOGLEVEL=debug:memcached;-test
+//
+// Only output where the file info matches "memcached" or the file info does not match "test".  e.g. a message at
+// "/path/to/memcached_test.go:123" *will* be logged - only the first matching filter applies - but "/path/to/ffdc_test.go:123"
+// will not.
+//
+// LOGLEVEL=debug:-test;memcached
+//
+// Only output where the file info the file info does not match "test" or matches "memcached".  e.g. a message at
+// "/path/to/memcached_test.go:123" will *not* be logged, neither will one at "/path/to/server.go:123", but one at
+// "/path/to/memcached.go:123" will.
+//
+// LOGLEVEL=debug:/ffdc;serverstats.go:123
+//
+// Only output where the file info matches "/ffdc" or "serverstats.go:123".  e.g. a message at "/path/to/serverstats.go:1230" will
+// be logged, as will a message at "/path/to/ffdc.go:123" but one at "/path/to/server_ffdc.go:1034" will not nor will one at
+// "/path/to/serverstats.go:456".
+//
+// LOGLEVEL=debug:-manager;!+dumpcore
+//
+// output as long as the file info doesn't match "manager" plus turn on core dumping.  e.g. a message at
+// "/path/to/service_manager.go:123" will be suppressed by this filter
+//
+// LOGLEVEL=debug:!-dumpcore
+//
+// No filtering (level set to debug) plus disable core dumping.
+
 var debugFilter []_filter
 
 var loggerMutex sync.RWMutex
