@@ -14,11 +14,9 @@ import (
 	"path"
 	"regexp"
 	"runtime"
-	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
-	"syscall"
 )
 
 type Level int
@@ -532,24 +530,7 @@ func setDebugFilter(pMutex sync.Locker, pFilters *[]_filter, s string, log func(
 			continue
 		}
 		e := false
-		if p[0] == '!' { // command, not a filter
-			switch p[1:] {
-			case "+dumpcore":
-				fallthrough
-			case "dumpcore":
-				p = ""
-				debug.SetTraceback("crash")
-				rl := &syscall.Rlimit{}
-				syscall.Getrlimit(syscall.RLIMIT_CORE, rl)
-				rl.Cur = uint64(0xffffffffffffffff)
-				syscall.Setrlimit(syscall.RLIMIT_CORE, rl)
-				log("Core dumping enabled.")
-			case "-dumpcore":
-				p = ""
-				debug.SetTraceback("single")
-				log("Core dumping disabled.")
-			}
-		} else if p[0] == '-' {
+		if p[0] == '-' {
 			e = true
 			p = p[1:]
 		} else {
