@@ -540,6 +540,7 @@ type Index6 interface {
 	MaxHeapSize() int // offset+limit Indexer allowed (configurable via indexer config).
 	VectorDescription() string
 	Include() expression.Expressions
+	AllowRerank() bool
 
 	Scan6(requestId string, spans Spans2, reverse, distinctAfterProjection bool,
 		projection *IndexProjection, offset, limit int64,

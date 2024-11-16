@@ -790,9 +790,15 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 
 		actualVector := ann.ActualVector()
 		if actualVector != nil {
+			index6, ok := entry.index.(datastore.Index6)
+			if !ok {
+				return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search index not index6")
+			}
 			actVectorVal := actualVector.Value()
-			if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth()) {
+			if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth() &&
+				(!index6.IsBhive() || !index6.AllowRerank())) {
 				// if ActualVector is specified but unknown, or it's true, cannot cover
+				// exception: BHive index that allows reranking can cover
 				ann = nil
 			}
 		}
@@ -987,9 +993,15 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry) (datastore.In
 
 	actualVector := ann.ActualVector()
 	if actualVector != nil {
+		index6, ok := entry.index.(datastore.Index6)
+		if !ok {
+			return keys, errors.NewPlanInternalError("replaceVectorKey: vector search index not index6")
+		}
 		actVectorVal := actualVector.Value()
-		if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth()) {
+		if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth() &&
+			(!index6.IsBhive() || !index6.AllowRerank())) {
 			// if ActualVector is specified but unknown, or it's true, cannot cover
+			// exception: BHive index that allows reranking can cover
 			return keys, nil
 		}
 	}
