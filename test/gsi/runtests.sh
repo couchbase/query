@@ -13,7 +13,7 @@ verbose=
 while [ $# -gt 0 ]; do
   case $1 in
     -v) verbose="$1" ;;
-    -s) skiptests="test_cases/curl test_cases/fts" ;;
+    -s) skiptests="test_cases/curl test_cases/fts test_cases/natural" ;;
     *) args="$args $1" ;;
   esac
   shift
@@ -37,6 +37,12 @@ do
     if [[ $skiptests =~ (^|[[:space:]])"$i"($|[[:space:]]) ]] ; then
         continue
     fi
+
+    if [[ $i == "test_cases/natural" ]] ; then 
+        read -sp "Enter natural_cred: " natural_cred;echo; export natural_cred;echo;
+        read -sp "Enter natural_orgid: " natural_orgid;echo; export natural_orgid;echo;
+    fi
+
     source ./exportval.sh $*
     cd $i
     dir=`pwd`

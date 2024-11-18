@@ -9,14 +9,12 @@
 package http
 
 import (
-	sys_json "encoding/json"
 	go_errors "errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -159,7 +157,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	}
 
 	if err == nil {
-		err = rv.processNatural()
+		err = rv.ProcessNatural()
 	}
 
 	if err == nil {
@@ -279,116 +277,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	rv.jsonArgs = jsonArgs{}
 	rv.urlArgs = urlArgs{}
 	rv.Output().AddPhaseTime(execution.SETUP, time.Since(reqTime))
-}
-
-// light-weight (lighter than a full parser) check if the statement starts with "USING AI"
-// if it does, then extract the optional WITH clause and separate out the natural language request
-var uai = regexp.MustCompile("[Uu][Ss][Ii][Nn][Gg][[:space:]]+[Aa][Ii][[:space:]]+")
-var with = regexp.MustCompile("[Ww][Ii][Tt][Hh][[:space:]]*{")
-
-func (this *httpRequest) processNatural() errors.Error {
-	s := this.Statement()
-	if s == "" {
-		return nil
-	}
-
-	m := uai.FindString(s)
-	if m == "" {
-		return nil
-	}
-	s = s[len(m):]
-
-	this.SetStatement("")
-
-	m = with.FindString(s)
-	if m == "" {
-		this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
-		return nil
-	}
-	s = s[len(m)-1:]
-
-	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
-	e := d.Decode(&opts)
-	if e != nil {
-		return errors.NewAdminEncodingError(e)
-	}
-
-	for k, v := range opts {
-		switch k {
-		case "keyspaces":
-			if a, ok := v.([]interface{}); ok {
-				sb := strings.Builder{}
-				for i := range a {
-					if s, ok := a[i].(string); ok {
-						if i > 0 {
-							sb.WriteRune(',')
-						}
-						sb.WriteString(s)
-					} else {
-						return errors.NewAdminSettingTypeError(k, v)
-					}
-				}
-				this.SetNaturalContext(sb.String())
-				logging.Debugf("natural_context: %s", sb.String())
-			} else if s, ok := v.(string); ok {
-				this.SetNaturalContext(s)
-				logging.Debugf("natural_context: %s", s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "creds":
-			if m, ok := v.(map[string]interface{}); ok {
-				var u, p string
-				for k, v := range m {
-					switch k {
-					case "user":
-						if s, ok := v.(string); ok {
-							u = s
-						} else {
-							return errors.NewAdminSettingTypeError(k, v)
-						}
-					case "pass":
-						if s, ok := v.(string); ok {
-							p = s
-						} else {
-							return errors.NewAdminSettingTypeError(k, v)
-						}
-					default:
-						return errors.NewAdminUnknownSettingError(k)
-					}
-				}
-				this.SetNaturalCred(fmt.Sprintf("%s:%s", u, p))
-			} else if s, ok := v.(string); ok {
-				this.SetNaturalCred(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "orgId":
-			if s, ok := v.(string); ok {
-				this.SetNaturalOrganizationId(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "execute":
-			if b, ok := v.(bool); ok {
-				this.SetNaturalShowOnly(!b)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "output":
-			if s, ok := v.(string); ok {
-				this.SetNaturalOutput(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
-		}
-	}
-	s = s[d.InputOffset():]
-	this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
-	return nil
 }
 
 // For audit.Auditable interface.

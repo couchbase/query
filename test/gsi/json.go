@@ -79,10 +79,11 @@ func init() {
 }
 
 type RunResult struct {
-	Results   []interface{}
-	Warnings  []errors.Error
-	Err       errors.Error
-	SortCount int
+	Results            []interface{}
+	Warnings           []errors.Error
+	Err                errors.Error
+	SortCount          int
+	GeneratedStatement bool
 }
 
 type MockQuery struct {
@@ -153,6 +154,10 @@ func (this *MockQuery) Execute(srvr *server.Server, context *execution.Context, 
 	}
 	close(this.response.done)
 	this.response.sortCount = int(this.SortCount())
+	if this.BaseRequest.Natural() != "" {
+		this.response.generatedStmt = true
+
+	}
 }
 
 func (this *MockQuery) Failed(srvr *server.Server) {
@@ -160,9 +165,9 @@ func (this *MockQuery) Failed(srvr *server.Server) {
 }
 
 func (this *MockQuery) CompletedNaturalRequest(srvr *server.Server) {
-	this.response.generatedStmt = this.Statement()
-	close(this.response.done)
+	this.response.generatedStmt = true
 	this.Stop(server.COMPLETED)
+	close(this.response.done)
 }
 
 func (this *MockQuery) IncrementStatementCount() {
@@ -222,7 +227,7 @@ func (this *MockQuery) AdmissionWaitTime() time.Duration {
 type MockResponse struct {
 	err           errors.Error
 	results       []interface{}
-	generatedStmt string
+	generatedStmt bool
 	warnings      []errors.Error
 	done          chan bool
 	sortCount     int
@@ -338,7 +343,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if prepare {
 		prepared, err := PrepareStmt(mockServer, queryParams, namespace, q)
 		if err != nil {
-			return &RunResult{nil, nil, err, -1}
+			return &RunResult{nil, nil, err, -1, false}
 		}
 		query.SetPrepared(prepared)
 		query.SetType(prepared.Type())
@@ -408,6 +413,23 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 		}
 	}
 
+	if nlcred, ok := queryParams["natural_cred"]; ok {
+		if nlcred, ok := nlcred.(string); ok {
+			query.SetNaturalCred(nlcred)
+		}
+	}
+
+	if nlorgid, ok := queryParams["natural_orgid"]; ok {
+		if nlorgid, ok := nlorgid.(string); ok {
+			query.SetNaturalOrganizationId(nlorgid)
+		}
+	}
+
+	err := query.ProcessNatural()
+	if err != nil {
+		return &RunResult{nil, nil, err, -1, false}
+	}
+
 	if userArgs == nil {
 		query.SetCredentials(_ALL_USERS)
 	} else {
@@ -430,13 +452,13 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 
 	if !ret {
 		mockServer.saveTxId(gv, query.Type(), nil)
-		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1}
+		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1, false}
 	}
 
 	// wait till all the results are ready
 	<-mr.done
 	mockServer.saveTxId(gv, query.Type(), mr.results)
-	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount}
+	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount, mr.generatedStmt}
 }
 
 /*
@@ -667,6 +689,19 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			}
 		}
 
+		if naturalCred := os.Getenv("natural_cred"); naturalCred != "" {
+			if queryParams == nil {
+				queryParams = map[string]interface{}{}
+			}
+			queryParams["natural_cred"] = naturalCred
+		}
+		if naturalOrgID := os.Getenv("natural_orgid"); naturalOrgID != "" {
+			if queryParams == nil {
+				queryParams = map[string]interface{}{}
+			}
+			queryParams["natural_orgid"] = naturalOrgID
+		}
+
 		if explain {
 			errstring = checkExplain(qc, queryParams, namespace, statements, c, ordered, namedArgs, positionalArgs, fname, i, b)
 			if errstring != nil {
@@ -854,6 +889,15 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				errstring = go_er.New(fmt.Sprintf("rr.SortCount %v doesn't match expected %v\nstatement: %v\n"+
 					"     file: %v\n    index: %v%s\n\n", rr.SortCount, expectedSortCount, statements, ffname, i, findIndex(b, i)))
 				return
+			}
+		}
+
+		v, ok = c["generated_statment"]
+		if ok {
+			expectedStatment := v.(bool)
+			if rr.GeneratedStatement != expectedStatment {
+				errstring = go_er.New(fmt.Sprintf("rr.GeneratedStatement %v doesn't match expected %v\nstatement: %v\n"+
+					"     file: %v\n    index: %v%s\n\n", rr.GeneratedStatement, expectedStatment, statements, ffname, i, findIndex(b, i)))
 			}
 		}
 	}
