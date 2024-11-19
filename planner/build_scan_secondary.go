@@ -862,8 +862,13 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 		return false
 	}
 
-	if se.nCondKeys != te.nCondKeys && !se.HasFlag(IE_NONEQ_COND) && !te.HasFlag(IE_NONEQ_COND) {
-		return se.nCondKeys > te.nCondKeys
+	if (se.nCondKeys+snc) != te.nCondKeys && !se.HasFlag(IE_NONEQ_COND) && !te.HasFlag(IE_NONEQ_COND) {
+		if (se.nCondKeys + snc) > te.nCondKeys {
+			return true
+		} else if se.cond == nil || (te.cond != nil && base.SubsetOf(te.cond, se.cond)) {
+			return false
+		}
+
 	}
 
 	if len(se.keys) != len(te.keys) {

@@ -421,7 +421,7 @@
     ]
     },
     {
-	"testcase": "MB-63057",
+	"testcase": "MB-63057, part1",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -433,6 +433,22 @@
             "statement": "SELECT true AS present FROM $explan AS p WHERE EVERY v WITHIN p.`plan`.`~children` SATISFIES (v.`#operator` IS MISSING OR v.`#operator` != 'IntersectScan') END AND ANY u WITHIN p.`plan`.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' and u.`index` = 'iorix5' END"
         },
         "statements":"SELECT * FROM orders WHERE _type = 'doc' AND status > 'published'",
+        "results": [
+    ]
+    },
+    {
+	"testcase": "MB-63057, part2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE EVERY v WITHIN p.`plan`.`~children` SATISFIES (v.`#operator` IS MISSING OR v.`#operator` != 'IntersectScan') END AND ANY u WITHIN p.`plan`.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' and u.`index` = 'iorix6' END"
+        },
+        "statements":"SELECT * FROM orders WHERE type = 'doc1' AND c11 = 1 AND c12 = 2",
         "results": [
     ]
     },
