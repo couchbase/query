@@ -1343,7 +1343,12 @@ func (p *namespace) Objects(credentials *auth.Credentials, filter func(string) b
 }
 
 func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Error) {
-	return p.keyspaceByName(name)
+	rv, err := p.keyspaceByName(name)
+	if rv == nil {
+		// this returns a detectable nil; if a nil rv (pointer) is returned directly, the result is a non-nil interface type
+		return nil, err
+	}
+	return rv, err
 }
 
 func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, errors.Error) {
@@ -1544,8 +1549,12 @@ func compareNodeAddress(a, b []string) bool {
 }
 
 func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
-	return p.keyspaceByName(id)
-
+	rv, err := p.keyspaceByName(id)
+	if rv == nil {
+		// this returns a detectable nil; if a nil rv (pointer) is returned directly, the result is a non-nil interface type
+		return nil, err
+	}
+	return rv, err
 }
 
 // namespace implements KeyspaceMetadata
@@ -1567,11 +1576,21 @@ func (p *namespace) BucketNames() ([]string, errors.Error) {
 }
 
 func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
-	return p.keyspaceByName(name)
+	rv, err := p.keyspaceByName(name)
+	if rv == nil {
+		// this returns a detectable nil; if a nil rv (pointer) is returned directly, the result is a non-nil interface type
+		return nil, err
+	}
+	return rv, err
 }
 
 func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
-	return p.keyspaceByName(name)
+	rv, err := p.keyspaceByName(name)
+	if rv == nil {
+		// this returns a detectable nil; if a nil rv (pointer) is returned directly, the result is a non-nil interface type
+		return nil, err
+	}
+	return rv, err
 }
 
 func (p *namespace) getPool() *cb.Pool {
