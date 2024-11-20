@@ -202,7 +202,7 @@ func NewVectorFuncInvalidMetric(name, metric string) Error {
 }
 
 func NewVectorFuncInvalidField(name, field string) Error {
-	return &err{level: EXCEPTION, ICode: E_VECTOR_FUNC_INVALID_METRIC, IKey: "function.vector.invalid_field",
+	return &err{level: EXCEPTION, ICode: E_VECTOR_FUNC_INVALID_FIELD, IKey: "function.vector.invalid_field",
 		InternalMsg:    fmt.Sprintf("Vector distance function (%s) has invalid field specification ('%s')", name, field),
 		InternalCaller: CallerN(1)}
 }
