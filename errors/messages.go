@@ -1668,6 +1668,20 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SEMANTICS_INTERNAL, // 3101
+		symbol:      "E_SEMANTICS_INTERNAL",
+		Description: "Semantic error: «what»",
+		Reason: []string{
+			"An internal error occurred during semantics check for the query.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_JOIN_NEST_NO_JOIN_HINT, // 3110
 		symbol:      "E_JOIN_NEST_NO_JOIN_HINT",
 		Description: "«op» on «alias» cannot have join hint (USE HASH or USE NL)",
@@ -3661,6 +3675,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_INVALID_QUERY_VECTOR, // 5430
+		symbol:      "E_INVALID_QUERY_VECTOR",
+		Description: "Invalid parameter (query vector) specified for vector function: <<msg>>.",
+		Reason: []string{
+			"An invalid parameter (query vector) is specified for vector function: <<msg>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a proper parameter (query vector).",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MEMORY_QUOTA_EXCEEDED, // 5500
 		symbol:      "E_MEMORY_QUOTA_EXCEEDED",
 		Description: "Request has exceeded memory quota.",
@@ -4738,6 +4767,36 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Refer to the documentation for valid arguments to pass to the advisor function.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_FUNC_INVALID_METRIC, // 10510
+		symbol:      "E_VECTOR_FUNC_INVALID_METRIC",
+		Description: "Vector function <<name>> has invalid metric specification (<<metric>>).",
+		Reason: []string{
+			"An invalid metric specification (<<metric>>) is used in vector function <<name>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a supported metric specification.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_VECTOR_FUNC_INVALID_FIELD, // 10511
+		symbol:      "E_VECTOR_FUNC_INVALID_FIELD",
+		Description: "Vector function <<name>> has invalid field specification (<<field>>).",
+		Reason: []string{
+			"An invalid field specification (<<field>>) is used in vector function <<name>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a valid field specification.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{

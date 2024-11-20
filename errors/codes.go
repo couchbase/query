@@ -128,6 +128,7 @@ const (
 	E_FORMALIZER_INTERNAL                        ErrorCode = 3082
 	E_PARSE_INVALID_INPUT                        ErrorCode = 3083
 	E_SEMANTICS                                  ErrorCode = 3100
+	E_SEMANTICS_INTERNAL                         ErrorCode = 3101
 	E_JOIN_NEST_NO_JOIN_HINT                     ErrorCode = 3110
 	E_JOIN_NEST_NO_USE_KEYS                      ErrorCode = 3120
 	E_JOIN_NEST_NO_USE_INDEX                     ErrorCode = 3130
@@ -282,6 +283,7 @@ const (
 	E_INDEX_UPD_STATS                            ErrorCode = 5415
 	E_TIME_PARSE                                 ErrorCode = 5416
 	E_JOIN_ON_PRIMARY_DOCS_EXCEEDED              ErrorCode = 5420
+	E_INVALID_QUERY_VECTOR                       ErrorCode = 5430
 	E_MEMORY_QUOTA_EXCEEDED                      ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                         ErrorCode = 5501
 	E_BUCKET_ACTION                              ErrorCode = 5502
@@ -371,6 +373,8 @@ const (
 	E_ADVISOR_INVALID_ACTION                     ErrorCode = 10501
 	E_ADVISOR_ACTION_MISSING                     ErrorCode = 10502
 	E_ADVISOR_INVALID_ARGS                       ErrorCode = 10503
+	E_VECTOR_FUNC_INVALID_METRIC                 ErrorCode = 10510
+	E_VECTOR_FUNC_INVALID_FIELD                  ErrorCode = 10511
 	E_SYSTEM_DATASTORE                           ErrorCode = 11000
 	E_SYSTEM_KEYSPACE_NOT_FOUND                  ErrorCode = 11002
 	E_SYSTEM_NOT_IMPLEMENTED                     ErrorCode = 11003

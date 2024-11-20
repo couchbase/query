@@ -40,6 +40,11 @@ func NewSemanticsWithCauseError(e error, msg string) Error {
 	}
 }
 
+func NewSemanticsInternalError(what string) Error {
+	return &err{level: EXCEPTION, ICode: E_SEMANTICS_INTERNAL, IKey: "semantics.internal_error",
+		InternalMsg: fmt.Sprintf("Internal semantics error: %v", what), InternalCaller: CallerN(1)}
+}
+
 func NewJoinNestNoJoinHintError(op string, alias string, iKey string) Error {
 	return &err{level: EXCEPTION, ICode: E_JOIN_NEST_NO_JOIN_HINT, IKey: iKey,
 		InternalMsg:    fmt.Sprintf("%s on %s cannot have join hint (USE HASH or USE NL).", op, alias),

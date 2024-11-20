@@ -194,3 +194,15 @@ func NewFunctionUnsupportedActionError(fType string, action string) Error {
 		InternalMsg:    fmt.Sprintf("%s is not supported for functions of type %s", action, fType),
 		InternalCaller: CallerN(1)}
 }
+
+func NewVectorFuncInvalidMetric(name, metric string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_FUNC_INVALID_METRIC, IKey: "function.vector.invalid_metric",
+		InternalMsg:    fmt.Sprintf("Vector distance function (%s) has invalid metric specification ('%s')", name, metric),
+		InternalCaller: CallerN(1)}
+}
+
+func NewVectorFuncInvalidField(name, field string) Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_FUNC_INVALID_FIELD, IKey: "function.vector.invalid_field",
+		InternalMsg:    fmt.Sprintf("Vector distance function (%s) has invalid field specification ('%s')", name, field),
+		InternalCaller: CallerN(1)}
+}

@@ -135,6 +135,11 @@ func NewFunctionBase(name string, operands ...Expression) *FunctionBase {
 	}
 }
 
+func (this *FunctionBase) Init(name string, operands ...Expression) {
+	this.name = name
+	this.operands = operands
+}
+
 func (this *FunctionBase) Indexable() bool {
 	if this.volatile() {
 		return false

@@ -26,8 +26,19 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 		return expr, this.visitSearchFunction(nexpr)
 	case *expression.Advisor:
 		return expr, this.visitAdvisorFunction(nexpr)
-	case *expression.TimeSeries:
-		return expr, this.visitTimeSeriesFunction(nexpr)
+	case *expression.TimeSeries, *expression.Knn:
+		if ve, ok := nexpr.(interface{ ValidOperands() error }); ok {
+			err := ve.ValidOperands()
+			if err != nil {
+				return expr, errors.NewSemanticsWithCauseError(err,
+					fmt.Sprintf("%s() function operands are invalid.", strings.ToUpper(nexpr.Name())))
+			}
+		} else {
+			return expr, errors.NewSemanticsInternalError(
+				fmt.Sprintf("%s() function does not have ValidOperands() function.",
+					strings.ToUpper(nexpr.Name())))
+		}
+		return expr, nil
 	case *expression.FlattenKeys:
 		if this.stmtType != "CREATE_INDEX" && this.stmtType != "UPDATE_STATISTICS" {
 			return expr, errors.NewFlattenKeys(nexpr.String(), nexpr.ErrorContext())
@@ -46,16 +57,6 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 		}
 	}
 	return expr, expr.MapChildren(this)
-}
-
-func (this *SemChecker) visitTimeSeriesFunction(ts *expression.TimeSeries) (err error) {
-	fnName := strings.ToUpper(ts.Name()) + "() function"
-
-	if err := ts.ValidOperands(); err != nil {
-		return errors.NewSemanticsWithCauseError(err, fmt.Sprintf("%s operands are invalid.", fnName))
-	}
-
-	return nil
 }
 
 func (this *SemChecker) visitSearchFunction(search *search.Search) (err error) {

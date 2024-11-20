@@ -446,6 +446,12 @@ func NewSubqueryNumDocsExceeded(keyspace string, limit int) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewInvalidQueryVector(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_INVALID_QUERY_VECTOR, IKey: "execution.vector_index.query_vector",
+		InternalMsg:    "Invalid parameter (query vector) specified for vector search function: " + msg,
+		InternalCaller: CallerN(1)}
+}
+
 func NewMemoryQuotaExceededError() Error {
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
 		InternalMsg:    "Request has exceeded memory quota",
