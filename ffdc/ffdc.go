@@ -52,6 +52,7 @@ const staticConfigFile = "etc/couchbase/static_config"
 var _path string
 var pidString string
 
+// some actions require external dependencies and are therefore set via the Set() function
 var operations = map[string]func(io.Writer) error{
 	Heap: func(w io.Writer) error {
 		p := pprof.Lookup("heap")
@@ -86,8 +87,32 @@ var operations = map[string]func(io.Writer) error{
 		fmt.Fprintf(w, "OtherSys........ %v\n", Human(s.OtherSys))
 		fmt.Fprintf(w, "NextGC.......... %v\n", s.NextGC)
 		fmt.Fprintf(w, "LastGC.......... %v %v\n", s.LastGC, time.Unix(0, int64(s.LastGC)))
-		fmt.Fprintf(w, "PauseNs......... %v\n", s.PauseNs)
-		fmt.Fprintf(w, "PauseEnd........ %v\n", s.PauseEnd)
+		fmt.Fprintf(w, "GCPauses........ [PauseEnd         PauseNs]\n                 ")
+		start := int((s.NumGC + 255) % 256)
+		if start < 0 {
+			start = 255
+		}
+		c := 0
+		for i := start; ; {
+			if c > 0 {
+				if c == 4 {
+					fmt.Fprintf(w, "\n                 ")
+					c = 0
+				} else {
+					fmt.Fprintf(w, " ")
+				}
+			}
+			fmt.Fprintf(w, "[%s %7d]", time.Unix(0, int64(s.PauseEnd[i])).Format("150405.000000000"), s.PauseNs[i])
+			c++
+			i--
+			if i < 0 {
+				i = 255
+			}
+			if i == start {
+				break
+			}
+		}
+		fmt.Fprintf(w, "\n")
 		fmt.Fprintf(w, "NumGC........... %v\n", s.NumGC)
 		fmt.Fprintf(w, "NumForcedGC..... %v\n", s.NumForcedGC)
 		fmt.Fprintf(w, "GCCPUFraction... %v\n", s.GCCPUFraction)
@@ -156,6 +181,7 @@ func Human(v uint64) string {
 type occurrence struct {
 	when  time.Time
 	ts    string
+	id    int64
 	files []string
 }
 
@@ -170,12 +196,12 @@ func (this *occurrence) capture(event string, what string) {
 		f.Sync()
 		f.Close()
 		if err != nil {
-			logging.Errorf("FFDC: Error capturing '%v' to %v: %v", what, name, err)
+			logging.Errorf("FFDC: [%#x] Error capturing '%v' to %v: %v", this.id, what, name, err)
 		} else {
-			logging.Infof("FFDC: Captured: %v", path.Base(name))
+			logging.Infof("FFDC: [%#x] Captured: %v", this.id, path.Base(name))
 		}
 	} else {
-		logging.Errorf("FFDC: failed to create '%v' dump file: %v - %v", what, name, err)
+		logging.Errorf("FFDC: [%#x] failed to create '%v' dump file: %v - %v", this.id, what, name, err)
 	}
 }
 
@@ -190,8 +216,10 @@ type reason struct {
 }
 
 func (this *reason) shouldCapture() *occurrence {
-	logging.Debugf("FFDC: \"%v\".shouldCapture(): count: %v, len(occ): %v", this.msg, this.count, len(this.occurrences))
+	logging.Debugf("FFDC: [%s] \"%v\".shouldCapture(): count: %v, len(occ): %v", this.event, this.msg, this.count,
+		len(this.occurrences))
 	if atomic.AddInt64(&this.count, 1) > 2 {
+		// don't change count; reset() will reset it
 		return nil
 	}
 	now := time.Now()
@@ -205,7 +233,7 @@ func (this *reason) shouldCapture() *occurrence {
 	if len(this.occurrences) >= _FFDC_OCCURENCE_LIMIT {
 		this.cleanup()
 	}
-	occ := &occurrence{when: now, ts: now.Format("2006-01-02-150405.000")}
+	occ := &occurrence{when: now, id: now.UnixMilli(), ts: now.Format("2006-01-02-150405.000")}
 	this.occurrences = append(this.occurrences, occ)
 	return occ
 }
@@ -216,9 +244,12 @@ func (this *reason) capture(ch chan bool) {
 	defer func() {
 		e := recover()
 		if e != nil {
-			logging.Stackf(logging.ERROR, "Panic capturing \"%v\" FFDC: %v", this.event, e)
+			logging.Stackf(logging.ERROR, "FFDC: [%s] Panic during capture: %v", this.event, e)
 		}
-		ch <- ret
+		select {
+		case ch <- ret:
+		default:
+		}
 		close(ch)
 		if locked {
 			this.Unlock()
@@ -231,7 +262,7 @@ func (this *reason) capture(ch chan bool) {
 	locked = false
 	if occ != nil {
 		ret = true
-		logging.Warnf("FFDC: %s", this.msg)
+		logging.Warnf("FFDC: [%#x] %s", occ.id, this.msg)
 		for i := range this.actions {
 			occ.capture(this.event, this.actions[i])
 		}
@@ -425,27 +456,27 @@ const (
 var reasons = map[string]*reason{
 	RequestQueueFull: &reason{
 		event:   RequestQueueFull,
-		actions: []string{Stacks, Active, Completed},
+		actions: []string{Vitals, Stacks, Active, Completed},
 		msg:     "Request queue full",
 	},
 	PlusQueueFull: &reason{
 		event:   PlusQueueFull,
-		actions: []string{Stacks, Active, Completed},
+		actions: []string{Vitals, Stacks, Active, Completed},
 		msg:     "Plus queue full",
 	},
 	StalledQueue: &reason{
 		event:   StalledQueue,
-		actions: []string{Stacks, Active, Completed, Netstat, Vitals},
+		actions: []string{Vitals, Stacks, Active, Completed, Netstat},
 		msg:     "Stalled queue processing",
 	},
 	MemoryThreshold: &reason{
 		event:   MemoryThreshold,
-		actions: []string{Heap, MemStats, Stacks, Active, Completed, Netstat, Vitals},
+		actions: []string{MemStats, Heap, Stacks, Vitals, Active, Completed, Netstat},
 		msg:     "Memory threshold exceeded",
 	},
 	SigTerm: &reason{
 		event:   SigTerm,
-		actions: []string{Heap, MemStats, Stacks, Active, Completed},
+		actions: []string{MemStats, Heap, Stacks, Active, Completed},
 		msg:     "SIGTERM received",
 	},
 	Shutdown: &reason{
@@ -455,12 +486,12 @@ var reasons = map[string]*reason{
 	},
 	MemoryRate: &reason{
 		event:   MemoryRate,
-		actions: []string{Heap, MemStats, Active, Stacks, Vitals},
+		actions: []string{MemStats, Heap, Active, Stacks, Vitals},
 		msg:     "Memory growth rate threshold exceeded",
 	},
 	Manual: &reason{
 		event:   Manual,
-		actions: []string{Heap, MemStats, Active, Completed, Stacks, Vitals, Netstat},
+		actions: []string{MemStats, Heap, Active, Completed, Stacks, Vitals, Netstat},
 		msg:     "Manual invocation",
 	},
 }
@@ -469,15 +500,15 @@ func Capture(event string) bool {
 	rv := false
 	r, ok := reasons[event]
 	if !ok {
-		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %v", event)
+		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %s", event)
 	} else {
 		// expense of creation here is low compared to actually running the FFDC
-		done := make(chan bool)
+		done := make(chan bool, 1)
 		go r.capture(done)
 		select {
 		case rv = <-done:
 		case <-time.After(_MAX_CAPTURE_WAIT_TIME):
-			logging.Warnf("FFDC: Maximum wait time reached")
+			logging.Warnf("FFDC: Maximum wait time reached for event: %s", event)
 		}
 	}
 	return rv
@@ -486,7 +517,7 @@ func Capture(event string) bool {
 func Reset(event string) {
 	r, ok := reasons[event]
 	if !ok {
-		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %v", event)
+		logging.Stackf(logging.ERROR, "FFDC: Invalid event: %s", event)
 	} else {
 		r.reset()
 	}
