@@ -213,6 +213,11 @@ func NewServiceNoClientError() Error {
 		InternalMsg: "Client disconnected", InternalCaller: CallerN(1)}
 }
 
+func NewServiceSlowClientError() Error {
+	return &err{level: EXCEPTION, ICode: E_SERVICE_SLOW_CLIENT, IKey: "service.slow_client",
+		InternalMsg: "Slow/stalled client write timed out", InternalCaller: CallerN(1)}
+}
+
 func NewServiceInvalidValueError(value string, feature string, details string) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_READONLY, IKey: "service.io.request.invalid_value",
 		InternalMsg: fmt.Sprintf("%s = %s is invalid.%s", feature, value, details), InternalCaller: CallerN(1)}

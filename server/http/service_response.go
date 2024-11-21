@@ -10,14 +10,11 @@ package http
 
 import (
 	"bytes"
-	"container/list"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,8 +42,6 @@ const (
 )
 
 const _DEF_IO_WRITE_TIME_LIMIT = 75 * time.Second
-const _IO_WRITE_MONITOR_PRECISION = 10 * time.Second
-const _MIN_IO_WRITE_TIME_LIMIT = _IO_WRITE_MONITOR_PRECISION + 1
 
 func (this *httpRequest) Output() execution.Output {
 	return this
@@ -1685,14 +1680,12 @@ type bufferedWriter struct {
 	lock        sync.Mutex
 
 	ioTimeout time.Duration
-	ioRemTime time.Duration
-	monElem   *list.Element
+	rc        *http.ResponseController
 }
 
 const _PRINTF_THRESHOLD = 128
 
 func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
-	w.ioRemTime = 0
 	w.req = r
 	w.buffer = bp.GetBuffer()
 	w.buffer_pool = bp
@@ -1704,12 +1697,11 @@ func NewBufferedWriter(w *bufferedWriter, r *httpRequest, bp BufferPool) {
 	w.inUse = false
 	w.waiter = false
 	w.cond.L = &w.lock
+	w.rc = http.NewResponseController(r.resp)
 
 	w.ioTimeout = r.Timeout()
 	if w.ioTimeout <= 0 {
 		w.ioTimeout = _DEF_IO_WRITE_TIME_LIMIT
-	} else if w.ioTimeout < _MIN_IO_WRITE_TIME_LIMIT {
-		w.ioTimeout = _MIN_IO_WRITE_TIME_LIMIT
 	}
 }
 
@@ -1959,89 +1951,13 @@ Connections are monitored and forcibly closed when we detect they've stalled.
 go-1.19: If there was a simple write with timeout or an individual request write operation deadline API we could use it instead.
 */
 func (this *bufferedWriter) copyWithTimeout(w io.Writer, s io.Reader) bool {
-	this.ioRemTime = this.ioTimeout // deliberately not atomic
-	io.Copy(w, s)
-	this.ioRemTime = 0
+	this.rc.SetWriteDeadline(time.Now().Add(this.ioTimeout))
+	_, err := io.Copy(w, s)
+	this.rc.SetWriteDeadline(time.Time{})
+	if err != nil && strings.Contains(err.Error(), "i/o timeout") {
+		this.req.Error(errors.NewServiceSlowClientError())
+		logging.Errorf("Detected slow/stalled client. Write operation timed out. Request: %v", this.req.Id())
+		this.closed = true
+	}
 	return !this.closed
-}
-
-func (this *bufferedWriter) cancelIO() {
-	if this.ioRemTime >= 0 || this.closed || this.req == nil || this.req.resp == nil {
-		return
-	}
-	this.closed = true
-	this.ioRemTime = 0
-	var conn net.Conn
-	if h, ok := this.req.resp.(http.Hijacker); ok {
-		conn, _, _ = h.Hijack()
-	}
-	if conn != nil {
-		logging.Errorf("Detected slow/stalled client. Aborting request: %s (%s)", this.req.Id(), conn.RemoteAddr().String())
-		conn.Close()
-	} else {
-		logging.Errorf("Detected slow/stalled client. Unable to close connection for request: %s", this.req.Id())
-	}
-}
-
-type ioMonitor struct {
-	sync.Mutex
-	monitored *list.List
-}
-
-func (this *ioMonitor) monitor(w *bufferedWriter) {
-	this.Lock()
-	w.monElem = this.monitored.PushFront(w)
-	this.Unlock()
-}
-
-func (this *ioMonitor) remove(w *bufferedWriter) {
-	if w.monElem != nil {
-		this.Lock()
-		this.monitored.Remove(w.monElem)
-		this.Unlock()
-	}
-}
-
-var ioIntr = &ioMonitor{monitored: list.New()}
-
-func (this *ioMonitor) driver() {
-	defer func() {
-		r := recover()
-		if r != nil {
-			buf := make([]byte, 1<<16)
-			n := runtime.Stack(buf, false)
-			s := string(buf[0:n])
-			logging.Severef("I/O interrupt driver panic: %v\n%v", r, s)
-			go this.driver()
-		}
-	}()
-
-	ticker := time.NewTicker(_IO_WRITE_MONITOR_PRECISION)
-	toCancel := list.New()
-	for {
-		<-ticker.C
-
-		this.Lock()
-		for e := this.monitored.Front(); e != nil; e = e.Next() {
-			k := e.Value.(*bufferedWriter)
-			if k.ioRemTime > 0 { // non synchronised access is deliberate
-				k.ioRemTime -= _IO_WRITE_MONITOR_PRECISION
-				if k.ioRemTime <= 0 {
-					k.ioRemTime-- // ensure never zero when calling cancel function
-					toCancel.PushFront(k.cancelIO)
-				}
-			}
-		}
-		this.Unlock()
-		for e := toCancel.Front(); e != nil; {
-			n := e.Next()
-			go e.Value.(func())()
-			toCancel.Remove(e)
-			e = n
-		}
-	}
-}
-
-func init() {
-	go ioIntr.driver()
 }

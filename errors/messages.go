@@ -1153,6 +1153,22 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SERVICE_SLOW_CLIENT, // 1203
+		symbol:      "E_SERVICE_SLOW_CLIENT",
+		Description: "Slow/stalled client write timed out",
+		Reason: []string{
+			"A write to the request output stream timed out.  Individual writes that make up the response must not block " +
+				"indefinitely, which typically occurs when the client isn't reading the response stream.",
+		},
+		Action: []string{
+			"Check the application is reading response stream fast enough to avoid blocking writes.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ADMIN_CONNECTION, // 2000
 		symbol:      "E_ADMIN_CONNECTION",
 		Description: "Error connecting to «what»",
