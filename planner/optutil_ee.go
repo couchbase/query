@@ -78,7 +78,8 @@ func indexScanCost(index datastore.Index, sargKeys expression.Expressions, reque
 	float64, float64, float64, int64, float64, error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, alias, advisorValidate, context)
+		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, spans.ann,
+			alias, advisorValidate, context)
 	case *IntersectSpans:
 		return intersectSpansCost(index, sargKeys, requestId, spans, alias, advisorValidate, context)
 	case *UnionSpans:
@@ -181,7 +182,8 @@ func indexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys
 	sel float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		sel, _ := optutil.CalcIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, considerInternal, context)
+		sel, _ := optutil.CalcIndexSelec(index, sargKeys, skipKeys, spans.spans, spans.ann,
+			alias, considerInternal, context)
 		return sel, nil
 	case *IntersectSpans:
 		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, false, considerInternal, context)
