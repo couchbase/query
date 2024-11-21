@@ -76,7 +76,6 @@ var requestPool util.FastPool
 func init() {
 	util.NewFastPool(&requestPool, func() interface{} {
 		r := &httpRequest{}
-		ioIntr.monitor(&r.writer)
 		return r
 	})
 }
@@ -356,14 +355,10 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 
 	// ESCAPE analysis workaround
 	request := requestPool.Get().(*httpRequest)
-	w := request.writer.monElem // preserve the IO monitor list reference
 	*request = httpRequest{}
-	request.writer.monElem = w
 	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace())
 	defer func() {
-		requestPool.PutFn(request, func(r interface{}) {
-			ioIntr.remove(&(r.(*httpRequest).writer))
-		})
+		requestPool.Put(request)
 	}()
 
 	defer this.doStats(request, this.server)
