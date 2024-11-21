@@ -1,0 +1,52 @@
+[
+    {
+        "testcase":"incorrect Natural context: path has too many elements to represent a keyspace",
+        "statements": "USING AI WITH {\"keyspaces\":\"a.c.c.d\"} Show few documents",
+        "errorCode": 19215
+    },
+    {
+        "testcase":"incorrect Natural context: too many keyspaces",
+        "statements": "USING AI WITH {\"keyspaces\":[\"k1\", \"k2\", \"k3\", \"k4\", \"k5\"]} Show few documents",
+        "errorCode":19215
+    },
+    {
+        "testcase":"prompt requesting for a sql statement",
+        "statements":"USING AI WITH {\"keyspaces\":\"orders\"} documents with mana more than 200",
+        "results": [
+            {
+                "o": {
+                    "class": "demon hunter",
+                    "health": 96,
+                    "level": 17,
+                    "mana": 204,
+                    "name": "Illidan"
+                }
+            },
+            {
+                "o": {
+                    "class": "mage",
+                    "health": 78,
+                    "level": 30,
+                    "mana": 581,
+                    "name": "Jaina"
+                }
+            }
+        ],
+        "generated_stmt": true
+    },
+    {
+        "testcase": "prompt requesting a javascript user defined function",
+        "statements":"USING AI WITH {\"keyspaces\":\"orders\",  \"output\":\"jsudf\"}  a function to calculate power score of a document given document id , where power score is level*(health+mana)",
+        "generated_stmt": true
+    },
+    {
+        "testcase": "invalid output option",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\",  \"output\":\"nodejs\"} add 2 numbers",
+        "error":"Unknown natural_output value: nodejs"
+    },
+    {
+        "testcase": "invalid user prompt",
+        "statements":"USING AI WITH {\"keyspaces\":\"orders\"} Blah Blah!",
+        "errorCode": 19212
+    }
+]

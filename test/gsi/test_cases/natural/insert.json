@@ -1,0 +1,5 @@
+[
+    {
+        "statements": "INSERT INTO orders (KEY,VALUE) VALUES (\"1\", {\"name\":\"Arthas\", \"class\":\"warrior\", \"level\":25, \"health\":67, \"mana\":100}), VALUES (\"2\", {\"name\":\"Jaina\", \"class\":\"mage\", \"level\":30, \"health\":78, \"mana\":581}), VALUES (\"3\", {\"name\":\"Thrall\", \"class\":\"shaman\", \"level\":24, \"health\":172, \"mana\":109}), VALUES (\"4\", {\"name\":\"Valeera\", \"class\":\"rogue\", \"level\":12, \"health\":89, \"mana\":88}),  VALUES (\"5\", {\"name\":\"Illidan\", \"class\":\"demon hunter\", \"level\":17, \"health\":96, \"mana\":204})"
+    }
+]
