@@ -48,7 +48,7 @@ func (this *builder) buildCoveringUnnestScan(node *algebra.KeyspaceTerm,
 		return
 	}
 
-	index := this.bestCoveringIndex(this.useCBO, node, coveringEntries, false)
+	index := this.bestCoveringIndex(this.useCBO, node.Alias(), baseKeyspace.Keyspace(), coveringEntries, false)
 	centry := coveringEntries[index]
 	implicitCover := len(centry.coveredUnnests) > 0
 

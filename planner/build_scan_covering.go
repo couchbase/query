@@ -188,7 +188,8 @@ outer:
 		return nil, 0, nil
 	}
 
-	index := this.bestCoveringIndex(useCBO, node, coveringEntries, (narrays < len(coveringEntries)))
+	index := this.bestCoveringIndex(useCBO, baseKeyspace.Name(), baseKeyspace.Keyspace(),
+		coveringEntries, (narrays < len(coveringEntries)))
 	coveringEntry := coveringEntries[index]
 	keys := coveringEntry.indexKeys
 	var implcitIndexProj map[int]bool
@@ -220,7 +221,7 @@ outer:
 		coveringEntry.filterCovers, implcitIndexProj)
 }
 
-func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
+func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 	coveringEntries map[datastore.Index]*coveringEntry, noArray bool) (index datastore.Index) {
 
 	hasGroupAggs := false
@@ -231,7 +232,7 @@ func (this *builder) bestCoveringIndex(useCBO bool, node *algebra.KeyspaceTerm,
 			entry := ce.idxEntry
 			if entry.cost <= 0.0 {
 				cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
-					this.context.RequestId(), entry.spans, node.Alias(),
+					this.context.RequestId(), entry.spans, alias, keyspace,
 					this.advisorValidate(), this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false

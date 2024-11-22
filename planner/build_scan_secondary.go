@@ -639,8 +639,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		for _, se := range sargables {
 			if se.cost <= 0.0 {
 				cost, selec, card, size, frCost, e := indexScanCost(se.index, se.sargKeys,
-					this.context.RequestId(), se.spans, alias, advisorValidate,
-					this.context)
+					this.context.RequestId(), se.spans, alias, baseKeyspace.Keyspace(),
+					advisorValidate, this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
@@ -1261,7 +1261,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	requestId := this.context.RequestId()
 	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
 		cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
-			requestId, entry.spans, alias, advisorValidate, this.context)
+			requestId, entry.spans, alias, baseKeyspace.Keyspace(), advisorValidate, this.context)
 		if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 			useCBO = false
 		} else {

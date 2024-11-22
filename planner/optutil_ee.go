@@ -74,16 +74,16 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, cont
 }
 
 func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans, alias string, advisorValidate bool, context *PrepareContext) (
+	spans SargSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
 	float64, float64, float64, int64, float64, error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
 		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, spans.ann,
 			alias, advisorValidate, context)
 	case *IntersectSpans:
-		return intersectSpansCost(index, sargKeys, requestId, spans, alias, advisorValidate, context)
+		return intersectSpansCost(index, sargKeys, requestId, spans, alias, keyspace, advisorValidate, context)
 	case *UnionSpans:
-		return unionSpansCost(index, sargKeys, requestId, spans, alias, advisorValidate, context)
+		return unionSpansCost(index, sargKeys, requestId, spans, alias, keyspace, advisorValidate, context)
 	}
 
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
@@ -91,13 +91,14 @@ func indexScanCost(index datastore.Index, sargKeys expression.Expressions, reque
 }
 
 func unionSpansCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	unionSpan *UnionSpans, alias string, advisorValidate bool, context *PrepareContext) (
+	unionSpan *UnionSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
 	float64, float64, float64, int64, float64, error) {
 
 	var cost, sel, frCost, nrows float64
 	var size int64
 	for i, span := range unionSpan.spans {
-		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, advisorValidate, context)
+		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, keyspace,
+			advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
@@ -121,18 +122,19 @@ func unionSpansCost(index datastore.Index, sargKeys expression.Expressions, requ
 }
 
 func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	intersectSpan *IntersectSpans, alias string, advisorValidate bool, context *PrepareContext) (
+	intersectSpan *IntersectSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
 	float64, float64, float64, int64, float64, error) {
 
 	spanMap := make(map[*base.IndexCost]SargSpans, len(intersectSpan.spans))
 	indexes := make([]*base.IndexCost, 0, len(intersectSpan.spans))
 	for _, span := range intersectSpan.spans {
 		skipKeys := make([]bool, len(sargKeys))
-		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, advisorValidate, context)
+		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, keyspace,
+			advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
-		tfetchCost, _, _ := optutil.CalcFetchCost(alias, tcard)
+		tfetchCost, _, _ := optutil.CalcFetchCost(keyspace, tcard)
 		if tcost <= 0.0 || tsel <= 0.0 || tcard <= 0.0 || tfrCost <= 0.0 || tfetchCost <= 0.0 {
 			return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
