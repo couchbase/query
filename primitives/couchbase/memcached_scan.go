@@ -65,10 +65,6 @@ func init() {
 	util.RegisterTempPattern(_SS_SPILL_FILE_PATTERN)
 }
 
-func init() {
-	util.RegisterTempPattern(_SS_SPILL_FILE_PATTERN)
-}
-
 /*
  * Bucket functions for driving and consuming a scan.
  */
