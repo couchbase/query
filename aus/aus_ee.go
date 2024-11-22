@@ -22,6 +22,7 @@ import (
 
 	"github.com/couchbase/cbauth/metakv"
 	"github.com/couchbase/query-ee/aus"
+	"github.com/couchbase/query-ee/aus/bridge"
 	"github.com/couchbase/query-ee/optimizer"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -149,8 +150,15 @@ func InitAus(server *server.Server) {
 		initialized: false,
 	}
 
+	bridge.SetAusEnabled(Enabled)
+
 	// run as go routine to prevent hanging at the migration.Await() call
 	go startupAus()
+}
+
+// Returns if AUS is enabled
+func Enabled() bool {
+	return ausCfg.initialized && ausCfg.settings.enable
 }
 
 // Sets up AUS for the node. Must only be called post-migration of CBO stats.

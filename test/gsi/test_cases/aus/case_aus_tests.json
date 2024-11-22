@@ -51,7 +51,7 @@
         ]
     },
     {
-        "description": "Test for a keyspace that has no custom change_percentage but rather uses the global change_percentage for AUS. The keyspace qualifies for Evaluation phase. But its expressions however do not have sufficient change to qualify to Update phase.",
+        "description": "Test for a keyspace that has no custom change_percentage but rather uses the global change_percentage for AUS. The keyspace qualifies for Evaluation phase. But its expressions however do not have sufficient change to qualify to Update phase. Additionally, it is a test to check if the change info is collected when UPDATE STATISTICS is run when AUS is enabled. If the change info is not collected, this keyspace will incorrectly qualify for Update.",
         "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_evaluated, \"default:product._default._default\") AS evaluation, ARRAY_CONTAINS(results.keyspaces_updated, \"default:product._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
         "results":[
             {

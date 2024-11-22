@@ -21,6 +21,11 @@ func InitAus(server *server.Server) {
 	// do nothing
 }
 
+// Returns if AUS is enabled
+func Enabled() bool {
+	return false
+}
+
 // system:aus keyspace related functions
 
 func CountAus() (int64, errors.Error) {

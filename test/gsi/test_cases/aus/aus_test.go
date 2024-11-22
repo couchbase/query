@@ -36,6 +36,19 @@ func TestAus(t *testing.T) {
 	runStmt(qc, "CREATE INDEX customer_idx_1 ON customer(custId, emailAddress, firstName, age)")
 	runStmt(qc, "CREATE INDEX customer_idx_2 ON customer(membership, custId, emailAddress)")
 
+	// Enable and set an AUS schedule that will not run during the test but instead scheduled for the next day.
+	// This is because, AUS needs to be enabled so that change information will be collected in CBO statistics
+	// that are created during the UPDATE STATISTICS statements executed later in the test
+	start := time.Now().Add(24 * time.Hour)
+	end := start.Add(30 * time.Minute)
+	sched := runStmt(qc, fmt.Sprintf(
+		"UPDATE system:aus SET enable=true, "+
+			"schedule = {\"start_time\": \"%s\", \"end_time\": \"%s\", \"days\": [\"%s\"], \"timezone\": \"%s\"}",
+		start.Format("15:04"), end.Format("15:04"), start.Weekday().String(), time.Local.String()))
+	if sched.Err != nil {
+		fmt.Printf("\nError creating first AUS schedule: %v", sched.Err)
+	}
+
 	// Update CBO statistics
 	fmt.Println("Updating CBO statistics.")
 	runStmt(qc, "UPDATE STATISTICS FOR shellTest(c1)")
@@ -53,16 +66,16 @@ func TestAus(t *testing.T) {
 	runStmt(qc, "UPDATE customer SET firstName = LOWER(firstName) LIMIT 1")
 
 	// Start and end time of the AUS schedule in local timezone
-	start := time.Now().Add(time.Minute)
-	end := start.Add(30 * time.Minute)
+	start = time.Now().Add(time.Minute)
+	end = start.Add(30 * time.Minute)
 
 	// Enable and set AUS schedule
-	rv := runStmt(qc, fmt.Sprintf(
+	sched = runStmt(qc, fmt.Sprintf(
 		"UPDATE system:aus SET enable=true, all_buckets=true, change_percentage=30, "+
 			"schedule = {\"start_time\": \"%s\", \"end_time\": \"%s\", \"days\": [\"%s\"], \"timezone\": \"%s\"}",
 		start.Format("15:04"), end.Format("15:04"), start.Weekday().String(), time.Local.String()))
-	if rv.Err != nil {
-		fmt.Printf("\nError creating AUS schedule: %v", rv.Err)
+	if sched.Err != nil {
+		fmt.Printf("\nError creating second AUS schedule: %v", sched.Err)
 	}
 
 	// Wait for the task to schedule
