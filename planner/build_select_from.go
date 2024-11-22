@@ -1280,7 +1280,8 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 	for _, fl := range filters {
 		// unnest filters can only be evaluated after the UNNEST operation
 		// subquery filters are not pushed down
-		if fl.IsUnnest() || fl.HasSubq() {
+		// volatile expressions returns FALSE for EquivalentTo (see FunctionBase.EquivalentTo)
+		if fl.IsUnnest() || fl.HasSubq() || fl.FltrExpr().HasVolatileExpr() {
 			continue
 		}
 
@@ -1298,6 +1299,7 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 
 		fltr := fl.FltrExpr()
 		origFltr := fl.OrigExpr()
+
 		if origFltr != nil {
 			terms = append(terms, origFltr.Copy())
 			if this.filter != nil {
