@@ -387,8 +387,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		OPT_COST_NOT_AVAIL, OPT_SIZE_NOT_AVAIL
 	if useCBO {
 		cost, selectivity, cardinality, size, frCost, _ =
-			indexScanCost(entry.index, origKeys, this.context.RequestId(),
-				spans, node.Alias(), this.advisorValidate(), this.context)
+			indexScanCost(entry.index, origKeys, this.context.RequestId(), spans,
+				node.Alias(), baseKeyspace.Keyspace(), this.advisorValidate(), this.context)
 		baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
 	}
 
