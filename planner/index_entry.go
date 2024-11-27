@@ -60,6 +60,7 @@ type indexEntry struct {
 	minKeys              int
 	maxKeys              int
 	sumKeys              int
+	includeKeys          int
 	nSargKeys            int
 	skeys                []bool
 	cond                 expression.Expression
@@ -87,7 +88,7 @@ type indexEntry struct {
 }
 
 func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes expression.Expressions,
-	sargLength int, partitionKeys expression.Expressions, minKeys, maxKeys, sumKeys int,
+	sargLength int, partitionKeys expression.Expressions, minKeys, maxKeys, sumKeys, includeKeys int,
 	cond, origCond expression.Expression, spans SargSpans, exactSpans bool, skeys []bool) *indexEntry {
 	rv := &indexEntry{
 		index:            index,
@@ -97,6 +98,7 @@ func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes 
 		minKeys:          minKeys,
 		maxKeys:          maxKeys,
 		sumKeys:          sumKeys,
+		includeKeys:      includeKeys,
 		skeys:            skeys,
 		cond:             cond,
 		origCond:         origCond,
@@ -151,11 +153,13 @@ func (this *indexEntry) Copy() *indexEntry {
 		index:            this.index,
 		idxKeys:          this.idxKeys.Copy(),
 		keys:             expression.CopyExpressions(this.keys),
+		includes:         expression.CopyExpressions(this.includes),
 		partitionKeys:    expression.CopyExpressions(this.partitionKeys),
 		arrayKeyPos:      this.arrayKeyPos,
 		minKeys:          this.minKeys,
 		maxKeys:          this.maxKeys,
 		sumKeys:          this.sumKeys,
+		includeKeys:      this.includeKeys,
 		nSargKeys:        this.nSargKeys,
 		cond:             expression.Copy(this.cond),
 		origCond:         expression.Copy(this.origCond),

@@ -28,10 +28,10 @@ func (this *sargable) VisitAnd(pred *expression.And) (interface{}, error) {
 	for _, child := range pred.Operands() {
 		var min int
 		if this.vector {
-			min, _, _, _ = SargableFor(nil, child, this.index, keys, this.missing, this.gsi, isArrays,
+			min, _, _, _, _ = SargableFor(nil, child, this.index, keys, this.missing, this.gsi, isArrays,
 				this.context, this.aliases)
 		} else {
-			min, _, _, _ = SargableFor(child, nil, this.index, keys, this.missing, this.gsi, isArrays,
+			min, _, _, _, _ = SargableFor(child, nil, this.index, keys, this.missing, this.gsi, isArrays,
 				this.context, this.aliases)
 		}
 		if min > 0 {

@@ -113,7 +113,7 @@ func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 	for i, k := range this.keys {
 		if _, ok := k.Expr.(*expression.All); ok {
 			keys := datastore.IndexKeys{k}
-			if min, _, _, _ := SargableFor(expr, nil, nil, keys, (i != 0), true, nil, this.context, nil); min > 0 {
+			if min, _, _, _, _ := SargableFor(expr, nil, nil, keys, (i != 0), true, nil, this.context, nil); min > 0 {
 				return map[string]*expression.Cover{
 					expr.String(): expression.NewCover(expr),
 				}, nil
