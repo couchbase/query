@@ -583,14 +583,14 @@ Restore scope to parent's scope.
 func (this *Formalizer) PopBindings() {
 
 	currLevelAllowed := this.allowed.GetValue().Fields()
-	currLevelIndentfiers := this.identifiers.GetValue().Fields()
+	currLevelIdentifiers := this.identifiers.GetValue().Fields()
 
 	this.allowed = this.allowed.Parent().(*value.ScopeValue)
 	this.identifiers = this.identifiers.Parent().(*value.ScopeValue)
 	this.aliases = this.aliases.Parent().(*value.ScopeValue)
 
 	// Identifiers that are used in current level but not defined in the current level scope move to parent
-	for ident, ident_val := range currLevelIndentfiers {
+	for ident, ident_val := range currLevelIdentifiers {
 		if currLevelAllowed != nil {
 			if _, ok := currLevelAllowed[ident]; !ok {
 				this.identifiers.SetField(ident, ident_val)
@@ -807,6 +807,10 @@ func (this *Formalizer) CheckCorrelated() bool {
 				this.correlation[id] |= id_flags
 			}
 			correlated = true
+		} else if _, ok1 := this.correlation[id]; ok1 {
+			// if an allowed identifier was added to this.correlation earlier, remove it
+			// (this could happen with PushBindings/PopBindings with extra scope)
+			delete(this.correlation, id)
 		}
 	}
 
@@ -827,7 +831,7 @@ func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) 
 				if this.FuncVariable(k) {
 					v = value.NewValue(uint32(IDENT_IS_FUNC_VAR | identFlags))
 				} else {
-					return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed", k))
+					return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed map", k))
 				}
 			}
 			this.identifiers.SetField(k, v)
