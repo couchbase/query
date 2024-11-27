@@ -192,6 +192,10 @@ func (name *systemEntry) Key() string {
 	return name.path.FullName()
 }
 
+func (name *systemEntry) ProtectedKey() string {
+	return name.path.ProtectedString()
+}
+
 func (name *systemEntry) IsGlobal() bool {
 	return false
 }
