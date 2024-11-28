@@ -385,5 +385,29 @@
         "description": "MB-64409 - DROP FUNCTION 1",
         "statements": "DROP FUNCTION `func-1`",
         "results": []
+    },
+    {
+        "description": "MB-64423 - CREATE DUMMY FUNCTION",
+        "statements": "CREATE OR REPLACE FUNCTION udf_recursion() { ( SELECT 1 ) }",
+        "results":[]
+    },
+    {
+        "description": "MB-64423 - CREATE FUNCTION",
+        "statements": "CREATE OR REPLACE FUNCTION udf_recursion(Item, AllItems, NumberOfRecursion) {( CASE WHEN NumberOfRecursion-1 < 0 then \"end\" WHEN Item.parentId is missing then Item ELSE udf_recursion(AllItems.[Item.parentId], AllItems, NumberOfRecursion-1) END ) }",
+        "results":[]
+    },
+    {
+        "description": "MB-64423 - EXECUTE FUNCTION",
+        "statements": "EXECUTE FUNCTION udf_recursion( {\"parentId\": \"6789\", \"value\": \"ChildData4\"}, {\"1234\": {\"value\": \"ParentData1\"}, \"4567\": {\"value\": \"ParentData2\"}, \"9876\": {\"parentId\": \"1234\", \"value\": \"ChildData1\"}, \"6789\": {\"parentId\": \"4567\", \"value\": \"ChildData2\"}, \"5555\": {\"parentId\": \"1234\", \"value\": \"ChildData3\"}, \"7777\": {\"parentId\": \"6789\", \"value\": \"ChildData4\"} }, 4)",
+        "results": [
+            {
+                "value": "ParentData2"
+            }
+        ]
+    },
+    {
+        "description": "MB-64423 - DROP FUNCTION",
+        "statements": "DROP FUNCTION udf_recursion",
+        "results": []
     }
 ]
