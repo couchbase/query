@@ -77,7 +77,7 @@ func (this *Field) Evaluate(item value.Value, context Context) (value.Value, err
 			return this.doEvaluate(context, first, second, walk)
 		}
 		exp := this.cache
-		static := this.operands[1].Static() != nil
+		static := this.operands[1].Static() != nil && !this.operands[1].HasStaticVariable()
 		// only consider cached value if operand is static
 		if exp == nil || !static {
 			exp = NewIdentifier(second.ToString())
