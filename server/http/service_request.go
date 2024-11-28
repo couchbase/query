@@ -995,6 +995,7 @@ const ( // Request argument names
 	NATURAL_ORGID      = "natural_orgid"
 	NATURAL_CONTEXT    = "natural_context"
 	NATURAL_OUTPUT     = "natural_output"
+	NATURAL_EXECUTE    = "natural_execute"
 )
 
 type argHandler struct {
@@ -1060,6 +1061,7 @@ var _PARAMETERS = map[string]*argHandler{
 	NATURAL_ORGID:   {handleNaturalOrgId, false},
 	NATURAL_CONTEXT: {handleNaturalContext, false},
 	NATURAL_OUTPUT:  {handleNaturalOutput, false},
+	NATURAL_EXECUTE: {handleNaturalExecute, false},
 }
 
 // common storage for the httpArgs implementations
@@ -2477,6 +2479,14 @@ func handleNaturalOutput(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	naturalOutput, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalOutput(naturalOutput)
+	}
+	return err
+}
+
+func handleNaturalExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalExecute, err := httpArgs.getTristateVal(parm, val)
+	if err == nil {
+		rv.SetNaturalShowOnly(naturalExecute == value.TRUE)
 	}
 	return err
 }
