@@ -638,3 +638,12 @@ func (this *ExpressionBase) HasVolatileExpr() bool {
 	}
 	return false
 }
+
+func (this *ExpressionBase) HasStaticVariable() bool {
+	for _, child := range this.expr.Children() {
+		if child.HasStaticVariable() {
+			return true
+		}
+	}
+	return false
+}

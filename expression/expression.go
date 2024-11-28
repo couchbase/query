@@ -255,6 +255,11 @@ type Expression interface {
 	   Contains volatile expression
 	*/
 	HasVolatileExpr() bool
+
+	/*
+	   Contains static variable
+	*/
+	HasStaticVariable() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {
