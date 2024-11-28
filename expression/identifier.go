@@ -403,3 +403,7 @@ func (this *Identifier) SetIdentFlags(aliases map[string]bool, flags uint32) {
 		}
 	}
 }
+
+func (this *Identifier) HasStaticVariable() bool {
+	return (this.identFlags & IDENT_IS_STATIC_VAR) != 0
+}
