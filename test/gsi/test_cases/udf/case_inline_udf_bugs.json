@@ -322,5 +322,33 @@
         "description": "MB-63147 - DROP FUNCTION",
         "statements": "DROP FUNCTION Test_CTE_Corr",
         "results": []
+    },
+    {
+        "description": "MB-64408 - CREATE FUNCTION",
+        "statements": "CREATE OR REPLACE FUNCTION nested_any_cte(v1, v2) { ( WITH cte1 AS (SELECT c1 FROM shellTest WHERE c1 > v1), cte2 AS ( SELECT c12 FROM shellTest st WHERE st.c11 IN (SELECT RAW c1 FROM cte1) AND ANY x IN st.a11 SATISFIES ANY a IN x.na SATISFIES a > v2 END END ) SELECT * FROM cte2 ) }",
+        "results":[]
+    },
+    {
+        "description": "MB-64408 - EXECUTE FUNCTION",
+        "statements": "EXECUTE FUNCTION nested_any_cte(0, 2)",
+        "results": [
+            [
+                {
+                    "cte2": {
+                        "c12": 2
+                    }
+                },
+                {
+                    "cte2": {
+                        "c12": 4
+                    }
+                }
+            ]
+        ]
+    },
+    {
+        "description": "MB-64408 - DROP FUNCTION",
+        "statements": "DROP FUNCTION nested_any_cte",
+        "results": []
     }
 ]

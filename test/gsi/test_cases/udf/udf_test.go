@@ -49,10 +49,12 @@ func TestUDFs(t *testing.T) {
 	externalJSTest(qc, t)
 
 	runStmt(qc, "CREATE INDEX idx1 ON shellTest(c1, c2, c3)")
+	runStmt(qc, "CREATE INDEX idx2 ON shellTest(c11, c12, DISTINCT ARRAY (DISTINCT ARRAY n FOR n IN v.na END) FOR v IN a11 END)")
 
 	runMatch("case_inline_udf_bugs.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX shellTest.idx1")
+	runStmt(qc, "DROP INDEX shellTest.idx2")
 
 	runStmt(qc, "CREATE INDEX idx2 ON product(rating)")
 	runMatch("case_inline_udf_order_by.json", false, true, qc, t)
