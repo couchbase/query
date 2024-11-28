@@ -301,6 +301,10 @@ func (name *metaEntry) Key() string {
 	return name.path.FullName()
 }
 
+func (name *metaEntry) ProtectedKey() string {
+	return name.path.ProtectedString()
+}
+
 func (name *metaEntry) IsGlobal() bool {
 	return !name.path.IsCollection()
 }

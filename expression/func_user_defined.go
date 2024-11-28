@@ -119,6 +119,11 @@ func (this *UserDefinedFunction) Indexable() bool {
 	return functions.Indexable(this.name) != value.FALSE
 }
 
+// Full name of the function with appropriate backticks
+func (this *UserDefinedFunction) ProtectedName() string {
+	return this.name.ProtectedKey()
+}
+
 /*
 Factory method pattern.
 */

@@ -645,7 +645,11 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 		return buf.String(), nil
 	}
 
-	buf.WriteString(expr.Name())
+	if udf, ok := expr.(*UserDefinedFunction); ok {
+		buf.WriteString(udf.ProtectedName())
+	} else {
+		buf.WriteString(expr.Name())
+	}
 	buf.WriteString("(")
 
 	if expr.Distinct() {
