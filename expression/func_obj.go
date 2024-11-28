@@ -2015,7 +2015,7 @@ func (this *ObjectField) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	exp := this.cache
-	static := this.operands[1].Static() != nil
+	static := this.operands[1].StaticNoVariable() != nil
 	// only consider using a cached value if second argument is static
 	if exp == nil || !static {
 		// parse field descriptor expression
@@ -2634,7 +2634,7 @@ func GetReferences(exs Expressions, item value.AnnotatedValue, context Context, 
 			if err != nil {
 				return nil, false, err
 			}
-			constant = constant && ex.Static() != nil
+			constant = constant && ex.StaticNoVariable() != nil
 			if v.Type() == value.STRING {
 				strs := splitStrings(v.ToString())
 				for _, str := range strs {

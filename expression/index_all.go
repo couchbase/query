@@ -102,6 +102,10 @@ func (this *All) Static() Expression {
 	return this.array.Static()
 }
 
+func (this *All) StaticNoVariable() Expression {
+	return this.array.StaticNoVariable()
+}
+
 func (this *All) Alias() string {
 	return this.array.Alias()
 }

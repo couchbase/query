@@ -331,6 +331,10 @@ func (this *AggregateBase) Static() expression.Expression {
 	return nil
 }
 
+func (this *AggregateBase) StaticNoVariable() expression.Expression {
+	return nil
+}
+
 /*
 Not indexable.
 */

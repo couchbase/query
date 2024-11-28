@@ -48,7 +48,7 @@ func NewLike(operands ...Expression) Function {
 		*NewFunctionBase("like", operands...),
 		nil,
 		nil,
-		(operands[1].Static() != nil && operands[2].Static() != nil),
+		(operands[1].StaticNoVariable() != nil && operands[2].StaticNoVariable() != nil),
 	}
 	p := operands[1].Value()
 	ev := operands[2].Value()

@@ -246,7 +246,7 @@ func (this *Search) ValidOperands() error {
 
 	op = this.Query()
 	val := op.Value()
-	if (val != nil && val.Type() != value.STRING && val.Type() != value.OBJECT) || op.Static() == nil {
+	if (val != nil && val.Type() != value.STRING && val.Type() != value.OBJECT) || op.StaticNoVariable() == nil {
 		return fmt.Errorf("%s() not valid second argument: %s", this.Name(), op.String())
 	}
 

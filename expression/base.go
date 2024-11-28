@@ -241,6 +241,16 @@ func (this *ExpressionBase) Static() Expression {
 	return this.expr
 }
 
+func (this *ExpressionBase) StaticNoVariable() Expression {
+	for _, child := range this.expr.Children() {
+		if child.StaticNoVariable() == nil {
+			return nil
+		}
+	}
+
+	return this.expr
+}
+
 /*
 It returns an empty string or the terminal identifier of
 the expression.
@@ -633,15 +643,6 @@ func (this *ExpressionBase) HasVolatileExpr() bool {
 	}
 	for _, child := range this.expr.Children() {
 		if child.HasVolatileExpr() {
-			return true
-		}
-	}
-	return false
-}
-
-func (this *ExpressionBase) HasStaticVariable() bool {
-	for _, child := range this.expr.Children() {
-		if child.HasStaticVariable() {
 			return true
 		}
 	}

@@ -76,6 +76,10 @@ func (this *ClockMillis) Static() Expression {
 	return this
 }
 
+func (this *ClockMillis) StaticNoVariable() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -1948,6 +1952,10 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 }
 
 func (this *NowMillis) Static() Expression {
+	return this
+}
+
+func (this *NowMillis) StaticNoVariable() Expression {
 	return this
 }
 

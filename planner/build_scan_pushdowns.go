@@ -522,7 +522,7 @@ outer:
 		}
 
 		// orderTerm is constant
-		if orderTerm.Expression().Static() != nil {
+		if orderTerm.Expression().StaticNoVariable() != nil {
 			partSortTermCount++
 			continue
 		}
