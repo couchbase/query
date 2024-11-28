@@ -350,5 +350,40 @@
         "description": "MB-64408 - DROP FUNCTION",
         "statements": "DROP FUNCTION nested_any_cte",
         "results": []
+    },
+    {
+        "description": "MB-64409 - CREATE FUNCTION 1",
+        "statements": "CREATE OR REPLACE FUNCTION `func-1`() { ( SELECT 1 ) }",
+        "results":[]
+    },
+    {
+        "description": "MB-64409 - CREATE FUNCTION 2",
+        "statements": "CREATE OR REPLACE FUNCTION `func2`() { ( SELECT `func-1`() ) }",
+        "results":[]
+    },
+    {
+        "description": "MB-64409 - EXECUTE FUNCTION",
+        "statements": "EXECUTE FUNCTION func2()",
+        "results": [
+            [
+                {
+                    "$1": [
+                        {
+                            "$1": 1
+                        }
+                    ]
+                }
+            ]
+        ]
+    },
+    {
+        "description": "MB-64409 - DROP FUNCTION 2",
+        "statements": "DROP FUNCTION func2",
+        "results": []
+    },
+    {
+        "description": "MB-64409 - DROP FUNCTION 1",
+        "statements": "DROP FUNCTION `func-1`",
+        "results": []
     }
 ]
