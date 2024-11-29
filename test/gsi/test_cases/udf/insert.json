@@ -48,6 +48,9 @@
        "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k001\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"udf\"}), VALUES(\"k002\", {\"c1\":2, \"c2\":4, \"c3\":6, \"test_id\":\"udf\"})"
    },
    {
+       "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k011\", {\"c11\":1, \"c12\":2, \"a11\":[{\"na\":[1,2,3]},{\"na\":[1,4,5]}], \"test_id\":\"udf\"}), VALUES(\"k012\", {\"c11\":2, \"c12\":4, \"a11\":[{\"na\":[2,4,6]},{\"na\":[2,8,9]}], \"test_id\":\"udf\"})"
+   },
+   {
     "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_udf1\", { \"id\" : 1, \"name\" : \"AC3 Phone\", \"brand\" : \"ACME\", \"type\" : \"phone\", \"price\" : 200, \"rating\" : null,\"warranty_years\" : 5, \"test_id\":\"udf\"})"
    },
    {
