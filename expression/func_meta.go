@@ -515,6 +515,10 @@ func (this *CurrentUser) Static() Expression {
 	return this
 }
 
+func (this *CurrentUser) StaticNoVariable() Expression {
+	return this
+}
+
 func (this *CurrentUser) SetOperator() {
 	this.operator = true
 }
