@@ -116,6 +116,10 @@ func (this *Cover) Static() Expression {
 	return this.covered.Static()
 }
 
+func (this *Cover) StaticNoVariable() Expression {
+	return this.covered.StaticNoVariable()
+}
+
 func (this *Cover) Alias() string {
 	return this.covered.Alias()
 }

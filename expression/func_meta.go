@@ -581,6 +581,10 @@ func (this *CurrentUsers) Static() Expression {
 	return this
 }
 
+func (this *CurrentUsers) StaticNoVariable() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */

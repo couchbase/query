@@ -146,6 +146,10 @@ func (this *SequenceOperation) Static() Expression {
 	return this
 }
 
+func (this *SequenceOperation) StaticNoVariable() Expression {
+	return this
+}
+
 func (this *SequenceOperation) Copy() Expression {
 	rv := &SequenceOperation{
 		next:     this.next,

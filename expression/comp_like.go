@@ -46,7 +46,7 @@ func NewLike(operands ...Expression) Function {
 	}
 	rv := &Like{}
 	rv.Init("like", operands...)
-	rv.canCacheRegex = (operands[1].Static() != nil && operands[2].Static() != nil)
+	rv.canCacheRegex = (operands[1].StaticNoVariable() != nil && operands[2].StaticNoVariable() != nil)
 
 	p := operands[1].Value()
 	ev := operands[2].Value()

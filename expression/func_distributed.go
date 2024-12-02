@@ -68,6 +68,10 @@ func (this *NodeName) Static() Expression {
 	return this.expr.(Function)
 }
 
+func (this *NodeName) StaticNoVariable() Expression {
+	return this.expr.(Function)
+}
+
 /*
 Factory method pattern.
 */
@@ -126,6 +130,10 @@ func (this *NodeUUID) Evaluate(item value.Value, context Context) (value.Value, 
 }
 
 func (this *NodeUUID) Static() Expression {
+	return this.expr.(Function)
+}
+
+func (this *NodeUUID) StaticNoVariable() Expression {
 	return this.expr.(Function)
 }
 

@@ -276,9 +276,9 @@ func skipFixedOrderTermsAndDedup(order *algebra.Order, pred expression.Expressio
 term_loop:
 	for n, term := range origTerms {
 		expr := term.Expression()
-		if expr.Static() != nil &&
-			(term.DescendingExpr() != nil && term.DescendingExpr().Static() != nil) &&
-			(term.NullsPosExpr() != nil && term.NullsPosExpr().Static() != nil) {
+		if expr.StaticNoVariable() != nil &&
+			(term.DescendingExpr() != nil && term.DescendingExpr().StaticNoVariable() != nil) &&
+			(term.NullsPosExpr() != nil && term.NullsPosExpr().StaticNoVariable() != nil) {
 			continue
 		}
 

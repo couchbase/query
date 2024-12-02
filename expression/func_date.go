@@ -64,6 +64,10 @@ func (this *ClockMillis) Static() Expression {
 	return this
 }
 
+func (this *ClockMillis) StaticNoVariable() Expression {
+	return this
+}
+
 func (this *ClockMillis) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function { return _CLOCK_MILLIS }
 }
@@ -2064,6 +2068,10 @@ func (this *NowMillis) Evaluate(item value.Value, context Context) (value.Value,
 }
 
 func (this *NowMillis) Static() Expression {
+	return this
+}
+
+func (this *NowMillis) StaticNoVariable() Expression {
 	return this
 }
 

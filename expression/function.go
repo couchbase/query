@@ -247,6 +247,10 @@ func (this *NullaryFunctionBase) Static() Expression {
 	return nil
 }
 
+func (this *NullaryFunctionBase) StaticNoVariable() Expression {
+	return nil
+}
+
 /*
 Return false (not indexable).
 */

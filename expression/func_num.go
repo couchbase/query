@@ -542,6 +542,10 @@ func (this *E) Static() Expression {
 	return this
 }
 
+func (this *E) StaticNoVariable() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -818,6 +822,10 @@ func (this *NaN) Static() Expression {
 	return this
 }
 
+func (this *NaN) StaticNoVariable() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -878,6 +886,10 @@ func (this *NegInf) Value() value.Value {
 }
 
 func (this *NegInf) Static() Expression {
+	return this
+}
+
+func (this *NegInf) StaticNoVariable() Expression {
 	return this
 }
 
@@ -944,6 +956,10 @@ func (this *PI) Static() Expression {
 	return this
 }
 
+func (this *PI) StaticNoVariable() Expression {
+	return this
+}
+
 /*
 Factory method pattern.
 */
@@ -1003,6 +1019,10 @@ func (this *PosInf) Value() value.Value {
 }
 
 func (this *PosInf) Static() Expression {
+	return this
+}
+
+func (this *PosInf) StaticNoVariable() Expression {
 	return this
 }
 
@@ -1221,6 +1241,10 @@ func (this *Random) Value() value.Value {
 }
 
 func (this *Random) Static() Expression {
+	return nil
+}
+
+func (this *Random) StaticNoVariable() Expression {
 	return nil
 }
 

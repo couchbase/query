@@ -105,6 +105,10 @@ func (this *Identifier) Static() Expression {
 	return nil
 }
 
+func (this *Identifier) StaticNoVariable() Expression {
+	return nil
+}
+
 func (this *Identifier) Alias() string {
 	return this.identifier
 }
@@ -402,8 +406,4 @@ func (this *Identifier) SetIdentFlags(aliases map[string]bool, flags uint32) {
 			this.identFlags |= flags
 		}
 	}
-}
-
-func (this *Identifier) HasStaticVariable() bool {
-	return (this.identFlags & IDENT_IS_STATIC_VAR) != 0
 }

@@ -63,6 +63,10 @@ func (this *Constant) Static() Expression {
 	return this
 }
 
+func (this *Constant) StaticNoVariable() Expression {
+	return this
+}
+
 /*
 A constant expression is indexable as part of another expression.
 */

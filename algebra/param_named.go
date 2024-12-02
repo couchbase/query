@@ -81,6 +81,10 @@ func (this *NamedParameter) Static() expression.Expression {
 	return this
 }
 
+func (this *NamedParameter) StaticNoVariable() expression.Expression {
+	return this
+}
+
 /*
 Returns false. Not indexable.
 */

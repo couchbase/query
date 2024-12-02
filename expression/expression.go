@@ -87,6 +87,13 @@ type Expression interface {
 	Static() Expression
 
 	/*
+	   StaticNoVariable() is similar to Static(), except that
+	   it does not include WITH alias and function variables
+	   which are considered static.
+	*/
+	StaticNoVariable() Expression
+
+	/*
 	   As per the N1QL specs this function returns the terminal
 	   identifier in the case the expression is a path. It can
 	   be thought of an expression alias. For example if for the
@@ -256,11 +263,6 @@ type Expression interface {
 	   Contains volatile expression
 	*/
 	HasVolatileExpr() bool
-
-	/*
-	   Contains static variable
-	*/
-	HasStaticVariable() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

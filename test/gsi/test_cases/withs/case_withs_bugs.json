@@ -244,6 +244,26 @@
                 "c21": 3
             }
         ]
+    },
+    {
+	"testcase": "MB-64442",
+        "statements": "SELECT (WITH w1 AS (d) SELECT d1.[w1]  FROM {\"a\":\"aa\", \"b\": \"bb\"} AS d1) AS val FROM [\"a\", \"b\"] AS d",
+        "results": [
+            {
+                "val": [
+                    {
+                        "w1": "aa"
+                    }
+                ]
+            },
+            {
+                "val": [
+                    {
+                        "w1": "bb"
+                    }
+                ]
+            }
+        ]
     }
 ]
 
