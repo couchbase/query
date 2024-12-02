@@ -428,6 +428,7 @@ const (
 	IX_STAT_AVG_ITEM_SIZE IndexStatType = "AVG_ITEM_SIZE"
 	IX_STAT_AVG_PAGE_SIZE IndexStatType = "AVG_PAGE_SIZE"
 	IX_STAT_PARTITION_ID  IndexStatType = "PARTITION_ID"
+	IX_STAT_LAST_RESET_TS IndexStatType = "LAST_RESET_TS"
 )
 
 func (indexStatType IndexStatType) String() string {
