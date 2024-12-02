@@ -100,7 +100,9 @@ func TestAus(t *testing.T) {
 
 	fmt.Println("Performing test cleanup.")
 	// Drop all indexes
-	runStmt(qc, "DROP INDEX customer_age ON customer")
+	runStmt(qc, "DROP INDEX product_idx_1 ON product")
+	runStmt(qc, "DROP INDEX customer_idx_1 ON customer")
+	runStmt(qc, "DROP INDEX customer_idx_2 ON customer")
 
 	// Delete all CBO statistics in keyspaces used
 	runStmt(qc, "UPDATE STATISTICS FOR customer DELETE ALL")
