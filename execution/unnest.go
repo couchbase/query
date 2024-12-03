@@ -57,6 +57,8 @@ func (this *Unnest) beforeItems(context *Context, parent value.Value) bool {
 	filter := this.plan.Filter()
 	if filter != nil {
 		filter.EnableInlistHash(&this.operatorCtx)
+		aliasMap := make(map[string]string, 1)
+		SetSearchInfo(aliasMap, parent, &this.operatorCtx, filter)
 	}
 	return true
 }
