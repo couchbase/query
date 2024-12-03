@@ -1,0 +1,309 @@
+{
+  "#comment": "All elements starting with # are examples of alternatives and are not used",
+  "loglevel": "info",
+  "logfile": "/tmp/combined.log",
+  "cluster_setup": {
+    "server_location": "https://latestbuilds.service.couchbase.com/builds/latestbuilds/couchbase-server/morpheus",
+    "#server_location": "/path/to/images",
+    "#comment": "'latest' looks for the highest build number regardless of version - the location should point to one version",
+    "#build": "latest",
+    "build": "2263",
+    "cluster-init": "-c localhost --cluster-username Administrator --cluster-password password --services query,data,index --cluster-ramsize 6144 --cluster-index-ramsize 512",
+    "#comment": "If an existing cluster should be restarted (when running as root)",
+    "#restart": true
+  },
+  "notifications": {
+    "#comment": "Configure these and a message will be sent notifying of failures",
+    "#subject": "Combined testing notification custom subject line",
+    "smtp_server": "localhost",
+    "smtp_port": 25,
+    "#comment": "Only needed if the SMTP server configured supports AUTH",
+    "#smtp_user": "root",
+    "#smtp_password": "couchbase",
+    "#comment": "List all who should receive notifications.",
+    "receipients": [
+      "query-dev@couchbase.com",
+      "couchbase@localhost"
+    ],
+    "#comment": "Minimum elapsed time between e-mail notifications.  Use this to limit the spamming when things go wrong",
+    "min_interval": "1m"
+  },
+  "runtime": {
+    "clients": {
+      "#comment": "Optional range for the number of clients (default 1)",
+      "min": 5,
+      "max": 10
+    },
+    "#comment": "Test run time.",
+    "duration": "2m",
+    "#comment": "Negative for effectively infinite iterations.",
+    "iterations": -1,
+    "request": {
+      "#comment": "Any standard request parameters.",
+      "timeout": "1m15s"
+    }
+  },
+  "statements": {
+    "#comment": "Optional location of fixed statements in files with the name suffix .sql",
+    "location": "./statements",
+    "#comment": "Optional location of templates in files with the name suffix .tpl",
+    "templates": "./templates",
+    "#comment": "Optional indication to generate random statements",
+    "random_statements": {
+      "#comment": "Set both to the same for a fixed number of random statements. Both are optional defaulting to 0. Negatives are ignored.",
+      "min": 10,
+      "max": 50
+    },
+    "#comment": "Optional location of fixed statements in files withe the name suffix .sql that are run once just prior to the main testing loop starting.  They can be used to create routines etc.",
+    "initial_statements": "./initial_statements",
+    "#comment": "List of SQL error codes that are ignored/not considered failures.",
+    "ignore_errors": [
+      "Non number entries are ignored",
+      "Inner of nested-loop join > 1000 docs, no index.",
+      5420,
+      "Syntax error.",
+      3000,
+      "Timeout",
+      "1080 - this is effectively commented out"
+    ]
+  },
+  "database": {
+    "config": {
+      "#comment": "Any Query node config can go here in the form for the *Query node* settings REST endpoint",
+      "completed-threshold": 2000,
+      "node-quota": 20480
+    },
+    "#comment": "If UPDATE STATISTICS commands should be run after loading the data.",
+    "update_statistics": true,
+    "#comment": "Drop all buckets (even those not defined in the test config) before starting.",
+    "purge": true,
+    "#comment": "Create buckets always; drop & recreate existing buckets (implies new scopes & collections)",
+    "force_create": false,
+    "random_keyspaces": {
+      "#comment": "Set both to the same for a fixed number of random keyspaces. Both are optional defaulting to 0. Negatives are ignored.",
+      "min": 3,
+      "max": 3,
+      "#comment": "Optional range for the number of schemas in each random keyspace (default 1)",
+      "schemas": {
+        "min": 1,
+        "max": 3
+      },
+      "#comment": "Optional range for the number of documents in each random keyspace schema (default 100)",
+      "size": {
+        "min": 0,
+        "max": 10000
+      },
+      "#comment": "Optional range for the number of fields in each random keyspace (default 10)",
+      "fields": {
+        "min": 5,
+        "max": 15
+      }
+    },
+    "keyspaces": [
+      {
+        "keyspace": "test._default.c1",
+        "bucket-config": {
+          "ramQuota": 200
+        },
+        "schemas": [
+          {
+            "count": {
+              "#comment": "Set both to the same for a fixed number of documents. Both are optional defaulting to 0. Negatives are ignored.",
+              "min": 10,
+              "max": 100
+            },
+            "fields": [
+              {
+                "name": "f1",
+                "type": "int",
+                "min": 0,
+                "max": 20
+              },
+              {
+                "name": "f2",
+                "type": "float",
+                "max": 100.0,
+                "step": -0.1347
+              },
+              {
+                "name": "s1",
+                "type": "string",
+                "min": 10,
+                "max": 300,
+                "prefix": "prefix::",
+                "suffix": "::suffix"
+              },
+              {
+                "name": "s2",
+                "type": "string",
+                "value": "a fixed value"
+              },
+              {
+                "name": "d1",
+                "type": "date"
+              },
+              {
+                "name": "d2",
+                "type": "date",
+                "min": "2020-01-01T00:00:00.000Z",
+                "max": "2030-01-01T00:00:00.000Z",
+                "step": 1,
+                "unit": "day"
+              },
+              {
+                "name": "d3",
+                "type": "date",
+                "min": "2020-01-01T00:00:00.000Z",
+                "max": "2020-12-31T23:59:59.999Z",
+                "unit": "hour"
+              },
+              {
+                "name": "s3",
+                "type": "string",
+                "random": true,
+                "values": [
+                  "one",
+                  "two",
+                  "three"
+                ]
+              },
+              {
+                "name": "s4",
+                "type": "string",
+                "max": 5,
+                "prefix": "a test prefix ",
+                "values": [
+                  "the",
+                  "quick",
+                  "brown",
+                  "fox",
+                  "jumps",
+                  "over",
+                  "the",
+                  "lazy",
+                  "dog"
+                ]
+              },
+              {
+                "name": "s5",
+                "type": "string",
+                "values": [
+                  "how",
+                  "now",
+                  "brown",
+                  "cow"
+                ]
+              },
+              {
+                "name": "bf1",
+                "type": "boolean",
+                "optional": true
+              },
+              {
+                "name": "any1"
+              }
+            ]
+          },
+          {
+            "type": "my second type",
+            "count": {
+              "#comment": "Set both to the same for a fixed number of documents. Both are optional defaulting to 0. Negatives are ignored.",
+              "min": 0,
+              "max": 10
+            },
+            "fields": [
+              {
+                "name": "f1",
+                "#comment": "Type as an array of fields to define an object field",
+                "type": [
+                  {
+                    "name": "f1",
+                    "type": [
+                      {
+                        "name": "x",
+                        "type": "int"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "f2",
+                "#comment": "Add 'random':true for a random length up to the value specified",
+                "type": {
+                  "type": "float",
+                  "min": 100,
+                  "max": 1000
+                },
+                "length": 10
+              },
+              {
+                "name": "f3",
+                "type": "string",
+                "null": true
+              },
+              {
+                "name": "f4",
+                "type": "boolean",
+                "null": true
+              }
+            ]
+          }
+        ],
+        "#comment": "List from the index key definition on. No pre-validation; passed directly to GSI with the necessary CREATE INDEX preamble",
+        "indexes": [
+          "(f1,distinct array v for v in f2 end)",
+          "(f1) where f2 = 2"
+        ],
+        "#comment": "For simple joins provide single 'from' and 'to' fields; the condition will always be equality",
+        "joins": [
+          {
+            "keyspace": "test.s1.xxx",
+            "from": "f1",
+            "to": "fx"
+          }
+        ]
+      },
+      {
+        "keyspace": "test.s1.xxx",
+        "schemas": [
+          {
+            "count": {
+              "#comment": "Set both to the same for a fixed number of documents. Both are optional defaulting to 0. Negatives are ignored.",
+              "min": 100,
+              "max": 1213
+            },
+            "fields": [
+              {
+                "name": "fx",
+                "type": "int",
+                "min": 1000
+              },
+              {
+                "name": "known_field",
+                "type": "string",
+                "values": [
+                  "something",
+                  "nothing"
+                ]
+              },
+              {
+                "name": "known_field2",
+                "type": "int",
+                "max": 10
+              }
+            ]
+          }
+        ],
+        "indexes": [],
+        "#comment": "For more complex join conditions provide an 'on' element used as is save for '${left}' and '${right}' being replaced with the relevant aliases for the keyspaces",
+        "joins": [
+          {
+            "keyspace": "test._default.c1",
+            "on": "${left}.fx > ${right}.f1"
+          }
+        ]
+      }
+    ]
+  }
+}
