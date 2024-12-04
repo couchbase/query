@@ -6,7 +6,7 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
@@ -84,7 +84,7 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)"
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)"
                   ]
                 }
             ],
@@ -245,9 +245,9 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)",
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)",
                       "ORDERED",
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
@@ -325,8 +325,8 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c)",
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "INDEX(`c`)",
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
@@ -404,7 +404,7 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "USE_HASH(c): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
+                      "USE_HASH(`c`): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
                   ]
                 }
             ],
@@ -482,7 +482,7 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "USE_HASH(c): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
+                      "USE_HASH(`c`): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
                   ]
                 }
             ],

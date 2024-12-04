@@ -6,9 +6,9 @@
             "results": [
                 {
                   "hints_followed": [
-                      "AVOID_INDEX(c cust_customerId_lastName_firstName)",
-                      "AVOID_NL(p)",
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "AVOID_INDEX(`c` `cust_customerId_lastName_firstName`)",
+                      "AVOID_NL(`p`)",
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
@@ -86,9 +86,9 @@
             "results": [
                 {
                   "hints_followed": [
-                      "AVOID_INDEX(c cust_lastName_firstName_customerId)",
-                      "AVOID_HASH(p)",
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "AVOID_INDEX(`c` `cust_lastName_firstName_customerId`)",
+                      "AVOID_HASH(`p`)",
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
@@ -166,11 +166,11 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)",
-                      "AVOID_HASH(p)"
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)",
+                      "AVOID_HASH(`p`)"
                   ],
                   "hints_not_followed": [
-                      "AVOID_INDEX(c cust_lastName_firstName_customerId): AVOID_INDEX hint cannot be followed"
+                      "AVOID_INDEX(`c` `cust_lastName_firstName_customerId`): AVOID_INDEX hint cannot be followed"
                   ]
                 }
             ],
@@ -248,11 +248,11 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)",
-                      "AVOID_NL(p)"
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)",
+                      "AVOID_NL(`p`)"
                   ],
                   "hints_not_followed": [
-                      "AVOID_INDEX(c): AVOID_INDEX hint cannot be followed"
+                      "AVOID_INDEX(`c`): AVOID_INDEX hint cannot be followed"
                   ]
                 }
             ],
@@ -330,11 +330,11 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ],
                   "hints_with_error": [
-                      "USE_HASH(p/PROBE): Duplicated join hint specified for keyspace: p",
-                      "AVOID_NL(p): Duplicated join hint specified for keyspace: p"
+                      "USE_HASH(`p`/PROBE): Duplicated join hint specified for keyspace: p",
+                      "AVOID_NL(`p`): Duplicated join hint specified for keyspace: p"
                   ]
                 }
             ],

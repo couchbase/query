@@ -10,7 +10,7 @@
                     "cardinality": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "USE_HASH(c)"
+                            "USE_HASH(`c`)"
                         ]
                     }
                 }
@@ -97,7 +97,7 @@
                             "ORDERED"
                         ],
                         "hints_with_error": [
-                            "USE_HASH(c): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
+                            "USE_HASH(`c`): Join hint (USE HASH or USE NL) cannot be specified on the first from term: c"
                         ]
                     }
                 }
@@ -181,7 +181,7 @@
                     "cardinality": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "USE_HASH(c)"
+                            "USE_HASH(`c`)"
                         ]
                     }
                 }
@@ -265,7 +265,7 @@
                     "cardinality": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                            "INDEX_ALL(`c` `cust_lastName_firstName_customerId` `cust_customerId_lastName_firstName`)"
                         ]
                     }
                 }
@@ -299,9 +299,9 @@
                     "cardinality": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "INDEX_ALL(p purch_customerId_purchaseId purch_purchaseId)",
-                            "INDEX(c cust_lastName_firstName_customerId)",
-                            "USE_NL(p)"
+                            "INDEX_ALL(`p` `purch_customerId_purchaseId` `purch_purchaseId`)",
+                            "INDEX(`c` `cust_lastName_firstName_customerId`)",
+                            "USE_NL(`p`)"
                         ]
                     }
                 }
