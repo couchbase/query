@@ -6,7 +6,7 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(c cust_lastName_firstName_customerId cust_customerId): Invalid indexes specified: cust_customerId"
+                      "INDEX(`c` `cust_lastName_firstName_customerId` `cust_customerId`): Invalid indexes specified: cust_customerId"
                   ]
                 }
             ],
@@ -39,8 +39,8 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(c cust_lastName_firstName_customerId): Duplicated index hint specified for keyspace: c",
-                      "INDEX(c cust_customerId_lastName_firstName): Duplicated index hint specified for keyspace: c"
+                      "INDEX(`c` `cust_lastName_firstName_customerId`): Duplicated index hint specified for keyspace: c",
+                      "INDEX(`c` `cust_customerId_lastName_firstName`): Duplicated index hint specified for keyspace: c"
                   ]
                 }
             ],
@@ -118,11 +118,11 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)",
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)",
                       "ORDERED"
                   ],
                   "invalid_hints": [
-                      "INDEX_SS(p purch_purchaseId): Invalid hint name"
+                      "INDEX_SS(`p` `purch_purchaseId`): Invalid hint name"
                   ]
                 }
             ],
@@ -200,11 +200,11 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)",
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)",
                       "ORDERED"
                   ],
                   "hints_not_followed": [
-                      "INDEX(p purch_purchaseId): INDEX hint cannot be followed"
+                      "INDEX(`p` `purch_purchaseId`): INDEX hint cannot be followed"
                   ]
                 }
             ],

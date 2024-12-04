@@ -81,8 +81,8 @@
                     "cardinality": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "USE_HASH(l2/PROBE)",
-                            "USE_HASH(r/BUILD)"
+                            "USE_HASH(`l2`/PROBE)",
+                            "USE_HASH(`r`/BUILD)"
                         ]
                     }
                 }
@@ -141,8 +141,8 @@
                     "cardinality": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "JOIN_FILTER(pd)",
-                            "USE_HASH(pd/PROBE)"
+                            "JOIN_FILTER(`pd`)",
+                            "USE_HASH(`pd`/PROBE)"
                         ]
                     }
                 }
@@ -195,9 +195,9 @@
                     "cardinality": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "JOIN_FILTER(pd)",
-                            "USE_HASH(c/BUILD)",
-                            "USE_HASH(pd/PROBE)"
+                            "JOIN_FILTER(`pd`)",
+                            "USE_HASH(`c`/BUILD)",
+                            "USE_HASH(`pd`/PROBE)"
                         ]
                     }
                 }

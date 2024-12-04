@@ -6,10 +6,10 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(t st_target_idx)"
+                      "INDEX(`t` `st_target_idx`)"
                   ],
                   "hints_with_error": [
-                      "USE_HASH(t): Join hint not supported in an UPDATE or DELETE statement",
+                      "USE_HASH(`t`): Join hint not supported in an UPDATE or DELETE statement",
                       "ORDERED: Ordered hint not supported in DML statements"
                   ]
                 }
@@ -27,8 +27,8 @@
             "results": [
                 {
                     "hints_with_error": [
-                        "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t",
-                        "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t"
+                        "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t",
+                        "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t"
                     ]
                 }
             ],
@@ -45,10 +45,10 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(t st_target_idx)"
+                      "INDEX(`t` `st_target_idx`)"
                   ],
                   "hints_with_error": [
-                      "USE_HASH(t): Join hint not supported in an UPDATE or DELETE statement",
+                      "USE_HASH(`t`): Join hint not supported in an UPDATE or DELETE statement",
                       "ORDERED: Ordered hint not supported in DML statements"
                   ]
                 }
@@ -66,8 +66,8 @@
             "results": [
                 {
                     "hints_with_error": [
-                        "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t",
-                        "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t"
+                        "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t",
+                        "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t"
                     ]
                 }
             ],
@@ -84,8 +84,8 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(t st_target_idx)",
-                      "USE_HASH(s/PROBE)"
+                      "INDEX(`t` `st_target_idx`)",
+                      "USE_HASH(`s`/PROBE)"
                   ]
                 }
             ],
@@ -138,11 +138,11 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(t st_target_idx)", 
-                      "USE_HASH(s/BUILD)"
+                      "INDEX(`t` `st_target_idx`)", 
+                      "USE_HASH(`s`/BUILD)"
                   ],
                   "hints_with_error": [
-                      "INDEX(s st_source_idx): Index hint specified on non-keyspace: s"
+                      "INDEX(`s` `st_source_idx`): Index hint specified on non-keyspace: s"
                   ]
                 }
             ],
@@ -183,10 +183,10 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t",
-                      "USE_HASH(s/PROBE): Duplicated join hint specified for keyspace: s",
-                      "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t",
-                      "USE_HASH(s/PROBE): Duplicated join hint specified for keyspace: s"
+                      "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t",
+                      "USE_HASH(`s`/PROBE): Duplicated join hint specified for keyspace: s",
+                      "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t",
+                      "USE_HASH(`s`/PROBE): Duplicated join hint specified for keyspace: s"
                   ]
                 }
             ],
@@ -240,10 +240,10 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t",
-                      "USE_HASH(s/BUILD): Duplicated join hint specified for keyspace: s",
-                      "INDEX(t st_target_idx): Duplicated index hint specified for keyspace: t",
-                      "USE_HASH(s/BUILD): Duplicated join hint specified for keyspace: s"
+                      "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t",
+                      "USE_HASH(`s`/BUILD): Duplicated join hint specified for keyspace: s",
+                      "INDEX(`t` `st_target_idx`): Duplicated index hint specified for keyspace: t",
+                      "USE_HASH(`s`/BUILD): Duplicated join hint specified for keyspace: s"
                  ]
                 }
             ],
@@ -284,8 +284,8 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(t st_target_idx): Index hint not supported for target keyspace in a MERGE statement with ON KEY clause",
-                      "USE_HASH(s/PROBE): Join hint not supported in a MERGE statement with ON KEY clause"
+                      "INDEX(`t` `st_target_idx`): Index hint not supported for target keyspace in a MERGE statement with ON KEY clause",
+                      "USE_HASH(`s`/PROBE): Join hint not supported in a MERGE statement with ON KEY clause"
                  ]
                 }
             ],
@@ -339,8 +339,8 @@
             "results": [
                 {
                   "hints_with_error": [
-                      "INDEX(t st_target_idx): Index hint not supported for target keyspace in a MERGE statement with ON KEY clause",
-                      "USE_HASH(s/PROBE): Join hint not supported in a MERGE statement with ON KEY clause"
+                      "INDEX(`t` `st_target_idx`): Index hint not supported for target keyspace in a MERGE statement with ON KEY clause",
+                      "USE_HASH(`s`/PROBE): Join hint not supported in a MERGE statement with ON KEY clause"
                  ]
                 }
             ],

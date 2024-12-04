@@ -6,7 +6,7 @@
             "results": [
                 {
                     "hints_followed": [
-                        "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                        "INDEX_ALL(`c` `cust_lastName_firstName_customerId` `cust_customerId_lastName_firstName`)"
                     ]
                 }
             ],
@@ -39,7 +39,7 @@
             "results": [
                 {
                     "hints_not_followed": [
-                        "INDEX_ALL(p purch_customerId_metaid purch_purchaseId): INDEX_ALL hint cannot be followed"
+                        "INDEX_ALL(`p` `purch_customerId_metaid` `purch_purchaseId`): INDEX_ALL hint cannot be followed"
                     ]
                 }
             ],
@@ -64,7 +64,7 @@
             "results": [
                 {
                     "invalid_hints": [
-                        "INDEX_ALL(c cust_lastName_firstName_customerId): INDEX_ALL hint must have more than one index specified"
+                        "INDEX_ALL(`c` `cust_lastName_firstName_customerId`): INDEX_ALL hint must have more than one index specified"
                     ]
                 }
             ],
@@ -97,7 +97,7 @@
             "results": [
                 {
                      "hints_followed": [
-                         "INDEX_ALL(p purch_customerId_metaid purch_purchaseId purch_customerId_purchaseId)"
+                         "INDEX_ALL(`p` `purch_customerId_metaid` `purch_purchaseId` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
@@ -126,7 +126,7 @@
             "results": [
                 {
                      "hints_followed": [
-                         "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                         "INDEX_ALL(`c` `cust_lastName_firstName_customerId` `cust_customerId_lastName_firstName`)"
                   ]
                 }
             ],
@@ -154,7 +154,7 @@
             "results": [
                 {
                      "hints_followed": [
-                         "INDEX_ALL(c cust_lastName_firstName_customerId cust_customerId_lastName_firstName)"
+                         "INDEX_ALL(`c` `cust_lastName_firstName_customerId` `cust_customerId_lastName_firstName`)"
                   ]
                 }
             ],
@@ -182,7 +182,7 @@
             "results": [
                 {
                     "hints_with_error": [
-                        "INDEX_ALL(p purch_customerId purch_purchaseId purch_customerId_purchaseId): Invalid indexes specified: purch_customerId"
+                        "INDEX_ALL(`p` `purch_customerId` `purch_purchaseId` `purch_customerId_purchaseId`): Invalid indexes specified: purch_customerId"
                     ]
                 }
             ],
@@ -211,8 +211,8 @@
             "results": [
                 {
                     "hints_with_error": [
-                        "INDEX_ALL(p purch_purchaseId purch_customerId_purchaseId): INDEX_ALL hint cannot be mixed with other index or FTS index hints for keyspace: p",
-                        "AVOID_INDEX(p purch_customerId_metaid): Index hint cannot be mixed with INDEX_ALL hint for keyspace: p"
+                        "INDEX_ALL(`p` `purch_purchaseId` `purch_customerId_purchaseId`): INDEX_ALL hint cannot be mixed with other index or FTS index hints for keyspace: p",
+                        "AVOID_INDEX(`p` `purch_customerId_metaid`): Index hint cannot be mixed with INDEX_ALL hint for keyspace: p"
                     ]
                 }
             ],
@@ -241,8 +241,8 @@
             "results": [
                 {
                     "hints_with_error": [
-                        "INDEX_ALL(p purch_purchaseId purch_customerId_purchaseId): Duplicated INDEX_ALL hint specified for keyspace: p",
-                        "INDEX_ALL(p purch_customerId_metaid purch_purchaseId): Duplicated INDEX_ALL hint specified for keyspace: p"
+                        "INDEX_ALL(`p` `purch_purchaseId` `purch_customerId_purchaseId`): Duplicated INDEX_ALL hint specified for keyspace: p",
+                        "INDEX_ALL(`p` `purch_customerId_metaid` `purch_purchaseId`): Duplicated INDEX_ALL hint specified for keyspace: p"
                     ]
                 }
             ],
@@ -271,9 +271,9 @@
             "results": [
                 {
                     "hints_followed": [
-                        "INDEX_ALL(p purch_customerId_purchaseId purch_purchaseId)",
-                        "INDEX(c cust_lastName_firstName_customerId)",
-                        "USE_NL(p)"
+                        "INDEX_ALL(`p` `purch_customerId_purchaseId` `purch_purchaseId`)",
+                        "INDEX(`c` `cust_lastName_firstName_customerId`)",
+                        "USE_NL(`p`)"
                     ]
                 }
             ],

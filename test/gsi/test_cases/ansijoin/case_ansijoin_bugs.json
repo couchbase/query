@@ -363,14 +363,14 @@
                     "present": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "USE_HASH(final/BUILD)"
+                            "USE_HASH(`final`/BUILD)"
                         ],
                         "~from_clause_subqueries": [
                             {
                                 "alias": "final",
                                 "optimizer_hints": {
                                     "hints_followed": [
-                                        "USE_NL(d10)"
+                                        "USE_NL(`d10`)"
                                     ]
                                 }
                             }
@@ -396,7 +396,7 @@
                     "present": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "USE_NL(final)"
+                            "USE_NL(`final`)"
                         ]
                     }
                 }
