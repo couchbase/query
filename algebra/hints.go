@@ -745,14 +745,14 @@ func (this *HintHash) FormatHint(jsonStyle bool) string {
 		bytes, _ := json.Marshal(hint)
 		return string(bytes)
 	}
-	s := this.keyspace
+	s := "`" + this.keyspace + "`"
 	switch this.option {
 	case HASH_OPTION_BUILD:
 		s += "/BUILD"
 	case HASH_OPTION_PROBE:
 		s += "/PROBE"
 	}
-	return formatHint("USE_HASH", []string{s})
+	return formatHintNoQuote("USE_HASH", []string{s})
 }
 
 func (this *HintHash) formatJSON() map[string]interface{} {
@@ -922,6 +922,21 @@ func (this *HintInvalid) formatJSON() map[string]interface{} {
 }
 
 func formatHint(hint_name string, hint_args []string) string {
+	s := hint_name
+	if hint_args != nil {
+		s += "("
+		for i, arg := range hint_args {
+			if i > 0 {
+				s += " "
+			}
+			s += "`" + arg + "`"
+		}
+		s += ")"
+	}
+	return s
+}
+
+func formatHintNoQuote(hint_name string, hint_args []string) string {
 	s := hint_name
 	if hint_args != nil {
 		s += "(" + strings.Join(hint_args, " ") + ")"

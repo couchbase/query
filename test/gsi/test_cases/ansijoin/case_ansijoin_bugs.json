@@ -381,7 +381,7 @@
                     "present": true,
                     "optimizer_hints": {
                         "hints_followed": [
-                            "USE_NL(final)"
+                            "USE_NL(`final`)"
                         ]
                     }
                 }

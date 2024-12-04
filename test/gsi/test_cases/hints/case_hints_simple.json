@@ -6,7 +6,7 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
@@ -84,7 +84,7 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)"
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)"
                   ]
                 }
             ],
@@ -245,9 +245,9 @@
             "results": [
                 {
                   "hints_followed": [
-                      "INDEX(c cust_lastName_firstName_customerId)",
+                      "INDEX(`c` `cust_lastName_firstName_customerId`)",
                       "ORDERED",
-                      "INDEX(p purch_customerId_purchaseId)"
+                      "INDEX(`p` `purch_customerId_purchaseId`)"
                   ]
                 }
             ],
