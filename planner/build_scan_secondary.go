@@ -618,12 +618,14 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 
 	if useCBO && len(baseKeyspace.VectorFilters()) > 0 {
-		// for now, do not use CBO for consideration of vector index for covering
-		// since we don't yet have proper costing for vector index scan
+		// for now, do not use CBO for consideration of bhive vector index for covering
+		// since we don't yet have proper costing for bhive vector index scan
 		for _, entry := range sargables {
 			if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
-				useCBO = false
-				break
+				if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() {
+					useCBO = false
+					break
+				}
 			}
 		}
 	}

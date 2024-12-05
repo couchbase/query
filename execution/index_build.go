@@ -105,7 +105,7 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 			if state != datastore.ONLINE {
 				idxNames = append(idxNames, name)
 				if updateStatsNames != nil {
-					if index6, ok := index.(datastore.Index6); !ok || !index6.IsVector() {
+					if index6, ok := index.(datastore.Index6); !ok || !index6.IsVector() || !index6.IsBhive() {
 						updateStatsNames = append(updateStatsNames, name)
 					}
 				}

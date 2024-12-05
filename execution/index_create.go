@@ -90,6 +90,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			include = node.Include().Expressions()
 		}
 		isVector := node.Keys().HasVector() && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT)
+		isBhive := isVector && node.Vector()
 
 		if !ok6 && isVector {
 			context.Error(errors.NewIndexerVersionError(datastore.INDEXER6_VERSION, "Index key has vector attribute"))
@@ -137,7 +138,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 			} else if context.useCBO && (node.Using() == datastore.GSI || node.Using() == datastore.DEFAULT) &&
-				!deferred(node.With()) && !isVector {
+				!deferred(node.With()) && !isBhive {
 
 				err = updateStats([]string{node.Name()}, "create_index", this.plan.Keyspace(), context)
 				if err != nil {
