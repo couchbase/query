@@ -67,9 +67,6 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 
 		if this.plan.Force() {
 			plan := this.plan.Plan()
-
-			// set the time the query plan for the the prepared statements was created
-			plan.SetPreparedTime(context.PlanPreparedTime())
 			err := prepareds.AddPrepared(plan)
 			if err != nil {
 				context.Fatal(err)

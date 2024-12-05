@@ -131,6 +131,7 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	r["namespace"] = this.namespace
 	r["queryContext"] = this.queryContext
 	r["reqType"] = this.reqType
+	r["planPreparedTime"] = this.preparedTime.Format(util.DEFAULT_FORMAT)
 
 	if this.userAgent != "" {
 		if this.reprepared {
@@ -181,6 +182,7 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
+		PreparedTime       string                 `json:"planPreparedTime"`
 		UserAgent          string                 `json:"userAgent"`
 		CreatingUserAgent  string                 `json:"creatingUserAgent"`
 		Users              string                 `json:"users"`
@@ -217,6 +219,11 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
+	prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
+	if err != nil {
+		return 0, err
+	}
+	this.preparedTime = prepTime
 
 	if _unmarshalled.UserAgent != "" {
 		this.userAgent = _unmarshalled.UserAgent

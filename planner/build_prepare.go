@@ -12,6 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -76,6 +77,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetUserAgent(this.context.dsContext.UserAgent())
 	prep.SetUsers(this.context.dsContext.Users())
 	prep.SetRemoteAddr(this.context.dsContext.RemoteAddr())
+	prep.SetPreparedTime(util.Now().ToTime())
 
 	json_bytes, err := prep.MarshalJSON()
 	if err != nil {
