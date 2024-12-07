@@ -913,16 +913,35 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 }
 
 // Calculates how many keys te sargable keys matched with se sargable keys and se condition
+// for include columns, if an include column is sargable, consider it the same as index key
 func matchedKeysConditions(se, te *indexEntry, shortest bool, predFc map[string]value.Value) (nk, nc int) {
 
+	var sk, tk expression.Expression
+
 outer:
-	for ti, tk := range te.sargKeys {
+	for ti := 0; ti < len(te.keys)+len(te.includes); ti++ {
 		if !te.skeys[ti] {
 			continue
 		}
+		if ti < len(te.sargKeys) {
+			tk = te.sargKeys[ti]
+		} else if ti >= len(te.keys) {
+			tk = te.includes[ti-len(te.keys)]
+		} else {
+			// not expected
+			continue
+		}
 
-		for si, sk := range se.sargKeys {
+		for si := 0; si < len(se.keys)+len(se.includes); si++ {
 			if se.skeys[si] {
+				if si < len(se.sargKeys) {
+					sk = se.sargKeys[si]
+				} else if si >= len(se.keys) {
+					sk = se.includes[si-len(se.keys)]
+				} else {
+					// not expected
+					continue
+				}
 				if matchedIndexKey(sk, tk) {
 					nk++
 					continue outer
@@ -1158,6 +1177,16 @@ func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
 	si := 0
 	ti := 0
 	for si < len(se.skeys) && ti < len(te.skeys) {
+		// for include columns, since the ordering of include columns is not important, if we
+		// find an entry corresponding to a "non-sargable" include column, simply skip it
+		if si >= len(se.idxKeys) && !se.skeys[si] {
+			si++
+			continue
+		}
+		if ti >= len(te.idxKeys) && !te.skeys[ti] {
+			ti++
+			continue
+		}
 		if se.skeys[si] != te.skeys[ti] {
 			if se.skeys[si] {
 				if tnc == 0 {

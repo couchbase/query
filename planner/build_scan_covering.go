@@ -428,8 +428,8 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 				}
 				continue
 			}
-			c_sumKeys := ce.idxEntry.sumKeys
-			i_sumKeys := centry.idxEntry.sumKeys
+			c_sumKeys := ce.idxEntry.sumKeys + ce.idxEntry.includeKeys
+			i_sumKeys := centry.idxEntry.sumKeys + centry.idxEntry.includeKeys
 			if c_sumKeys != i_sumKeys {
 				if c_sumKeys > i_sumKeys {
 					centry = ce
@@ -441,7 +441,13 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 				continue
 			}
 			c_minKeys := ce.idxEntry.minKeys
+			if c_minKeys == len(ce.idxEntry.idxKeys) {
+				c_minKeys += ce.idxEntry.includeKeys
+			}
 			i_minKeys := centry.idxEntry.minKeys
+			if i_minKeys == len(centry.idxEntry.idxKeys) {
+				i_minKeys += centry.idxEntry.includeKeys
+			}
 			if c_minKeys > i_minKeys {
 				centry = ce
 				i_cost = c_cost
@@ -483,13 +489,13 @@ couter:
 	// Keep indexes with max sumKeys
 	sumKeys := 0
 	for _, ce := range coveringEntries {
-		if max := ce.idxEntry.sumKeys + ce.idxEntry.nEqCond; max > sumKeys {
+		if max := ce.idxEntry.sumKeys + ce.idxEntry.nEqCond + ce.idxEntry.includeKeys; max > sumKeys {
 			sumKeys = max
 		}
 	}
 
 	for c, ce := range coveringEntries {
-		if ce.idxEntry.sumKeys+ce.idxEntry.nEqCond < sumKeys {
+		if ce.idxEntry.sumKeys+ce.idxEntry.nEqCond+ce.idxEntry.includeKeys < sumKeys {
 			delete(coveringEntries, c)
 		}
 	}
@@ -497,13 +503,21 @@ couter:
 	// Keep indexes with max minKeys
 	minKeys := 0
 	for _, ce := range coveringEntries {
-		if ce.idxEntry.minKeys > minKeys {
-			minKeys = ce.idxEntry.minKeys
+		cminKeys := ce.idxEntry.minKeys
+		if cminKeys == len(ce.idxEntry.idxKeys) {
+			cminKeys += ce.idxEntry.includeKeys
+		}
+		if cminKeys > minKeys {
+			minKeys = cminKeys
 		}
 	}
 
 	for c, ce := range coveringEntries {
-		if ce.idxEntry.minKeys < minKeys {
+		cminKeys := ce.idxEntry.minKeys
+		if cminKeys == len(ce.idxEntry.idxKeys) {
+			cminKeys += ce.idxEntry.includeKeys
+		}
+		if cminKeys < minKeys {
 			delete(coveringEntries, c)
 		}
 	}
@@ -511,7 +525,7 @@ couter:
 	// Use shortest remaining index
 	minLen := 0
 	for _, ce := range coveringEntries {
-		cLen := len(ce.idxEntry.keys)
+		cLen := len(ce.idxEntry.keys) + len(ce.idxEntry.includes)
 		if centry == nil {
 			centry = ce
 			minLen = cLen
