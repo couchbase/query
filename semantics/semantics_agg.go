@@ -27,6 +27,10 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 		return errors.NewRecursiveWithSemanticError("Aggregates/Window functions are not allowed")
 	}
 
+	if this.hasSemFlag(_SEM_ORDERBY_VECTOR_DIST) {
+		return errors.NewVectorFunctionError("Cannot use aggregate/window functions with vector search function")
+	}
+
 	aggName := strings.ToUpper(agg.Name())
 
 	// Aggregate syntax has DISTINCT but aggregate doesn't support it
@@ -67,10 +71,6 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 	// Window Aggregation is EE feature only
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return errors.NewEnterpriseFeature("Window function", "semantics.visit_aggregate_function")
-	}
-
-	if this.hasSemFlag(_SEM_ORDERBY_VECTOR_DIST) {
-		return errors.NewVectorFunctionError("Cannot use window functions with vector search function")
 	}
 
 	// Aggregate syntax has second argument check semantics
