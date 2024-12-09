@@ -53,6 +53,10 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 				return nil, errors.NewIndexNotAllowed("Array Index USING FTS", "")
 			}
 		} else if term.HasAttribute(algebra.IK_VECTOR) {
+			if !this.hasSemFlag(_SEM_ENTERPRISE) {
+				return nil, errors.NewEnterpriseFeature("Index with vector key", "semantics.visit_create_index")
+			}
+
 			nvectors++
 			indexKey := expr.String()
 			if term.HasAttribute(algebra.IK_MISSING) {
