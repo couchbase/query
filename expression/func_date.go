@@ -1305,6 +1305,7 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
+	capacity = capacity / int64(step)
 	if err != nil {
 		return setWarning(context, err)
 	}
@@ -1522,6 +1523,7 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
+	capacity = capacity / int64(step)
 	if err != nil {
 		return setWarning(context, err)
 	}
