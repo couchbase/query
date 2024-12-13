@@ -20,25 +20,31 @@ import (
 // Perform ANSI OUTER JOIN to ANSI INNER JOIN transforation on all nodes in a FROM clause (by walking the algebra AST tree)
 type ansijoinOuterToInner struct {
 	baseKeyspaces    map[string]*base.BaseKeyspace
+	keyspaceNames    map[string]string
 	unnests          []*algebra.Unnest
 	pushableOnclause expression.Expression
 }
 
-func newAnsijoinOuterToInner(baseKeyspaces map[string]*base.BaseKeyspace, unnests []*algebra.Unnest) *ansijoinOuterToInner {
+func newAnsijoinOuterToInner(baseKeyspaces map[string]*base.BaseKeyspace,
+	keyspaceNames map[string]string, unnests []*algebra.Unnest) *ansijoinOuterToInner {
 	return &ansijoinOuterToInner{
 		baseKeyspaces: baseKeyspaces,
+		keyspaceNames: keyspaceNames,
 		unnests:       unnests,
 	}
 }
 
-func (this *ansijoinOuterToInner) addOnclause(onclause expression.Expression) {
-	if onclause != nil {
+func (this *ansijoinOuterToInner) addOnclause(onclause expression.Expression) bool {
+	if onclause != nil && pushableOnclause(onclause, this.baseKeyspaces, this.keyspaceNames) {
 		if this.pushableOnclause != nil {
 			this.pushableOnclause = expression.NewAnd(this.pushableOnclause, onclause)
 		} else {
 			this.pushableOnclause = onclause
 		}
+		return true
 	}
+
+	return false
 }
 
 func (this *ansijoinOuterToInner) decrementOuterlevel(alias string) {
@@ -140,7 +146,7 @@ func (this *ansijoinOuterToInner) VisitAnsiJoin(node *algebra.AnsiJoin) (interfa
 		return nil, err
 	}
 	if aoj2aij {
-		this.addOnclause(node.Onclause())
+		node.SetPushable(this.addOnclause(node.Onclause()))
 		node.SetOuter(false)
 		this.decrementOuterlevel(node.Alias())
 	}
@@ -163,7 +169,7 @@ func (this *ansijoinOuterToInner) VisitAnsiNest(node *algebra.AnsiNest) (interfa
 		return nil, err
 	}
 	if aoj2aij {
-		this.addOnclause(node.Onclause())
+		node.SetPushable(this.addOnclause(node.Onclause()))
 		node.SetOuter(false)
 		this.decrementOuterlevel(node.Alias())
 	}
