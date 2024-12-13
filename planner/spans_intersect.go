@@ -88,6 +88,7 @@ func (this *IntersectSpans) Streamline() SargSpans {
 	spans := _SPANS_POOL.Get()
 	defer _SPANS_POOL.Put(spans)
 
+	var arraySpans map[int]SargSpans
 	var sps []SargSpans
 	for _, span := range this.spans {
 		span = span.Streamline()
@@ -107,9 +108,23 @@ func (this *IntersectSpans) Streamline() SargSpans {
 			} else if s == _EXACT_FULL_SPANS {
 				exactFull = true
 			} else if s != _FULL_SPANS {
-				spans = append(spans, s)
+				arrayId := s.ArrayId()
+				if arrayId > 0 {
+					if asp, ok := arraySpans[arrayId]; ok {
+						s = s.Constrain(asp)
+					} else if arraySpans == nil {
+						arraySpans = make(map[int]SargSpans, 4)
+					}
+					arraySpans[arrayId] = s
+				} else {
+					spans = append(spans, s)
+				}
 			}
 		}
+	}
+
+	for _, asp := range arraySpans {
+		spans = append(spans, asp)
 	}
 
 	spans = dedupSpans(spans)

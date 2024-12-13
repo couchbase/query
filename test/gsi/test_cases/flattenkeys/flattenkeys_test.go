@@ -84,9 +84,11 @@ func TestFlattenkeys(t *testing.T) {
 
 	runStmt(qc, "CREATE INDEX ix1 ON shellTest(c1, DISTINCT ARRAY FLATTEN_KEYS(v1.type,v1.phone) FOR v1 IN contacts END, c2)")
 	runStmt(qc, "CREATE INDEX ix2 ON shellTest(c11, DISTINCT ARRAY(DISTINCT ARRAY FLATTEN_KEYS(v1.type,v1.phone) FOR v1 IN v.contacts END) FOR v IN infos END, c12)")
+	runStmt(qc, "CREATE INDEX ix10 ON shellTest(DISTINCT ARRAY FLATTEN_KEYS(v.c1,v.c2) FOR v IN arr1 END)")
 	runMatch("case_bugs.json", false, true, qc, t)
 	runStmt(qc, "DROP INDEX shellTest.ix1")
 	runStmt(qc, "DROP INDEX shellTest.ix2")
+	runStmt(qc, "DROP INDEX shellTest.ix10")
 
 	case_clean(qc, t) // Delete the test specific data
 }
