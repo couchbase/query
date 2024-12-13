@@ -441,39 +441,55 @@ func constrainSpans(spans1, spans2 plan.Spans2) *TermSpans {
 }
 
 func constrainSpan(span1, span2 *plan.Span2) {
-	if span1.Exact && (!span2.Exact || constrainEmptySpan(span1, span2) || constrainEmptySpan(span2, span1)) {
-		span1.Exact = false
+	// when this is called during sarging of index spans, each span has a single Range;
+	// however it is possible to have multiple ranges during intersectSpan generation,
+	// in which case constrain each individual range separately
+	end := len(span1.Ranges)
+	if end > len(span2.Ranges) {
+		end = len(span2.Ranges)
 	}
+	for i := 0; i < end; i++ {
+		range1 := span1.Ranges[i]
+		range2 := span2.Ranges[i]
 
+		if span1.Exact && (!span2.Exact || constrainEmptySpan(range1, range2) || constrainEmptySpan(range2, range1)) {
+			span1.Exact = false
+		}
+
+		span1.Exact = constrainRange(range1, range2, span1.Exact, span2.Exact)
+	}
+}
+
+func constrainRange(range1, range2 *plan.Range2, exact1, exact2 bool) bool {
 	var changed bool
 
 	// Adjust low bound
-	if span2.Ranges[0].Low != nil {
-		span1.Exact = span1.Exact && span2.Exact
+	if range2.Low != nil {
+		exact1 = exact1 && exact2
 
-		if span1.Ranges[0].Low == nil {
-			// Get low bound from span2
-			span1.Ranges[0].Low = span2.Ranges[0].Low
-			span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
-				(span2.Ranges[0].Inclusion & datastore.LOW)
-			span1.Ranges[0].Selec1 = span2.Ranges[0].Selec1
+		if range1.Low == nil {
+			// Get low bound from range2
+			range1.Low = range2.Low
+			range1.Inclusion = (range1.Inclusion & datastore.HIGH) |
+				(range2.Inclusion & datastore.LOW)
+			range1.Selec1 = range2.Selec1
 			changed = true
 		} else {
 			// Keep the greater or unknown low bound from
-			// span1 and span2
+			// range1 and range2
 
-			low1 := span1.Ranges[0].Low.Value()
-			low2 := span2.Ranges[0].Low.Value()
+			low1 := range1.Low.Value()
+			low2 := range2.Low.Value()
 
-			if span1.Exact {
+			if exact1 {
 				if low1 == nil && low2 == nil {
-					span1.Exact = false
-				} else if low1 == nil && (low2.Type() > value.NULL || (span2.Ranges[0].Inclusion&datastore.LOW) != 0) {
+					exact1 = false
+				} else if low1 == nil && (low2.Type() > value.NULL || (range2.Inclusion&datastore.LOW) != 0) {
 					// query parameter, non inclusive null
-					span1.Exact = false
-				} else if low2 == nil && (low1.Type() > value.NULL || (span1.Ranges[0].Inclusion&datastore.LOW) != 0) {
+					exact1 = false
+				} else if low2 == nil && (low1.Type() > value.NULL || (range1.Inclusion&datastore.LOW) != 0) {
 					// non inclusive null, query paramtere
-					span1.Exact = false
+					exact1 = false
 				}
 			}
 
@@ -498,45 +514,45 @@ func constrainSpan(span1, span2 *plan.Span2) {
 				}
 			}
 			if useBoth {
-				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
-					(span1.Ranges[0].Inclusion & span2.Ranges[0].Inclusion & datastore.LOW)
+				range1.Inclusion = (range1.Inclusion & datastore.HIGH) |
+					(range1.Inclusion & range2.Inclusion & datastore.LOW)
 				changed = true
 			} else if useGreatest {
-				span1.Exact = false
-				span1.Ranges[0].Low = getLowHigh(span1.Ranges[0].Low, span2.Ranges[0].Low, true)
-				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
-					((span1.Ranges[0].Inclusion | span2.Ranges[0].Inclusion) & datastore.LOW)
+				exact1 = false
+				range1.Low = getLowHigh(range1.Low, range2.Low, true)
+				range1.Inclusion = (range1.Inclusion & datastore.HIGH) |
+					((range1.Inclusion | range2.Inclusion) & datastore.LOW)
 				changed = true
 			} else if use2 {
-				span1.Ranges[0].Low = span2.Ranges[0].Low
-				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.HIGH) |
-					(span2.Ranges[0].Inclusion & datastore.LOW)
-				span1.Ranges[0].Selec1 = span2.Ranges[0].Selec1
+				range1.Low = range2.Low
+				range1.Inclusion = (range1.Inclusion & datastore.HIGH) |
+					(range2.Inclusion & datastore.LOW)
+				range1.Selec1 = range2.Selec1
 				changed = true
 			}
 		}
 	}
 	// Adjust high bound
-	if span2.Ranges[0].High != nil {
-		span1.Exact = span1.Exact && span2.Exact
+	if range2.High != nil {
+		exact1 = exact1 && exact2
 
-		if span1.Ranges[0].High == nil {
-			// Get high bound from span2
+		if range1.High == nil {
+			// Get high bound from range2
 
-			span1.Ranges[0].High = span2.Ranges[0].High
-			span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
-				(span2.Ranges[0].Inclusion & datastore.HIGH)
-			span1.Ranges[0].Selec2 = span2.Ranges[0].Selec2
+			range1.High = range2.High
+			range1.Inclusion = (range1.Inclusion & datastore.LOW) |
+				(range2.Inclusion & datastore.HIGH)
+			range1.Selec2 = range2.Selec2
 			changed = true
 		} else {
 			// Keep the lesser or unknown high bound from
-			// span1 and span2
+			// range1 and range2
 
-			high1 := span1.Ranges[0].High.Value()
-			high2 := span2.Ranges[0].High.Value()
+			high1 := range1.High.Value()
+			high2 := range2.High.Value()
 
-			if span1.Exact && (high1 == nil || high2 == nil) {
-				span1.Exact = false
+			if exact1 && (high1 == nil || high2 == nil) {
+				exact1 = false
 			}
 
 			var use2, useBoth, useLeast bool
@@ -559,50 +575,52 @@ func constrainSpan(span1, span2 *plan.Span2) {
 				}
 			}
 			if useBoth {
-				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
-					(span1.Ranges[0].Inclusion & span2.Ranges[0].Inclusion & datastore.HIGH)
+				range1.Inclusion = (range1.Inclusion & datastore.LOW) |
+					(range1.Inclusion & range2.Inclusion & datastore.HIGH)
 				changed = true
 			} else if useLeast {
-				span1.Exact = false
-				span1.Ranges[0].High = getLowHigh(span1.Ranges[0].High, span2.Ranges[0].High, false)
-				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
-					((span1.Ranges[0].Inclusion | span2.Ranges[0].Inclusion) & datastore.HIGH)
+				exact1 = false
+				range1.High = getLowHigh(range1.High, range2.High, false)
+				range1.Inclusion = (range1.Inclusion & datastore.LOW) |
+					((range1.Inclusion | range2.Inclusion) & datastore.HIGH)
 				changed = true
 			} else if use2 {
-				span1.Ranges[0].High = span2.Ranges[0].High
-				span1.Ranges[0].Inclusion = (span1.Ranges[0].Inclusion & datastore.LOW) |
-					(span2.Ranges[0].Inclusion & datastore.HIGH)
-				span1.Ranges[0].Selec2 = span2.Ranges[0].Selec2
+				range1.High = range2.High
+				range1.Inclusion = (range1.Inclusion & datastore.LOW) |
+					(range2.Inclusion & datastore.HIGH)
+				range1.Selec2 = range2.Selec2
 				changed = true
 			}
 		}
 	}
 
 	if changed {
-		span1.Ranges[0].SetCheckSpecialSpan()
-		span1.Ranges[0].InheritFlags(span2.Ranges[0])
+		range1.SetCheckSpecialSpan()
+		range1.InheritFlags(range2)
 	}
+
+	return exact1
 }
 
-func constrainEmptySpan(span1, span2 *plan.Span2) bool {
+func constrainEmptySpan(range1, range2 *plan.Range2) bool {
 	// handle empty span for f1 >= 3 and f1 < 3, f1 < 3 and f1 >= 3
 
-	if span1.Ranges[0].High == nil || span2.Ranges[0].Low == nil {
+	if range1.High == nil || range2.Low == nil {
 		return false
 	}
 
-	// span1 HIGH, span2 LOW are set, so it will not empty span
-	if (span1.Ranges[0].Inclusion&datastore.HIGH) != 0 && (span2.Ranges[0].Inclusion&datastore.LOW) != 0 {
+	// range1 HIGH, range2 LOW are set, so it will not empty span
+	if (range1.Inclusion&datastore.HIGH) != 0 && (range2.Inclusion&datastore.LOW) != 0 {
 		return false
 	}
 
-	// span1 HIGH, span2 LOW are not set, so it will not empty span
-	if (span1.Ranges[0].Inclusion&datastore.HIGH) == 0 && (span2.Ranges[0].Inclusion&datastore.LOW) == 0 {
+	// range1 HIGH, range2 LOW are not set, so it will not empty span
+	if (range1.Inclusion&datastore.HIGH) == 0 && (range2.Inclusion&datastore.LOW) == 0 {
 		return false
 	}
 
-	high1 := span1.Ranges[0].High.Value()
-	low2 := span2.Ranges[0].Low.Value()
+	high1 := range1.High.Value()
+	low2 := range2.Low.Value()
 	if low2 != nil && high1 != nil && high1.Equals(low2).Truth() {
 		return true
 	}
