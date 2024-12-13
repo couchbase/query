@@ -183,7 +183,7 @@ func indexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys
 	sel float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		sel, _ := optutil.CalcIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, considerInternal, context)
+		sel, _ := optutil.CalcIndexSelec(index, "", sargKeys, skipKeys, spans.spans, alias, considerInternal, context)
 		return sel, nil
 	case *IntersectSpans:
 		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, false, considerInternal, context)
