@@ -340,6 +340,45 @@
                 ]
             }
         ]
+    },
+    {
+        "testcase": "MB-64613",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'st3' AND v.`outer` IS MISSING END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT st1.c12 AS c112, st2.c22 AS c222, st3.c12 AS c312, st4.c22 AS c422 FROM shellTest AS st1 LEFT JOIN shellTest AS st2 ON st1.c11 = st2.c21 AND st2.type = 'right' LEFT JOIN shellTest AS st3 ON st2.c21 = st3.c11 AND st3.type = 'left' LEFT JOIN shellTest AS st4 ON st3.c11 = st4.c21 AND st4.type = 'right' WHERE st1.type = 'left' AND st2.c22 IN [20, 21] AND st3.c12 > 10",
+        "results": [
+            {
+                "c112": 20,
+                "c222": 20,
+                "c312": 20,
+                "c422": 20
+            },
+            {
+                "c112": 20,
+                "c222": 20,
+                "c312": 20,
+                "c422": 21
+            },
+            {
+                "c112": 20,
+                "c222": 21,
+                "c312": 20,
+                "c422": 20
+            },
+            {
+                "c112": 20,
+                "c222": 21,
+                "c312": 20,
+                "c422": 21
+            }
+        ]
     }
 ]
-

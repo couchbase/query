@@ -54,20 +54,17 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias string, path *algebra.Path,
 }
 
 func (this *keyspaceFinder) addOnclause(onclause expression.Expression) bool {
-	if onclause != nil {
-		// add onclause if it does not reference any previous outer tables
-		if !pushableOnclause(onclause, this.baseKeyspaces, this.keyspaceMap) {
-			return false
-		}
-
+	// add onclause if it does not reference any previous outer tables
+	if onclause != nil && pushableOnclause(onclause, this.baseKeyspaces, this.keyspaceMap) {
 		if this.pushableOnclause != nil {
 			this.pushableOnclause = expression.NewAnd(this.pushableOnclause, onclause)
 		} else {
 			this.pushableOnclause = onclause
 		}
+		return true
 	}
 
-	return true
+	return false
 }
 
 func (this *keyspaceFinder) visitJoin(left algebra.FromTerm, right algebra.SimpleFromTerm, outer bool) error {

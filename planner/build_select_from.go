@@ -116,7 +116,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			defer _UNNEST_POOL.Put(unnests)
 			unnests = collectInnerUnnests(node.From(), unnests)
 
-			aoj2aij := newAnsijoinOuterToInner(this.baseKeyspaces, unnests)
+			aoj2aij := newAnsijoinOuterToInner(this.baseKeyspaces, this.keyspaceNames, unnests)
 			_, err = node.From().Accept(aoj2aij)
 			if err != nil {
 				return err
