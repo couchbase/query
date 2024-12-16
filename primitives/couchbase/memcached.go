@@ -320,6 +320,17 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		case gomemcached.SYNC_WRITE_RECOMMITINPROGRESS:
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+		case gomemcached.CONFIG_ONLY:
+			// Wait for sometime and check for a new vbmap
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+			if desc.retry && desc.version == b.Version {
+				b.Refresh()
+			}
+			desc.version = b.Version
+
+			// If there are no vbuckets for this bucket on the node, discard the connection
+			desc.discard = b.obsoleteNode(node)
 		}
 		if logging.LogLevel() == logging.DEBUG {
 			logging.Debugf("[%p:%s:%s:%d] %s retry:%v", b, b.Name, b.getAbbreviatedUUID(), vb, resp.Status.String(), desc.retry)
