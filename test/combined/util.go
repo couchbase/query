@@ -254,10 +254,10 @@ func createBucket(name string, config map[string]interface{}) error {
 				resp.Body.Close()
 				break
 			}
-			logging.DBG("%v", resp.Status)
+			//logging.DBG("%v", resp.Status)
 			if resp != nil && resp.Body != nil {
 				x, _ := io.ReadAll(resp.Body)
-				logging.DBG("%v", string(x))
+				//logging.DBG("%v", string(x))
 				resp.Body.Close()
 			}
 			time.Sleep(_RETRY_WAIT)
@@ -283,10 +283,10 @@ func alterBucket(name string, config map[string]interface{}) error {
 				resp.Body.Close()
 				break
 			}
-			logging.DBG("%v", resp.Status)
+			//logging.DBG("%v", resp.Status)
 			if resp != nil && resp.Body != nil {
 				x, _ := io.ReadAll(resp.Body)
-				logging.DBG("%v", string(x))
+				//logging.DBG("%v", string(x))
 				resp.Body.Close()
 			}
 			time.Sleep(_RETRY_WAIT)

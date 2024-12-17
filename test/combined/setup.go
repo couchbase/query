@@ -187,7 +187,7 @@ func getRefs(loc string, refs []string) ([]string, error) {
 		}
 	}
 	if !isHtml {
-		logging.DBG("Not html")
+		//logging.DBG("Not html")
 		resp.Body.Close()
 		refs = append(refs, strings.TrimSuffix(loc, "/"))
 		return refs, nil
