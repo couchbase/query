@@ -27,7 +27,7 @@ func SargableFor(pred, vpred expression.Expression, index datastore.Index, keys 
 	}
 
 	if or, ok := pred.(*expression.Or); ok {
-		return sargableForOr(or, vpred, index, keys, missing, gsi, isArrays, context, aliases)
+		return sargableForOr(or, vpred, index, keys, includes, missing, gsi, isArrays, context, aliases)
 	}
 
 	skiped := false
@@ -100,10 +100,10 @@ func SargableFor(pred, vpred expression.Expression, index datastore.Index, keys 
 }
 
 func sargableForOr(or *expression.Or, vpred expression.Expression, index datastore.Index, keys datastore.IndexKeys,
-	missing, gsi bool, isArrays []bool, context *PrepareContext, aliases map[string]bool) (
-	min, max, sum, include int, skeys []bool) {
+	includes expression.Expressions, missing, gsi bool, isArrays []bool, context *PrepareContext,
+	aliases map[string]bool) (min, max, sum, include int, skeys []bool) {
 
-	skeys = make([]bool, len(keys))
+	skeys = make([]bool, len(keys)+len(includes))
 
 	// OR should have already been flattened with DNF transformation
 	for _, c := range or.Operands() {
