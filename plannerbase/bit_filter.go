@@ -67,7 +67,16 @@ func (this *BFSource) GetIndexExprs(index datastore.Index, alias string,
 	for _, bfInfo := range this.bfInfos {
 		if _, ok := bfInfo.indexes[index]; ok {
 			if curBFInfo, ok := buildBFInfos[index]; ok && curBFInfo != nil {
-				curBFInfo.exprs = append(curBFInfo.exprs, bfInfo.other)
+				add := true
+				for _, exp := range curBFInfo.exprs {
+					if exp.EquivalentTo(bfInfo.other) {
+						add = false
+						break
+					}
+				}
+				if add {
+					curBFInfo.exprs = append(curBFInfo.exprs, bfInfo.other)
+				}
 			} else {
 				buildBFInfos[index] = newBuildBFInfo(alias, expression.Expressions{bfInfo.other})
 			}
