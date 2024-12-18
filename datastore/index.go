@@ -495,7 +495,7 @@ type Indexer5 interface {
 
 // //////////////////////////////////////////////////////////////////////
 //
-// # Index API6 introduced in 7.7.0 for Vector index
+// # Index API6 introduced in 8.0.0 for Vector index
 //
 // //////////////////////////////////////////////////////////////////////
 type IndexDistanceType string
@@ -520,6 +520,15 @@ type IndexPartitionSet struct {
 
 type IndexPartitionSets []*IndexPartitionSet
 
+type BhiveStatType string
+
+const (
+	BHIVE_STAT_RES_RATIO     BhiveStatType = "RESIDENT_RATIO"    // resident ratio of graph layer
+	BHIVE_STAT_VEC_PER_CELL  BhiveStatType = "VECTORS_PER_CELL"  // avg num of vectors retrieved per cell
+	BHIVE_STAT_FETCH_SIZE    BhiveStatType = "GRAPH_FECTCH_SIZE" // graph fetch size
+	BHIVE_STAT_RERANK_FACTOR BhiveStatType = "RERANK_FACTOR"     // rerank factor
+)
+
 type Indexer6 interface {
 	Indexer5
 
@@ -542,6 +551,7 @@ type Index6 interface {
 	VectorDescription() string
 	Include() expression.Expressions
 	AllowRerank() bool
+	// BhiveStorageStats() ([]map[BhiveStatType]value.Value, errors.Error)
 
 	Scan6(requestId string, spans Spans2, reverse, distinctAfterProjection bool,
 		projection *IndexProjection, offset, limit int64,
