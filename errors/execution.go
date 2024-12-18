@@ -352,8 +352,8 @@ func NewAdviseIndexError(e error, msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
-func NewUpdateStatisticsError(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_UPDATE_STATISTICS, IKey: "execution.update_statistics",
+func NewUpdateStatisticsError(msg string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_UPDATE_STATISTICS, IKey: "execution.update_statistics", ICause: e,
 		InternalMsg:    msg,
 		InternalCaller: CallerN(1)}
 }
