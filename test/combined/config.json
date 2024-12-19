@@ -3,11 +3,12 @@
   "loglevel": "info",
   "logfile": "/tmp/combined.log",
   "cluster_setup": {
-    "server_location": "https://latestbuilds.service.couchbase.com/builds/latestbuilds/couchbase-server/morpheus",
+    "#server_location": "https://server.com/path/to/version",
     "#server_location": "/path/to/images",
     "#comment": "'latest' looks for the highest build number regardless of version - the location should point to one version",
-    "#build": "latest",
-    "build": "2263",
+    "build": "latest",
+    "#build": "2263",
+    "#comment": "Adjust the couchbase-cli cluster-init command line options to suit.",
     "cluster-init": "-c localhost --cluster-username Administrator --cluster-password password --services query,data,index --cluster-ramsize 6144 --cluster-index-ramsize 512",
     "#comment": "If an existing cluster should be restarted (when running as root)",
     "#restart": true
@@ -22,11 +23,10 @@
     "#smtp_password": "couchbase",
     "#comment": "List all who should receive notifications.",
     "receipients": [
-      "query-dev@couchbase.com",
       "couchbase@localhost"
     ],
     "#comment": "Minimum elapsed time between e-mail notifications.  Use this to limit the spamming when things go wrong",
-    "min_interval": "1m"
+    "min_interval": "5m"
   },
   "runtime": {
     "clients": {
@@ -35,8 +35,8 @@
       "max": 10
     },
     "#comment": "Test run time.",
-    "duration": "2m",
-    "#comment": "Negative for effectively infinite iterations.",
+    "duration": "8h",
+    "#comment": "-1 for infinite iterations.",
     "iterations": -1,
     "request": {
       "#comment": "Any standard request parameters.",
@@ -64,7 +64,9 @@
       "Syntax error.",
       3000,
       "Timeout",
-      "1080 - this is effectively commented out"
+      "1080 - this is effectively commented out",
+      "Node quota",
+      5600
     ]
   },
   "database": {
@@ -250,7 +252,7 @@
             ]
           }
         ],
-        "#comment": "List from the index key definition on. No pre-validation; passed directly to GSI with the necessary CREATE INDEX preamble",
+        "#comment": "List from the index key definition on. No pre-validation; passed directly to the server with the necessary CREATE INDEX preamble",
         "indexes": [
           "(f1,distinct array v for v in f2 end)",
           "(f1) where f2 = 2"

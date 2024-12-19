@@ -15,7 +15,6 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/debug"
-	"sort"
 	"strings"
 	"sync"
 )
@@ -683,97 +682,11 @@ func DumpAllStacks(level Level, msg string) {
 	if skipLogging(level) {
 		return
 	}
-	stacks := make([]runtime.StackRecord, runtime.NumGoroutine())
-	n, ok := runtime.GoroutineProfile(stacks)
-	if !ok {
-		buf := make([]byte, 20*1024*1024)
-		copy(buf, msg+"\n")
-		n := runtime.Stack(buf[len(msg)+1:], true)
-		s := string(buf[:n+len(msg)+1])
-		Logf(level, s)
-	} else {
-		stacks = stacks[:n]
-		cnt := make(map[int]int)
-		for i := 0; i < len(stacks); {
-			same := false
-			for j := 0; j < i; j++ {
-				if len(stacks[i].Stack()) == len(stacks[j].Stack()) {
-					same = true
-					for ii := range stacks[i].Stack0 {
-						if stacks[i].Stack0[ii] != stacks[j].Stack0[ii] {
-							same = false
-							break
-						} else if stacks[i].Stack0[ii] == 0 {
-							break
-						}
-					}
-					if same {
-						cnt[j] = cnt[j] + 1
-						copy(stacks[i:], stacks[i+1:])
-						stacks = stacks[:len(stacks)-1]
-						break
-					}
-				}
-			}
-			if !same {
-				cnt[i] = 1
-				i++
-			}
-		}
-		order := make([][2]int, len(cnt))
-		i := 0
-		for k, v := range cnt {
-			order[i][0] = k
-			order[i][1] = v
-			i++
-		}
-		cnt = nil
-		sort.Slice(order, func(i int, j int) bool {
-			if order[i][1] > order[j][1] {
-				return true
-			} else if order[i][1] < order[j][1] {
-				return false
-			}
-			return len(stacks[order[i][0]].Stack()) > len(stacks[order[j][0]].Stack())
-		})
-		var sb strings.Builder
-		sb.WriteString(msg)
-		sb.WriteRune('\n')
-		for i := range order {
-			sb.WriteString(fmtpkg.Sprintf("%d @\n", order[i][1]))
-			frames := runtime.CallersFrames(stacks[order[i][0]].Stack())
-			m := 0
-			for more := true; more == true; {
-				var frame runtime.Frame
-				frame, more = frames.Next()
-				if frame.Func != nil {
-					l := len(frame.Function)
-					if l > m {
-						m = l
-					}
-				}
-			}
-			frames = runtime.CallersFrames(stacks[order[i][0]].Stack())
-			for more := true; more == true; {
-				var frame runtime.Frame
-				frame, more = frames.Next()
-				if frame.Func != nil {
-					sb.WriteRune(' ')
-					sb.WriteString(frame.Function)
-					for n := m - len(frame.Function); n > 0; n-- {
-						sb.WriteRune(' ')
-					}
-					sb.WriteRune(' ')
-					sb.WriteString(frame.File)
-					sb.WriteRune(':')
-					sb.WriteString(fmtpkg.Sprintf("%d", frame.Line))
-					sb.WriteRune('\n')
-				}
-			}
-			sb.WriteRune('\n')
-		}
-		Logf(level, sb.String())
-	}
+	buf := make([]byte, 20*MiB)
+	copy(buf, msg+"\n")
+	n := runtime.Stack(buf[len(msg)+1:], true)
+	s := string(buf[:n+len(msg)+1])
+	Logf(level, s)
 }
 
 func getFileLine(caller int) string {

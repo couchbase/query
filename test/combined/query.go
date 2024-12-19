@@ -236,12 +236,20 @@ func (this *Query) complete() {
 }
 
 func (this *Query) SQL(baseAlias string) string {
+	return this.doSQL(baseAlias, true)
+}
+
+func (this *Query) doSQL(baseAlias string, lock bool) string {
 	if this.sql != "" {
 		return this.aliasedSQL(baseAlias)
 	}
-	this.Lock()
+	if lock {
+		this.Lock()
+	}
 	if this.sql != "" {
-		this.Unlock()
+		if lock {
+			this.Unlock()
+		}
 		return this.aliasedSQL(baseAlias)
 	}
 
@@ -315,7 +323,9 @@ func (this *Query) SQL(baseAlias string) string {
 	sb.WriteString(this.limit)
 
 	this.sql = sb.String()
-	this.Unlock()
+	if lock {
+		this.Unlock()
+	}
 	return this.aliasedSQL(baseAlias)
 }
 
@@ -361,7 +371,7 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 func (this *Query) MarshalJSON() ([]byte, error) {
 	this.Lock()
 	m := map[string]interface{}{
-		"statement":   this.sql,
+		"statement":   this.doSQL("", false),
 		"executions":  this.executions,
 		"failed":      this.failed,
 		"lastFailure": this.lastFailure,

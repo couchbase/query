@@ -12,16 +12,19 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 )
 
-var configFile = flag.String("config", CONFIG, "Configuration file path")
+var configFile = flag.String("config", CONFIG, "Comma-separated list of configuration file paths to load")
 
 var DB *Database
 
@@ -29,7 +32,7 @@ var InitialQueries []*Query
 var Queries []*Query
 var IgnoredErrors map[int]bool
 
-var Iterations = -1
+var Iterations uint64 = math.MaxUint64
 
 var Notifications map[string]interface{}
 var LastNotification = time.Now()
@@ -52,8 +55,8 @@ func setLogger() {
 
 // to keep the maintenance overhead as low as possible, we just use the JSON directly rather than building and populating
 // native types from the configuration, even though this is less efficient at run time
-func loadConfig(config string) (map[string]interface{}, error) {
-	f, err := os.Open(config)
+func loadConfig(config map[string]interface{}, configFile string) (map[string]interface{}, error) {
+	f, err := os.Open(configFile)
 	if err != nil {
 		logging.Errorf("Error opening config.json: %v", err)
 		return nil, err
@@ -71,9 +74,38 @@ func loadConfig(config string) (map[string]interface{}, error) {
 		logging.Warnf("Empty config")
 	}
 	f.Close()
+	config = mergeMaps(config, c)
+	logging.Infof("Configyration loaded from: %s", configFile)
+	return config, nil
+}
 
-	if lf, ok := c["logfile"].(string); ok {
-		f, err = os.OpenFile(lf, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+// Two objects are merged on a field-by-field basis; two arrays are combined.  All others/other combinations add or replace.
+func mergeMaps(dst map[string]interface{}, src map[string]interface{}) map[string]interface{} {
+	for k, v := range src {
+		switch t := v.(type) {
+		case map[string]interface{}:
+			if existing, ok := dst[k].(map[string]interface{}); ok {
+				dst[k] = mergeMaps(existing, t)
+			} else {
+				dst[k] = t
+			}
+		case []interface{}:
+			if existing, ok := dst[k].([]interface{}); ok {
+				dst[k] = append(existing, t...)
+			} else {
+				dst[k] = t
+			}
+		default:
+			dst[k] = t
+		}
+	}
+	return dst
+}
+
+func processConfig(config map[string]interface{}) error {
+	var err error
+	if lf, ok := config["logfile"].(string); ok {
+		f, err := os.OpenFile(lf, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			logging.Errorf("Failed to create/open log file \"%s\": %v", lf, err)
 		} else {
@@ -85,7 +117,7 @@ func loadConfig(config string) (map[string]interface{}, error) {
 		}
 	}
 
-	if ll, ok := c["loglevel"]; ok {
+	if ll, ok := config["loglevel"]; ok {
 		if ls, ok := ll.(string); ok {
 			if l, ok, filter := logging.ParseLevel(ls); ok {
 				logging.SetLevel(l)
@@ -96,45 +128,45 @@ func loadConfig(config string) (map[string]interface{}, error) {
 		}
 	}
 
-	if v, ok := c["database"]; !ok {
+	if v, ok := config["database"]; !ok {
 		err := fmt.Errorf("Invalid configuration: \"database\" element missing.")
 		logging.Errorf("%v", err)
-		return nil, err
+		return err
 	} else {
 		if database, ok := v.(map[string]interface{}); !ok {
 			err := fmt.Errorf("Invalid configuration: \"database\" element is not an object.")
 			logging.Errorf("%v", err)
-			return nil, err
+			return err
 		} else {
 			DB, err = NewDatabase(database)
 			if err != nil {
 				logging.Errorf("Failed to load database definition: %v", err)
-				return nil, err
+				return err
 			}
 		}
 	}
 
-	if v, ok := c["runtime"]; !ok {
+	if v, ok := config["runtime"]; !ok {
 		err := fmt.Errorf("Invalid configuration: \"runtime\" element missing.")
 		logging.Errorf("%v", err)
-		return nil, err
+		return err
 	} else {
 		if rt, ok := v.(map[string]interface{}); !ok {
 			err := fmt.Errorf("Invalid configuration: \"runtime\" element is not an object.")
 			logging.Errorf("%v", err)
-			return nil, err
+			return err
 		} else {
 			if n, ok := rt["iterations"].(float64); ok {
-				Iterations = int(n)
+				Iterations = uint64(n)
 			}
 		}
 	}
 
-	if v, ok := c["notifications"]; ok {
+	if v, ok := config["notifications"]; ok {
 		if m, ok := v.(map[string]interface{}); !ok {
 			err := fmt.Errorf("Invalid configuration: \"notifications\" element is not an object.")
 			logging.Errorf("%v", err)
-			return nil, err
+			return err
 		} else {
 			Notifications = make(map[string]interface{})
 			for k, v := range m {
@@ -144,8 +176,7 @@ func loadConfig(config string) (map[string]interface{}, error) {
 			}
 		}
 	}
-	logging.Infof("Configyration loaded from: %s", *configFile)
-	return c, nil
+	return nil
 }
 
 // loads queries from "location" (if present) and invoked database random query generation if need be
@@ -222,6 +253,21 @@ func getQueries(config map[string]interface{}) error {
 	return nil
 }
 
+func sigHandler() {
+	sig_chan := make(chan os.Signal, 2)
+	signal.Notify(sig_chan, syscall.SIGPROF, syscall.SIGUSR1, syscall.SIGTERM)
+	defer signal.Stop(sig_chan)
+
+	for {
+		s := <-sig_chan
+		logging.DumpAllStacks(logging.INFO, fmt.Sprintf("Signal received: %v", s))
+		if s == syscall.SIGTERM {
+			logging.Fatalf("Exiting on receipt of SIGTERM.")
+			os.Exit(1)
+		}
+	}
+}
+
 func main() {
 	defer func() {
 		e := recover()
@@ -230,14 +276,20 @@ func main() {
 		}
 	}()
 
+	go sigHandler()
+
 	if runtime.GOOS != "linux" {
 		logging.Fatalf("This programme must be run on (Debian based) Linux.")
 		os.Exit(-1)
 	}
 
+	flag.Parse()
+
+	configFiles := strings.Split(*configFile, ",")
+
 	force := false
 	var waitTime time.Duration // no wait on first pass
-	for iter := 0; iter != Iterations; iter++ {
+	for iter := uint64(1); iter < Iterations; iter++ {
 		time.Sleep(waitTime)
 		// once a day sent a notification as a heartbeat
 		if time.Since(LastNotification) >= time.Hour*24 {
@@ -248,9 +300,19 @@ func main() {
 		DB = nil
 		Queries = nil
 		// load the config every time so that changes are dynamically picked up
-		c, err := loadConfig(*configFile)
-		if c == nil {
-			reportRunFailure(iter, "Failed to load config.", err)
+		// merge the listed configuration files, in order
+		c := make(map[string]interface{}, 5)
+		for _, cf := range configFiles {
+			var err error
+			c, err = loadConfig(c, cf)
+			if c == nil {
+				reportRunFailure(iter, "Failed to load config.", err)
+				return
+			}
+		}
+
+		if err := processConfig(c); err != nil {
+			reportRunFailure(iter, "Invalid configuration.", err)
 			return
 		}
 
@@ -311,7 +373,7 @@ func main() {
 			}
 			continue
 		}
-		logging.Infof("Iteration %v complete.", iter+1)
+		logging.Infof("Iteration %v complete.", iter)
 		var report []interface{}
 		for i := range Queries {
 			b, _ := json.MarshalIndent(Queries[i], "  ", "  ")
@@ -333,7 +395,7 @@ func main() {
 	notify("Testing complete.")
 }
 
-func reportRunFailure(iter int, args ...interface{}) {
+func reportRunFailure(iter uint64, args ...interface{}) {
 	logging.Fatalf("Iteration %d failed ======================================================", iter)
 
 	for i := range DataFiles {
