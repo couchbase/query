@@ -889,12 +889,12 @@ processing:
 							start += batch
 						}
 					}
-					err := vbscan.truncate()
-					if err != nil {
-						cancelAll()
-						this.reportError(err.(qerrors.Error))
-						return
-					}
+				}
+				err := vbscan.truncate()
+				if err != nil {
+					cancelAll()
+					this.reportError(err.(qerrors.Error))
+					return
 				}
 				if this.limit > 0 && returnLimit == 0 {
 					break processing
