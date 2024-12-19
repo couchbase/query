@@ -667,7 +667,8 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 
 	request.CompleteRequest(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.GetErrorCount(), request.req, srvr,
-		int64(request.PhaseCount(execution.INDEX_SCAN_SEQ)+request.PhaseCount(execution.PRIMARY_SCAN_SEQ)))
+		int64(request.PhaseCount(execution.INDEX_SCAN_SEQ)+request.PhaseCount(execution.PRIMARY_SCAN_SEQ)),
+		request.LogLevel() == logging.TRACE)
 
 	audit.Submit(request)
 }

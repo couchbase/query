@@ -98,6 +98,7 @@ type RequestLogEntry struct {
 	NaturalLanguage          string
 	NaturalOutput            string
 	NaturalTime              time.Duration
+	LogContent               []interface{}
 }
 
 type qualifier interface {
@@ -516,7 +517,7 @@ func RequestsForeach(nonBlocking func(string, *RequestLogEntry) bool, blocking f
 
 func LogRequest(request_time, service_time, transactionElapsedTime time.Duration,
 	result_count int, result_size int, error_count int, req *http.Request,
-	request *BaseRequest, server *Server, seq_scan_keys int64) {
+	request *BaseRequest, server *Server, seq_scan_keys int64, forceCapture bool) {
 
 	// negative limit means no upper bound (handled in cache)
 	// zero limit means log nothing (handled here to avoid time wasting in cache)
@@ -538,7 +539,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 
 	// first try all tags
 	// all the qualifiers in a tag set must apply
-	doLog := false
+	doLog := forceCapture
 	tag := ""
 	for n, _ := range requestLog.taggedQualifiers {
 		good := true
@@ -595,6 +596,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		Tenant:          tenant.Bucket(request.TenantCtx()),
 		SessionMemory:   request.SessionMemory(),
 		SqlID:           sqlID,
+		LogContent:      request.GetLogContent(),
 	}
 	errs := request.Errors()
 	re.Errors = make([]map[string]interface{}, 0, len(errs))
@@ -870,6 +872,9 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	}
 	if len(request.Analysis) > 0 {
 		reqMap["~analysis"] = request.Analysis
+	}
+	if len(request.LogContent) > 0 {
+		reqMap["~log"] = request.LogContent
 	}
 	return reqMap
 }

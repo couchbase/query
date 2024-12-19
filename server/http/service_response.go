@@ -531,6 +531,8 @@ func (this *httpRequest) Result(item value.AnnotatedValue) bool {
 		return true
 	}
 
+	this.Loga(logging.TRACE, func() string { return fmt.Sprintf("%v", item) })
+
 	this.writer.timeFlush()
 	beforeWrites := this.writer.mark()
 
@@ -1740,7 +1742,11 @@ func (this *httpRequest) writeLog(prefix, indent string) bool {
 		newPrefix = "\n" + prefix + indent
 	}
 	first := true
+	cr := this.logger.Level() == logging.TRACE
 	ok = logger.Foreach(func(text string) bool {
+		if cr {
+			this.AddLogContent(text)
+		}
 		if !first && !this.writeString(",") {
 			return false
 		}

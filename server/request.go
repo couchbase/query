@@ -438,6 +438,9 @@ type BaseRequest struct {
 	nlStatement          algebra.Statement
 	nlShowOnly           bool
 	nloutput             string
+
+	// effectively temporary storage for the TRACE level request logging ahead of being included in completed_requests
+	logContent []interface{}
 }
 
 type requestIDImpl struct {
@@ -1459,14 +1462,16 @@ func (this *BaseRequest) release() {
 // this logs the request if needed and takes any other action required to
 // put this request to rest
 func (this *BaseRequest) CompleteRequest(requestTime, serviceTime, transaction_time time.Duration,
-	resultCount int, resultSize int, errorCount int, req *http.Request, server *Server, seqScanCount int64) {
+	resultCount int, resultSize int, errorCount int, req *http.Request, server *Server, seqScanCount int64,
+	forceCapture bool) {
 
 	if this.timer != nil {
 		this.timer.Stop()
 		this.timer = nil
 	}
 
-	LogRequest(requestTime, serviceTime, transaction_time, resultCount, resultSize, errorCount, req, this, server, seqScanCount)
+	LogRequest(requestTime, serviceTime, transaction_time, resultCount, resultSize, errorCount, req, this, server, seqScanCount,
+		forceCapture)
 
 	// Request Profiling - signal that request has completed and
 	// resources can be pooled / released as necessary
@@ -1948,4 +1953,20 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 	s = s[d.InputOffset():]
 	this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
 	return nil
+}
+
+func (this *BaseRequest) GetLogContent() []interface{} {
+	return this.logContent
+}
+
+func (this *BaseRequest) AddLogContent(text string) {
+	if len(text) > 16384 {
+		text = text[:16384]
+	}
+	if len(this.logContent) < 20 {
+		this.logContent = append(this.logContent, text)
+	} else {
+		copy(this.logContent[10:], this.logContent[11:])
+		this.logContent[19] = text
+	}
 }

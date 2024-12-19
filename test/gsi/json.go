@@ -262,7 +262,7 @@ func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsist
 }
 
 func (this *MockServer) doStats(request *MockQuery) {
-	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server, 0)
+	request.CompleteRequest(0, 0, 0, request.resultCount, 0, 0, nil, this.server, 0, false)
 }
 
 func (this *MockServer) getTxId(group int) string {
