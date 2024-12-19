@@ -647,6 +647,9 @@ func (this *Formalizer) PopBindings() {
 		if currLevelAllowed != nil {
 			if _, ok := currLevelAllowed[ident]; !ok {
 				this.identifiers.SetField(ident, ident_val)
+			} else if _, ok1 := this.correlation[ident]; ok1 {
+				// if an allowed identifier was added to this.correlation earlier, remove it
+				delete(this.correlation, ident)
 			}
 		}
 	}
