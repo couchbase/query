@@ -515,12 +515,23 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 
 const _MEMORY_LIMIT = 0.9
 const _MAX_MEMORY_ABOVE_LIMIT = 8 * util.GiB
+const _PER_SERVICER_MIN_MEMORY = 128 * util.MiB
+const _MIN_MEMORY_LIMIT = util.GiB
 
 func setMemoryLimit(ml int64) {
 	var extra string
 	var oml int64
 
+	// the minimum and maximum permitted can be overridden by using the GOMEMLIMIT environment variable
 	max := int64(math.MaxInt64)
+	// this is based on the default number of servicers and doesn't change with updates to the Server object's settings
+	min := int64(util.NumCPU() * server_package.SERVICERS_MULTIPLIER * _PER_SERVICER_MIN_MEMORY)
+	if min < _MIN_MEMORY_LIMIT {
+		min = _MIN_MEMORY_LIMIT
+	}
+	if min > max {
+		max = min
+	}
 
 	ss, err := stats.NewSystemStats()
 	if err == nil {
@@ -544,6 +555,9 @@ func setMemoryLimit(ml int64) {
 	} else if ml > 0 {
 		if ml > max {
 			ml = max
+			extra = "(NODE QUOTA - LIMITED)"
+		} else if ml < min {
+			ml = min
 			extra = "(NODE QUOTA - LIMITED)"
 		} else {
 			extra = "(NODE QUOTA)"
