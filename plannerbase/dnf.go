@@ -12,7 +12,7 @@ import (
 	"math"
 
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 )
 
 type DNF struct {
@@ -168,7 +168,7 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	case *expression.In:
 		second := operand.Second()
 		if acons, ok := second.(*expression.ArrayConstruct); ok &&
-			len(acons.Operands()) <= plan.FULL_SPAN_FANOUT {
+			len(acons.Operands()) <= util.FullSpanFanout() {
 			return this.visitNotIn(operand.First(), acons)
 		}
 

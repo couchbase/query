@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
 
 func SargFor(pred expression.Expression, entry *indexEntry, keys datastore.IndexKeys, isMissing bool,
@@ -224,7 +225,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 		}
 
 		if sz == 0 ||
-			(sz > 1 && size >= 1 && sz*size > plan.FULL_SPAN_FANOUT) {
+			(sz > 1 && size >= 1 && sz*size > util.FullSpanFanout()) {
 			exactSpan = false
 			tooMany = i
 			break

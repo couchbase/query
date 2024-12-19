@@ -10,8 +10,8 @@ package planner
 
 import (
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
 
 func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
@@ -65,7 +65,7 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 		}
 
 		size += cspans.Size()
-		if size > plan.FULL_SPAN_FANOUT {
+		if size > util.FullSpanFanout() {
 			fullSpan = true
 			continue
 		}
