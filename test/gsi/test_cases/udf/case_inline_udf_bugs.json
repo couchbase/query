@@ -409,5 +409,33 @@
         "description": "MB-64423 - DROP FUNCTION",
         "statements": "DROP FUNCTION udf_recursion",
         "results": []
+    },
+    {
+        "description": "MB-64684 - CREATE FUNCTION",
+        "statements": "CREATE or REPLACE FUNCTION func1(id)  { ( SELECT RAW ARRAY (ARRAY {\"b\": FIRST v3 FOR v3 IN v1.a1 WHEN v1.a = v3 END } FOR v2 IN v1.a1 END) FOR v1 IN [{\"a\":1, \"a1\":[1,2]}] END FROM shellTest USE KEYS id) }",
+        "results":[]
+    },
+    {
+        "description": "MB-64684 - EXECUTE FUNCTION",
+        "statements": "EXECUTE FUNCTION func1('k001')",
+        "results": [
+            [
+                [
+                    [
+                        {
+                            "b": 1
+                        },
+                        {
+                            "b": 1
+                        }
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "description": "MB-64684 - DROP FUNCTION",
+        "statements": "DROP FUNCTION func1",
+        "results": []
     }
 ]
