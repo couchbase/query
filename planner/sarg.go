@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -244,7 +245,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 		}
 
 		if sz == 0 ||
-			(sz > 1 && size >= 1 && sz*size > plan.FULL_SPAN_FANOUT) {
+			(sz > 1 && size >= 1 && sz*size > util.FullSpanFanout()) {
 			exactSpan = false
 			if vectorPos < 0 {
 				for j := i + 1; j < len(sargSpans); j++ {

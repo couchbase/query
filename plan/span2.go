@@ -252,8 +252,6 @@ func (this *Range2) GetDynamicInExpr() expression.Expression {
 	return nil
 }
 
-const FULL_SPAN_FANOUT = 8192
-
 type Spans2 []*Span2
 
 type Span2 struct {

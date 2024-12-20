@@ -13,6 +13,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -70,7 +71,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		// De-dup and Sort before generating spans for EXPLAIN stability
 		vals = expression.SortValArr(vals)
 
-		if len(vals) > plan.FULL_SPAN_FANOUT {
+		if len(vals) > util.FullSpanFanout() {
 			// for long IN-list, instead of generating individual spans, just use
 			// array_min()/array_max() as span and evaluate the IN-list after
 			// the index scan
@@ -106,7 +107,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		var arrayKey expression.Expression
 		if acons, ok := second.(*expression.ArrayConstruct); ok {
 			array = acons.Operands()
-			if len(array) > plan.FULL_SPAN_FANOUT {
+			if len(array) > util.FullSpanFanout() {
 				// for long IN-list, instead of generating individual spans, just use
 				// array_min()/array_max() as span and evaluate the IN-list after
 				// the index scan

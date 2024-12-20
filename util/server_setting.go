@@ -16,6 +16,8 @@ import (
 	atomic "github.com/couchbase/go-couchbase/platform"
 )
 
+const FULL_SPAN_FANOUT = 8192
+
 var MaxIndexApi atomic.AlignedInt64
 var n1qlFeatureControl atomic.AlignedInt64
 var UseCBO bool
@@ -57,6 +59,7 @@ const (
 	N1QL_ADMISSION_CONTROL                       // 0x0000400000
 	N1QL_IGNORE_IDXR_META                        // 0x0000800000
 	N1QL_NATURAL_LANG_REQ                        // 0x0001000000
+	N1QL_FULL_SPAN_FANOUT                        // 0x0002000000
 )
 
 // Care should be taken that the descriptions accept "disabled" being appended when the bit is set (and "enabled" when not).
@@ -85,6 +88,7 @@ var _N1QL_Features = map[uint64]string{
 	N1QL_ADMISSION_CONTROL:    "Admission control",
 	N1QL_IGNORE_IDXR_META:     "Ignore indexer metadata changes for prepared statements",
 	N1QL_NATURAL_LANG_REQ:     "Natural Language Request",
+	N1QL_FULL_SPAN_FANOUT:     "Spans Fanout to 8192",
 }
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)
@@ -166,4 +170,11 @@ func DescribeChangedFeatures(prev uint64, new uint64) string {
 	}
 
 	return changes.String()
+}
+
+func FullSpanFanout() int {
+	if IsFeatureEnabled(GetN1qlFeatureControl(), N1QL_FULL_SPAN_FANOUT) {
+		return FULL_SPAN_FANOUT
+	}
+	return 4 * FULL_SPAN_FANOUT
 }
