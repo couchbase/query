@@ -63,15 +63,6 @@ func (gl *goLogger) Tracea(f func() string) {
 	gl.Loga(logging.TRACE, f)
 }
 
-func (gl *goLogger) Requesta(rlevel logging.Level, f func() string) {
-	if gl.logger == nil {
-		return
-	}
-	if logging.REQUEST <= gl.level {
-		gl.log(logging.REQUEST, rlevel, f())
-	}
-}
-
 func (gl *goLogger) Infoa(f func() string) {
 	gl.Loga(logging.INFO, f)
 }
@@ -92,10 +83,6 @@ func (gl *goLogger) Fatala(f func() string) {
 	gl.Loga(logging.FATAL, f)
 }
 
-func (gl *goLogger) Audita(f func() string) {
-	gl.Loga(logging.AUDIT, f)
-}
-
 // printf-style variants
 
 func (gl *goLogger) Logf(level logging.Level, format string, args ...interface{}) {
@@ -113,15 +100,6 @@ func (gl *goLogger) Debugf(format string, args ...interface{}) {
 
 func (gl *goLogger) Tracef(format string, args ...interface{}) {
 	gl.Logf(logging.TRACE, format, args...)
-}
-
-func (gl *goLogger) Requestf(rlevel logging.Level, format string, args ...interface{}) {
-	if gl.logger == nil {
-		return
-	}
-	if logging.REQUEST <= gl.level {
-		gl.log(logging.REQUEST, rlevel, fmt.Sprintf(format, args...))
-	}
 }
 
 func (gl *goLogger) Infof(format string, args ...interface{}) {
@@ -144,10 +122,6 @@ func (gl *goLogger) Fatalf(format string, args ...interface{}) {
 	gl.Logf(logging.FATAL, format, args...)
 }
 
-func (gl *goLogger) Auditf(format string, args ...interface{}) {
-	gl.Logf(logging.AUDIT, format, args...)
-}
-
 func (gl *goLogger) Level() logging.Level {
 	return gl.level
 }
@@ -161,7 +135,7 @@ func (gl *goLogger) log(level logging.Level, rlevel logging.Level, msg string) {
 }
 
 func (gl *goLogger) str(level logging.Level, rlevel logging.Level, msg string) string {
-	tm := time.Now().Format("2006-01-02T15:04:05.000-07:00") // time.RFC3339 with milliseconds
+	tm := time.Now().Format(logging.FULL_TIMESTAMP_FORMAT)
 	return gl.entryFormatter.format(tm, level, rlevel, msg)
 }
 

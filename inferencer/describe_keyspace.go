@@ -180,7 +180,7 @@ func processWith(context datastore.QueryContext, with value.Value) (*DescribeOpt
 		logging.Debuga(func() string {
 			return fmt.Sprintf("Setting infer_timeout to %v based on context deadline %v",
 				options.InferTimeout, context.GetReqDeadline())
-		})
+		}, context)
 	}
 
 	if with == nil {
@@ -277,7 +277,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 		return
 	}
 
-	retriever, err := MakeUnifiedDocumentRetriever("infer", context, ks, options.SampleSize, options.Flags)
+	retriever, err := MakeUnifiedDocumentRetriever("infer_"+context.RequestId(), context, ks, options.SampleSize, options.Flags)
 	if err != nil {
 		if !err.IsWarning() {
 			conn.Error(err)

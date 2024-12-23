@@ -281,7 +281,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 		"args":     insertArgs,
 	})
 
-	prepared, _ := prepareds.GetPrepared(name, nil)
+	prepared, _ := prepareds.GetPrepared(name, nil, datastore.NULL_QUERY_CONTEXT)
 	if prepared == nil {
 		t.Errorf("Expected to resolve prepared statement with name %v", name)
 		return
@@ -325,7 +325,7 @@ func doPrepare(t *testing.T, name string, stmt string) {
 	})
 
 	// Verify the name is in the prepared cache:
-	prepared, err := prepareds.GetPrepared(name, nil)
+	prepared, err := prepareds.GetPrepared(name, nil, datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Errorf("Unexpected error looking up prepared: %v", err)
 	}

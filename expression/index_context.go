@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -148,3 +149,20 @@ func (this *IndexContext) Park(stop func(stop bool)) {
 func (this *IndexContext) Resume() {
 	// no-op
 }
+
+func (this *IndexContext) Loga(level logging.Level, f func() string)               {}
+func (this *IndexContext) Debuga(f func() string)                                  {}
+func (this *IndexContext) Tracea(f func() string)                                  {}
+func (this *IndexContext) Infoa(f func() string)                                   {}
+func (this *IndexContext) Warna(f func() string)                                   {}
+func (this *IndexContext) Errora(f func() string)                                  {}
+func (this *IndexContext) Severea(f func() string)                                 {}
+func (this *IndexContext) Fatala(f func() string)                                  {}
+func (this *IndexContext) Logf(level logging.Level, f string, args ...interface{}) {}
+func (this *IndexContext) Debugf(f string, args ...interface{})                    {}
+func (this *IndexContext) Tracef(f string, args ...interface{})                    {}
+func (this *IndexContext) Infof(f string, args ...interface{})                     {}
+func (this *IndexContext) Warnf(f string, args ...interface{})                     {}
+func (this *IndexContext) Errorf(f string, args ...interface{})                    {}
+func (this *IndexContext) Severef(f string, args ...interface{})                   {}
+func (this *IndexContext) Fatalf(f string, args ...interface{})                    {}

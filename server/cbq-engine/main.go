@@ -229,15 +229,18 @@ func main() {
 		logging.SetLevel(logging.DEBUG)
 	} else {
 		level := logging.INFO
+		filter := ""
 
 		if *LOG_LEVEL != "" {
-			lvl, ok := logging.ParseLevel(*LOG_LEVEL)
+			lvl, ok, f := logging.ParseLevel(*LOG_LEVEL)
 			if ok {
 				level = lvl
+				filter = f
 			}
 		}
 
 		logging.SetLevel(level)
+		logging.SetDebugFilter(filter)
 	}
 
 	datastore, err := resolver.NewDatastore(*DATASTORE)

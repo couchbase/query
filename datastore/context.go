@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -59,6 +60,7 @@ func (ci *contextImpl) FeatureControl() uint64 {
 
 // A subset of execution.Context that is useful at the datastore level.
 type QueryContext interface {
+	logging.Log
 	GetReqDeadline() time.Time
 	UseReplica() bool
 	Credentials() *auth.Credentials
@@ -73,6 +75,7 @@ type QueryContext interface {
 	KvTimeout() time.Duration
 	PreserveExpiry() bool
 	IsActive() bool
+	RequestId() string
 }
 
 type queryContextImpl struct {
@@ -130,3 +133,24 @@ func (ci *queryContextImpl) PreserveExpiry() bool {
 func (ci *queryContextImpl) IsActive() bool {
 	return true
 }
+
+func (ci *queryContextImpl) RequestId() string {
+	return ""
+}
+
+func (ci *queryContextImpl) Loga(l logging.Level, f func() string)                   {}
+func (ci *queryContextImpl) Debuga(f func() string)                                  {}
+func (ci *queryContextImpl) Tracea(f func() string)                                  {}
+func (ci *queryContextImpl) Infoa(f func() string)                                   {}
+func (ci *queryContextImpl) Warna(f func() string)                                   {}
+func (ci *queryContextImpl) Errora(f func() string)                                  {}
+func (ci *queryContextImpl) Severea(f func() string)                                 {}
+func (ci *queryContextImpl) Fatala(f func() string)                                  {}
+func (ci *queryContextImpl) Logf(level logging.Level, f string, args ...interface{}) {}
+func (ci *queryContextImpl) Debugf(f string, args ...interface{})                    {}
+func (ci *queryContextImpl) Tracef(f string, args ...interface{})                    {}
+func (ci *queryContextImpl) Infof(f string, args ...interface{})                     {}
+func (ci *queryContextImpl) Warnf(f string, args ...interface{})                     {}
+func (ci *queryContextImpl) Errorf(f string, args ...interface{})                    {}
+func (ci *queryContextImpl) Severef(f string, args ...interface{})                   {}
+func (ci *queryContextImpl) Fatalf(f string, args ...interface{})                    {}

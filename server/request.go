@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -174,6 +175,8 @@ type Request interface {
 	GetErrorLimit() int
 	SetTracked()
 	Tracked() bool
+	Loga(logging.Level, func() string)
+	LogLevel() logging.Level
 
 	setSleep() // internal methods for load control
 	sleep()
@@ -338,6 +341,7 @@ type BaseRequest struct {
 	resultSize           int64
 	serviceDuration      time.Duration
 	tracked              bool
+	logLevel             logging.Level
 }
 
 type requestIDImpl struct {

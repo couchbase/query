@@ -27,6 +27,8 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -57,6 +59,8 @@ type httpRequest struct {
 	consCnt  int
 	jsonArgs jsonArgs // ESCAPE analysis workaround
 	urlArgs  urlArgs  // ESCAPE analysis workaround
+
+	logger logging.Logger
 }
 
 var zeroScanVectorSource = &ZeroScanVectorSource{}
@@ -69,7 +73,6 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	// This is literally when we become aware of the request
 	reqTime := time.Now()
 
-	// Limit body size in case of denial-of-service attack
 	req.Body = http.MaxBytesReader(resp, req.Body, int64(size))
 
 	if req.Method != "GET" && req.Method != "POST" {
@@ -119,6 +122,13 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 
 	if err == nil {
 		err = httpArgs.processParameters(rv)
+	}
+	// update the logger with the request Id once it is known
+	if rv.logger != nil {
+		if rl, ok := rv.logger.(logging.RequestLogger); ok {
+			rl.SetRequestId(rv.Id().String())
+		}
+		rv.logger.Infof("Request received at %v", reqTime.Format(logging.SHORT_TIMESTAMP_FORMAT))
 	}
 
 	if err == nil {
@@ -186,6 +196,39 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	if err != nil {
 		rv.Fail(err)
 	}
+	// start - temporary logging of requests
+	dfn := func() string {
+		data := make(map[string]interface{}, 7)
+		data["request"] = rv.Id().String()
+		data["statement"] = rv.EventStatement()
+		data["query_context"] = rv.QueryContext()
+		data["named_args"] = httpArgs.getNamedArgs()
+		data["client_context_id"] = rv.ClientContextId()
+		// only include fields not already processed in args
+		a := make(map[string]interface{})
+		if rv.jsonArgs.req != nil {
+			for i := 0; i < rv.jsonArgs.args.count; i++ {
+				if _, ok := data[rv.jsonArgs.args.parms[i].name]; !ok && rv.jsonArgs.args.parms[i].name != "creds" {
+					a[rv.jsonArgs.args.parms[i].name] = rv.jsonArgs.args.parms[i].val
+				}
+			}
+		} else {
+			for param, val := range req.Form {
+				if _, ok := data[param]; !ok && param != "creds" {
+					a[param] = val
+				}
+			}
+		}
+		data["args"] = a
+		data["remote_addr"] = rv.RemoteAddr()
+		b, _ := json.Marshal(data)
+		return string(b)
+	}
+	logging.Debuga(dfn)
+	if rv.logger != nil {
+		rv.logger.Infoa(dfn)
+	}
+	// end - temporary logging of requests
 	rv.jsonArgs = jsonArgs{}
 	rv.urlArgs = urlArgs{}
 }
@@ -215,8 +258,11 @@ func handleEncodedPlan(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 
 func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	var phaseTime time.Duration
-
-	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime)
+	log := rv.logger
+	if log == nil {
+		log = logging.NULL_LOG
+	}
+	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime, log)
 
 	// MB-18841 (encoded_plan processing affects latency)
 	// MB-19509 (encoded_plan may corrupt cache)
@@ -233,7 +279,8 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
-			decoded_plan, plan_err = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan, (prepared == nil), &phaseTime, true)
+			decoded_plan, plan_err = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan,
+				(prepared == nil), &phaseTime, true, log)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {
@@ -644,6 +691,49 @@ func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 	return err
 }
 
+func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	v, err := httpArgs.getStringVal(parm, val)
+	if err != nil {
+		return err
+	}
+	l, ok, filter := logging.ParseLevel(v)
+	if !ok {
+		i := strings.Index(v, ":")
+		if i != -1 {
+			lgr, err := resolver.NewLogger(strings.ToLower(v[:i]))
+			if err != nil {
+				return errors.NewServiceErrorBadValue(errors.NewServiceErrorUnrecognizedValue("logger", v), parm)
+			}
+			rv.logger = lgr
+			if rl, ok := rv.logger.(logging.RequestLogger); ok {
+				rl.SetRequestId(rv.Id().String())
+			}
+			l, ok, filter = logging.ParseLevel(v[i+1:])
+		}
+	}
+	if !ok {
+		return errors.NewServiceErrorBadValue(errors.NewServiceErrorUnrecognizedValue("loglevel", v), parm)
+	}
+	if l == logging.NONE {
+		rv.logger = nil
+	}
+	if rv.logger == nil {
+		if l != logging.NONE {
+			rv.logger, _ = resolver.NewLogger("builtin")
+			if rl, ok := rv.logger.(logging.RequestLogger); ok {
+				rl.SetRequestId(rv.Id().String())
+			}
+		} else {
+			return nil
+		}
+	}
+	rv.SetLogLevel(l)
+	if filterLogger, ok := rv.logger.(interface{ SetDebugFilter(string) }); ok {
+		filterLogger.SetDebugFilter(filter)
+	}
+	return nil
+}
+
 // For audit.Auditable interface.
 func (this *httpRequest) ElapsedTime() time.Duration {
 	return this.elapsedTime
@@ -731,6 +821,19 @@ func (this *httpRequest) TransactionRemainingTime() string {
 	return ""
 }
 
+func (this *httpRequest) SetLogLevel(level logging.Level) {
+	if this.logger != nil {
+		this.logger.SetLevel(level)
+	}
+}
+
+func (this *httpRequest) LogLevel() logging.Level {
+	if this.logger != nil {
+		return this.logger.Level()
+	}
+	return logging.NONE
+}
+
 const ( // Request argument names
 	MAX_PARALLELISM    = "max_parallelism"
 	SCAN_CAP           = "scan_cap"
@@ -777,6 +880,7 @@ const ( // Request argument names
 	NUMATRS            = "numatrs"
 	PRESERVE_EXPIRY    = "preserve_expiry"
 	ERROR_LIMIT        = "error_limit"
+	LOGLEVEL           = "loglevel"
 )
 
 type argHandler struct {
@@ -831,6 +935,7 @@ var _PARAMETERS = map[string]*argHandler{
 	NUMATRS:         {handleNumAtrs, false},
 	PRESERVE_EXPIRY: {handlePreserveExpiry, false},
 	ERROR_LIMIT:     {handleErrorLimit, false},
+	LOGLEVEL:        {handleLogLevel, false},
 }
 
 // common storage for the httpArgs implementations
@@ -894,19 +999,22 @@ func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, 
 }
 
 func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{},
-	phaseTime *time.Duration) (string, *plan.Prepared, errors.Error) {
+	phaseTime *time.Duration, log logging.Log) (string, *plan.Prepared, errors.Error) {
 	prepared_name, err := a.getPreparedName(parm, val)
 	if err != nil || prepared_name == "" {
+		log.Debugf("%v %v", parm, err)
 		return "", nil, err
 	}
 
 	// Monitoring API: track prepared statement access
 	prepared, err := prepareds.GetPreparedWithContext(prepared_name, queryContext, nil,
-		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime)
+		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime, log)
 	if err != nil || prepared == nil {
+		log.Debugf("%v %v", prepared_name, err)
 		return prepared_name, nil, err
 	}
 
+	log.Debuga(func() string { return fmt.Sprintf("%v: %v", prepared_name, prepared.Text()) })
 	return prepared_name, prepared, err
 }
 

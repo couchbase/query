@@ -355,7 +355,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			user.uuid = strings.Replace(user.uuid, "-", "_", -1)
 			limits, err := cbauth.GetUserLimits(userName, "local", "query")
 			if err != nil {
-				logging.Infof("No user limits fouund for user <ud>%v</ud> - limits not enforced", userName)
+				s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not enforced", userName)
+				logging.Infof(s)
+				request.Loga(logging.INFO, func() string { return s })
 			} else {
 				user.amendLimits(limits)
 				user.limitsVersion = this.trackedUsersVersion
@@ -369,7 +371,9 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 			if this.trackedUsersVersion != user.limitsVersion {
 				limits, err := cbauth.GetUserLimits(userName, "local", "query")
 				if err != nil {
-					logging.Infof("No user limits fouund for user <ud>%v</ud> - limits not changed")
+					s := fmt.Sprintf("No user limits found for user <ud>%v</ud> - limits not changed", userName)
+					logging.Infof(s)
+					request.Loga(logging.INFO, func() string { return s })
 				} else {
 					user.amendLimits(limits)
 					user.limitsVersion = this.trackedUsersVersion

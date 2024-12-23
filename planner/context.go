@@ -101,3 +101,7 @@ func (this *PrepareContext) HasDeltaKeyspace(keyspace string) bool {
 	_, ok := this.deltaKeyspaces[keyspace]
 	return ok
 }
+
+func (this *PrepareContext) Context() datastore.QueryContext {
+	return this.dsContext
+}

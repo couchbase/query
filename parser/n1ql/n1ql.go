@@ -26,17 +26,23 @@ func SetNamespaces(ns map[string]interface{}) {
 }
 
 func ParseStatement(input string) (algebra.Statement, error) {
-	return parseStatement(input, "default", "", false)
+	return parseStatement(input, "default", "", false, nil)
 }
 
-func ParseStatement2(input string, namespace string, queryContext string) (algebra.Statement, error) {
-	return parseStatement(input, namespace, queryContext, true)
+func ParseStatement2(input string, namespace string, queryContext string, args ...logging.Log) (algebra.Statement, error) {
+	var l logging.Log
+	if len(args) > 0 {
+		l = args[0]
+	}
+	return parseStatement(input, namespace, queryContext, true, l)
 }
 
-func parseStatement(input string, namespace string, queryContext string, udfCheck bool) (algebra.Statement, error) {
+func parseStatement(input string, namespace string, queryContext string, udfCheck bool, log logging.Log) (
+	algebra.Statement, error) {
+
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
-	lex := newLexer(NewLexer(reader))
+	lex := newLexer(NewLexer(reader), log)
 	lex.parsingStmt = true
 	lex.text = input
 	lex.namespace = namespace
@@ -64,7 +70,7 @@ func parseStatement(input string, namespace string, queryContext string, udfChec
 func ParseExpression(input string) (expression.Expression, error) {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
-	lex := newLexer(NewLexer(reader))
+	lex := newLexer(NewLexer(reader), nil)
 	lex.nex.ResetOffset()
 	lex.text = input
 	lex.nex.ReportError(lex.ScannerError)
@@ -82,7 +88,7 @@ func ParseExpression(input string) (expression.Expression, error) {
 func ParseOptimHints(input string) *algebra.OptimHints {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
-	lex := newLexer(NewLexer(reader))
+	lex := newLexer(NewLexer(reader), nil)
 	lex.text = input
 	lex.nex.ResetOffset()
 	lex.nex.ReportError(lex.ScannerError)
@@ -134,13 +140,15 @@ type lexer struct {
 	lval                   yySymType
 	stop                   bool
 	optimHints             *algebra.OptimHints
+	log                    logging.Log
 }
 
-func newLexer(nex *Lexer) *lexer {
+func newLexer(nex *Lexer, log logging.Log) *lexer {
 	return &lexer{
 		nex:    nex,
 		errs:   make([]string, 0, 16),
 		offset: 0,
+		log:    log,
 	}
 }
 

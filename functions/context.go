@@ -18,10 +18,12 @@ import (
 	"time"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
 type Context interface {
+	logging.Log
 	Now() time.Time
 	GetTimeout() time.Duration
 	AuthenticatedUsers() []string

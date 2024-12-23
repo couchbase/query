@@ -210,7 +210,7 @@ func checkLogLevel(val interface{}) (bool, errors.Error) {
 	if !is_string {
 		return false, nil
 	}
-	_, ok := logging.ParseLevel(level)
+	_, ok, _ := logging.ParseLevel(level)
 	return ok, nil
 }
 

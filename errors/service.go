@@ -36,7 +36,11 @@ func NewServiceErrorUnrecognizedValue(feature string, value string) Error {
 }
 
 func NewServiceErrorBadValue(e error, feature string) Error {
-	return &err{level: EXCEPTION, ICode: E_SERVICE_BAD_VALUE, IKey: "service.io.request.bad_value", ICause: e,
+	var c interface{}
+	if ee, ok := e.(Error); ok {
+		c = ee
+	}
+	return &err{level: EXCEPTION, ICode: E_SERVICE_BAD_VALUE, IKey: "service.io.request.bad_value", ICause: e, cause: c,
 		InternalMsg: fmt.Sprintf("Error processing %s", feature), InternalCaller: CallerN(1)}
 }
 

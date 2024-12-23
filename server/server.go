@@ -497,11 +497,11 @@ func (this *Server) SetDebug(debug bool) {
 }
 
 func (this *Server) LogLevel() string {
-	return logging.LogLevel().String()
+	return logging.LogLevelString()
 }
 
 func (this *Server) SetLogLevel(level string) {
-	lvl, ok := logging.ParseLevel(level)
+	lvl, ok, f := logging.ParseLevel(level)
 	if !ok {
 		logging.Errorf("SetLogLevel: unrecognized level %v", level)
 		return
@@ -510,6 +510,7 @@ func (this *Server) SetLogLevel(level string) {
 		this.datastore.SetLogLevel(lvl)
 	}
 	logging.SetLevel(lvl)
+	logging.SetDebugFilter(f)
 }
 
 const (
@@ -688,6 +689,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetDurability(request.DurabilityLevel(), request.DurabilityTimeout())
 	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())
 	context.SetPreserveExpiry(request.PreserveExpiry())
+	context.SetLogLevel(request.LogLevel())
 	context.SetTracked(request.Tracked())
 
 	if request.TxId() != "" {
@@ -1090,10 +1092,10 @@ func (this *Server) serviceRequest(request Request) {
 			s := string(buf[0:n])
 			stmt := "<ud>" + request.Statement() + "</ud>"
 			qc := "<ud>" + request.QueryContext() + "</ud>"
-			logging.Severef("panic: %v ", err)
-			logging.Severef("request text: %v", stmt)
-			logging.Severef("query context: %v", qc)
-			logging.Severef("stack: %v", s)
+			logging.Severef("panic: %v ", err, request.ExecutionContext())
+			logging.Severef("request text: %v", stmt, request.ExecutionContext())
+			logging.Severef("query context: %v", qc, request.ExecutionContext())
+			logging.Severef("stack: %v", s, request.ExecutionContext())
 			os.Stderr.WriteString(s)
 			os.Stderr.Sync()
 			event.Report(event.CRASH, event.ERROR, "error", err, "request-id", request.Id().String(),
@@ -1104,9 +1106,10 @@ func (this *Server) serviceRequest(request Request) {
 		}
 	}()
 
+	context := request.ExecutionContext()
+	context.Debuga(func() string { return "Servicing request" })
 	request.Servicing()
 
-	context := request.ExecutionContext()
 	atrCollection := this.AtrCollection()
 	if request.AtrCollection() != "" {
 		atrCollection = request.AtrCollection()
@@ -1284,7 +1287,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 	if prepared == nil {
 		parse := time.Now()
-		stmt, err := n1ql.ParseStatement2(request.Statement(), context.Namespace(), request.QueryContext())
+		stmt, err := n1ql.ParseStatement2(request.Statement(), context.Namespace(), request.QueryContext(), context)
 		request.Output().AddPhaseTime(execution.PARSE, time.Since(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
@@ -1427,10 +1430,14 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	request.SetUseReplica(useReplica)
 	context.SetUseReplica(useReplica)
 
-	if logging.LogLevel() >= logging.DEBUG {
-		// log EXPLAIN for the request
-		logExplain(prepared)
-	}
+	logging.Tracea(func() string {
+		var pl plan.Operator = prepared
+		explain, err := json.MarshalIndent(pl, "", "    ")
+		if err != nil {
+			return fmt.Sprintf("Error logging explain: %v", err)
+		}
+		return fmt.Sprintf("Explain <ud>%v</ud>", string(explain))
+	}, context)
 
 	return prepared, nil
 }
@@ -1495,7 +1502,7 @@ func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepa
 
 			prepared, er = prepareds.GetPreparedWithContext(name, request.QueryContext(),
 				context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-				&reprepTime)
+				&reprepTime, context)
 			if reprepTime > 0 {
 				request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 			}
@@ -1523,7 +1530,7 @@ func (this *Server) getPreparedByName(prepareName string, request Request, conte
 
 	prepared, err := prepareds.GetPreparedWithContext(prepareName, request.QueryContext(),
 		context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-		&reprepTime)
+		&reprepTime, context)
 	if reprepTime > 0 {
 		request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 	}
@@ -1684,17 +1691,6 @@ func (this *Server) monitorShutdown(timeout time.Duration) {
 	} else {
 		logging.Infof("Shutdown: Monitor detected shutdown was cancelled.")
 	}
-}
-
-func logExplain(prepared *plan.Prepared) {
-	var pl plan.Operator = prepared
-	explain, err := json.MarshalIndent(pl, "", "    ")
-	if err != nil {
-		logging.Tracef("Error logging explain: %v", err)
-		return
-	}
-
-	logging.Tracea(func() string { return fmt.Sprintf("Explain <ud>%v</ud>", string(explain)) })
 }
 
 // API for tracking server options
