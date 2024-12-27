@@ -43,6 +43,8 @@ const (
 	_MIGRATION_WAIT_TIME = time.Second * 35 // 30 seconds for it to kick in plus 5 for it to complete its checks
 
 	_DOC_SIZE_LIMIT = 20 * 1024 * 1024 // 20 MiB
+
+	_HTTP_TIMEOUT = time.Minute * 30 // maximum time for any HTTP action (including running a request & receiving the results)
 )
 
 var _FILTER_OPS = []string{"=", ">", "<", ">=", "<=", "!="}

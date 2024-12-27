@@ -102,6 +102,7 @@ func doNodeGet(uri string) (*http.Response, error) {
 	}
 	req.Header.Set("User-Agent", "Combined test")
 	req.SetBasicAuth(USER, PASSWORD)
+	http.DefaultClient.Timeout = _HTTP_TIMEOUT
 	return http.DefaultClient.Do(req)
 }
 
@@ -123,13 +124,14 @@ func doNodePost(uri string, params map[string]interface{}, body bool) (int, []by
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "Combined test")
 	req.SetBasicAuth(USER, PASSWORD)
+	http.DefaultClient.Timeout = _HTTP_TIMEOUT
 	var resp *http.Response
 	for retry := 0; retry < _RETRY_COUNT; retry++ {
 		resp, err = http.DefaultClient.Do(req)
 		if err == nil || !isHttpConnError(err) {
 			break
 		}
-		logging.Debugf("Retrying: %d: %v", retry, err)
+		logging.Debugf("Retrying: %s (%d: %v)", uri, retry, err)
 	}
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -164,6 +166,7 @@ func doQueryGet(uri string, params map[string]interface{}) (*http.Response, erro
 	}
 	req.Header.Set("User-Agent", "Combined test")
 	req.SetBasicAuth(USER, PASSWORD)
+	http.DefaultClient.Timeout = _HTTP_TIMEOUT
 	return http.DefaultClient.Do(req)
 }
 
@@ -181,13 +184,14 @@ func doQueryPost(uri string, data map[string]interface{}, body bool) (int, []byt
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Combined test")
 	req.SetBasicAuth(USER, PASSWORD)
+	http.DefaultClient.Timeout = _HTTP_TIMEOUT
 	var resp *http.Response
 	for retry := 0; retry < _RETRY_COUNT; retry++ {
 		resp, err = http.DefaultClient.Do(req)
 		if err == nil || !isHttpConnError(err) {
 			break
 		}
-		logging.Debugf("Retrying: %d: %v", retry, err)
+		logging.Debugf("Retrying: %v (%d: %v)", uri, retry, err)
 	}
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -305,12 +309,13 @@ func dropBucket(name string) error {
 	}
 	req.Header.Set("User-Agent", "Combined test")
 	req.SetBasicAuth(USER, PASSWORD)
+	http.DefaultClient.Timeout = _HTTP_TIMEOUT
 	for retry := 0; retry < _RETRY_COUNT; retry++ {
 		resp, err = http.DefaultClient.Do(req)
 		if err == nil || !isHttpConnError(err) {
 			break
 		}
-		logging.Debugf("Retrying: %s %d: %v", uri, retry, err)
+		logging.Debugf("Retrying: %s (%d: %v)", uri, retry, err)
 	}
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
@@ -622,13 +627,14 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "Combined test")
 	req.SetBasicAuth(USER, PASSWORD)
+	http.DefaultClient.Timeout = _HTTP_TIMEOUT
 	var resp *http.Response
 	for retry := 0; retry < _RETRY_COUNT; retry++ {
 		resp, err = http.DefaultClient.Do(req)
 		if err == nil || !isHttpConnError(err) {
 			break
 		}
-		logging.Debugf("Retrying: %d: %v", retry, err)
+		logging.Debugf("Retrying: %v (%d: %v)", stmt, retry, err)
 	}
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()

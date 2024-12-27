@@ -10,6 +10,7 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"golang.org/x/net/html"
 	"io"
@@ -272,6 +273,18 @@ func install(pkg string) error {
 	if err != nil {
 		logging.Errorf("Failed to locate dpkg in the PATH: %v", err)
 		return err
+	}
+
+	// backup the query.log file before removing
+	if src, err := os.Open("/opt/couchbase/var/lib/couchbase/logs/query.log"); err == nil {
+		if dst, err := os.CreateTemp(os.TempDir(), "query.log_zip_*"); err == nil {
+			zip := gzip.NewWriter(dst)
+			if _, err := io.Copy(zip, src); err == nil {
+				logging.Infof("query.log backed up to %s", dst.Name())
+			} else {
+				logging.Errorf("Failed to back up query.log: %v", err)
+			}
+		}
 	}
 
 	logging.Debugf("removing")
