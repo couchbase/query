@@ -26,7 +26,7 @@ func worker(id uint, stop chan bool, requestParams map[string]interface{}) {
 	for rn := 0; ; rn++ {
 		select {
 		case <-stop:
-			logging.Infof("Worker %d stopping after %d requests (%d failures).", id, rn, failed)
+			logging.Infof("Worker %d stopping after %d request(s) (%d failure(s)).", id, rn, failed)
 			wg.Done()
 			return
 		default:

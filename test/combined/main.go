@@ -15,6 +15,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"path"
 	"runtime"
 	"strings"
 	"syscall"
@@ -398,21 +399,46 @@ func main() {
 func reportRunFailure(iter uint64, args ...interface{}) {
 	logging.Fatalf("Iteration %d failed ======================================================", iter)
 
-	for i := range DataFiles {
-		logging.Infof("Retaining %s (renamed .keep)", DataFiles[i])
-		os.Rename(DataFiles[i], DataFiles[i]+".keep")
-	}
-
+	files := make([]string, 10)
 	if DB != nil {
-		logging.Infoa(func() string {
-			b, _ := json.MarshalIndent(DB, "  ", "  ")
-			return "Database at failure:\n" + string(b)
-		})
+		b, _ := json.MarshalIndent(DB, "  ", "  ")
+		if f, err := os.Create(path.Join(os.TempDir(), "DB.json")); err == nil {
+			if _, err = f.Write(b); err == nil {
+				files = append(files, f.Name())
+			} else {
+				logging.Errorf("Failed to write DB.json: %v", err)
+			}
+			f.Close()
+		} else {
+			logging.Errorf("Failed to write DB.json: %v", err)
+		}
+	}
+	files = append(files, DataFiles...)
+
+	cbc, err := runCBCollectInfo()
+	if err == nil {
+		files = append(files, cbc)
+	} else {
+		files = append(files, "/opt/couchbase/var/lib/couchbase/logs/query.log")
 	}
 
-	content := make([]interface{}, len(args)+1)
+	content := make([]interface{}, len(args)+1, len(args)+2)
 	content[0] = fmt.Sprintf("Iteration %d failed.", iter)
 	copy(content[1:], args)
+
+	if len(files) > 0 {
+		zip := path.Join(os.TempDir(), fmt.Sprintf("iter_%d_failure_%d.zip", iter, time.Now().Unix()))
+		if err := createZip(zip, files...); err != nil {
+			logging.Errorf("Failed to create zip of diagnostic data: %v", err)
+		} else {
+			content = append(content, fmt.Sprintf("Diagnostic data: %s", zip))
+			logging.Infof("Diagnostic data gathered in: %s", zip)
+			for _, file := range files {
+				os.Remove(file)
+			}
+		}
+	}
+
 	notify(content...)
 }
 

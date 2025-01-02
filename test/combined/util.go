@@ -622,6 +622,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 	u, _ := url.JoinPath(_QUERY_URL, "/query/service")
 	req, err := http.NewRequest("POST", u, bytes.NewBufferString(postData.Encode()))
 	if err != nil {
+		err = fmt.Errorf("Failed to create request: (%T) %v", err, err)
 		return -1, 0, nil, err
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -640,6 +641,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 		defer resp.Body.Close()
 	}
 	if err != nil {
+		err = fmt.Errorf("Failed to execute request: (%T) %v", err, err)
 		return -1, 0, nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -663,6 +665,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 	dec := json.NewDecoder(resp.Body)
 	tok, err := dec.Token()
 	if err != nil {
+		err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
 		return -1, 0, nil, err
 	}
 	if r, ok := tok.(json.Delim); !ok || r != json.Delim('{') {
@@ -671,6 +674,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 	for dec.More() { // top-level field processing
 		f, err := dec.Token()
 		if err != nil {
+			err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
 			return -1, 0, nil, err
 		}
 		fn, ok := f.(string)
@@ -682,6 +686,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 			// read the errors as a single object
 			var i interface{}
 			if err = dec.Decode(&i); err != nil {
+				err = fmt.Errorf("JSON decode of errors failed: (%T) %v", err, err)
 				return -1, 0, nil, err
 			}
 			if ai, ok := i.([]interface{}); !ok {
@@ -699,6 +704,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 			// read the metrics as a single object
 			var i interface{}
 			if err = dec.Decode(&i); err != nil {
+				err = fmt.Errorf("JSON decode of metrics failed: (%T) %v", err, err)
 				return -1, 0, nil, err
 			}
 			if m, ok := i.(map[string]interface{}); !ok {
@@ -724,6 +730,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 			for {
 				tok, err = dec.Token()
 				if err != nil {
+					err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
 					return -1, 0, nil, err
 				}
 				if jd, ok := tok.(json.Delim); ok {
@@ -742,6 +749,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 	}
 	tok, err = dec.Token()
 	if err != nil {
+		err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
 		return -1, 0, nil, err
 	}
 	if r, ok := tok.(json.Delim); !ok || r != json.Delim('}') {
@@ -899,7 +907,7 @@ func cleanupTempDataFiles() {
 		ents, err := d.ReadDir(10)
 		if err == nil {
 			for i := range ents {
-				if strings.HasPrefix(ents[i].Name(), "import_data_") && !strings.HasSuffix(ents[i].Name(), ".keep") {
+				if strings.HasPrefix(ents[i].Name(), "import_data_") {
 					os.Remove(path.Join(dir, ents[i].Name()))
 				}
 			}
@@ -909,4 +917,42 @@ func cleanupTempDataFiles() {
 		}
 	}
 	d.Close()
+}
+
+func createZip(name string, contents ...string) error {
+	args := make([]string, len(contents)+1)
+	args[0] = name
+	copy(args[1:], contents)
+	ic := exec.Command("/usr/bin/zip", args...)
+	sb := &strings.Builder{}
+	ic.Stdout = sb
+	err := ic.Run()
+	output := sb.String()
+	if err != nil {
+		logging.Errorf("/usr/bin/zip %v", strings.Join(args, " "))
+		for _, s := range strings.Split(output, "\n") {
+			logging.Errorf(">   %v", s)
+		}
+		logging.Errorf(">   %v", err)
+		return err
+	}
+	return nil
+}
+
+func runCBCollectInfo() (string, error) {
+	name := path.Join(os.TempDir(), "cbcollect_info")
+	logging.Infof("Running cbcollect_info")
+	ic := exec.Command("/opt/couchbase/bin/cbcollect_info", name)
+	sb := &strings.Builder{}
+	ic.Stdout = sb
+	err := ic.Run()
+	output := sb.String()
+	if err != nil {
+		logging.Errorf("cbcollect_info %v", name)
+		for _, s := range strings.Split(output, "\n") {
+			logging.Errorf(">   %v", s)
+		}
+		logging.Errorf(">   %v", err)
+	}
+	return name + ".zip", err
 }
