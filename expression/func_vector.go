@@ -396,7 +396,7 @@ func (this *IsVector) ValidOperands() (err error) {
 		if err != nil {
 			return err
 		}
-	} else if esv := this.operands[1].StaticNoVariable(); esv == nil {
+	} else if esv := this.operands[1].Static(); esv == nil {
 		return errors.NewIsVectorInvalidArg("2nd argument must be constant or positional/named parameter")
 	}
 	ev = this.operands[2].Value()
