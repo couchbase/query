@@ -30,9 +30,10 @@ func TestTimeSeries(t *testing.T) {
 	runMatch("case_ts.json", false, false, qc, t) // non-prepared, no-explain
 	runMatch("case_ts.json", true, false, qc, t)  // prepared, no-explain
 
+	runMatch("case_bugs.json", false, false, qc, t)
+
 	runStmt(qc, "DELETE FROM orders._default.ts WHERE ticker IS NOT NULL")
 	runStmt(qc, "DROP INDEX ix1 ON orders._default.ts")
-
 }
 
 func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *testing.T) {

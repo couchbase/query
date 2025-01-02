@@ -1,0 +1,29 @@
+[
+    {
+        "testcase": "MB-64722",
+        "queryParams": {"query_context": "orders._default"},
+        "statements": "WITH range_start AS (1677730948000), range_end AS (1677730952000) SELECT MILLIS_TO_TZ(t._t,'UTC') AS day, t._v0 AS low, t._v1 AS high FROM ts AS d UNNEST _timeseries(d, {'ts_ranges': [range_start, range_end]}) AS t WHERE d.ticker = 'BASE' AND d.ts_interval IS MISSING AND d.ts_start <= range_end AND d.ts_end >= range_start",
+        "results": [
+            {
+                "day": "2023-03-02T04:22:28Z",
+                "low": 16.48
+            },
+            {
+                "day": "2023-03-02T04:22:29Z",
+                "low": 16.49
+            },
+            {
+                "day": "2023-03-02T04:22:30Z",
+                "low": 16.5
+            },
+            {
+                "day": "2023-03-02T04:22:31Z",
+                "low": 16.51
+            },
+            {
+                "day": "2023-03-02T04:22:32Z",
+                "low": 16.52
+            }
+        ]
+    }
+]
