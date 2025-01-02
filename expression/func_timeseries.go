@@ -85,7 +85,7 @@ func (this *TimeSeries) ValidOperands() (err error) {
 		// second argument must be OBJECT
 		op := this.operands[1]
 		val := op.Value()
-		if (val != nil && val.Type() != value.OBJECT) || op.StaticNoVariable() == nil {
+		if (val != nil && val.Type() != value.OBJECT) || op.Static() == nil {
 			return fmt.Errorf("Second argument must be OBJECT and can only contain constants or positional/named parameters.")
 		}
 
