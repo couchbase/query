@@ -16,30 +16,30 @@ import (
 )
 
 type IndexVector struct {
-	QueryVector  expression.Expression
-	IndexKeyPos  int
-	Probes       expression.Expression
-	ActualVector expression.Expression
-	SquareRoot   bool
+	QueryVector expression.Expression
+	IndexKeyPos int
+	Probes      expression.Expression
+	ReRank      expression.Expression
+	SquareRoot  bool
 }
 
 func NewIndexVector(queryVector expression.Expression, indexKeyPos int,
-	probes, actualVector expression.Expression, squareRoot bool) *IndexVector {
+	probes, reRank expression.Expression, squareRoot bool) *IndexVector {
 	return &IndexVector{
-		QueryVector:  queryVector,
-		IndexKeyPos:  indexKeyPos,
-		Probes:       probes,
-		ActualVector: actualVector,
-		SquareRoot:   squareRoot,
+		QueryVector: queryVector,
+		IndexKeyPos: indexKeyPos,
+		Probes:      probes,
+		ReRank:      reRank,
+		SquareRoot:  squareRoot,
 	}
 }
 
 func (this *IndexVector) Copy() *IndexVector {
 	return &IndexVector{
-		QueryVector:  expression.Copy(this.QueryVector),
-		IndexKeyPos:  this.IndexKeyPos,
-		Probes:       expression.Copy(this.Probes),
-		ActualVector: expression.Copy(this.ActualVector),
+		QueryVector: expression.Copy(this.QueryVector),
+		IndexKeyPos: this.IndexKeyPos,
+		Probes:      expression.Copy(this.Probes),
+		ReRank:      expression.Copy(this.ReRank),
 	}
 }
 
@@ -54,10 +54,10 @@ func (this *IndexVector) EquivalentTo(other *IndexVector) bool {
 	} else if this.Probes != nil && !this.Probes.EquivalentTo(other.Probes) {
 		return false
 	}
-	if (this.ActualVector == nil && other.ActualVector != nil) ||
-		(this.ActualVector != nil && other.ActualVector == nil) {
+	if (this.ReRank == nil && other.ReRank != nil) ||
+		(this.ReRank != nil && other.ReRank == nil) {
 		return false
-	} else if this.ActualVector != nil && !this.ActualVector.EquivalentTo(other.ActualVector) {
+	} else if this.ReRank != nil && !this.ReRank.EquivalentTo(other.ReRank) {
 		return false
 	}
 	return true
@@ -75,8 +75,8 @@ func (this *IndexVector) MarshalBase(f func(map[string]interface{})) map[string]
 	if this.Probes != nil {
 		rv["probes"] = this.Probes
 	}
-	if this.ActualVector != nil {
-		rv["actual_vector"] = this.ActualVector
+	if this.ReRank != nil {
+		rv["re_rank"] = this.ReRank
 	}
 	if this.SquareRoot {
 		rv["square_root"] = this.SquareRoot
@@ -86,11 +86,11 @@ func (this *IndexVector) MarshalBase(f func(map[string]interface{})) map[string]
 
 func (this *IndexVector) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		QueryVector  string `json:"query_vector"`
-		IndexKeyPos  int    `json:"index_key_pos"`
-		Probes       string `json:"probes"`
-		ActualVector string `json:"actual_vector"`
-		SquareRoot   bool   `json:"square_root"`
+		QueryVector string `json:"query_vector"`
+		IndexKeyPos int    `json:"index_key_pos"`
+		Probes      string `json:"probes"`
+		ReRank      string `json:"re_rank"`
+		SquareRoot  bool   `json:"square_root"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -115,8 +115,8 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 		}
 	}
 
-	if _unmarshalled.ActualVector != "" {
-		this.ActualVector, err = parser.Parse(_unmarshalled.ActualVector)
+	if _unmarshalled.ReRank != "" {
+		this.ReRank, err = parser.Parse(_unmarshalled.ReRank)
 		if err != nil {
 			return err
 		}

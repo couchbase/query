@@ -572,9 +572,9 @@ func NewInvalidProbes(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewInvalidActualVector(msg string) Error {
-	return &err{level: EXCEPTION, ICode: E_INVALID_ACTUAL_VECTOR, IKey: "execution.vector_index.actual_vector",
-		InternalMsg:    "Invalid parameter (actual vector) specified for vector search function: " + msg,
+func NewInvalidReRank(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_INVALID_RERANK, IKey: "execution.vector_index.rerank",
+		InternalMsg:    "Invalid parameter (rerank) specified for vector search function: " + msg,
 		InternalCaller: CallerN(1)}
 }
 

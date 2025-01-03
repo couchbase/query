@@ -4263,14 +4263,14 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_INVALID_ACTUAL_VECTOR, // 5432
-		symbol:      "E_INVALID_ACTUAL_VECTOR",
-		Description: "Invalid parameter (actual vector) specified for vector function: <<msg>>.",
+		Code:        E_INVALID_RERANK, // 5432
+		symbol:      "E_INVALID_RERANK",
+		Description: "Invalid parameter (rerank) specified for vector function: <<msg>>.",
 		Reason: []string{
-			"An invalid parameter (actual vector) is specified for vector function: <<msg>>.",
+			"An invalid parameter (rerank) is specified for vector function: <<msg>>.",
 		},
 		Action: []string{
-			"Revise the vector function to use a proper parameter (actual vector).",
+			"Revise the vector function to use a proper parameter (rerank).",
 		},
 		IsUser: YES,
 		AppliesTo: []string{

@@ -318,7 +318,7 @@ const (
 	E_JOIN_ON_PRIMARY_DOCS_EXCEEDED              ErrorCode = 5420
 	E_INVALID_QUERY_VECTOR                       ErrorCode = 5430
 	E_INVALID_PROBES                             ErrorCode = 5431
-	E_INVALID_ACTUAL_VECTOR                      ErrorCode = 5432
+	E_INVALID_RERANK                             ErrorCode = 5432
 	E_MAXHEAP_SIZE_EXCEEDED                      ErrorCode = 5433
 	E_MEMORY_QUOTA_EXCEEDED                      ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                         ErrorCode = 5501

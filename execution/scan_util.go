@@ -176,16 +176,17 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 		indexVector.Probes = int(probes)
 	}
 
-	if planIndexVector.ActualVector != nil {
-		avVal, err := planIndexVector.ActualVector.Evaluate(parent, context)
+	if planIndexVector.ReRank != nil {
+		avVal, err := planIndexVector.ReRank.Evaluate(parent, context)
 		if err != nil {
-			return errors.NewEvaluationError(err, "index vector parameter: actual vector")
+			return errors.NewEvaluationError(err, "index vector parameter: rerank")
 		}
 		if avVal.Type() != value.BOOLEAN {
-			return errors.NewInvalidActualVector("not a boolean")
+			return errors.NewInvalidReRank("not a boolean")
 		}
 		avAct := avVal.Actual().(bool)
-		indexVector.ActualVector = avAct
+		indexVector.ReRank = avAct
+		indexVector.ActualVector = avAct // TODO: remove
 	}
 
 	return nil

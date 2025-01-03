@@ -321,7 +321,7 @@ func (this *Ann) Nprobes() Expression {
 	return nil
 }
 
-func (this *Ann) ActualVector() Expression {
+func (this *Ann) ReRank() Expression {
 	if len(this.operands) > 4 {
 		return this.operands[4]
 	}

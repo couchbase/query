@@ -51,7 +51,7 @@ func (this *TermSpans) CreateScan(
 		if _, ok = index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.ann != nil {
 			squareRoot := this.ann.NeedSquareRoot()
 			indexVector = plan.NewIndexVector(this.ann.QueryVector(), this.annPos,
-				this.ann.Nprobes(), this.ann.ActualVector(), squareRoot)
+				this.ann.Nprobes(), this.ann.ReRank(), squareRoot)
 		} else {
 			indexKeyNames = nil
 			indexPartitionSets = nil

@@ -805,16 +805,16 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 			return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search predicate not available")
 		}
 
-		actualVector := ann.ActualVector()
-		if actualVector != nil {
+		reRank := ann.ReRank()
+		if reRank != nil {
 			index6, ok := entry.index.(datastore.Index6)
 			if !ok {
 				return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search index not index6")
 			}
-			actVectorVal := actualVector.Value()
-			if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth() &&
+			reRankVal := reRank.Value()
+			if reRankVal == nil || (reRankVal.Type() == value.BOOLEAN && reRankVal.Truth() &&
 				(!index6.IsBhive() || !index6.AllowRerank())) {
-				// if ActualVector is specified but unknown, or it's true, cannot cover
+				// if ReRank is specified but unknown, or it's true, cannot cover
 				// exception: BHive index that allows reranking can cover
 				ann = nil
 			}
@@ -1008,16 +1008,16 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry) (datastore.In
 		return keys, errors.NewPlanInternalError("replaceVectorKey: vector search predicate not available")
 	}
 
-	actualVector := ann.ActualVector()
-	if actualVector != nil {
+	reRank := ann.ReRank()
+	if reRank != nil {
 		index6, ok := entry.index.(datastore.Index6)
 		if !ok {
 			return keys, errors.NewPlanInternalError("replaceVectorKey: vector search index not index6")
 		}
-		actVectorVal := actualVector.Value()
-		if actVectorVal == nil || (actVectorVal.Type() == value.BOOLEAN && actVectorVal.Truth() &&
+		reRankVal := reRank.Value()
+		if reRankVal == nil || (reRankVal.Type() == value.BOOLEAN && reRankVal.Truth() &&
 			(!index6.IsBhive() || !index6.AllowRerank())) {
-			// if ActualVector is specified but unknown, or it's true, cannot cover
+			// if ReRank is specified but unknown, or it's true, cannot cover
 			// exception: BHive index that allows reranking can cover
 			return keys, nil
 		}

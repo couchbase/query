@@ -511,7 +511,8 @@ type IndexVector struct {
 	QueryVector  []float32 // query vector
 	IndexKeyPos  int       // vector key pos in index
 	Probes       int       // nprobes
-	ActualVector bool      // Use actual vector
+	ReRank       bool      // rerank
+	ActualVector bool      // TODO: remove
 }
 
 type IndexPartitionSet struct {
