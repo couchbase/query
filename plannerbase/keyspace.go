@@ -239,11 +239,29 @@ func (this *BaseKeyspace) JoinFilters() Filters {
 }
 
 func (this *BaseKeyspace) AddFilter(filter *Filter) {
-	this.filters = append(this.filters, filter)
+	found := false
+	for i := range this.filters {
+		if filter.EquivalentTo(this.filters[i]) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		this.filters = append(this.filters, filter)
+	}
 }
 
 func (this *BaseKeyspace) AddJoinFilter(joinfilter *Filter) {
-	this.joinfilters = append(this.joinfilters, joinfilter)
+	found := false
+	for i := range this.joinfilters {
+		if joinfilter.EquivalentTo(this.joinfilters[i]) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		this.joinfilters = append(this.joinfilters, joinfilter)
+	}
 }
 
 func (this *BaseKeyspace) AddFilters(filters Filters) {
