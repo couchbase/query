@@ -33,6 +33,22 @@ func TestGroupagg(t *testing.T) {
 
 	run_test(qc, t, true) // prepare statements
 
+	// misc bugs
+	runStmt(qc, "CREATE INDEX ixga201 ON orders(c1, a1, c2, c3) WHERE test_id = 'indexga' AND type = 'bugs'")
+	runStmt(qc, "CREATE INDEX ixga202 ON orders(c10, DISTINCT a1) WHERE test_id = 'indexga' AND type = 'bugs'")
+
+	runMatch("case_indexga_bugs.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX orders.ixga201")
+	runStmt(qc, "DROP INDEX orders.ixga202")
+
+	// misc bugs with primary index
+	runStmt(qc, "CREATE PRIMARY INDEX oprimary ON orders")
+
+	runMatch("case_indexga_bugs_primary.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX orders.oprimary")
+
 	// Delete the test specific data
 	case_delete(qc, t)
 
@@ -91,22 +107,6 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 	primary, testcases = buildtestcase(cases, indexes, 5, 2, 7)
 	run_testcase(primary, prepare, qc, t, testcases)
 	runStmt(qc, indexes[11])
-
-	// misc bugs
-	runStmt(qc, "CREATE INDEX ixga201 ON orders(c1, a1, c2, c3) WHERE test_id = 'indexga' AND type = 'bugs'")
-	runStmt(qc, "CREATE INDEX ixga202 ON orders(c10, DISTINCT a1) WHERE test_id = 'indexga' AND type = 'bugs'")
-
-	runMatch("case_indexga_bugs.json", false, true, qc, t)
-
-	runStmt(qc, "DROP INDEX orders.ixga201")
-	runStmt(qc, "DROP INDEX orders.ixga202")
-
-	// misc bugs with primary index
-	runStmt(qc, "CREATE PRIMARY INDEX oprimary ON orders")
-
-	runMatch("case_indexga_bugs_primary.json", false, true, qc, t)
-
-	runStmt(qc, "DROP INDEX orders.oprimary")
 }
 
 func case_delete(qc *gsi.MockServer, t *testing.T) {

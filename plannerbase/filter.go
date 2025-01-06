@@ -105,6 +105,15 @@ func (this *Filter) Copy() *Filter {
 	return rv
 }
 
+func (this *Filter) EquivalentTo(other *Filter) bool {
+	return expression.Equivalent(this.fltrExpr, other.fltrExpr) &&
+		expression.Equivalent(this.origExpr, other.origExpr) &&
+		len(this.keyspaces) == len(other.keyspaces) &&
+		len(this.origKeyspaces) == len(other.origKeyspaces) &&
+		this.optBits == other.optBits &&
+		this.fltrFlags == other.fltrFlags
+}
+
 func (this *Filter) IsOnclause() bool {
 	return (this.fltrFlags & FLTR_IS_ONCLAUSE) != 0
 }

@@ -134,5 +134,32 @@
                 "sum": 4
             }
         ]
+    },
+    {
+        "testcase": "MB-64752",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`limit` IS NOT MISSING AND v.`covers` IS NOT MISSING AND ARRAY_LENGTH(v.`spans`) = 1 AND v.`spans`[0].`exact` = true END"
+        },
+        "statements": "SELECT c2, c3 FROM orders WHERE test_id = 'indexga' AND type = 'bugs' AND c1 = $c1 AND c1 = $c1 LIMIT 4",
+        "namedArgs": {"c1": "doc"},
+        "results": [
+            {},
+            {
+                "c3": 10
+            },
+            {
+                "c3": 15
+            },
+            {
+                "c3": 15
+            }
+        ]
     }
 ]
