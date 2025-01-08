@@ -102,7 +102,7 @@ func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, contex
 }
 
 func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.IndexVector, parent value.Value,
-	dimension int, context *opContext) errors.Error {
+	dimension int, allowRerank bool, context *opContext) errors.Error {
 
 	qvVal, err := planIndexVector.QueryVector.Evaluate(parent, context)
 	if err != nil {
@@ -176,7 +176,7 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 		indexVector.Probes = int(probes)
 	}
 
-	if planIndexVector.ReRank != nil {
+	if allowRerank && planIndexVector.ReRank != nil {
 		avVal, err := planIndexVector.ReRank.Evaluate(parent, context)
 		if err != nil {
 			return errors.NewEvaluationError(err, "index vector parameter: rerank")

@@ -151,7 +151,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 					IndexKeyPos: planIndexVector.IndexKeyPos,
 				}
 				er = getIndexVector(planIndexVector, indexVector, parent,
-					index6.VectorDimension(), &this.operatorCtx)
+					index6.VectorDimension(), index6.AllowRerank(), &this.operatorCtx)
 				if er != nil {
 					context.Error(er)
 					return
