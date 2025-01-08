@@ -348,7 +348,8 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 	atomic.AddUint64(&this.executions, 1)
 	results, elapsed, errs, err := executeSQLProcessingResults(this.SQL(""), requestParams)
 	if err != nil {
-		logging.Debugf("%v", err)
+		//logging.Debugf("%v", err)
+		logging.Errorf("Executing query %s has failed with error: %v", this.SQL(""), err)
 		this.Lock()
 		this.failed++
 		this.lastFailure = err
