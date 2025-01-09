@@ -197,7 +197,7 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
 	nTerms int, alias string, limit, offset expression.Expression, advisorValidate, singleKeyspace bool,
-	context *PrepareContext) map[datastore.Index]*indexEntry {
+	vector bool, context *PrepareContext) map[datastore.Index]*indexEntry {
 	return sargables
 }
 

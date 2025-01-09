@@ -171,7 +171,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	offsetHandled := false
 	if stmtOrder != nil && !this.hasBuilderFlag(BUILDER_PLAN_HAS_ORDER|BUILDER_HAS_EARLY_ORDER) &&
-		(this.order == nil || this.partialSortTermCount > 0) {
+		(this.order == nil || this.partialSortTermCount > 0 || this.hasBuilderFlag(BUILDER_HAS_VECTOR_RERANK)) {
 
 		var limit *plan.Limit
 		var offset *plan.Offset

@@ -15,6 +15,8 @@ import (
 	"github.com/couchbase/query/expression/parser"
 )
 
+const RERANK_FACTOR = 5
+
 type IndexVector struct {
 	QueryVector expression.Expression
 	IndexKeyPos int

@@ -45,6 +45,7 @@ const (
 	IE_VECTOR_KEY_SARGABLE
 	IE_VECTOR_KEY_SKIP_ORDER
 	IE_NONEQ_COND
+	IE_VECTOR_RERANK
 )
 
 type indexEntry struct {

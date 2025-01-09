@@ -1189,6 +1189,14 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 	}
 }
 
+func expandOffsetLimit(offset, limit expression.Expression) expression.Expression {
+	if offset != nil || limit != nil {
+		limit = offsetPlusLimit(offset, limit)
+		return expression.NewMult(expression.NewConstant(plan.RERANK_FACTOR), limit)
+	}
+	return nil
+}
+
 func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans SargSpans,
 	arrayKey *expression.All, unnestAliases []string, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64, size int64, frCost float64) (

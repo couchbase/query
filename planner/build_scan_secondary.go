@@ -136,6 +136,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		indexProjection = this.buildIndexProjection(nil, nil, nil, true, nil)
 	}
 
+	hasVector := false
+	hasRerank := false
 	for index, entry := range indexes {
 		// skip primary index with no sargable keys. Able to do PrimaryScan
 		if index.IsPrimary() && entry.minKeys == 0 {
@@ -171,7 +173,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		}
 
 		var indexKeyOrders plan.IndexKeyOrders
-		if orderEntry != nil && index == orderEntry.index {
+		if (orderEntry != nil && index == orderEntry.index) ||
+			(entry.IsPushDownProperty(_PUSHDOWN_ORDER) && entry.HasFlag(IE_VECTOR_RERANK)) {
 			_, indexKeyOrders, _ = this.entryUseIndexOrder(entry)
 		}
 
@@ -181,24 +184,36 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 		var limit, offset expression.Expression
 		if entry.IsPushDownProperty(_PUSHDOWN_LIMIT) {
-			limit = this.limit
+			if entry.HasFlag(IE_VECTOR_RERANK) {
+				limit = expandOffsetLimit(this.offset, this.limit)
+			} else {
+				limit = this.limit
+			}
 		}
 		if entry.IsPushDownProperty(_PUSHDOWN_OFFSET) {
 			offset = this.offset
 		}
 
+		vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
+		hasVector = hasVector || vector
+
 		var indexKeyNames []string
 		var indexPartitionSets plan.IndexPartitionSets
-		if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
-			if filter != nil {
-				indexKeyNames, err = getIndexKeyNames(node.Alias(), index, idxProj, false)
+		if vector {
+			if entry.HasFlag(IE_VECTOR_RERANK) {
+				hasRerank = true
+			}
+			if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() {
+				if filter != nil {
+					indexKeyNames, err = getIndexKeyNames(node.Alias(), index, idxProj, false)
+					if err != nil {
+						return nil, 0, err
+					}
+				}
+				indexPartitionSets, err = this.getIndexPartitionSets(entry.partitionKeys, node, pred, baseKeyspace)
 				if err != nil {
 					return nil, 0, err
 				}
-			}
-			indexPartitionSets, err = this.getIndexPartitionSets(entry.partitionKeys, node, pred, baseKeyspace)
-			if err != nil {
-				return nil, 0, err
 			}
 		}
 
@@ -226,7 +241,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 						iscan3.SetEarlyOffset()
 					}
 				}
-			} else if entry.IsPushDownProperty(_PUSHDOWN_ORDER) &&
+			} else if entry.IsPushDownProperty(_PUSHDOWN_ORDER) && !entry.HasFlag(IE_VECTOR_RERANK) &&
 				entry.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
 				if this.limit != nil && !entry.IsPushDownProperty(_PUSHDOWN_LIMIT) {
 					iscan3.SetEarlyLimit()
@@ -297,6 +312,15 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		}
 	}
 
+	if hasVector {
+		if !(len(scans) == 1 || (scans[0] == nil && len(scans) == 2)) {
+			return nil, 0, errors.NewPlanInternalError(fmt.Sprintf("buildCreateSecondaryScan: vector query using intersect scan (%d)", len(scans)-1))
+		}
+		if hasRerank {
+			this.setBuilderFlag(BUILDER_HAS_VECTOR_RERANK)
+		}
+	}
+
 	if len(scans) == 1 {
 		this.orderScan = scans[0]
 		return scans[0], sargLength, nil
@@ -322,6 +346,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	}
 
 	hasEarlyOrder := false
+	hasRerank := false
 
 	// get ordered Index. If any index doesn't have Limit/Offset pushdown those must turned off
 	pushDown := this.hasOffsetOrLimit()
@@ -329,7 +354,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 		if this.order != nil {
 			// prefer _PUSHDOWN_ORDER over _PUSHDOWN_PARTIAL_ORDER
 			if (orderEntry == nil || orderEntry.IsPushDownProperty(_PUSHDOWN_PARTIAL_ORDER)) &&
-				entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
+				entry.IsPushDownProperty(_PUSHDOWN_ORDER) && !entry.HasFlag(IE_VECTOR_RERANK) {
 				orderEntry = entry
 				this.partialSortTermCount = 0
 			} else if orderEntry == nil && entry.IsPushDownProperty(_PUSHDOWN_PARTIAL_ORDER) {
@@ -345,6 +370,10 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 
 		if entry.HasFlag(IE_HAS_EARLY_ORDER) {
 			hasEarlyOrder = true
+		}
+
+		if entry.HasFlag(IE_VECTOR_RERANK) {
+			hasRerank = true
 		}
 	}
 
@@ -378,7 +407,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	if orderEntry != nil {
 		this.maxParallelism = 1
 	} else if this.order != nil {
-		if !hasEarlyOrder {
+		if !hasEarlyOrder && !hasRerank {
 			this.resetOrderOffsetLimit()
 		}
 		return nil, nil, nil
@@ -388,7 +417,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	if pushDown && (len(indexes)+len(flex)+len(searchSargables)) > 1 {
 		limit = offsetPlusLimit(this.offset, this.limit)
 		this.resetOffsetLimit()
-	} else if !pushDown && !hasEarlyOrder {
+	} else if !pushDown && !hasEarlyOrder && !hasRerank {
 		this.resetOffsetLimit()
 	}
 	return
@@ -617,11 +646,13 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 
+	vector := false
 	if useCBO && len(baseKeyspace.VectorFilters()) > 0 {
 		// for now, do not use CBO for consideration of bhive vector index for covering
 		// since we don't yet have proper costing for bhive vector index scan
 		for _, entry := range sargables {
 			if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+				vector = true
 				if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() {
 					useCBO = false
 					break
@@ -660,7 +691,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 				}
 			}
 			if se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-				!se.HasFlag(IE_LIMIT_OFFSET_COST) {
+				!se.HasFlag(IE_LIMIT_OFFSET_COST) && !se.HasFlag(IE_VECTOR_RERANK) {
 				if se.cost > 0.0 && se.cardinality > 0.0 && se.size > 0 && se.frCost > 0.0 {
 					cost, card, frCost, selec := this.getIndexLimitCost(se.cost, se.cardinality, se.frCost, se.selectivity)
 					if cost > 0.0 && card > 0.0 && frCost > 0.0 && selec > 0.0 {
@@ -709,7 +740,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 					}
 				}
 
-				if matchedLeadingKeys(se, te, predFc) {
+				if matchedLeadingKeys(se, te, predFc) || vectorIndexes(s, t) {
 					seCost := se.scanCost()
 					teCost := te.scanCost()
 					if seCost < teCost || (seCost == teCost && se.cardinality < te.cardinality) {
@@ -739,11 +770,19 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			}
 		}
 		if useCBO {
-			sargables = this.chooseIntersectScan(sargables, node)
+			sargables = this.chooseIntersectScan(sargables, node, vector)
 		} else {
 			// remove any early order indicator
 			for _, entry := range sargables {
 				entry.UnsetFlags(IE_HAS_EARLY_ORDER)
+			}
+			if vector {
+				// choose random one
+				for i, e := range sargables {
+					return map[datastore.Index]*indexEntry{
+						i: e,
+					}
+				}
 			}
 		}
 	}
@@ -787,6 +826,8 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 	if be == se {
 		return true
 	}
+
+	vector := vectorIndexes(se.index, te.index)
 
 	sePushDown := se.PushDownProperty()
 	tePushDown := te.PushDownProperty()
@@ -845,6 +886,14 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 
 	if sePushDown != tePushDown {
 		return sePushDown > tePushDown
+	}
+
+	if vector {
+		seRerank := se.HasFlag(IE_VECTOR_RERANK)
+		teRerank := te.HasFlag(IE_VECTOR_RERANK)
+		if seRerank != teRerank {
+			return teRerank
+		}
 	}
 
 	if se.includeKeys != te.includeKeys {
@@ -1019,6 +1068,15 @@ func matchedIndexCondition(se *indexEntry, tk expression.Expression, predFc map[
 	return false
 }
 
+func vectorIndexes(s, t datastore.Index) bool {
+	if ixs, ok := s.(datastore.Index6); ok && ixs.IsVector() {
+		if ixt, ok := t.(datastore.Index6); ok && ixt.IsVector() {
+			return true
+		}
+	}
+	return false
+}
+
 func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool,
 	sargables map[datastore.Index]*indexEntry) error {
 
@@ -1156,10 +1214,18 @@ func hasArrayIndexKey(keys expression.Expressions) bool {
 }
 
 func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEntry,
-	node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
+	node *algebra.KeyspaceTerm, vector bool) map[datastore.Index]*indexEntry {
 
 	keyspace, err := this.getTermKeyspace(node)
 	if err != nil {
+		if vector {
+			// choose random one
+			for i, e := range sargables {
+				return map[datastore.Index]*indexEntry{
+					i: e,
+				}
+			}
+		}
 		return sargables
 	}
 
@@ -1170,7 +1236,7 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 
 	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(),
 		this.limit, this.offset, this.advisorValidate(), len(this.baseKeyspaces) == 1,
-		this.context)
+		vector, this.context)
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
@@ -1376,7 +1442,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	idxKeys := entry.idxKeys
 	includes := entry.includes
 	if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) && !entry.IsPushDownProperty(_PUSHDOWN_ORDER) {
-		idxKeys, err = replaceVectorKey(idxKeys, entry)
+		idxKeys, _, err = replaceVectorKey(idxKeys, entry, false)
 		if err != nil {
 			return
 		}
@@ -1411,6 +1477,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		this.order != nil && this.limit != nil &&
 		!this.hasBuilderFlag(BUILDER_ORDER_DEPENDS_ON_LET) &&
 		!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+		!entry.HasFlag(IE_VECTOR_RERANK) &&
 		// Do not allow early order when the FROM clause has an UNNEST
 		(!baseKeyspace.IsUnnest() && !baseKeyspace.HasUnnest()) {
 
@@ -1698,7 +1765,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 	keys := entry.idxKeys
 	includes := entry.includes
 	if hasVector && entry.HasFlag(IE_HAS_EARLY_ORDER) {
-		keys, err = replaceVectorKey(keys, entry)
+		keys, _, err = replaceVectorKey(keys, entry, false)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}

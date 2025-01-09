@@ -125,7 +125,7 @@ outer:
 		}
 
 		if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
-			idxKeys, err = replaceVectorKey(idxKeys, entry)
+			idxKeys, _, err = replaceVectorKey(idxKeys, entry, true)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -999,27 +999,27 @@ outer:
 	return true
 }
 
-func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry) (datastore.IndexKeys, error) {
+func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (datastore.IndexKeys, *expression.Ann, error) {
 	var ann *expression.Ann
 	if tspans, ok := entry.spans.(*TermSpans); ok {
 		ann = tspans.ann
 	}
 	if ann == nil {
-		return keys, errors.NewPlanInternalError("replaceVectorKey: vector search predicate not available")
+		return keys, nil, errors.NewPlanInternalError("replaceVectorKey: vector search predicate not available")
 	}
 
 	reRank := ann.ReRank()
-	if reRank != nil {
+	if reRank != nil && cover {
 		index6, ok := entry.index.(datastore.Index6)
 		if !ok {
-			return keys, errors.NewPlanInternalError("replaceVectorKey: vector search index not index6")
+			return keys, nil, errors.NewPlanInternalError("replaceVectorKey: vector search index not index6")
 		}
 		reRankVal := reRank.Value()
 		if reRankVal == nil || (reRankVal.Type() == value.BOOLEAN && reRankVal.Truth() &&
 			(!index6.IsBhive() || !index6.AllowRerank())) {
 			// if ReRank is specified but unknown, or it's true, cannot cover
 			// exception: BHive index that allows reranking can cover
-			return keys, nil
+			return keys, nil, nil
 		}
 	}
 
@@ -1032,7 +1032,7 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry) (datastore.In
 		}
 	}
 
-	return newKeys, nil
+	return newKeys, ann, nil
 }
 
 var _FILTER_COVERS_POOL = value.NewStringValuePool(32)

@@ -396,7 +396,7 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
-	nTerms int, alias string, limit, offset expression.Expression, advisorValidate, singleKeyspace bool,
+	nTerms int, alias string, limit, offset expression.Expression, advisorValidate, singleKeyspace, vector bool,
 	context *PrepareContext) map[datastore.Index]*indexEntry {
 
 	if keyspace == nil {
@@ -520,9 +520,13 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		}
 	}
 
-	adjustIndexSelectivity(indexes, sargables, alias, advisorValidate, context)
+	adjustIndexSelectivity(indexes, sargables, alias, advisorValidate, vector, context)
 
-	indexes = optutil.ChooseIntersectScan(keyspace.QualifiedName(), indexes)
+	if vector {
+		indexes = indexes[:1]
+	} else {
+		indexes = optutil.ChooseIntersectScan(keyspace.QualifiedName(), indexes)
+	}
 
 	newSargables := make(map[datastore.Index]*indexEntry, len(indexes))
 	for _, idx := range indexes {
@@ -533,7 +537,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 }
 
 func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.Index]*indexEntry,
-	alias string, considerInternal bool, context *PrepareContext) {
+	alias string, considerInternal, vector bool, context *PrepareContext) {
 
 	if len(indexes) <= 1 {
 		return
@@ -598,8 +602,10 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 		}
 	}
 
-	// recurse on remaining indexes
-	adjustIndexSelectivity(indexes[1:], sargables, alias, considerInternal, context)
+	if !vector {
+		// recurse on remaining indexes
+		adjustIndexSelectivity(indexes[1:], sargables, alias, considerInternal, vector, context)
+	}
 }
 
 func getSortCost(totalSize int64, nterms int, cardinality float64, limit, offset int64) (float64, float64, int64, float64) {

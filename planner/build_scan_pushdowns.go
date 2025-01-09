@@ -39,13 +39,26 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 
 	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
 	idxKeys := entry.idxKeys
+	var ann *expression.Ann
+	rerank := false
 
 	// Check Query Order By matches with index key order.
 	exactLimitOffset := exact
 	if this.order != nil {
 		if this.group == nil || isPushDownProperty(pushDownProperty, _PUSHDOWN_FULLGROUPAGGS) {
 			if exact && vector {
-				idxKeys, _ = replaceVectorKey(idxKeys, entry)
+				idxKeys, ann, _ = replaceVectorKey(idxKeys, entry, false)
+				allowRerank := false
+				if index6, ok := entry.index.(datastore.Index6); ok && index6.AllowRerank() {
+					allowRerank = true
+				}
+				if !allowRerank && ann != nil && ann.ReRank() != nil {
+					rrVal := ann.ReRank().Value()
+					if rrVal == nil || rrVal.Truth() {
+						// assume we need to rerank if value is not known
+						rerank = true
+					}
+				}
 			}
 			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys, nil, pushDownProperty)
 			logging.Debugf("indexPushDownProperty: ok: %v, count: %v", ok, partSortCount)
@@ -66,14 +79,18 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 				if index6, ok := entry.index.(datastore.Index6); ok {
 					maxHeapSize = index6.MaxHeapSize()
 				}
+				factor := 1
+				if rerank {
+					factor = plan.RERANK_FACTOR
+				}
 				heapSize := -1
 				lv, static := base.GetStaticInt(this.limit)
 				if static {
-					heapSize = int(lv)
+					heapSize = int(lv) * factor
 					if this.offset != nil {
 						ov, static := base.GetStaticInt(this.offset)
 						if static {
-							heapSize += int(ov)
+							heapSize += int(ov) * factor
 						} else {
 							heapSize = -1
 						}
@@ -101,6 +118,9 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 		if this.limit != nil {
 			if exactLimitOffset {
 				pushDownProperty |= _PUSHDOWN_LIMIT
+				if rerank {
+					entry.SetFlags(IE_VECTOR_RERANK, true)
+				}
 			} else if vector && this.order != nil {
 				// if determined above that ORDER can be pushed down but LIMIT cannot,
 				// need to unset ORDER pushdown
@@ -122,7 +142,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 		//        *  Query Order By not present
 		//        *  Query Order By matches with Index key order
 
-		if this.offset != nil && exactLimitOffset &&
+		if this.offset != nil && exactLimitOffset && !rerank &&
 			useIndex2API(entry.index, this.context.IndexApiVersion()) &&
 			entry.spans.CanPushDownOffset(entry.index, overlapSpans(pred),
 				!unnest && indexHasArrayIndexKey(entry.index)) {
@@ -547,7 +567,7 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, 
 		// for vector index key, only do key replacement if we've previously determined that
 		// order can be pushed down, otherwise key replacement needs to be performed by caller
 		var err error
-		keys, err = replaceVectorKey(keys, entry)
+		keys, _, err = replaceVectorKey(keys, entry, false)
 		if err != nil {
 			logging.Debugf("useIndexOrder: replaceVectorKey returns error %v", err)
 			return false, nil, 0
