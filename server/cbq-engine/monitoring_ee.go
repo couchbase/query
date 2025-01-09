@@ -12,8 +12,10 @@ package main
 
 import (
 	"flag"
+
 	index_advisor "github.com/couchbase/query-ee/indexadvisor"
 	"github.com/couchbase/query/clustering"
+	clustering_stub "github.com/couchbase/query/clustering/stub"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/server"
@@ -25,7 +27,9 @@ var PROFILE = flag.String("profile", "off", "Profiling state: off, phases, timin
 var CONTROLS = flag.Bool("controls", false, "Response to include controls section")
 
 func monitoringInit(configstore clustering.ConfigurationStore) (server.Profile, bool, errors.Error) {
-	distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
+	if configstore.URL() != clustering_stub.CONFIGURATION_STORE_STUB_URL {
+		distributed.SetRemoteAccess(http.NewSystemRemoteAccess(configstore))
+	}
 	prof, _ := server.ParseProfile(*PROFILE, false)
 
 	index_advisor.SetConfigStore(configstore)
