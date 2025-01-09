@@ -48,10 +48,14 @@ func (this *TermSpans) CreateScan(
 
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
 		var indexVector *plan.IndexVector
-		if _, ok = index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.ann != nil {
+		if index6, ok := index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.ann != nil {
+			var reRank expression.Expression
+			if index6.AllowRerank() {
+				reRank = this.ann.ReRank()
+			}
 			squareRoot := this.ann.NeedSquareRoot()
 			indexVector = plan.NewIndexVector(this.ann.QueryVector(), this.annPos,
-				this.ann.Nprobes(), this.ann.ReRank(), squareRoot)
+				this.ann.Nprobes(), reRank, squareRoot)
 		} else {
 			indexKeyNames = nil
 			indexPartitionSets = nil
