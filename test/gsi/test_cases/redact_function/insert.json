@@ -1,0 +1,5 @@
+[
+    {
+        "statements":"INSERT INTO orders VALUES ('t',{\"user\": {\"id\": \"12345\",\"name\": \"John Doe\",\"email\": \"johndoe@example.com\",\"phone\": \"+1-555-123-4567\",\"secondary_phone\":\"+1-555-123-4569\",\"address\": {\"street\": \"123 Elm Street\",\"city\": \"Springfield\",\"state\": \"IL\",\"zip\": \"62704\",\"country\": \"USA\"},\"ssn\": \"987-65-4320\"},\"transactions\": [{\"id\": \"txn001\",\"amount\": 250.75,\"date\": \"2025-01-10\",\"merchant\": \"Amazon\",\"card_number\": \"4111 1111 1111 1111\"},{\"id\": \"txn002\",\"amount\": 85.00,\"date\": \"2025-01-11\",\"merchant\": \"Starbucks\",\"card_number\": \"4111 1111 1111 1111\"}],\"metadata\": {\"created_by\": \"admin_user\",\"created_at\": \"2025-01-12T14:30:00Z\"}})"
+    }
+]

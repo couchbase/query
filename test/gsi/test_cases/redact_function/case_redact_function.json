@@ -1,0 +1,471 @@
+[
+    {
+        "testcase":"redact the entire object",
+        "statements":"SELECT redact(t).* FROM orders t",
+        "results": [
+            {
+                "metadata": {
+                    "created_at": "1111-11-11111:11:111",
+                    "created_by": "xxxxx_xxxx"
+                },
+                "transactions": [
+                    {
+                        "amount": 111.11,
+                        "card_number": "xxxx xxxx xxxx xxxx",
+                        "date": "1111-11-11",
+                        "id": "xxxxxx",
+                        "merchant": "xxxxxx"
+                    },
+                    {
+                        "amount": 11,
+                        "card_number": "xxxx xxxx xxxx xxxx",
+                        "date": "1111-11-11",
+                        "id": "xxxxxx",
+                        "merchant": "xxxxxxxxx"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "xxxxxxxxxxx",
+                        "country": "xxx",
+                        "state": "xx",
+                        "street": "xxx xxx xxxxxx",
+                        "zip": "xxxxx"
+                    },
+                    "email": "xxxxxxx@xxxxxxx.xxx",
+                    "id": "xxxxx",
+                    "name": "xxxx xxx",
+                    "phone": "+x-xxx-xxx-xxxx",
+                    "secondary_phone": "+x-xxx-xxx-xxxx",
+                    "ssn": "xxx-xx-xxxx"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "redact filter with a plain pattern",
+        "statements":"SELECT redact(t, {\"pattern\":\"phone\"}).* FROM orders t",
+        "results": [
+            {
+                "metadata": {
+                    "created_at": "2025-01-12T14:30:00Z",
+                    "created_by": "admin_user"
+                },
+                "transactions": [
+                    {
+                        "amount": 250.75,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-10",
+                        "id": "txn001",
+                        "merchant": "Amazon"
+                    },
+                    {
+                        "amount": 85,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-11",
+                        "id": "txn002",
+                        "merchant": "Starbucks"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "Springfield",
+                        "country": "USA",
+                        "state": "IL",
+                        "street": "123 Elm Street",
+                        "zip": "62704"
+                    },
+                    "email": "johndoe@example.com",
+                    "id": "12345",
+                    "name": "John Doe",
+                    "phone": "+x-xxx-xxx-xxxx",
+                    "secondary_phone": "+x-xxx-xxx-xxxx",
+                    "ssn": "987-65-4320"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "redact filter with a pattern and exact match",
+        "statements":"SELECT redact(t, {\"pattern\":\"phone\", \"exact\":true}).* FROM orders t",
+        "results":[
+            {
+                "metadata": {
+                    "created_at": "2025-01-12T14:30:00Z",
+                    "created_by": "admin_user"
+                },
+                "transactions": [
+                    {
+                        "amount": 250.75,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-10",
+                        "id": "txn001",
+                        "merchant": "Amazon"
+                    },
+                    {
+                        "amount": 85,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-11",
+                        "id": "txn002",
+                        "merchant": "Starbucks"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "Springfield",
+                        "country": "USA",
+                        "state": "IL",
+                        "street": "123 Elm Street",
+                        "zip": "62704"
+                    },
+                    "email": "johndoe@example.com",
+                    "id": "12345",
+                    "name": "John Doe",
+                    "phone": "+x-xxx-xxx-xxxx",
+                    "secondary_phone": "+1-555-123-4569",
+                    "ssn": "987-65-4320"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "redact filter with a regex pattern",
+        "statements":"SELECT redact(t, {\"pattern\":\"^created.*\", \"regex\":true}).* FROM orders t",
+        "results": [
+            {
+                "metadata": {
+                    "created_at": "1111-11-11111:11:111",
+                    "created_by": "xxxxx_xxxx"
+                },
+                "transactions": [
+                    {
+                        "amount": 250.75,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-10",
+                        "id": "txn001",
+                        "merchant": "Amazon"
+                    },
+                    {
+                        "amount": 85,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-11",
+                        "id": "txn002",
+                        "merchant": "Starbucks"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "Springfield",
+                        "country": "USA",
+                        "state": "IL",
+                        "street": "123 Elm Street",
+                        "zip": "62704"
+                    },
+                    "email": "johndoe@example.com",
+                    "id": "12345",
+                    "name": "John Doe",
+                    "phone": "+1-555-123-4567",
+                    "secondary_phone": "+1-555-123-4569",
+                    "ssn": "987-65-4320"
+                }
+            }
+        ]
+    },
+    {
+        "testcase":"redact filter that redacts field names too",
+        "statements":"SELECT redact(t, {\"name\":true}).* FROM orders t",
+        "results": [
+            {
+                "f0000": {
+                    "f0000_f0000": "1111-11-11111:11:111",
+                    "f0000_f0001": "xxxxx_xxxx"
+                },
+                "f0001": [
+                    {
+                        "f0001_f0000": 111.11,
+                        "f0001_f0001": "xxxx xxxx xxxx xxxx",
+                        "f0001_f0002": "1111-11-11",
+                        "f0001_f0003": "xxxxxx",
+                        "f0001_f0004": "xxxxxx"
+                    },
+                    {
+                        "f0001_f0000": 11,
+                        "f0001_f0001": "xxxx xxxx xxxx xxxx",
+                        "f0001_f0002": "1111-11-11",
+                        "f0001_f0003": "xxxxxx",
+                        "f0001_f0004": "xxxxxxxxx"
+                    }
+                ],
+                "f0002": {
+                    "f0002_f0000": {
+                        "f0002_f0000_f0000": "xxxxxxxxxxx",
+                        "f0002_f0000_f0001": "xxx",
+                        "f0002_f0000_f0002": "xx",
+                        "f0002_f0000_f0003": "xxx xxx xxxxxx",
+                        "f0002_f0000_f0004": "xxxxx"
+                    },
+                    "f0002_f0001": "xxxxxxx@xxxxxxx.xxx",
+                    "f0002_f0002": "xxxxx",
+                    "f0002_f0003": "xxxx xxx",
+                    "f0002_f0004": "+x-xxx-xxx-xxxx",
+                    "f0002_f0005": "+x-xxx-xxx-xxxx",
+                    "f0002_f0006": "xxx-xx-xxxx"
+                }
+            }
+        ]
+    },
+    {
+        "testcase":"redact filter that omits fields that match the pattern",
+        "statements":"SELECT redact(t, {\"pattern\":\"metadata\", \"omit\":true}).* FROM orders t",
+        "results": [
+            {
+                "transactions": [
+                    {
+                        "amount": 250.75,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-10",
+                        "id": "txn001",
+                        "merchant": "Amazon"
+                    },
+                    {
+                        "amount": 85,
+                        "card_number": "4111 1111 1111 1111",
+                        "date": "2025-01-11",
+                        "id": "txn002",
+                        "merchant": "Starbucks"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "Springfield",
+                        "country": "USA",
+                        "state": "IL",
+                        "street": "123 Elm Street",
+                        "zip": "62704"
+                    },
+                    "email": "johndoe@example.com",
+                    "id": "12345",
+                    "name": "John Doe",
+                    "phone": "+1-555-123-4567",
+                    "secondary_phone": "+1-555-123-4569",
+                    "ssn": "987-65-4320"
+                }
+            }
+        ]
+    },
+    {
+        "testcase":"redact filter that changes the mask to \"ASD\" from default \"x\"",
+        "statements":"SELECT redact(t, {\"mask\":\"ASD\"}).* FROM orders t",
+        "results": [
+            {
+                "metadata": {
+                    "created_at": "1111-11-11111:11:111",
+                    "created_by": "ASDAS_ASDA"
+                },
+                "transactions": [
+                    {
+                        "amount": 111.11,
+                        "card_number": "ASDA DASD SDAS ASDA",
+                        "date": "1111-11-11",
+                        "id": "ASDASD",
+                        "merchant": "ASDASD"
+                    },
+                    {
+                        "amount": 11,
+                        "card_number": "ASDA DASD SDAS ASDA",
+                        "date": "1111-11-11",
+                        "id": "ASDASD",
+                        "merchant": "ASDASDASD"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "ASDASDASDAS",
+                        "country": "ASD",
+                        "state": "AS",
+                        "street": "ASD SDA DASDAS",
+                        "zip": "ASDAS"
+                    },
+                    "email": "ASDASDA@DASDASD.SDA",
+                    "id": "ASDAS",
+                    "name": "ASDA DAS",
+                    "phone": "+S-ASD-SDA-DASD",
+                    "secondary_phone": "+S-ASD-SDA-DASD",
+                    "ssn": "ASD-SD-SDAS"
+                }
+            }
+        ]
+    },
+    {
+        "testcase":"redact filter that applies strict redaction, i.e ignores whitespaces",
+        "statements":"SELECT redact(t, {\"strict\":true}).* FROM orders t",
+        "results": [
+            {
+                "metadata": {
+                    "created_at": "xxxxxxxxxxxxxxxxxxxx",
+                    "created_by": "xxxxxxxxxx"
+                },
+                "transactions": [
+                    {
+                        "amount": 111.11,
+                        "card_number": "xxxxxxxxxxxxxxxxxxx",
+                        "date": "xxxxxxxxxx",
+                        "id": "xxxxxx",
+                        "merchant": "xxxxxx"
+                    },
+                    {
+                        "amount": 11,
+                        "card_number": "xxxxxxxxxxxxxxxxxxx",
+                        "date": "xxxxxxxxxx",
+                        "id": "xxxxxx",
+                        "merchant": "xxxxxxxxx"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "xxxxxxxxxxx",
+                        "country": "xxx",
+                        "state": "xx",
+                        "street": "xxxxxxxxxxxxxx",
+                        "zip": "xxxxx"
+                    },
+                    "email": "xxxxxxxxxxxxxxxxxxx",
+                    "id": "xxxxx",
+                    "name": "xxxxxxxx",
+                    "phone": "xxxxxxxxxxxxxxx",
+                    "secondary_phone": "xxxxxxxxxxxxxxx",
+                    "ssn": "xxxxxxxxxxx"
+                }
+            }
+        ]
+    },
+    {
+        "testcase":"redact filter that applies fixedlength redaction, i.e string data is replaced with single instance of the mask if not identified as a valid date",
+        "statements":"SELECT redact(t, {\"fixedlength\":true}).* FROM orders t",
+        "results": [
+            {
+                "metadata": {
+                    "created_at": "1111-11-11111:11:111",
+                    "created_by": "x"
+                },
+                "transactions": [
+                    {
+                        "amount": 0,
+                        "card_number": "x",
+                        "date": "1111-11-11",
+                        "id": "x",
+                        "merchant": "x"
+                    },
+                    {
+                        "amount": 0,
+                        "card_number": "x",
+                        "date": "1111-11-11",
+                        "id": "x",
+                        "merchant": "x"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "x",
+                        "country": "x",
+                        "state": "x",
+                        "street": "x",
+                        "zip": "x"
+                    },
+                    "email": "x",
+                    "id": "x",
+                    "name": "x",
+                    "phone": "x",
+                    "secondary_phone": "x",
+                    "ssn": "x"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "redact filter that redacts based on a pattern match and excludes redacting fields passed in the \"exclude\" option",
+        "statements":"SELECT redact(t, {\"pattern\":\"^name$|^amount$|^id$|^date$\", \"regex\":true, \"exclude\":true}).* FROM orders t",
+        "results":  [
+            {
+                "metadata": {
+                    "created_at": "1111-11-11111:11:111",
+                    "created_by": "xxxxx_xxxx"
+                },
+                "transactions": [
+                    {
+                        "amount": 250.75,
+                        "card_number": "xxxx xxxx xxxx xxxx",
+                        "date": "2025-01-10",
+                        "id": "txn001",
+                        "merchant": "xxxxxx"
+                    },
+                    {
+                        "amount": 85,
+                        "card_number": "xxxx xxxx xxxx xxxx",
+                        "date": "2025-01-11",
+                        "id": "txn002",
+                        "merchant": "xxxxxxxxx"
+                    }
+                ],
+                "user": {
+                    "address": {
+                        "city": "xxxxxxxxxxx",
+                        "country": "xxx",
+                        "state": "xx",
+                        "street": "xxx xxx xxxxxx",
+                        "zip": "xxxxx"
+                    },
+                    "email": "xxxxxxx@xxxxxxx.xxx",
+                    "id": "12345",
+                    "name": "John Doe",
+                    "phone": "+x-xxx-xxx-xxxx",
+                    "secondary_phone": "+x-xxx-xxx-xxxx",
+                    "ssn": "xxx-xx-xxxx"
+                }
+            }
+        ]
+    },
+    {
+        "testcase":"test combination of exclude and name option",
+        "statements":"SELECT redact(t, {\"pattern\":\"^name$|^amount$|^id$|^date$\",\"regex\":true,\"exclude\":true, \"name\":true}).* FROM orders t",
+        "results": [
+            {
+                "f0000": {
+                    "f0000_f0000": "1111-11-11111:11:111",
+                    "f0000_f0001": "xxxxx_xxxx"
+                },
+                "f0001": [
+                    {
+                        "amount": 250.75,
+                        "date": "2025-01-10",
+                        "f0001_f0001": "xxxx xxxx xxxx xxxx",
+                        "f0001_f0004": "xxxxxx",
+                        "id": "txn001"
+                    },
+                    {
+                        "amount": 85,
+                        "date": "2025-01-11",
+                        "f0001_f0001": "xxxx xxxx xxxx xxxx",
+                        "f0001_f0004": "xxxxxxxxx",
+                        "id": "txn002"
+                    }
+                ],
+                "f0002": {
+                    "f0002_f0000": {
+                        "f0002_f0000_f0000": "xxxxxxxxxxx",
+                        "f0002_f0000_f0001": "xxx",
+                        "f0002_f0000_f0002": "xx",
+                        "f0002_f0000_f0003": "xxx xxx xxxxxx",
+                        "f0002_f0000_f0004": "xxxxx"
+                    },
+                    "f0002_f0001": "xxxxxxx@xxxxxxx.xxx",
+                    "f0002_f0004": "+x-xxx-xxx-xxxx",
+                    "f0002_f0005": "+x-xxx-xxx-xxxx",
+                    "f0002_f0006": "xxx-xx-xxxx",
+                    "id": "12345",
+                    "name": "John Doe"
+                }
+            }
+        ]
+    }
+]

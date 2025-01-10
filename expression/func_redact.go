@@ -48,6 +48,7 @@ type redactFilter struct {
 	omit       value.Tristate
 	fixedlen   value.Tristate
 	mask       string
+	exclude    value.Tristate
 }
 
 func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, error) {
@@ -116,6 +117,15 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 				rf.fixedlen = value.FALSE
 			}
 		}
+
+		if exclude, ok := options.Field("exclude"); ok && exclude.Type() == value.BOOLEAN {
+			if exclude.Truth() {
+				rf.exclude = value.TRUE
+			} else {
+				rf.exclude = value.FALSE
+			}
+		}
+
 		if p, ok := options.Field("pattern"); ok {
 			pattern := p.ToString()
 			if len(pattern) > 0 {
@@ -176,12 +186,11 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 		return value.NULL_VALUE, nil
 	}
 	if len(this.filters) == 0 {
-		this.filters = append(this.filters, &redactFilter{})
+		this.filters = append(this.filters, &redactFilter{mask: "x"})
 	}
 
 	n := make(map[string]interface{})
 	this.redact(arg, n, "", false, false, false, false, "x")
-
 	return value.NewValue(n), nil
 }
 
@@ -272,29 +281,37 @@ func (this *Redact) shouldRedact(name string, defV bool, defN bool, defStrict bo
 	}
 	for i := range this.filters {
 		n := name
+
+		exclude := value.ToBool(this.filters[i].exclude)
 		if this.filters[i].ignorecase == value.TRUE {
 			n = strings.ToLower(n)
 		}
+
+		redactN := false
+		switch this.filters[i].name {
+		case value.TRUE:
+			redactN = true
+		case value.FALSE:
+			redactN = false
+		default:
+			redactN = defN
+		}
+
+		s := false
+		switch this.filters[i].strict {
+		case value.TRUE:
+			s = true
+		case value.FALSE:
+			s = false
+		default:
+			s = defStrict
+		}
+
 		if this.filters[i].re == nil || this.filters[i].re.MatchString(n) {
-			n := false
-			switch this.filters[i].name {
-			case value.TRUE:
-				n = true
-			case value.FALSE:
-				n = false
-			default:
-				n = defN
-			}
-			s := false
-			switch this.filters[i].strict {
-			case value.TRUE:
-				s = true
-			case value.FALSE:
-				s = false
-			default:
-				s = defStrict
-			}
-			return true, n, s, (this.filters[i].omit == value.TRUE), (this.filters[i].fixedlen == value.TRUE), this.filters[i].mask
+			return true && !exclude, redactN && !exclude, s, (this.filters[i].omit == value.TRUE),
+				(this.filters[i].fixedlen == value.TRUE), this.filters[i].mask
+		} else if exclude == true {
+			return true, redactN, s, false, (this.filters[i].fixedlen == value.TRUE), this.filters[i].mask
 		}
 	}
 	return defV, defN, defStrict, false, defFixedLen, defMask
