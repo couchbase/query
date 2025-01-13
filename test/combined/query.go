@@ -341,6 +341,14 @@ func (this *Query) aliasedSQL(baseAlias string) string {
 func (this *Query) AsSubQuery() string {
 	// adjust the aliases so there is no conflict with the parent query
 	sql := this.SQL(fmt.Sprintf("sq%d_", nextSerial()))
+
+	// Remove suffixing semi-colons if present
+	sql = strings.TrimSpace(sql)
+
+	if strings.LastIndex(sql, ";") == len(sql)-1 {
+		sql = strings.TrimRight(sql, ";")
+	}
+
 	return "(" + sql + ")"
 }
 
