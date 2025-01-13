@@ -384,6 +384,11 @@ func main() {
 			} else {
 				logging.Infof("%v", string(b))
 			}
+
+			// TODO: remove this when we figure out why lastFailure is always null in the report even when set
+			if Queries[i].lastFailure != nil {
+				logging.Errorf("Executing query %s failed with error: %v", Queries[i].sql, Queries[i].lastFailure)
+			}
 		}
 		if len(report) > 0 {
 			reportRunFailure(iter, report...)

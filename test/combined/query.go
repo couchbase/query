@@ -357,7 +357,7 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 	results, elapsed, errs, err := executeSQLProcessingResults(this.SQL(""), requestParams)
 	if err != nil {
 		//logging.Debugf("%v", err)
-		logging.Errorf("Executing query %s has failed with error: %v", this.SQL(""), err)
+		//logging.Errorf("Executing query %s has failed with error: %v", this.SQL(""), err)	// Uncomment for verbose error logging
 		this.Lock()
 		this.failed++
 		this.lastFailure = err
