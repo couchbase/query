@@ -332,6 +332,10 @@ func (this *VirtualIndex) Scan6(requestId string, spans datastore.Spans2, revers
 
 }
 
+func (this *VirtualIndex) VectorPos() int {
+	return this.vectorPos
+}
+
 func (this *VirtualIndex) isCBOEnabledMode() bool {
 	return this.storageMode == datastore.INDEX_MODE_PLASMA || this.storageMode == datastore.INDEX_MODE_MOI
 }

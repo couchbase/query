@@ -15,6 +15,7 @@ import (
 
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 )
@@ -573,6 +574,15 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 		deferred, lkmissing, index.Type())
 	if validatePhase {
 		info.SetCovering(true)
+		if virtualIdx, ok := index.(*virtual.VirtualIndex); ok {
+			vectorPos := virtualIdx.VectorPos()
+			dimension := fmt.Sprintf("%d", virtualIdx.VectorDimension())
+			similarity := string(virtualIdx.VectorDistanceType())
+			description := virtualIdx.VectorDescription()
+			vectorInfo := iaplan.NewVectorInfo(dimension, similarity, description)
+			info.SetVectorInfo(vectorInfo, vectorPos)
+
+		}
 	} else if index.Type() == datastore.GSI {
 		info.SetFormalizedKeyExprs(formalizeIndexKeys(keyspaceAlias, index.RangeKey()))
 		info.SetKeyStrings(getIndexKeyStringArray(index))
