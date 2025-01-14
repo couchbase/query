@@ -320,6 +320,10 @@ func (this *VirtualIndex) Include() expression.Expressions {
 	return nil
 }
 
+func (this *VirtualIndex) AllowRerank() bool {
+	return false // for now
+}
+
 func (this *VirtualIndex) Scan6(requestId string, spans datastore.Spans2, reverse, distinctAfterProjection bool,
 	projection *datastore.IndexProjection, offset, limit int64, groupAggs *datastore.IndexGroupAggregates,
 	indexOrders datastore.IndexKeyOrders, indexKeyNames []string, inlineFilter string,
