@@ -26,6 +26,10 @@ func TestVectors(t *testing.T) {
 	fmt.Print("\n\nChecking import into vectors collection\n\n")
 	runMatch("check_import.json", false, false, qc, t)
 
+	fmt.Println("Running Advise test cases")
+
+	runMatch("case_advise.json", false, false, qc, t)
+
 	fmt.Println("Running KNN test cases")
 
 	runStmt(qc, "CREATE INDEX ix_prod_id on product._default.vectors(id)")
