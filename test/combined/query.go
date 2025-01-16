@@ -357,7 +357,8 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 	results, elapsed, errs, err := executeSQLProcessingResults(this.SQL(""), requestParams)
 	if err != nil {
 		//logging.Debugf("%v", err)
-		//logging.Errorf("Executing query %s has failed with error: %v", this.SQL(""), err)	// Uncomment for verbose error logging
+		// Uncomment for verbose error logging
+		//logging.Errorf("Issuing or streaming results of query %s has failed with error: %v", this.SQL(""), err)
 		this.Lock()
 		this.failed++
 		this.lastFailure = err
@@ -383,7 +384,7 @@ func (this *Query) MarshalJSON() ([]byte, error) {
 		"statement":   this.doSQL("", false),
 		"executions":  this.executions,
 		"failed":      this.failed,
-		"lastFailure": this.lastFailure,
+		"lastFailure": this.lastFailure.Error(),
 		"lastErrors":  this.lastErrors,
 	}
 	if this.executions > 0 {
