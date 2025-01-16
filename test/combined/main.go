@@ -387,7 +387,7 @@ func main() {
 
 			// TODO: remove this when we figure out why lastFailure is always null in the report even when set
 			if Queries[i].lastFailure != nil {
-				logging.Errorf("Executing query %s failed with error: %v", Queries[i].sql, Queries[i].lastFailure)
+				logging.Errorf("Executing query %s failed with error: %v", Queries[i].doSQL("", false), Queries[i].lastFailure)
 			}
 		}
 		if len(report) > 0 {
