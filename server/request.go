@@ -87,6 +87,10 @@ type Request interface {
 	NaturalShowOnly() bool
 	SetNaturalOutput(n string)
 	NaturalOutput() string
+	SetNaturalAdvise(adv bool)
+	NaturalAdvise() bool
+	SetNaturalExplain(exp bool)
+	NaturalExplain() bool
 	Prepared() *plan.Prepared
 	SetPrepared(prepared *plan.Prepared)
 	Type() string
@@ -438,6 +442,8 @@ type BaseRequest struct {
 	nlStatement          algebra.Statement
 	nlShowOnly           bool
 	nloutput             string
+	nladvise             bool
+	nlexplain            bool
 
 	// effectively temporary storage for the TRACE level request logging ahead of being included in completed_requests
 	logContent []interface{}
@@ -1714,6 +1720,22 @@ func (this *BaseRequest) NaturalOutput() string {
 	return this.nloutput
 }
 
+func (this *BaseRequest) SetNaturalAdvise(adv bool) {
+	this.nladvise = adv
+}
+
+func (this *BaseRequest) NaturalAdvise() bool {
+	return this.nladvise
+}
+
+func (this *BaseRequest) SetNaturalExplain(exp bool) {
+	this.nlexplain = exp
+}
+
+func (this *BaseRequest) NaturalExplain() bool {
+	return this.nlexplain
+}
+
 func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof bool, redact bool) map[string]interface{} {
 	item := make(map[string]interface{}, 32)
 	item["requestId"] = this.Id().String()
@@ -1846,6 +1868,7 @@ func (this *BaseRequest) NaturalTime() time.Duration {
 
 // light-weight (lighter than a full parser) check if the statement starts with "USING AI"
 // if it does, then extract the optional WITH clause and separate out the natural language request
+var prefixuai = regexp.MustCompile("^[eE][xX][pP][lL][aA][iI][nN][[:space:]]+$|^[aA][dD][vV][iI][sS][eE][[:space:]]+$")
 var uai = regexp.MustCompile("[Uu][Ss][Ii][Nn][Gg][[:space:]]+[Aa][Ii][[:space:]]+")
 var with = regexp.MustCompile("[Ww][Ii][Tt][Hh][[:space:]]*{")
 
@@ -1855,20 +1878,35 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 		return nil
 	}
 
-	m := uai.FindString(s)
-	if m == "" {
+	m := uai.FindStringIndex(s)
+
+	if m == nil || len(m) < 2 {
 		return nil
 	}
-	s = s[len(m):]
+
+	if m[0] != 0 {
+
+		spref := s[:m[0]]
+		sp := prefixuai.FindString(spref)
+		if sp == "" {
+			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for USING AI: %v", spref))
+		}
+		if sp = strings.TrimSpace(strings.ToLower(sp)); sp == "advise" {
+			this.SetNaturalAdvise(true)
+		} else if sp == "explain" {
+			this.SetNaturalExplain(true)
+		}
+	}
+	s = s[m[1]:]
 
 	this.SetStatement("")
 
-	m = with.FindString(s)
-	if m == "" {
+	m1 := with.FindString(s)
+	if m1 == "" {
 		this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
 		return nil
 	}
-	s = s[len(m)-1:]
+	s = s[len(m1)-1:]
 
 	d := sys_json.NewDecoder(strings.NewReader(s))
 	var opts map[string]interface{}

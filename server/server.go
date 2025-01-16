@@ -805,6 +805,16 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		request.Failed(this)
 		return true, false
 	}
+
+	request.SetStatement(stmt)
+	if advise, explain := request.NaturalAdvise(), request.NaturalExplain(); advise || explain {
+		prefix := "advise "
+		if explain {
+			prefix = "explain "
+		}
+		stmt = prefix + stmt
+	}
+
 	var parseErr error
 	var nlAlgebraStmt algebra.Statement
 	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
@@ -814,12 +824,12 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		request.Failed(this)
 		return true, false
 	}
-	request.SetStatement(stmt)
 	request.SetQueryContext("")
 	request.IncrementStatementCount()
 	request.SetNaturalStatement(nlAlgebraStmt)
 
-	if nlAlgebraStmt.Type() != "SELECT" || request.NaturalShowOnly() {
+	if (nlAlgebraStmt.Type() != "SELECT" && nlAlgebraStmt.Type() != "ADVISE" &&
+		nlAlgebraStmt.Type() != "EXPLAIN") || request.NaturalShowOnly() {
 		request.CompletedNaturalRequest(this)
 		return true, false
 	}
