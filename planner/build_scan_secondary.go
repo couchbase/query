@@ -857,31 +857,43 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 		if te.nSargKeys > (snk + snc) {
 			return false
 		} else if te.nSargKeys == (snk+snc) && sePushDown == tePushDown && seKeyFlags == teKeyFlags {
-			if se.minKeys != te.minKeys {
-				if se.minKeys != se.nSargKeys || te.minKeys != te.nSargKeys {
+			seMinKeys := se.minKeys
+			if seMinKeys == len(se.idxKeys) {
+				seMinKeys += se.includeKeys
+			}
+			teMinKeys := te.minKeys
+			if teMinKeys == len(te.idxKeys) {
+				teMinKeys += te.includeKeys
+			}
+			if seMinKeys != teMinKeys {
+				if seMinKeys != se.nSargKeys || teMinKeys != te.nSargKeys {
 					// for two indexes with the same sargKeys, favor the one
 					// with more consecutive leading sargKeys
 					// e.g (c1, c4) vs (c1, c2, c4) with predicates on c1 and c4
-					return se.minKeys > te.minKeys
-				} else if (se.minKeys + snc) != te.minKeys {
+					return seMinKeys > teMinKeys
+				} else if (seMinKeys + snc) != teMinKeys {
 					// also consider matched index conditions
-					return (se.minKeys + snc) > te.minKeys
+					return (seMinKeys + snc) > teMinKeys
 				}
 			}
-			if se.maxKeys != te.maxKeys {
-				if se.maxKeys != se.nSargKeys || te.maxKeys != te.nSargKeys {
+			seMaxKeys := se.maxKeys + se.includeKeys
+			teMaxKeys := te.maxKeys + te.includeKeys
+			if seMaxKeys != teMaxKeys {
+				if seMaxKeys != se.nSargKeys || teMaxKeys != te.nSargKeys {
 					// favor the one with shorter sargKeys
-					return se.maxKeys < te.maxKeys
-				} else if (se.maxKeys + snc) != te.maxKeys {
+					return seMaxKeys < teMaxKeys
+				} else if (seMaxKeys + snc) != teMaxKeys {
 					// also consider matched index conditions
-					return (se.maxKeys + snc) < te.maxKeys
+					return (seMaxKeys + snc) < teMaxKeys
 				}
 			}
 		}
 	}
 
-	if se.sumKeys+se.nEqCond != te.sumKeys+te.nEqCond {
-		return se.sumKeys+se.nEqCond > te.sumKeys+te.nEqCond
+	seSumKeys := se.sumKeys + se.includeKeys
+	teSumKeys := te.sumKeys + te.includeKeys
+	if seSumKeys+se.nEqCond != teSumKeys+te.nEqCond {
+		return seSumKeys+se.nEqCond > teSumKeys+te.nEqCond
 	}
 
 	if sePushDown != tePushDown {

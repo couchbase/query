@@ -522,6 +522,44 @@ couter:
 		}
 	}
 
+	// vector index
+	vector := false
+	needRerank := false
+	canRerank := false
+	sargableIncludes := 0
+	for c, ce := range coveringEntries {
+		if c6, ok := c.(datastore.Index6); ok && c6.IsVector() {
+			vector = true
+			if c6.AllowRerank() {
+				canRerank = true
+			}
+			if ce.idxEntry.HasFlag(IE_VECTOR_RERANK) {
+				needRerank = true
+			}
+		}
+		if ce.idxEntry.includeKeys > sargableIncludes {
+			sargableIncludes = ce.idxEntry.includeKeys
+		}
+	}
+	if vector {
+		if needRerank && canRerank {
+			// remove indexes with no reranking capability
+			for c, _ := range coveringEntries {
+				if c6, ok := c.(datastore.Index6); !ok || !c6.AllowRerank() {
+					delete(coveringEntries, c)
+				}
+			}
+		}
+		if sargableIncludes > 0 {
+			// prefer sargable include keys
+			for c, ce := range coveringEntries {
+				if ce.idxEntry.includeKeys < sargableIncludes {
+					delete(coveringEntries, c)
+				}
+			}
+		}
+	}
+
 	// Use shortest remaining index
 	minLen := 0
 	for _, ce := range coveringEntries {
