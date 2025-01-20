@@ -138,7 +138,7 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 			cntKeyspaceNotFound += 1
 			continue
 		}
-		checkVector := v.HasVector()
+		checkVector := v.HasVectorIdx()
 		hasVector := false
 		cIndexes := v.GetCurIndexes()
 		if len(cIndexes) > 0 {

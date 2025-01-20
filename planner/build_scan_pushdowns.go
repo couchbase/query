@@ -587,7 +587,9 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, 
 	if this.projection != nil {
 		hashProj = make(map[string]expression.Expression, len(this.projection.Terms()))
 		for _, term := range this.projection.Terms() {
-			hashProj[term.Alias()] = term.Expression()
+			if term.Alias() != "" {
+				hashProj[term.Alias()] = term.Expression()
+			}
 		}
 	}
 
