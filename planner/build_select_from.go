@@ -80,6 +80,14 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 
 		}
 
+		if len(keyspaceFinder.outerUnnests) > 0 {
+			for a, _ := range keyspaceFinder.outerUnnests {
+				keyspace, _ := this.baseKeyspaces[a]
+				primKeyspace.AddOuterUnnestAlias(keyspace.Name(), keyspace.Keyspace(),
+					len(keyspaceFinder.outerUnnests))
+			}
+		}
+
 		// Process where clause and pushable on clause
 		if this.where != nil {
 			err = this.processWhere(this.where)
