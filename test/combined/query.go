@@ -381,16 +381,21 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 func (this *Query) MarshalJSON() ([]byte, error) {
 	this.Lock()
 	m := map[string]interface{}{
-		"statement":   this.doSQL("", false),
-		"executions":  this.executions,
-		"failed":      this.failed,
-		"lastFailure": this.lastFailure.Error(),
-		"lastErrors":  this.lastErrors,
+		"statement":  this.doSQL("", false),
+		"executions": this.executions,
+		"failed":     this.failed,
+		"lastErrors": this.lastErrors,
 	}
+
+	if this.lastFailure != nil {
+		m["lastFailure"] = this.lastFailure.Error()
+	}
+
 	if this.executions > 0 {
 		m["avgElapsed"] = fmt.Sprintf("%v", time.Duration(this.elapsedMs/this.executions)*time.Millisecond)
 		m["avgResults"] = this.results / this.executions
 	}
+
 	this.Unlock()
 	return json.Marshal(m)
 }
