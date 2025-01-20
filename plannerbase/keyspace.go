@@ -49,6 +49,7 @@ type BaseKeyspace struct {
 	docCount      int64
 	unnests       map[string]string
 	unnestIndexes map[datastore.Index]*UnnestIndexInfo
+	outerUnnests  map[string]string
 	node          algebra.SimpleFromTerm
 	optBit        int32
 	indexHints    []algebra.OptimHint
@@ -250,6 +251,12 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 				}
 			}
 		}
+		if len(kspace.outerUnnests) > 0 {
+			dest[kspace.name].outerUnnests = make(map[string]string, len(kspace.outerUnnests))
+			for a, k := range kspace.outerUnnests {
+				dest[kspace.name].outerUnnests[a] = k
+			}
+		}
 		// The optimizer hints kept in BaseKeyspace is a slice of pointers that points to
 		// the "original" hints in a statement. The optimizer/planner subsequently
 		// modify the hints (e.g. change hint state) based on plans being generated.
@@ -413,7 +420,7 @@ func (this *BaseKeyspace) OptBit() int32 {
 	return this.optBit
 }
 
-// unnests is only populated for the primary keyspace term
+// unnests/outerUnnests is only populated for the primary keyspace term
 func (this *BaseKeyspace) AddUnnestAlias(alias, keyspace string, size int) {
 	if this.unnests == nil {
 		this.unnests = make(map[string]string, size)
@@ -425,8 +432,19 @@ func (this *BaseKeyspace) GetUnnests() map[string]string {
 	return this.unnests
 }
 
+func (this *BaseKeyspace) AddOuterUnnestAlias(alias, keyspace string, size int) {
+	if this.outerUnnests == nil {
+		this.outerUnnests = make(map[string]string, size)
+	}
+	this.outerUnnests[alias] = keyspace
+}
+
+func (this *BaseKeyspace) GetOuterUnnests() map[string]string {
+	return this.outerUnnests
+}
+
 func (this *BaseKeyspace) HasUnnest() bool {
-	return len(this.unnests) > 0
+	return len(this.unnests)+len(this.outerUnnests) > 0
 }
 
 // if an UNNEST SCAN is used, this.unnestIndexes is a map that points to
