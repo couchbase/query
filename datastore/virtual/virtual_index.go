@@ -324,6 +324,15 @@ func (this *VirtualIndex) AllowRerank() bool {
 	return false // for now
 }
 
+func (this *VirtualIndex) DefnStorageStatistics(requestid string) (map[uint64][]map[datastore.IndexStatType]value.Value, errors.Error) {
+	if this.storageStats == nil {
+		return nil, errors.NewVirtualIdxNotSupportedError(nil, "Storage Statistics")
+	}
+	rv := make(map[uint64][]map[datastore.IndexStatType]value.Value, 1)
+	rv[0] = this.storageStats
+	return rv, nil
+}
+
 func (this *VirtualIndex) Scan6(requestId string, spans datastore.Spans2, reverse, distinctAfterProjection bool,
 	projection *datastore.IndexProjection, offset, limit int64, groupAggs *datastore.IndexGroupAggregates,
 	indexOrders datastore.IndexKeyOrders, indexKeyNames []string, inlineFilter string,

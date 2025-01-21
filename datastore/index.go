@@ -429,6 +429,11 @@ const (
 	IX_STAT_AVG_PAGE_SIZE IndexStatType = "AVG_PAGE_SIZE"
 	IX_STAT_PARTITION_ID  IndexStatType = "PARTITION_ID"
 	IX_STAT_LAST_RESET_TS IndexStatType = "LAST_RESET_TS"
+
+	IX_STAT_BHIVE_RES_RATIO     IndexStatType = "BHIVE_RES_RATIO"         // resident ratio of graph layer
+	IX_STAT_BHIVE_VEC_PER_CELL  IndexStatType = "BHIVE_VECS_PER_CELL"     // avg num of vectors retrieved per cell
+	IX_STAT_BHIVE_FETCH_SIZE    IndexStatType = "BHIVE_GRAPH_FECTCH_SIZE" // graph fetch size
+	IX_STAT_BHIVE_RERANK_FACTOR IndexStatType = "BHIVE_RERANK_FACTOR"     // rerank factor
 )
 
 func (indexStatType IndexStatType) String() string {
@@ -521,15 +526,6 @@ type IndexPartitionSet struct {
 
 type IndexPartitionSets []*IndexPartitionSet
 
-type BhiveStatType string
-
-const (
-	BHIVE_STAT_RES_RATIO     BhiveStatType = "RESIDENT_RATIO"    // resident ratio of graph layer
-	BHIVE_STAT_VEC_PER_CELL  BhiveStatType = "VECTORS_PER_CELL"  // avg num of vectors retrieved per cell
-	BHIVE_STAT_FETCH_SIZE    BhiveStatType = "GRAPH_FECTCH_SIZE" // graph fetch size
-	BHIVE_STAT_RERANK_FACTOR BhiveStatType = "RERANK_FACTOR"     // rerank factor
-)
-
 type Indexer6 interface {
 	Indexer5
 
@@ -552,7 +548,7 @@ type Index6 interface {
 	VectorDescription() string
 	Include() expression.Expressions
 	AllowRerank() bool
-	// BhiveStorageStats() ([]map[BhiveStatType]value.Value, errors.Error)
+	DefnStorageStatistics(requestid string) (map[uint64][]map[IndexStatType]value.Value, errors.Error)
 
 	Scan6(requestId string, spans Spans2, reverse, distinctAfterProjection bool,
 		projection *IndexProjection, offset, limit int64,
