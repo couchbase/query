@@ -133,42 +133,51 @@ func (this *awrConfig) setLocation(ks string) {
 	this.location = ks
 }
 
-func (this *awrConfig) setQueueLen(v int) {
+func (this *awrConfig) setQueueLen(v int) errors.Error {
 	if v <= 0 {
-		v = util.NumCPU() * _AWR_CPU_MULTIPLIER
+		return errors.NewAWRInvalidSettingError("queue_len", v, nil)
 	}
+
 	this.queueLen = v
+	return nil
 }
 
-func (this *awrConfig) setNumStmts(v int) {
+func (this *awrConfig) setNumStmts(v int) errors.Error {
+	if v <= 0 {
+		return errors.NewAWRInvalidSettingError("num_statements", v, nil)
+	}
+
 	this.numStmts = v
+	return nil
 }
 
-func (this *awrConfig) setThreshold(v time.Duration) {
+func (this *awrConfig) setThreshold(v time.Duration) errors.Error {
 	if v < time.Duration(0) {
-		v = _AWR_DEF_THRESHOLD
+		return errors.NewAWRInvalidSettingError("threshold", v, nil)
 	}
+
 	this.threshold = v
+	return nil
 }
 
-func (this *awrConfig) setInterval(v time.Duration) {
-	if v <= time.Duration(0) {
-		v = _AWR_DEF_INTERVAL
-	} else if v < _AWR_MIN_INTERVAL {
-		v = _AWR_MIN_INTERVAL
+func (this *awrConfig) setInterval(v time.Duration) errors.Error {
+	if v <= time.Duration(0) || v < _AWR_MIN_INTERVAL {
+		return errors.NewAWRInvalidSettingError("interval", v, nil)
 	}
+
 	this.interval = v
+	return nil
 }
 
 func (this *awrConfig) getStorageCollection() (datastore.Keyspace, error) {
 	if this.location == "" {
-		return nil, errors.NewAWRError(errors.E_AWR_SETTING, "", "location")
+		return nil, errors.NewAWRInvalidSettingError("location", "", nil)
 	}
 	parts := algebra.ParsePath(this.location)
 	var ks datastore.Keyspace
 	var err error
 	if parts[0] != "default" && parts[0] != "" {
-		return nil, errors.NewAWRError(errors.E_AWR_SETTING, this.location, "location", fmt.Errorf("Invalid namespace."))
+		return nil, errors.NewAWRInvalidSettingError("location", this.location, fmt.Errorf("Invalid namespace."))
 	}
 	for {
 		ks, err = datastore.GetKeyspace(parts...)
@@ -302,51 +311,61 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 			case "threshold":
 				if _, ok := v.(string); ok {
 					if ok, _ := checkDuration(v); !ok {
-						return errors.NewAdminSettingTypeError(k, v)
+						return errors.NewAWRInvalidSettingError(k, v, nil)
 					}
-					target.setThreshold(getDuration(v))
-				} else if n, ok := v.(int64); ok {
-					target.setThreshold(time.Duration(n) * time.Millisecond)
+
+					err := target.setThreshold(getDuration(v))
+					if err != nil {
+						return err
+					}
 				} else {
-					return errors.NewAdminSettingTypeError(k, v)
+					return errors.NewAWRInvalidSettingError(k, v, nil)
 				}
 			case "interval":
 				if _, ok := v.(string); ok {
 					if ok, _ := checkDuration(v); !ok {
-						return errors.NewAdminSettingTypeError(k, v)
+						return errors.NewAWRInvalidSettingError(k, v, nil)
 					}
-					target.setInterval(getDuration(v))
-				} else if n, ok := v.(int64); ok {
-					target.setInterval(time.Duration(n) * time.Millisecond)
+
+					err := target.setInterval(getDuration(v))
+					if err != nil {
+						return err
+					}
 				} else {
-					return errors.NewAdminSettingTypeError(k, v)
+					return errors.NewAWRInvalidSettingError(k, v, nil)
 				}
 			case "queue_len":
 				if n, ok := v.(int64); ok {
-					target.setQueueLen(int(n))
+					err := target.setQueueLen(int(n))
+					if err != nil {
+						return err
+					}
 				} else {
-					return errors.NewAdminSettingTypeError(k, v)
+					return errors.NewAWRInvalidSettingError(k, v, nil)
 				}
 			case "num_statements":
 				if n, ok := v.(int64); ok {
-					target.setNumStmts(int(n))
+					err := target.setNumStmts(int(n))
+					if err != nil {
+						return err
+					}
 				} else {
-					return errors.NewAdminSettingTypeError(k, v)
+					return errors.NewAWRInvalidSettingError(k, v, nil)
 				}
 			case "enabled":
 				if enabled, ok := v.(bool); ok {
 					start = enabled
 				} else {
-					return errors.NewAdminSettingTypeError(k, v)
+					return errors.NewAWRInvalidSettingError(k, v, nil)
 				}
 			case "location":
 				if ks, ok := v.(string); ok {
 					if ks != "" {
 						parts := algebra.ParsePath(ks)
 						if parts[0] != "default" && parts[0] != "" {
-							return errors.NewAWRError(errors.E_AWR_SETTING, ks, "location", fmt.Errorf("Invalid namespace"))
+							return errors.NewAWRInvalidSettingError(k, ks, fmt.Errorf("Invalid namespace"))
 						} else if len(parts) != 2 && len(parts) != 4 {
-							return errors.NewAWRError(errors.E_AWR_SETTING, ks, "location",
+							return errors.NewAWRInvalidSettingError(k, ks,
 								fmt.Errorf("Invalid path (must resolve to 2 or 4 parts)"))
 						} else if parts[0] == "" {
 							parts[0] = "default"
@@ -357,7 +376,7 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 						target.setLocation("")
 					}
 				} else {
-					return errors.NewAdminSettingTypeError(k, v)
+					return errors.NewAWRInvalidSettingError(k, v, nil)
 				}
 			default:
 				return errors.NewAdminUnknownSettingError(k)
