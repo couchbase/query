@@ -25,7 +25,6 @@ type keyspaceFinder struct {
 	outerlevel       int32
 	pushableOnclause expression.Expression
 	unnestDepends    map[string]*expression.Identifier
-	outerUnnests     map[string]*expression.Identifier
 	metadataDuration time.Duration
 	arrayId          int
 }
@@ -38,7 +37,6 @@ func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary stri
 	rv.keyspaceMap = make(map[string]string, len(baseKeyspaces))
 	rv.unnestDepends = make(map[string]*expression.Identifier, len(baseKeyspaces))
 	rv.unnestDepends[primary] = expression.NewIdentifier(primary)
-	rv.outerUnnests = make(map[string]*expression.Identifier, len(baseKeyspaces)-1)
 	return rv
 }
 
@@ -197,36 +195,10 @@ func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (interface{}, erro
 	ks.SetUnnest()
 	if node.Outer() {
 		ks.SetOuterlevel(this.outerlevel + 1)
-		found := false
-		if _, ok := this.unnestDepends[alias]; ok {
-			found = true
-		} else if _, ok = this.outerUnnests[alias]; ok {
-			found = true
-		}
-		if !found {
-			for _, unnest := range this.unnestDepends {
-				if node.Expression().DependsOn(unnest) {
-					this.outerUnnests[alias] = expression.NewIdentifier(alias)
-					found = true
-					break
-				}
-			}
-		}
-		if !found {
-			for _, unnest := range this.outerUnnests {
-				if node.Expression().DependsOn(unnest) {
-					this.outerUnnests[alias] = expression.NewIdentifier(alias)
-					break
-				}
-			}
-		}
 	} else {
 		for _, unnest := range this.unnestDepends {
 			if node.Expression().DependsOn(unnest) {
 				this.unnestDepends[alias] = expression.NewIdentifier(alias)
-				if _, ok := this.outerUnnests[alias]; ok {
-					delete(this.outerUnnests, alias)
-				}
 				break
 			}
 		}
