@@ -1579,8 +1579,8 @@ var errData = []ErrData{
 			"The value provided for the setting is invalid.",
 		},
 		Action: []string{
-			"Review the configuration and correct the value.",
-			"Note that the only permitted namespace is \"default\".",
+			"Consult the documentation for the valid values for the workload settings." +
+				" Review the configuration and correct the value.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{

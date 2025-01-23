@@ -31,7 +31,7 @@ func getAWRSchemaHelp(setting string) string {
 		help = "A boolean value."
 	case "location":
 		help = "A string representating a syntactically valid path to a bucket or collection." +
-			" (e.g. \"default:bucket1.scope1.collection1\")"
+			" The only permitted namespace is \"default\". (e.g. \"default:bucket1.scope1.collection1\")"
 	default:
 		return ""
 	}
