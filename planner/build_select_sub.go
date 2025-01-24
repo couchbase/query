@@ -323,7 +323,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	}
 
 	doCoverTransform := (!this.subquery || !this.SkipCoverTransform())
-	if len(this.coveringScans) > 0 && doCoverTransform {
+	if len(this.coveringScans) > 0 && doCoverTransform && !this.indexAdvisor {
 		err = this.coverExpressions()
 		if err != nil {
 			return nil, err

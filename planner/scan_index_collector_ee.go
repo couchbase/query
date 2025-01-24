@@ -570,8 +570,8 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 	}
 
 	lkmissing := indexHasLeadingKeyMissingValues(index, uint64(0))
-	info := iaplan.NewIndexInfo(index.Name(), keyspaceAlias, keyspace, index.IsPrimary(), "", nil, "",
-		deferred, lkmissing, index.Type())
+	info := iaplan.NewIndexInfo(index.Name(), keyspaceAlias, keyspace, index.IsPrimary(), "", nil, nil,
+		"", deferred, lkmissing, index.Type())
 	if validatePhase {
 		info.SetCovering(true)
 		if virtualIdx, ok := index.(*virtual.VirtualIndex); ok {
@@ -581,6 +581,9 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 			description := virtualIdx.VectorDescription()
 			vectorInfo := iaplan.NewVectorInfo(dimension, similarity, description)
 			info.SetVectorInfo(vectorInfo, vectorPos)
+			if virtualIdx.IsBhive() {
+				info.SetBhive()
+			}
 
 		}
 	} else if index.Type() == datastore.GSI {
@@ -592,23 +595,25 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 	return info
 }
 
-func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lkmissing bool,
-	vectorPos int, vectorInfo *iaplan.VectorInfo) {
+func getIndexKeyStringArray(index datastore.Index) (keys, includes []string, desc []bool,
+	lkmissing, isBhive bool, vectorPos int, vectorInfo *iaplan.VectorInfo) {
 	vectorPos = -1
 	stringer := expression.NewStringer()
 	if index2, ok2 := index.(datastore.Index2); ok2 {
-		keys := index2.RangeKey2()
-		rv = make([]string, len(keys))
-		desc = make([]bool, len(keys))
-		for i, kp := range keys {
-			rv[i] = stringer.Visit(kp.Expr)
+		idxkeys := index2.RangeKey2()
+		keys = make([]string, len(idxkeys))
+		desc = make([]bool, len(idxkeys))
+		index6, ok6 := index.(datastore.Index6)
+		for i, kp := range idxkeys {
+			keys[i] = stringer.Visit(kp.Expr)
 			desc[i] = kp.HasAttribute(datastore.IK_DESC)
 			if i == 0 {
 				lkmissing = kp.HasAttribute(datastore.IK_MISSING)
 			}
 			if vectorPos < 0 && kp.HasAttribute(datastore.IK_VECTOR) {
 				vectorPos = i
-				if index6, ok6 := index.(datastore.Index6); ok6 {
+				if ok6 {
+					isBhive = index6.IsBhive()
 					dimension := fmt.Sprintf("%d", index6.VectorDimension())
 					similarity := string(index6.VectorDistanceType())
 					description := index6.VectorDescription()
@@ -616,12 +621,19 @@ func getIndexKeyStringArray(index datastore.Index) (rv []string, desc []bool, lk
 				}
 			}
 		}
+		if ok6 {
+			idxIncludes := index6.Include()
+			includes = make([]string, len(idxIncludes))
+			for i, incl := range idxIncludes {
+				includes[i] = stringer.Visit(incl)
+			}
+		}
 	} else {
-		keys := index.RangeKey()
-		rv = make([]string, len(keys))
-		desc = make([]bool, len(keys))
-		for i, kp := range keys {
-			rv[i] = stringer.Visit(kp)
+		idxkeys := index.RangeKey()
+		keys = make([]string, len(idxkeys))
+		desc = make([]bool, len(idxkeys))
+		for i, kp := range idxkeys {
+			keys[i] = stringer.Visit(kp)
 		}
 	}
 	return

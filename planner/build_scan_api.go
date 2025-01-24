@@ -345,7 +345,7 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 	// has equality (EQ, IN) predicates for purpose of partition elimination
 
 	index := virtual.NewVirtualIndex(keyspace, "partitionVirtualIndex", nil, partitionKeys, nil,
-		nil, false, false, -1, nil, datastore.INDEX_MODE_VIRTUAL, nil)
+		nil, nil, false, false, false, -1, nil, datastore.INDEX_MODE_VIRTUAL, nil)
 
 	nkeys := len(partitionKeys)
 	keys := make(datastore.IndexKeys, 0, nkeys)

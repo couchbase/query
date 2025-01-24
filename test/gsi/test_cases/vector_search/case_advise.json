@@ -15,6 +15,11 @@
                   "index_property": "ORDER pushdown, LIMIT pushdown",
                   "index_statement": "CREATE INDEX adv_brand_vecVECTOR_id ON `default`:`product`.`_default`.`vectors`(`brand`,`vec` VECTOR,`id`) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
                   "keyspace_alias": "vectors_v"
+                },
+                {
+                  "index_property": "ORDER pushdown, LIMIT pushdown",
+                  "index_statement": "CREATE VECTOR INDEX adv_VECTOR_vecVECTOR_INCLUDE_brand_id ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR) INCLUDE (`brand`,`id`) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
+                  "keyspace_alias": "vectors_v"
                 }
               ]
             }
@@ -39,6 +44,11 @@
                 {
                   "index_property": "ORDER pushdown, LIMIT pushdown",
                   "index_statement": "CREATE INDEX adv_brand_vecVECTOR ON `default`:`product`.`_default`.`vectors`(`brand`,`vec` VECTOR) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
+                  "keyspace_alias": "vectors_v"
+                },
+                {
+                  "index_property": "ORDER pushdown, LIMIT pushdown",
+                  "index_statement": "CREATE VECTOR INDEX adv_VECTOR_vecVECTOR_INCLUDE_brand ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR) INCLUDE (`brand`) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
                   "keyspace_alias": "vectors_v"
                 }
               ]
@@ -65,6 +75,11 @@
                   "index_property": "ORDER pushdown, LIMIT pushdown",
                     "index_statement": "CREATE INDEX adv_vecVECTOR_id ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR,`id`) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
                   "keyspace_alias": "vectors"
+                },
+                {
+                  "index_property": "ORDER pushdown, LIMIT pushdown",
+                  "index_statement": "CREATE VECTOR INDEX adv_VECTOR_vecVECTOR_INCLUDE_id ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR) INCLUDE (`id`) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
+                  "keyspace_alias": "vectors"
                 }
               ]
             }
@@ -89,6 +104,11 @@
                 {
                   "index_property": "ORDER pushdown, LIMIT pushdown",
                   "index_statement": "CREATE INDEX adv_vecVECTOR ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
+                  "keyspace_alias": "vectors"
+                },
+                {
+                  "index_property": "ORDER pushdown, LIMIT pushdown",
+                  "index_statement": "CREATE VECTOR INDEX adv_VECTOR_vecVECTOR ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
                   "keyspace_alias": "vectors"
                 }
               ]

@@ -25,8 +25,10 @@ type VirtualIndex struct {
 	primary      bool
 	condition    expression.Expression
 	indexKeys    expression.Expressions
+	includes     expression.Expressions
 	desc         []bool
 	lkMissing    bool
+	bhive        bool
 	vectorPos    int
 	vectorDesc   map[string]interface{}
 	partnExpr    expression.Expressions //partition key expressions
@@ -35,17 +37,19 @@ type VirtualIndex struct {
 }
 
 func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition expression.Expression,
-	indexKeys expression.Expressions, desc []bool, partnExpr expression.Expressions, isPrimary, lkMissing bool,
-	vectorPos int, vectorDesc map[string]interface{}, sm datastore.IndexStorageMode,
-	storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
+	indexKeys, includes expression.Expressions, desc []bool, partnExpr expression.Expressions,
+	isPrimary, lkMissing, bhive bool, vectorPos int, vectorDesc map[string]interface{},
+	sm datastore.IndexStorageMode, storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
 	rv := &VirtualIndex{
 		keyspace:   keyspace,
 		name:       name,
 		primary:    isPrimary,
 		condition:  expression.Copy(condition),
 		indexKeys:  expression.CopyExpressions(indexKeys),
+		includes:   expression.CopyExpressions(includes),
 		desc:       desc,
 		lkMissing:  lkMissing,
+		bhive:      bhive,
 		partnExpr:  expression.CopyExpressions(partnExpr),
 		vectorPos:  vectorPos,
 		vectorDesc: vectorDesc,
@@ -254,7 +258,7 @@ func (this *VirtualIndex) StorageStatistics(requestid string) ([]map[datastore.I
 //Implement Index6 interface
 
 func (this *VirtualIndex) IsBhive() bool {
-	return false // for now
+	return this.bhive
 }
 
 func (this *VirtualIndex) IsVector() bool {
@@ -317,11 +321,11 @@ func (this *VirtualIndex) VectorDescription() string {
 }
 
 func (this *VirtualIndex) Include() expression.Expressions {
-	return nil
+	return this.includes
 }
 
 func (this *VirtualIndex) AllowRerank() bool {
-	return false // for now
+	return this.bhive
 }
 
 func (this *VirtualIndex) DefnStorageStatistics(requestid string) (map[uint64][]map[datastore.IndexStatType]value.Value, errors.Error) {

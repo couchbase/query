@@ -11,6 +11,8 @@
 package planner
 
 import (
+	"sort"
+
 	"github.com/couchbase/query-ee/dictionary"
 	advisor "github.com/couchbase/query-ee/indexadvisor"
 	"github.com/couchbase/query-ee/indexadvisor/iaplan"
@@ -94,27 +96,75 @@ func (this *builder) advise(considerCBO bool, queryInfos map[expression.HasExpre
 	this.setAdvisePhase(_VALIDATE)
 	//There are covering indexes to be validated:
 	if len(coverIdxMap) > 0 {
-		this.idxCandidates = make([]datastore.Index, 0, len(coverIdxMap))
+		var vectorIdxCandidates []datastore.Index
+		idxCandidates := make([]datastore.Index, 0, len(coverIdxMap))
 		for _, info := range coverIdxMap {
 			idx := info.VirtualIndex()
 			if idx != nil {
-				this.idxCandidates = append(this.idxCandidates, idx)
+				if idx6, ok := idx.(datastore.Index6); ok && idx6.IsVector() {
+					if vectorIdxCandidates == nil {
+						vectorIdxCandidates = make([]datastore.Index, 0, len(coverIdxMap))
+					}
+					vectorIdxCandidates = append(vectorIdxCandidates, idx)
+				} else {
+					idxCandidates = append(idxCandidates, idx)
+				}
 				if considerCBO && !info.IsCostBased() {
 					considerCBO = false
 				}
 			}
 		}
 
-		if len(this.idxCandidates) > 0 {
-			if considerCBO {
-				this.useCBO = true
-			}
-			stmt.Accept(this)
-			if len(this.validatedIdxes) > 0 {
-				this.matchIdxInfos(coverIdxMap)
-			}
+		if len(vectorIdxCandidates) > 0 {
+			this.validateVectorIndexes(vectorIdxCandidates, considerCBO, stmt)
+		} else if len(idxCandidates) > 0 {
+			this.validateIndexes(idxCandidates, considerCBO, stmt)
+		}
+
+		if len(this.validatedIdxes) > 0 {
+			this.matchIdxInfos(coverIdxMap)
 		}
 	}
+}
+
+func (this *builder) validateVectorIndexes(idxCandidates []datastore.Index, considerCBO bool, stmt algebra.Statement) {
+	if len(idxCandidates) > 1 {
+		// for advise output stability
+		sort.Slice(idxCandidates, func(i, j int) bool {
+			i6, oki := idxCandidates[i].(datastore.Index6)
+			j6, okj := idxCandidates[j].(datastore.Index6)
+			if oki && okj && !i6.IsBhive() && j6.IsBhive() {
+				return true
+			}
+			return false
+		})
+	}
+	// consider vector index one at a time
+	for i := range idxCandidates {
+		this.validateIndexes(idxCandidates[i:i+1], considerCBO, stmt)
+	}
+}
+
+func (this *builder) validateIndexes(idxCandidates []datastore.Index, considerCBO bool, stmt algebra.Statement) {
+	prevIdxCandidates := this.idxCandidates
+	prevValidatedIdxes := this.validatedIdxes
+	prevUseCBO := this.useCBO
+	defer func() {
+		this.idxCandidates = prevIdxCandidates
+		this.useCBO = prevUseCBO
+		if len(this.validatedIdxes) == 0 {
+			this.validatedIdxes = prevValidatedIdxes
+		} else {
+			this.validatedIdxes = append(prevValidatedIdxes, this.validatedIdxes...)
+		}
+	}()
+
+	this.idxCandidates = idxCandidates
+	this.validatedIdxes = nil
+	if considerCBO {
+		this.useCBO = true
+	}
+	stmt.Accept(this)
 }
 
 func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryInfo, nonCoverIdxes, coverIdxes iaplan.IndexInfos,

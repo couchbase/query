@@ -734,7 +734,7 @@ func (this *builder) SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo 
 }
 
 func (this *builder) SkipCoverTransform() bool {
-	return this.joinEnum() || this.subqInJoinEnum() || this.subqUnderJoin() || this.advisorRecommend()
+	return this.joinEnum() || this.subqInJoinEnum() || this.subqUnderJoin() || this.indexAdvisor
 }
 
 type CoveringSubqInfo interface {
