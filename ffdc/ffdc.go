@@ -26,6 +26,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/logging"
 )
 
@@ -230,6 +231,25 @@ func (this *reason) shouldCapture() *occurrence {
 		}
 	}
 	this.totalCount++
+	switch this.event {
+	case RequestQueueFull:
+		accounting.UpdateCounter(accounting.FFDC_RQF)
+	case PlusQueueFull:
+		accounting.UpdateCounter(accounting.FFDC_PQF)
+	case StalledQueue:
+		accounting.UpdateCounter(accounting.FFDC_SQP)
+	case MemoryThreshold:
+		accounting.UpdateCounter(accounting.FFDC_MTE)
+	case SigTerm:
+		accounting.UpdateCounter(accounting.FFDC_SIG)
+	case Shutdown:
+		accounting.UpdateCounter(accounting.FFDC_SDN)
+	case MemoryRate:
+		accounting.UpdateCounter(accounting.FFDC_MRE)
+	case Manual:
+		accounting.UpdateCounter(accounting.FFDC_MAN)
+	}
+	accounting.UpdateCounter(accounting.FFDC_TOTAL)
 	if len(this.occurrences) >= _FFDC_OCCURENCE_LIMIT {
 		this.cleanup()
 	}

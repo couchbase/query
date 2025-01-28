@@ -210,6 +210,16 @@ const (
 	CURL_CALLS
 	CURL_CALL_ERRORS
 
+	FFDC_RQF
+	FFDC_PQF
+	FFDC_SQP
+	FFDC_MTE
+	FFDC_SIG
+	FFDC_SDN
+	FFDC_MRE
+	FFDC_MAN
+	FFDC_TOTAL
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -276,6 +286,16 @@ const (
 
 	_CURL_CALLS       = "curl_calls"
 	_CURL_CALL_ERRORS = "curl_call_errors"
+
+	FFDC_RQF_COUNT   = "ffdc_request_queue_full"
+	FFDC_PQF_COUNT   = "ffdc_plus_queue_full"
+	FFDC_SQP_COUNT   = "ffdc_stalled_queue"
+	FFDC_MTE_COUNT   = "ffdc_memory_threshold"
+	FFDC_SIG_COUNT   = "ffdc_sigterm"
+	FFDC_SDN_COUNT   = "ffdc_shutdown"
+	FFDC_MRE_COUNT   = "ffdc_memory_rate"
+	FFDC_MAN_COUNT   = "ffdc_manual"
+	FFDC_TOTAL_COUNT = "ffdc_total"
 )
 
 // please keep in sync with the mnemonics
@@ -336,6 +356,16 @@ var metricNames = []string{
 
 	_CURL_CALLS,
 	_CURL_CALL_ERRORS,
+
+	FFDC_RQF_COUNT,
+	FFDC_PQF_COUNT,
+	FFDC_SQP_COUNT,
+	FFDC_MTE_COUNT,
+	FFDC_SIG_COUNT,
+	FFDC_SDN_COUNT,
+	FFDC_MRE_COUNT,
+	FFDC_MAN_COUNT,
+	FFDC_TOTAL_COUNT,
 }
 
 const (
