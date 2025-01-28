@@ -76,7 +76,7 @@ func loadConfig(config map[string]interface{}, configFile string) (map[string]in
 	}
 	f.Close()
 	config = mergeMaps(config, c)
-	logging.Infof("Configyration loaded from: %s", configFile)
+	logging.Infof("Configuration loaded from: %s", configFile)
 	return config, nil
 }
 
@@ -450,7 +450,7 @@ func RunPrepSQL() error {
 	}
 	logging.Infof("Running preparatory SQL.")
 	for i := range InitialQueries {
-		if err := Queries[i].Execute(nil); err != nil {
+		if err := InitialQueries[i].Execute(nil); err != nil {
 			return err
 		}
 	}
