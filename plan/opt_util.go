@@ -59,9 +59,17 @@ func unmarshalOptEstimate(oe *optEstimate, unmarshalled map[string]interface{}) 
 	}
 
 	if sizev, ok := unmarshalled["size"]; ok {
-		if size, ok := sizev.(int64); ok && size > 0 {
-			oe.size = size
-			hasSize = true
+		switch size := sizev.(type) {
+		case int64:
+			if size > 0 {
+				oe.size = size
+				hasSize = true
+			}
+		case float64:
+			if size > 0.0 {
+				oe.size = int64(size)
+				hasSize = true
+			}
 		}
 	}
 	if !hasSize {
