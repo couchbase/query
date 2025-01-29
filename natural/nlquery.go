@@ -352,9 +352,11 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (
 	userMessageBuf.WriteString("\"\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
 		" no explanation that implements the request in the Prompt." +
 		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
+		"\nAlways comment using multiline comment syntax,i.e /* ... */ as you have construct a SQL++ managed user defined function" +
+		" in a single line." +
 		"\n\nPrompt may request for something trivial such as string manipulation, mathematical calculations, etc." +
 		" Which are not related to the information provided but must always instruct to generate a function." +
-		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ mangaed user defined function." +
+		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ managed user defined function." +
 		"As Capella does not currently support a way to create or manage an external library" +
 		"\n\nExamples:" +
 		"\n\nExample1) shows an example for a request that doesn't use the information provided, example prompt:" +
