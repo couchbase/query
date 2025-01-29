@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -121,6 +122,7 @@ func unmarshalWiths(body []byte) (expression.Withs, error) {
 		Isunion bool            `json:"is_union"`
 		Config  json.RawMessage `json:"config"`
 		Cycle   json.RawMessage `json:"cycle"`
+		Var     string          `json:"var"` // for plan from pre-7.6 server
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -161,7 +163,16 @@ func unmarshalWiths(body []byte) (expression.Withs, error) {
 			}
 		}
 
-		withs[i] = algebra.NewWith(with.Alias, expr, rexpr, union, config, cycle)
+		alias := with.Alias
+		if alias == "" {
+			if with.Var != "" {
+				// if the plan was generated from pre-7.6 server, it'll have "var" instead of "alias"
+				alias = with.Var
+			} else {
+				return nil, errors.NewPlanInternalError("Unmarshal of WITH clause is missing WITH alias")
+			}
+		}
+		withs[i] = algebra.NewWith(alias, expr, rexpr, union, config, cycle)
 	}
 
 	return withs, nil

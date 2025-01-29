@@ -21,6 +21,8 @@ func UnmarshalBinding(body []byte) (*expression.Binding, error) {
 		Var     string `json:"var"`
 		Expr    string `json:"expr"`
 		Desc    bool   `json:"desc"`
+		Static  bool   `json:"static"`
+		FuncVar bool   `json:"function_variable"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -33,7 +35,14 @@ func UnmarshalBinding(body []byte) (*expression.Binding, error) {
 		return nil, err
 	}
 
-	return expression.NewBinding(_unmarshalled.NameVar, _unmarshalled.Var, expr, _unmarshalled.Desc), nil
+	rv := expression.NewBinding(_unmarshalled.NameVar, _unmarshalled.Var, expr, _unmarshalled.Desc)
+	if _unmarshalled.Static {
+		rv.SetStatic(true)
+	}
+	if _unmarshalled.FuncVar {
+		rv.SetFuncVariable(true)
+	}
+	return rv, nil
 }
 
 func UnmarshalBindings(body []byte) (expression.Bindings, error) {
@@ -42,6 +51,8 @@ func UnmarshalBindings(body []byte) (expression.Bindings, error) {
 		Var     string `json:"var"`
 		Expr    string `json:"expr"`
 		Desc    bool   `json:"desc"`
+		Static  bool   `json:"static"`
+		FuncVar bool   `json:"function_variable"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -56,7 +67,15 @@ func UnmarshalBindings(body []byte) (expression.Bindings, error) {
 			return nil, err
 		}
 
-		bindings[i] = expression.NewBinding(binding.NameVar, binding.Var, expr, binding.Desc)
+		rv := expression.NewBinding(binding.NameVar, binding.Var, expr, binding.Desc)
+		if binding.Static {
+			rv.SetStatic(true)
+		}
+		if binding.FuncVar {
+			rv.SetFuncVariable(true)
+		}
+
+		bindings[i] = rv
 	}
 
 	return bindings, nil
@@ -68,6 +87,8 @@ func UnmarshalDimensions(body []byte) ([]expression.Bindings, error) {
 		Var     string `json:"var"`
 		Expr    string `json:"expr"`
 		Desc    bool   `json:"desc"`
+		Static  bool   `json:"static"`
+		FuncVar bool   `json:"function_variable"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -84,7 +105,15 @@ func UnmarshalDimensions(body []byte) ([]expression.Bindings, error) {
 				return nil, err
 			}
 
-			dimension[j] = expression.NewBinding(binding.NameVar, binding.Var, expr, binding.Desc)
+			rv := expression.NewBinding(binding.NameVar, binding.Var, expr, binding.Desc)
+			if binding.Static {
+				rv.SetStatic(true)
+			}
+			if binding.FuncVar {
+				rv.SetFuncVariable(true)
+			}
+
+			dimension[j] = rv
 		}
 
 		dimensions[i] = dimension
