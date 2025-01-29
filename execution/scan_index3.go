@@ -139,6 +139,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 		if !hasCache {
 			var er errors.Error
 			var indexVector *datastore.IndexVector
+			var inlineFilter string
 			if this.plan.IndexVector() != nil {
 				index6, ok := this.plan.Index().(datastore.Index6)
 				if !ok {
@@ -158,11 +159,10 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				}
 				squareRoot = planIndexVector.SquareRoot
 				vectorPos = planIndexVector.IndexKeyPos
-			}
-			var inlineFilter string
-			if filter != nil {
-				inlineFilter = filter.String()
-				fltrPushed = true
+				if filter != nil && index6.IsBhive() {
+					inlineFilter = filter.String()
+					fltrPushed = true
+				}
 			}
 			var indexPartitionSets datastore.IndexPartitionSets
 			planIndexPartitionSets := this.plan.IndexPartitionSets()
