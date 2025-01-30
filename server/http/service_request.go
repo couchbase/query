@@ -2486,7 +2486,7 @@ func handleNaturalOutput(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 func handleNaturalExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	naturalExecute, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
-		rv.SetNaturalShowOnly(naturalExecute == value.TRUE)
+		rv.SetNaturalShowOnly(naturalExecute != value.TRUE)
 	}
 	return err
 }
