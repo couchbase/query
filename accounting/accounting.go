@@ -198,6 +198,17 @@ const (
 
 	SPILLS_ORDER
 
+	FFDC_RQF
+	FFDC_PQF
+	FFDC_SQP
+	FFDC_MTE
+	FFDC_SIG
+	FFDC_SDN
+	FFDC_MRE
+	FFDC_MAN
+	FFDC_SML
+	FFDC_TOTAL
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -274,6 +285,17 @@ const (
 
 	SPILLS_ORDER_STR = "spills_order"
 
+	FFDC_RQF_COUNT   = "ffdc_request_queue_full"
+	FFDC_PQF_COUNT   = "ffdc_plus_queue_full"
+	FFDC_SQP_COUNT   = "ffdc_stalled_queue"
+	FFDC_MTE_COUNT   = "ffdc_memory_threshold"
+	FFDC_SIG_COUNT   = "ffdc_sigterm"
+	FFDC_SDN_COUNT   = "ffdc_shutdown"
+	FFDC_MRE_COUNT   = "ffdc_memory_rate"
+	FFDC_MAN_COUNT   = "ffdc_manual"
+	FFDC_SML_COUNT   = "ffdc_memory_limit"
+	FFDC_TOTAL_COUNT = "ffdc_total"
+
 	// gauges
 	USED_MEMORY_HWM = "used_memory_hwm"
 )
@@ -341,6 +363,17 @@ var metricNames = []string{
 	_SYSTEM_ERROR_COUNT,
 
 	SPILLS_ORDER_STR,
+
+	FFDC_RQF_COUNT,
+	FFDC_PQF_COUNT,
+	FFDC_SQP_COUNT,
+	FFDC_MTE_COUNT,
+	FFDC_SIG_COUNT,
+	FFDC_SDN_COUNT,
+	FFDC_MRE_COUNT,
+	FFDC_MAN_COUNT,
+	FFDC_SML_COUNT,
+	FFDC_TOTAL_COUNT,
 }
 
 var gaugeNames = []string{

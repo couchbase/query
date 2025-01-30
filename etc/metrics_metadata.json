@@ -516,5 +516,56 @@
 		"type": "counter",
 		"help": "Number of order by operations that have spilled to disk.",
 		"added": "8.0.0"
+	},
+	"n1ql_ffdc_memory_threshold": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc captures triggered due to memory usage exceeding the 80% threshold"
+	},
+	"n1ql_ffdc_manual": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc captures triggered due to manual invocation of ffdc admin api"
+	},
+	"n1ql_ffdc_request_queue_full": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc captures triggered due to the unbounded-request queue being full"
+	},
+	"n1ql_ffdc_memory_rate": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc captures triggered due to memory usage rate increasing by 20% of the average memory usage over the past 2 hours"
+	},
+	"n1ql_ffdc_stalled_queue": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc captures triggered due to no requests being processed when the queued requests exceed three times the number of servicers within the last 30 seconds"
+	},
+	"n1ql_ffdc_shutdown": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc captures triggered due to shutdown processing exceeding 30 minutes"
+	},
+	"n1ql_ffdc_sigterm": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc captures triggered by a SIGTERM signal",
+		"notes": "This metric is included for completeness, as a SIGTERM resets all accounting metrics to zero, rendering this metric redundant."
+	},
+	"n1ql_ffdc_plus_queue_full": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help":"The total number of ffdc captures triggered due to the plus-request queue being full"
+	},
+	"n1ql_ffdc_memory_limit": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help":"The total number of ffdc captures triggered due to free memory dropping below 10%"
+	},
+	"n1ql_ffdc_total": {
+		"type": "counter",
+		"added": "7.6.6",
+		"help": "The total number of ffdc occurrences"
 	}
 }
