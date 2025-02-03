@@ -1,0 +1,33 @@
+[
+    {
+        "testcase":"MB-64562 with step , range is within the range limit",
+        "statements":"select d from (DATE_RANGE_STR(\"2024-12-10T00:00:00Z\", \"2025-01-04T00:00:00Z\", \"millisecond\",10000)) d LIMIT 3",
+        "results": [
+            {
+                "d": "2024-12-10T00:00:00Z"
+            },
+            {
+                "d": "2024-12-10T00:00:10Z"
+            },
+            {
+                "d": "2024-12-10T00:00:20Z"
+            }
+            ]
+    },
+    {
+        "testcase":"MB-64562 without step, range exceeds the range limit",
+        "statements":"select d from (DATE_RANGE_STR(\"2024-12-10T00:00:00Z\", \"2025-01-04T00:00:00Z\", \"millisecond\")) d LIMIT 3",
+        "error":"Out of range evaluating DATE_RANGE_STR()."
+    },
+    {
+        "testcase":"MB-65072 step can be 0",
+        "statements":"SELECT DATE_RANGE_STR(\"2006-01-02T15:04:05\", \"2006-01-10T15:04:05\", \"calendar_month\", 0)",
+        "results": [
+            {
+                "$1": [
+                    "2006-01-02T15:04:05"
+                ]
+            }
+        ]
+    }
+]
