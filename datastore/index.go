@@ -430,10 +430,12 @@ const (
 	IX_STAT_PARTITION_ID  IndexStatType = "PARTITION_ID"
 	IX_STAT_LAST_RESET_TS IndexStatType = "LAST_RESET_TS"
 
-	IX_STAT_BHIVE_RES_RATIO     IndexStatType = "BHIVE_RES_RATIO"         // resident ratio of graph layer
-	IX_STAT_BHIVE_VEC_PER_CELL  IndexStatType = "BHIVE_VECS_PER_CELL"     // avg num of vectors retrieved per cell
-	IX_STAT_BHIVE_FETCH_SIZE    IndexStatType = "BHIVE_GRAPH_FECTCH_SIZE" // graph fetch size
-	IX_STAT_BHIVE_RERANK_FACTOR IndexStatType = "BHIVE_RERANK_FACTOR"     // rerank factor
+	IX_STAT_BHIVE_GRAPH_RES_RATIO IndexStatType = "BHIVE_GRAPH_RES_RATIO" // resident ratio of graph layer
+	IX_STAT_BHIVE_GRAPH_HIT_RATIO IndexStatType = "BHIVE_GRAPH_HIT_RATIO" // hit ratio of graph layer
+	IX_STAT_BHIVE_NUM_VEC_OPS     IndexStatType = "BHIVE_NUM_VEC_OPS"     // avg num of vector operations per cell
+	IX_STAT_BHIVE_GRAPH_DISK_SIZE IndexStatType = "BHIVE_GRAPH_DISK_SIZE" // avg graph disk size (4k unit)
+	IX_STAT_BHIVE_FULL_VEC_SIZE   IndexStatType = "BHIVE_FULL_VEC_SIZE"   // avg size of full vectors (4k unit)
+	IX_STAT_BHIVE_RERANK_FACTOR   IndexStatType = "BHIVE_RERANK_FACTOR"   // rerank factor
 )
 
 func (indexStatType IndexStatType) String() string {
