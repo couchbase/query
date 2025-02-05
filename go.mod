@@ -66,13 +66,13 @@ require (
 	github.com/russross/blackfriday v1.5.2
 	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
 	golang.org/x/crypto v0.32.0
-	golang.org/x/net v0.21.0
+	golang.org/x/net v0.25.0
 	golang.org/x/sys v0.29.0
 	golang.org/x/term v0.28.0
 )
 
 require (
-	github.com/RoaringBitmap/roaring v1.9.3 // indirect
+	github.com/RoaringBitmap/roaring/v2 v2.4.4 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.30.3 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.5.4 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.15.15 // indirect
@@ -88,7 +88,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.12.0 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.6.0 // indirect
-	github.com/blevesearch/bleve/v2 v2.4.4-0.20250115090822-cbafdca08538 // indirect
+	github.com/blevesearch/bleve/v2 v2.4.4-0.20250205210342-c30d0a1a58cb // indirect
 	github.com/blevesearch/bleve_index_api v1.2.1 // indirect
 	github.com/blevesearch/geo v0.1.20 // indirect
 	github.com/blevesearch/go-faiss v1.0.24 // indirect
@@ -96,19 +96,19 @@ require (
 	github.com/blevesearch/goleveldb v1.0.1 // indirect
 	github.com/blevesearch/gtreap v0.1.1 // indirect
 	github.com/blevesearch/mmap-go v1.0.4 // indirect
-	github.com/blevesearch/scorch_segment_api/v2 v2.3.1 // indirect
+	github.com/blevesearch/scorch_segment_api/v2 v2.3.2 // indirect
 	github.com/blevesearch/sear v0.3.0 // indirect
 	github.com/blevesearch/segment v0.9.1 // indirect
 	github.com/blevesearch/snowballstem v0.9.0 // indirect
 	github.com/blevesearch/stempel v0.2.0 // indirect
 	github.com/blevesearch/upsidedown_store_api v1.0.2 // indirect
 	github.com/blevesearch/vellum v1.1.0 // indirect
-	github.com/blevesearch/zapx/v11 v11.3.11 // indirect
-	github.com/blevesearch/zapx/v12 v12.3.11 // indirect
-	github.com/blevesearch/zapx/v13 v13.3.11 // indirect
-	github.com/blevesearch/zapx/v14 v14.3.11 // indirect
-	github.com/blevesearch/zapx/v15 v15.3.18 // indirect
-	github.com/blevesearch/zapx/v16 v16.1.11-0.20250107152255-021e66397612 // indirect
+	github.com/blevesearch/zapx/v11 v11.4.0 // indirect
+	github.com/blevesearch/zapx/v12 v12.4.0 // indirect
+	github.com/blevesearch/zapx/v13 v13.4.0 // indirect
+	github.com/blevesearch/zapx/v14 v14.4.0 // indirect
+	github.com/blevesearch/zapx/v15 v15.4.0 // indirect
+	github.com/blevesearch/zapx/v16 v16.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudfoundry/gosigar v1.3.4 // indirect
