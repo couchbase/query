@@ -16,7 +16,6 @@ package.
 package couchbase
 
 import (
-	"crypto/tls"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -896,7 +895,7 @@ func (s *store) SetClientConnectionSecurityConfig() (err error) {
 			s.connSecConfig.KeyFile,
 			s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts,
 			s.connSecConfig.TLSConfig.PrivateKeyPassphrase,
-			s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+			s.connSecConfig.TLSConfig.ShouldClientsUseClientCert,
 			s.connSecConfig.InternalClientCertFile,
 			s.connSecConfig.InternalClientKeyFile,
 			s.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase)
@@ -906,7 +905,7 @@ func (s *store) SetClientConnectionSecurityConfig() (err error) {
 				s.connSecConfig.CertFile,
 				s.connSecConfig.KeyFile,
 				s.connSecConfig.TLSConfig.PrivateKeyPassphrase,
-				s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+				s.connSecConfig.TLSConfig.ShouldClientsUseClientCert,
 				s.connSecConfig.InternalClientCertFile,
 				s.connSecConfig.InternalClientKeyFile,
 				s.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase)

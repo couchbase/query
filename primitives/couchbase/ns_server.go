@@ -1038,7 +1038,7 @@ func ConnectWithAuth(baseU string, ah AuthHandler, userAgent string) (c Client, 
 //
 // This method should be called immediately after a Connect*() method.
 func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bool, passphrase []byte,
-	clientCertAuthMandatory bool, internalClientCertFile string, internalClientKeyFile string,
+	useInternalClientCert bool, internalClientCertFile string, internalClientKeyFile string,
 	internalClientPrivateKeyPassphrase []byte) error {
 	// Set the values for certs
 	SetCaFile(caFile)
@@ -1057,8 +1057,9 @@ func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bo
 	CA_Pool.AppendCertsFromPEM(serverCert)
 	c.tlsConfig = &tls.Config{RootCAs: CA_Pool}
 
-	// MB-52102: Include the internal client cert if n2n encryption is enabled and client certificate authentication is mandatory.
-	if clientCertAuthMandatory {
+	// Include the internal client cert if n2n encryption is enabled
+	// and client certificate authentication is set to Mandatory or Hybrid
+	if useInternalClientCert {
 		internalClientCert, err := ntls.LoadX509KeyPair(internalClientCertFile, internalClientKeyFile,
 			internalClientPrivateKeyPassphrase)
 		if err != nil {

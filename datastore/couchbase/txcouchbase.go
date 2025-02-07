@@ -9,7 +9,6 @@
 package couchbase
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	gerrors "errors"
 	"fmt"
@@ -779,9 +778,9 @@ func initGocb(s *store) (err errors.Error) {
 		keyFile = s.connSecConfig.KeyFile
 		passphrase = s.connSecConfig.TLSConfig.PrivateKeyPassphrase
 
-		// MB-52102: Include the internal client cert if n2n encryption is enabled and
-		// client certificate authentication is mandatory.
-		if s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert {
+		// Include the internal client cert if n2n encryption is enabled and
+		// client certificate authentication is set to Mandatory or Hybrid
+		if s.connSecConfig.TLSConfig.ShouldClientsUseClientCert {
 			internalClientCertFile = s.connSecConfig.InternalClientCertFile
 			internalClientKeyFile = s.connSecConfig.InternalClientKeyFile
 			internalClientPassphrase = s.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase
@@ -817,7 +816,7 @@ func initGocb(s *store) (err errors.Error) {
 		keyFile,
 		passphrase,
 		s.connSecConfig.ClusterEncryptionConfig.EncryptData,
-		s.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+		s.connSecConfig.TLSConfig.ShouldClientsUseClientCert,
 		internalClientCertFile,
 		internalClientKeyFile,
 		internalClientPassphrase)

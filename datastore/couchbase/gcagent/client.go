@@ -87,7 +87,7 @@ type Client struct {
 }
 
 func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte, encryptNodeToNodeComms bool,
-	clientCertAuthMandatory bool, internalClientFile, internalClientKey string, internalClientPassphrase []byte) (
+	useInternalClientCert bool, internalClientFile, internalClientKey string, internalClientPassphrase []byte) (
 	rv *Client, err error) {
 	rv = &Client{}
 
@@ -99,8 +99,8 @@ func NewClient(url string, caFile, certFile, keyFile string, passphrase []byte, 
 		return nil, err
 	}
 
-	if certFile != "" || caFile != "" || keyFile != "" || internalClientFile != "" || internalClientKey != "" {
-		if err = rv.InitTLS(caFile, certFile, keyFile, passphrase, clientCertAuthMandatory,
+	if certFile != "" || caFile != "" || keyFile != "" {
+		if err = rv.InitTLS(caFile, certFile, keyFile, passphrase, useInternalClientCert,
 			internalClientFile, internalClientKey, internalClientPassphrase); err != nil {
 			return nil, err
 		}
@@ -241,7 +241,7 @@ func (c *Client) Close() {
 }
 
 // with the KV engine encrypted.
-func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte, clientCertAuthMandatory bool,
+func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte, useInternalClientCert bool,
 	internalClientCertFile, internalClientKeyFile string, internalClientPrivateKeyPassphrase []byte) error {
 	certs, err := ntls.LoadX509KeyPair(certFile, keyFile, passphrase)
 	if err != nil {
@@ -262,9 +262,10 @@ func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte, cl
 	CA_Pool := x509.NewCertPool()
 	CA_Pool.AppendCertsFromPEM(serverCert)
 
-	// MB-52102: Include the internal client cert if n2n encryption is enabled and client certificate authentication is mandatory.
+	// Include the internal client cert if n2n encryption is enabled
+	// and client certificate authentication is set to Mandatory or Hybrid
 	var internalClientCert tls.Certificate
-	if clientCertAuthMandatory {
+	if useInternalClientCert {
 		internalClientCert, err = ntls.LoadX509KeyPair(internalClientCertFile, internalClientKeyFile,
 			internalClientPrivateKeyPassphrase)
 		if err != nil {
@@ -278,7 +279,7 @@ func (c *Client) InitTLS(caFile, certFile, keyFile string, passphrase []byte, cl
 	c.certs = &certs
 	c.rootCAs = CA_Pool
 
-	if clientCertAuthMandatory {
+	if useInternalClientCert {
 		c.internalClientCert = &internalClientCert
 	}
 	c.mutex.Unlock()

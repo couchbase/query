@@ -590,9 +590,9 @@ func (this *HttpEndpoint) SetupSSL() error {
 
 		}
 
-		// MB-52102: Internal client certificate authentication is only required if:
+		// Internal client certificate authentication is only required if:
 		// i. Node to Node encryption is enabled i.e set to "Strict" or "All"
-		// ii. Client certificate authentication is Mandatory
+		// ii. Client certificate authentication is Mandatory or Hybrid
 
 		// Check if the internal client cert, key or passphrase has changed
 		if (configChange & cbauth.CFG_CHANGE_CLIENT_CERTS_TLSCONFIG) != 0 {
@@ -629,8 +629,8 @@ func (this *HttpEndpoint) SetupSSL() error {
 
 			distributed.RemoteAccess().SetConnectionSecurityConfig(this.connSecConfig.CAFile, this.connSecConfig.CertFile,
 				this.connSecConfig.ClusterEncryptionConfig.EncryptData,
-				// check if client certificate authentication is mandatory
-				this.connSecConfig.TLSConfig.ClientAuthType == tls.RequireAndVerifyClientCert,
+				// If client certificate authentication is set to Mandatory or Hybrid
+				this.connSecConfig.TLSConfig.ShouldClientsUseClientCert,
 				this.connSecConfig.InternalClientCertFile,
 				this.connSecConfig.InternalClientKeyFile,
 				this.connSecConfig.TLSConfig.ClientPrivateKeyPassphrase)

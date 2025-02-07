@@ -64,7 +64,7 @@ func (this *systemRemoteHttp) setCommParams(cp *commParameters) {
 }
 
 func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile string, certFile string, encryptNodeToNodeComms bool,
-	clientCertAuthMandatory bool, internalClientCertFile string, internalClientKeyFile string,
+	useInternalClientCert bool, internalClientCertFile string, internalClientKeyFile string,
 	internalClientPrivateKeyPassphrase []byte) {
 
 	var cp *commParameters
@@ -89,9 +89,9 @@ func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile string, certFil
 		caPool.AppendCertsFromPEM(serverCert)
 		tlsConfig := &tls.Config{RootCAs: caPool}
 
-		// MB-52102: Include the internal client cert if n2n encryption is enabled
-		// and client certificate authentication is mandatory.
-		if clientCertAuthMandatory {
+		// Include the internal client cert if n2n encryption is enabled
+		// and client certificate authentication is set to Mandatory or Hybrid
+		if useInternalClientCert {
 			internalTlSCert, err := ntls.LoadX509KeyPair(internalClientCertFile, internalClientKeyFile,
 				internalClientPrivateKeyPassphrase)
 			if err != nil {
