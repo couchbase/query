@@ -72,6 +72,14 @@ func (this *Echo) ExecCommand(args []string) (errors.ErrorCode, string) {
 				_, werr = OUTPUT.WriteString(tmpstr)
 				_, werr = OUTPUT.WriteString(" ")
 
+			} else if val == "-natural_cred" {
+				fval := ValToStr(v)
+				n := strings.Index(fval, ":")
+				if n > -1 {
+					fval = fval[:n+1] + "***\""
+				}
+				_, werr = OUTPUT.WriteString(fval)
+				_, werr = OUTPUT.WriteString(" ")
 			} else {
 				// If the value type is string then output it directly.
 				if v.Type() == value.STRING {
