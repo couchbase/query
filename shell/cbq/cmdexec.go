@@ -273,20 +273,22 @@ func ExecN1QLStmt(line string, dBn1ql n1ql.N1qlDB) (errors.ErrorCode, string) {
 }
 
 // Function to remove extra space in between words in a string.
-func trimSpaceInStr(inputStr string) (outputStr string) {
+func trimSpaceInStr(inputStr string) string {
 	whiteSpace := false
+	var builder strings.Builder
+	builder.Grow(len(inputStr))
 	for _, character := range inputStr {
 		if unicode.IsSpace(character) {
 			if !whiteSpace {
-				outputStr = outputStr + " "
+				builder.WriteRune(' ')
 			}
 			whiteSpace = true
 		} else {
-			outputStr = outputStr + string(character)
+			builder.WriteRune(character)
 			whiteSpace = false
 		}
 	}
-	return
+	return builder.String()
 }
 
 func ExecShellCmd(line string, liner *liner.State) (errors.ErrorCode, string) {
