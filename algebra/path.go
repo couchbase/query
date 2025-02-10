@@ -477,27 +477,30 @@ func parsePathOrContext(queryContext string) []string {
 	elements := []string{}
 	hasNamespace := false
 	start := 0
-	end := -1
+	end := 0
 	inBackTicks := false
+	endBackTicks := false // only true for the very next char after the end of a backTick
 	for i, c := range queryContext {
 		switch c {
 		case '`':
 			inBackTicks = !inBackTicks
 			if inBackTicks {
 				start = i + 1
+				endBackTicks = false
 			} else {
 				end = i
+				endBackTicks = true
 			}
 		case ':':
 			if inBackTicks {
 				continue
 			}
-			if end != i-1 || end == -1 {
+			if !endBackTicks {
 				end = i
 			}
 			elements = append(elements, queryContext[start:end])
 			start = i + 1
-			end = start
+			endBackTicks = false
 			hasNamespace = true
 		case '.':
 			if inBackTicks {
@@ -507,12 +510,14 @@ func parsePathOrContext(queryContext string) []string {
 				elements = append(elements, "")
 				hasNamespace = true
 			}
-			if end != i-1 || end == -1 {
+			if !endBackTicks {
 				end = i
 			}
 			elements = append(elements, queryContext[start:end])
 			start = i + 1
-			end = start
+			endBackTicks = false
+		default:
+			endBackTicks = false
 		}
 	}
 	if !hasNamespace {
