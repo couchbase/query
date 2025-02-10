@@ -140,7 +140,7 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 				for _, expr := range exprs {
 					depends := false
 					if vector {
-						depends = expr.EquivalentTo(ann)
+						depends = expr.DependsOn(ann)
 					} else {
 						depends = expr.DependsOn(indexKey.Expr)
 					}
