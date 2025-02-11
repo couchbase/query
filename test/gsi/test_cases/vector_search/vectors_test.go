@@ -25,6 +25,10 @@ func TestVectors(t *testing.T) {
 
 	fmt.Print("\n\nChecking import into vectors collection\n\n")
 	runMatch("check_import.json", false, false, qc, t)
+	if !t.Failed() {
+		fmt.Print("Import succeeded\n\n")
+		os.Remove("cbimport.out")
+	}
 
 	fmt.Println("Running Advise test cases")
 
