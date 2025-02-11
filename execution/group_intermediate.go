@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
@@ -114,7 +115,8 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 			context.Fatal(errors.NewGroupUpdateError(e, "Error updating intermediate GROUP value."))
 			return false
 		}
-		if v.Equals(pv) != value.TRUE_VALUE {
+		// MB-65246 ARRAY_AGG() Don't recycle previous once
+		if _, ok := agg.(*algebra.ArrayAgg); !ok && v.Equals(pv) != value.TRUE_VALUE {
 			pv.Recycle()
 		}
 		cumulative[a] = v
