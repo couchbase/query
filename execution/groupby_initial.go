@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
@@ -114,10 +115,25 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 			item.Recycle()
 			return false
 		}
+
 		if v.Equals(pv) != value.TRUE_VALUE {
-			// maintain a reference count for each aggregate as appropriate
-			v.Track()
-			pv.Recycle()
+			// MB-65246 ARRAY_AGG() Track only do last element, don't recycle previous once
+			if array_agg, ok := agg.(*algebra.ArrayAgg); ok {
+				if array_agg.Distinct() {
+					recycle = false
+					releaseSize = 0
+				} else if array, ok := v.Actual().([]interface{}); ok {
+					if l := len(array) - 1; l > 0 {
+						if v1, ok := v.Index(l); ok {
+							v1.Track()
+						}
+					}
+				}
+			} else {
+				// maintain a reference count for each aggregate as appropriate
+				v.Track()
+				pv.Recycle()
+			}
 		}
 		b := agg.String()
 		aggregates[b] = v
