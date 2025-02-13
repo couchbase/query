@@ -219,11 +219,17 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
-	prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
-	if err != nil {
-		return 0, err
+
+	if _unmarshalled.PreparedTime != "" {
+		prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
+		if err != nil {
+			return 0, err
+		}
+		this.preparedTime = prepTime
+	} else {
+		// MB-65207 empty planPreparedTime field causes unmarshal to fail
+		this.preparedTime = util.Now().ToTime()
 	}
-	this.preparedTime = prepTime
 
 	if _unmarshalled.UserAgent != "" {
 		this.userAgent = _unmarshalled.UserAgent
