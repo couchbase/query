@@ -447,6 +447,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start the FFDC period reset routine
+	ffdc.StartFFDC()
+
 	// topology awareness - after listeners are ready to handle requests
 	_ = control.NewManager(*UUID)
 
