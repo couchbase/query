@@ -538,7 +538,8 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 
 		skip := useSkipIndexKeys(index, this.context.IndexApiVersion())
 		missing := indexHasLeadingKeyMissingValues(index, this.context.FeatureControls())
-		min, max, sum, include, skeys := SargableFor(pred, vpred, index, keys, missing, skip, nil, this.context, this.aliases)
+		min, max, sum, include, skeys := SargableFor(pred, vpred, index, keys, includes,
+			missing, skip, nil, this.context, this.aliases)
 		exact := min == 0 && pred == nil
 
 		n := min
@@ -1907,8 +1908,8 @@ func (this *builder) orSargUseFilters(pred *expression.Or, vpred expression.Expr
 	var min, max int
 	var skeys []bool
 	for i, child := range pred.Operands() {
-		cmin, cmax, _, _, cskeys := SargableFor(child, vpred, entry.index, entry.idxSargKeys, missing, skip, nil,
-			this.context, this.aliases)
+		cmin, cmax, _, _, cskeys := SargableFor(child, vpred, entry.index, entry.idxSargKeys,
+			nil, missing, skip, nil, this.context, this.aliases)
 		if i == 0 {
 			min = cmin
 			max = cmax
@@ -1957,7 +1958,7 @@ func (this *builder) orSargUseFilters(pred *expression.Or, vpred expression.Expr
 					cmissing = true
 				}
 				cmin, _, _, _, _ := SargableFor(or, nil, entry.index, datastore.IndexKeys{key},
-					cmissing, skip, nil, this.context, this.aliases)
+					nil, cmissing, skip, nil, this.context, this.aliases)
 				if cmin > 0 {
 					nsarg++
 					if nsarg > 1 {
@@ -2007,7 +2008,7 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, index datastor
 			add := true
 			for i, key := range keys {
 				min, _, _, _, _ := SargableFor(op1, nil, index, datastore.IndexKeys{&datastore.IndexKey{key, datastore.IK_NONE}},
-					(missing || i > 0), skip, nil, this.context, this.aliases)
+					nil, (missing || i > 0), skip, nil, this.context, this.aliases)
 				if min == 0 {
 					continue
 				}

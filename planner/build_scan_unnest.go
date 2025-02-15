@@ -357,7 +357,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 
 	skip := useSkipIndexKeys(entry.index, this.context.IndexApiVersion())
 	missing := entry.HasFlag(IE_LEADINGMISSING)
-	min, max, sum, include, skeys := SargableFor(pred, vpred, entry.index, keys, missing, skip, isArrays, this.context, this.aliases)
+	min, max, sum, include, skeys := SargableFor(pred, vpred, entry.index, keys, entry.includes,
+		missing, skip, isArrays, this.context, this.aliases)
 
 	n := min
 	if skip && (n > 0 || missing) {

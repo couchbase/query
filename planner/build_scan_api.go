@@ -353,7 +353,7 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 		keys = append(keys, &datastore.IndexKey{k, datastore.IK_NONE})
 	}
 
-	min, max, sum, include, skeys := SargableFor(pred, nil, index, keys, true, true, nil, this.context, this.aliases)
+	min, max, sum, include, skeys := SargableFor(pred, nil, index, keys, nil, true, true, nil, this.context, this.aliases)
 	if min < nkeys {
 		// not all partition keys sargable
 		return nil, nil

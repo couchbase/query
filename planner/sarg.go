@@ -52,7 +52,8 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 	spans := make([]SargSpans, len(or.Operands()))
 	for i, c := range or.Operands() {
 		// Variable length sarging
-		_, max1, _, _, _ := SargableFor(c, vpred, entry.index, keys, isMissing, true, isArrays, context, aliases)
+		_, max1, _, _, _ := SargableFor(c, vpred, entry.index, keys, entry.includes, isMissing,
+			true, isArrays, context, aliases)
 		if max1 == 0 {
 			max1 = 1
 		}

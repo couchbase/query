@@ -15,10 +15,8 @@ import (
 )
 
 func SargableFor(pred, vpred expression.Expression, index datastore.Index, keys datastore.IndexKeys,
-	missing, gsi bool, isArrays []bool, context *PrepareContext, aliases map[string]bool) (
-	min, max, sum, include int, skeys []bool) {
-
-	includes := datastore.GetIndexIncludes(index)
+	includes expression.Expressions, missing, gsi bool, isArrays []bool, context *PrepareContext,
+	aliases map[string]bool) (min, max, sum, include int, skeys []bool) {
 
 	skeys = make([]bool, len(keys)+len(includes))
 
@@ -107,7 +105,8 @@ func sargableForOr(or *expression.Or, vpred expression.Expression, index datasto
 
 	// OR should have already been flattened with DNF transformation
 	for _, c := range or.Operands() {
-		cmin, cmax, csum, cinclude, cskeys := SargableFor(c, vpred, index, keys, missing, gsi, isArrays, context, aliases)
+		cmin, cmax, csum, cinclude, cskeys := SargableFor(c, vpred, index, keys, includes,
+			missing, gsi, isArrays, context, aliases)
 		if (cmin == 0 && !missing) || cmax == 0 || csum < cmin {
 			return 0, 0, 0, 0, skeys
 		}
