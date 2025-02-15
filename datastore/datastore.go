@@ -1049,11 +1049,14 @@ func GetIndexKeys(index Index) (indexKeys IndexKeys) {
 	return flattenIndexKeys
 }
 
-func GetIndexIncludes(index Index) (includes expression.Expressions) {
+func GetIndexIncludes(index Index) expression.Expressions {
 	if index6, ok := index.(Index6); ok {
-		includes = index6.Include()
+		includes := index6.Include()
+		if len(includes) > 0 {
+			return includes.Copy()
+		}
 	}
-	return
+	return nil
 }
 
 func CompatibleMetric(distanceType IndexDistanceType, metric expression.VectorMetric) bool {

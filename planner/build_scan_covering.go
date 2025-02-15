@@ -199,10 +199,7 @@ outer:
 		implcitIndexProj = coveringEntry.implcitIndexProj
 	}
 
-	var includes expression.Expressions
-	if index6, ok := index.(datastore.Index6); ok {
-		includes = index6.Include()
-	}
+	includes := datastore.GetIndexIncludes(index)
 
 	// Include covering expression from index keys
 	covers := make(expression.Covers, 0, len(keys)+len(includes))
