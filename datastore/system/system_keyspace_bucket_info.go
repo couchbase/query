@@ -104,7 +104,18 @@ func (b *bucketInfoKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 
 func newBucketInfoKeyspace(p *namespace) (*bucketInfoKeyspace, errors.Error) {
 	b := new(bucketInfoKeyspace)
-	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_BUCKET_INFO, KEYSPACE_NAME_DATABASE_INFO)
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_BUCKET_INFO)
+
+	primary := &bucketInfoIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
+	b.indexer = newSystemIndexer(b, primary)
+	setIndexBase(&primary.indexBase, b.indexer)
+
+	return b, nil
+}
+
+func newDatabaseInfoKeyspace(p *namespace) (*bucketInfoKeyspace, errors.Error) {
+	b := new(bucketInfoKeyspace)
+	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_DATABASE_INFO)
 
 	primary := &bucketInfoIndex{name: PRIMARY_INDEX_NAME, keyspace: b}
 	b.indexer = newSystemIndexer(b, primary)

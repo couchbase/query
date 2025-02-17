@@ -249,6 +249,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	registerKeyspace(p, bucketInfo)
 
+	databaseInfo, e := newDatabaseInfoKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, databaseInfo)
+
 	nodes, e := newNodesKeyspace(p)
 	if e != nil {
 		return e
