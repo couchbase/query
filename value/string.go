@@ -12,11 +12,12 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	json "github.com/couchbase/go_json"
 	"io"
 	"strconv"
 	"strings"
 	"unicode"
+
+	json "github.com/couchbase/go_json"
 
 	"github.com/couchbase/query/util"
 )
