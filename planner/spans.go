@@ -30,7 +30,7 @@ type SargSpans interface {
 		projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 		indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 		filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
-		cost, cardinality float64, size int64, frCost float64,
+		cost, cardinality float64, size int64, frCost float64, includeSpans plan.Spans2,
 		baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop, setop bool,
 		indexKeyNames []string, indexPartitionSet plan.IndexPartitionSets) plan.SecondaryScan
 

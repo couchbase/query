@@ -373,8 +373,8 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		return nil, nil, nil, nil
 	}
 
-	spans, exactSpans, err := SargFor(pred, vpred, entry, keys, missing, isArrays, n, false, useCBO,
-		baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
+	spans, exactSpans, includeSpans, exactIncludes, err := SargFor(pred, vpred, entry, keys, missing, isArrays,
+		n, false, useCBO, baseKeyspace, this.keyspaceNames, advisorValidate, this.aliases, this.context)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -397,7 +397,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 	}
 
 	entry = newIndexEntry(entry.index, keys, entry.includes, n, entry.partitionKeys, min, n, sum,
-		include, entry.cond, entry.origCond, spans, exactSpans, skeys)
+		include, entry.cond, entry.origCond, spans, exactSpans, includeSpans, exactIncludes, skeys)
 	entry.setArrayKey(newArrayKey, 0)
 	entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size =
 		cardinality, selectivity, cost, frCost, size

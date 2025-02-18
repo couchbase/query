@@ -225,10 +225,14 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			}
 		}
 
+		var includeSpans plan.Spans2
+		if tspan, ok := entry.includeSpans.(*TermSpans); ok {
+			includeSpans = tspan.spans
+		}
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
 			covers, filterCovers, filter, entry.cost, entry.cardinality,
-			entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace, skipNewKeys,
+			entry.size, entry.frCost, includeSpans, baseKeyspace, hasDeltaKeyspace, skipNewKeys,
 			this.hasBuilderFlag(BUILDER_NL_INNER), false, indexKeyNames, indexPartitionSets)
 
 		if iscan3, ok := scan.(*plan.IndexScan3); ok {
@@ -553,7 +557,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 
 		if n > 0 || allKey != nil {
 			entry := newIndexEntry(index, keys, includes, n, partitionKeys, min, n, sum,
-				include, cond, origCond, nil, exact, skeys)
+				include, cond, origCond, nil, exact, nil, false, skeys)
 			if missing {
 				entry.SetFlags(IE_LEADINGMISSING, true)
 			}
@@ -1115,8 +1119,8 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 	useCBO := this.useCBO && (baseKeyspace.DocCount() >= 0)
 	advisorValidate := this.advisorValidate()
 	for _, se := range sargables {
-		var spans SargSpans
-		var exactSpans bool
+		var spans, includeSpans SargSpans
+		var exactSpans, exactIncludes bool
 		var err error
 
 		if (se.index.IsPrimary() && se.minKeys == 0) || se.maxKeys == 0 {
@@ -1157,9 +1161,9 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			} else {
 				se.exactFilters = make(map[*base.Filter]bool, len(filters))
 			}
-			spans, exactSpans, err = SargForFilters(filters, vpred, se, se.idxKeys, isMissing, nil,
-				se.maxKeys, underHash, useCBO, baseKeyspace, this.keyspaceNames,
-				advisorValidate, this.aliases, se.exactFilters, this.context)
+			spans, exactSpans, includeSpans, exactIncludes, err = SargForFilters(filters, vpred,
+				se, se.idxKeys, isMissing, nil, se.maxKeys, underHash, useCBO, baseKeyspace,
+				this.keyspaceNames, advisorValidate, this.aliases, se.exactFilters, this.context)
 			if err == nil && (spans != nil || !isOrPred || !se.HasFlag(IE_LEADINGMISSING)) {
 				// If this is OR predicate and no valid span generated, and index
 				// has leading missing, allow it to try with SargFor() below.
@@ -1168,8 +1172,8 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 		}
 		if !validSpans {
 			useFilters = false
-			spans, exactSpans, err = SargFor(baseKeyspace.DnfPred(), vpred, se, se.idxKeys,
-				isMissing, nil, se.maxKeys, orIsJoin, useCBO, baseKeyspace,
+			spans, exactSpans, includeSpans, exactIncludes, err = SargFor(baseKeyspace.DnfPred(), vpred,
+				se, se.idxKeys, isMissing, nil, se.maxKeys, orIsJoin, useCBO, baseKeyspace,
 				this.keyspaceNames, advisorValidate, this.aliases, this.context)
 		}
 
@@ -1204,6 +1208,8 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			exactSpans = spans.ExactSpan1(len(se.keys))
 		}
 		se.exactSpans = exactSpans
+		se.includeSpans = includeSpans
+		se.exactIncludes = exactIncludes
 
 		if isOrPred && useFilters {
 			se.SetFlags(IE_OR_USE_FILTERS, true)

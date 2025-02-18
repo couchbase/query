@@ -52,8 +52,10 @@ type indexEntry struct {
 	index                datastore.Index
 	idxKeys              datastore.IndexKeys
 	idxSargKeys          datastore.IndexKeys
+	idxSargIncludes      datastore.IndexKeys
 	keys                 expression.Expressions
 	sargKeys             expression.Expressions
+	sargIncludes         expression.Expressions
 	partitionKeys        expression.Expressions
 	includes             expression.Expressions
 	arrayKey             *expression.All
@@ -68,6 +70,8 @@ type indexEntry struct {
 	origCond             expression.Expression
 	spans                SargSpans
 	exactSpans           bool
+	includeSpans         SargSpans
+	exactIncludes        bool
 	pushDownProperty     PushDownProperties
 	cost                 float64
 	cardinality          float64
@@ -90,7 +94,8 @@ type indexEntry struct {
 
 func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes expression.Expressions,
 	sargLength int, partitionKeys expression.Expressions, minKeys, maxKeys, sumKeys, includeKeys int,
-	cond, origCond expression.Expression, spans SargSpans, exactSpans bool, skeys []bool) *indexEntry {
+	cond, origCond expression.Expression, spans SargSpans, exactSpans bool,
+	includeSpans SargSpans, exactIncludes bool, skeys []bool) *indexEntry {
 	rv := &indexEntry{
 		index:            index,
 		idxKeys:          idxKeys,
@@ -105,6 +110,8 @@ func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes 
 		origCond:         origCond,
 		spans:            spans,
 		exactSpans:       exactSpans,
+		includeSpans:     includeSpans,
+		exactIncludes:    exactIncludes,
 		pushDownProperty: _PUSHDOWN_NONE,
 		cost:             OPT_COST_NOT_AVAIL,
 		cardinality:      OPT_CARD_NOT_AVAIL,
@@ -125,6 +132,18 @@ func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes 
 	}
 	rv.idxSargKeys = rv.idxKeys[0:sargLength]
 	rv.sargKeys = rv.keys[0:sargLength]
+
+	if len(includes) > 0 && includeKeys > 0 {
+		rv.idxSargIncludes = make(datastore.IndexKeys, 0, len(includes))
+		rv.sargIncludes = make(expression.Expressions, 0, len(includes))
+		for i := len(idxKeys); i < len(skeys); i++ {
+			if skeys[i] {
+				includeKey := &datastore.IndexKey{includes[i-len(idxKeys)], datastore.IK_NONE}
+				rv.idxSargIncludes = append(rv.idxSargIncludes, includeKey)
+				rv.sargIncludes = append(rv.sargIncludes, includes[i-len(idxKeys)])
+			}
+		}
+	}
 
 	rv.arrayKeyPos = -1
 	for _, b := range skeys {
@@ -166,6 +185,8 @@ func (this *indexEntry) Copy() *indexEntry {
 		origCond:         expression.Copy(this.origCond),
 		spans:            CopySpans(this.spans),
 		exactSpans:       this.exactSpans,
+		includeSpans:     CopySpans(this.includeSpans),
+		exactIncludes:    this.exactIncludes,
 		pushDownProperty: this.pushDownProperty,
 		cost:             this.cost,
 		cardinality:      this.cardinality,
@@ -182,6 +203,10 @@ func (this *indexEntry) Copy() *indexEntry {
 	rv.sargKeys = rv.keys[0:len(this.sargKeys)]
 	if this.arrayKey != nil {
 		rv.arrayKey, _ = expression.Copy(this.arrayKey).(*expression.All)
+	}
+	if len(this.idxSargIncludes) > 0 {
+		rv.idxSargIncludes = this.idxSargIncludes.Copy()
+		rv.sargIncludes = expression.CopyExpressions(this.sargIncludes)
 	}
 	rv.searchOrders = make([]string, len(this.searchOrders))
 	copy(rv.searchOrders, this.searchOrders)

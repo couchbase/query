@@ -31,6 +31,7 @@ const (
 	RANGE_ARRAY_ANY_EVERY
 	RANGE_DEFAULT_LIKE
 	RANGE_NOT_VALUED_SPAN
+	RANGE_IS_INCLUDE_KEY
 )
 
 const RANGE_SPECIAL_SPAN = (RANGE_SELF_SPAN | RANGE_FULL_SPAN | RANGE_WHOLE_SPAN | RANGE_VALUED_SPAN | RANGE_EMPTY_SPAN |
@@ -142,7 +143,11 @@ func (this *Range2) MarshalBase(f func(map[string]interface{})) map[string]inter
 	}
 
 	if len(this.IndexKey) > 0 {
-		r["index_key"] = this.IndexKey
+		if this.HasFlag(RANGE_IS_INCLUDE_KEY) {
+			r["include_key"] = this.IndexKey
+		} else {
+			r["index_key"] = this.IndexKey
+		}
 	}
 
 	if f != nil {
@@ -153,10 +158,12 @@ func (this *Range2) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Range2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Low       string              `json:"low"`
-		High      string              `json:"high"`
-		Inclusion datastore.Inclusion `json:"inclusion"`
-		DynamicIn bool                `json:"dynamic_in"`
+		Low        string              `json:"low"`
+		High       string              `json:"high"`
+		Inclusion  datastore.Inclusion `json:"inclusion"`
+		DynamicIn  bool                `json:"dynamic_in"`
+		IndexKey   string              `json:"index_key"`
+		IncludeKey string              `json:"include_key"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -188,6 +195,14 @@ func (this *Range2) UnmarshalJSON(body []byte) error {
 	}
 
 	this.Inclusion = _unmarshalled.Inclusion
+
+	if _unmarshalled.IncludeKey != "" {
+		this.IndexKey = _unmarshalled.IncludeKey
+		this.SetFlag(RANGE_IS_INCLUDE_KEY)
+	} else {
+		this.IndexKey = _unmarshalled.IndexKey
+	}
+
 	return nil
 }
 
@@ -442,6 +457,14 @@ func (this Spans2) HasDynamicIn() bool {
 	return false
 }
 
+func (this Spans2) SetInclude() {
+	for _, sp := range this {
+		for _, rg := range sp.Ranges {
+			rg.SetFlag(RANGE_IS_INCLUDE_KEY)
+		}
+	}
+}
+
 func setRangeIndexKey(spans Spans2, index datastore.Index) {
 	keys := index.RangeKey()
 	flattenKeys := make(expression.Expressions, 0, len(keys))
@@ -466,6 +489,21 @@ func setRangeIndexKey(spans Spans2, index datastore.Index) {
 				break
 			}
 			r.IndexKey = flattenKeys[i].String()
+		}
+	}
+}
+
+func setIncludeKey(includeSpans Spans2, includes expression.Expressions) {
+	for n, s := range includeSpans {
+		if s.Static {
+			s = s.Copy()
+			includeSpans[n] = s
+		}
+		for i, r := range s.Ranges {
+			if i >= len(includes) {
+				break
+			}
+			r.IndexKey = includes[i].String()
 		}
 	}
 }

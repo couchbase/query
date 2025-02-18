@@ -359,9 +359,10 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 		return nil, nil
 	}
 
-	entry := newIndexEntry(index, keys, nil, max, nil, min, max, sum, include, nil, nil, nil, false, skeys)
+	entry := newIndexEntry(index, keys, nil, max, nil, min, max, sum, include, nil, nil,
+		nil, false, nil, false, skeys)
 
-	spans, exact, err := SargFor(pred, nil, entry, keys, false, nil, max, false, false,
+	spans, exact, _, _, err := SargFor(pred, nil, entry, keys, false, nil, max, false, false,
 		baseKeyspace, this.keyspaceNames, false, this.aliases, this.context)
 	if err != nil || spans == nil || spans.Size() == 0 || !exact {
 		// ignore error here, no partition elimination in that case

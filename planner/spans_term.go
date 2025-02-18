@@ -40,7 +40,7 @@ func (this *TermSpans) CreateScan(
 	projection *plan.IndexProjection, indexOrder plan.IndexKeyOrders,
 	indexGroupAggs *plan.IndexGroupAggregates, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, filter expression.Expression,
-	cost, cardinality float64, size int64, frCost float64,
+	cost, cardinality float64, size int64, frCost float64, includeSpans plan.Spans2,
 	baseKeyspace *base.BaseKeyspace, hasDeltaKeyspace, skipNewKeys, nested_loop, setop bool,
 	indexKeyNames []string, indexPartitionSets plan.IndexPartitionSets) plan.SecondaryScan {
 
@@ -62,8 +62,8 @@ func (this *TermSpans) CreateScan(
 		}
 		dynamicIn := this.spans.HasDynamicIn()
 		if distScan && indexGroupAggs == nil {
-			scan := plan.NewIndexScan3(index3, term, this.spans, reverse, false, dynamicIn, nil, nil,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
+			scan := plan.NewIndexScan3(index3, term, this.spans, includeSpans, reverse, false, dynamicIn,
+				nil, nil, projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
 				cost, cardinality, size, frCost, hasDeltaKeyspace, skipNewKeys, nested_loop,
 				indexVector, indexKeyNames, indexPartitionSets)
 
@@ -83,8 +83,8 @@ func (this *TermSpans) CreateScan(
 			}
 			return plan.NewDistinctScan(limit, offset, scan, cost, cardinality, size, frCost)
 		} else {
-			return plan.NewIndexScan3(index3, term, this.spans, reverse, distinct, dynamicIn, offset, limit,
-				projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
+			return plan.NewIndexScan3(index3, term, this.spans, includeSpans, reverse, distinct, dynamicIn,
+				offset, limit, projection, indexOrder, indexGroupAggs, covers, filterCovers, filter,
 				cost, cardinality, size, frCost, hasDeltaKeyspace, skipNewKeys, nested_loop,
 				indexVector, indexKeyNames, indexPartitionSets)
 		}

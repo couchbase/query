@@ -21,7 +21,7 @@ import (
 func SargFor(pred, vpred expression.Expression, entry *indexEntry, keys datastore.IndexKeys,
 	isMissing bool, isArrays []bool, max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	context *PrepareContext) (SargSpans, bool, error) {
+	context *PrepareContext) (SargSpans, bool, SargSpans, bool, error) {
 
 	// Optimize top-level OR predicate
 	if or, ok := pred.(*expression.Or); ok {
@@ -34,22 +34,53 @@ func SargFor(pred, vpred expression.Expression, entry *indexEntry, keys datastor
 	// Get sarg spans for index sarg keys. The sarg spans are
 	// truncated when they exceed the limit.
 	sargSpans, exactSpan, err := getSargSpans(pred, vpred, entry, sargKeys, isMissing, isArrays,
-		isJoin, doSelec, baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
+		isJoin, doSelec, false, baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
 	if sargSpans == nil || err != nil {
-		return nil, exactSpan, err
+		return nil, exactSpan, nil, false, err
 	}
 
-	return composeSargSpan(sargSpans, exactSpan)
+	var sargSpan SargSpans
+	sargSpan, exactSpan, err = composeSargSpan(sargSpans, exactSpan)
+	if err != nil {
+		return nil, exactSpan, nil, false, err
+	}
+
+	var includeSpans []SargSpans
+	var exactInclude bool
+	var includeSpan SargSpans
+	if len(entry.idxSargIncludes) > 0 {
+		includeSpans, exactInclude, err = getSargSpans(pred, nil, entry, entry.idxSargIncludes,
+			false, nil, isJoin, doSelec, true, baseKeyspace, keyspaceNames,
+			advisorValidate, aliases, context)
+		if err != nil {
+			return nil, exactSpan, nil, exactInclude, err
+		}
+
+		includeSpan, exactInclude, err = composeSargSpan(includeSpans, exactInclude)
+		if err != nil {
+			return nil, exactSpan, nil, exactInclude, err
+		}
+	}
+
+	return sargSpan, exactSpan, includeSpan, exactInclude, err
 }
 
 func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry, keys datastore.IndexKeys,
 	isMissing bool, isArrays []bool, max int, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	context *PrepareContext) (SargSpans, bool, error) {
+	context *PrepareContext) (SargSpans, bool, SargSpans, bool, error) {
 
 	exact := true
 	hasVector := false
 	spans := make([]SargSpans, len(or.Operands()))
+	hasInclude := false
+	exactInclude := false
+	var includeSpans []SargSpans
+	if len(entry.idxSargIncludes) > 0 {
+		hasInclude = true
+		exactInclude = true
+		includeSpans = make([]SargSpans, len(or.Operands()))
+	}
 	for i, c := range or.Operands() {
 		// Variable length sarging
 		_, max1, _, _, _ := SargableFor(c, vpred, entry.index, keys, entry.includes, isMissing,
@@ -57,15 +88,19 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 		if max1 == 0 {
 			max1 = 1
 		}
-		s, ex, err := SargFor(c, vpred, entry, keys, isMissing, isArrays, max1, isJoin, doSelec,
+		s, ex, is, iex, err := SargFor(c, vpred, entry, keys, isMissing, isArrays, max1, isJoin, doSelec,
 			baseKeyspace, keyspaceNames, advisorValidate, aliases, context)
 		if err != nil {
-			return nil, false, err
+			return nil, false, nil, false, err
 		}
 
 		spans[i] = s
 		exact = exact && ex
 		hasVector = hasVector || s.HasVector()
+		if hasInclude {
+			includeSpans[i] = is
+			exactInclude = exactInclude && iex
+		}
 
 		if exact && !entry.HasFlag(IE_OR_NON_SARG_EXPR) {
 			setFlag := false
@@ -74,7 +109,7 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 				exprs, _, err := indexCoverExpressions(entry, keys[:max1], false, c, nil,
 					baseKeyspace.Name(), context)
 				if err != nil {
-					return nil, false, err
+					return nil, false, nil, false, err
 				}
 				implicitAny := implicitAnyCover(entry, true, context.FeatureControls())
 				if !expression.IsCovered(c, baseKeyspace.Name(), exprs, implicitAny) {
@@ -93,11 +128,16 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 	rv = rv.Streamline()
 	if hasVector {
 		if _, ok := rv.(*TermSpans); !ok {
-			return nil, false, errors.NewPlanInternalError("sargForOr: unexpected OR predicate for vector index key: " +
+			return nil, false, nil, false, errors.NewPlanInternalError("sargForOr: unexpected OR predicate for vector index key: " +
 				or.String())
 		}
 	}
-	return rv, exact, nil
+	var rvi SargSpans
+	if hasInclude {
+		rvi = NewUnionSpans(includeSpans...)
+		rvi = rvi.Streamline()
+	}
+	return rv, exact, rvi, exactInclude, nil
 }
 
 func sargFor(pred expression.Expression, index datastore.Index, key expression.Expression, isJoin, doSelec bool,
@@ -128,11 +168,20 @@ func sargFor(pred expression.Expression, index datastore.Index, key expression.E
 func SargForFilters(filters base.Filters, vpred expression.Expression, entry *indexEntry, keys datastore.IndexKeys,
 	isMissing bool, isArrays []bool, max int, underHash, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	exactFilters map[*base.Filter]bool, context *PrepareContext) (SargSpans, bool, error) {
+	exactFilters map[*base.Filter]bool, context *PrepareContext) (SargSpans, bool, SargSpans, bool, error) {
 
 	sargSpans := make([]SargSpans, max)
 	exactSpan := true
 	arrayKeySpans := make(map[int][]SargSpans)
+
+	var includeSpans []SargSpans
+	exactInclude := false
+	hasInclude := false
+	if len(entry.idxSargIncludes) > 0 {
+		includeSpans = make([]SargSpans, len(entry.idxSargIncludes))
+		exactInclude = true
+		hasInclude = true
+	}
 
 	sargKeys := keys[0:max]
 	hasVector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
@@ -152,28 +201,40 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 		fltrExpr := fl.FltrExpr()
 		isJoin := fl.IsJoin() && !underHash
 		flSargSpans, flExactSpan, err := getSargSpans(fltrExpr, vpred, entry, sargKeys,
-			isMissing, isArrays, isJoin, doSelec, baseKeyspace, keyspaceNames,
+			isMissing, isArrays, isJoin, doSelec, false, baseKeyspace, keyspaceNames,
 			advisorValidate, aliases, context)
 		if err != nil {
-			return nil, flExactSpan, err
+			return nil, flExactSpan, nil, false, err
 		}
 
-		if flExactSpan && exactFilters != nil {
-			valid := false
-			for pos, rs := range flSargSpans {
-				if rs != nil && rs.Size() > 0 &&
-					// don't consider the index span for vector index key
-					(!hasVector || !(pos < len(sargKeys) && sargKeys[pos].HasAttribute(datastore.IK_VECTOR))) {
-					valid = true
-					break
-				}
+		valid := false
+		for pos, rs := range flSargSpans {
+			if rs != nil && rs.Size() > 0 &&
+				// don't consider the index span for vector index key
+				(!hasVector || !(pos < len(sargKeys) && sargKeys[pos].HasAttribute(datastore.IK_VECTOR))) {
+				valid = true
+				break
 			}
-			if valid {
-				exactFilters[fl] = true
-			}
+		}
+
+		if flExactSpan && exactFilters != nil && valid {
+			exactFilters[fl] = true
 		}
 
 		exactSpan = exactSpan && flExactSpan
+
+		var flIncludeSpans []SargSpans
+		var flExactInclude bool
+		if hasInclude && !valid {
+			flIncludeSpans, flExactInclude, err = getSargSpans(fltrExpr, nil, entry,
+				entry.idxSargIncludes, false, nil, isJoin, doSelec, true, baseKeyspace,
+				keyspaceNames, advisorValidate, aliases, context)
+			if err != nil {
+				return nil, exactSpan, nil, flExactInclude, err
+			}
+
+			exactInclude = exactInclude && flExactInclude
+		}
 
 		for pos, sargKey := range sargKeys {
 			isArray, _, _ := sargKey.Expr.IsArrayIndexKey()
@@ -184,7 +245,7 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 				}
 				continue
 			} else if !isArray && !isVector && flSargSpans[pos] == _EMPTY_SPANS {
-				return _EMPTY_SPANS, true, nil
+				return _EMPTY_SPANS, true, nil, false, nil
 			}
 
 			if isArray {
@@ -198,12 +259,34 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 				} else {
 					sargSpans[pos] = sargSpans[pos].Constrain(flSargSpans[pos])
 					if sargSpans[pos] == _EMPTY_SPANS {
-						return _EMPTY_SPANS, true, nil
+						return _EMPTY_SPANS, true, nil, false, nil
 					}
 				}
 				if isVector {
 					// no need to regenerate span for vector index key
 					vpred = nil
+				}
+			}
+		}
+
+		if hasInclude {
+			for pos, includeExpr := range entry.sargIncludes {
+				if flIncludeSpans[pos] == nil || flIncludeSpans[pos].Size() == 0 {
+					if exactInclude && fltrExpr.DependsOn(includeExpr) {
+						exactInclude = false
+					}
+					continue
+				} else if flIncludeSpans[pos] == _EMPTY_SPANS {
+					return nil, false, _EMPTY_SPANS, true, nil
+				}
+
+				if includeSpans[pos] == nil || includeSpans[pos].Size() == 0 {
+					includeSpans[pos] = flIncludeSpans[pos]
+				} else {
+					includeSpans[pos] = includeSpans[pos].Constrain(flIncludeSpans[pos])
+					if includeSpans[pos] == _EMPTY_SPANS {
+						return nil, false, _EMPTY_SPANS, true, nil
+					}
 				}
 			}
 		}
@@ -222,10 +305,16 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 	}
 
 	if !hasSpan && len(filters) != 0 {
-		return nil, false, nil
+		return nil, false, nil, false, nil
 	}
 
-	return composeSargSpan(sargSpans, exactSpan)
+	var sargSpan, includeSpan SargSpans
+	var err error
+	sargSpan, exactSpan, err = composeSargSpan(sargSpans, exactSpan)
+	if hasInclude && err == nil {
+		includeSpan, exactInclude, err = composeSargSpan(includeSpans, exactInclude)
+	}
+	return sargSpan, exactSpan, includeSpan, exactInclude, err
 }
 
 /*
@@ -326,9 +415,9 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 Get sarg spans for index sarg keys.
 */
 func getSargSpans(pred, vpred expression.Expression, entry *indexEntry, sargKeys datastore.IndexKeys,
-	isMissing bool, isArrays []bool, isJoin, doSelec bool, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	context *PrepareContext) ([]SargSpans, bool, error) {
+	isMissing bool, isArrays []bool, isJoin, doSelec, isInclude bool,
+	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate bool,
+	aliases map[string]bool, context *PrepareContext) ([]SargSpans, bool, error) {
 
 	if pred == nil && vpred == nil {
 		return nil, false, errors.NewPlanInternalError("getSargSpans: no predicates")
@@ -387,7 +476,7 @@ func getSargSpans(pred, vpred expression.Expression, entry *indexEntry, sargKeys
 				return sargSpans, true, nil
 			}
 
-			if simple && !isVector {
+			if simple && !isVector && !isInclude {
 				// if the same simple predicate can be used to sarg multiple
 				// index keys, we can safely just use the exactSpan information
 				// from this key and disregard that of the previous keys since

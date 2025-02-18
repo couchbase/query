@@ -39,6 +39,7 @@ type IndexScan3 struct {
 	term               *algebra.KeyspaceTerm
 	keyspace           datastore.Keyspace
 	spans              Spans2
+	includeSpans       Spans2
 	flags              uint32
 	groupAggs          *IndexGroupAggregates
 	projection         *IndexProjection
@@ -59,7 +60,7 @@ type IndexScan3 struct {
 	indexPartitionSets IndexPartitionSets
 }
 
-func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spans2,
+func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans, includeSpans Spans2,
 	reverse, distinct, dynamicIn bool, offset, limit expression.Expression,
 	projection *IndexProjection, orderTerms IndexKeyOrders,
 	groupAggs *IndexGroupAggregates, covers expression.Covers,
@@ -83,6 +84,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 		indexer:            index.Indexer(),
 		term:               term,
 		spans:              spans,
+		includeSpans:       includeSpans,
 		flags:              flags,
 		groupAggs:          groupAggs,
 		projection:         projection,
@@ -102,6 +104,10 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans Spa
 
 	if len(covers) > 0 {
 		rv.fullCover = covers[0].FullCover()
+	}
+
+	if rv.includeSpans != nil {
+		rv.includeSpans.SetInclude()
 	}
 
 	rv.keyspace, _ = datastore.GetKeyspace(term.Path().Parts()...)
@@ -135,6 +141,14 @@ func (this *IndexScan3) Spans() Spans2 {
 
 func (this *IndexScan3) SetSpans(spans Spans2) {
 	this.spans = spans
+}
+
+func (this *IndexScan3) IncludeSpans() Spans2 {
+	return this.includeSpans
+}
+
+func (this *IndexScan3) SetIncludeSpans(includeSpans Spans2) {
+	this.includeSpans = includeSpans
 }
 
 func (this *IndexScan3) Distinct() bool {
@@ -292,6 +306,12 @@ func (this *IndexScan3) CoverJoinSpanExpressions(coverer *expression.Coverer,
 	if err == nil {
 		err = coverJoinSpanExpressions(coverer, this.spans)
 	}
+	if err == nil && len(this.includeSpans) > 0 {
+		err = anyRenameExpressions(implicitArrayKey, this.includeSpans)
+		if err == nil {
+			err = coverJoinSpanExpressions(coverer, this.includeSpans)
+		}
+	}
 	return err
 }
 
@@ -409,6 +429,13 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 
 	setRangeIndexKey(this.spans, this.index)
 	r["spans"] = this.spans
+
+	if len(this.includeSpans) > 0 {
+		if index6, ok := this.index.(datastore.Index6); ok {
+			setIncludeKey(this.includeSpans, index6.Include())
+		}
+		r["spans_include"] = this.includeSpans
+	}
 
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
@@ -543,6 +570,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		As                 string                 `json:"as"`
 		Using              datastore.IndexType    `json:"using"`
 		Spans              Spans2                 `json:"spans"`
+		IncludeSpans       Spans2                 `json:"spans_include"`
 		Reverse            bool                   `json:"reverse"`
 		Distinct           bool                   `json:"distinct"`
 		DynamicIn          bool                   `json:"has_dynamic_in"`
@@ -582,6 +610,9 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	}
 
 	this.spans = _unmarshalled.Spans
+	if len(_unmarshalled.IncludeSpans) > 0 {
+		this.includeSpans = _unmarshalled.IncludeSpans
+	}
 	flags := uint32(0)
 	if _unmarshalled.Reverse {
 		flags |= ISCAN_IS_REVERSE_SCAN

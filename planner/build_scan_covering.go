@@ -690,11 +690,16 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		}
 	}
 
+	var includeSpans plan.Spans2
+	if tspan, ok := entry.includeSpans.(*TermSpans); ok {
+		includeSpans = tspan.spans
+	}
+
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
 		overlapSpans(pred), array, this.offset, this.limit, indexProjection, indexKeyOrders,
 		indexGroupAggs, covers, filterCovers, filter, entry.cost, entry.cardinality,
-		entry.size, entry.frCost, baseKeyspace, hasDeltaKeyspace, skipNewKeys,
+		entry.size, entry.frCost, includeSpans, baseKeyspace, hasDeltaKeyspace, skipNewKeys,
 		this.hasBuilderFlag(BUILDER_NL_INNER), false, indexKeyNames, indexPartitionSets)
 	if scan != nil {
 		scan.SetImplicitArrayKey(arrayKey)
@@ -778,7 +783,7 @@ func (this *builder) buildCoveringPushdDownIndexScan2(entry *indexEntry, node *a
 	this.maxParallelism = 1
 	scan := entry.spans.CreateScan(entry.index, node, this.context.IndexApiVersion(), false, false, overlapSpans(pred),
 		array, nil, expression.ONE_EXPR, indexProjection, indexKeyOrders, nil, covers, filterCovers, nil,
-		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, baseKeyspace,
+		OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil, baseKeyspace,
 		false, false, this.hasBuilderFlag(BUILDER_NL_INNER), false, nil, nil)
 	if scan != nil {
 		if entry.index.Type() != datastore.SYSTEM {
