@@ -389,7 +389,7 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 		plan.OrderTerms(), plan.GroupAggs(), plan.Covers())
 
 	if index6, ok := index3.(datastore.Index6); ok && indexVector != nil {
-		index6.Scan6(context.RequestId(), dspans, plan.Reverse(), plan.Distinct(),
+		index6.Scan6(context.RequestId(), dspans, nil, plan.Reverse(), plan.Distinct(),
 			indexProjection, offset, limit, indexGroupAggs, indexOrder,
 			this.plan.IndexKeyNames(), inlineFilter, indexVector, indexPartitionSets,
 			context.ScanConsistency(), scanVector, conn)

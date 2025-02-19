@@ -337,7 +337,7 @@ func (this *VirtualIndex) DefnStorageStatistics(requestid string) (map[uint64][]
 	return rv, nil
 }
 
-func (this *VirtualIndex) Scan6(requestId string, spans datastore.Spans2, reverse, distinctAfterProjection bool,
+func (this *VirtualIndex) Scan6(requestId string, spans, inclSpans datastore.Spans2, reverse, distinctAfterProjection bool,
 	projection *datastore.IndexProjection, offset, limit int64, groupAggs *datastore.IndexGroupAggregates,
 	indexOrders datastore.IndexKeyOrders, indexKeyNames []string, inlineFilter string,
 	indexVector *datastore.IndexVector, indexPartionSets datastore.IndexPartitionSets,

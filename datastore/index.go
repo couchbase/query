@@ -552,7 +552,7 @@ type Index6 interface {
 	AllowRerank() bool
 	DefnStorageStatistics(requestid string) (map[uint64][]map[IndexStatType]value.Value, errors.Error)
 
-	Scan6(requestId string, spans Spans2, reverse, distinctAfterProjection bool,
+	Scan6(requestId string, spans, inclSpans Spans2, reverse, distinctAfterProjection bool,
 		projection *IndexProjection, offset, limit int64,
 		groupAggs *IndexGroupAggregates, indexOrders IndexKeyOrders,
 		indexKeyNames []string, inlineFilter string,
