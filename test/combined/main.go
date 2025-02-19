@@ -17,6 +17,7 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
@@ -273,7 +274,7 @@ func main() {
 	defer func() {
 		e := recover()
 		if e != nil {
-			logging.Fatalf("Panic: %v", e)
+			logging.Fatalf("Panic: %v\n%s\n", e, debug.Stack())
 		}
 	}()
 

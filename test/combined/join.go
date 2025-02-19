@@ -23,6 +23,8 @@ type Join struct {
 	right     *Keyspace
 	on        string
 
+	rightschema *Schema
+
 	ridx string // only for joins loaded from config; the field name for the index in the right keyspace
 }
 
@@ -111,7 +113,7 @@ func NewJoinKeyspaces(left *Keyspace, right *Keyspace) *Join {
 		rightSchema.fields = append(rightSchema.fields, rfields...)
 	}
 
-	j := &Join{rightName: right.name, right: right}
+	j := &Join{rightName: right.name, right: right, rightschema: rightSchema}
 	j.on = sb.String()
 	if rand.Intn(30) == 17 {
 		right.addIndex("")

@@ -30,11 +30,15 @@ type Query struct {
 	sql string
 
 	// used when building
-	projection    []string
-	aggs          []string
-	where         []string
-	from          []string
-	group         []string
+	projection []string
+	aggs       []string
+	where      []string
+	from       []string
+	group      []string
+
+	groupAs     string
+	usedSchemas map[*Schema]string
+
 	order         []string
 	offset        string
 	limit         string
@@ -109,6 +113,7 @@ func LoadQueries(dir string) ([]*Query, error) {
 func NewQuery(keyspace *Keyspace, joins int) *Query {
 	qry := &Query{}
 	qry.followedJoins = make(map[*Join]bool)
+	qry.usedSchemas = make(map[*Schema]string)
 	qry.from = append(qry.from, fmt.Sprintf("%s AS %s", keyspace.name, qry.alias()))
 	buildQuery(qry, keyspace, joins)
 	qry.complete()
@@ -147,6 +152,9 @@ func buildQuery(qry *Query, keyspace *Keyspace, joins int) int {
 func (this *Query) add(keyspace *Keyspace) {
 	alias := this.alias()
 	schema := keyspace.schemas[rand.Intn(len(keyspace.schemas))]
+	if _, ok := this.usedSchemas[schema]; !ok {
+		this.usedSchemas[schema] = alias
+	}
 	this.projection = append(this.projection, schema.randomProjection(alias)...)
 	this.aggs = append(this.aggs, schema.randomAggs(alias)...)
 	this.where = append(this.where, schema.randomFilter(alias)...)
@@ -155,9 +163,16 @@ func (this *Query) add(keyspace *Keyspace) {
 }
 
 func (this *Query) addJoin(keyspace *Keyspace, join *Join) {
+
 	lalias := this.alias()
 	this.nextAlias()
 	ralias := this.alias()
+	if join.rightschema != nil {
+		if _, ok := this.usedSchemas[join.rightschema]; !ok {
+			this.usedSchemas[join.rightschema] = ralias
+		}
+	}
+
 	this.from = append(this.from, join.clause(lalias, ralias))
 }
 
@@ -203,6 +218,39 @@ func (this *Query) complete() {
 				this.group = append(this.group, p)
 			}
 		}
+
+		if len(this.group) > 0 && rand.Intn(5) == 0 {
+			this.nextAlias()
+			this.groupAs = this.alias()
+
+			if rand.Intn(10) < 7 {
+				this.projection = append(this.projection, this.groupAs)
+			} else {
+				grpasProj := false
+				collectionOperations := []string{"ARRAY", "FIRST"}
+				this.nextAlias()
+				arrvar := this.alias()
+				for sch, alias := range this.usedSchemas {
+					if !grpasProj || rand.Intn(5) == 0 {
+						opkeyword := collectionOperations[rand.Intn(len(collectionOperations))]
+						groupasProjterm := fmt.Sprintf("%s %s.%s FOR %s IN %s END", opkeyword, arrvar, alias, arrvar, this.groupAs)
+						if rand.Intn(10) < 7 {
+							this.projection = append(this.projection, groupasProjterm)
+						} else {
+							pj := sch.randomProjection("")
+							for _, p := range pj {
+								groupasProjterm = fmt.Sprintf("%s %s.%s.%s FOR %s IN %s END", opkeyword, arrvar, alias, p,
+									arrvar, this.groupAs)
+								this.projection = append(this.projection, groupasProjterm)
+								opkeyword = collectionOperations[rand.Intn(len(collectionOperations))]
+							}
+						}
+						grpasProj = true
+					}
+				}
+			}
+		}
+
 	} else if rand.Intn(25) == 17 && len(Queries) > 1 {
 		switch rand.Intn(5) {
 		case 1:
@@ -234,6 +282,7 @@ func (this *Query) complete() {
 		this.offset = fmt.Sprintf(" OFFSET %d", rand.Intn(100)+1)
 	}
 	this.followedJoins = nil
+	this.usedSchemas = nil
 }
 
 func (this *Query) SQL(baseAlias string) string {
@@ -308,6 +357,12 @@ func (this *Query) doSQL(baseAlias string, lock bool) string {
 		}
 	}
 	this.group = nil
+
+	if len(this.groupAs) > 0 {
+		sb.WriteString(" GROUP AS ")
+		sb.WriteString(this.groupAs)
+		sb.WriteString(" ")
+	}
 
 	if len(this.order) > 0 {
 		sb.WriteString(" ORDER BY ")
