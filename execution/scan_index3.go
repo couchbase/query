@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -160,7 +161,17 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				squareRoot = planIndexVector.SquareRoot
 				vectorPos = planIndexVector.IndexKeyPos
 				if filter != nil && index6.IsBhive() {
-					inlineFilter = filter.String()
+					if len(context.namedArgs) > 0 || len(context.positionalArgs) > 0 {
+						fltrExpr, err := plannerbase.ReplaceParameters(filter,
+							context.namedArgs, context.positionalArgs)
+						if err != nil {
+							context.Error(errors.NewEvaluationWithCauseError(err, "replace query parameters"))
+							return
+						}
+						inlineFilter = fltrExpr.String()
+					} else {
+						inlineFilter = filter.String()
+					}
 					fltrPushed = true
 				}
 			}
