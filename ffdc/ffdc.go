@@ -153,6 +153,10 @@ var asyncOperations = map[string]func(io.Writer) error{
 	},
 }
 
+func StartFFDC() {
+	go periodicReset(15 * time.Minute)
+}
+
 func runCommand(w io.Writer, path string, options string) error {
 	var cmd *exec.Cmd
 	if options != "" {
@@ -277,7 +281,10 @@ func (this *reason) shouldCapture() *occurrence {
 	now := time.Now()
 	if len(this.occurrences) > 0 {
 		if now.Sub(this.occurrences[len(this.occurrences)-1].when) < FFDC_MIN_INTERVAL {
-			atomic.AddInt64(&this.count, -1)
+			// Only decrement count if not reset
+			if atomic.LoadInt64(&this.count) > 0 {
+				atomic.AddInt64(&this.count, -1)
+			}
 			return nil
 		}
 	}
@@ -342,6 +349,26 @@ func (this *reason) capture(ch chan bool) {
 
 func (this *reason) reset() {
 	atomic.StoreInt64(&this.count, 0)
+}
+
+// Periodically reset the event
+func periodicReset(interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer func() {
+		ticker.Stop()
+		// cannot panic and die
+		err := recover()
+		logging.Debugf("FFDC: Periodic reset routine failed with error: %v. Restarting.", err)
+		go periodicReset(interval)
+	}()
+
+	for range ticker.C {
+		// Reset the count of every type of FFDC event
+		for _, r := range reasons {
+			r.reset()
+		}
+	}
+
 }
 
 func (this *reason) cleanup() {

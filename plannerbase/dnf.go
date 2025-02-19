@@ -361,6 +361,7 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 
 	re := expr.Regexp()
 	if re == nil {
+		expr.SetExprFlag(expression.EXPR_DEFAULT_LIKE)
 		return expr, nil
 	}
 
@@ -377,10 +378,12 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 
 	last := len(prefix) - 1
 	if last < 0 || prefix[last] >= math.MaxUint8 {
+		expr.SetExprFlag(expression.EXPR_DEFAULT_LIKE)
 		return expr, nil
 	}
 
 	if re.NumSubexp() != 1 || re.String()[len(prefix):] != "(.*)" {
+		expr.SetExprFlag(expression.EXPR_DEFAULT_LIKE)
 		return expr, nil
 	}
 
