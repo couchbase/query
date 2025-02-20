@@ -168,7 +168,7 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 	case *expression.In:
 		second := operand.Second()
 		if acons, ok := second.(*expression.ArrayConstruct); ok &&
-			len(acons.Operands()) <= util.FullSpanFanout() {
+			len(acons.Operands()) <= util.FullSpanFanout(false) {
 			return this.visitNotIn(operand.First(), acons)
 		}
 

@@ -17,6 +17,7 @@ import (
 )
 
 const FULL_SPAN_FANOUT = 8192
+const INCLUDE_SPAN_FANOUT = 128
 
 var MaxIndexApi atomic.AlignedInt64
 var n1qlFeatureControl atomic.AlignedInt64
@@ -172,9 +173,14 @@ func DescribeChangedFeatures(prev uint64, new uint64) string {
 	return changes.String()
 }
 
-func FullSpanFanout() int {
+func FullSpanFanout(isInclude bool) int {
 	if IsFeatureEnabled(GetN1qlFeatureControl(), N1QL_FULL_SPAN_FANOUT) {
+		if isInclude {
+			return INCLUDE_SPAN_FANOUT
+		}
 		return FULL_SPAN_FANOUT
+	} else if isInclude {
+		return 4 * INCLUDE_SPAN_FANOUT
 	}
 	return 4 * FULL_SPAN_FANOUT
 }

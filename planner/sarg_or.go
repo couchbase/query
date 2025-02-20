@@ -40,7 +40,7 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 	for _, child := range pred.Operands() {
 		cspans, _, err := sargFor(child, this.index, this.key, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, this.advisorValidate, this.isMissing,
-			this.isArray, this.isVector, this.keyPos, this.aliases, this.context)
+			this.isArray, this.isVector, this.isInclude, this.keyPos, this.aliases, this.context)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +70,7 @@ func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
 		}
 
 		size += cspans.Size()
-		if size > util.FullSpanFanout() {
+		if size > util.FullSpanFanout(this.isInclude) {
 			fullSpan = true
 			continue
 		}

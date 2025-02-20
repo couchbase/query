@@ -63,7 +63,7 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 		variable.SetBindingVariable(true)
 		return anySargFor(pred.Satisfies(), variable, nil, this.index, this.isJoin, this.doSelec,
 			this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec, false,
-			this.advisorValidate, false, this.isMissing, this.isVector,
+			this.advisorValidate, false, this.isMissing, this.isVector, this.isInclude,
 			this.keyPos, this.aliases, arrayId, this.context)
 	}
 
@@ -84,5 +84,5 @@ func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) 
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.index, this.isJoin,
 		this.doSelec, this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(),
 		selec, false, this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing,
-		this.isVector, this.keyPos, this.aliases, arrayId, this.context)
+		this.isVector, this.isInclude, this.keyPos, this.aliases, arrayId, this.context)
 }

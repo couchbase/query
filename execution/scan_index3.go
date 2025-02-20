@@ -435,7 +435,7 @@ func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, co
 					arr = set.Actuals()
 					sort.Sort(value.NewSorter(value.NewValue(arr)))
 					newlength := numspans + (maxPos-minPos+1)*(len(arr)-1)
-					if newlength <= util.FullSpanFanout() {
+					if newlength <= util.FullSpanFanout(false) {
 						ospans := spans
 						spans = make(plan.Spans2, 0, newlength)
 						add := 0

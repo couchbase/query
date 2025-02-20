@@ -40,7 +40,7 @@ func SargFor(pred, vpred expression.Expression, entry *indexEntry, keys datastor
 	}
 
 	var sargSpan SargSpans
-	sargSpan, exactSpan, err = composeSargSpan(sargSpans, exactSpan)
+	sargSpan, exactSpan, err = composeSargSpan(sargSpans, exactSpan, false)
 	if err != nil {
 		return nil, exactSpan, nil, false, err
 	}
@@ -56,7 +56,7 @@ func SargFor(pred, vpred expression.Expression, entry *indexEntry, keys datastor
 			return nil, exactSpan, nil, exactInclude, err
 		}
 
-		includeSpan, exactInclude, err = composeSargSpan(includeSpans, exactInclude)
+		includeSpan, exactInclude, err = composeSargSpan(includeSpans, exactInclude, true)
 		if err != nil {
 			return nil, exactSpan, nil, exactInclude, err
 		}
@@ -141,11 +141,11 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 }
 
 func sargFor(pred expression.Expression, index datastore.Index, key expression.Expression, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate, isMissing, isArray, isVector bool,
+	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate, isMissing, isArray, isVector, isInclude bool,
 	keyPos int, aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
 
 	s := newSarg(key, index, baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, isMissing, isArray,
-		isVector, keyPos, aliases, context)
+		isVector, isInclude, keyPos, aliases, context)
 
 	r, err := pred.Accept(s)
 	if err != nil {
@@ -310,9 +310,9 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 
 	var sargSpan, includeSpan SargSpans
 	var err error
-	sargSpan, exactSpan, err = composeSargSpan(sargSpans, exactSpan)
+	sargSpan, exactSpan, err = composeSargSpan(sargSpans, exactSpan, false)
 	if hasInclude && err == nil {
-		includeSpan, exactInclude, err = composeSargSpan(includeSpans, exactInclude)
+		includeSpan, exactInclude, err = composeSargSpan(includeSpans, exactInclude, true)
 	}
 	return sargSpan, exactSpan, includeSpan, exactInclude, err
 }
@@ -320,7 +320,7 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 /*
 Compose SargSpan for a composite index
 */
-func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, error) {
+func composeSargSpan(sargSpans []SargSpans, exactSpan, isInclude bool) (SargSpans, bool, error) {
 	// Truncate sarg spans when they exceed the limit
 	size := 1
 	n := 0
@@ -335,7 +335,7 @@ func composeSargSpan(sargSpans []SargSpans, exactSpan bool) (SargSpans, bool, er
 		}
 
 		if sz == 0 ||
-			(sz > 1 && size >= 1 && sz*size > util.FullSpanFanout()) {
+			(sz > 1 && size >= 1 && sz*size > util.FullSpanFanout(isInclude)) {
 			exactSpan = false
 			if vectorPos < 0 {
 				for j := i + 1; j < len(sargSpans); j++ {
@@ -449,7 +449,7 @@ func getSargSpans(pred, vpred expression.Expression, entry *indexEntry, sargKeys
 
 		s := newSarg(sargKeys[i].Expr, entry.index, baseKeyspace, keyspaceNames, isJoin, doSelec,
 			advisorValidate, (isMissing || i > 0), (i < len(isArrays) && isArrays[i]),
-			isVector, i, aliases, context)
+			isVector, isInclude, i, aliases, context)
 		r, err := spred.Accept(s)
 		if err != nil {
 			return nil, false, err

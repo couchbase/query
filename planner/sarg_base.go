@@ -25,6 +25,7 @@ type sarg struct {
 	isMissing       bool
 	isArray         bool
 	isVector        bool
+	isInclude       bool
 	index           datastore.Index
 	keyPos          int
 	aliases         map[string]bool
@@ -32,7 +33,7 @@ type sarg struct {
 }
 
 func newSarg(key expression.Expression, index datastore.Index, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray, isVector bool,
+	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray, isVector, isInclude bool,
 	keyPos int, aliases map[string]bool, context *PrepareContext) *sarg {
 	return &sarg{
 		key:             key,
@@ -44,6 +45,7 @@ func newSarg(key expression.Expression, index datastore.Index, baseKeyspace *bas
 		isMissing:       isMissing,
 		isArray:         isArray,
 		isVector:        isVector,
+		isInclude:       isInclude,
 		index:           index,
 		keyPos:          keyPos,
 		aliases:         aliases,

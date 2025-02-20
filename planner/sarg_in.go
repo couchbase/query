@@ -71,7 +71,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		// De-dup and Sort before generating spans for EXPLAIN stability
 		vals = expression.SortValArr(vals)
 
-		if len(vals) > util.FullSpanFanout() {
+		if len(vals) > util.FullSpanFanout(this.isInclude) {
 			// for long IN-list, instead of generating individual spans, just use
 			// array_min()/array_max() as span and evaluate the IN-list after
 			// the index scan
@@ -107,7 +107,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		var arrayKey expression.Expression
 		if acons, ok := second.(*expression.ArrayConstruct); ok {
 			array = acons.Operands()
-			if len(array) > util.FullSpanFanout() {
+			if len(array) > util.FullSpanFanout(this.isInclude) {
 				// for long IN-list, instead of generating individual spans, just use
 				// array_min()/array_max() as span and evaluate the IN-list after
 				// the index scan
@@ -125,15 +125,19 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 
 			arrayMinMax = true
 			arrayKey = static
-			dynamicIn = true
-			selec = defSelec
+			if !this.isInclude {
+				dynamicIn = true
+			}
+			if this.doSelec {
+				selec = defSelec
+			}
 		}
 		if arrayMinMax {
 			if dynamicIn {
 				arrayKey.SetExprFlag(expression.EXPR_DYNAMIC_IN)
 			}
-			range2 := plan.NewRange2(expression.NewArrayMin(arrayKey), expression.NewArrayMax(arrayKey), datastore.BOTH, selec,
-				OPT_SELEC_NOT_AVAIL, 0)
+			range2 := plan.NewRange2(expression.NewArrayMin(arrayKey), expression.NewArrayMax(arrayKey),
+				datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
 			span := plan.NewSpan2(nil, plan.Ranges2{range2}, false)
 			return NewTermSpans(span), nil
 

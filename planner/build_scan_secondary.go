@@ -2019,8 +2019,8 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, index datastor
 					continue
 				}
 				rs, exact, err := sargFor(op1, index, key, false, false, baseKeyspace,
-					this.keyspaceNames, this.advisorValidate(),
-					(missing || i > 0), false, false, i, this.aliases, this.context)
+					this.keyspaceNames, this.advisorValidate(), (missing || i > 0),
+					false, false, false, i, this.aliases, this.context)
 				if err == nil && rs != nil && exact {
 					add = false
 					break
