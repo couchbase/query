@@ -357,14 +357,14 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 
 	defer context.Recover(nil) // Recover from any panic
 
-	plan := this.plan
-	index3 := plan.Index()
+	qplan := this.plan
+	index3 := qplan.Index()
 
 	// for nested-loop join we need to pass in values from left-hand-side (outer) of the join
 	// for span evaluation
 
-	groupAggs := plan.GroupAggs()
-	dspans, empty, err := evalSpan3(plan.Spans(), parent, plan.HasDynamicInSpan(), &this.operatorCtx)
+	groupAggs := qplan.GroupAggs()
+	dspans, empty, err := evalSpan3(qplan.Spans(), parent, qplan.HasDynamicInSpan(), &this.operatorCtx)
 
 	// empty span with Index aggregation is present and no group by requies produce default row.
 	// Therefore, do IndexScan
@@ -377,15 +377,28 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 		return
 	}
 
-	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), &this.operatorCtx)
-	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), &this.operatorCtx)
+	var inclSpans datastore.Spans2
+	if len(qplan.IncludeSpans()) > 0 {
+		// there is no dynamic in capability in include spans, thus evalSpan2 is sufficient
+		inclSpans, empty, err = evalSpan2(qplan.IncludeSpans(), parent, &this.operatorCtx)
+		if err != nil || (empty && (groupAggs == nil || len(groupAggs.Group) > 0)) {
+			if err != nil {
+				context.Error(errors.NewEvaluationError(err, "include span"))
+			}
+			conn.Sender().Close()
+			return
+		}
+	}
+
+	offset := evalLimitOffset(qplan.Offset(), parent, int64(0), qplan.Covering(), &this.operatorCtx)
+	limit := evalLimitOffset(qplan.Limit(), parent, math.MaxInt64, qplan.Covering(), &this.operatorCtx)
 
 	if index6, ok := index3.(datastore.Index6); ok && indexVector != nil {
 		maxHeap := int64(0)
-		if this.plan.Limit() != nil && limit >= 0 && limit < math.MaxInt64 {
+		if qplan.Limit() != nil && limit >= 0 && limit < math.MaxInt64 {
 			maxHeap += limit
 		}
-		if this.plan.Offset() != nil && offset >= 0 {
+		if qplan.Offset() != nil && offset >= 0 {
 			maxHeap += offset
 		}
 		if maxHeap > int64(index6.MaxHeapSize()) {
@@ -394,18 +407,18 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 			return
 		}
 	}
-	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Path().Bucket())
+	scanVector := context.ScanVectorSource().ScanVector(qplan.Term().Namespace(), qplan.Term().Path().Bucket())
 
-	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(index3, plan.Projection(),
-		plan.OrderTerms(), plan.GroupAggs(), plan.Covers())
+	indexProjection, indexOrder, indexGroupAggs := planToScanMapping(index3, qplan.Projection(),
+		qplan.OrderTerms(), qplan.GroupAggs(), qplan.Covers())
 
 	if index6, ok := index3.(datastore.Index6); ok && indexVector != nil {
-		index6.Scan6(context.RequestId(), dspans, nil, plan.Reverse(), plan.Distinct(),
+		index6.Scan6(context.RequestId(), dspans, inclSpans, qplan.Reverse(), qplan.Distinct(),
 			indexProjection, offset, limit, indexGroupAggs, indexOrder,
-			this.plan.IndexKeyNames(), inlineFilter, indexVector, indexPartitionSets,
+			qplan.IndexKeyNames(), inlineFilter, indexVector, indexPartitionSets,
 			context.ScanConsistency(), scanVector, conn)
 	} else {
-		index3.Scan3(context.RequestId(), dspans, plan.Reverse(), plan.Distinct(),
+		index3.Scan3(context.RequestId(), dspans, qplan.Reverse(), qplan.Distinct(),
 			indexProjection, offset, limit, indexGroupAggs, indexOrder,
 			context.ScanConsistency(), scanVector, conn)
 	}
