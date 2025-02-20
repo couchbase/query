@@ -648,6 +648,7 @@ type FTSFlexRequest struct {
 	Keyspace      string                 // keyspace alias name
 	Bindings      expression.Bindings    // Unnest bindings depends on this keyspace
 	Pred          expression.Expression  // predicate depends on the keyspace
+	VecPred       expression.Expression  // Vector predicate depends on the keyspace
 	Opaque        map[string]interface{} // opaque
 	Cond          expression.Expression  // DNF index condition
 	OrigCond      expression.Expression  // Original index condition

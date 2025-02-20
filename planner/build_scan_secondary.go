@@ -433,8 +433,12 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 	sargables, arrays, flex map[datastore.Index]*indexEntry, err error) {
 
 	flexPred := pred
+	flexVecPred := vpred
 	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
 		flexPred, err = base.ReplaceParameters(flexPred, this.context.NamedArgs(), this.context.PositionalArgs())
+		if err == nil {
+			flexVecPred, err = base.ReplaceParameters(flexVecPred, this.context.NamedArgs(), this.context.PositionalArgs())
+		}
 		if err != nil {
 			return
 		}
@@ -450,11 +454,11 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 
 	for _, index := range indexes {
 		if index.Type() == datastore.FTS {
-			if this.hintIndexes && flexPred != nil && !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
+			if this.hintIndexes && (flexPred != nil || flexVecPred != nil) && !this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER) {
 				// FTS Flex index sargability
 				if flexRequest == nil {
 					flex = make(map[datastore.Index]*indexEntry, len(indexes))
-					flexRequest = this.buildFTSFlexRequest(formalizer.Keyspace(), flexPred, ubs)
+					flexRequest = this.buildFTSFlexRequest(formalizer.Keyspace(), flexPred, flexVecPred, ubs)
 				}
 
 				entry, err = this.sargableFlexSearchIndex(index, flexRequest, join)

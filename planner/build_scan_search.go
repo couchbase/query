@@ -109,8 +109,15 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 	}
 
 	pred := baseKeyspace.DnfPred()
+	vecPred := baseKeyspace.GetVectorPred()
 	alias := node.Alias()
-	coveringExprs := expression.Expressions{pred, id}
+	coveringExprs := expression.Expressions{id}
+	if pred != nil {
+		coveringExprs = append(coveringExprs, pred)
+	}
+	if vecPred != nil {
+		coveringExprs = append(coveringExprs, vecPred)
+	}
 
 	for _, expr := range this.getExprsToCover() {
 		if !expression.IsCovered(expr, alias, coveringExprs, false) {
@@ -372,7 +379,7 @@ func (this *builder) flexIndexPushDownProperty(resp *datastore.FTSFlexResponse) 
 }
 
 // build FTS Flex Request
-func (this *builder) buildFTSFlexRequest(alias string, pred expression.Expression,
+func (this *builder) buildFTSFlexRequest(alias string, pred, vpred expression.Expression,
 	ubs expression.Bindings) (flexRequest *datastore.FTSFlexRequest) {
 
 	pageable := this.hasOrderOrOffsetOrLimit()
@@ -416,10 +423,15 @@ func (this *builder) buildFTSFlexRequest(alias string, pred expression.Expressio
 
 	flexRequest = &datastore.FTSFlexRequest{
 		Keyspace:      alias,
-		Pred:          pred.Copy(),
 		Bindings:      ubs,
 		Opaque:        make(map[string]interface{}, 4),
 		CheckPageable: pageable,
+	}
+	if pred != nil {
+		flexRequest.Pred = pred.Copy()
+	}
+	if vpred != nil {
+		flexRequest.VecPred = vpred.Copy()
 	}
 
 	if flexRequest.CheckPageable {
