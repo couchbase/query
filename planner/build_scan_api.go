@@ -126,7 +126,7 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 
 				curKey := false
 				vector := false
-				var ann *expression.Ann
+				var ann *expression.ApproxVectorDistance
 				if indexKey.HasAttribute(datastore.IK_VECTOR) && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 					vector = true
 					if tspans, ok := entry.spans.(*TermSpans); ok {

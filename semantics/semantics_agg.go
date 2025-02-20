@@ -102,7 +102,7 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 
 		for _, term := range oby.Terms() {
 			switch term.Expression().(type) {
-			case *expression.Ann, *expression.Knn:
+			case *expression.ApproxVectorDistance, *expression.VectorDistance:
 				return errors.NewWindowSemanticError(aggName, "ORDER BY clause ",
 					"cannot use vector search functions", "semantics.visit_aggregate_function.oby")
 			}

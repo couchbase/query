@@ -1,7 +1,7 @@
 [
   {
     "namedArgs": {"qvec": [7.0, 4.0, 5.0, 11.0, 2.0, 2.0, 41.0, 98.0, 10.0, 68.0, 30.0, 10.0, 12.0, 91.0, 38.0, 32.0, 39.0, 35.0, 5.0, 3.0, 22.0, 112.0, 24.0, 19.0, 89.0, 46.0, 0.0, 0.0, 6.0, 29.0, 6.0, 15.0, 14.0, 10.0, 45.0, 35.0, 9.0, 5.0, 42.0, 91.0, 8.0, 3.0, 13.0, 5.0, 7.0, 112.0, 112.0, 52.0, 112.0, 23.0, 10.0, 0.0, 2.0, 47.0, 48.0, 108.0, 112.0, 21.0, 0.0, 3.0, 103.0, 106.0, 2.0, 30.0, 0.0, 3.0, 45.0, 87.0, 77.0, 5.0, 1.0, 0.0, 0.0, 37.0, 105.0, 37.0, 17.0, 4.0, 10.0, 0.0, 112.0, 64.0, 69.0, 11.0, 0.0, 0.0, 1.0, 16.0, 112.0, 14.0, 2.0, 21.0, 112.0, 20.0, 0.0, 21.0, 12.0, 13.0, 20.0, 11.0, 40.0, 23.0, 3.0, 2.0, 3.0, 43.0, 62.0, 22.0, 27.0, 0.0, 0.0, 0.0, 25.0, 42.0, 45.0, 18.0, 5.0, 0.0, 1.0, 9.0, 29.0, 10.0, 0.0, 13.0, 31.0, 5.0, 2.0, 20.0]},
-    "statements": "advise SELECT id FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY ANN(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10",
+    "statements": "advise SELECT id FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10",
     "advise": true,
     "results": [
     {
@@ -25,13 +25,13 @@
             }
           }
         },
-        "query": "SELECT id FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY ANN(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10"
+        "query": "SELECT id FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10"
     }
     ]
   },
   {
     "namedArgs": {"qvec": [7.0, 4.0, 5.0, 11.0, 2.0, 2.0, 41.0, 98.0, 10.0, 68.0, 30.0, 10.0, 12.0, 91.0, 38.0, 32.0, 39.0, 35.0, 5.0, 3.0, 22.0, 112.0, 24.0, 19.0, 89.0, 46.0, 0.0, 0.0, 6.0, 29.0, 6.0, 15.0, 14.0, 10.0, 45.0, 35.0, 9.0, 5.0, 42.0, 91.0, 8.0, 3.0, 13.0, 5.0, 7.0, 112.0, 112.0, 52.0, 112.0, 23.0, 10.0, 0.0, 2.0, 47.0, 48.0, 108.0, 112.0, 21.0, 0.0, 3.0, 103.0, 106.0, 2.0, 30.0, 0.0, 3.0, 45.0, 87.0, 77.0, 5.0, 1.0, 0.0, 0.0, 37.0, 105.0, 37.0, 17.0, 4.0, 10.0, 0.0, 112.0, 64.0, 69.0, 11.0, 0.0, 0.0, 1.0, 16.0, 112.0, 14.0, 2.0, 21.0, 112.0, 20.0, 0.0, 21.0, 12.0, 13.0, 20.0, 11.0, 40.0, 23.0, 3.0, 2.0, 3.0, 43.0, 62.0, 22.0, 27.0, 0.0, 0.0, 0.0, 25.0, 42.0, 45.0, 18.0, 5.0, 0.0, 1.0, 9.0, 29.0, 10.0, 0.0, 13.0, 31.0, 5.0, 2.0, 20.0]},
-    "statements": "advise SELECT * FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY ANN(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10",
+    "statements": "advise SELECT * FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10",
     "advise": true,
     "results": [
     {
@@ -55,13 +55,13 @@
             }
           }
         },
-        "query": "SELECT * FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY ANN(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10"
+        "query": "SELECT * FROM product._default.vectors AS v WHERE brand = 'nike' ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2_SQUARED', 3) LIMIT 10"
     }
     ]
   },
   {
     "namedArgs": {"qvec": [7.0, 4.0, 5.0, 11.0, 2.0, 2.0, 41.0, 98.0, 10.0, 68.0, 30.0, 10.0, 12.0, 91.0, 38.0, 32.0, 39.0, 35.0, 5.0, 3.0, 22.0, 112.0, 24.0, 19.0, 89.0, 46.0, 0.0, 0.0, 6.0, 29.0, 6.0, 15.0, 14.0, 10.0, 45.0, 35.0, 9.0, 5.0, 42.0, 91.0, 8.0, 3.0, 13.0, 5.0, 7.0, 112.0, 112.0, 52.0, 112.0, 23.0, 10.0, 0.0, 2.0, 47.0, 48.0, 108.0, 112.0, 21.0, 0.0, 3.0, 103.0, 106.0, 2.0, 30.0, 0.0, 3.0, 45.0, 87.0, 77.0, 5.0, 1.0, 0.0, 0.0, 37.0, 105.0, 37.0, 17.0, 4.0, 10.0, 0.0, 112.0, 64.0, 69.0, 11.0, 0.0, 0.0, 1.0, 16.0, 112.0, 14.0, 2.0, 21.0, 112.0, 20.0, 0.0, 21.0, 12.0, 13.0, 20.0, 11.0, 40.0, 23.0, 3.0, 2.0, 3.0, 43.0, 62.0, 22.0, 27.0, 0.0, 0.0, 0.0, 25.0, 42.0, 45.0, 18.0, 5.0, 0.0, 1.0, 9.0, 29.0, 10.0, 0.0, 13.0, 31.0, 5.0, 2.0, 20.0]},
-    "statements": "advise SELECT id FROM product._default.vectors ORDER BY ANN(vec, $qvec, 'L2', 3) LIMIT 10",
+    "statements": "advise SELECT id FROM product._default.vectors ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2', 3) LIMIT 10",
     "advise": true,
     "results": [
     {
@@ -85,13 +85,13 @@
             }
           }
         },
-        "query": "SELECT id FROM product._default.vectors ORDER BY ANN(vec, $qvec, 'L2', 3) LIMIT 10"
+        "query": "SELECT id FROM product._default.vectors ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2', 3) LIMIT 10"
     }
     ]
   },
   {
     "namedArgs": {"qvec": [7.0, 4.0, 5.0, 11.0, 2.0, 2.0, 41.0, 98.0, 10.0, 68.0, 30.0, 10.0, 12.0, 91.0, 38.0, 32.0, 39.0, 35.0, 5.0, 3.0, 22.0, 112.0, 24.0, 19.0, 89.0, 46.0, 0.0, 0.0, 6.0, 29.0, 6.0, 15.0, 14.0, 10.0, 45.0, 35.0, 9.0, 5.0, 42.0, 91.0, 8.0, 3.0, 13.0, 5.0, 7.0, 112.0, 112.0, 52.0, 112.0, 23.0, 10.0, 0.0, 2.0, 47.0, 48.0, 108.0, 112.0, 21.0, 0.0, 3.0, 103.0, 106.0, 2.0, 30.0, 0.0, 3.0, 45.0, 87.0, 77.0, 5.0, 1.0, 0.0, 0.0, 37.0, 105.0, 37.0, 17.0, 4.0, 10.0, 0.0, 112.0, 64.0, 69.0, 11.0, 0.0, 0.0, 1.0, 16.0, 112.0, 14.0, 2.0, 21.0, 112.0, 20.0, 0.0, 21.0, 12.0, 13.0, 20.0, 11.0, 40.0, 23.0, 3.0, 2.0, 3.0, 43.0, 62.0, 22.0, 27.0, 0.0, 0.0, 0.0, 25.0, 42.0, 45.0, 18.0, 5.0, 0.0, 1.0, 9.0, 29.0, 10.0, 0.0, 13.0, 31.0, 5.0, 2.0, 20.0]},
-    "statements": "advise SELECT * FROM product._default.vectors ORDER BY ANN(vec, $qvec, 'L2', 3) LIMIT 10",
+    "statements": "advise SELECT * FROM product._default.vectors ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2', 3) LIMIT 10",
     "advise": true,
     "results": [
     {
@@ -115,7 +115,7 @@
             }
           }
         },
-        "query": "SELECT * FROM product._default.vectors ORDER BY ANN(vec, $qvec, 'L2', 3) LIMIT 10"
+        "query": "SELECT * FROM product._default.vectors ORDER BY APPROX_VECTOR_DISTANCE(vec, $qvec, 'L2', 3) LIMIT 10"
     }
     ]
   }

@@ -39,7 +39,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 
 	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
 	idxKeys := entry.idxKeys
-	var ann *expression.Ann
+	var ann *expression.ApproxVectorDistance
 	rerank := false
 
 	// Check Query Order By matches with index key order.
@@ -671,7 +671,7 @@ outer:
 				// orderTerm matched with index key
 				if vector {
 					// check whether vector index key can have order
-					if _, ok := keys[i].Expr.(*expression.Ann); ok && !vectorOrder {
+					if _, ok := keys[i].Expr.(*expression.ApproxVectorDistance); ok && !vectorOrder {
 						return false, indexOrder, partSortTermCount
 					}
 				}

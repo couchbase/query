@@ -510,7 +510,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		}
 
 		if len(keyspaces) == 1 {
-			if _, ok := dnfExpr.(*expression.Ann); ok {
+			if _, ok := dnfExpr.(*expression.ApproxVectorDistance); ok {
 				filter.SetVectorFunc()
 				baseKspace.AddVectorFilter(filter)
 			} else {

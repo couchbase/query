@@ -839,7 +839,7 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 	flatten := entry.arrayKey != nil && entry.arrayKey.Flatten()
 	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
 
-	var ann *expression.Ann
+	var ann *expression.ApproxVectorDistance
 	if vector {
 		if tspans, ok := entry.spans.(*TermSpans); ok {
 			ann = tspans.ann
@@ -1042,8 +1042,8 @@ outer:
 	return true
 }
 
-func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (datastore.IndexKeys, *expression.Ann, error) {
-	var ann *expression.Ann
+func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (datastore.IndexKeys, *expression.ApproxVectorDistance, error) {
+	var ann *expression.ApproxVectorDistance
 	if tspans, ok := entry.spans.(*TermSpans); ok {
 		ann = tspans.ann
 	}

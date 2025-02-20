@@ -34,7 +34,7 @@ func TestVectors(t *testing.T) {
 
 	runMatch("case_advise.json", false, false, qc, t)
 
-	fmt.Println("Running KNN test cases")
+	fmt.Println("Running VECTOR_DISTANCE test cases")
 
 	runStmt(qc, "CREATE INDEX ix_prod_id on product._default.vectors(id)")
 

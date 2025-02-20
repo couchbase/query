@@ -137,7 +137,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			}
 			anns := make(expression.Expressions, 0, len(sortExprs))
 			for _, term := range sortExprs {
-				if _, ok := term.(*expression.Ann); ok {
+				if _, ok := term.(*expression.ApproxVectorDistance); ok {
 					anns = append(anns, term)
 				}
 			}

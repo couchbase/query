@@ -314,7 +314,7 @@ func (this *sargable) VisitFunction(pred expression.Function) (interface{}, erro
 	switch pred := pred.(type) {
 	case *expression.RegexpLike:
 		return this.visitLike(pred)
-	case *expression.Ann:
+	case *expression.ApproxVectorDistance:
 		if this.vector {
 			if index6, ok := this.index.(datastore.Index6); ok {
 				fld := pred.Field()

@@ -23,7 +23,7 @@ type TermSpans struct {
 	spans   plan.Spans2
 	arrayId int
 	annPos  int
-	ann     *expression.Ann
+	ann     *expression.ApproxVectorDistance
 }
 
 func NewTermSpans(spans ...*plan.Span2) *TermSpans {
@@ -283,7 +283,7 @@ func (this *TermSpans) Copy() SargSpans {
 	}
 
 	if this.ann != nil {
-		rv.ann = this.ann.Copy().(*expression.Ann)
+		rv.ann = this.ann.Copy().(*expression.ApproxVectorDistance)
 		rv.annPos = this.annPos
 	}
 
@@ -333,7 +333,7 @@ func (this *TermSpans) inheritTermInfo(ts1, ts2 *TermSpans) *TermSpans {
 		newArrayId = ts2.arrayId
 	}
 
-	var ann *expression.Ann
+	var ann *expression.ApproxVectorDistance
 	var annPos int
 	if ts1.ann != nil && ts2.ann != nil {
 		if ts1.ann.EquivalentTo(ts2.ann) && ts1.annPos == ts2.annPos {
