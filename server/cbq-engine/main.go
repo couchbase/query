@@ -122,6 +122,7 @@ var IPv4 = flag.String("ipv4", server_package.TCP_REQ, "Query uses IPv4 listener
 
 var LOGGER = flag.String("logger", "", "Logger implementation")
 var LOG_LEVEL = flag.String("loglevel", "info", "Log level: debug, trace, info, warn, error, severe, none")
+var LOG_DIR = flag.String("logDir", "", "Path to the Couchbase server log directory")
 var DEBUG = flag.Bool("debug", false, "Debug mode")
 var KEEP_ALIVE_LENGTH = flag.Int("keep-alive-length", server_package.KEEP_ALIVE_DEFAULT, "maximum size of buffered result")
 var STATIC_PATH = flag.String("static-path", "static", "Path to static content")
