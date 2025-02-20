@@ -55,13 +55,13 @@ const (
 	_VECTOR_QVEC_CHECKED = 1 << iota
 )
 
-type Knn struct {
+type VectorDistance struct {
 	FunctionBase
 	metric VectorMetric
 	flags  uint32
 }
 
-func NewKnn(operands Expressions) Function {
+func NewVectorDistance(operands Expressions) Function {
 	var metric VectorMetric
 	// get metric (3rd argument)
 	// MinArgs()/MaxArgs() ensures len(operands) == 3
@@ -70,7 +70,7 @@ func NewKnn(operands Expressions) Function {
 		metric = GetVectorMetric(ev.ToString())
 	}
 
-	rv := &Knn{
+	rv := &VectorDistance{
 		metric: metric,
 	}
 	rv.Init("vector_distance", operands...)
@@ -78,8 +78,8 @@ func NewKnn(operands Expressions) Function {
 	return rv
 }
 
-func (this *Knn) Copy() Expression {
-	rv := &Knn{
+func (this *VectorDistance) Copy() Expression {
+	rv := &VectorDistance{
 		metric: this.metric,
 		flags:  this.flags,
 	}
@@ -89,28 +89,28 @@ func (this *Knn) Copy() Expression {
 	return rv
 }
 
-func (this *Knn) Accept(visitor Visitor) (interface{}, error) {
+func (this *VectorDistance) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *Knn) PropagatesNull() bool { return false }
-func (this *Knn) Indexable() bool      { return false }
-func (this *Knn) Type() value.Type     { return value.NUMBER }
-func (this *Knn) MinArgs() int {
+func (this *VectorDistance) PropagatesNull() bool { return false }
+func (this *VectorDistance) Indexable() bool      { return false }
+func (this *VectorDistance) Type() value.Type     { return value.NUMBER }
+func (this *VectorDistance) MinArgs() int {
 	return 3
 }
 
-func (this *Knn) MaxArgs() int {
+func (this *VectorDistance) MaxArgs() int {
 	return 3
 }
 
-func (this *Knn) Constructor() FunctionConstructor {
+func (this *VectorDistance) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
-		return NewKnn(operands)
+		return NewVectorDistance(operands)
 	}
 }
 
-func (this *Knn) ValidOperands() error {
+func (this *VectorDistance) ValidOperands() error {
 	field := this.operands[0].Static()
 	if field != nil {
 		return errors.NewVectorFuncInvalidField(this.name, field.String())
@@ -131,19 +131,19 @@ func (this *Knn) ValidOperands() error {
 	return nil
 }
 
-func (this *Knn) Metric() VectorMetric {
+func (this *VectorDistance) Metric() VectorMetric {
 	return this.metric
 }
 
-func (this *Knn) Field() Expression {
+func (this *VectorDistance) Field() Expression {
 	return this.operands[0]
 }
 
-func (this *Knn) QueryVector() Expression {
+func (this *VectorDistance) QueryVector() Expression {
 	return this.operands[1]
 }
 
-func (this *Knn) Evaluate(item value.Value, context Context) (value.Value, error) {
+func (this *VectorDistance) Evaluate(item value.Value, context Context) (value.Value, error) {
 	if (this.flags & _VECTOR_QVEC_CHECKED) == 0 {
 		rv, err := vectorDistance(this.metric, this.operands, true, item, context)
 		this.flags |= _VECTOR_QVEC_CHECKED

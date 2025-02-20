@@ -480,6 +480,5 @@ var _FUNCTIONS = map[string]Function{
 	"_timeseries":   &TimeSeries{},
 	"recursive_cte": &RecursiveCte{},
 
-	"knn":             &Knn{},
-	"vector_distance": &Knn{},
+	"vector_distance": &VectorDistance{},
 }

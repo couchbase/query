@@ -26,7 +26,7 @@ func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, er
 		return expr, this.visitSearchFunction(nexpr)
 	case *expression.Advisor:
 		return expr, this.visitAdvisorFunction(nexpr)
-	case *expression.TimeSeries, *expression.Knn:
+	case *expression.TimeSeries, *expression.VectorDistance:
 		if ve, ok := nexpr.(interface{ ValidOperands() error }); ok {
 			err := ve.ValidOperands()
 			if err != nil {
