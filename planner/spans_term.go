@@ -22,8 +22,8 @@ import (
 type TermSpans struct {
 	spans   plan.Spans2
 	arrayId int
-	annPos  int
-	ann     *expression.ApproxVectorDistance
+	vecPos  int
+	vecExpr *expression.ApproxVectorDistance
 }
 
 func NewTermSpans(spans ...*plan.Span2) *TermSpans {
@@ -48,14 +48,14 @@ func (this *TermSpans) CreateScan(
 
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
 		var indexVector *plan.IndexVector
-		if index6, ok := index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.ann != nil {
+		if index6, ok := index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.vecExpr != nil {
 			var reRank expression.Expression
 			if index6.AllowRerank() {
-				reRank = this.ann.ReRank()
+				reRank = this.vecExpr.ReRank()
 			}
-			squareRoot := this.ann.NeedSquareRoot()
-			indexVector = plan.NewIndexVector(this.ann.QueryVector(), this.annPos,
-				this.ann.Nprobes(), reRank, squareRoot)
+			squareRoot := this.vecExpr.NeedSquareRoot()
+			indexVector = plan.NewIndexVector(this.vecExpr.QueryVector(), this.vecPos,
+				this.vecExpr.Nprobes(), reRank, squareRoot)
 		} else {
 			indexKeyNames = nil
 			indexPartitionSets = nil
@@ -145,13 +145,13 @@ func (this *TermSpans) ConstrainTerm(other *TermSpans) SargSpans {
 
 func (this *TermSpans) Streamline() SargSpans {
 	rv := streamline(this.spans)
-	if this.arrayId != 0 || this.ann != nil {
+	if this.arrayId != 0 || this.vecExpr != nil {
 		if rv.spans.HasStatic() {
 			rv = rv.Copy().(*TermSpans)
 		}
 		rv.arrayId = this.arrayId
-		rv.ann = this.ann
-		rv.annPos = this.annPos
+		rv.vecExpr = this.vecExpr
+		rv.vecPos = this.vecPos
 	}
 	return rv
 }
@@ -182,7 +182,7 @@ func (this *TermSpans) HasStatic() bool {
 }
 
 func (this *TermSpans) HasVector() bool {
-	return this.ann != nil
+	return this.vecExpr != nil
 }
 
 func (this *TermSpans) SetExact(exact bool) {
@@ -282,9 +282,9 @@ func (this *TermSpans) Copy() SargSpans {
 		arrayId: this.arrayId,
 	}
 
-	if this.ann != nil {
-		rv.ann = this.ann.Copy().(*expression.ApproxVectorDistance)
-		rv.annPos = this.annPos
+	if this.vecExpr != nil {
+		rv.vecExpr = this.vecExpr.Copy().(*expression.ApproxVectorDistance)
+		rv.vecPos = this.vecPos
 	}
 
 	return rv
@@ -333,22 +333,22 @@ func (this *TermSpans) inheritTermInfo(ts1, ts2 *TermSpans) *TermSpans {
 		newArrayId = ts2.arrayId
 	}
 
-	var ann *expression.ApproxVectorDistance
-	var annPos int
-	if ts1.ann != nil && ts2.ann != nil {
-		if ts1.ann.EquivalentTo(ts2.ann) && ts1.annPos == ts2.annPos {
-			ann = ts1.ann
-			annPos = ts1.annPos
-		} // else it's an error condition (unexpected), ignore ann
-	} else if ts1.ann != nil {
-		ann = ts1.ann
-		annPos = ts1.annPos
-	} else if ts2.ann != nil {
-		ann = ts2.ann
-		annPos = ts2.annPos
+	var vecExpr *expression.ApproxVectorDistance
+	var vecPos int
+	if ts1.vecExpr != nil && ts2.vecExpr != nil {
+		if ts1.vecExpr.EquivalentTo(ts2.vecExpr) && ts1.vecPos == ts2.vecPos {
+			vecExpr = ts1.vecExpr
+			vecPos = ts1.vecPos
+		} // else it's an error condition (unexpected), ignore vecExpr
+	} else if ts1.vecExpr != nil {
+		vecExpr = ts1.vecExpr
+		vecPos = ts1.vecPos
+	} else if ts2.vecExpr != nil {
+		vecExpr = ts2.vecExpr
+		vecPos = ts2.vecPos
 	}
 
-	if (newArrayId != 0 && newArrayId != this.arrayId) || ann != nil {
+	if (newArrayId != 0 && newArrayId != this.arrayId) || vecExpr != nil {
 		rv := this
 		if this.spans.HasStatic() {
 			rv = this.Copy().(*TermSpans)
@@ -356,9 +356,9 @@ func (this *TermSpans) inheritTermInfo(ts1, ts2 *TermSpans) *TermSpans {
 		if newArrayId != 0 && newArrayId != this.arrayId {
 			rv.arrayId = newArrayId
 		}
-		if ann != nil {
-			rv.ann = ann
-			rv.annPos = annPos
+		if vecExpr != nil {
+			rv.vecExpr = vecExpr
+			rv.vecPos = vecPos
 		}
 		return rv
 	}

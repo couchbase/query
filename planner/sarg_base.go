@@ -265,8 +265,8 @@ func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
 				if fld.EquivalentTo(this.key) &&
 					datastore.CompatibleMetric(index6.VectorDistanceType(), pred.Metric()) {
 					rv := _WHOLE_SPANS.Copy().(*TermSpans)
-					rv.ann = pred
-					rv.annPos = this.keyPos
+					rv.vecExpr = pred
+					rv.vecPos = this.keyPos
 					return rv, nil
 				}
 			}

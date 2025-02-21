@@ -126,11 +126,11 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 
 				curKey := false
 				vector := false
-				var ann *expression.ApproxVectorDistance
+				var vecExpr *expression.ApproxVectorDistance
 				if indexKey.HasAttribute(datastore.IK_VECTOR) && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 					vector = true
 					if tspans, ok := entry.spans.(*TermSpans); ok {
-						ann = tspans.ann
+						vecExpr = tspans.vecExpr
 					} else {
 						// not expected, add to index projection to be safe
 						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
@@ -140,7 +140,7 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 				for _, expr := range exprs {
 					depends := false
 					if vector {
-						depends = expr.DependsOn(ann)
+						depends = expr.DependsOn(vecExpr)
 					} else {
 						depends = expr.DependsOn(indexKey.Expr)
 					}
