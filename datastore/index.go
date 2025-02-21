@@ -435,7 +435,6 @@ const (
 	IX_STAT_BHIVE_NUM_VEC_OPS     IndexStatType = "BHIVE_NUM_VEC_OPS"     // avg num of vector operations per cell
 	IX_STAT_BHIVE_GRAPH_DISK_SIZE IndexStatType = "BHIVE_GRAPH_DISK_SIZE" // avg graph disk size (4k unit)
 	IX_STAT_BHIVE_FULL_VEC_SIZE   IndexStatType = "BHIVE_FULL_VEC_SIZE"   // avg size of full vectors (4k unit)
-	IX_STAT_BHIVE_RERANK_FACTOR   IndexStatType = "BHIVE_RERANK_FACTOR"   // rerank factor
 )
 
 func (indexStatType IndexStatType) String() string {
@@ -550,6 +549,7 @@ type Index6 interface {
 	VectorDescription() string
 	Include() expression.Expressions
 	AllowRerank() bool
+	RerankFactor() int32
 	DefnStorageStatistics(requestid string) (map[uint64][]map[IndexStatType]value.Value, errors.Error)
 
 	Scan6(requestId string, spans, inclSpans Spans2, reverse, distinctAfterProjection bool,

@@ -328,6 +328,10 @@ func (this *VirtualIndex) AllowRerank() bool {
 	return this.bhive
 }
 
+func (this *VirtualIndex) RerankFactor() int32 {
+	return 1
+}
+
 func (this *VirtualIndex) DefnStorageStatistics(requestid string) (map[uint64][]map[datastore.IndexStatType]value.Value, errors.Error) {
 	if this.storageStats == nil {
 		return nil, errors.NewVirtualIdxNotSupportedError(nil, "Storage Statistics")
