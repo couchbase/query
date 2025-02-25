@@ -185,7 +185,14 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		var limit, offset expression.Expression
 		if entry.IsPushDownProperty(_PUSHDOWN_LIMIT) {
 			if entry.HasFlag(IE_VECTOR_RERANK) {
-				limit = expandOffsetLimit(this.offset, this.limit)
+				factor := 0
+				if index6, ok := index.(datastore.Index6); ok {
+					factor = int(index6.RerankFactor())
+				}
+				if factor <= 0 {
+					factor = plan.RERANK_FACTOR
+				}
+				limit = expandOffsetLimit(this.offset, this.limit, factor)
 			} else {
 				limit = this.limit
 			}

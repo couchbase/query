@@ -1189,10 +1189,10 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 	}
 }
 
-func expandOffsetLimit(offset, limit expression.Expression) expression.Expression {
+func expandOffsetLimit(offset, limit expression.Expression, factor int) expression.Expression {
 	if offset != nil || limit != nil {
 		limit = offsetPlusLimit(offset, limit)
-		return expression.NewMult(expression.NewConstant(plan.RERANK_FACTOR), limit)
+		return expression.NewMult(expression.NewConstant(factor), limit)
 	}
 	return nil
 }

@@ -76,12 +76,15 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 			// in case Limit/Offset not available, defer to execution time
 			if vector && exactLimitOffset && this.limit != nil {
 				maxHeapSize := -1
+				factor := 1
 				if index6, ok := entry.index.(datastore.Index6); ok {
 					maxHeapSize = index6.MaxHeapSize()
-				}
-				factor := 1
-				if rerank {
-					factor = plan.RERANK_FACTOR
+					if rerank {
+						factor = int(index6.RerankFactor())
+						if factor <= 0 {
+							factor = plan.RERANK_FACTOR
+						}
+					}
 				}
 				heapSize := -1
 				lv, static := base.GetStaticInt(this.limit)
