@@ -99,14 +99,10 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	// Attach and send
 	var av value.AnnotatedValue
 	var actv value.AnnotatedValue
-	var trackSize uint64
 	useQuota := context.UseRequestQuota()
 	for {
 		// av and actv are reused if filter evaluation fails for an item, and reset to nil
 		// if filter evaluation passes (see below when pass == true).
-		// for memory tracking purpose, trackSize is calculated first, but actual tracking
-		// happens only when filter evaluation passes later, otherwise we loop back and reuse
-		// av and actv, and recalculate trackSize again for current element.
 		if actv == nil {
 			actv = value.NewAnnotatedValue(act)
 		} else {
@@ -117,24 +113,17 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		idx++
 		nextAct, isValidIndex := ev.Index(idx)
 
-		trackSize = 0
 		if !isValidIndex {
 			if av != nil {
 				av.Recycle()
 			}
 			av = item
 			av.SetField(unnestAlias, actv)
-			if useQuota {
-				trackSize = av.Size() - item.Size()
-			}
 		} else {
 			if av == nil {
 				av = value.NewAnnotatedValue(item.Copy())
 			}
 			av.SetField(unnestAlias, actv)
-			if useQuota {
-				trackSize = av.Size()
-			}
 		}
 
 		pass := true
@@ -155,6 +144,11 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 			}
 
 			if useQuota {
+				trackSize := av.Size()
+				if !isValidIndex {
+					// for the last element, we reuse the original item (which is already tracked)
+					trackSize -= item.Size()
+				}
 				err := context.TrackValueSize(trackSize)
 				if err != nil {
 					context.Error(err)
@@ -267,7 +261,6 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 	var nextAct value.Value
 	var isValidIndex bool
 	var av, actv value.AnnotatedValue
-	var trackSize uint64
 	useQuota := context.UseRequestQuota()
 
 	// iterate of over timeseries data points
@@ -281,24 +274,17 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 
 		nextAct, idx, isValidIndex = this.timeSeriesData.GetNextValue(idx)
 
-		trackSize = 0
 		if !isValidIndex {
 			if av != nil {
 				av.Recycle()
 			}
 			av = nitem
 			av.SetField(unnestAlias, actv)
-			if useQuota {
-				trackSize = av.Size() - nitem.Size()
-			}
 		} else {
 			if av == nil {
 				av = value.NewAnnotatedValue(nitem.Copy())
 			}
 			av.SetField(unnestAlias, actv)
-			if useQuota {
-				trackSize = av.Size()
-			}
 		}
 
 		pass := true
@@ -319,6 +305,11 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 			}
 
 			if useQuota {
+				trackSize := av.Size()
+				if !isValidIndex {
+					// for the last element, we reuse the original item (which is already tracked)
+					trackSize -= item.Size()
+				}
 				err := context.TrackValueSize(trackSize)
 				if err != nil {
 					context.Error(err)
