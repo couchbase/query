@@ -186,7 +186,6 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 		}
 		avAct := avVal.Actual().(bool)
 		indexVector.ReRank = avAct
-		indexVector.ActualVector = avAct // TODO: remove
 	}
 
 	return nil

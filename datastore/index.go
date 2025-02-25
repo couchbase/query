@@ -514,11 +514,10 @@ const (
 )
 
 type IndexVector struct {
-	QueryVector  []float32 // query vector
-	IndexKeyPos  int       // vector key pos in index
-	Probes       int       // nprobes
-	ReRank       bool      // rerank
-	ActualVector bool      // TODO: remove
+	QueryVector []float32 // query vector
+	IndexKeyPos int       // vector key pos in index
+	Probes      int       // nprobes
+	ReRank      bool      // rerank
 }
 
 type IndexPartitionSet struct {
