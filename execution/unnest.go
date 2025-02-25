@@ -99,7 +99,12 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	// Attach and send
 	var av value.AnnotatedValue
 	var actv value.AnnotatedValue
+	var baseSize uint64
 	useQuota := context.UseRequestQuota()
+	if useQuota {
+		baseSize = item.Size()
+	}
+
 	for {
 		// av and actv are reused if filter evaluation fails for an item, and reset to nil
 		// if filter evaluation passes (see below when pass == true).
@@ -149,7 +154,7 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				trackSize := av.Size()
 				if !isValidIndex {
 					// for the last element, we reuse the original item (which is already tracked)
-					trackSize -= item.Size()
+					trackSize -= baseSize
 				}
 				err := context.TrackValueSize(trackSize)
 				if err != nil {
@@ -229,13 +234,19 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		}
 	}
 
+	var baseSize uint64
+	useQuota := context.UseRequestQuota()
 	var nitem value.AnnotatedValue
 	if path, ok := this.timeSeriesData.TsDataExpr().(expression.Path); ok && !this.timeSeriesData.TsKeep() {
 		// strip of the tsdata path from original document
 		nitem = value.NewAnnotatedValue(item.Copy())
 		path.Unset(nitem, &this.operatorCtx)
+		// baseSize remains 0 since we made a copy of the original item
 	} else {
 		nitem = item
+		if useQuota {
+			baseSize = item.Size()
+		}
 	}
 
 	if this.plan.Term().Outer() && this.timeSeriesData.AllData() {
@@ -263,7 +274,6 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 	var nextAct value.Value
 	var isValidIndex bool
 	var av, actv value.AnnotatedValue
-	useQuota := context.UseRequestQuota()
 
 	// iterate of over timeseries data points
 	for {
@@ -312,7 +322,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 				trackSize := av.Size()
 				if !isValidIndex {
 					// for the last element, we reuse the original item (which is already tracked)
-					trackSize -= nitem.Size()
+					trackSize -= baseSize
 				}
 				err := context.TrackValueSize(trackSize)
 				if err != nil {
