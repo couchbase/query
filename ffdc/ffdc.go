@@ -9,7 +9,6 @@
 package ffdc
 
 import (
-	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -24,7 +23,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unicode"
 
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/logging"
@@ -54,6 +52,7 @@ const staticConfigFile = "etc/couchbase/static_config"
 
 var _path string
 var pidString string
+var cbLogDir string
 
 // some actions require external dependencies and are therefore set via the Set() function
 var operations = map[string]func(io.Writer) error{
@@ -409,70 +408,25 @@ func (this *reason) getOccurence(ts string) *occurrence {
 	return occ
 }
 
-// We are not passed the path to the logs so this is a (dirty?) means of obtaining it
+// Get the path to the Couchbase log directory.
 func GetPath() string {
-	if _path == "" {
-		installDir := os.Args[0]
-		if os.PathSeparator != '/' {
-			installDir = strings.ReplaceAll(installDir, string([]byte{os.PathSeparator}), "/")
-		}
-		installDir = path.Dir(path.Dir(installDir))
-		var p string
-		f, err := os.Open(path.Join(installDir, staticConfigFile))
-		if err == nil {
-			s := bufio.NewScanner(f)
-			s.Split(func(data []byte, atEOF bool) (int, []byte, error) {
-				var err error
-				var extra, s, i int
-				if atEOF {
-					err = bufio.ErrFinalToken
-				}
-				for s < len(data) && !(data[s] == '"' || data[s] == '_' || unicode.In(rune(data[s]), unicode.L, unicode.N)) {
-					s++
-				}
-				if s == len(data) {
-					return s, nil, err
-				}
-				if data[s] == '"' {
-					s++
-					for i = s; i < len(data) && data[i] != '"'; i++ {
-					}
-					extra = 1
-				} else {
-					for i = s + 1; i < len(data); i++ {
-						if !unicode.In(rune(data[i]), unicode.L, unicode.N) && data[i] != '_' {
-							break
-						}
-					}
-				}
-				return i + extra, data[s:i], err
-			})
-			for s.Scan() {
-				if s.Text() == "error_logger_mf_dir" && s.Scan() {
-					p = s.Text()
-					break
-				}
-			}
-			f.Close()
-		}
-		if p == "" {
-			p = path.Join(installDir, defaultLogsPath)
-		}
-		if _, err := os.Stat(p); err != nil {
-			p = os.TempDir()
-		}
-		_path = p
-	}
-	return _path
+	return cbLogDir
 }
 
-func Init() {
+func Init(logDir string) {
 	defer func() {
 		e := recover()
 		if e != nil {
 			logging.Stackf(logging.ERROR, "Panic initialising FFDC: %v", e)
 		}
 	}()
+
+	// This should not happen. But logging an error in case it does.
+	if logDir == "" {
+		logging.Errorf("FFDC: No log directory specified. FFDC files have no capture path.")
+	}
+
+	cbLogDir = logDir
 	pidString = fmt.Sprintf("%08d", os.Getpid())
 	capturePath := GetPath()
 	logging.Infof("FFDC: Capture path: %v", capturePath)

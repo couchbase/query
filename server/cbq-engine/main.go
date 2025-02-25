@@ -194,7 +194,7 @@ func main() {
 	}
 	numProcs := util.SetNumCPUs(max_cpus, num_cpus, tenant.IsServerless())
 
-	ffdc.Init()
+	ffdc.Init(*LOG_DIR)
 
 	// Use the IPv4/IPv6 flags to setup listener bool value
 	// This is for external interfaces / listeners
@@ -449,7 +449,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start the FFDC period reset routine
+	// Start the FFDC periodic reset routine
 	ffdc.StartFFDC()
 
 	// topology awareness - after listeners are ready to handle requests
