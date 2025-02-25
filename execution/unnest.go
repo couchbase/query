@@ -97,7 +97,15 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 	// Attach and send
 	var av value.AnnotatedValue
 	var actv value.AnnotatedValue
+	var baseSize uint64
+	useQuota := context.UseRequestQuota()
+	if useQuota {
+		baseSize = item.Size()
+	}
+
 	for {
+		// av and actv are reused if filter evaluation fails for an item, and reset to nil
+		// if filter evaluation passes (see below when pass == true).
 		if actv == nil {
 			actv = value.NewAnnotatedValue(act)
 		} else {
@@ -119,6 +127,8 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				av = value.NewAnnotatedValue(item.Copy())
 				av.SetField(unnestAlias, actv)
 			}
+			// else actv is already set as unnestAlias of av in previous iteration
+			// and the new array element is set as value of actv above
 		}
 
 		pass := true
@@ -138,13 +148,13 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				return false
 			}
 
-			if context.UseRequestQuota() {
-				sz := av.Size()
+			if useQuota {
+				trackSize := av.Size()
 				if !isValidIndex {
-					// for the last item, only track the growth
-					sz = actv.Size() + uint64(len(unnestAlias))
+					// for the last element, we reuse the original item (which is already tracked)
+					trackSize -= baseSize
 				}
-				err := context.TrackValueSize(sz)
+				err := context.TrackValueSize(trackSize)
 				if err != nil {
 					context.Error(err)
 					av.Recycle()
@@ -166,6 +176,9 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 				actv.Recycle()
 			}
 			if av != nil {
+				if useQuota {
+					context.ReleaseValueSize(av.Size())
+				}
 				av.Recycle()
 			}
 			break
@@ -219,13 +232,19 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		}
 	}
 
+	var baseSize uint64
+	useQuota := context.UseRequestQuota()
 	var nitem value.AnnotatedValue
 	if path, ok := this.timeSeriesData.TsDataExpr().(expression.Path); ok && !this.timeSeriesData.TsKeep() {
 		// strip of the tsdata path from original document
 		nitem = value.NewAnnotatedValue(item.Copy())
 		path.Unset(nitem, &this.operatorCtx)
+		// baseSize remains 0 since we made a copy of the original item
 	} else {
 		nitem = item
+		if useQuota {
+			baseSize = item.Size()
+		}
 	}
 
 	if this.plan.Term().Outer() && this.timeSeriesData.AllData() {
@@ -276,6 +295,8 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 				av = value.NewAnnotatedValue(nitem.Copy())
 				av.SetField(unnestAlias, actv)
 			}
+			// else actv is already set as unnestAlias of av in previous iteration
+			// and the new array element is set as value of actv above
 		}
 
 		pass := true
@@ -295,13 +316,13 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 				return false
 			}
 
-			if context.UseRequestQuota() {
-				sz := av.Size()
+			if useQuota {
+				trackSize := av.Size()
 				if !isValidIndex {
-					// for the last item, only track the growth
-					sz = actv.Size() + uint64(len(unnestAlias))
+					// for the last element, we reuse the original item (which is already tracked)
+					trackSize -= baseSize
 				}
-				err := context.TrackValueSize(sz)
+				err := context.TrackValueSize(trackSize)
 				if err != nil {
 					context.Error(err)
 					av.Recycle()
@@ -323,6 +344,9 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 				actv.Recycle()
 			}
 			if av != nil {
+				if useQuota {
+					context.ReleaseValueSize(av.Size())
+				}
 				av.Recycle()
 			}
 			break
