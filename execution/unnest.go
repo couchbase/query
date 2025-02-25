@@ -308,7 +308,7 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 				trackSize := av.Size()
 				if !isValidIndex {
 					// for the last element, we reuse the original item (which is already tracked)
-					trackSize -= item.Size()
+					trackSize -= nitem.Size()
 				}
 				err := context.TrackValueSize(trackSize)
 				if err != nil {
