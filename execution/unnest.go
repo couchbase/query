@@ -122,8 +122,10 @@ func (this *Unnest) processItem(item value.AnnotatedValue, context *Context) boo
 		} else {
 			if av == nil {
 				av = value.NewAnnotatedValue(item.Copy())
+				av.SetField(unnestAlias, actv)
 			}
-			av.SetField(unnestAlias, actv)
+			// else actv is already set as unnestAlias of av in previous iteration
+			// and the new array element is set as value of actv above
 		}
 
 		pass := true
@@ -283,8 +285,10 @@ func (this *Unnest) processTimeSeriesItem(item value.AnnotatedValue, context *Co
 		} else {
 			if av == nil {
 				av = value.NewAnnotatedValue(nitem.Copy())
+				av.SetField(unnestAlias, actv)
 			}
-			av.SetField(unnestAlias, actv)
+			// else actv is already set as unnestAlias of av in previous iteration
+			// and the new array element is set as value of actv above
 		}
 
 		pass := true
