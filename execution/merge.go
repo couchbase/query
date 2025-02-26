@@ -366,6 +366,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 	match := false
 	ok1 := true
 	alias := this.plan.KeyspaceRef().Alias()
+	useQuota := context.UseRequestQuota()
 
 	tv, ok1 = item.Field(alias)
 	if ok1 {
@@ -407,7 +408,7 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 				item1 := item
 				if delete != nil {
 					item1 = item.CopyForUpdate().(value.AnnotatedValue)
-					if context.UseRequestQuota() {
+					if useQuota {
 						err := context.TrackValueSize(item1.Size())
 						if err != nil {
 							context.Error(err)
@@ -425,7 +426,13 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 
 					this.updates.Append(item1)
 				}
+				// else LIMIT is reached, we can technically recycle item1 and release
+				// its tracking memory, but since plan should be terminating in this
+				// case anyway, just leave it alone
 			} else if delete == nil {
+				if useQuota {
+					context.ReleaseValueSize(item.Size())
+				}
 				item.Recycle()
 			}
 		}
@@ -466,10 +473,40 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 							// Reset the META data on the original value to
 							// avoid "sharing"
 							tav.ResetMeta()
+							if useQuota {
+								size := item.Size()
+								size1 := item1.Size()
+								if size >= size1 {
+									context.ReleaseValueSize(size - size1)
+								} else {
+									err := context.TrackValueSize(size1 - size)
+									if err != nil {
+										context.Error(err)
+										item1.Recycle()
+										item.Recycle()
+										return false
+									}
+								}
+							}
 							item.Recycle()
 						} else {
 							item1 = this.newEmptyDocumentWithKey(key, nil, context)
 							item1.SetField(alias, item1)
+							if useQuota {
+								size := item.Size()
+								size1 := item1.Size()
+								if size >= size1 {
+									context.ReleaseValueSize(size - size1)
+								} else {
+									err := context.TrackValueSize(size1 - size)
+									if err != nil {
+										context.Error(err)
+										item1.Recycle()
+										item.Recycle()
+										return false
+									}
+								}
+							}
 							item.Recycle()
 						}
 						this.matched[key] = false
@@ -479,11 +516,20 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 							// add to items to be deleted, actual delete happens later
 							this.deletes.Append(item1)
 						}
+						// else LIMIT is reached, we can technically recycle item1 and release
+						// its tracking memory, but since plan should be terminating in this
+						// case anyway, just leave it alone
 					}
 				} else {
+					if useQuota {
+						context.ReleaseValueSize(item.Size())
+					}
 					item.Recycle()
 				}
 			} else {
+				if useQuota {
+					context.ReleaseValueSize(item.Size())
+				}
 				item.Recycle()
 			}
 		}
@@ -526,7 +572,13 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					// add item to be inserted, actual insert happens later
 					this.inserts.Append(item)
 				}
+				// else LIMIT is reached, we can technically recycle item1 and release
+				// its tracking memory, but since plan should be terminating in this
+				// case anyway, just leave it alone
 			} else {
+				if useQuota {
+					context.ReleaseValueSize(item.Size())
+				}
 				item.Recycle()
 			}
 		}
