@@ -519,6 +519,11 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 						// else LIMIT is reached, we can technically recycle item1 and release
 						// its tracking memory, but since plan should be terminating in this
 						// case anyway, just leave it alone
+					} else {
+						if useQuota {
+							context.ReleaseValueSize(item.Size())
+						}
+						item.Recycle()
 					}
 				} else {
 					if useQuota {
@@ -532,6 +537,12 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 				}
 				item.Recycle()
 			}
+		} else if update == nil {
+			// no DELETE or UPDATE action
+			if useQuota {
+				context.ReleaseValueSize(item.Size())
+			}
+			item.Recycle()
 		}
 	} else {
 		// Not matched; INSERT
@@ -581,6 +592,12 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 				}
 				item.Recycle()
 			}
+		} else {
+			// no INSERT action
+			if useQuota {
+				context.ReleaseValueSize(item.Size())
+			}
+			item.Recycle()
 		}
 	}
 
