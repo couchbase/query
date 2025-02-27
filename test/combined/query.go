@@ -44,12 +44,13 @@ type Query struct {
 	nextAliasNum  int
 
 	// runtime stats
-	executions  uint64
-	failed      uint64 // failed to execute, not executed with errors
-	lastFailure error
-	elapsedMs   uint64
-	results     uint64
-	lastErrors  []int // keep the last 10 reported error numbers
+	executions    uint64
+	failed        uint64 // failed to execute, not executed with errors
+	lastFailure   error
+	elapsedMs     uint64
+	results       uint64
+	maxUsedMemory uint64
+	lastErrors    []int // keep the last 10 reported error numbers
 }
 
 func LoadQuery(file string) (*Query, error) {
@@ -354,7 +355,7 @@ func (this *Query) AsSubQuery() string {
 
 func (this *Query) Execute(requestParams map[string]interface{}) error {
 	atomic.AddUint64(&this.executions, 1)
-	results, elapsed, errs, err := executeSQLProcessingResults(this.SQL(""), requestParams)
+	results, elapsed, usedMemory, errs, err := executeSQLProcessingResults(this.SQL(""), requestParams)
 	if err != nil {
 		//logging.Debugf("%v", err)
 		// Uncomment for verbose error logging
@@ -367,24 +368,27 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 	}
 	atomic.AddUint64(&this.results, uint64(results))
 	atomic.AddUint64(&this.elapsedMs, uint64(elapsed.Milliseconds()))
+
+	this.Lock()
+	this.maxUsedMemory = max(this.maxUsedMemory, usedMemory)
 	if len(errs) > 0 {
-		this.Lock()
 		this.lastErrors = append(errs, this.lastErrors...)
 		if len(this.lastErrors) > 10 {
 			this.lastErrors = this.lastErrors[:10]
 		}
-		this.Unlock()
 	}
+	this.Unlock()
 	return nil
 }
 
 func (this *Query) MarshalJSON() ([]byte, error) {
 	this.Lock()
 	m := map[string]interface{}{
-		"statement":  this.doSQL("", false),
-		"executions": this.executions,
-		"failed":     this.failed,
-		"lastErrors": this.lastErrors,
+		"statement":     this.doSQL("", false),
+		"executions":    this.executions,
+		"failed":        this.failed,
+		"lastErrors":    this.lastErrors,
+		"maxUsedMemory": this.maxUsedMemory,
 	}
 
 	if this.lastFailure != nil {
