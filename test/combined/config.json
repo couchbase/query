@@ -77,6 +77,12 @@
     },
     "#comment": "If UPDATE STATISTICS commands should be run after loading the data.",
     "update_statistics": true,
+    "#comment": "Configuration for AWR.",
+    "awr": {
+      "enabled": true,
+      "threshold": "0s",
+      "location": "default:awr"
+    },
     "#comment": "Drop all buckets (even those not defined in the test config) before starting.",
     "purge": true,
     "#comment": "Create buckets always; drop & recreate existing buckets (implies new scopes & collections)",

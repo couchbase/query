@@ -80,6 +80,8 @@ type Database struct {
 	rkSchemaDocs    *RandomRange
 	rkSchemas       *RandomRange
 	rkSchemaFields  *RandomRange
+	awrConfig       map[string]interface{} // Settings to be updated in system:awr.
+	awrKeyspace     *Keyspace              // The keyspace where AWR data will be stored.
 }
 
 func NewDatabase(i interface{}) (*Database, error) {
@@ -155,6 +157,34 @@ func NewDatabase(i interface{}) (*Database, error) {
 			logging.Fatalf("\"update_statistics\" is not a boolean.")
 			return nil, os.ErrNotExist
 		}
+	}
+
+	v, ok = database["awr"]
+	if ok {
+		if m, ok := v.(map[string]interface{}); ok {
+			db.awrConfig = m
+
+			// Configure the keyspace location for AWR data
+			if path, ok := m["location"].(string); ok {
+				awrKs, err := newKeyspace(path)
+				if err != nil {
+					logging.Errorf("AWR: Failed to create keyspace with error: %v", err)
+					// Do not return an error. Do not fail the test for now.
+				} else {
+					db.awrKeyspace = awrKs
+					logging.Infof("AWR: Keyspace location set to: %s", path)
+				}
+			} else {
+				logging.Errorf("AWR: `location` setting is not a string.")
+				// Do not return an error. Do not fail the test for now.
+			}
+
+			logging.Debugf("AWR: Settings configuration: %v", db.awrConfig)
+		} else {
+			logging.Errorf("AWR: Configuration specified is not an object.")
+		}
+	} else {
+		logging.Warnf("AWR: Not configured for the iteration.")
 	}
 
 	keyspaces, ok := database["keyspaces"].([]interface{})
@@ -339,7 +369,14 @@ func (this *Database) create() error {
 
 	n := 0
 	created := make(map[string]bool)
-	for _, ks := range this.keyspaces {
+
+	allKeyspaces := make([]*Keyspace, 0, len(this.keyspaces)+1)
+	allKeyspaces = append(allKeyspaces, this.keyspaces...)
+	if this.awrKeyspace != nil {
+		allKeyspaces = append(allKeyspaces, this.awrKeyspace)
+	}
+
+	for _, ks := range allKeyspaces {
 		config, customConfig := this.getBucketConfig(ks.bucket())
 		if _, ok := config["ramQuota"]; !ok {
 			if v, ok := config["storageBackend"]; ok && v == "magma" {
@@ -465,6 +502,31 @@ func (this *Database) populate() error {
 				logging.Errorf("Failed to update statistics for %s: %v", ks.name, err)
 				return err
 			}
+		}
+	}
+
+	if this.awrKeyspace != nil {
+		var sb strings.Builder
+		sb.WriteString("UPDATE system:awr SET ")
+
+		i := 0
+		for k, v := range this.awrConfig {
+			switch v.(type) {
+			case string:
+				v = fmt.Sprintf("'%s'", v)
+			}
+
+			if i > 0 {
+				sb.WriteRune(',')
+			}
+
+			i++
+			sb.WriteString(fmt.Sprintf("%s = %v", k, v))
+		}
+
+		if err := executeSQLWithoutResults(sb.String(), nil, false); err != nil {
+			logging.Errorf("AWR: Failed to update system:awr with error: %v", err)
+			// Do not return an error. Do not fail the test for now.
 		}
 	}
 	return nil
