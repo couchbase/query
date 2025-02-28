@@ -50,7 +50,9 @@ func fitWidth(s string, width int) string {
 	} else if b == 0 {
 		b = p
 	}
-	fmt.Printf(s[:b])
+	var builder strings.Builder
+	builder.WriteString(s[:b])
+	fmt.Print(builder.String())
 	if len(s) > b {
 		return s[b:]
 	}
@@ -63,9 +65,10 @@ func printWidth(width int, margin int, what string) {
 		margin *= -1
 		fmt.Printf("\n")
 	}
+	marginSpaces := strings.Repeat(" ", margin)
 	for what != "" {
 		if margin > 0 {
-			fmt.Printf("%*s", margin, "")
+			fmt.Print(marginSpaces)
 		}
 		what = fitWidth(what, width-margin)
 		fmt.Printf("\n")
