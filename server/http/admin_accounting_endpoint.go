@@ -1169,7 +1169,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
 			}
 
-			err2, _ = aus.SetAus(mAus, true)
+			err2, _ = aus.SetAus(mAus, true, true)
 			if err2 != nil {
 				return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
 			}

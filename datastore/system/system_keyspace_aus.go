@@ -114,7 +114,7 @@ func (b *ausKeyspace) Update(updates value.Pairs, context datastore.QueryContext
 			continue
 		}
 
-		err, warnings := aus.SetAus(pair.Value, true)
+		err, warnings := aus.SetAus(pair.Value, true, false)
 		if warnings != nil {
 			for _, w := range warnings {
 				context.Warning(w)

@@ -70,7 +70,7 @@ func NewAusDocInvalidSettingsValue(setting string, value interface{}) Error {
 
 	return &err{level: EXCEPTION, ICode: E_AUS_INVALID_DOCUMENT_SCHEMA, IKey: "aus.settings.invalid_schema",
 		InternalMsg: "Invalid schema or semantics detected in the Auto Update Statistics settings document." +
-			fmt.Sprintf(" Invalid value '%v' (%T) for setting '%s'.", value, value, setting), cause: c,
+			fmt.Sprintf(" Invalid value '%v' for setting '%s'.", value, setting), cause: c,
 		InternalCaller: CallerN(1)}
 }
 

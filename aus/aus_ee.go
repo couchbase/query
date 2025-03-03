@@ -54,7 +54,6 @@ const (
 )
 
 var ausCfg ausConfig
-var daysOfWeek map[string]time.Weekday
 
 // since we fetch documents from _system._query 1 at a time
 var _STRING_ANNOTATED_POOL *value.StringAnnotatedPool
@@ -67,19 +66,15 @@ type ausConfig struct {
 	settings    ausGlobalSettings
 	initialized bool
 
-	// version indicates the version of schedule/enablement changes
-	// The version is only changed/incremented when a new global setting is received
-	// and the previous setting and new setting differ in enablement or schedule
-	version int64
+	// Indicates the version of the global settings that was used to schedule/ enable the current task.
+	// This field is only changes when the new global settings received, change the enablement or schedule.
+	configVersion string
 
-	// Stores information about the current task.
-	// Is set/re-set when the AUS task begins. It is not re-set upon task completion.
-	// This means that this will store "old" running task info, till it is re-set on the next run.
-	// But this is okay because the only purpose of this field is:
-	// When a new global setting is received with a new schedule, any scheduled tasks must be cancelled but any running task
-	// must be allowed to complete. The new schedule must be used to schedule the next AUS task run.
-	// However, the next task run must not overlap with the window of the current run.
-	// This field will be used to make this check.
+	// Stores information about the running task's window
+	// Is set when the AUS task begins and re-set to zero when the task completes.
+	// When there is a new global setting received that changes the schedule, the scheduling mechanism uses this field to ensure
+	// that the new task is not scheduled to run in the same window as the current running task.
+	// This is to prevent multiple tasks from running at once on the node.
 	currentWindow taskInfo
 }
 
@@ -88,6 +83,7 @@ type ausGlobalSettings struct {
 	allBuckets       bool
 	changePercentage int
 	schedule         ausSchedule
+	version          string
 }
 
 type ausSchedule struct {
@@ -101,13 +97,11 @@ type taskInfo struct {
 	startTime time.Time
 	endTime   time.Time
 
-	// Denotes the version of the global settings that was used to schedule this task.
-	// This field should be used to perform an equality check against the current global configuration's version
-	// before performing any task related operations like [re]scheduling, task execution, etc.
-	// If the equality check, it means that a new configuration with a different enablement/schedule was received.
-	// Performing this check before any AUS operations is to prevent the progression of operations configured from older settings.
-	// Since operations configured from the latest setting must prevail.
-	version int64
+	// The configVersion that was used to schedule this task.
+	// This field should be used to perform an equality check against the current global configVersion before the task is
+	// executed or [re]scheduled. If the check fails, it means that there were new settings received that changed the config and
+	// the task operation must not proceed.
+	version string
 }
 
 func (this *ausConfig) setInitialized(init bool) {
@@ -116,7 +110,7 @@ func (this *ausConfig) setInitialized(init bool) {
 	this.Unlock()
 }
 
-func (this *ausConfig) setCurrentWindow(lock bool, start time.Time, end time.Time, version int64) {
+func (this *ausConfig) setCurrentWindow(lock bool, start time.Time, end time.Time, version string) {
 	if lock {
 		this.Lock()
 		defer this.Unlock()
@@ -177,9 +171,6 @@ func startupAus() {
 
 	logging.Infof(AUS_LOG_PREFIX + "Initialization started.")
 
-	// Initialize the days of the week map
-	daysOfWeek = initDaysOfWeek()
-
 	// Initialize the system:aus_settings Fetch pool
 	_STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(1)
 
@@ -207,7 +198,7 @@ func callback(kve metakv.KVEntry) error {
 		return nil
 	}
 
-	if newSettings, err, _ := setAusHelper(v, false); err != nil {
+	if newSettings, err, _ := setAusHelper(v, false, false); err != nil {
 		ausCfg.Unlock()
 		logging.Errorf(AUS_LOG_PREFIX+"Error during global settings retrieval: %v", err)
 		return nil
@@ -216,7 +207,7 @@ func callback(kve metakv.KVEntry) error {
 		prev := ausCfg.settings
 		ausCfg.settings = newSettings
 
-		var version int64
+		var version string
 		var reschedule bool // whether a new AUS task should be scheduled
 		var cancelOld bool  // whether any scheduled AUS tasks should be deleted
 
@@ -234,12 +225,12 @@ func callback(kve metakv.KVEntry) error {
 			reschedule = true
 		}
 
-		// Only if there is a change in the enablement/schedule increment the version of the configuration
+		// Only if there is a change in the enablement/schedule change the version of the configuration
 		if reschedule || cancelOld {
-			ausCfg.version++
+			ausCfg.configVersion = newSettings.version
 		}
 
-		version = ausCfg.version
+		version = ausCfg.configVersion
 		ausCfg.Unlock()
 
 		logging.Infof(AUS_LOG_PREFIX+"Global settings are now: %v with internal version: %v.", v, version)
@@ -273,7 +264,7 @@ func callback(kve metakv.KVEntry) error {
 
 		// Schedule next task with the new schedule
 		if reschedule {
-			ausCfg.schedule(true, true, version, true, true)
+			ausCfg.schedule(version, true)
 		}
 	}
 
@@ -329,13 +320,16 @@ func FetchAus() (map[string]interface{}, errors.Error) {
 		return nil, errors.NewAusStorageAccessError(errors.NewAusDocEncodingError(false, err))
 	}
 
+	// Version field is only required for internal use.
+	delete(val, "internal_version")
+
 	return val, nil
 }
 
 // For the global settings path/ key that is to be in metakv:
 // Checks if the path/ key is present in metakv
 // If not present, attempts to add the path to metakv with the default global settings value
-// If the param 'get' is set to true, returns the contents in metakv for the key
+// get: if the value of the key are to be returned
 func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 	rv, rev, err = metakv.Get(_AUS_GLOBAL_SETTINGS_PATH)
 	if err != nil {
@@ -351,6 +345,7 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 			"enable":            false,
 			"all_buckets":       false,
 			"change_percentage": 10,
+			"internal_version":  "default",
 		})
 
 		if err != nil {
@@ -382,17 +377,17 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 	}
 }
 
-func SetAus(settings interface{}, distribute bool) (err errors.Error, warnings errors.Errors) {
+func SetAus(settings interface{}, distribute bool, restore bool) (err errors.Error, warnings errors.Errors) {
 	if !ausCfg.initialized {
 		return errors.NewAusNotInitialized(), nil
 	}
 
-	_, err, warnings = setAusHelper(settings, true)
+	_, err, warnings = setAusHelper(settings, true, restore)
 	return err, warnings
 }
 
 // Function to validate schema of the input settings document. And optionally distribute said settings document in metakv
-func setAusHelper(settings interface{}, distribute bool) (obj ausGlobalSettings, err errors.Error,
+func setAusHelper(settings interface{}, distribute bool, restore bool) (obj ausGlobalSettings, err errors.Error,
 	warnings errors.Errors) {
 
 	if actual, ok := settings.(value.Value); ok {
@@ -444,6 +439,12 @@ func setAusHelper(settings interface{}, distribute bool) (obj ausGlobalSettings,
 					return obj, err, nil
 				}
 				obj.schedule = sched
+			case "internal_version":
+				if vv, ok := v.(string); ok {
+					obj.version = vv
+				} else {
+					logging.Warnf(AUS_LOG_PREFIX+"internal_version is not a string: %v", v)
+				}
 			default:
 				return obj, errors.NewAusDocUnknownSetting(k), nil
 			}
@@ -481,6 +482,17 @@ func setAusHelper(settings interface{}, distribute bool) (obj ausGlobalSettings,
 
 		// Add the new settings document to metakv
 		if distribute {
+
+			// If restoring the settings, do not change the version.
+			if !restore {
+				// Add a random UUID as the "internal_version" field
+				version, err := util.UUIDV4()
+				if err != nil {
+					return obj, errors.NewAusDocEncodingError(true, err), warnings
+				}
+				settings["internal_version"] = version
+			}
+
 			bytes, err := json.Marshal(settings)
 			if err != nil {
 				return obj, errors.NewAusDocEncodingError(true, err), warnings
@@ -613,13 +625,27 @@ func validateSchedule(schedule interface{}) (ausSchedule ausSchedule, err errors
 					}
 
 					if ds, ok := d.(string); ok {
-						if w, ok1 := daysOfWeek[strings.ToLower(strings.TrimSpace(ds))]; ok1 {
-							daysNum[w] = true
-							continue
+						switch strings.ToLower(strings.TrimSpace(ds)) {
+						case "sunday":
+							daysNum[time.Sunday] = true
+						case "monday":
+							daysNum[time.Monday] = true
+						case "tuesday":
+							daysNum[time.Tuesday] = true
+						case "wednesday":
+							daysNum[time.Wednesday] = true
+						case "thursday":
+							daysNum[time.Thursday] = true
+						case "friday":
+							daysNum[time.Friday] = true
+						case "saturday":
+							daysNum[time.Saturday] = true
+						default:
+							return ausSchedule, errors.NewAusDocInvalidSettingsValue("schedule.days", ds), warnings
 						}
+					} else {
+						return ausSchedule, errors.NewAusDocInvalidSettingsValue("schedule.days", ds), warnings
 					}
-
-					return ausSchedule, errors.NewAusDocInvalidSettingsValue("schedule.days", days), warnings
 				}
 
 				// Since all fields have been validated successfully - set the ausSchedule object
@@ -876,12 +902,26 @@ func path2key(path string) (string, []string, errors.Error) {
 
 // Returns document id of a scope level document in system:aus_settings
 func ausSettingsScopeKey(scopeUid string, scopeName string) string {
-	return AUS_DOC_PREFIX + scopeUid + "::" + scopeName
+	sb := strings.Builder{}
+	sb.WriteString(AUS_DOC_PREFIX)
+	sb.WriteString(scopeUid)
+	sb.WriteString("::")
+	sb.WriteString(scopeName)
+	return sb.String()
 }
 
 // Returns document id of a collection level document in system:aus_settings
 func ausSettingsCollectionKey(scopeUid string, scopeName string, collectionUid string, collectionName string) string {
-	return AUS_DOC_PREFIX + scopeUid + "::" + collectionUid + "::" + scopeName + "." + collectionName
+	sb := strings.Builder{}
+	sb.WriteString(AUS_DOC_PREFIX)
+	sb.WriteString(scopeUid)
+	sb.WriteString("::")
+	sb.WriteString(collectionUid)
+	sb.WriteString("::")
+	sb.WriteString(scopeName)
+	sb.WriteString(".")
+	sb.WriteString(collectionName)
+	return sb.String()
 }
 
 // Get the _system._query collection for a bucket
@@ -1036,37 +1076,31 @@ func BackupAusSettings(namespace string, bucket string, filter func([]string) bo
 
 // Scheduling related functions
 
-// Finds the next AUS window and schedules the task. Returns whether a version change occurred and an error.
+// Finds the next AUS window and schedules the task. Returns whether a config version change occurred and an error.
 // Parameters:
-// checkVersion - whether an equality check of the provided version and the current global config version must be performed
-// checkToday - If today should be considered when finding the next window
-// newSchedule - Whether this is the first task scheduled when a new schedule is received
-func (this *ausConfig) schedule(lock bool, checkVersion bool, version int64, checkToday bool, newSchedule bool) (
-	bool, errors.Error) {
-	if lock {
-		this.RLock()
-		defer this.RUnlock()
+// checkToday: If true, considers today's schedule when finding the next window and performs overlap check with any running task
+func (this *ausConfig) schedule(version string, checkToday bool) (bool, errors.Error) {
+
+	this.RLock()
+	defer this.RUnlock()
+
+	// Skip scheduling if the task's version differs from current config version,
+	// It indicates that newer settings have been received.
+	if version != this.configVersion {
+		logging.Infof(AUS_LOG_PREFIX+
+			"Detected global settings change. Task configured with internal version %v not scheduled.", version)
+		return true, nil
 	}
 
-	if checkVersion {
-		// If the configuration version is different from the version with which the task is to be scheduled
-		// that means a new configuration was received. Do not re-schedule.
-		if version != this.version {
-			logging.Infof(AUS_LOG_PREFIX+
-				"Detected global settings change. Task configured with internal version %v not scheduled.", version)
-			return true, nil
-		}
-	}
-
+	// Check for overlap between the next scheduled window and the currently running task's window
 	var windowStart time.Time
 	var windowEnd time.Time
-	// To check that the next run with the new schedule does not overlap with the window of the existing running task
-	if newSchedule {
+	if checkToday {
 		windowStart = this.currentWindow.startTime
 		windowEnd = this.currentWindow.endTime
 	}
 
-	start, end, err := this.settings.schedule.findNextWindow(checkToday, newSchedule, windowStart, windowEnd)
+	start, end, err := this.settings.schedule.findNextWindow(checkToday, windowStart, windowEnd)
 	if err != nil {
 		return false, err
 	}
@@ -1078,17 +1112,17 @@ func (this *ausConfig) schedule(lock bool, checkVersion bool, version int64, che
 		return false, err
 	}
 
-	logging.Infof(AUS_LOG_PREFIX+"New task scheduled between %v and %v using configuration version %v.", start, end,
-		this.version)
+	logging.Infof(AUS_LOG_PREFIX+"New task scheduled between %v and %v using configuration version %s.",
+		start.Format(util.DEFAULT_FORMAT), end.Format(util.DEFAULT_FORMAT), this.configVersion)
 
 	return false, nil
 }
 
-// Returns the next scheduled AUS window i.e start and end time of the next window
-// overlapCheck: Check if the start time of today's potential schedule is within the provided window
-// windowStart: start time of the window to check for overlap
-// windowEnd: end time of the window to check for overlap
-func (this *ausSchedule) findNextWindow(checkToday bool, overlapCheck bool, windowStart time.Time, windowEnd time.Time) (
+// Returns the start and end times of the next window for the next AUS task
+// Parameters:
+// checkToday: If true, considers today's schedule when finding the next window and
+// performs overlap check with the provided start and end times specified by the parameters windowStart and windowEnd
+func (this *ausSchedule) findNextWindow(checkToday bool, windowStart time.Time, windowEnd time.Time) (
 	time.Time, time.Time, errors.Error) {
 
 	// Get the current time in the required timezone
@@ -1109,7 +1143,7 @@ func (this *ausSchedule) findNextWindow(checkToday bool, overlapCheck bool, wind
 			today := true
 
 			// Perform the overlap check. Check if the start time of today's potential schedule is within the provided window
-			if overlapCheck && !windowStart.IsZero() && !windowEnd.IsZero() {
+			if !windowStart.IsZero() && !windowEnd.IsZero() {
 				// If the next run is during the provided window
 				if !nextStart.Before(windowStart) && !nextStart.After(windowEnd) {
 					today = false
@@ -1143,7 +1177,8 @@ func (this *ausSchedule) findNextWindow(checkToday bool, overlapCheck bool, wind
 	}
 
 	// This should never happen since only allow valid schedules are allowed to be configured
-	return time.Time{}, time.Time{}, errors.NewAusSchedulingError(time.Time{}, time.Time{}, nil)
+	emptyTime := time.Time{}
+	return emptyTime, emptyTime, errors.NewAusSchedulingError(emptyTime, emptyTime, nil)
 }
 
 func scheduleTask(task taskInfo) errors.Error {
@@ -1170,7 +1205,8 @@ func scheduleTask(task taskInfo) errors.Error {
 		parms["task"] = task
 
 		after := task.startTime.Sub(time.Now())
-		errT := scheduler.ScheduleStoppableTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "", context)
+		errT := scheduler.ScheduleStoppableTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "",
+			context)
 		if errT != nil {
 			err = errors.NewAusSchedulingError(task.startTime, task.endTime, errT)
 			continue
@@ -1257,28 +1293,25 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 
 			// End the AUS Evaluation Task
 			// Schedule the next task run. Do not consider "today" in the determination of the window of the next run.
-			ausCfg.schedule(true, true, task.version, false, false)
+			ausCfg.schedule(task.version, false)
+			emptyTime := time.Time{}
+			ausCfg.setCurrentWindow(true, emptyTime, emptyTime, "")
+
 		}()
 
-		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v started.", task.startTime, task.endTime)
+		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v started.",
+			task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT))
 
 		// If the configuration version is different from the version with which the task was scheduled
 		// that means a new configuration was received. Do not execute the task.
 		ausCfg.Lock()
-		if task.version != ausCfg.version {
+		if task.version != ausCfg.configVersion {
 			ausCfg.Unlock()
 			return "Newer version of settings detected. This task was scheduled from older settings. Task not executed.", nil
 		}
 
 		// Set the current task window information
 		ausCfg.setCurrentWindow(false, task.startTime, task.endTime, task.version)
-
-		ds, ok := datastore.GetDatastore().(datastore.Datastore2)
-		if !ok || ds == nil {
-			// This should not ideally happen as migration should have completed.
-			logging.Errorf(AUS_LOG_PREFIX + "Task not started as cluster is not migrated to a supported version")
-			return nil, []errors.Error{errors.NewAusNotInitialized()}
-		}
 
 		// Get the global information before starting execution. These values will be used for the course of this task run.
 		// This is so that consistent global settings are used during a task's entirety in the case changes to the global settings
@@ -1287,9 +1320,17 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 		allBuckets := ausCfg.settings.allBuckets
 		ausCfg.Unlock()
 
+		ds, ok := datastore.GetDatastore().(datastore.Datastore2)
+		if !ok || ds == nil {
+			// This should not ideally happen as migration should have completed.
+			logging.Errorf(AUS_LOG_PREFIX + "Task not started as cluster is not migrated to a supported version")
+			return nil, []errors.Error{errors.NewAusNotInitialized()}
+		}
+
 		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf(
 			"Configurations of task: start_time: %v end_time: %v change_percentage: %v all_buckets: %v internal version: %v",
-			task.startTime, task.endTime, globalChangePercentage, allBuckets, task.version))
+			task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT), globalChangePercentage,
+			allBuckets, task.version))
 
 		var errs errors.Errors
 
@@ -1333,6 +1374,7 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 			// Iterate through the buckets list. Generate the random start index.
 			gen := rand.New(rand.NewSource(time.Now().Unix()))
 			b := gen.Int() % len(buckets)
+			coordKeyPrefix := AUS_COORDINATION_DOC_PREFIX + task.version
 
 		bucketLoop:
 			for i := 0; i < len(buckets); i++ {
@@ -1407,17 +1449,20 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 
 						// Check if any other node is performing AUS on the collection by attempting to INSERT a unique
 						// coordination document for the keyspace.
+						// if INSERT fails with a "duplicate key" error, then another node has performed AUS on it.
 						dpairs := make([]value.Pair, 1)
-						dpairs[0].Name = AUS_COORDINATION_DOC_PREFIX + coll.QualifiedName()
+
+						// Include task version in coordination doc to prevent conflicts
+						// when config changes occur before previous doc's TTL expires
+						dpairs[0].Name = coordKeyPrefix + coll.QualifiedName()
 						dpairs[0].Value = value.EMPTY_ANNOTATED_OBJECT
 
-						// The expiration of the coordination document should be the end time of this scheduled AUS task window.
+						// The expiration of the coordination document should be the end time of this task window.
 						dpairs[0].Options = value.NewValue(map[string]interface{}{
 							"expiration": task.endTime.Unix()})
 
 						_, _, iErrs := systemCollection.Insert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
 
-						// if INSERT fails with a "duplicate key" error, then another node has performed AUS on it.
 						if len(iErrs) > 0 {
 							if !iErrs[0].HasCause(errors.E_DUPLICATE_KEY) {
 								errs = append(errs, errors.NewAusTaskError("coordination", errs[0]))
@@ -1641,8 +1686,8 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces qualified for Update Phase: %v", keyspacesUpdated))
 
 		taskRv["Configuration"] = map[string]interface{}{
-			"start_time":        task.startTime.String(),
-			"end_time":          task.endTime.String(),
+			"start_time":        task.startTime.Format(util.DEFAULT_FORMAT),
+			"end_time":          task.endTime.Format(util.DEFAULT_FORMAT),
 			"internal_version":  task.version,
 			"change_percentage": globalChangePercentage,
 			"all_buckets":       allBuckets,
@@ -1656,8 +1701,8 @@ func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan b
 			taskRv["keyspaces_updated"] = keyspacesUpdated
 		}
 
-		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v has completed.", task.startTime,
-			task.endTime)
+		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v has completed.",
+			task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT))
 
 		return taskRv, errs
 
@@ -1682,7 +1727,7 @@ func stopTask(context scheduler.Context, parms interface{}) (interface{}, []erro
 		rv := fmt.Sprintf("Task scheduled between %v and %v has been stopped.", task.startTime, task.endTime)
 
 		// Schedule the next task run. Do not consider "today" in the determination of the window of the next run
-		versionChange, err := ausCfg.schedule(true, true, task.version, false, false)
+		versionChange, err := ausCfg.schedule(task.version, false)
 		if versionChange {
 			rv += " Detected global settings change."
 			return rv, nil

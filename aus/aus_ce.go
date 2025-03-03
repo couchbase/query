@@ -36,7 +36,7 @@ func FetchAus() (map[string]interface{}, errors.Error) {
 	return nil, errors.NewAusNotSupportedError()
 }
 
-func SetAus(settings interface{}, distribute bool) (errors.Error, errors.Errors) {
+func SetAus(settings interface{}, distribute bool, backup bool) (errors.Error, errors.Errors) {
 	return errors.NewAusNotSupportedError(), nil
 }
 
