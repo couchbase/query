@@ -26,7 +26,7 @@ Site=http://127.0.0.1:8091/pools/nodes/
 Auth=Administrator:password
 
 export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
-export CGO_LDFLAGS="-L$GOPATH/lib -Wl,-no_warn_duplicate_libraries $CGO_LDLAGS"
+export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDLAGS"
 export LD_LIBRARY_PATH=$GOPATH/lib:$LD_LIBRARY_PATH
 if [[ `uname` == "Darwin" ]]
 then
