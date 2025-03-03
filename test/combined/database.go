@@ -15,6 +15,7 @@ import (
 	"os"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/couchbase/query/logging"
 )
@@ -82,6 +83,7 @@ type Database struct {
 	rkSchemaFields  *RandomRange
 	awrConfig       map[string]interface{} // Settings to be updated in system:awr.
 	awrKeyspace     *Keyspace              // The keyspace where AWR data will be stored.
+	testStartTime   time.Time              // The time that the iteration started executing the test queries.
 }
 
 func NewDatabase(i interface{}) (*Database, error) {

@@ -423,6 +423,13 @@ func reportRunFailure(iter uint64, args ...interface{}) {
 		files = append(files, "/opt/couchbase/var/lib/couchbase/logs/query.log")
 	}
 
+	cbqr, err := runCBQueryReportGen()
+	if err == nil {
+		files = append(files, cbqr)
+	} else {
+		logging.Errorf("Failure when running cbqueryreportgen: %v", err)
+	}
+
 	content := make([]interface{}, len(args)+1, len(args)+2)
 	content[0] = fmt.Sprintf("Iteration %d failed.", iter)
 	copy(content[1:], args)

@@ -22,6 +22,7 @@ const (
 	_QUERY_PROCESS = "cbq-engine"
 	_NODE_URL      = "http://localhost:8091"
 	_QUERY_URL     = "http://localhost:8093"
+	_COUCHBASE_URL = "couchbase://localhost"
 
 	_ITERATION_INTERVAL = time.Second * 10
 

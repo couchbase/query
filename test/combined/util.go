@@ -951,3 +951,46 @@ func runCBCollectInfo() (string, error) {
 	}
 	return name + ".zip", err
 }
+
+func runCBQueryReportGen() (string, error) {
+
+	if DB.awrKeyspace == nil {
+		return "", fmt.Errorf("AWR not configured for this iteration")
+	}
+
+	// Path to report file
+	reportPath := path.Join(os.TempDir(), "cbqueryreportgen_report.html")
+	logging.Infof("Running cbqueryreportgen")
+
+	// cbqueryreportgen seems to only accepts the path to the AWR keyspace location in format bucket.scope.collection
+	awrKs := DB.awrKeyspace.name
+
+	// If the keyspace is a bucket, add the _default scope and _default collection to the path.
+	if parts := parsePath(DB.awrKeyspace.name); len(parts) == 2 {
+		awrKs = awrKs + "._default._default"
+	}
+
+	awrKs = strings.TrimPrefix(awrKs, "default:")
+
+	// The t1 flag expects the time period for the report in format "start-time, end-time".
+	// And the time being in YYYY-MM-DDTHH:MM:SS format
+	testStartTime := DB.testStartTime.Format("2006-01-02T15:04:05")
+	testEndTime := time.Now().Format("2006-01-02T15:04:05")
+	t1 := testStartTime + "," + testEndTime
+
+	ic := exec.Command("/opt/couchbase/bin/cbqueryreportgen", "-c", _COUCHBASE_URL, "-u", USER, "-p", PASSWORD, "-k", awrKs,
+		"-t1", t1, "-o", reportPath)
+	sb := &strings.Builder{}
+	ic.Stdout = sb
+	err := ic.Run()
+	output := sb.String()
+	if err != nil {
+		logging.Errorf("Error generating report at %v using cbqueryreportgen", reportPath)
+		for _, s := range strings.Split(output, "\n") {
+			logging.Errorf(">   %v", s)
+		}
+		logging.Errorf(">   %v", err)
+	}
+
+	return reportPath, err
+}

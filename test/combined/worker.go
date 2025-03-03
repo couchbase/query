@@ -160,6 +160,8 @@ func RunTest(config map[string]interface{}) error {
 	}
 
 	logVitals()
+
+	DB.testStartTime = time.Now()
 	if err = runWorkers(numClients, duration, requestParams); err != nil {
 		logging.Debugf("Run failed with: %v", err)
 	} else {
