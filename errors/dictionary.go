@@ -43,3 +43,9 @@ func NewDictKeyspaceMismatchError(ks1, ks2 string) Error {
 		InternalMsg:    fmt.Sprintf("Decoded dictionary entry for keyspace %s does not match %s", ks2, ks1),
 		InternalCaller: CallerN(1)}
 }
+
+func NewDictMissingFieldError(entry, field string) Error {
+	return &err{level: EXCEPTION, ICode: E_DICT_MISSING_FIELD, IKey: "dictionary.missing_field_error",
+		InternalMsg:    fmt.Sprintf("Dictionary entry '%s' is missing field '%s'", entry, field),
+		InternalCaller: CallerN(1)}
+}

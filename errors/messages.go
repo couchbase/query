@@ -7217,6 +7217,17 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_DICT_MISSING_FIELD, // 18070
+		symbol:      "E_DICT_MISSING_FIELD",
+		Description: "Dictionary entry «entry» is missing field <<field>>",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_VIRTUAL_KS_NOT_SUPPORTED, // 19000
 		symbol:      "E_VIRTUAL_KS_NOT_SUPPORTED",
 		Description: "Virtual Keyspace : Not supported «details»",

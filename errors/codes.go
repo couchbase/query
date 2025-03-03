@@ -564,6 +564,7 @@ const (
 	E_SYSTEM_COLLECTION                          ErrorCode = 18040
 	E_DICTIONARY_ENCODING                        ErrorCode = 18050
 	E_DICT_KEYSPACE_MISMATCH                     ErrorCode = 18060
+	E_DICT_MISSING_FIELD                         ErrorCode = 18070
 	E_VIRTUAL_KS_NOT_SUPPORTED                   ErrorCode = 19000
 	E_VIRTUAL_KS_NOT_IMPLEMENTED                 ErrorCode = 19001
 	E_VIRTUAL_KS_IDXER_NOT_FOUND                 ErrorCode = 19002
