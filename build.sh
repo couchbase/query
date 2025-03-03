@@ -331,7 +331,7 @@ function DevStandaloneSetup {
 # turn off go module for non repo sync build or standalone build
 if [[ ( ( ! -d ../../../../../cbft || -h ../../../../../cbft ) && "$GOPATH" != "") || ( $sflag != 0) ]]; then
     export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
-    export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
+    export CGO_LDFLAGS="-L$GOPATH/lib -Wl,-no_warn_duplicate_libraries $CGO_LDFLAGS"
     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
     if [[ $sflag == 1 ]]; then
         DevStandaloneSetup
