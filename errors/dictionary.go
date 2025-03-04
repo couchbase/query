@@ -44,8 +44,8 @@ func NewDictKeyspaceMismatchError(ks1, ks2 string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewDictMissingFieldError(entry, field string) Error {
+func NewDictMissingFieldError(entry, name, field string) Error {
 	return &err{level: EXCEPTION, ICode: E_DICT_MISSING_FIELD, IKey: "dictionary.missing_field_error",
-		InternalMsg:    fmt.Sprintf("Dictionary entry '%s' is missing field '%s'", entry, field),
+		InternalMsg:    fmt.Sprintf("Dictionary entry '%s' for '%s' is missing field '%s'", entry, name, field),
 		InternalCaller: CallerN(1)}
 }

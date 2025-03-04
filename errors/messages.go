@@ -7219,7 +7219,7 @@ var errData = []ErrData{
 	{
 		Code:        E_DICT_MISSING_FIELD, // 18070
 		symbol:      "E_DICT_MISSING_FIELD",
-		Description: "Dictionary entry «entry» is missing field <<field>>",
+		Description: "Dictionary entry «entry» for <<name>> is missing field <<field>>",
 		Action: []string{
 			"Contact support.",
 		},
