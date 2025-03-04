@@ -12,10 +12,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"math"
+	"math/rand"
 	"os"
 	"os/signal"
 	"path"
+	"regexp"
 	"runtime"
 	"runtime/debug"
 	"strings"
@@ -345,6 +348,11 @@ func main() {
 			}
 		}
 
+		if err := createAdviseIndexes(); err != nil {
+			reportRunFailure(iter, "Failed to advise query.", err)
+			continue
+		}
+
 		if installServer(c, force) != nil {
 			force = true
 			continue
@@ -460,6 +468,180 @@ func RunPrepSQL() error {
 	for i := range InitialQueries {
 		if err := InitialQueries[i].Execute(nil); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+var advreg = regexp.MustCompile(`ON\s+([^\s(]+)\s*\((.*)\)`)
+
+func runAdvise(qry string) error {
+	createCov := rand.Intn(10) >= 3
+	extractAdvise := func(respBody io.ReadCloser) error {
+		dec := json.NewDecoder(respBody)
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+
+		if r, ok := tok.(json.Delim); !ok || r != json.Delim('{') {
+			return fmt.Errorf("Unexpected JSON content: missing opening '{'.")
+		}
+
+		for dec.More() {
+			tok, err := dec.Token()
+			if err != nil {
+				return err
+			}
+			tn, ok := tok.(string)
+			if !ok {
+				return fmt.Errorf("Invalid type for field name: %T", tn)
+			}
+			switch tn {
+			case "results":
+				tok, err = dec.Token()
+				if err != nil {
+					return err
+				}
+				if r, ok := tok.(json.Delim); !ok || r != json.Delim('[') {
+					return fmt.Errorf("Unexpected JSON content: missing opening '['.")
+				}
+				nesting := 1
+				inrec := false
+				rec := 0
+
+				incov := false
+				cov := 0
+				for {
+					if nesting == 0 {
+						break
+					}
+
+					tok, err = dec.Token()
+					if err != nil {
+						return fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
+					}
+
+					if jd, ok := tok.(json.Delim); ok {
+						if jd == json.Delim('{') || jd == json.Delim('[') {
+							nesting++
+							if inrec {
+								rec++
+							}
+
+							if incov {
+								cov++
+							}
+						} else if jd == json.Delim('}') || jd == json.Delim(']') {
+							// don't have to care about mis-matching closing tokens; Token() will raise an error if invalid/missing
+							nesting--
+							if inrec {
+								rec--
+							}
+
+							if incov {
+								cov--
+							}
+						}
+						continue
+					}
+
+					if rec == 0 {
+						inrec = false
+					}
+
+					if cov == 0 {
+						incov = false
+					}
+
+					tn, ok := tok.(string)
+					if !ok {
+						return fmt.Errorf("Invalid type for field name: %T", tn)
+					}
+					if tn == "recommended_indexes" { // handles subquery section as well, following the createCov flag again
+						inrec = true
+					} else if tn == "covering_indexes" { // assumes advise returns  "covering_indexes" and "indexes" sections only
+						if inrec {
+							incov = true
+						}
+					} else if tn == "index_statement" {
+						tok, err = dec.Token()
+						if err != nil {
+							return fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
+						}
+						tn, ok := tok.(string)
+						if !ok {
+							return fmt.Errorf("Invalid type for index statement: %T", tn)
+						}
+						if incov {
+							if createCov {
+								if err := addIndextoKeyspaceFromCreateStmt(tn); err != nil {
+									return err
+								}
+							}
+						} else {
+							if !createCov {
+								if err := addIndextoKeyspaceFromCreateStmt(tn); err != nil {
+									return err
+								}
+							}
+						}
+					}
+
+				}
+			default:
+				// all other fields are streamed and discarded
+				nesting := 0
+				for {
+					tok, err = dec.Token()
+					if err != nil {
+						return fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
+					}
+					if jd, ok := tok.(json.Delim); ok {
+						if jd == json.Delim('{') || jd == json.Delim('[') {
+							nesting++
+						} else if jd == json.Delim('}') || jd == json.Delim(']') {
+							// don't have to care about mis-matching closing tokens; Token() will raise an error if invalid/missing
+							nesting--
+						}
+					}
+					if nesting == 0 {
+						break
+					}
+				}
+			}
+		}
+		return nil
+	}
+
+	advq := fmt.Sprintf("ADVISE %s", qry)
+	err := executeSQLProcessingResults(advq, nil, extractAdvise)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func addIndextoKeyspaceFromCreateStmt(crtidx string) error {
+	m := advreg.FindStringSubmatch(crtidx)
+	if m != nil {
+		p := parsePath(m[1])
+		k := DB.keyspaceByParts(p)
+		if k == nil {
+			return fmt.Errorf("keyspace in Advisor returned statement not found: %v", k)
+		}
+		k.addIndex(m[2])
+	}
+	return nil
+}
+
+func createAdviseIndexes() error {
+	for i := range Queries {
+		if rand.Intn(10) < 3 {
+			qry := Queries[i].SQL("")
+			if err := runAdvise(qry); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

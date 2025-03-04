@@ -273,6 +273,28 @@ func (this *Database) keyspaceByName(name string) *Keyspace {
 	return nil
 }
 
+func (this *Database) keyspaceByParts(p []string) *Keyspace {
+	if len(p) != 2 && len(p) != 4 {
+		return nil
+	}
+
+	for i := range this.keyspaces {
+		if len(this.keyspaces[i].parts) == len(p) {
+			found := true
+			for pi := 1; pi < len(p); pi++ {
+				if this.keyspaces[i].parts[pi] != p[pi] {
+					found = false
+					break
+				}
+			}
+			if found {
+				return this.keyspaces[i]
+			}
+		}
+	}
+	return nil
+}
+
 func (this *Database) addKeyspace(ks *Keyspace) bool {
 	if this.keyspaceByName(ks.name) != nil {
 		return false

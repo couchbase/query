@@ -607,7 +607,7 @@ func executeSQLWithoutResults(stmt string, params map[string]interface{}, logRes
 }
 
 // issues an SQL statement and streams the results; returns the resultCount, elapsedTime and an array of error codes (may be empty)
-func executeSQLProcessingResults(stmt string, params map[string]interface{}) (int, time.Duration, uint64, []int, error) {
+func executeSQLProcessingResults(stmt string, params map[string]interface{}, processResults func(respBody io.ReadCloser) error) error {
 	//logging.Debugf("%s", stmt)
 	postData := url.Values{}
 	postData.Set("signature", "false")
@@ -622,8 +622,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 	u, _ := url.JoinPath(_QUERY_URL, "/query/service")
 	req, err := http.NewRequest("POST", u, bytes.NewBufferString(postData.Encode()))
 	if err != nil {
-		err = fmt.Errorf("Failed to create request: (%T) %v", err, err)
-		return -1, 0, 0, nil, err
+		return fmt.Errorf("Failed to create request: (%T) %v", err, err)
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "Combined test")
@@ -641,8 +640,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		err = fmt.Errorf("Failed to execute request: (%T) %v", err, err)
-		return -1, 0, 0, nil, err
+		return fmt.Errorf("Failed to execute request: (%T) %v", err, err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		b, _ := io.ReadAll(resp.Body)
@@ -651,107 +649,13 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}) (in
 		} else {
 			err = fmt.Errorf("Status: %v. %s", resp.Status, string(b))
 		}
-		return -1, 0, 0, nil, err
+		return err
 	}
 	if !strings.Contains(resp.Header.Get("Content-Type"), "application/json") {
-		return -1, 0, 0, nil, fmt.Errorf("Invalid content: %v", resp.Header.Get("Content-Type"))
+		return fmt.Errorf("Invalid content: %v", resp.Header.Get("Content-Type"))
 	}
 
-	// stream the results
-	var elapsed time.Duration
-	var errs []int
-	var results int
-	var usedMemory uint64
-
-	dec := json.NewDecoder(resp.Body)
-	tok, err := dec.Token()
-	if err != nil {
-		err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
-		return -1, 0, 0, nil, err
-	}
-	if r, ok := tok.(json.Delim); !ok || r != json.Delim('{') {
-		return -1, 0, 0, nil, fmt.Errorf("Unexpected JSON content: missing opening '{'.")
-	}
-	for dec.More() { // top-level field processing
-		f, err := dec.Token()
-		if err != nil {
-			err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
-			return -1, 0, 0, nil, err
-		}
-		fn, ok := f.(string)
-		if !ok {
-			return -1, 0, 0, nil, fmt.Errorf("Invalid type for field name: %T", f)
-		}
-		switch fn {
-		case "errors":
-			// read the errors as a single object
-			var i interface{}
-			if err = dec.Decode(&i); err != nil {
-				err = fmt.Errorf("JSON decode of errors failed: (%T) %v", err, err)
-				return -1, 0, 0, nil, err
-			}
-			if ai, ok := i.([]interface{}); !ok {
-				return -1, 0, 0, nil, fmt.Errorf("Invalid type for errors field: %T", i)
-			} else {
-				for n := range ai {
-					if m, ok := ai[n].(map[string]interface{}); ok {
-						if c, ok := m["code"].(float64); ok {
-							errs = append(errs, int(c))
-						}
-					}
-				}
-			}
-		case "metrics":
-			// read the metrics as a single object
-			var _unmarshalled struct {
-				ElapsedTime string `json:"elapsedTime"`
-				ResultCount int    `json:"resultCount"`
-				UsedMemory  uint64 `json:"usedMemory"`
-			}
-			if err = dec.Decode(&_unmarshalled); err != nil {
-				err = fmt.Errorf("JSON decode of metrics failed: (%T) %v", err, err)
-				return -1, 0, 0, nil, err
-			}
-			elapsed, err = time.ParseDuration(_unmarshalled.ElapsedTime)
-			if err != nil {
-				return -1, 0, 0, nil, fmt.Errorf("Metrics elapsedTime is invalid: %v", err)
-			}
-
-			results = _unmarshalled.ResultCount
-			usedMemory = _unmarshalled.UsedMemory
-		default:
-			// all other fields are streamed and discarded
-			nesting := 0
-			for {
-				tok, err = dec.Token()
-				if err != nil {
-					err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
-					return -1, 0, 0, nil, err
-				}
-				if jd, ok := tok.(json.Delim); ok {
-					if jd == json.Delim('{') || jd == json.Delim('[') {
-						nesting++
-					} else if jd == json.Delim('}') || jd == json.Delim(']') {
-						// don't have to care about mis-matching closing tokens; Token() will raise an error if invalid/missing
-						nesting--
-					}
-				}
-				if nesting == 0 {
-					break
-				}
-			}
-		}
-	}
-	tok, err = dec.Token()
-	if err != nil {
-		err = fmt.Errorf("JSON decode token failed: (%T) %v", err, err)
-		return -1, 0, 0, nil, err
-	}
-	if r, ok := tok.(json.Delim); !ok || r != json.Delim('}') {
-		return -1, 0, 0, nil, fmt.Errorf("Unexpected JSON content: missing closing '}'.")
-	}
-
-	return results, elapsed, usedMemory, errs, nil
+	return processResults(resp.Body)
 }
 
 // gets the PID of the given process name

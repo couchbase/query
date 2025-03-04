@@ -410,7 +410,100 @@ func (this *Query) AsSubQuery() string {
 
 func (this *Query) Execute(requestParams map[string]interface{}) error {
 	atomic.AddUint64(&this.executions, 1)
-	results, elapsed, usedMemory, errs, err := executeSQLProcessingResults(this.SQL(""), requestParams)
+	var results int
+	var elapsed time.Duration
+	var usedMemory uint64
+	var errs []int
+	// streams the result
+	processResults := func(respBody io.ReadCloser) error {
+		dec := json.NewDecoder(respBody)
+		tok, derr := dec.Token()
+		if derr != nil {
+			return fmt.Errorf("JSON decode token failed: (%T) %v", derr, derr)
+		}
+		if r, ok := tok.(json.Delim); !ok || r != json.Delim('{') {
+			return fmt.Errorf("Unexpected JSON content: missing opening '{'.")
+		}
+		for dec.More() { // top-level field processing
+			f, derr := dec.Token()
+			if derr != nil {
+				return fmt.Errorf("JSON decode token failed: (%T) %v", derr, derr)
+				// return -1, 0, 0, nil, err
+			}
+			fn, ok := f.(string)
+			if !ok {
+				return fmt.Errorf("Invalid type for field name: %T", f)
+			}
+			switch fn {
+			case "errors":
+				// read the errors as a single object
+				var i interface{}
+				if derr = dec.Decode(&i); derr != nil {
+					return fmt.Errorf("JSON decode of errors failed: (%T) %v", derr, derr)
+				}
+				if ai, ok := i.([]interface{}); !ok {
+					return fmt.Errorf("Invalid type for errors field: %T", i)
+				} else {
+					for n := range ai {
+						if m, ok := ai[n].(map[string]interface{}); ok {
+							if c, ok := m["code"].(float64); ok {
+								errs = append(errs, int(c))
+							}
+						}
+					}
+				}
+			case "metrics":
+				// read the metrics as a single object
+				var _unmarshalled struct {
+					ElapsedTime string `json:"elapsedTime"`
+					ResultCount int    `json:"resultCount"`
+					UsedMemory  uint64 `json:"usedMemory"`
+				}
+				if derr = dec.Decode(&_unmarshalled); derr != nil {
+					return fmt.Errorf("JSON decode of metrics failed: (%T) %v", derr, derr)
+				}
+				elapsed, derr = time.ParseDuration(_unmarshalled.ElapsedTime)
+				if derr != nil {
+					return fmt.Errorf("Metrics elapsedTime is invalid: %v", derr)
+				}
+
+				results = _unmarshalled.ResultCount
+				usedMemory = _unmarshalled.UsedMemory
+			default:
+				// all other fields are streamed and discarded
+				nesting := 0
+				for {
+					tok, derr = dec.Token()
+					if derr != nil {
+						return fmt.Errorf("JSON decode token failed: (%T) %v", derr, derr)
+						// return -1, 0, 0, nil, err
+					}
+					if jd, ok := tok.(json.Delim); ok {
+						if jd == json.Delim('{') || jd == json.Delim('[') {
+							nesting++
+						} else if jd == json.Delim('}') || jd == json.Delim(']') {
+							// don't have to care about mis-matching closing tokens; Token() will raise an error if invalid/missing
+							nesting--
+						}
+					}
+					if nesting == 0 {
+						break
+					}
+				}
+			}
+		}
+		tok, derr = dec.Token()
+		if derr != nil {
+			return fmt.Errorf("JSON decode token failed: (%T) %v", derr, derr)
+		}
+		if r, ok := tok.(json.Delim); !ok || r != json.Delim('}') {
+			return fmt.Errorf("Unexpected JSON content: missing closing '}'.")
+		}
+
+		return nil
+	}
+
+	err := executeSQLProcessingResults(this.SQL(""), requestParams, processResults)
 	if err != nil {
 		//logging.Debugf("%v", err)
 		// Uncomment for verbose error logging
