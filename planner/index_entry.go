@@ -136,12 +136,22 @@ func newIndexEntry(index datastore.Index, idxKeys datastore.IndexKeys, includes 
 	if len(includes) > 0 && includeKeys > 0 {
 		rv.idxSargIncludes = make(datastore.IndexKeys, 0, len(includes))
 		rv.sargIncludes = make(expression.Expressions, 0, len(includes))
-		for i := len(idxKeys); i < len(skeys); i++ {
+		numSargIncludes := len(includes)
+		// remove trailing include columns that are not sargable
+		for i := len(skeys) - 1; i >= len(idxKeys); i-- {
 			if skeys[i] {
-				includeKey := &datastore.IndexKey{includes[i-len(idxKeys)], datastore.IK_NONE}
-				rv.idxSargIncludes = append(rv.idxSargIncludes, includeKey)
-				rv.sargIncludes = append(rv.sargIncludes, includes[i-len(idxKeys)])
+				break
 			}
+			numSargIncludes--
+		}
+		for i := 0; i < numSargIncludes; i++ {
+			attrib := datastore.IK_NONE
+			if i == 0 {
+				attrib |= datastore.IK_MISSING
+			}
+			includeKey := &datastore.IndexKey{includes[i], attrib}
+			rv.idxSargIncludes = append(rv.idxSargIncludes, includeKey)
+			rv.sargIncludes = append(rv.sargIncludes, includes[i])
 		}
 	}
 
