@@ -226,7 +226,7 @@ func (this *occurrence) capture(event string, what string) {
 		bufWriter := bufio.NewWriter(zip)
 		if op, ok := asyncOperations[what]; ok {
 			go func() {
-				err = op(zip)
+				err = op(bufWriter)
 				// Flush buffer before closing writers
 				bufWriter.Flush()
 				zip.Close()
@@ -240,8 +240,8 @@ func (this *occurrence) capture(event string, what string) {
 			}()
 			logging.Infof("FFDC: [%#x] Started capture of: %v", this.id, path.Base(name))
 		} else {
-			err = operations[what](zip) // if it panics it is because there is a problem with the event definition
-			bufWriter.Flush()           // Flush buffer before closing
+			err = operations[what](bufWriter) // if it panics it is because there is a problem with the event definition
+			bufWriter.Flush()                 // Flush buffer before closing
 			zip.Close()
 			f.Sync()
 			f.Close()
