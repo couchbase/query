@@ -1067,9 +1067,9 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 		nTerms = len(this.order.Terms())
 	}
 
-	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(),
-		this.limit, this.offset, this.advisorValidate(), len(this.baseKeyspaces) == 1,
-		this.context)
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	return optChooseIntersectScan(keyspace, sargables, nTerms, baseKeyspace, this.limit, this.offset,
+		this.advisorValidate(), len(this.baseKeyspaces) == 1, this.context)
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
@@ -1482,7 +1482,9 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				if !fl.IsJoin() {
 					if useCBO {
 						if fl.Selec() > 0.0 {
-							if !subFltr {
+							// filters marked with EXPR_DEFAULT_LIKE has its
+							// selectivity already accounted for in spans
+							if !subFltr && !fltrExpr.HasExprFlag(expression.EXPR_DEFAULT_LIKE) {
 								selec *= fl.Selec()
 							}
 						} else {
