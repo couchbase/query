@@ -9,6 +9,7 @@
 package ffdc
 
 import (
+	"bufio"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -64,32 +65,33 @@ var operations = map[string]func(io.Writer) error{
 		return nil
 	},
 	MemStats: func(w io.Writer) error {
+		bufWriter := bufio.NewWriter(w)
 		var s runtime.MemStats
 		runtime.ReadMemStats(&s)
-		fmt.Fprintf(w, "Alloc........... %v\n", Human(s.Alloc))
-		fmt.Fprintf(w, "TotalAlloc...... %v\n", Human(s.TotalAlloc))
-		fmt.Fprintf(w, "Sys............. %v\n", Human(s.Sys))
-		fmt.Fprintf(w, "Lookups......... %v\n", s.Lookups)
-		fmt.Fprintf(w, "Mallocs......... %v\n", s.Mallocs)
-		fmt.Fprintf(w, "Frees........... %v\n", s.Frees)
-		fmt.Fprintf(w, "HeapAlloc....... %v\n", Human(s.HeapAlloc))
-		fmt.Fprintf(w, "HeapSys......... %v\n", Human(s.HeapSys))
-		fmt.Fprintf(w, "HeapIdle........ %v\n", Human(s.HeapIdle))
-		fmt.Fprintf(w, "HeapInuse....... %v\n", Human(s.HeapInuse))
-		fmt.Fprintf(w, "HeapReleased.... %v\n", Human(s.HeapReleased))
-		fmt.Fprintf(w, "HeapObjects..... %v\n", s.HeapObjects)
-		fmt.Fprintf(w, "Stack in use.... %v\n", Human(s.StackInuse))
-		fmt.Fprintf(w, "Stack sys....... %v\n", Human(s.StackSys))
-		fmt.Fprintf(w, "MSpan in use.... %v\n", Human(s.MSpanInuse))
-		fmt.Fprintf(w, "MSpan sys....... %v\n", Human(s.MSpanSys))
-		fmt.Fprintf(w, "MCache in use... %v\n", Human(s.MCacheInuse))
-		fmt.Fprintf(w, "MCache sys...... %v\n", Human(s.MCacheSys))
-		fmt.Fprintf(w, "BuckHashSys..... %v\n", Human(s.BuckHashSys))
-		fmt.Fprintf(w, "GCSys........... %v\n", Human(s.GCSys))
-		fmt.Fprintf(w, "OtherSys........ %v\n", Human(s.OtherSys))
-		fmt.Fprintf(w, "NextGC.......... %v\n", s.NextGC)
-		fmt.Fprintf(w, "LastGC.......... %v %v\n", s.LastGC, time.Unix(0, int64(s.LastGC)))
-		fmt.Fprintf(w, "GCPauses........ [PauseEnd         PauseNs]\n                 ")
+		fmt.Fprintf(bufWriter, "Alloc........... %v\n", Human(s.Alloc))
+		fmt.Fprintf(bufWriter, "TotalAlloc...... %v\n", Human(s.TotalAlloc))
+		fmt.Fprintf(bufWriter, "Sys............. %v\n", Human(s.Sys))
+		fmt.Fprintf(bufWriter, "Lookups......... %v\n", s.Lookups)
+		fmt.Fprintf(bufWriter, "Mallocs......... %v\n", s.Mallocs)
+		fmt.Fprintf(bufWriter, "Frees........... %v\n", s.Frees)
+		fmt.Fprintf(bufWriter, "HeapAlloc....... %v\n", Human(s.HeapAlloc))
+		fmt.Fprintf(bufWriter, "HeapSys......... %v\n", Human(s.HeapSys))
+		fmt.Fprintf(bufWriter, "HeapIdle........ %v\n", Human(s.HeapIdle))
+		fmt.Fprintf(bufWriter, "HeapInuse....... %v\n", Human(s.HeapInuse))
+		fmt.Fprintf(bufWriter, "HeapReleased.... %v\n", Human(s.HeapReleased))
+		fmt.Fprintf(bufWriter, "HeapObjects..... %v\n", s.HeapObjects)
+		fmt.Fprintf(bufWriter, "Stack in use.... %v\n", Human(s.StackInuse))
+		fmt.Fprintf(bufWriter, "Stack sys....... %v\n", Human(s.StackSys))
+		fmt.Fprintf(bufWriter, "MSpan in use.... %v\n", Human(s.MSpanInuse))
+		fmt.Fprintf(bufWriter, "MSpan sys....... %v\n", Human(s.MSpanSys))
+		fmt.Fprintf(bufWriter, "MCache in use... %v\n", Human(s.MCacheInuse))
+		fmt.Fprintf(bufWriter, "MCache sys...... %v\n", Human(s.MCacheSys))
+		fmt.Fprintf(bufWriter, "BuckHashSys..... %v\n", Human(s.BuckHashSys))
+		fmt.Fprintf(bufWriter, "GCSys........... %v\n", Human(s.GCSys))
+		fmt.Fprintf(bufWriter, "OtherSys........ %v\n", Human(s.OtherSys))
+		fmt.Fprintf(bufWriter, "NextGC.......... %v\n", s.NextGC)
+		fmt.Fprintf(bufWriter, "LastGC.......... %v %v\n", s.LastGC, time.Unix(0, int64(s.LastGC)))
+		fmt.Fprintf(bufWriter, "GCPauses........ [PauseEnd         PauseNs]\n                 ")
 		start := int((s.NumGC + 255) % 256)
 		if start < 0 {
 			start = 255
@@ -98,13 +100,13 @@ var operations = map[string]func(io.Writer) error{
 		for i := start; ; {
 			if c > 0 {
 				if c == 4 {
-					fmt.Fprintf(w, "\n                 ")
+					fmt.Fprintf(bufWriter, "\n                 ")
 					c = 0
 				} else {
-					fmt.Fprintf(w, " ")
+					fmt.Fprintf(bufWriter, " ")
 				}
 			}
-			fmt.Fprintf(w, "[%s %7d]", time.Unix(0, int64(s.PauseEnd[i])).Format("150405.000000000"), s.PauseNs[i])
+			fmt.Fprintf(bufWriter, "[%s %7d]", time.Unix(0, int64(s.PauseEnd[i])).Format("150405.000000000"), s.PauseNs[i])
 			c++
 			i--
 			if i < 0 {
@@ -114,12 +116,12 @@ var operations = map[string]func(io.Writer) error{
 				break
 			}
 		}
-		fmt.Fprintf(w, "\n")
-		fmt.Fprintf(w, "NumGC........... %v\n", s.NumGC)
-		fmt.Fprintf(w, "NumForcedGC..... %v\n", s.NumForcedGC)
-		fmt.Fprintf(w, "GCCPUFraction... %v\n", s.GCCPUFraction)
-		fmt.Fprintf(w, "DebugGC......... %v\n", s.DebugGC)
-		return nil
+		fmt.Fprintf(bufWriter, "\n")
+		fmt.Fprintf(bufWriter, "NumGC........... %v\n", s.NumGC)
+		fmt.Fprintf(bufWriter, "NumForcedGC..... %v\n", s.NumForcedGC)
+		fmt.Fprintf(bufWriter, "GCCPUFraction... %v\n", s.GCCPUFraction)
+		fmt.Fprintf(bufWriter, "DebugGC......... %v\n", s.DebugGC)
+		return bufWriter.Flush()
 	},
 	Stacks: func(w io.Writer) error {
 		p := pprof.Lookup("goroutine")
@@ -203,14 +205,30 @@ type occurrence struct {
 }
 
 func (this *occurrence) capture(event string, what string) {
-	name := strings.Join([]string{fileNamePrefix, event, what, pidString, this.ts}, "_") + ".gz"
+	var nameBuilder strings.Builder
+	nameBuilder.WriteString(fileNamePrefix)
+	nameBuilder.WriteByte('_')
+	nameBuilder.WriteString(event)
+	nameBuilder.WriteByte('_')
+	nameBuilder.WriteString(what)
+	nameBuilder.WriteByte('_')
+	nameBuilder.WriteString(pidString)
+	nameBuilder.WriteByte('_')
+	nameBuilder.WriteString(this.ts)
+	nameBuilder.WriteString(".gz")
+	name := nameBuilder.String()
+
 	f, err := os.Create(path.Join(GetPath(), name))
 	if err == nil {
 		this.files = append(this.files, name)
 		zip := gzip.NewWriter(f)
+		// Add buffered writer wrapper
+		bufWriter := bufio.NewWriter(zip)
 		if op, ok := asyncOperations[what]; ok {
 			go func() {
 				err = op(zip)
+				// Flush buffer before closing writers
+				bufWriter.Flush()
 				zip.Close()
 				f.Sync()
 				f.Close()
@@ -223,6 +241,7 @@ func (this *occurrence) capture(event string, what string) {
 			logging.Infof("FFDC: [%#x] Started capture of: %v", this.id, path.Base(name))
 		} else {
 			err = operations[what](zip) // if it panics it is because there is a problem with the event definition
+			bufWriter.Flush()           // Flush buffer before closing
 			zip.Close()
 			f.Sync()
 			f.Close()
@@ -383,6 +402,7 @@ func (this *reason) cleanup() {
 			i++
 		}
 	}
+
 	if len(this.occurrences) < _OCCURENCE_LIMIT {
 		return
 	}
