@@ -69,6 +69,7 @@ type CurlContext interface {
 	GetAllowlist() map[string]interface{}
 	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
+	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (interface{}, error)
 }
 
 type InlistContext interface {

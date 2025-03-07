@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
+	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -2269,4 +2270,8 @@ func (this *Context) checkPause(op *base) {
 		this.pauseWg.Wait()
 		op.switchPhase(phase)
 	}
+}
+
+func (this *Context) LoadX509KeyPair(certFile, keyFile string, passPhrase []byte) (interface{}, error) {
+	return ntls.LoadX509KeyPair(certFile, keyFile, passPhrase)
 }
