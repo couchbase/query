@@ -35,4 +35,5 @@ type CurlContext interface {
 	Credentials() *auth.Credentials
 	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
+	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (interface{}, error)
 }

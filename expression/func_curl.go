@@ -365,6 +365,8 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	}
 
 	var body io.Reader
+	var certFile, keyFile string
+	var passPhrase []byte
 	body = nil
 	username := ""
 	password := ""
@@ -494,53 +496,39 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 			}
 
 		case "cacert":
-			// All the certificates are stored withing the ..var/lib/couchbase/n1qlcerts
-			// Find the os
-			subdir := filepath.FromSlash(_PATH)
-
-			// Get directory of currently running file.
-			certDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+			caFile, err := getFileName(inputVal)
 			if err != nil {
-				// Get ip addresses to display in error
-				name, _ := os.Hostname()
-				addrs, err := net.LookupHost(name)
-				if err != nil {
-					logging.Infof("Error looking up hostname: %v", err)
-				}
-
-				hostname = strings.Join(addrs, ",")
-				return nil, fmt.Errorf(subdir + " does not exist on node " + hostname)
+				return nil, err
 			}
-
-			// nsserver uses the inbox folder within var/lib/couchbase to read certificates from.
-			certDir = certDir + subdir
-			// dir. Paths are not allowed.
-			if inputVal.Type() != value.STRING {
-				return nil, fmt.Errorf("Incorrect type for cacert option in CURL. It should be a string. ")
-			}
-			certName := inputVal.ToString()
-
-			// Make sure this file is not a path.
-			dir, file := path.Split(certName)
-			if dir != "" || file == "" {
-				return nil, fmt.Errorf("Cacert should only contain the certificate name. Paths are invalid. ")
-			}
-
-			// Also make sure the extension is .pem
-			if path.Ext(file) != ".pem" {
-				return nil, fmt.Errorf("Cacert should only contain the certificate name that refers to a valid pem file. ")
-			}
-
-			caCert, err := ioutil.ReadFile(certDir + file)
-
+			caCert, err := ioutil.ReadFile(caFile)
 			if err != nil {
-				return nil, fmt.Errorf("Error in reading cacert file - %v", err)
+				return nil, fmt.Errorf("Error in reading %s file - %v", caFile, err)
 			}
 
 			caCertPool := x509.NewCertPool()
 			caCertPool.AppendCertsFromPEM(caCert)
 
 			transport.TLSClientConfig.RootCAs = caCertPool
+
+		case "cert":
+			var err1 error
+			certFile, err1 = getFileName(inputVal)
+			if err1 != nil {
+				return nil, err1
+			}
+
+		case "key":
+			var err1 error
+			keyFile, err1 = getFileName(inputVal)
+			if err1 != nil {
+				return nil, err1
+			}
+
+		case "passphrase":
+			if inputVal.Type() != value.STRING {
+				return "", fmt.Errorf("Passphrase must be a string.")
+			}
+			passPhrase = []byte(inputVal.ToString())
 
 		case "result-cap":
 			// Restricted to 0.5 - 256 MiB
@@ -564,6 +552,22 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 
 		}
 
+	}
+
+	if certFile != "" && keyFile != "" {
+		if _curlContext, ok := context.(CurlContext); ok {
+			tlsCert1, err := _curlContext.LoadX509KeyPair(certFile, keyFile, passPhrase)
+			if err != nil {
+				return nil, err
+			}
+			tlsCert, _ := tlsCert1.(tls.Certificate)
+			transport.TLSClientConfig.Certificates = []tls.Certificate{tlsCert}
+		} else {
+			return nil, fmt.Errorf("Curl context is nil")
+		}
+	} else if certFile != "" || keyFile != "" {
+		//error need to pass both certfile and keyfile
+		return nil, fmt.Errorf("Requires both cert and key options")
 	}
 
 	// Akin to curl
@@ -1137,4 +1141,39 @@ func hasPathPrefix(path string, prefix string) bool {
 
 	return true
 
+}
+
+func getFileName(val value.Value) (string, error) {
+	// All the certificates are stored withing the ..var/lib/couchbase/n1qlcerts
+	// Find the os
+	subdir := filepath.FromSlash(_PATH)
+
+	// Get directory of currently running file.
+	certDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		// Get ip addresses to display in error
+		name, _ := os.Hostname()
+		addrs, err := net.LookupHost(name)
+		if err != nil {
+			logging.Infof("Error looking up hostname: %v", err)
+		}
+
+		hostname = strings.Join(addrs, ",")
+		return "", fmt.Errorf(subdir + " does not exist on node " + hostname)
+	}
+
+	// nsserver uses the inbox folder within var/lib/couchbase to read certificates from.
+	certDir = certDir + subdir
+	// dir. Paths are not allowed.
+	if val.Type() != value.STRING {
+		return "", fmt.Errorf("cacert/cert/key must be a string.")
+	}
+	name := val.ToString()
+	// Make sure this file is not a path.
+	dir, file := path.Split(name)
+	if dir != "" || file == "" {
+		return "", fmt.Errorf("cacert/cert/key should only contain the name. Paths are invalid.")
+	}
+
+	return certDir + file, nil
 }
