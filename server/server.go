@@ -137,52 +137,93 @@ const (
 	_SERVER_SHUTDOWN = 2
 )
 
-type gate struct {
+type requestGate struct {
 	counter        atomic.AlignedUint64
 	waiting        atomic.AlignedInt64
 	lock           sync.Mutex
 	cond           *sync.Cond
 	bypass         bool
 	sleepInterrupt chan bool
+	enabled        bool // indicates if the gate should perform its activities.
 }
 
-func (this *gate) init() {
+func (this *requestGate) init() {
 	this.cond = sync.NewCond(&this.lock)
 	this.sleepInterrupt = make(chan bool, 1)
 }
 
-func (this *gate) mustWait() bool {
+func (this *requestGate) mustWait() bool {
+	// Check without lock because this can be a hot path
+	// The admission control featureis disabled by default and rarely enabled.
+	// Race conditions during enablement toggling are handled safely in wait().
+	// In the worst case, a few requests might skip waiting when the feature is toggled from disabled to enabled.
+	// The check for this.enabled under lock in wait() ensures no requests are orphaned when the feature is
+	// toggled from disabled to enabled.
+	if !this.enabled {
+		return false
+	}
+
 	return !this.bypass || this.waiting > 0
 }
 
-func (this *gate) wait() {
+func (this *requestGate) wait(request Request, l logging.Log) {
 	this.cond.L.Lock()
 	// Whenever a new waiter joins the queue, a new check should be made if the head of the queue can be released to run
 	select {
 	case this.sleepInterrupt <- true:
 	default:
 	}
-	atomic.AddUint64(&this.counter, 1)
-	atomic.AddInt64(&this.waiting, 1)
-	this.cond.Wait()
-	atomic.AddInt64(&this.waiting, -1)
+
+	// Check if the gate is enabled so that the request does not wait if the admission control has been disabled
+	if this.enabled {
+		logging.Infof("Pausing request %v due to memory pressure.", request.Id())
+		start := time.Now()
+
+		atomic.AddUint64(&this.counter, 1)
+		atomic.AddInt64(&this.waiting, 1)
+		this.cond.Wait()
+		atomic.AddInt64(&this.waiting, -1)
+
+		request.SetAdmissionWaitTime(time.Now().Sub(start))
+		logging.Infof("Resuming paused request %v after %v.", request.Id(),
+			util.FormatDuration(request.AdmissionWaitTime(), request.DurationStyle()))
+		l.Infof("Request was paused for %v", util.FormatDuration(request.AdmissionWaitTime(), request.DurationStyle()))
+	}
+
 	this.cond.L.Unlock()
 }
 
-func (this *gate) releaseOne() {
+func (this *requestGate) releaseOne() {
+	this.cond.L.Lock()
 	this.cond.Signal()
+	this.cond.L.Unlock()
 }
 
-func (this *gate) releaseAll() {
+func (this *requestGate) releaseAll() {
+	// Release all waiters
+	this.cond.L.Lock()
 	this.cond.Broadcast()
+	this.cond.L.Unlock()
 }
 
-func (this *gate) count() uint64 {
+func (this *requestGate) count() uint64 {
 	return atomic.LoadUint64(&this.counter)
 }
 
-func (this *gate) waiters() uint64 {
+func (this *requestGate) waiters() uint64 {
 	return uint64(atomic.LoadInt64(&this.waiting))
+}
+
+func (this *requestGate) changeState(enabled bool) {
+	// Modify enabled flag under lock to:
+	// 1. wait() checks this state under lock ensuring it sees the latest value. Prevents requests waiting when
+	//  admission control is changed to disabled
+	// 2. Broadcast/Signal/Wait must use the condional variable lock, to ensure that no waiters are orphaned.
+	// Without this, a request might check if waiting is needed, then the gate gets disabled, and the request could wait
+	// indefinitely for a signal that never comes.
+	this.cond.L.Lock()
+	this.enabled = enabled
+	this.cond.L.Unlock()
 }
 
 type Server struct {
@@ -193,41 +234,43 @@ type Server struct {
 	requestSize    atomic.AlignedInt64
 
 	sync.RWMutex
-	unboundQueue      runQueue
-	plusQueue         runQueue
-	transactionQueues txRunQueues
-	datastore         datastore.Datastore
-	systemstore       datastore.Systemstore
-	configstore       clustering.ConfigurationStore
-	acctstore         accounting.AccountingStore
-	namespace         string
-	readonly          bool
-	timeout           time.Duration
-	txTimeout         time.Duration
-	signature         bool
-	metrics           bool
-	memprofile        string
-	cpuprofile        string
-	enterprise        bool
-	pretty            bool
-	srvprofile        Profile
-	srvcontrols       bool
-	allowlist         map[string]interface{}
-	autoPrepare       bool
-	memoryQuota       uint64
-	atrCollection     string
-	numAtrs           int
-	settingsCallback  func(string, interface{})
-	gcpercent         int
-	shutdown          int
-	shutdownStart     time.Time
-	requestErrorLimit int
-	memoryStats       runtime.MemStats
-	lastTotalTime     int64
-	lastNow           time.Time
-	lastCpuPercent    float64
-	useReplica        value.Tristate
-	requestGate       gate
+	unboundQueue           runQueue
+	plusQueue              runQueue
+	transactionQueues      txRunQueues
+	datastore              datastore.Datastore
+	systemstore            datastore.Systemstore
+	configstore            clustering.ConfigurationStore
+	acctstore              accounting.AccountingStore
+	namespace              string
+	readonly               bool
+	timeout                time.Duration
+	txTimeout              time.Duration
+	signature              bool
+	metrics                bool
+	memprofile             string
+	cpuprofile             string
+	enterprise             bool
+	pretty                 bool
+	srvprofile             Profile
+	srvcontrols            bool
+	allowlist              map[string]interface{}
+	autoPrepare            bool
+	memoryQuota            uint64
+	atrCollection          string
+	numAtrs                int
+	settingsCallback       func(string, interface{})
+	gcpercent              int
+	shutdown               int
+	shutdownStart          time.Time
+	requestErrorLimit      int
+	memoryStats            runtime.MemStats
+	lastTotalTime          int64
+	lastNow                time.Time
+	lastCpuPercent         float64
+	useReplica             value.Tristate
+	requestGate            requestGate
+	admissionsLock         sync.Mutex
+	admissionsRoutineState admissionsRoutineState
 }
 
 // Default and min Keep Alive Length
@@ -238,6 +281,14 @@ const KEEP_ALIVE_MIN = 1024
 const (
 	SERVICERS_MULTIPLIER     = 4
 	PLUSSERVICERS_MULTIPLIER = 16
+)
+
+type admissionsRoutineState int
+
+const (
+	_INACTIVE admissionsRoutineState = iota
+	_ACTIVE
+	_RESTART
 )
 
 func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clustering.ConfigurationStore,
@@ -274,13 +325,17 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	rv.SetNumAtrs(datastore.DEF_NUMATRS)
 	rv.SetUseReplica(value.NONE)
 
+	// Must be initialized before N1QL feature control can be set
+	rv.requestGate.init()
+	rv.admissionsRoutineState = _INACTIVE
+
 	// set default values
 	rv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
 	if rv.enterprise {
-		util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL)
+		rv.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL)
 		util.SetUseCBO(util.DEF_USE_CBO)
 	} else {
-		util.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
+		rv.SetN1qlFeatureControl(util.DEF_N1QL_FEAT_CTRL | util.CE_N1QL_FEAT_CTRL)
 		util.SetUseCBO(util.CE_USE_CBO)
 	}
 
@@ -310,10 +365,6 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	}
 	n1ql.SetNamespaces(nsm)
 	rv.StartStatsCollector()
-
-	rv.requestGate.init()
-	go rv.admissions()
-
 	return rv, nil
 }
 
@@ -1336,13 +1387,7 @@ func (this *Server) ServicerPauses() uint64 {
 
 func (this *Server) admit(request Request, l logging.Log) {
 	if this.requestGate.mustWait() {
-		logging.Infof("Pausing request %v due to memory pressure.", request.Id())
-		start := time.Now()
-		this.requestGate.wait()
-		request.SetAdmissionWaitTime(time.Now().Sub(start))
-		logging.Infof("Resuming paused request %v after %v.", request.Id(),
-			util.FormatDuration(request.AdmissionWaitTime(), request.DurationStyle()))
-		l.Infof("Request was paused for %v", util.FormatDuration(request.AdmissionWaitTime(), request.DurationStyle()))
+		this.requestGate.wait(request, l)
 	}
 }
 
@@ -1369,11 +1414,59 @@ const (
 )
 
 func (this *Server) admissions() {
+
+	this.admissionsLock.Lock()
+	// Exit if this routine is already running. Only one admissions routine can run.
+	if this.admissionsRoutineState == _ACTIVE {
+		this.admissionsLock.Unlock()
+		return
+	}
+	this.admissionsRoutineState = _ACTIVE
+	this.admissionsLock.Unlock()
+
+	logging.Infof(_ADMISSION_MSG_PREFIX + "Admission control routine started.")
 	triggered := false
 	lastFFDC := int64(0)
 	lastError := int64(0)
 	ticker := time.NewTicker(_ADMISSION_CHECK_TIME_UNIT)
 	waitInterval := _ADMISSION_CHECK_INTERVAL
+	this.requestGate.bypass = false
+	this.requestGate.changeState(true)
+
+	defer func() {
+
+		ticker.Stop()
+
+		// drain the channel
+		select {
+		case <-this.requestGate.sleepInterrupt:
+		default:
+		}
+
+		this.admissionsLock.Lock()
+
+		e := recover()
+		if e != nil {
+			this.admissionsRoutineState = _INACTIVE
+			this.admissionsLock.Unlock()
+			go this.admissions()
+			return
+		}
+
+		if this.admissionsRoutineState == _RESTART {
+			// Restart the routine if required
+			this.admissionsRoutineState = _INACTIVE
+			this.admissionsLock.Unlock()
+			go this.admissions()
+			return
+		} else {
+			// Routine should no longer be active
+			this.admissionsRoutineState = _INACTIVE
+		}
+
+		this.admissionsLock.Unlock()
+	}()
+
 	for {
 		select {
 		case <-this.requestGate.sleepInterrupt:
@@ -1385,13 +1478,46 @@ func (this *Server) admissions() {
 			continue
 		}
 		waitInterval = _ADMISSION_CHECK_INTERVAL
-		if !triggered && !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_ADMISSION_CONTROL) {
-			if !this.requestGate.bypass {
-				this.requestGate.bypass = true
+
+		// If admission control is disabled, release all waiting servicers and un-pause all paused active requestss
+		if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_UNRESTRICTED_ADMISSION_AND_ACTIVITY) {
+			logging.Infof(_ADMISSION_MSG_PREFIX + "Admission control has been disabled. Shutting down admission control routine.")
+
+			this.requestGate.bypass = true
+			this.requestGate.changeState(false)
+
+			// Release all waiting servicers
+			for this.requestGate.waiters() > 0 {
 				this.requestGate.releaseAll()
 			}
-			continue
+
+			// Un-pause all paused active requests
+			released := 0
+			var reqs []Request
+			ActiveRequestsForEach(func(id string, req Request) bool {
+				if req.State() == RUNNING {
+					reqs = append(reqs, req)
+				}
+				return true
+			}, nil)
+
+			for _, req := range reqs {
+				if ctx := req.ExecutionContext(); ctx != nil {
+					if ctx.Pause(false) {
+						released++
+					}
+				}
+			}
+
+			if released > 0 {
+				logging.Infof(_ADMISSION_MSG_PREFIX+"Request pipeline(s) resumed: %d", released)
+			} else {
+				logging.Infof(_ADMISSION_MSG_PREFIX + "No request pipelines to resume.")
+			}
+
+			return
 		}
+
 		mu, mf, lastGC := this.MemoryUsage(true)
 		if triggered || mf < _ADMISSION_MIN_FREE_MEM_PERCENT {
 			logging.Debugf(_ADMISSION_MSG_PREFIX+"triggered: %v mf: %v", triggered, mf)
@@ -2478,4 +2604,29 @@ func (this *Server) SetUseReplica(useReplica value.Tristate) {
 
 func (this *Server) UseReplicaToString() string {
 	return value.TRISTATE_NAMES[this.useReplica]
+}
+
+func (this *Server) SetN1qlFeatureControl(control uint64) {
+	this.admissionsLock.Lock()
+	prev := util.SetN1qlFeatureControl(control)
+	prevAdmissionControlEnabled := !util.IsFeatureEnabled(prev, util.N1QL_UNRESTRICTED_ADMISSION_AND_ACTIVITY)
+	nowAdmissionControlEnabled := !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_UNRESTRICTED_ADMISSION_AND_ACTIVITY)
+
+	// Admission control was previously disabled, now it is enabled
+	if !prevAdmissionControlEnabled && nowAdmissionControlEnabled {
+		// If no admissions routine is running, start it.
+		if this.admissionsRoutineState == _INACTIVE {
+			this.admissionsLock.Unlock()
+			go this.admissions()
+			return
+		} else if this.admissionsRoutineState == _ACTIVE {
+			// If the routine is running, it could be in the process of shutting down. Indicate that the routine must be restarted
+			this.admissionsRoutineState = _RESTART
+		}
+	}
+
+	// If admission control is disabled, the admissions routine will stop itself.
+
+	this.admissionsLock.Unlock()
+
 }

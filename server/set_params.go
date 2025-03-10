@@ -154,9 +154,9 @@ var _SETTERS = map[string]Setter{
 	N1QLFEATCTRL: func(s *Server, o interface{}) errors.Error {
 		value := getHexNumber(o)
 		if s.enterprise {
-			util.SetN1qlFeatureControl(uint64(value))
+			s.SetN1qlFeatureControl(uint64(value))
 		} else {
-			util.SetN1qlFeatureControl(uint64(value) | (util.CE_N1QL_FEAT_CTRL & ^util.N1QL_ENCODED_PLAN))
+			s.SetN1qlFeatureControl(uint64(value) | (util.CE_N1QL_FEAT_CTRL & ^util.N1QL_ENCODED_PLAN))
 		}
 		return nil
 	},
