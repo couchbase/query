@@ -435,6 +435,7 @@ const (
 	IX_STAT_BHIVE_NUM_VEC_OPS     IndexStatType = "BHIVE_NUM_VEC_OPS"     // avg num of vector operations per cell
 	IX_STAT_BHIVE_GRAPH_DISK_SIZE IndexStatType = "BHIVE_GRAPH_DISK_SIZE" // avg graph disk size (4k unit)
 	IX_STAT_BHIVE_FULL_VEC_SIZE   IndexStatType = "BHIVE_FULL_VEC_SIZE"   // avg size of full vectors (4k unit)
+	IX_STAT_BHIVE_NUM_ITEMS       IndexStatType = "BHIVE_NUM_ITEMS"       // number of items
 )
 
 func (indexStatType IndexStatType) String() string {
