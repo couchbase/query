@@ -9,7 +9,6 @@
 package natural
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -25,6 +24,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -44,6 +44,8 @@ func getCompletionsApi(orgid string) string {
 
 const _CACHE_LIMIT = 65536
 const MAX_KEYSPACES = 4
+const _COMPLETIONS_REQ_BACKOFF_INIT = 1 * time.Second
+const _COMPLETIONS_REQ_RETRY = 5
 
 const (
 	// Models
@@ -51,9 +53,10 @@ const (
 )
 
 const (
-	maxconcurrency = 4
-	maxWaiters     = 16
-	WaitTimeout    = 20 * time.Second
+	maxconcurrency       = 4
+	maxWaiters           = 16
+	waitTimeout          = 20 * time.Second
+	maxCorrectionRetries = 4
 )
 
 type naturalReqThrottler struct {
@@ -423,18 +426,14 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 			return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ORG_NOT_FOUND, nlOrganizationId)
 		} else if statusCode == http.StatusUnauthorized {
 
-			// JWT refreshed by an external client
-			// unauthorized, try refreshing jwt
-
 			// possible ways a request was unauthorized
-			// 1. user doesn't access to the organization
-			// 2. JWT refreshed by an external client
+			// 1. user doesn't have access to the organization
+			// 2. JWT was refreshed by an external client
 
-			//  no way to know which is the cause, so we'll retry until we give up
+			//  no way to know which one is the cause, so we'll retry until we give up
 			chatRes.Body.Close()
-			backoff := 1 * time.Second
-			maxRetries := 5
-			for retries := 0; retries < maxRetries; retries++ {
+			backoff := _COMPLETIONS_REQ_BACKOFF_INIT
+			for retries := 0; retries < _COMPLETIONS_REQ_RETRY; retries++ {
 				time.Sleep(backoff)
 
 				var err errors.Error
@@ -476,23 +475,9 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 	}
 
 	defer chatRes.Body.Close()
-	reader := bufio.NewReader(chatRes.Body)
-	var llmResp bytes.Buffer
-	for {
-		b, perr := reader.ReadByte()
-		if perr != nil {
-			if perr != io.EOF {
-				return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_READ_RESP_STREAM,
-					chatCompletionsUrl, perr)
-			}
-			break
-		}
-		llmResp.WriteByte(b)
-	}
-	out := llmResp.Bytes()
+	decoder := json.NewDecoder(chatRes.Body)
 	chatComplRes := ChatCompletionResponse{}
-	perr = json.Unmarshal(out, &chatComplRes)
-	if perr != nil {
+	if perr = decoder.Decode(&chatComplRes); perr != nil {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL, perr)
 	}
 
@@ -603,23 +588,27 @@ func throttleRequest() errors.Error {
 			nlreqThrottler.nlgate() <- true
 		}()
 		return nil
-	case <-time.After(WaitTimeout):
+	case <-time.After(waitTimeout):
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_TIMEOUT)
 	}
 }
 
 func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nloutputOpt naturalOutput,
-	context NaturalContext, record func(execution.Phases, time.Duration)) (string, errors.Error) {
+	explain, advise bool,
+	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
 	waitTime := util.Now()
-	throttleRequest()
+	err := throttleRequest()
 	record(execution.NLWAIT, util.Since(waitTime))
+	if err != nil {
+		return "", nil, err
+	}
 
 	getJwt := util.Now()
 	jwt, err := getJWTFromSessionsApi(nlCred, false)
 	record(execution.GETJWT, util.Since(getJwt))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	keyspaceInfo := make(map[string]interface{}, len(elems))
@@ -627,7 +616,7 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 	keyspaceInfo, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context)
 	record(execution.INFERSCHEMA, util.Since(inferschema))
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	var prompt *prompt
@@ -640,16 +629,136 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 		err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 	}
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	chatcompletionreq := util.Now()
 	content, err := doChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
 	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
-	return content, err
+	if err != nil {
+		return "", nil, err
+	}
+
+	parse := util.Now()
+	stmt, err := getStatement(content, nloutputOpt)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if advise || explain {
+		prefix := "advise "
+		if explain {
+			prefix = "explain "
+		}
+		stmt = prefix + stmt
+	}
+
+	var parseErr error
+	var nlAlgebraStmt algebra.Statement
+	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
+	record(execution.NLPARSE, util.Since(parse))
+	if parseErr != nil {
+		retrytime := util.Now()
+		prompt = buildRetryPrompt(prompt, content, parseErr.Error())
+		orgContent := content
+		for i := 1; i < maxCorrectionRetries; i++ {
+			content, stmt, nlAlgebraStmt, parseErr = retryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
+			if parseErr == nil {
+				record(execution.NLRETRY, util.Since(retrytime))
+				return stmt, nlAlgebraStmt, nil
+			} else {
+				prompt = buildRetryPrompt(prompt, content, parseErr.Error())
+			}
+		}
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
+			fmt.Sprintf("failed to parse generated statement- %v", orgContent), parseErr)
+	}
+
+	return stmt, nlAlgebraStmt, nil
+}
+
+func buildRetryPrompt(pmt *prompt, assistantContent string, reason string) *prompt {
+	assitantmessage := message{
+		Role:    "assistant",
+		Content: assistantContent,
+	}
+	pmt.Messages = append(pmt.Messages, assitantmessage)
+
+	var parseErrorMessage strings.Builder
+	parseErrorMessage.WriteString("The previous response errored out with: ")
+	parseErrorMessage.WriteString(reason)
+	parseErrorMessage.WriteString(".\nCan you correct the previous response?")
+
+	pmt.Messages = append(pmt.Messages, message{
+		Role:    "user",
+		Content: parseErrorMessage.String(),
+	})
+
+	return pmt
+}
+
+func retryRequest(nlCred, nlOrgId string, prompt *prompt,
+	record func(execution.Phases, time.Duration), nloutputOpt naturalOutput,
+	explain, advise bool) (string, string, algebra.Statement, error) {
+
+	waitTime := util.Now()
+	err := throttleRequest()
+	record(execution.NLWAIT, util.Since(waitTime))
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	getJwt := util.Now()
+	jwt, err := getJWTFromSessionsApi(nlCred, false)
+	record(execution.GETJWT, util.Since(getJwt))
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	chatcompletionreq := util.Now()
+	content, err := doChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
+	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	parse := util.Now()
+	stmt, err := getStatement(content, nloutputOpt)
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	if advise || explain {
+		prefix := "advise "
+		if explain {
+			prefix = "explain "
+		}
+		stmt = prefix + stmt
+	}
+
+	var parseErr error
+	var nlAlgebraStmt algebra.Statement
+	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
+	record(execution.NLPARSE, util.Since(parse))
+
+	return content, stmt, nlAlgebraStmt, parseErr
 }
 
 func GetStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {
+	switch nloutputOpt {
+	case SQL:
+		return getSQLContent(content), nil
+	case JSUDF:
+		return getJsContent(content), nil
+	default:
+		return "", errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
+	}
+}
+
+func getStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {
+	if content == "" {
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, "empty response")
+	}
 	switch nloutputOpt {
 	case SQL:
 		return getSQLContent(content), nil

@@ -88,6 +88,7 @@ const (
 	INFERSCHEMA
 	CHATCOMPLETIONSREQ
 	NLWAIT
+	NLRETRY
 
 	// Server layer
 	INSTANTIATE
@@ -148,6 +149,7 @@ var _PHASE_NAMES = []string{
 	INFERSCHEMA:        "inferschema",
 	CHATCOMPLETIONSREQ: "chatcompletionsrequest",
 	NLWAIT:             "nlwait",
+	NLRETRY:            "nlretry",
 
 	INSTANTIATE:            "instantiate",
 	PARSE:                  "parse",

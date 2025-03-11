@@ -611,7 +611,7 @@ const (
 	E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL          ErrorCode = 19211
 	E_NL_ERR_CHATCOMPLETIONS_RESP                ErrorCode = 19212
 	E_NL_MISSING_NL_PARAM                        ErrorCode = 19213
-	E_NL_PARSE_GENERATED_STMT                    ErrorCode = 19214
+	E_NL_FAIL_GENERATED_STMT                     ErrorCode = 19214
 	E_NL_CONTEXT                                 ErrorCode = 19215
 	E_NL_PROMPT_INFER                            ErrorCode = 19216
 	E_NL_ORG_NOT_FOUND                           ErrorCode = 19217

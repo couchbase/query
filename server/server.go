@@ -840,17 +840,11 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 	request.SetNaturalOutput(nloutputOpt.String())
 
-	content, err := natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
-		nlquery, elems, nloutputOpt, request.ExecutionContext(),
-		request.Output().AddPhaseTime)
-	if err != nil {
-		request.Fail(err)
-		request.Failed(this)
-		return true, false
-	}
-
-	parse := util.Now()
-	stmt, err := natural.GetStatement(content, nloutputOpt)
+	var nlAlgebraStmt algebra.Statement
+	var stmt string
+	stmt, nlAlgebraStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
+		nlquery, elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+		request.ExecutionContext(), request.Output().AddPhaseTime)
 	if err != nil {
 		request.Fail(err)
 		request.Failed(this)
@@ -858,23 +852,6 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	request.SetStatement(stmt)
-	if advise, explain := request.NaturalAdvise(), request.NaturalExplain(); advise || explain {
-		prefix := "advise "
-		if explain {
-			prefix = "explain "
-		}
-		stmt = prefix + stmt
-	}
-
-	var parseErr error
-	var nlAlgebraStmt algebra.Statement
-	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
-	request.Output().AddPhaseTime(execution.NLPARSE, util.Since(parse))
-	if parseErr != nil {
-		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_PARSE_GENERATED_STMT, stmt, parseErr))
-		request.Failed(this)
-		return true, false
-	}
 	request.SetQueryContext("")
 	request.IncrementStatementCount()
 	request.SetNaturalStatement(nlAlgebraStmt)

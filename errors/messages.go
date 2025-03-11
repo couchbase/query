@@ -7738,16 +7738,16 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_PARSE_GENERATED_STMT, // 19214
-		symbol:      "E_NL_PARSE_GENERATED_STMT",
-		Description: "Error parsing generated statement: «generated_statement»",
+		Code:        E_NL_FAIL_GENERATED_STMT, // 19214
+		symbol:      "E_NL_FAIL_GENERATED_STMT",
+		Description: "Statement generation failed: «failure»",
 		IsUser:      MAYBE,
 		Reason: []string{
 			"Syntax error in generated statement.",
+			"LLM returned an empty response",
 		},
 		Action: []string{
-			"Examine the \"generated_statement\" field in the response, adjust and re-submit as a direct statement " +
-				"execution request.",
+			"Examine the «failure», adjust and re-submit as a direct statement execution request if possible.",
 		},
 		AppliesTo: []string{
 			"Server",

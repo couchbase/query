@@ -15,7 +15,7 @@ const (
 	PROMPT_IKEY         = "prompt"
 	CHATCOMPLTIONS_IKEY = "chatcompletions_req"
 	NLPARAM_IKEY        = "missing_parameters"
-	PARSE_IKEY          = "parse_generated_stmt"
+	FAIL_IKEY           = "failed_to_generated_stmt"
 	NLCONTEXT_IKEY      = "natural_context"
 	RATE_LIMIT          = "rate_limit"
 	SERVE_NATURAL       = "service_natural_request"
@@ -38,7 +38,7 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL:   {CHATCOMPLTIONS_IKEY, "Error unmarshalling chat completions response"},
 	E_NL_ERR_CHATCOMPLETIONS_RESP:         {CHATCOMPLTIONS_IKEY, "LLM processing failed"},
 	E_NL_MISSING_NL_PARAM:                 {NLPARAM_IKEY, "Natural Language request expects %s request parameter to be set"},
-	E_NL_PARSE_GENERATED_STMT:             {PARSE_IKEY, "Error parsing generated statement: %v"},
+	E_NL_FAIL_GENERATED_STMT:              {FAIL_IKEY, "Statement generation failed: %v"},
 	E_NL_CONTEXT:                          {NLCONTEXT_IKEY, "Error in keyspace list provided for natural language processing"},
 	E_NL_ORG_NOT_FOUND:                    {CHATCOMPLTIONS_IKEY, "Organization \"%v\" not found"},
 	E_NL_ORG_UNAUTH: {CHATCOMPLTIONS_IKEY, "Access to organisation '%v' is not authorized " +
