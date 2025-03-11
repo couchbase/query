@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -191,30 +190,38 @@ func (this *preparedCache) GetName(text, namespace string, context *planner.Prep
 	// name
 	// name is independent of query context as well, so as to make anonynoums and
 	// named prepared statements behaviour consistent
-
-	var buf [_REALM_SIZE]byte
-	realm := buf[0:0:_REALM_SIZE]
-	realm = strconv.AppendInt(realm, int64(context.IndexApiVersion()), 16)
-	realm = append(realm, '_')
-	realm = strconv.AppendInt(realm, int64(context.FeatureControls()), 16)
-	realm = append(realm, '_')
-	realm = strconv.AppendBool(realm, context.UseFts())
-	realm = append(realm, '_')
-	realm = strconv.AppendBool(realm, context.UseCBO())
-	realm = append(realm, '_')
-	realm = append(realm, namespace...)
-	name, err := util.UUIDV5(string(realm), text)
+	var sb strings.Builder
+	sb.Grow(_REALM_SIZE) // Pre-allocate expected size
+	fmt.Fprintf(&sb, "%x_%x_%t_%t_%s",
+		context.IndexApiVersion(),
+		context.FeatureControls(),
+		context.UseFts(),
+		context.UseCBO(),
+		namespace)
+	name, err := util.UUIDV5(sb.String(), text)
 	if err != nil {
 		return "", errors.NewPreparedNameError(err.Error())
 	}
 	return name, nil
 }
 
+const (
+	EmptyQueryContext   = ""
+	DefaultQueryContext = "default:"
+	ColonQueryContext   = ":"
+)
+
 func encodeName(name string, queryContext string) string {
-	if queryContext == "" || queryContext == ":" || queryContext == "default:" {
+	if queryContext == EmptyQueryContext || queryContext == ColonQueryContext || queryContext == DefaultQueryContext {
 		return name
 	}
-	return name + "(" + queryContext + ")"
+	var sb strings.Builder
+	sb.Grow(len(name) + len(queryContext) + 2) // Pre-allocate capacity
+	sb.WriteString(name)
+	sb.WriteByte('(')
+	sb.WriteString(queryContext)
+	sb.WriteByte(')')
+	return sb.String()
 }
 
 func (this *preparedCache) GetPlan(name, text, namespace string, context *planner.PrepareContext) (*plan.Prepared, errors.Error) {
@@ -316,18 +323,15 @@ func GetAutoPrepareName(text string, context *planner.PrepareContext) string {
 	// different feature controls and index API version generate different names
 	// so that the same statement prepared differently can coexist
 
-	var buf [_REALM_SIZE]byte
-	realm := buf[0:0:_REALM_SIZE]
-	realm = strconv.AppendInt(realm, int64(context.IndexApiVersion()), 16)
-	realm = append(realm, '_')
-	realm = strconv.AppendInt(realm, int64(context.FeatureControls()), 16)
-	realm = append(realm, '_')
-	realm = strconv.AppendBool(realm, context.UseFts())
-	realm = append(realm, '_')
-	realm = strconv.AppendBool(realm, context.UseCBO())
-	realm = append(realm, '_')
-	realm = append(realm, context.QueryContext()...)
-	name, err := util.UUIDV5(string(realm), text)
+	var sb strings.Builder
+	sb.Grow(_REALM_SIZE) // Pre-allocate expected size
+	fmt.Fprintf(&sb, "%x_%x_%t_%t_%s",
+		context.IndexApiVersion(),
+		context.FeatureControls(),
+		context.UseFts(),
+		context.UseCBO(),
+		context.QueryContext())
+	name, err := util.UUIDV5(sb.String(), text)
 
 	// this never happens
 	if err != nil {
