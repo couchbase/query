@@ -71,6 +71,7 @@ type Request interface {
 	SetIsPrepare(bool)
 	NamedArgs() map[string]value.Value
 	SetNamedArgs(args map[string]value.Value)
+	FormattedNamedArgs() map[string]value.Value
 	PositionalArgs() value.Values
 	SetPositionalArgs(args value.Values)
 	Namespace() string
@@ -488,8 +489,27 @@ func (this *BaseRequest) IsPrepare() bool {
 	return this.isPrepare
 }
 
+var REDACTED_VALUE = value.NewValue(map[string]interface{}{"redacted": true})
+
+func IsSpecialNamedParam(param string) bool {
+	return len(param) > 2 && param[0] == '_' && param[len(param)-1] == '_'
+}
+
 func (this *BaseRequest) NamedArgs() map[string]value.Value {
 	return this.namedArgs
+}
+
+func (this *BaseRequest) FormattedNamedArgs() map[string]value.Value {
+	prependedNamedArgs := make(map[string]value.Value, len(this.namedArgs))
+
+	for k, v := range this.namedArgs {
+		if IsSpecialNamedParam(k) {
+			prependedNamedArgs["$"+k] = REDACTED_VALUE
+		} else {
+			prependedNamedArgs["$"+k] = v
+		}
+	}
+	return prependedNamedArgs
 }
 
 func (this *BaseRequest) SetNamedArgs(args map[string]value.Value) {

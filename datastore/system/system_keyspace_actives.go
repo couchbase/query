@@ -247,7 +247,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 					ctrl = (ctr == value.TRUE)
 				}
 				if ctrl {
-					na := request.NamedArgs()
+					na := request.FormattedNamedArgs()
 					if na != nil {
 						item.SetField("namedArgs", na)
 					}

@@ -1872,7 +1872,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 			ctrl = (ctr == value.TRUE)
 		}
 		if ctrl {
-			na := request.NamedArgs()
+			na := request.FormattedNamedArgs()
 			if na != nil {
 				reqMap["namedArgs"] = util.InterfaceRedacted(na, redact)
 			}
