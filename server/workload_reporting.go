@@ -47,6 +47,7 @@ const (
 	_AWR_ACTIVE             = uint32(1)
 	_AWR_MAX_PLAN           = 512
 	_AWR_READY_WAIT_INTRVL  = time.Second
+	_AWR_HOSTNAME_REFRESH   = 20 * time.Minute // Time interval for hostname refresh
 )
 
 func InitAWR() {
@@ -752,11 +753,6 @@ func (this *awrCB) reporter() {
 	ticker := time.NewTicker(this.activeConfig.Interval())
 	logging.Debugf("[%p] interval %v", this, this.activeConfig.Interval())
 
-	whoAmI := distributed.RemoteAccess().WhoAmI()
-	if len(whoAmI) > 0 {
-		whoAmI = whoAmI + "::"
-	}
-
 	// block until start has completed
 	this.Lock()
 	this.Unlock()
@@ -773,6 +769,18 @@ func (this *awrCB) reporter() {
 	psd := this.statementDataOmissions
 
 	stopProcessing := false
+
+	// Calculate how many ticks should pass before refreshing the local node name
+	// whoAmI() in certain cases can cause a pool refresh. So only call whoAmI() every 20 minutes.
+	whoAmI := distributed.RemoteAccess().WhoAmI()
+	refreshEvery := int(_AWR_HOSTNAME_REFRESH.Minutes() / this.activeConfig.Interval().Minutes())
+
+	// If interval is at least 20 minutes, refresh every tick
+	if refreshEvery <= 1 {
+		refreshEvery = 1
+	}
+	refreshCounter := 0
+
 	for !stopProcessing {
 		select {
 		case <-ticker.C:
@@ -780,6 +788,12 @@ func (this *awrCB) reporter() {
 			logging.Debugf("[%p] stopping", this)
 			stopProcessing = true
 			this.workerDone.Wait() // wait for worker
+		}
+
+		refreshCounter++
+		if refreshCounter >= refreshEvery {
+			whoAmI = distributed.RemoteAccess().WhoAmI()
+			refreshCounter = 0
 		}
 
 		ks, err := this.activeConfig.getStorageCollection()
@@ -817,6 +831,10 @@ func (this *awrCB) reporter() {
 		this.Unlock()
 
 		if ks != nil {
+			if len(whoAmI) > 0 {
+				whoAmI = whoAmI + "::"
+			}
+
 			tsStart := value.NewValue(ts.UTC().UnixMilli())
 			tsEnd := value.NewValue(this.ts.UTC().UnixMilli())
 			keybase := fmt.Sprintf("awrs::%s::%s", ts.UTC().Format(util.DEFAULT_FORMAT), whoAmI)
