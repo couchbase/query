@@ -279,5 +279,21 @@
                 ]
             }
     ]
+    },
+    {
+	"testcase": "MB-65746",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE EVERY v WITHIN p.`plan`.`~children` SATISFIES (v.`#operator` IS MISSING OR v.`#operator` != 'IntersectScan') END"
+        },
+        "statements":"SELECT * FROM shellTest WHERE c5 = 10 AND c6 != 1 AND c7 NOT IN [1,2] AND c10 > 0 AND c11 != 0",
+        "results": [
+    ]
     }
 ]
