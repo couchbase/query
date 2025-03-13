@@ -78,7 +78,15 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 			//Named Parameters
 			_, werr = io.WriteString(W, NAMEDP)
 			for name, value := range NamedParam {
-				werr = printSET(name, fmt.Sprintf("%v", *value))
+				if len(name) > 2 && name[0] == '_' && name[len(name)-1] == '_' {
+					vals := make([]string, len(*value))
+					for i := range vals {
+						vals[i] = "***"
+					}
+					werr = printSET(name, fmt.Sprintf("%v", vals))
+				} else {
+					werr = printSET(name, fmt.Sprintf("%v", *value))
+				}
 			}
 			_, werr = io.WriteString(W, "\n")
 
