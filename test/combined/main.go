@@ -348,11 +348,6 @@ func main() {
 			}
 		}
 
-		if err := createAdviseIndexes(); err != nil {
-			reportRunFailure(iter, "Failed to advise query.", err)
-			continue
-		}
-
 		if installServer(c, force) != nil {
 			force = true
 			continue
@@ -376,6 +371,12 @@ func main() {
 			reportRunFailure(iter, "Failed to run the preparatory SQL.", err)
 			continue
 		}
+
+		if err := createAdviseIndexes(); err != nil {
+			reportRunFailure(iter, "Failed to advise query.", err)
+			continue
+		}
+
 		if err := RunTest(c); err != nil {
 			reportRunFailure(iter, "Failed to run the test.", err)
 			if strings.Contains(err.Error(), "Interrupted") {
