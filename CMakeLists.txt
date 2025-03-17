@@ -93,3 +93,5 @@ GoModBuild (TARGET finderr PACKAGE github.com/couchbase/query/finderr
   CGO_LIBRARY_DIRS "${CGO_LIBRARY_DIRS}")
 
 AddMetricsMetadata (JSON etc/metrics_metadata.json COMPONENT n1ql)
+
+GoModTidySetup()

@@ -18,6 +18,8 @@ replace github.com/couchbase/hebrew => ../../../../../hebrew
 
 replace github.com/couchbase/cbgt => ../../../../../cbgt
 
+replace github.com/couchbase/eventing => ../eventing
+
 replace github.com/couchbase/eventing-ee => ../eventing-ee
 
 replace github.com/couchbase/go-couchbase => ../go-couchbase
