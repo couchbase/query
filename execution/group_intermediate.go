@@ -116,7 +116,7 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 			return false
 		}
 		// MB-65246 ARRAY_AGG() Don't recycle previous once
-		if _, ok := agg.(*algebra.ArrayAgg); !ok && v.Equals(pv) != value.TRUE_VALUE {
+		if _, ok := agg.(*algebra.ArrayAgg); !ok && v.Equals(pv) == value.FALSE_VALUE {
 			pv.Recycle()
 		}
 		cumulative[a] = v
