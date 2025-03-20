@@ -408,5 +408,36 @@
                 "c422": 21
             }
         ]
+    },
+    {
+        "testcase": "MB-65832",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'd' AND v.`index_group_aggs` IS NOT MISSING END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT d1.c11,  META(d1).id, d2.m FROM (SELECT d.c21 , MIN(d.c22) AS m FROM shellTest AS d WHERE d.c21 IS NOT NULL AND d.type = 'right' GROUP BY d.c21) AS d2 JOIN shellTest AS d1 ON d1.c11 = d2.c21 AND d1.c12 = d2.m AND d1.type = 'left'",
+        "results": [
+            {
+                "c11": 1,
+                "id": "test11_ansijoin",
+                "m": 10
+            },
+            {
+                "c11": 2,
+                "id": "test12_ansijoin",
+                "m": 20
+            },
+            {
+                "c11": 3,
+                "id": "test13_ansijoin",
+                "m": 30
+            }
+        ]
     }
 ]

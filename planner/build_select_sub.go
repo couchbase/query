@@ -383,7 +383,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	op := plan.NewSequence(this.children...)
 
 	if len(this.coveringScans) > 0 && !doCoverTransform {
-		err = this.addSubqCoveringInfo(node, op)
+		err = this.addSubqCoveringInfo(node, op, this.aggs)
 		if err != nil {
 			return nil, err
 		}
@@ -555,20 +555,47 @@ func (this *builder) coverExpressions() (err error) {
 	return this.coverIndexGroupAggs()
 }
 
-func (this *builder) coverIndexGroupAggs() (err error) {
+func (this *builder) coverIndexGroupAggs() error {
 	if len(this.coveringScans) != 1 || this.coveringScans[0].GroupAggs() == nil {
-		return
+		return nil
 	}
+	groupCoverer, aggPartialCoverer, aggFullCoverer, err := prepIndexGroupAggs(this.coveringScans[0], this.aggs)
+	if err != nil {
+		return err
+	}
+	// replace all the statement expressions with group covers
+	if groupCoverer != nil {
+		err = this.cover.MapExpressions(groupCoverer)
+		if err != nil {
+			return err
+		}
+	}
+	// replace all the statement expressions with aggregate covers
+	if aggPartialCoverer != nil {
+		err = this.cover.MapExpressions(aggPartialCoverer)
+		if err != nil {
+			return err
+		}
+	} else if aggFullCoverer != nil {
+		err = this.cover.MapExpressions(aggFullCoverer)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func prepIndexGroupAggs(op plan.CoveringOperator, aggs algebra.Aggregates) (
+	groupCoverer *expression.Coverer, aggPartialCoverer *PartialAggCoverer, aggFullCoverer *FullAggCoverer, err error) {
 
 	// Add cover to the index key expressions inside the aggregates used in group Operators
-	op := this.coveringScans[0]
 	var expr expression.Expression
 
 	indexKeyCovers := op.Covers()
 	idCover := indexKeyCovers[len(indexKeyCovers)-1]
 	keyCoverer := expression.NewCoverer(indexKeyCovers, nil)
 
-	err = this.coverIndexGroupAggsMap(keyCoverer)
+	err = coverIndexGroupAggsMap(keyCoverer, aggs)
 	if err != nil {
 		return
 	}
@@ -590,15 +617,11 @@ func (this *builder) coverIndexGroupAggs() (err error) {
 		}
 	}
 
-	// Add the new group covers to the existing coverers
-	// replace the all the statement expressions with group covers
+	// Add the new group covers to the existing covers and make groupCoverer
+	// which replaces expressions with group covers
 	if len(groupCovers) > 0 {
 		op.SetCovers(append(op.Covers(), groupCovers...))
-		groupCoverer := expression.NewCoverer(groupCovers, nil)
-		err = this.cover.MapExpressions(groupCoverer)
-		if err != nil {
-			return
-		}
+		groupCoverer = expression.NewCoverer(groupCovers, nil)
 	}
 
 	// Add cover to the index key expressions of aggregates in the plan
@@ -614,42 +637,35 @@ func (this *builder) coverIndexGroupAggs() (err error) {
 
 	// generate new covers for aggregates
 	aggCovers := make(expression.Covers, 0, len(indexGroupAgg.Aggregates))
-	for _, agg := range this.aggs {
+	for _, agg := range aggs {
 		aggCovers = append(aggCovers, expression.NewCover(agg.Copy()))
 	}
 
-	// replace the all the statement expressions with aggregates
+	// Add the new aggregate covers to the existing covers, and make aggPartialCoverer or
+	// aggFullCoverer which replaces expressions with aggregate covers;
 	// it also changes group operators/aggregates (i.e countn to sum, avg sum/countn)
 	// perform multi level aggregation if the results are partial aggregates
 	if len(aggCovers) > 0 {
 		op.SetCovers(append(op.Covers(), aggCovers...))
 		if indexGroupAgg.Partial {
-			aggPartialCoverer := NewPartialAggCoverer(aggCovers, this.aggs)
+			aggPartialCoverer = NewPartialAggCoverer(aggCovers, aggs)
 
-			err = this.coverIndexGroupAggsMap(aggPartialCoverer)
+			err = coverIndexGroupAggsMap(aggPartialCoverer, aggs)
 			if err != nil {
 				return
 			}
 
-			aggPartialCoverer = NewPartialAggCoverer(aggCovers, this.aggs)
-			err = this.cover.MapExpressions(aggPartialCoverer)
-			if err != nil {
-				return
-			}
+			aggPartialCoverer = NewPartialAggCoverer(aggCovers, aggs)
 		} else {
-			aggFullCoverer := NewFullAggCoverer(aggCovers)
-			err = this.cover.MapExpressions(aggFullCoverer)
-			if err != nil {
-				return
-			}
+			aggFullCoverer = NewFullAggCoverer(aggCovers)
 		}
 	}
 
 	return
 }
 
-func (this *builder) coverIndexGroupAggsMap(mapper expression.Mapper) error {
-	for i, agg := range this.aggs {
+func coverIndexGroupAggsMap(mapper expression.Mapper, aggs algebra.Aggregates) error {
+	for i, agg := range aggs {
 		expr, err := mapper.Map(agg)
 		if err != nil {
 			return err
@@ -659,7 +675,7 @@ func (this *builder) coverIndexGroupAggsMap(mapper expression.Mapper) error {
 		if !ok {
 			return fmt.Errorf("Error in Aggregates Mapping.")
 		}
-		this.aggs[i] = nagg
+		aggs[i] = nagg
 	}
 	return nil
 
