@@ -38,7 +38,7 @@ func (this *Redact) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
-func (this *Redact) Type() value.Type { return value.OBJECT }
+func (this *Redact) Type() value.Type { return value.JSON }
 
 type redactFilter struct {
 	re         *regexp.Regexp
