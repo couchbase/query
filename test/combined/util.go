@@ -635,6 +635,7 @@ func executeSQLProcessingResults(stmt string, params map[string]interface{}, pro
 			break
 		}
 		logging.Debugf("Retrying: %v (%d: %v)", stmt, retry, err)
+		time.Sleep(_RETRY_WAIT)
 	}
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()

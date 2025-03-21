@@ -357,6 +357,12 @@ func main() {
 			reportRunFailure(iter, "Failed to configure the instance.", err)
 			continue
 		}
+
+		if err := addAdviseIndexes(); err != nil {
+			reportRunFailure(iter, "Failed to advise query.", err)
+			continue
+		}
+
 		if err := DB.create(); err != nil {
 			reportRunFailure(iter, "Failed to create the database.", err)
 			continue
@@ -369,11 +375,6 @@ func main() {
 		time.Sleep(_INIT_WAIT)
 		if err := RunPrepSQL(); err != nil {
 			reportRunFailure(iter, "Failed to run the preparatory SQL.", err)
-			continue
-		}
-
-		if err := createAdviseIndexes(); err != nil {
-			reportRunFailure(iter, "Failed to advise query.", err)
 			continue
 		}
 
@@ -636,7 +637,7 @@ func addIndextoKeyspaceFromCreateStmt(crtidx string) error {
 	return nil
 }
 
-func createAdviseIndexes() error {
+func addAdviseIndexes() error {
 	for i := range Queries {
 		if rand.Intn(10) < 3 {
 			qry := Queries[i].SQL("")
