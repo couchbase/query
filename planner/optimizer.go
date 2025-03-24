@@ -20,7 +20,7 @@ import (
 type Optimizer interface {
 	Copy() Optimizer
 	OptimizeQueryBlock(builder Builder, node algebra.Node, limit, offset expression.Expression,
-		order *algebra.Order, distinct algebra.ResultTerms) (
+		order *algebra.Order, distinct algebra.ResultTerms, advisorValidate bool) (
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, bool, error)
 }
 
