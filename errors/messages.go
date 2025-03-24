@@ -8042,4 +8042,15 @@ var errData = []ErrData{
 			"Server",
 		},
 	},
+	{
+		Code:        E_AUS_INTERNAL, // 20012
+		symbol:      "E_AUS_INTERNAL",
+		Description: "Unexpected error in Auto Update Statistics. «message»",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
 }

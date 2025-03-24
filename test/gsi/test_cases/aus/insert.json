@@ -1,113 +1,230 @@
 [
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"1_aus\", { \"type\": \"customer\", \"firstName\": \"Cordula\", \"lastName\": \"Lumb\", \"emailAddress\": \"clumb@zdnet.com\", \"custId\": \"customer1\", \"age\": 15, \"membership\":\"premium\",\"test_id\": \"aus\" })"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"1_aus\", { \"type\": \"customer\", \"firstName\": \"Cordula\", \"lastName\": \"Lumb\", \"emailAddress\": \"clumb@zdnet.com\", \"custId\": \"customer1\", \"age\": 15, \"membership\":\"premium\", \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"2_aus\", { \"type\": \"customer\", \"firstName\": \"Sharron\", \"lastName\": \"Worrel\", \"emailAddress\": \"sworrel@gravatar.com\", \"custId\": \"customer2\", \"age\": 25, \"test_id\": \"aus\" })"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"2_aus\", { \"type\": \"customer\", \"firstName\": \"Sharron\", \"lastName\": \"Worrel\", \"emailAddress\": \"sworrel@gravatar.com\", \"custId\": \"customer2\", \"age\": 25, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"3_aus\", { \"type\": \"customer\", \"firstName\": \"Janessa\", \"lastName\": \"Ambresin\", \"emailAddress\": \"janessa@nydailynews.com\", \"custId\": \"customer3\", \"age\": 18, \"test_id\": \"aus\" })"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"3_aus\", { \"type\": \"customer\", \"firstName\": \"Janessa\", \"lastName\": \"Ambresin\", \"emailAddress\": \"janessa@nydailynews.com\", \"custId\": \"customer3\", \"age\": 18, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"4_aus\", { \"type\": \"customer\", \"firstName\": \"Kayla\", \"lastName\": \"Gerring\", \"emailAddress\": \"kgerring3@marriott.com\", \"custId\": \"customer4\", \"age\": 57, \"test_id\": \"aus\" })"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"4_aus\", { \"type\": \"customer\", \"firstName\": \"Kayla\", \"lastName\": \"Gerring\", \"emailAddress\": \"kgerring3@marriott.com\", \"custId\": \"customer4\", \"age\": 57, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"5_aus\", {\"type\":\"customer\",\"firstName\":\"Ginger\",\"lastName\":\"Richardson\",\"emailAddress\":\"grichardson4@nytimes.com\",\"custId\":\"customer5\", \"age\": 42, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"5_aus\", {\"type\":\"customer\",\"firstName\":\"Ginger\",\"lastName\":\"Richardson\",\"emailAddress\":\"grichardson4@nytimes.com\",\"custId\":\"customer5\", \"age\": 42, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"6_aus\", {\"type\":\"customer\",\"firstName\":\"Ronna\",\"lastName\":\"Whitlow\",\"emailAddress\":\"rwhitlow5@icq.com\",\"custId\":\"customer6\", \"age\": 36, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"6_aus\", {\"type\":\"customer\",\"firstName\":\"Ronna\",\"lastName\":\"Whitlow\",\"emailAddress\":\"rwhitlow5@icq.com\",\"custId\":\"customer6\", \"age\": 36, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"7_aus\", {\"type\":\"customer\",\"firstName\":\"Griselda\",\"lastName\":\"Wanderschek\",\"emailAddress\":\"gwanderschek6@photobucket.com\",\"custId\":\"customer7\", \"age\": 33, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"7_aus\", {\"type\":\"customer\",\"firstName\":\"Griselda\",\"lastName\":\"Wanderschek\",\"emailAddress\":\"gwanderschek6@photobucket.com\",\"custId\":\"customer7\", \"age\": 33, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"8_aus\", {\"type\":\"customer\",\"firstName\":\"Gerrilee\",\"lastName\":\"Purkiss\",\"emailAddress\":\"gpurkiss7@yellowpages.com\",\"custId\":\"customer8\", \"age\": 40, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"8_aus\", {\"type\":\"customer\",\"firstName\":\"Gerrilee\",\"lastName\":\"Purkiss\",\"emailAddress\":\"gpurkiss7@yellowpages.com\",\"custId\":\"customer8\", \"age\": 40, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"9_aus\", {\"type\":\"customer\",\"firstName\":\"Fanchette\",\"lastName\":\"Sidsaff\",\"emailAddress\":\"fsidsaff8@xrea.com\",\"custId\":\"customer9\", \"age\": 38, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"9_aus\", {\"type\":\"customer\",\"firstName\":\"Fanchette\",\"lastName\":\"Sidsaff\",\"emailAddress\":\"fsidsaff8@xrea.com\",\"custId\":\"customer9\", \"age\": 38, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"10_aus\", {\"type\":\"customer\",\"firstName\":\"Leone\",\"lastName\":\"Stuther\",\"emailAddress\":\"lstuther9@berkeley.edu\",\"custId\":\"customer10\", \"age\": 23, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"10_aus\", {\"type\":\"customer\",\"firstName\":\"Leone\",\"lastName\":\"Stuther\",\"emailAddress\":\"lstuther9@berkeley.edu\",\"custId\":\"customer10\", \"age\": 23, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"11_aus\", {\"type\":\"customer\",\"firstName\":\"Kathye\",\"lastName\":\"Eadie\",\"emailAddress\":\"keadiea@rediff.com\",\"custId\":\"customer11\", \"age\": 19, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"11_aus\", {\"type\":\"customer\",\"firstName\":\"Kathye\",\"lastName\":\"Eadie\",\"emailAddress\":\"keadiea@rediff.com\",\"custId\":\"customer11\", \"age\": 19, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"12_aus\", {\"type\":\"customer\",\"firstName\":\"Tymon\",\"lastName\":\"Dudden\",\"emailAddress\":\"tduddenb@discuz.net\",\"custId\":\"customer12\", \"age\": 33, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"12_aus\", {\"type\":\"customer\",\"firstName\":\"Tymon\",\"lastName\":\"Dudden\",\"emailAddress\":\"tduddenb@discuz.net\",\"custId\":\"customer12\", \"age\": 33, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"13_aus\", {\"type\":\"customer\",\"firstName\":\"Moe\",\"lastName\":\"While\",\"emailAddress\":\"mwhilec@chicagotribune.com\",\"custId\":\"customer13\",\"age\": 59, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"13_aus\", {\"type\":\"customer\",\"firstName\":\"Moe\",\"lastName\":\"While\",\"emailAddress\":\"mwhilec@chicagotribune.com\",\"custId\":\"customer13\",\"age\": 59, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"14_aus\", {\"type\":\"customer\",\"firstName\":\"Nikita\",\"lastName\":\"Royson\",\"emailAddress\":\"nroysond@tumblr.com\",\"custId\":\"customer14\",\"age\": 34, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"14_aus\", {\"type\":\"customer\",\"firstName\":\"Nikita\",\"lastName\":\"Royson\",\"emailAddress\":\"nroysond@tumblr.com\",\"custId\":\"customer14\",\"age\": 34, \"test_id\":\"aus\"});"
    },
    {
-     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"15_aus\", {\"type\":\"customer\",\"firstName\":\"Burton\",\"lastName\":\"Caldes\",\"emailAddress\":\"bcaldese@youtu.be\",\"custId\":\"customer15\",\"age\": 65, \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"15_aus\", {\"type\":\"customer\",\"firstName\":\"Burton\",\"lastName\":\"Caldes\",\"emailAddress\":\"bcaldese@youtu.be\",\"custId\":\"customer15\",\"age\": 65, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"16_aus\", {\"type\":\"customer\",\"firstName\":\"Sibelle\",\"lastName\":\"Martinez\",\"emailAddress\":\"sibellee@youtu.be\",\"custId\":\"customer16\",\"age\": 28, \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"16_aus\", {\"type\":\"customer\",\"firstName\":\"Sibelle\",\"lastName\":\"Martinez\",\"emailAddress\":\"sibellee@youtu.be\",\"custId\":\"customer16\",\"age\": 28, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"17_aus\", {\"type\":\"customer\",\"firstName\":\"Raju\",\"lastName\":\"Kumar\",\"emailAddress\":\"rajuk1@wowza.com\",\"custId\":\"customer17\",\"age\": 32, \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"17_aus\", {\"type\":\"customer\",\"firstName\":\"Raju\",\"lastName\":\"Kumar\",\"emailAddress\":\"rajuk1@wowza.com\",\"custId\":\"customer17\",\"age\": 32, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"18_aus\", {\"type\":\"customer\",\"firstName\":\"Sophie\",\"lastName\":\"Emerson\",\"emailAddress\":\"soph@discuz.net\",\"custId\":\"customer18\",\"age\": 29, \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"18_aus\", {\"type\":\"customer\",\"firstName\":\"Sophie\",\"lastName\":\"Emerson\",\"emailAddress\":\"soph@discuz.net\",\"custId\":\"customer18\",\"age\": 29, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"19_aus\", {\"type\":\"customer\",\"firstName\":\"Jackie\",\"lastName\":\"Smith\",\"emailAddress\":\"smithjackie@tumblr.com\",\"custId\":\"customer19\",\"age\": 45, \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"19_aus\", {\"type\":\"customer\",\"firstName\":\"Jackie\",\"lastName\":\"Smith\",\"emailAddress\":\"smithjackie@tumblr.com\",\"custId\":\"customer19\",\"age\": 45, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"20_aus\", {\"type\":\"customer\",\"firstName\":\"Emily\",\"lastName\":\"Wobbleton\",\"emailAddress\":\"emilyw@youtu.be\",\"custId\":\"customer20\",\"age\": 53, \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO customer (KEY,VALUE) VALUES(\"20_aus\", {\"type\":\"customer\",\"firstName\":\"Emily\",\"lastName\":\"Wobbleton\",\"emailAddress\":\"emilyw@youtu.be\",\"custId\":\"customer20\",\"age\": 53, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k001\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"}), VALUES(\"k002\", {\"c1\":2, \"c2\":4, \"c3\":6, \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k001\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus1\", { \"id\" : 1, \"name\" : \"AC3 Phone\", \"brand\" : \"ACME\", \"type\" : \"phone\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k002\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus2\", { \"id\" : 2, \"name\" : \"AC3 Charger\", \"brand\" : \"ACME\", \"type\" : \"charger\", \"test_id\":\"aus\"})"
+     "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k003\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus3\", { \"id\" : 3, \"name\" : \"AC3 Headphones\", \"brand\" : \"ACME\", \"type\" : \"headphones\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k004\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus4\", { \"id\" : 4, \"name\" : \"Coolio Office Chair\", \"brand\" : \"Coolio\", \"type\" : \"furniture\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k005\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus5\", { \"id\" : 5, \"name\" : \"Coolio Paperclips\", \"brand\" : \"Coolio\", \"type\" : \"supplies\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k006\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus6\", { \"id\" : 6, \"name\" : \"SuperTech Phone\", \"brand\" : \"SuperTech\", \"type\" : \"phone\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k007\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus7\", { \"id\" : 7, \"name\" : \"SuperTech Headphones\", \"brand\" : \"SuperTech\", \"type\" : \"headphones\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k008\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus8\", { \"id\" : 8, \"name\" : \"YummyFoods Muffins\", \"brand\" : \"YummyFoods\", \"type\" : \"bakery\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k009\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus9\", { \"id\" : 9, \"name\" : \"YummyFoods Cupcakes\", \"brand\" : \"YummyFoods\", \"type\" : \"bakery\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO shellTest (KEY,VALUE) VALUES(\"k010\", {\"c1\":1, \"c2\":2, \"c3\":3, \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus10\", { \"id\" : 10, \"name\" : \"Chic and Co Sweater\", \"brand\" : \"Chic and Co\", \"type\" : \"clothing\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus1\", { \"id\" : 1, \"name\" : \"AC3 Phone\", \"brand\" : \"ACME\", \"type\" : \"phone\", \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus11\", { \"id\" : 11, \"name\" : \"Chic and Co Jeans\", \"brand\" : \"Chic and Co\", \"type\" : \"clothing\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus2\", { \"id\" : 2, \"name\" : \"AC3 Charger\", \"brand\" : \"ACME\", \"type\" : \"charger\", \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus12\", { \"id\" : 12, \"name\" : \"Supertastic Cement\", \"brand\" : \"Supertastic\", \"type\" : \"construction\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus3\", { \"id\" : 3, \"name\" : \"AC3 Headphones\", \"brand\" : \"ACME\", \"type\" : \"headphones\", \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus13\", { \"id\" : 13, \"name\" : \"Supertastic Bricks\", \"brand\" : \"Supertastic\", \"type\" : \"construction\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus4\", { \"id\" : 4, \"name\" : \"Coolio Office Chair\", \"brand\" : \"Coolio\", \"type\" : \"furniture\", \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus14\", { \"id\" : 14, \"name\" : \"Coolio Crayons\", \"brand\" : \"Coolio\", \"type\" : \"supplies\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus5\", { \"id\" : 5, \"name\" : \"Coolio Paperclips\", \"brand\" : \"Coolio\", \"type\" : \"supplies\", \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus15\", { \"id\" : 15, \"name\" : \"Visionary Lemonade\", \"brand\" : \"Visionary\", \"type\" : \"beverages\", \"test_id\":\"aus\"})"
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus6\", { \"id\" : 6, \"name\" : \"SuperTech Phone\", \"brand\" : \"SuperTech\", \"type\" : \"phone\", \"test_id\":\"aus\"});"
    },
    {
-    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus1\", { \"id\" : 1, \"product_id\" : 4, \"verified_user\" : true, \"username\" : \"John\", \"rating\" : 9, \"review\" : \"The quality is amazing. The chair is sturdy.\", \"test_id\":\"aus\"})"
-   }
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus7\", { \"id\" : 7, \"name\" : \"SuperTech Headphones\", \"brand\" : \"SuperTech\", \"type\" : \"headphones\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus8\", { \"id\" : 8, \"name\" : \"YummyFoods Muffins\", \"brand\" : \"YummyFoods\", \"type\" : \"bakery\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus9\", { \"id\" : 9, \"name\" : \"YummyFoods Cupcakes\", \"brand\" : \"YummyFoods\", \"type\" : \"bakery\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus10\", { \"id\" : 10, \"name\" : \"Chic and Co Sweater\", \"brand\" : \"Chic and Co\", \"type\" : \"clothing\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus11\", { \"id\" : 11, \"name\" : \"Chic and Co Jeans\", \"brand\" : \"Chic and Co\", \"type\" : \"clothing\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus12\", { \"id\" : 12, \"name\" : \"Supertastic Cement\", \"brand\" : \"Supertastic\", \"type\" : \"construction\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus13\", { \"id\" : 13, \"name\" : \"Supertastic Bricks\", \"brand\" : \"Supertastic\", \"type\" : \"construction\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus14\", { \"id\" : 14, \"name\" : \"Coolio Crayons\", \"brand\" : \"Coolio\", \"type\" : \"supplies\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO product (KEY, VALUE) VALUES(\"product_aus15\", { \"id\" : 15, \"name\" : \"Visionary Lemonade\", \"brand\" : \"Visionary\", \"type\" : \"beverages\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus1\", { \"id\" : 1, \"product_id\" : 4, \"verified_user\" : true, \"username\" : \"John\", \"rating\" : 9, \"review\" : \"The quality is amazing. The chair is sturdy.\", \"test_id\":\"aus\"});"
+   },
+   {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus2\", { \"id\" : 2, \"product_id\" : 6, \"verified_user\" : true, \"username\" : \"Sarah\", \"rating\" : 8, \"review\" : \"Great phone with excellent battery life and camera quality.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus3\", { \"id\" : 3, \"product_id\" : 10, \"verified_user\" : false, \"username\" : \"Mike\", \"rating\" : 7, \"review\" : \"The sweater is comfortable but runs a bit small.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus4\", { \"id\" : 4, \"product_id\" : 15, \"verified_user\" : true, \"username\" : \"Emma\", \"rating\" : 9, \"review\" : \"Best lemonade I've ever tasted! Perfect balance of sweet and tart.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus5\", { \"id\" : 5, \"product_id\" : 3, \"verified_user\" : true, \"username\" : \"David\", \"rating\" : 6, \"review\" : \"Good sound quality but the ear cushions could be more comfortable.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus6\", { \"id\" : 6, \"product_id\" : 8, \"verified_user\" : false, \"username\" : \"Lisa\", \"rating\" : 10, \"review\" : \"These muffins are absolutely delicious! Perfect texture and flavor.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus7\", { \"id\" : 7, \"product_id\" : 12, \"verified_user\" : true, \"username\" : \"Robert\", \"rating\" : 8, \"review\" : \"High-quality cement that sets quickly and holds well.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus8\", { \"id\" : 8, \"product_id\" : 11, \"verified_user\" : true, \"username\" : \"Jennifer\", \"rating\" : 9, \"review\" : \"These jeans fit perfectly and are very comfortable. Great quality!\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus9\", { \"id\" : 9, \"product_id\" : 14, \"verified_user\" : false, \"username\" : \"Tom\", \"rating\" : 7, \"review\" : \"Good crayons with vibrant colors, but they break easily.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO review (KEY, VALUE) VALUES(\"review_aus10\", { \"id\" : 10, \"product_id\" : 7, \"verified_user\" : true, \"username\" : \"Anna\", \"rating\" : 8, \"review\" : \"Great sound quality and comfortable to wear for long periods.\", \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus1\", {\"order_id\" : 10, \"product_id\" : 23, \"quantity\" : 7,  \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus2\", {\"order_id\" : 11, \"product_id\" : 23, \"quantity\" : 1, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus3\", {\"order_id\" : 12, \"product_id\" : 25, \"quantity\" : 3, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus4\", {\"order_id\" : 13, \"product_id\" : 25, \"quantity\" : 4, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus5\", {\"order_id\" : 14, \"product_id\" : 27, \"quantity\" : 5, \"test_id\":\"aus\"});" 
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus6\", {\"order_id\" : 15, \"product_id\" : 28, \"quantity\" : 6, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus7\", {\"order_id\" : 16, \"product_id\" : 29, \"quantity\" : 7, \"test_id\":\"aus\"});" 
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus8\", {\"order_id\" : 17, \"product_id\" : 30, \"quantity\" : 2, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus9\", {\"order_id\" : 18, \"product_id\" : 30, \"quantity\" : 9, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus10\", {\"order_id\" : 19, \"product_id\" : 30, \"quantity\" : 10, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus11\", {\"order_id\" : 20, \"product_id\" : 33, \"quantity\" : 11, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus12\", {\"order_id\" : 21, \"product_id\" : 34, \"quantity\" : 2, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus13\", {\"order_id\" : 22, \"product_id\" : 35, \"quantity\" : 3, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus14\", {\"order_id\" : 23, \"product_id\" : 36, \"quantity\" : 4, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus15\", {\"order_id\" : 24, \"product_id\" : 37, \"quantity\" : 5, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus16\", {\"order_id\" : 25, \"product_id\" : 38, \"quantity\" : 1, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus17\", {\"order_id\" : 26, \"product_id\" : 36, \"quantity\" : 17, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus18\", {\"order_id\" : 27, \"product_id\" : 40, \"quantity\" : 18, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus19\", {\"order_id\" : 28, \"product_id\" : 40, \"quantity\" : 9, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO orders (KEY, VALUE) VALUES(\"orders_aus20\", {\"order_id\" : 29, \"product_id\" : 42, \"quantity\" : 2, \"test_id\":\"aus\"});"
+  },
+  {
+    "statements": "INSERT INTO purchase (KEY, VALUE) VALUES(\"purchase_aus1\", {\"purchase_id\" : 1, \"test_id\":\"aus\"});"
+  }
  ]

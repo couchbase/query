@@ -22,6 +22,6 @@ const (
 type StatUpdater interface {
 	Name() StatUpdaterType
 	UpdateStatistics(ks Keyspace, indexes []Index, terms expression.Expressions, with value.Value,
-		conn *ValueConnection, exContext interface{}, internal bool) // The StatUpdater should populate the connection.
+		conn *ValueConnection, exContext interface{}, internal bool, inAus bool) // The StatUpdater should populate the connection.
 	DeleteStatistics(ks Keyspace, terms expression.Expressions, conn *ValueConnection, exContext interface{})
 }

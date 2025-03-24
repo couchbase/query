@@ -3455,7 +3455,7 @@ func CleanupSystemCollection(namespace string, bucket string) {
 						toDelete = true
 					}
 				}
-			} else if len(parts) > 2 && parts[0] == "aus" {
+			} else if len(parts) > 2 && parts[0] == "aus_setting" {
 				// Refer to aus/aus_ee.go for AUS settings document key formats.
 				path := parts[len(parts)-1]
 				elements := strings.Split(path, ".")
@@ -3463,18 +3463,38 @@ func CleanupSystemCollection(namespace string, bucket string) {
 				// Check if key is for a valid scope level AUS setting doc
 				if len(parts) == 3 && len(elements) == 1 {
 					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
-					if err != nil || (err == nil && s.Uid() != parts[1]) {
+					if err != nil || (s.Uid() != parts[1]) {
 						toDelete = true
 					}
 				} else if len(parts) == 4 && len(elements) == 2 { // Check if key is for a valid collection level AUS setting doc
 					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
-					if err != nil || (err == nil && s.Uid() != parts[1]) {
+					if err != nil || (s.Uid() != parts[1]) {
 						toDelete = true
 					}
 
 					if !toDelete {
 						c, err := s.KeyspaceByName(elements[1])
-						if err != nil || (err == nil && c.Uid() != parts[2]) {
+						if err != nil || (c.Uid() != parts[2]) {
+							toDelete = true
+						}
+					}
+				}
+			} else if len(parts) == 4 && parts[0] == "aus_change_doc" {
+				// Is an AUS change history document
+				path := parts[len(parts)-1]
+				elements := strings.Split(path, ".")
+
+				if len(elements) == 3 {
+					// Check is scope is still present
+					s, err := systemCollection.Scope().Bucket().ScopeByName(elements[0])
+					if err != nil || (s.Uid() != parts[1]) {
+						toDelete = true
+					}
+
+					if !toDelete {
+						// Check if collection is still present
+						c, err := s.KeyspaceByName(elements[1])
+						if err != nil || (c.Uid() != parts[2]) {
 							toDelete = true
 						}
 					}

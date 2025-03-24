@@ -14,6 +14,6 @@ import (
 	"github.com/couchbase/query/planner"
 )
 
-func getNewOptimizer() planner.Optimizer {
+func GetNewOptimizer() planner.Optimizer {
 	return nil
 }

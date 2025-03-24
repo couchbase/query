@@ -310,7 +310,7 @@ func DeleteTask(id string) errors.Error {
 			// And the channel would not be nil or closed, as the channel cleanup is only done
 			// only once the task's execution completes
 			select {
-			case task.stopChannel <- false:
+			case task.stopChannel <- true:
 			default:
 			}
 			running = true

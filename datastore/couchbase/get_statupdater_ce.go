@@ -29,7 +29,7 @@ func (dsu *NopStatUpdater) Name() datastore.StatUpdaterType {
 
 func (dsu *NopStatUpdater) UpdateStatistics(ks datastore.Keyspace, indexes []datastore.Index,
 	terms expression.Expressions, with value.Value, conn *datastore.ValueConnection,
-	exContext interface{}, internal bool) {
+	exContext interface{}, internal bool, inAus bool) {
 	conn.Error(errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS. This is an Enterprise only feature."))
 	close(conn.ValueChannel())
 }

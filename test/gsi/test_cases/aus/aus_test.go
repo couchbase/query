@@ -35,10 +35,15 @@ func TestAus(t *testing.T) {
 	runStmt(qc, "CREATE INDEX product_idx_1 ON product(brand)")
 	runStmt(qc, "CREATE INDEX customer_idx_1 ON customer(custId, emailAddress, firstName, age)")
 	runStmt(qc, "CREATE INDEX customer_idx_2 ON customer(membership, custId, emailAddress)")
+	runStmt(qc, "CREATE INDEX review_idx_1 ON review(rating);")
+	runStmt(qc, "CREATE INDEX orders_idx_1 ON orders(order_id, product_id);")
+	runStmt(qc, "CREATE INDEX purchase_idx_1 ON purchase(purchase_id);")
+
+	// Update statistics before enabling AUS.
+	runStmt(qc, "UPDATE STATISTICS FOR default:purchase._default._default INDEX ALL;")
 
 	// Enable and set an AUS schedule that will not run during the test but instead scheduled for the next day.
-	// This is because, AUS needs to be enabled so that change information will be collected in CBO statistics
-	// that are created during the UPDATE STATISTICS statements executed later in the test
+	// This is because, AUS needs to be enabled so that AUS information can be collected by the system.
 	start := time.Now().Add(24 * time.Hour)
 	end := start.Add(30 * time.Minute)
 	sched := runStmt(qc, fmt.Sprintf(
@@ -51,19 +56,29 @@ func TestAus(t *testing.T) {
 
 	// Update CBO statistics
 	fmt.Println("Updating CBO statistics.")
-	runStmt(qc, "UPDATE STATISTICS FOR shellTest(c1)")
-	runStmt(qc, "UPDATE STATISTICS FOR review(id)")
-	runStmt(qc, "UPDATE STATISTICS FOR product(brand)")
-	runStmt(qc, "UPDATE STATISTICS FOR customer(custId, emailAddress)")
-	runStmt(qc, "UPDATE STATISTICS FOR customer(firstName, age) WITH {\"resolution\":0.5}")
+	runStmt(qc, "UPDATE STATISTICS FOR default:shellTest._default._default(c1);")
+	runStmt(qc, "UPDATE STATISTICS FOR default:review._default._default INDEX ALL;")
+	runStmt(qc, "UPDATE STATISTICS FOR default:product._default._default INDEX ALL;")
+	runStmt(qc, "UPDATE STATISTICS FOR default:customer._default._default INDEX ALL;")
+	runStmt(qc, "UPDATE STATISTICS FOR default:orders._default._default INDEX ALL;")
+	runStmt(qc, "UPDATE STATISTICS FOR default:customer._default._default(firstName, age) WITH {\"resolution\":0.5};")
 
 	// Adding custom settings for some keyspaces
-	runStmt(qc, "INSERT INTO system:aus_settings ( key, value ) VALUES (\"default:review\", {\"enable\": false})")
-	runStmt(qc, "INSERT INTO system:aus_settings ( key, value ) VALUES (\"default:customer\", {\"change_percentage\": 10})")
+	runStmt(qc, "UPSERT INTO system:aus_settings ( key, value ) VALUES (\"default:review\", {\"enable\": false})")
+	runStmt(qc, "UPSERT INTO system:aus_settings ( key, value ) VALUES (\"default:customer\", {\"change_percentage\": 10})")
+	runStmt(qc, "UPSERT INTO system:aus_settings ( KEY k, VALUE v) SELECT \"default:\" || meta().id AS k, {\"enable\":false} AS v FROM system:bucket_info WHERE meta().id NOT IN [\"shellTest\", \"product\", \"review\", \"customer\", \"orders\", \"purchase\"];")
 
 	// Perform some mutations on certain keyspaces
 	runStmt(qc, "DELETE FROM product WHERE brand = \"YummyFoods\"")
 	runStmt(qc, "UPDATE customer SET firstName = LOWER(firstName) LIMIT 1")
+	runStmt(qc, "DELETE FROM shellTest LIMIT 3;")
+	runStmt(qc, "DELETE FROM orders LIMIT 10;")
+	runStmt(qc, "UPDATE review SET rating = rating - 1;")
+
+	// Update statistics for some indexed expressions.
+	// Wait to give GSI breathing space.
+	time.Sleep(30 * time.Second)
+	runStmt(qc, "UPDATE STATISTICS FOR default:orders._default._default(order_id, product_id)")
 
 	// Start and end time of the AUS schedule in local timezone
 	start = time.Now().Add(time.Minute)
@@ -103,24 +118,33 @@ func TestAus(t *testing.T) {
 	runStmt(qc, "DROP INDEX product_idx_1 ON product")
 	runStmt(qc, "DROP INDEX customer_idx_1 ON customer")
 	runStmt(qc, "DROP INDEX customer_idx_2 ON customer")
+	runStmt(qc, "DROP INDEX review_idx_1 ON review")
+	runStmt(qc, "DROP INDEX orders_idx_1 ON orders")
+	runStmt(qc, "DROP INDEX purchase_idx_1 ON purchase;")
 
 	// Delete all CBO statistics in keyspaces used
 	runStmt(qc, "UPDATE STATISTICS FOR customer DELETE ALL")
 	runStmt(qc, "UPDATE STATISTICS FOR shellTest DELETE ALL")
 	runStmt(qc, "UPDATE STATISTICS FOR product DELETE ALL")
 	runStmt(qc, "UPDATE STATISTICS FOR review DELETE ALL")
+	runStmt(qc, "UPDATE STATISTICS FOR orders DELETE ALL;")
+	runStmt(qc, "UPDATE STATISTICS FOR purchase DELETE ALL;")
 
 	// Delete documents in keyspaces used
 	runStmt(qc, "DELETE FROM customer")
 	runStmt(qc, "DELETE FROM shellTest")
 	runStmt(qc, "DELETE FROM product")
 	runStmt(qc, "DELETE FROM review")
+	runStmt(qc, "DELETE FROM orders;")
+	runStmt(qc, "DELETE FROM purchase;")
 
 	// Delete AUS coordination documents
 	runAdminStmt(qc, "DELETE FROM default:customer._system._query WHERE meta().id LIKE \"aus_coord::%\"")
 	runAdminStmt(qc, "DELETE FROM default:shellTest._system._query WHERE meta().id LIKE \"aus_coord::%\"")
 	runAdminStmt(qc, "DELETE FROM default:product._system._query WHERE meta().id LIKE \"aus_coord::%\"")
 	runAdminStmt(qc, "DELETE FROM default:review._system._query WHERE meta().id LIKE \"aus_coord::%\"")
+	runAdminStmt(qc, "DELETE FROM default:orders._system._query WHERE meta().id LIKE \"aus_coord::%\";")
+	runAdminStmt(qc, "DELETE FROM default:purchase._system._query WHERE meta().id LIKE \"aus_coord::%\";")
 
 	// Reset AUS to its default values
 	runStmt(qc, "UPDATE system:aus SET enable=false UNSET schedule, change_percentage, all_buckets")

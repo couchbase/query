@@ -899,7 +899,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 		namespace = this.namespace
 	}
 
-	optimizer := getNewOptimizer()
+	optimizer := GetNewOptimizer()
 	maxParallelism := request.MaxParallelism()
 	if maxParallelism <= 0 || maxParallelism > this.MaxParallelism() {
 		maxParallelism = this.MaxParallelism()

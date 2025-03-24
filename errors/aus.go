@@ -26,6 +26,8 @@ func getSchemaHelp(setting string) string {
 		help = "List of text string names of the days of the week."
 	case "enable", "all_buckets":
 		help = "boolean."
+	case "update_statistics_timeout":
+		help = "Integer representing a duration in seconds."
 	default:
 		return ""
 	}
@@ -59,7 +61,7 @@ func NewAusNotInitialized() Error {
 
 func NewAusStorageAccessError(cause error) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_STORAGE, IKey: "aus.storage.error",
-		InternalMsg: "Error accessing Auto Update Statistics information from storage.", cause: cause, InternalCaller: CallerN(1)}
+		InternalMsg: "Error accessing Auto Update Statistics information from storage.", ICause: cause, InternalCaller: CallerN(1)}
 }
 
 func NewAusDocInvalidSettingsValue(setting string, value interface{}) Error {
@@ -134,18 +136,16 @@ func NewAusSchedulingError(startTime time.Time, endTime time.Time, cause error) 
 		InternalMsg: "Error scheduling the Auto Update Statistics task.", InternalCaller: CallerN(1)}
 }
 
-func NewAusTaskError(operation string, cause error) Error {
+func NewAusTaskError(msg string, cause error) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_TASK, IKey: "aus.task_execution_error",
-		InternalMsg: fmt.Sprintf("Error during %s of the Auto Update Statistics task.", operation), ICause: cause,
+		InternalMsg: fmt.Sprintf("Error during execution of the Auto Update Statistics task. %s", msg), ICause: cause,
 		InternalCaller: CallerN(1)}
 }
 
-func NewAusTaskInvalidInfoError(operation string, param string, val interface{}) Error {
-	c := make(map[string]interface{}, 1)
-	c["cause"] = fmt.Sprintf("Invalid task initialization information '%v' for parameter '%s' received.", val, param)
-
-	return &err{level: EXCEPTION, ICode: E_AUS_TASK, IKey: "aus.task_execution_error",
-		InternalMsg: fmt.Sprintf("Error during %s of Auto Update Statistics task.", operation), cause: c,
+func NewAusTaskInvalidInfoError(val interface{}) Error {
+	return &err{level: EXCEPTION, ICode: E_AUS_TASK_NOT_STARTED, IKey: "aus_task_not_started",
+		InternalMsg: fmt.Sprintf(
+			"The Auto Update Statistics task was not started due to invalid initialization information %v received.", val),
 		InternalCaller: CallerN(1)}
 }
 
@@ -171,4 +171,9 @@ func NewAusTaskNotStartedError() Error {
 func NewAusTaskTimeoutExceeded() Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_TASK_TIMEOUT, IKey: "aus_task_timeout",
 		InternalMsg: "Scheduled window of the Auto Update Statistics task exceeded.", InternalCaller: CallerN(1)}
+}
+
+func NewAusInternalError(msg string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_AUS_INTERNAL, IKey: "aus.internal", ICause: e,
+		InternalMsg: "Unexpected error in Auto Update Statistics. %s " + msg, InternalCaller: CallerN(1)}
 }

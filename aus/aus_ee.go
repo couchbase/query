@@ -17,20 +17,19 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/cbauth/metakv"
+	query_ee "github.com/couchbase/query-ee"
 	"github.com/couchbase/query-ee/aus"
 	"github.com/couchbase/query-ee/aus/bridge"
-	"github.com/couchbase/query-ee/optimizer"
+	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/migration"
@@ -45,12 +44,18 @@ import (
 const (
 	_AUS_PATH                    = "/query/auto_update_statistics/"
 	_AUS_GLOBAL_SETTINGS_PATH    = _AUS_PATH + "global_settings"
-	_AUS_SETTINGS_BUCKET_DOC_KEY = AUS_DOC_PREFIX + "bucket"
+	_AUS_SETTINGS_BUCKET_DOC_KEY = _AUS_SETTING_DOC_PREFIX + "bucket"
+
+	_AUS_SETTING_DOC_PREFIX              = "aus_setting::"
+	_AUS_COORDINATION_DOC_PREFIX         = "aus_coord::"
+	_AUS_CLEANUP_COORDINATION_DOC_PREFIX = "aus_coord_cleanup::"
+	_AUS_CHANGE_DOC_PREFIX               = "aus_change_history::"
 
 	_MAX_RETRY                 = 10
 	_RETRY_INTERVAL            = 30 * time.Second
 	_SCHEDULING_RETRY_INTERVAL = 5 * time.Second
-	_MAX_LOAD_FACTOR           = 65
+	_MAX_LOAD_FACTOR           = 80
+	_BATCH_SIZE                = 16
 )
 
 var ausCfg ausConfig
@@ -58,7 +63,7 @@ var ausCfg ausConfig
 // since we fetch documents from _system._query 1 at a time
 var _STRING_ANNOTATED_POOL *value.StringAnnotatedPool
 
-var defaultKeyspaceSettings = keyspaceSettings{enable: value.NONE, changePercentage: -1}
+var defaultKeyspaceSettings = keyspaceSettings{enable: value.NONE, changePercentage: -1, update_stats_timeout: -1}
 
 type ausConfig struct {
 	sync.RWMutex
@@ -70,12 +75,10 @@ type ausConfig struct {
 	// This field is only changes when the new global settings received, change the enablement or schedule.
 	configVersion string
 
-	// Stores information about the running task's window
-	// Is set when the AUS task begins and re-set to zero when the task completes.
-	// When there is a new global setting received that changes the schedule, the scheduling mechanism uses this field to ensure
-	// that the new task is not scheduled to run in the same window as the current running task.
+	// Stores information about the running tasks window
 	// This is to prevent multiple tasks from running at once on the node.
-	currentWindow taskInfo
+	runningAusEnd     time.Time
+	runningCleanupEnd time.Time
 }
 
 type ausGlobalSettings struct {
@@ -93,6 +96,11 @@ type ausSchedule struct {
 	days      []bool
 }
 
+const (
+	_AUS_TASK_CLASS         = "auto_update_statistics"
+	_AUS_CLEANUP_TASK_CLASS = "auto_update_statistics_cleanup"
+)
+
 type taskInfo struct {
 	startTime time.Time
 	endTime   time.Time
@@ -101,7 +109,9 @@ type taskInfo struct {
 	// This field should be used to perform an equality check against the current global configVersion before the task is
 	// executed or [re]scheduled. If the check fails, it means that there were new settings received that changed the config and
 	// the task operation must not proceed.
-	version string
+	version     string
+	class       string
+	sessionName string
 }
 
 func (this *ausConfig) setInitialized(init bool) {
@@ -110,15 +120,22 @@ func (this *ausConfig) setInitialized(init bool) {
 	this.Unlock()
 }
 
-func (this *ausConfig) setCurrentWindow(lock bool, start time.Time, end time.Time, version string) {
+func (this *ausConfig) setRunningAusEnd(lock bool, end time.Time) {
 	if lock {
 		this.Lock()
 		defer this.Unlock()
 	}
 
-	this.currentWindow.startTime = start
-	this.currentWindow.endTime = end
-	this.currentWindow.version = version
+	ausCfg.runningAusEnd = end
+}
+
+func (this *ausConfig) setRunningCleanupEnd(lock bool, end time.Time) {
+	if lock {
+		this.Lock()
+		defer this.Unlock()
+	}
+
+	ausCfg.runningCleanupEnd = end
 }
 
 func (this *ausSchedule) equals(sched *ausSchedule) bool {
@@ -145,7 +162,6 @@ func InitAus(server *server.Server) {
 	}
 
 	bridge.SetAusEnabled(Enabled)
-
 	// run as go routine to prevent hanging at the migration.Await() call
 	go startupAus()
 }
@@ -165,11 +181,11 @@ func startupAus() {
 	// If migration has completed - either the state of migration is MIGRATED or ABORTED - allow AUS to be initialized.
 	// Otherwise wait for migration to complete
 	if m, _ := migration.IsComplete("CBO_STATS"); !m {
-		logging.Infof(AUS_LOG_PREFIX + "Initialization will start when migration to a supported version is complete.")
+		logging.Infof("AUS: Initialization will start when migration to a supported version is complete.")
 		migration.Await("CBO_STATS")
 	}
 
-	logging.Infof(AUS_LOG_PREFIX + "Initialization started.")
+	logging.Infof("AUS: Initialization started.")
 
 	// Initialize the system:aus_settings Fetch pool
 	_STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(1)
@@ -177,30 +193,30 @@ func startupAus() {
 	// Initialize the global settings in metakv
 	err := initMetakv()
 	if err != nil {
-		logging.Errorf(AUS_LOG_PREFIX+"Metakv initialization failed with error: %v", err)
+		logging.Errorf("AUS: Metakv initialization failed with error: %v", err)
 	}
 
 	go metakv.RunObserveChildren(_AUS_PATH, callback, make(chan struct{}))
 	ausCfg.setInitialized(true)
 
-	logging.Infof(AUS_LOG_PREFIX + "Initialization completed.")
+	logging.Infof("AUS: Initialization completed.")
 }
 
 func callback(kve metakv.KVEntry) error {
 	ausCfg.Lock()
-	logging.Infof(AUS_LOG_PREFIX + "New global settings received.")
+	logging.Infof("AUS: New global settings received.")
 
 	var v map[string]interface{}
 	err := json.Unmarshal(kve.Value, &v)
 	if err != nil {
 		ausCfg.Unlock()
-		logging.Errorf(AUS_LOG_PREFIX+"Error unmarshalling new global settings: %v", err)
+		logging.Errorf("AUS: Error unmarshalling new global settings: %v", err)
 		return nil
 	}
 
 	if newSettings, err, _ := setAusHelper(v, false, false); err != nil {
 		ausCfg.Unlock()
-		logging.Errorf(AUS_LOG_PREFIX+"Error during global settings retrieval: %v", err)
+		logging.Errorf("AUS: Error during global settings retrieval: %v", err)
 		return nil
 	} else {
 
@@ -208,13 +224,16 @@ func callback(kve metakv.KVEntry) error {
 		ausCfg.settings = newSettings
 
 		var version string
-		var reschedule bool // whether a new AUS task should be scheduled
-		var cancelOld bool  // whether any scheduled AUS tasks should be deleted
+		var reschedule bool  // whether a new AUS task should be scheduled
+		var cancelOld bool   // whether any scheduled AUS tasks should be deleted
+		var nowDisabled bool // whether AUS has been changed from enabled to disabled
+		var nowEnabled bool  // whether AUS has been changed from disabled to enabled
 
 		if prev.enable {
 			if !newSettings.enable {
 				// If AUS enablement changes from enabled to disabled
 				cancelOld = true
+				nowDisabled = true
 			} else if !prev.schedule.equals(&newSettings.schedule) {
 				// If AUS remains enabled but the schedule has changed
 				reschedule = true
@@ -223,6 +242,7 @@ func callback(kve metakv.KVEntry) error {
 		} else if !prev.enable && newSettings.enable {
 			// If AUS enablement changes from disabled to enabled
 			reschedule = true
+			nowEnabled = true
 		}
 
 		// Only if there is a change in the enablement/schedule change the version of the configuration
@@ -233,38 +253,38 @@ func callback(kve metakv.KVEntry) error {
 		version = ausCfg.configVersion
 		ausCfg.Unlock()
 
-		logging.Infof(AUS_LOG_PREFIX+"Global settings are now: %v with internal version: %v.", v, version)
+		logging.Infof("AUS: Global settings are now: %v with internal version: %v.", v, version)
 
-		if cancelOld {
+		if cancelOld || nowEnabled {
 			// Delete all scheduled AUS tasks. But let running tasks complete execution.
-			if err == nil {
+			var taskId string
+			scheduler.TasksForeach(func(name string, task *scheduler.TaskEntry) bool {
+				taskId = ""
+				if cancelOld && (task.Class == _AUS_TASK_CLASS && task.State == scheduler.SCHEDULED) {
+					taskId = task.Id
+				} else if nowEnabled && (task.Class == _AUS_CLEANUP_TASK_CLASS && task.State == scheduler.SCHEDULED) {
+					taskId = task.Id
+				}
+				return true
 
-				var taskId string
-				scheduler.TasksForeach(func(name string, task *scheduler.TaskEntry) bool {
-					taskId = ""
-					if task.Class == "auto_update_statistics" && task.State == scheduler.SCHEDULED {
-						taskId = task.Id
+			}, func() bool {
+				if taskId != "" {
+					execErr := scheduler.DeleteTask(taskId)
+					if execErr != nil {
+						logging.Errorf("AUS: Error deleting old scheduled task with id %v: %v", taskId, execErr)
 					}
-					return true
-
-				}, func() bool {
-					if taskId != "" {
-						execErr := scheduler.DeleteTask(taskId)
-						if execErr != nil {
-							logging.Errorf(AUS_LOG_PREFIX+"Error deleting old scheduled task with id %v: %v", taskId, execErr)
-						}
-					}
-					return true
-				}, scheduler.SCHEDULED_TASKS_CACHE)
-			}
-			if err != nil {
-				logging.Errorf(AUS_LOG_PREFIX+"Error during global settings retrieval: %v", err)
-			}
+				}
+				return true
+			}, scheduler.SCHEDULED_TASKS_CACHE)
 		}
 
 		// Schedule next task with the new schedule
 		if reschedule {
-			ausCfg.schedule(version, true)
+			ausCfg.scheduleAusTask(version, true)
+		}
+
+		if nowDisabled {
+			ausCfg.scheduleCleanupTask(version)
 		}
 	}
 
@@ -275,18 +295,6 @@ func callback(kve metakv.KVEntry) error {
 func initMetakv() error {
 	_, _, err := fetchAusHelper(false)
 	return err
-}
-
-func initDaysOfWeek() map[string]time.Weekday {
-	days := make(map[string]time.Weekday, 7)
-	days["sunday"] = time.Sunday
-	days["monday"] = time.Monday
-	days["tuesday"] = time.Tuesday
-	days["wednesday"] = time.Wednesday
-	days["thursday"] = time.Thursday
-	days["friday"] = time.Friday
-	days["saturday"] = time.Saturday
-	return days
 }
 
 // system:aus keyspace related functions
@@ -333,7 +341,7 @@ func FetchAus() (map[string]interface{}, errors.Error) {
 func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 	rv, rev, err = metakv.Get(_AUS_GLOBAL_SETTINGS_PATH)
 	if err != nil {
-		logging.Errorf(AUS_LOG_PREFIX+"Error retrieving global settings from metakv: %v", err)
+		logging.Errorf("AUS: Error retrieving global settings from metakv: %v", err)
 		return nil, nil, err
 	}
 
@@ -349,7 +357,7 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 		})
 
 		if err != nil {
-			logging.Errorf(AUS_LOG_PREFIX+"Error encoding default global settings document: %v", err)
+			logging.Errorf("AUS: Error encoding default global settings document: %v", err)
 			return nil, nil, err
 		}
 
@@ -357,7 +365,7 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 
 		// If a non 200 OK status is returned from ns_server
 		if err != nil && err != metakv.ErrRevMismatch {
-			logging.Errorf(AUS_LOG_PREFIX+"Error distributing default global settings via metakv: %v", err)
+			logging.Errorf("AUS: Error distributing default global settings via metakv: %v", err)
 			return nil, nil, err
 		}
 
@@ -365,7 +373,7 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 			// Attempt to get the latest value for the key
 			rv, rev, err = metakv.Get(_AUS_GLOBAL_SETTINGS_PATH)
 			if err != nil {
-				logging.Errorf(AUS_LOG_PREFIX+"Error retrieving global settings from metakv: %v", err)
+				logging.Errorf("AUS: Error retrieving global settings from metakv: %v", err)
 			}
 		}
 	}
@@ -443,7 +451,7 @@ func setAusHelper(settings interface{}, distribute bool, restore bool) (obj ausG
 				if vv, ok := v.(string); ok {
 					obj.version = vv
 				} else {
-					logging.Warnf(AUS_LOG_PREFIX+"internal_version is not a string: %v", v)
+					logging.Warnf("AUS: internal_version is not a string: %v", v)
 				}
 			default:
 				return obj, errors.NewAusDocUnknownSetting(k), nil
@@ -682,7 +690,7 @@ func ScanAusSettings(bucket string, f func(path string) error) errors.Error {
 		return errors.NewAusNotInitialized()
 	}
 
-	return datastore.ScanSystemCollection(bucket, AUS_DOC_PREFIX, nil,
+	return datastore.ScanSystemCollection(bucket, _AUS_SETTING_DOC_PREFIX, nil,
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 
 			// Convert the KV document key into a path
@@ -785,7 +793,7 @@ func MutateAusSettings(op MutateOp, pair value.Pair, queryContext datastore.Quer
 	}
 
 	// Do not send OPTIONS to be mutated. Modifying options for system:aus_settings will not be allowed.
-	dpairs := make([]value.Pair, 1)
+	dpairs := make(value.Pairs, 1)
 	dpairs[0].Name = key
 	dpairs[0].Value = pair.Value
 
@@ -807,11 +815,11 @@ func MutateAusSettings(op MutateOp, pair value.Pair, queryContext datastore.Quer
 // If it returns an empty string, the key is not from system:aus_settings
 // Format is like so:
 // 1. Bucket level document:
-// aus::bucket
+// aus_setting::bucket
 // 2. Scope level document:
-// aus::scope_id::scope_name
+// aus_setting::scope_id::scope_name
 // 3. Collection level document:
-// aus::scope_id::collection_id::scope_name.collection_name
+// aus_setting::scope_id::collection_id::scope_name.collection_name
 func key2path(key, namespace, bucket string) (string, []string) {
 	// strip prefix and scope (and collection) UIDs from the scope (and collection) names
 	parts := strings.Split(key, "::")
@@ -821,8 +829,8 @@ func key2path(key, namespace, bucket string) (string, []string) {
 		return "", nil
 	}
 
-	// check if the key is prefixed by "aus::"
-	if parts[0] != "aus" {
+	// check if the key is prefixed by "aus_setting::"
+	if parts[0] != "aus_setting" {
 		return "", nil
 	}
 
@@ -903,7 +911,7 @@ func path2key(path string) (string, []string, errors.Error) {
 // Returns document id of a scope level document in system:aus_settings
 func ausSettingsScopeKey(scopeUid string, scopeName string) string {
 	sb := strings.Builder{}
-	sb.WriteString(AUS_DOC_PREFIX)
+	sb.WriteString(_AUS_SETTING_DOC_PREFIX)
 	sb.WriteString(scopeUid)
 	sb.WriteString("::")
 	sb.WriteString(scopeName)
@@ -913,7 +921,7 @@ func ausSettingsScopeKey(scopeUid string, scopeName string) string {
 // Returns document id of a collection level document in system:aus_settings
 func ausSettingsCollectionKey(scopeUid string, scopeName string, collectionUid string, collectionName string) string {
 	sb := strings.Builder{}
-	sb.WriteString(AUS_DOC_PREFIX)
+	sb.WriteString(_AUS_SETTING_DOC_PREFIX)
 	sb.WriteString(scopeUid)
 	sb.WriteString("::")
 	sb.WriteString(collectionUid)
@@ -935,9 +943,9 @@ func getSystemCollection(bucket string) (datastore.Keyspace, errors.Error) {
 }
 
 // Validate the schema of a bucket/scope/collection level document
-func validateAusSettingDoc(doc value.Value) (keyspaceSettings, errors.Error) {
+func validateAusSettingDoc(doc value.Value) (*keyspaceSettings, errors.Error) {
 
-	settings := defaultKeyspaceSettings
+	settings := &keyspaceSettings{enable: value.NONE, changePercentage: -1, update_stats_timeout: -1}
 
 	// Check if there are any disallowed fields or invalid field values
 	for k, v := range doc.Fields() {
@@ -953,20 +961,28 @@ func validateAusSettingDoc(doc value.Value) (keyspaceSettings, errors.Error) {
 		switch k {
 		case "enable":
 			if e, ok := v.(bool); !ok {
-				return defaultKeyspaceSettings, errors.NewAusDocInvalidSettingsValue(k, v)
+				return nil, errors.NewAusDocInvalidSettingsValue(k, v)
 			} else {
 				settings.enable = value.ToTristate(e)
 			}
 		case "change_percentage":
 			if cp, ok := v.(int64); !ok {
-				return defaultKeyspaceSettings, errors.NewAusDocInvalidSettingsValue(k, v)
+				return nil, errors.NewAusDocInvalidSettingsValue(k, v)
 			} else if cp < 0 || cp > 100 {
-				return defaultKeyspaceSettings, errors.NewAusDocInvalidSettingsValue(k, v)
+				return nil, errors.NewAusDocInvalidSettingsValue(k, v)
 			} else {
 				settings.changePercentage = int(cp)
 			}
+		case "update_statistics_timeout":
+			if t, ok := v.(int64); !ok {
+				return nil, errors.NewAusDocInvalidSettingsValue("update_statistics_timeout", v)
+			} else if t < 0 {
+				return nil, errors.NewAusDocInvalidSettingsValue("update_statistics_timeout", v)
+			} else {
+				settings.update_stats_timeout = int(t)
+			}
 		default:
-			return defaultKeyspaceSettings, errors.NewAusDocUnknownSetting(k)
+			return nil, errors.NewAusDocUnknownSetting(k)
 		}
 	}
 
@@ -977,6 +993,9 @@ func validateAusSettingDoc(doc value.Value) (keyspaceSettings, errors.Error) {
 type keyspaceSettings struct {
 	enable           value.Tristate
 	changePercentage int
+
+	// Options for the UPDATE STATISTICS statements
+	update_stats_timeout int
 }
 
 // Cleans up scope level AUS documents
@@ -985,20 +1004,48 @@ func DropScope(namespace string, bucket string, scope string, scopeUid string) {
 		return
 	}
 
-	datastore.ScanSystemCollection(bucket, AUS_DOC_PREFIX+scopeUid+"::", nil,
-		func(key string, systemCollection datastore.Keyspace) errors.Error {
-			dpairs := make([]value.Pair, 1)
-			dpairs[0].Name = key
-			queryContext := datastore.GetDurableQueryContextFor(systemCollection)
+	var context datastore.QueryContext
+	dPairs := make(value.Pairs, 0, _BATCH_SIZE)
 
-			_, _, mErrs := systemCollection.Delete(dpairs, queryContext, false)
-			if len(mErrs) > 0 {
-				logging.Errorf(AUS_LOG_PREFIX+
-					"Errors during cleanup of settings document for the scope %s Uid %s. Error: %v",
-					algebra.PathFromParts(namespace, bucket, scope), scopeUid, mErrs[0])
-			}
-			return nil
-		}, nil)
+	for _, prefix := range []string{_AUS_SETTING_DOC_PREFIX, _AUS_CHANGE_DOC_PREFIX} {
+		err := datastore.ScanSystemCollection(bucket, prefix+scopeUid+"::",
+			func(systemCollection datastore.Keyspace) errors.Error {
+				context = datastore.GetDurableQueryContextFor(systemCollection)
+				return nil
+			},
+			func(key string, systemCollection datastore.Keyspace) errors.Error {
+				dPairs = append(dPairs, value.Pair{Name: key})
+
+				if len(dPairs) >= _BATCH_SIZE {
+					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
+					if len(mErrs) > 0 {
+						logging.Errorf("AUS: Errors during cleanup of stale documents in the scope %s with Uid %s. Error: %v",
+							algebra.PathFromParts(namespace, bucket, scope), scopeUid, mErrs[0])
+					}
+					dPairs = dPairs[:0]
+				}
+
+				return nil
+			},
+			func(systemCollection datastore.Keyspace) errors.Error {
+				if len(dPairs) > 0 {
+					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
+					if len(mErrs) > 0 {
+						logging.Errorf("AUS: Errors during cleanup of stale documents in the scope %s with Uid %s. Error: %v",
+							algebra.PathFromParts(namespace, bucket, scope), scopeUid, mErrs[0])
+					}
+				}
+				return nil
+			})
+
+		if err != nil {
+			logging.Errorf("AUS: Errors during cleanup of stale documents in the scope %s with Uid %s. Error: %v",
+				algebra.PathFromParts(namespace, bucket, scope), scopeUid, err)
+		}
+
+		dPairs = dPairs[:0]
+	}
+
 }
 
 // Cleans up collection level AUS documents
@@ -1007,20 +1054,49 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 		return
 	}
 
-	datastore.ScanSystemCollection(bucket, AUS_DOC_PREFIX+scopeUid+"::"+collectionUid+"::", nil,
-		func(key string, systemCollection datastore.Keyspace) errors.Error {
-			dpairs := make([]value.Pair, 1)
-			dpairs[0].Name = key
-			queryContext := datastore.GetDurableQueryContextFor(systemCollection)
+	var context datastore.QueryContext
+	dPairs := make(value.Pairs, 0, _BATCH_SIZE)
 
-			_, _, mErrs := systemCollection.Delete(dpairs, queryContext, false)
-			if len(mErrs) > 0 {
-				logging.Errorf(AUS_LOG_PREFIX+
-					"Errors during cleanup of settings document for the collection '%s' with Uid '%s'. Error: %v",
-					algebra.PathFromParts(namespace, bucket, scope, collection), collectionUid, mErrs[0])
-			}
-			return nil
-		}, nil)
+	for _, prefix := range []string{_AUS_SETTING_DOC_PREFIX, _AUS_CHANGE_DOC_PREFIX} {
+		err := datastore.ScanSystemCollection(bucket, prefix+scopeUid+"::"+collectionUid+"::",
+			func(systemCollection datastore.Keyspace) errors.Error {
+				context = datastore.GetDurableQueryContextFor(systemCollection)
+				return nil
+			},
+			func(key string, systemCollection datastore.Keyspace) errors.Error {
+				dPairs = append(dPairs, value.Pair{Name: key})
+
+				if len(dPairs) >= _BATCH_SIZE {
+					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
+					if len(mErrs) > 0 {
+						logging.Errorf("AUS: Error during cleanup of stale documents in collection %s with Uid %s. Error: %v",
+							algebra.PathFromParts(namespace, bucket, scope, collection), collectionUid, mErrs[0])
+					}
+					dPairs = dPairs[:0]
+				}
+
+				return nil
+			},
+			func(systemCollection datastore.Keyspace) errors.Error {
+				if len(dPairs) > 0 {
+					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
+					if len(mErrs) > 0 {
+						logging.Errorf("AUS: Errors during cleanup of stale documents in collection %s with Uid %s. Error: %v",
+							algebra.PathFromParts(namespace, bucket, scope, collection), collectionUid, mErrs[0])
+					}
+
+				}
+				return nil
+			})
+
+		if err != nil {
+			logging.Errorf("AUS: Errors during cleanup of stale documents in collection %s with Uid %s. Error: %v",
+				algebra.PathFromParts(namespace, bucket, scope, collection), collectionUid, err)
+		}
+
+		dPairs = dPairs[:0]
+	}
+
 }
 
 // Backup related functions
@@ -1029,7 +1105,7 @@ func BackupAusSettings(namespace string, bucket string, filter func([]string) bo
 	rv := make([]interface{}, 0)
 	keys := make([]string, 1)
 
-	err := datastore.ScanSystemCollection(bucket, AUS_DOC_PREFIX, nil,
+	err := datastore.ScanSystemCollection(bucket, _AUS_SETTING_DOC_PREFIX, nil,
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 
 			// Convert the KV document key into a path
@@ -1065,6 +1141,11 @@ func BackupAusSettings(namespace string, bucket string, filter func([]string) bo
 						setting["change_percentage"] = v.ToString()
 					}
 
+					v, ok1 = av.Field("update_statistics_timeout")
+					if ok1 {
+						setting["update_statistics_timeout"] = v.ToString()
+					}
+
 					rv = append(rv, setting)
 				}
 			}
@@ -1079,41 +1160,30 @@ func BackupAusSettings(namespace string, bucket string, filter func([]string) bo
 // Finds the next AUS window and schedules the task. Returns whether a config version change occurred and an error.
 // Parameters:
 // checkToday: If true, considers today's schedule when finding the next window and performs overlap check with any running task
-func (this *ausConfig) schedule(version string, checkToday bool) (bool, errors.Error) {
+func (this *ausConfig) scheduleAusTask(version string, checkToday bool) (bool, errors.Error) {
 
 	this.RLock()
-	defer this.RUnlock()
-
 	// Skip scheduling if the task's version differs from current config version,
 	// It indicates that newer settings have been received.
 	if version != this.configVersion {
-		logging.Infof(AUS_LOG_PREFIX+
-			"Detected global settings change. Task configured with internal version %v not scheduled.", version)
+		this.RUnlock()
+		logging.Infof("AUS: Detected global settings change. Task configured with internal version %v not scheduled.", version)
 		return true, nil
 	}
 
 	// Check for overlap between the next scheduled window and the currently running task's window
-	var windowStart time.Time
-	var windowEnd time.Time
-	if checkToday {
-		windowStart = this.currentWindow.startTime
-		windowEnd = this.currentWindow.endTime
-	}
-
-	start, end, err := this.settings.schedule.findNextWindow(checkToday, windowStart, windowEnd)
+	start, end, err := this.settings.schedule.findNextWindow(checkToday, this.runningAusEnd, this.runningCleanupEnd)
+	this.RUnlock()
 	if err != nil {
+		logging.Errorf("AUS: Error finding window for next task: %v", err)
 		return false, err
 	}
 
-	task := taskInfo{startTime: start, endTime: end, version: version}
+	task := taskInfo{startTime: start, endTime: end, version: version, class: _AUS_TASK_CLASS}
 	err = scheduleTask(task)
 	if err != nil {
-		logging.Errorf(AUS_LOG_PREFIX+"Error scheduling task: %v", err)
 		return false, err
 	}
-
-	logging.Infof(AUS_LOG_PREFIX+"New task scheduled between %v and %v using configuration version %s.",
-		start.Format(util.DEFAULT_FORMAT), end.Format(util.DEFAULT_FORMAT), this.configVersion)
 
 	return false, nil
 }
@@ -1122,7 +1192,7 @@ func (this *ausConfig) schedule(version string, checkToday bool) (bool, errors.E
 // Parameters:
 // checkToday: If true, considers today's schedule when finding the next window and
 // performs overlap check with the provided start and end times specified by the parameters windowStart and windowEnd
-func (this *ausSchedule) findNextWindow(checkToday bool, windowStart time.Time, windowEnd time.Time) (
+func (this *ausSchedule) findNextWindow(checkToday bool, overlaps ...time.Time) (
 	time.Time, time.Time, errors.Error) {
 
 	// Get the current time in the required timezone
@@ -1143,10 +1213,10 @@ func (this *ausSchedule) findNextWindow(checkToday bool, windowStart time.Time, 
 			today := true
 
 			// Perform the overlap check. Check if the start time of today's potential schedule is within the provided window
-			if !windowStart.IsZero() && !windowEnd.IsZero() {
-				// If the next run is during the provided window
-				if !nextStart.Before(windowStart) && !nextStart.After(windowEnd) {
+			for _, runEnd := range overlaps {
+				if !runEnd.IsZero() && !nextStart.After(runEnd) {
 					today = false
+					break
 				}
 			}
 
@@ -1159,20 +1229,13 @@ func (this *ausSchedule) findNextWindow(checkToday bool, windowStart time.Time, 
 	}
 
 	// Iterate through the days to see when the nearest next run is
-	d := (int(now.Weekday()) + 1) % len(this.days)
-	for i := 0; i < len(this.days); i++ {
-		if this.days[d] {
+	for i := 1; i <= len(this.days); i++ {
+		if this.days[(int(now.Weekday())+i)%len(this.days)] {
 			// This is the next run
-			numDaysBetween := i + 1
 			return time.Date(now.Year(), now.Month(), now.Day(),
-					start.Hour(), start.Minute(), 0, 0, this.timezone).AddDate(0, 0, numDaysBetween),
+					start.Hour(), start.Minute(), 0, 0, this.timezone).AddDate(0, 0, i),
 				time.Date(now.Year(), now.Month(), now.Day(),
-					end.Hour(), end.Minute(), 0, 0, this.timezone).AddDate(0, 0, numDaysBetween), nil
-		}
-
-		d++
-		if d == len(this.days) {
-			d = 0
+					end.Hour(), end.Minute(), 0, 0, this.timezone).AddDate(0, 0, i), nil
 		}
 	}
 
@@ -1201,548 +1264,725 @@ func scheduleTask(task taskInfo) errors.Error {
 			continue
 		}
 
+		task.sessionName = session
 		parms := make(map[string]interface{}, 1)
 		parms["task"] = task
 
 		after := task.startTime.Sub(time.Now())
-		errT := scheduler.ScheduleStoppableTask(session, "auto_update_statistics", "", after, execTask, stopTask, parms, "",
-			context)
+		var errT errors.Error
+
+		if task.class == _AUS_TASK_CLASS {
+			errT = scheduler.ScheduleStoppableTask(session, _AUS_TASK_CLASS, "", after, execAusTask, stopAusTask, parms, "",
+				context)
+		} else if task.class == _AUS_CLEANUP_TASK_CLASS {
+			errT = scheduler.ScheduleStoppableTask(session, _AUS_CLEANUP_TASK_CLASS, "", after, execCleanupTask, stopCleanupTask,
+				parms, "", context)
+		}
+
 		if errT != nil {
 			err = errors.NewAusSchedulingError(task.startTime, task.endTime, errT)
 			continue
 		}
 
-		// Task scheduling successful
+		logging.Infof("AUS: New %s task %s scheduled between %v and %v using internal version %s.",
+			task.class, task.sessionName, task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT),
+			task.version)
+
 		return nil
 	}
 
-	// Task scheduling unsuccessful
+	logging.Errorf("AUS: Error scheduling %s task: %v", task.class, err)
 	return err
 }
 
-func execTask(context scheduler.Context, parms interface{}, stopChannel <-chan bool) (interface{}, []errors.Error) {
+// Task execution related functions
+type taskContext struct {
+	sync.Mutex
+	task           taskInfo
+	abort          bool
+	coordKeyPrefix string
+	stopFn         func()
+	err            errors.Error
+	errCount       int
+}
 
-	if params, okP := parms.(map[string]interface{}); okP {
-		var task taskInfo
-		if v, ok := params["task"]; ok {
-			if task, ok = v.(taskInfo); !ok {
-				return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", v)}
-			}
-		} else {
-			return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", nil)}
-		}
+func newTaskContext(task taskInfo, coordKeyPrefix string) *taskContext {
+	return &taskContext{
+		task:           task,
+		coordKeyPrefix: coordKeyPrefix,
+	}
+}
 
-		var activeUpdStatLock sync.Mutex
-		// The currently executing update statistics.
-		var activeUpdStat *ausOutput
-		// Indicates that a stop signal has been received.
-		// Further code must check this variable to determine if further processing can proceed.
-		abort := false
+func (this *taskContext) Name() string {
+	return this.task.sessionName
+}
 
-		timedOut := false
-		timer := time.AfterFunc(task.endTime.Sub(task.startTime), func() {
-			activeUpdStatLock.Lock()
-			updStat := activeUpdStat
-			abort = true
-			activeUpdStatLock.Unlock()
+func (this *taskContext) AddError(err errors.Error) {
+	this.Lock()
+	this.errCount++
+	if this.err == nil {
+		this.err = err
+	}
+	this.Unlock()
+}
 
-			// Stop any currently running update statistics
-			if updStat != nil {
-				updStat.stopActiveUpdStat()
-			}
+func (this *taskContext) SetStopHandler(stop func()) {
+	this.Lock()
+	this.stopFn = stop
+	this.Unlock()
+}
 
-			timedOut = true
-			logging.Errorf(AUS_LOG_PREFIX + "Task stopped as timeout exceeded.")
-		})
+func (this *taskContext) UnsetStopHandler() {
+	this.Lock()
+	this.stopFn = nil
+	this.Unlock()
+}
 
-		go func() {
-			_, ok := <-stopChannel
-			// If a stop signal was received
-			if ok {
-				// Stops the timer if not already fired/ stopped.
-				// Because once the stop signal is received there is no need for the timer to fire.
-				timer.Stop()
+func (this *taskContext) Stopped() bool {
+	return this.abort
+}
 
-				activeUpdStatLock.Lock()
-				updStat := activeUpdStat
-				abort = true
-				activeUpdStatLock.Unlock()
+func (this *taskContext) stop() {
+	this.Lock()
+	this.abort = true
+	stopFunc := this.stopFn
+	this.Unlock()
 
-				// Stop any currently running update statistics
-				if updStat != nil {
-					updStat.stopActiveUpdStat()
-				}
+	if stopFunc != nil {
+		stopFunc()
+	}
+}
 
-				logging.Warnf(AUS_LOG_PREFIX + "Task stopped due to user cancellation.")
-			}
+func (this *taskContext) GetExecutionSetup() (query_ee.Context, *datastore.ValueConnection, errors.Error) {
+	op := newAusOutput()
+	ctx, err := newContext(op)
+	if err != nil {
+		return nil, nil, err
+	}
+	op.activeUpdStat = datastore.NewValueConnection(ctx)
+	return ctx, op.activeUpdStat, nil
+}
+
+func extractTaskInfo(parms interface{}) (taskInfo, bool) {
+	params, ok := parms.(map[string]interface{})
+	if !ok {
+		return taskInfo{}, false
+	}
+
+	taskVal, ok := params["task"]
+	if !ok {
+		return taskInfo{}, false
+	}
+
+	task, ok := taskVal.(taskInfo)
+	if !ok {
+		return taskInfo{}, false
+	}
+
+	return task, true
+}
+
+func (this *taskContext) processCollections(skipDisabled bool, getKsSettings bool,
+	keyspaceHandler func(datastore.Keyspace, *keyspaceSettings, *taskContext)) (
+	bucketsDetected bool) {
+
+	ausCfg.RLock()
+	allBuckets := ausCfg.settings.allBuckets
+	globalChangePercentage := ausCfg.settings.changePercentage
+	ausCfg.RUnlock()
+
+	buckets, err := getBuckets(allBuckets)
+	if err != nil {
+		this.AddError(err)
+		return
+	}
+
+	if len(buckets) == 0 {
+		bucketsDetected = false
+		return
+	}
+	bucketsDetected = true
+
+	rand := rand.New(rand.NewSource(time.Now().Unix()))
+	bStart := rand.Intn(len(buckets))
+	dpairs := value.Pairs{value.Pair{
+		Name:    "",
+		Value:   value.EMPTY_ANNOTATED_OBJECT,
+		Options: value.NewValue(map[string]interface{}{"expiration": this.task.endTime.Unix()}),
+	}}
+
+	for i := 0; i < len(buckets); i++ {
+
+		if this.abort {
 			return
-		}()
+		}
 
-		defer func() {
-			// Stops the timer if not already fired/ stopped.
-			timer.Stop()
-			timer = nil
+		// Randomized start to prevent starvation of a keyspace
+		bucket := buckets[(bStart+i)%len(buckets)]
+		scopeIds, err := bucket.ScopeIds()
+		if err != nil {
+			this.AddError(err)
+			continue
+		}
 
-			r := recover()
-			if r != nil {
-				buf := make([]byte, 1<<16)
-				n := runtime.Stack(buf, false)
-				s := string(buf[0:n])
-				logging.Severef(AUS_LOG_PREFIX+"Panic in task execution: %v\n%v", r, s)
+		if len(scopeIds) == 0 {
+			continue
+		}
+
+		systemCollection, err := getSystemCollection(bucket.Name())
+		if err != nil {
+			this.AddError(err)
+			continue
+		}
+
+		var bucketSettingRetreived bool
+		var bucketSetting *keyspaceSettings
+
+		sStart := rand.Intn(len(scopeIds))
+		for j := 0; j < len(scopeIds); j++ {
+			if this.abort {
+				return
 			}
 
-			// End the AUS Evaluation Task
-			// Schedule the next task run. Do not consider "today" in the determination of the window of the next run.
-			ausCfg.schedule(task.version, false)
-			emptyTime := time.Time{}
-			ausCfg.setCurrentWindow(true, emptyTime, emptyTime, "")
-
-		}()
-
-		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v started.",
-			task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT))
-
-		// If the configuration version is different from the version with which the task was scheduled
-		// that means a new configuration was received. Do not execute the task.
-		ausCfg.Lock()
-		if task.version != ausCfg.configVersion {
-			ausCfg.Unlock()
-			return "Newer version of settings detected. This task was scheduled from older settings. Task not executed.", nil
-		}
-
-		// Set the current task window information
-		ausCfg.setCurrentWindow(false, task.startTime, task.endTime, task.version)
-
-		// Get the global information before starting execution. These values will be used for the course of this task run.
-		// This is so that consistent global settings are used during a task's entirety in the case changes to the global settings
-		// occur during the task execution.
-		globalChangePercentage := ausCfg.settings.changePercentage
-		allBuckets := ausCfg.settings.allBuckets
-		ausCfg.Unlock()
-
-		ds, ok := datastore.GetDatastore().(datastore.Datastore2)
-		if !ok || ds == nil {
-			// This should not ideally happen as migration should have completed.
-			logging.Errorf(AUS_LOG_PREFIX + "Task not started as cluster is not migrated to a supported version")
-			return nil, []errors.Error{errors.NewAusNotInitialized()}
-		}
-
-		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf(
-			"Configurations of task: start_time: %v end_time: %v change_percentage: %v all_buckets: %v internal version: %v",
-			task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT), globalChangePercentage,
-			allBuckets, task.version))
-
-		var errs errors.Errors
-
-		// Fuzzy Start
-		// Do not start task if the Load Factor of the query node is too high.
-		for retry := 0; retry < _MAX_RETRY; retry++ {
-			if ausCfg.server.LoadFactor() <= _MAX_LOAD_FACTOR {
-				break
-			} else if retry == _MAX_RETRY-1 {
-				// Exit on the last retry if the load factor is still beyond the threshold. Do not wastefully perform the sleep.
-				logging.Errorf(AUS_LOG_PREFIX + "Task not started due to existing load on the node.")
-				return nil, append(errs, errors.NewAusTaskNotStartedError())
-			} else {
-				time.Sleep(_RETRY_INTERVAL)
+			scope, err := bucket.ScopeById(scopeIds[(sStart+j)%len(scopeIds)])
+			if err != nil {
+				this.AddError(err)
+				continue
 			}
-		}
 
-		var keyspacesEvaluated []interface{}
-		var keyspacesUpdated []interface{}
+			collectionIds, err := scope.KeyspaceIds()
+			if err != nil {
+				this.AddError(err)
+				continue
+			}
 
-		// Start the AUS Evaluation Task
-		// Keep a list of buckets to do randomized selection against
-		var buckets []datastore.ExtendedBucket
+			if len(collectionIds) == 0 {
+				continue
+			}
 
-		if allBuckets {
-			ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-				buckets = append(buckets, b)
-			})
-		} else {
-			ds.ForeachBucket(func(b datastore.ExtendedBucket) {
-				buckets = append(buckets, b)
-			})
-		}
+			var scopeSettingRetreived bool
+			var scopeSetting *keyspaceSettings
 
-		if len(buckets) != 0 {
-			// Attempt to prevent starvation.
-			// By iterating through the list of buckets/ scopes/ collections starting at a random index, we attempt to prevent
-			// always performing AUS on the first keyspaces in the list. As keyspaces at the end of the list will routinely be
-			// starved of evaluation/update in the case of timeout/cancellations.
-
-			// Iterate through the buckets list. Generate the random start index.
-			gen := rand.New(rand.NewSource(time.Now().Unix()))
-			b := gen.Int() % len(buckets)
-			coordKeyPrefix := AUS_COORDINATION_DOC_PREFIX + task.version
-
-		bucketLoop:
-			for i := 0; i < len(buckets); i++ {
-
-				if abort {
-					break
+			cStart := rand.Intn(len(collectionIds))
+			for k := 0; k < len(collectionIds); k++ {
+				if this.abort {
+					return
 				}
 
-				bucket := buckets[b]
-				b++
-				if b == len(buckets) {
-					b = 0
-				}
-
-				scopeIds, err := bucket.ScopeIds()
-				if err != nil || len(scopeIds) == 0 {
-					continue
-				}
-
-				systemCollection, err := getSystemCollection(bucket.Name())
+				coll, err := scope.KeyspaceById(collectionIds[(cStart+k)%len(collectionIds)])
 				if err != nil {
-					errs = append(errs, err)
+					this.AddError(err)
 					continue
 				}
 
-				var bucketSettingRetreived bool
-				bucketSetting := defaultKeyspaceSettings
+				var sb strings.Builder
+				sb.WriteString(this.coordKeyPrefix)
+				sb.WriteString(coll.QualifiedName())
 
-				// Iterate through the scopes list. Generate the random start index.
-				s := gen.Int() % len(scopeIds)
-				for j := 0; j < len(scopeIds); j++ {
+				dpairs[0].Name = sb.String()
 
-					if abort {
-						break bucketLoop
+				// Insert the coordination document to prevent more than one node performing the task on the same keyspace
+				_, _, iErrs := systemCollection.Insert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
+				if len(iErrs) > 0 {
+					if !iErrs[0].HasCause(errors.E_DUPLICATE_KEY) {
+						this.AddError(errors.NewAusTaskError("Error during coordination.", iErrs[0]))
+						logging.Errorf(fmt.Sprintf("AUS: Error inserting the coordination document for keyspace %s: %v",
+							coll.QualifiedName(),
+							iErrs[0]))
 					}
+					continue
+				}
 
-					scope, err := bucket.ScopeById(scopeIds[s])
-					if err != nil {
-						continue
-					}
-
-					s++
-					if s == len(scopeIds) {
-						s = 0
-					}
-
-					collectionIds, err := scope.KeyspaceIds()
-					if err != nil || len(collectionIds) == 0 {
-						continue
-					}
-
-					var scopeSettingRetreived bool
-					scopeSetting := defaultKeyspaceSettings
-
-					// Iterate through the collections list. Generate the random start index.
-					c := gen.Int() % len(collectionIds)
-					for k := 0; k < len(collectionIds); k++ {
-
-						if abort {
-							break bucketLoop
-						}
-
-						coll, err := scope.KeyspaceById(collectionIds[c])
-						if err != nil {
-							continue
-						}
-
-						c++
-						if c == len(collectionIds) {
-							c = 0
-						}
-
-						// Check if any other node is performing AUS on the collection by attempting to INSERT a unique
-						// coordination document for the keyspace.
-						// if INSERT fails with a "duplicate key" error, then another node has performed AUS on it.
-						dpairs := make([]value.Pair, 1)
-
-						// Include task version in coordination doc to prevent conflicts
-						// when config changes occur before previous doc's TTL expires
-						dpairs[0].Name = coordKeyPrefix + coll.QualifiedName()
-						dpairs[0].Value = value.EMPTY_ANNOTATED_OBJECT
-
-						// The expiration of the coordination document should be the end time of this task window.
-						dpairs[0].Options = value.NewValue(map[string]interface{}{
-							"expiration": task.endTime.Unix()})
-
-						_, _, iErrs := systemCollection.Insert(dpairs, datastore.NULL_QUERY_CONTEXT, false)
-
-						if len(iErrs) > 0 {
-							if !iErrs[0].HasCause(errors.E_DUPLICATE_KEY) {
-								errs = append(errs, errors.NewAusTaskError("coordination", errs[0]))
-								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
-									"Error inserting the coordination document for keyspace %s: %v", coll.QualifiedName(),
-									iErrs[0]))
-							}
-							continue
-						}
-
-						// Get the bucket level setting
-						if !bucketSettingRetreived {
-							val, errsF := fetchSystemCollection(bucket.Name(), _AUS_SETTINGS_BUCKET_DOC_KEY)
-							if len(errsF) > 0 {
-								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
-									"Error fetching settings document for bucket %v: %v", bucket.Name(), errsF))
-								errs = append(errs, errsF[0])
-								continue
-							} else if val != nil {
-								setting, err := validateAusSettingDoc(val)
-								if err != nil {
-									logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
-										"Invalid settings document for bucket %v: %v", bucket.Name(), err))
-									errs = append(errs, err)
-									continue
-								}
-								bucketSetting = setting
-							}
-							bucketSettingRetreived = true
-						}
-
-						if bucketSetting.enable == value.FALSE {
-							continue
-						}
-
-						// Get scope level setting
-						if !scopeSettingRetreived {
-							val, errsS := fetchSystemCollection(bucket.Name(),
-								ausSettingsScopeKey(scope.Uid(), scope.Name()))
-							if len(errsS) > 0 {
-								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
-									"Error fetching settings document for scope %v: %v", algebra.PathFromParts("default",
-										bucket.Name(), scope.Name()), errsS))
-								errs = append(errs, errsS[0])
-								continue
-							} else if val != nil {
-								setting, err := validateAusSettingDoc(val)
-								if err != nil {
-									logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
-										"Invalid settings document for scope %v: %v", algebra.PathFromParts("default",
-											bucket.Name(), scope.Name()), err))
-									errs = append(errs, err)
-									continue
-								}
-								scopeSetting = setting
-							}
-							scopeSettingRetreived = true
-						}
-
-						if scopeSetting.enable == value.FALSE {
-							continue
-						}
-
-						// Get collection level setting
-						collSetting := defaultKeyspaceSettings
-						val, errsC := fetchSystemCollection(bucket.Name(),
-							ausSettingsCollectionKey(scope.Uid(), scope.Name(), coll.Uid(), coll.Name()))
-						if len(errsC) > 0 {
-							logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
-								"Error fetching settings document for collection %v: %v", coll.QualifiedName(), errsC))
-							errs = append(errs, errsC[0])
+				settings := &defaultKeyspaceSettings
+				if skipDisabled || getKsSettings {
+					if !bucketSettingRetreived {
+						val, errsF := fetchSystemCollection(bucket.Name(), _AUS_SETTINGS_BUCKET_DOC_KEY)
+						if len(errsF) > 0 {
+							logging.Errorf(fmt.Sprintf("AUS: Error fetching settings document for bucket %v: %v", bucket.Name(), errsF))
+							this.AddError(errsF[0])
 							continue
 						} else if val != nil {
 							setting, err := validateAusSettingDoc(val)
 							if err != nil {
-								logging.Errorf(AUS_LOG_PREFIX + fmt.Sprintf(
-									"Invalid settings document for collection %v: %v", coll.QualifiedName(), err))
-								errs = append(errs, err)
+								logging.Errorf(fmt.Sprintf("AUS: Invalid settings document for bucket %v: %v", bucket.Name(), err))
+								this.AddError(err)
 								continue
 							}
-							collSetting = setting
+							bucketSetting = setting
 						}
+						bucketSettingRetreived = true
+					}
 
-						if collSetting.enable == value.FALSE {
+					if skipDisabled && bucketSetting != nil && bucketSetting.enable == value.FALSE {
+						continue
+					}
+
+					if !scopeSettingRetreived {
+						val, errsS := fetchSystemCollection(bucket.Name(),
+							ausSettingsScopeKey(scope.Uid(), scope.Name()))
+						if len(errsS) > 0 {
+							logging.Errorf(fmt.Sprintf("AUS: Error fetching settings document for scope %v: %v",
+								algebra.PathFromParts("default", bucket.Name(), scope.Name()), errsS))
+							this.AddError(errsS[0])
+							continue
+						} else if val != nil {
+							setting, err := validateAusSettingDoc(val)
+							if err != nil {
+								logging.Errorf(fmt.Sprintf("AUS: Invalid settings document for scope %v: %v",
+									algebra.PathFromParts("default", bucket.Name(), scope.Name()), err))
+								this.AddError(err)
+								continue
+							}
+							scopeSetting = setting
+						}
+						scopeSettingRetreived = true
+					}
+
+					if skipDisabled && scopeSetting != nil && scopeSetting.enable == value.FALSE {
+						continue
+					}
+
+					var collSetting *keyspaceSettings
+					val, errsC := fetchSystemCollection(bucket.Name(),
+						ausSettingsCollectionKey(scope.Uid(), scope.Name(), coll.Uid(), coll.Name()))
+					if len(errsC) > 0 {
+						logging.Errorf(fmt.Sprintf("AUS: Error fetching settings document for collection %v: %v", coll.QualifiedName(),
+							errsC))
+						this.AddError(errsC[0])
+						continue
+					} else if val != nil {
+						setting, err := validateAusSettingDoc(val)
+						if err != nil {
+							logging.Errorf(fmt.Sprintf("AUS: Invalid settings document for collection %v: %v", coll.QualifiedName(),
+								err))
+							this.AddError(err)
 							continue
 						}
+						collSetting = setting
+					}
 
+					if skipDisabled && collSetting != nil && collSetting.enable == value.FALSE {
+						continue
+					}
+
+					if getKsSettings {
 						// Get the "change percentage" at which to evaluate this keyspace
 						change := globalChangePercentage
-
-						if collSetting.changePercentage >= 0 {
+						if collSetting != nil && collSetting.changePercentage >= 0 {
 							change = collSetting.changePercentage
-						} else if scopeSetting.changePercentage >= 0 {
+						} else if scopeSetting != nil && scopeSetting.changePercentage >= 0 {
 							change = scopeSetting.changePercentage
-						} else if bucketSetting.changePercentage >= 0 {
+						} else if bucketSetting != nil && bucketSetting.changePercentage >= 0 {
 							change = bucketSetting.changePercentage
 						}
 
-						keyspacesEvaluated = append(keyspacesEvaluated, coll.QualifiedName())
-
-						// Evaluation Phase
-						if abort {
-							break bucketLoop
-						}
-						exprs, customUpdStats, err := aus.Evaluation(coll, change)
-						if err != nil {
-							errs = append(errs, errors.NewAusEvaluationStageError(coll.QualifiedName(), err))
-							logging.Errorf(AUS_LOG_PREFIX+
-								"Auto Update Statistics task's Evaluation phase for keyspace %s encountered an error: %v",
-								coll.QualifiedName(), err)
-							continue
+						timeout := -1
+						// Get the update_statistics_timeout from the settings
+						if collSetting != nil && collSetting.update_stats_timeout >= 0 {
+							timeout = collSetting.update_stats_timeout
+						} else if scopeSetting != nil && scopeSetting.update_stats_timeout >= 0 {
+							timeout = scopeSetting.update_stats_timeout
+						} else if bucketSetting != nil && bucketSetting.update_stats_timeout >= 0 {
+							timeout = bucketSetting.update_stats_timeout
 						}
 
-						if len(exprs) > 0 || len(customUpdStats) > 0 {
-							keyspacesUpdated = append(keyspacesUpdated, coll.QualifiedName())
-						}
-
-						// Update Phase
-						// Perform the statistics update for all index expressions that require default UPDATE STATISTICS options
-						if len(exprs) > 0 {
-
-							if abort {
-								break bucketLoop
-							}
-
-							output := newAusOutput()
-							activeUpdStatLock.Lock()
-							activeUpdStat = output
-							activeUpdStatLock.Unlock()
-
-							err := output.executeUpdateStatistics(coll, exprs, nil)
-
-							activeUpdStatLock.Lock()
-							activeUpdStat = nil
-							activeUpdStatLock.Unlock()
-
-							if err != nil {
-								logging.Errorf(AUS_LOG_PREFIX+
-									"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
-									coll.QualifiedName(), err)
-
-								errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), err))
-							}
-
-							if output.err != nil {
-								errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), output.err))
-								logging.Errorf(AUS_LOG_PREFIX+
-									"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
-									coll.QualifiedName(), output.err)
-							}
-						}
-
-						// Perform the statistics update for all index expressions that require customized UPDATE STATISTICS options
-						if len(customUpdStats) > 0 {
-							if abort {
-								break bucketLoop
-							}
-
-							for i, _ := range customUpdStats {
-								cExprs := customUpdStats[i].Expressions()
-
-								with := value.NewValue(map[string]interface{}{
-									"sample_size": customUpdStats[i].SampleSize(),
-									"resolution":  customUpdStats[i].Resolution(),
-								})
-
-								output := newAusOutput()
-								activeUpdStatLock.Lock()
-								activeUpdStat = output
-								activeUpdStatLock.Unlock()
-
-								err := output.executeUpdateStatistics(coll, cExprs, with)
-
-								activeUpdStatLock.Lock()
-								activeUpdStat = nil
-								activeUpdStatLock.Unlock()
-
-								if err != nil {
-									logging.Errorf(AUS_LOG_PREFIX+
-										"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
-										coll.QualifiedName(), err)
-
-									errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), err))
-								}
-
-								if output.err != nil {
-									logging.Errorf(AUS_LOG_PREFIX+
-										"Auto Update Statistics task's Update phase for keyspace %s encountered an error: %v",
-										coll.QualifiedName(), output.err)
-									errs = append(errs, errors.NewAusUpdateStageError(coll.QualifiedName(), output.err))
-								}
-							}
-						}
+						settings.changePercentage = change
+						settings.update_stats_timeout = timeout
 					}
-
 				}
 
+				keyspaceHandler(coll, settings, this)
 			}
 		}
 
-		if timedOut {
-			errs = append(errs, errors.NewAusTaskTimeoutExceeded())
-		}
-
-		// Cache task history in system:tasks_cache
-		taskRv := make(map[string]interface{}, 4)
-		if len(buckets) == 0 {
-			if allBuckets {
-				s := "No buckets detected in cluster."
-				logging.Infof(AUS_LOG_PREFIX + s)
-				taskRv["info"] = s
-			} else {
-				s := "No buckets loaded on the node."
-				logging.Infof(AUS_LOG_PREFIX + s)
-				taskRv["info"] = s
-			}
-		}
-
-		// Persist task history in the log
-		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces Evaluated: %v", keyspacesEvaluated))
-		logging.Infof(AUS_LOG_PREFIX + fmt.Sprintf("Keyspaces qualified for Update Phase: %v", keyspacesUpdated))
-
-		taskRv["Configuration"] = map[string]interface{}{
-			"start_time":        task.startTime.Format(util.DEFAULT_FORMAT),
-			"end_time":          task.endTime.Format(util.DEFAULT_FORMAT),
-			"internal_version":  task.version,
-			"change_percentage": globalChangePercentage,
-			"all_buckets":       allBuckets,
-		}
-
-		if len(keyspacesEvaluated) > 0 {
-			taskRv["keyspaces_evaluated"] = keyspacesEvaluated
-		}
-
-		if len(keyspacesUpdated) > 0 {
-			taskRv["keyspaces_updated"] = keyspacesUpdated
-		}
-
-		logging.Infof(AUS_LOG_PREFIX+"Execution of the task scheduled between %v and %v has completed.",
-			task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT))
-
-		return taskRv, errs
-
-	} else {
-		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "param", parms)}
 	}
-
+	return
 }
 
-func stopTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
-
-	if params, okP := parms.(map[string]interface{}); okP {
-		var task taskInfo
-		if v, ok := params["task"]; ok {
-			if task, ok = v.(taskInfo); !ok {
-				return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", v)}
-			}
-		} else {
-			return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "task", nil)}
-		}
-
-		rv := fmt.Sprintf("Task scheduled between %v and %v has been stopped.", task.startTime, task.endTime)
-
-		// Schedule the next task run. Do not consider "today" in the determination of the window of the next run
-		versionChange, err := ausCfg.schedule(task.version, false)
-		if versionChange {
-			rv += " Detected global settings change."
-			return rv, nil
-		}
-
-		if err != nil {
-			return rv, []errors.Error{err}
-		}
-
-		return rv, nil
-
-	} else {
-		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError("execution", "param", parms)}
+func getBuckets(allBuckets bool) ([]datastore.ExtendedBucket, errors.Error) {
+	ds, ok := datastore.GetDatastore().(datastore.Datastore2)
+	if !ok || ds == nil {
+		// This should not ideally happen as migration should have completed.
+		return nil, errors.NewAusNotInitialized()
 	}
 
+	var buckets []datastore.ExtendedBucket
+
+	if allBuckets {
+		ds.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+			buckets = append(buckets, b)
+		})
+	} else {
+		ds.ForeachBucket(func(b datastore.ExtendedBucket) {
+			buckets = append(buckets, b)
+		})
+	}
+
+	return buckets, nil
+}
+
+// Returns whether the task should be started or not
+func fuzzyStart() bool {
+	for retry := 0; retry < _MAX_RETRY; retry++ {
+		if ausCfg.server.LoadFactor() <= _MAX_LOAD_FACTOR {
+			break
+		} else if retry == _MAX_RETRY-1 {
+			logging.Errorf("AUS: Task not started due to existing load on the node.")
+			return false
+		} else {
+			time.Sleep(_RETRY_INTERVAL)
+		}
+	}
+
+	return true
+}
+
+// AUS task related functions
+
+func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-chan bool) (interface{}, []errors.Error) {
+	task, ok := extractTaskInfo(parms)
+	if !ok {
+		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
+	}
+
+	taskCtx := newTaskContext(task, _AUS_COORDINATION_DOC_PREFIX+task.version)
+
+	var timedOut bool
+	timer := time.NewTimer(task.endTime.Sub(task.startTime))
+
+	go func() {
+		var stop bool
+		select {
+		case stop = <-stopChannel:
+			if stop {
+				logging.Warnf("AUS: [%s] Task stopped due to user cancellation.", task.sessionName)
+			}
+		case <-timer.C:
+			timedOut = true
+			logging.Errorf("AUS: [%s] Task stopped as timeout exceeded.", task.sessionName)
+		}
+
+		if timedOut || stop {
+			timer.Stop()
+			taskCtx.stop()
+		}
+	}()
+
+	defer func() {
+		timer.Stop()
+		timer = nil
+
+		r := recover()
+		if r != nil {
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			s := string(buf[0:n])
+			logging.Severef("AUS: [%s] Panic in task execution: %v\n%v", task.sessionName, r, s)
+		}
+
+		ausCfg.scheduleAusTask(task.version, false)
+		ausCfg.setRunningAusEnd(true, time.Time{})
+	}()
+
+	logging.Infof(
+		"AUS: Task %s scheduled between %v and %v started.", task.sessionName,
+		task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT))
+
+	ausCfg.Lock()
+	if task.version != ausCfg.configVersion {
+		ausCfg.Unlock()
+		s := fmt.Sprintf("Not executed. Scheduled with outdated config version %s.", task.version)
+		logging.Infof("AUS: [%s] %s", task.sessionName, s)
+		return s, nil
+	}
+	ausCfg.setRunningAusEnd(false, task.endTime)
+	allBuckets := ausCfg.settings.allBuckets
+	globalChangePercentage := ausCfg.settings.changePercentage
+	ausCfg.Unlock()
+
+	logging.Infof(
+		"AUS: [%s] Configurations: start_time: %v end_time: %v change_percentage: %v all_buckets: %v internal_version: %v",
+		task.sessionName, task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT),
+		globalChangePercentage, allBuckets, task.version)
+
+	start := fuzzyStart()
+	if !start {
+		logging.Errorf("AUS: [%s] Task not started due to existing load on the node.", task.sessionName)
+		return nil, errors.Errors{errors.NewAusTaskNotStartedError()}
+	}
+
+	var keyspacesUpdated []interface{}
+
+	ausHandler := func(keyspace datastore.Keyspace, settings *keyspaceSettings, taskContext *taskContext) {
+
+		if taskContext.abort {
+			return
+		}
+
+		changePerc := globalChangePercentage
+		if settings != nil && settings.changePercentage >= 0 {
+			changePerc = settings.changePercentage
+		}
+
+		statupdater, err := ausCfg.server.Datastore().StatUpdater()
+		if err != nil {
+			taskContext.AddError(err)
+			return
+		} else if statupdater.Name() != datastore.UPDSTAT_DEFAULT {
+			taskContext.AddError(errors.NewAusNotSupportedError())
+			return
+		}
+
+		updated := aus.AutoUpdateStatistics(keyspace, changePerc, settings.update_stats_timeout, statupdater, taskContext)
+		if updated {
+			keyspacesUpdated = append(keyspacesUpdated, keyspace.QualifiedName())
+		}
+
+		return
+	}
+
+	bucketsDetected := taskCtx.processCollections(true, true, ausHandler)
+
+	logging.Infof("AUS: [%s] Keyspaces qualified for update: %v", task.sessionName, keyspacesUpdated)
+
+	var errs errors.Errors
+	if taskCtx.err != nil {
+		errs = append(errs, taskCtx.err)
+	}
+
+	errCount := taskCtx.errCount
+	if timedOut {
+		errCount++
+		errs = append(errs, errors.NewAusTaskTimeoutExceeded())
+	}
+
+	taskRv := make(map[string]interface{}, 2)
+	if errCount > 0 {
+		taskRv["error_count"] = errCount
+	}
+
+	if !bucketsDetected {
+		var s string
+		if allBuckets {
+			s = "No buckets detected in cluster."
+		} else {
+			s = "No buckets loaded on the node."
+		}
+		logging.Infof("AUS: [%s] %s", task.sessionName, s)
+		taskRv["info"] = s
+	}
+
+	taskRv["internal_version"] = task.version
+
+	if len(keyspacesUpdated) > 0 {
+		taskRv["keyspaces_updated"] = keyspacesUpdated
+	}
+
+	logging.Infof("AUS: [%s] Task scheduled between %v and %v has completed with %v errors.",
+		task.sessionName, task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT), taskCtx.errCount)
+
+	return taskRv, errs
+}
+
+func stopAusTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+
+	task, ok := extractTaskInfo(parms)
+	if !ok {
+		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
+	}
+
+	rv := fmt.Sprintf("Task scheduled between %v and %v has been cancelled.", task.startTime.Format(util.DEFAULT_FORMAT),
+		task.endTime.Format(util.DEFAULT_FORMAT))
+
+	versionChange, err := ausCfg.scheduleAusTask(task.version, false)
+	if versionChange {
+		rv += fmt.Sprintf(" Scheduled with outdated config version %s.", task.version)
+	}
+
+	logging.Infof("AUS: [%s] %s", task.sessionName, rv)
+
+	if err != nil {
+		return fmt.Sprintf("Not executed. Scheduled with outdated config version %s.", task.version), []errors.Error{err}
+	}
+
+	return rv, nil
+}
+
+// Cleanup task functions
+// When AUS is changed from enabled to disabled, the cleanup tasks deletes all AUS related documents stored in KV
+
+func (this *ausConfig) scheduleCleanupTask(version string) (bool, errors.Error) {
+	this.RLock()
+	cfgVersion := this.configVersion
+	runningAusEnd := this.runningAusEnd
+	runningCleanupEnd := this.runningCleanupEnd
+	this.RUnlock()
+
+	if version != cfgVersion {
+		logging.Infof("AUS: Detected global settings change. Cleanup task configured with internal version %v not scheduled.",
+			version)
+
+		return true, nil
+	}
+
+	startTime := time.Now().Add(time.Second * 30)
+
+	if !runningAusEnd.IsZero() {
+		// implies there is an AUS task running
+		// Do not schedule a cleanup task right now. Schedule it after the task ends
+		startTime = runningAusEnd.Add(time.Second * 30)
+	}
+
+	if !runningCleanupEnd.IsZero() {
+		if !startTime.After(runningCleanupEnd) {
+			startTime = runningCleanupEnd.Add(time.Second * 30)
+		}
+	}
+
+	task := taskInfo{startTime: startTime, endTime: startTime.Add(time.Hour), version: version,
+		class: _AUS_CLEANUP_TASK_CLASS}
+
+	err := scheduleTask(task)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func execCleanupTask(context scheduler.Context, parms interface{}, stopChannel <-chan bool) (interface{}, []errors.Error) {
+	task, ok := extractTaskInfo(parms)
+	if !ok {
+		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
+	}
+
+	logging.Infof("AUS: [%s] Cleanup task scheduled between %v and %v started.",
+		task.sessionName, task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT))
+	logging.Infof("AUS: [%s] Configurations of cleanup task: start_time: %v end_time: %v internal version: %v",
+		task.sessionName, task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT), task.version)
+
+	taskCtx := newTaskContext(task, _AUS_CLEANUP_COORDINATION_DOC_PREFIX+task.version)
+
+	var timedOut bool
+	timer := time.NewTimer(task.endTime.Sub(task.startTime))
+
+	go func() {
+		select {
+		case stop := <-stopChannel:
+			if stop {
+				timer.Stop()
+				taskCtx.stop()
+				logging.Errorf("AUS: [%s] Cleanup task stopped due to user cancellation.", task.sessionName)
+			}
+		case <-timer.C:
+			timer.Stop()
+			taskCtx.stop()
+			timedOut = true
+			logging.Errorf("AUS: [%s] Cleanup task stopped as timeout exceeded.", task.sessionName)
+		}
+	}()
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			s := string(buf[0:n])
+			logging.Severef("AUS: [%s] Panic in cleanup execution: %v\n%v", task.sessionName, r, s)
+		}
+
+		timer.Stop()
+		timer = nil
+		ausCfg.setRunningCleanupEnd(true, time.Time{})
+	}()
+
+	ausCfg.Lock()
+	if ausCfg.configVersion != task.version {
+		ausCfg.Unlock()
+		s := fmt.Sprintf(
+			"Not executed. Scheduled with outdated config version %s.", task.version)
+		logging.Infof("AUS: [%s] Cleanup task %s", task.sessionName, s)
+		return s, nil
+	}
+	ausCfg.setRunningCleanupEnd(false, task.endTime)
+	ausCfg.Unlock()
+
+	var keyspacesCleaned []interface{}
+
+	cleanupHandler := func(keyspace datastore.Keyspace, settings *keyspaceSettings, taskContext *taskContext) {
+		if taskContext.abort {
+			return
+		}
+
+		err := dictionary.DeleteAllAusHistoryDocs(keyspace)
+		if err != nil {
+			logging.Errorf("AUS: [%s] Error performing cleanup for keyspace %s: %v", task.sessionName, keyspace.QualifiedName(), err)
+			taskContext.AddError(err)
+			return
+		}
+
+		keyspacesCleaned = append(keyspacesCleaned, keyspace.QualifiedName())
+		return
+	}
+
+	bucketsDetected := taskCtx.processCollections(false, false, cleanupHandler)
+
+	logging.Infof("AUS: [%s] Cleaned up done on keyspaces: %v", task.sessionName, keyspacesCleaned)
+
+	var errs errors.Errors
+	if taskCtx.err != nil {
+		errs = append(errs, taskCtx.err)
+	}
+
+	errCount := taskCtx.errCount
+	if timedOut {
+		errCount++
+		errs = append(errs, errors.NewAusTaskTimeoutExceeded())
+	}
+
+	taskRv := make(map[string]interface{}, 2)
+	if errCount > 0 {
+		taskRv["error_count"] = errCount
+	}
+
+	if !bucketsDetected {
+		s := "No buckets detected in cluster."
+		logging.Infof("AUS: [%s] Cleanup task completed with %s", task.sessionName, s)
+		taskRv["info"] = s
+	}
+
+	taskRv["internal_version"] = task.version
+
+	if len(keyspacesCleaned) > 0 {
+		taskRv["keyspaces_cleaned"] = keyspacesCleaned
+	}
+
+	logging.Infof("AUS: [%s] Cleanup task scheduled between %v and %v has completed with %v errors.",
+		task.sessionName, task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT), taskCtx.errCount)
+
+	return taskRv, errs
+}
+
+func stopCleanupTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+	task, ok := extractTaskInfo(parms)
+	if !ok {
+		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
+	}
+
+	rv := fmt.Sprintf("Cleanup task scheduled between %v and %v has been cancelled.", task.startTime.Format(util.DEFAULT_FORMAT),
+		task.endTime.Format(util.DEFAULT_FORMAT))
+
+	ausCfg.RLock()
+	version := ausCfg.settings.version
+	ausCfg.RUnlock()
+
+	if version != task.version {
+		rv += fmt.Sprintf(" Scheduled with outdated config version %s.", task.version)
+	}
+
+	logging.Infof("AUS: [%s] %s", task.sessionName, rv)
+
+	return fmt.Sprintf("Not executed. Scheduled with outdated config version %s.", task.version), nil
 }
 
 // Execution related functions
@@ -1760,7 +2000,7 @@ func newContext(output *ausOutput) (*execution.Context, errors.Error) {
 		qServer.MaxParallelism(), qServer.ScanCap(), qServer.PipelineCap(), qServer.PipelineBatch(), nil, nil,
 		creds, datastore.NOT_SET, &ZeroScanVectorSource{}, output, nil, qServer.MaxIndexAPI(),
 		util.GetN1qlFeatureControl(), "", util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_FLEXINDEX),
-		util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_CBO), optimizer.NewOptimizer(), datastore.DEF_KVTIMEOUT,
+		util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_CBO), server.GetNewOptimizer(), datastore.DEF_KVTIMEOUT,
 		qServer.Timeout())
 
 	if qServer.MemoryQuota() > 0 {
@@ -1826,7 +2066,6 @@ func (this *ZeroScanVectorSource) Type() int32 {
 // context.Output implementation for executions in AUS related operations
 type ausOutput struct {
 	err           errors.Error
-	mutationCount uint64
 	activeUpdStat *datastore.ValueConnection
 }
 
@@ -1882,11 +2121,11 @@ func (this *ausOutput) Errors() []errors.Error {
 }
 
 func (this *ausOutput) AddMutationCount(i uint64) {
-	atomic.AddUint64(&this.mutationCount, i)
+	// do nothing
 }
 
 func (this *ausOutput) MutationCount() uint64 {
-	return atomic.LoadUint64(&this.mutationCount)
+	return 0
 }
 
 func (this *ausOutput) SetSortCount(i uint64) {
@@ -1894,7 +2133,7 @@ func (this *ausOutput) SetSortCount(i uint64) {
 }
 
 func (this *ausOutput) SortCount() uint64 {
-	return uint64(0)
+	return 0
 }
 
 func (this *ausOutput) AddPhaseCount(p execution.Phases, c uint64) {
@@ -1988,24 +2227,4 @@ func (this *ausOutput) stopActiveUpdStat() {
 		default:
 		}
 	}
-}
-
-func (this *ausOutput) executeUpdateStatistics(collection datastore.Keyspace, terms expression.Expressions,
-	options value.Value) errors.Error {
-	context, err := newContext(this)
-	if err != nil {
-		return err
-	}
-
-	opContext := execution.NewOpContext(context)
-	updStat, err := ausCfg.server.Datastore().StatUpdater()
-	if err != nil {
-		return err
-	}
-
-	this.activeUpdStat = datastore.NewValueConnection(opContext)
-	updStat.UpdateStatistics(collection, nil, terms, options, this.activeUpdStat, opContext, false)
-	this.stopActiveUpdStat()
-	this.activeUpdStat = nil
-	return nil
 }

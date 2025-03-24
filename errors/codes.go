@@ -633,4 +633,5 @@ const (
 	E_AUS_UPDATE_PHASE                           ErrorCode = 20009
 	E_AUS_TASK_NOT_STARTED                       ErrorCode = 20010
 	E_AUS_TASK_TIMEOUT                           ErrorCode = 20011
+	E_AUS_INTERNAL                               ErrorCode = 20012
 )

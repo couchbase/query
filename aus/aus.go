@@ -8,12 +8,6 @@
 
 package aus
 
-const (
-	AUS_LOG_PREFIX              = "AUS: "
-	AUS_DOC_PREFIX              = "aus::"
-	AUS_COORDINATION_DOC_PREFIX = "aus_coord::"
-)
-
 type MutateOp int
 
 const (

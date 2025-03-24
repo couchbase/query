@@ -9,37 +9,34 @@
         ]
     },
     {
-        "description": "Test for expressions with no change information associated with it. Must qualify for Evaluation phase and Update phase.",
-        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_evaluated, \"default:shellTest._default._default\") AS evaluation, ARRAY_CONTAINS(results.keyspaces_updated, \"default:shellTest._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
+        "description": "Test for expressions that are not indexed. Should not qualify for Update.",
+        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_updated, \"default:shellTest._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
         "results":[
             {
-            "evaluation": true,
-            "update": true
-            }
-        ]
-    },
-    {
-        "description": "Test for a keyspace with AUS disabled. Must not qualify for Evaluation or Update phase.",
-        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_evaluated, \"default:review._default._default\") AS evaluation, ARRAY_CONTAINS(results.keyspaces_updated, \"default:review._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
-        "results":[
-            {
-            "evaluation": false,
             "update": false
             }
         ]
     },
     {
-        "description": "Test for a keyspace with a custom change_percentage set that is lower than the global change_percentage. The expressions would not have qualified if not for the lower threshold. Keyspace qualifies for Evaluation phase. The expressions have sufficient change to qualify to Update phase.",
-        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_evaluated, \"default:customer._default._default\") AS evaluation, ARRAY_CONTAINS(results.keyspaces_updated, \"default:customer._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
+        "description": "Test for a keyspace with AUS disabled. Must not qualify for Update. If not for the disablement, it would have qualified for Update.",
+        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_updated, \"default:review._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
         "results":[
             {
-            "evaluation": true,
+            "update": false
+            }
+        ]
+    },
+    {
+        "description": "Test for a keyspace with a custom change_percentage set that is lower than the global change_percentage. Would not have qualified if not for the lower threshold. Qualifies for Update phase.",
+        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_updated, \"default:customer._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
+        "results":[
+            {
             "update": true
             }
         ]
     },
     {
-        "description": "Test for expressions whose statistics were collected with a custom resolution. This must be maintained when updated with AUS. Otherwise, default resolution will be used.",
+        "description": "Test for expressions whose statistics were collected with a custom resolution. This must be maintained when updated with AUS.",
         "statements": "SELECT META().distributions.firstName.resolution AS f, META().distributions.age.resolution AS r, META().distributions.custId.resolution AS c, META().distributions.emailAddress.resolution AS  e FROM system:dictionary WHERE meta().id = \"default:customer._default._default\"",
         "results":[
             {
@@ -51,12 +48,29 @@
         ]
     },
     {
-        "description": "Test for a keyspace that has no custom change_percentage but rather uses the global change_percentage for AUS. The keyspace qualifies for Evaluation phase. But its expressions however do not have sufficient change to qualify to Update phase. Additionally, it is a test to check if the change info is collected when UPDATE STATISTICS is run when AUS is enabled. If the change info is not collected, this keyspace will incorrectly qualify for Update.",
-        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_evaluated, \"default:product._default._default\") AS evaluation, ARRAY_CONTAINS(results.keyspaces_updated, \"default:product._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
+        "description": "Test for a keyspace that has no custom change_percentage but rather uses the global change_percentage for AUS. Does not have sufficient change to qualify to Update phase. Additionally, it is a test to check if the change info is collected when UPDATE STATISTICS is run when AUS is enabled. If the change info is not collected, this keyspace will incorrectly qualify for Update.",
+        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_updated, \"default:product._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
         "results":[
             {
-            "evaluation": true,
             "update": false
+            }
+        ]
+    },
+    {
+        "description": "Test for indexed expressions that have had their changes accounted for by recent manual UPDATE STATISTICS runs. Should not qualify for Update.",
+        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_updated, \"default:orders._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
+        "results":[
+            {
+            "update": false
+            }
+        ]
+    },
+    {
+        "description": "Test for a keyspace that has no AUS information. Should qualify for Update.",
+        "statements": "SELECT ARRAY_CONTAINS(results.keyspaces_updated, \"default:purchase._default._default\") AS `update` FROM system:tasks_cache WHERE class=\"auto_update_statistics\" AND state=\"completed\"",
+        "results":[
+            {
+            "update": true
             }
         ]
     }

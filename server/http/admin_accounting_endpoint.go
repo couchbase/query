@@ -2845,6 +2845,12 @@ func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, rem
 		oState.Release()
 		return errors.NewServiceErrorBadValue(err, "aus settings restore: change_percentage")
 	}
+
+	aTimeout, err := oState.FindKey("update_statistics_timeout")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, "aus settings restore: update_statistics_timeout")
+	}
 	oState.Release()
 
 	path := strings.Trim(string(aPath), "\"")
@@ -2861,7 +2867,7 @@ func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, rem
 		return nil
 	}
 
-	doc := make(map[string]interface{}, 2)
+	doc := make(map[string]interface{}, 3)
 
 	if aEnable != nil {
 		enable, parseErr := strconv.ParseBool(strings.Trim(string(aEnable), "\""))
@@ -2877,6 +2883,14 @@ func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, rem
 			return errors.NewServiceErrorBadValue(parseErr, "aus settings restore: change_percentage invalid")
 		}
 		doc["change_percentage"] = changePercentage
+	}
+
+	if aTimeout != nil {
+		timeout, parseErr := strconv.ParseInt(strings.Trim(string(aTimeout), "\""), 10, 0)
+		if parseErr != nil {
+			return errors.NewServiceErrorBadValue(parseErr, "aus settings restore: update_statistics_timeout invalid")
+		}
+		doc["update_statistics_timeout"] = timeout
 	}
 
 	var pair value.Pair
