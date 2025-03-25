@@ -606,6 +606,7 @@ func (this *httpRequest) writeErrors(prefix string, indent string) bool {
 				this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 			}
 		}
+		logging.Tracea(func() string { return fmt.Sprintf("%v: Error: %v", this.Id(), err.Object()) })
 		if !this.writeError(err, first, prefix, indent) {
 			break
 		}
@@ -634,6 +635,7 @@ func (this *httpRequest) writeErrorsXML(prefix string, indent string) bool {
 		if first && this.httpCode() == 0 {
 			this.setHttpCode(mapErrorToHttpResponse(err, http.StatusOK))
 		}
+		logging.Tracea(func() string { return fmt.Sprintf("%v: Error: %v", this.Id(), err.Object()) })
 		if !this.writeErrorXML(err, prefix, indent) {
 			return false
 		}

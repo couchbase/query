@@ -1684,11 +1684,11 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 	logging.Tracea(func() string {
 		var pl plan.Operator = prepared
-		explain, err := json.MarshalIndent(pl, "", "    ")
+		explain, err := json.Marshal(pl)
 		if err != nil {
-			return fmt.Sprintf("Error logging explain: %v", err)
+			return fmt.Sprintf("Explain: %s error: %v", request.Id().String(), err)
 		}
-		return fmt.Sprintf("Explain <ud>%v</ud>", string(explain))
+		return fmt.Sprintf("Explain: %s <ud>%v</ud>", request.Id().String(), string(explain))
 	}, context)
 
 	return prepared, nil
