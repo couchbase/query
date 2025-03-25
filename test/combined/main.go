@@ -639,11 +639,10 @@ func addIndextoKeyspaceFromCreateStmt(crtidx string) error {
 
 func addAdviseIndexes() error {
 	for i := range Queries {
-		if rand.Intn(10) < 3 {
-			qry := Queries[i].SQL("")
-			if err := runAdvise(qry); err != nil {
-				return err
-			}
+		// If required, this is the place to add probability of running advise for a query
+		qry := Queries[i].SQL("")
+		if err := runAdvise(qry); err != nil {
+			return err
 		}
 	}
 	return nil
