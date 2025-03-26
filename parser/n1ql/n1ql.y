@@ -4350,6 +4350,14 @@ LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($2)
     $$.ExprBase().SetErrorContext(yylex.(*lexer).nex.Line()+1,yylex.(*lexer).nex.Column())
+    if !yylex.(*lexer).parsingStatement() {
+        // when parsing expressions, need to formalize the subquery such that proper identifier flags
+        // are set on the subquery expressions, this is required for planning of the subquery
+        err := $$.Select().CheckFormalization()
+        if err != nil {
+            yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in formalization of uncorrelated subquery%s %v", $$.ErrorContext(), err))
+        }
+    }
 }
 ;
 

@@ -404,6 +404,11 @@ func (this *Select) CheckSetCorrelated() {
 	markCorrelated(this.subresult)
 }
 
+func (this *Select) CheckFormalization() error {
+	f := expression.NewFormalizer("", nil)
+	return this.FormalizeSubquery(f, true)
+}
+
 func (this *Select) SetIncludeWith(incl bool) {
 	this.includeWith = incl
 }
