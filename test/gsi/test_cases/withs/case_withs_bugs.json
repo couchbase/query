@@ -264,6 +264,35 @@
                 ]
             }
         ]
+    },
+    {
+	"testcase": "MB-65954",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY u WITHIN p.`~subqueries`[0].`plan`.`~children` SATISFIES u.`#operator` LIKE 'IndexScan%' AND u.`covers` IS NOT MISSING AND u.`as` = 'r' END AND ANY v WITHIN p.`~subqueries`[0].`plan`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`as` = 'l' END"
+        },
+        "statements": "WITH w1 AS (SELECT l.c11, r.c21, r.c22 FROM shellTest l JOIN shellTest r USE HASH(probe) ON l.c11 = r.c21 WHERE l.c11 > 1 AND r.c22 IN [20,21]  AND l.type = \"left\" AND r.type = \"right\") SELECT w1",
+        "results": [
+            {
+                "w1": [
+                    {
+                        "c11": 2,
+                        "c21": 2,
+                        "c22": 20
+                    },
+                    {
+                        "c11": 2,
+                        "c21": 2,
+                        "c22": 21
+                    }
+                ]
+            }
+        ]
     }
 ]
 
