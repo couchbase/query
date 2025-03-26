@@ -5062,14 +5062,23 @@ LPAREN fullselect RPAREN
     $$ = algebra.NewSubquery($4)
     err := $$.Select().CheckSetCorrelated()
     if err != nil {
-        yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in handling of CORRELATED subquery %v", err), $<line>3, $<column>3)
+        yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in handling of CORRELATED subquery %v", err), $<line>2, $<column>2)
     }
-    $$.ExprBase().SetErrorContext($<line>3,$<column>3)
+    $$.ExprBase().SetErrorContext($<line>2,$<column>2)
 }
 |
 LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($2)
+    if !yylex.(*lexer).parsingStatement() {
+        // when parsing expressions, need to formalize the subquery such that proper identifier flags
+        // are set on the subquery expressions, this is required for planning of the subquery
+	// (correlated subquery above already go through formalization with CheckSetCorrelated() call)
+        err := $$.Select().CheckFormalization()
+        if err != nil {
+            yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in formalization of uncorrelated subquery %v", err), $<line>1, $<column>1)
+        }
+    }
     $$.ExprBase().SetErrorContext($<line>1,$<column>1)
 }
 ;
