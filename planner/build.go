@@ -629,6 +629,7 @@ type coveringSubqInfo struct {
 	subqTermPlans []*subqTermPlan
 	coveringScans []plan.CoveringOperator
 	subqueryTerms []*algebra.SubqueryTerm
+	aggs          algebra.Aggregates
 }
 
 func (this *coveringSubqInfo) SubqTermPlans() []*subqTermPlan {
@@ -651,7 +652,11 @@ func (this *coveringSubqInfo) addSubqueryTerm(subqTerm *algebra.SubqueryTerm) {
 	this.subqueryTerms = append(this.subqueryTerms, subqTerm)
 }
 
-func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operator) error {
+func (this *coveringSubqInfo) Aggregates() algebra.Aggregates {
+	return this.aggs
+}
+
+func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operator, aggs algebra.Aggregates) error {
 	flags := int32(0)
 	if this.subqUnderJoin() {
 		if !this.NoExecute() {
@@ -696,11 +701,14 @@ func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operat
 			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible coveringScans")
 		} else if len(subqTerms) != len(info.SubqueryTerms()) {
 			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible nested SubqueryTerms")
+		} else if len(aggs) != len(info.Aggregates()) {
+			return errors.NewPlanInternalError("addSubqCOveringInfo: incompatible aggregates")
 		}
 	} else {
 		this.subqCoveringInfo[node] = &coveringSubqInfo{
 			coveringScans: this.coveringScans,
 			subqueryTerms: subqTerms,
+			aggs:          aggs,
 		}
 	}
 	this.subqCoveringInfo[node].AddSubqTermPlan(subqTermPlan)
@@ -722,6 +730,7 @@ func (this *builder) inheritSubqCoveringInfo(builderCopy *builder) {
 					info = &coveringSubqInfo{
 						coveringScans: infoCopy.CoveringScans(),
 						subqueryTerms: infoCopy.SubqueryTerms(),
+						aggs:          infoCopy.Aggregates(),
 					}
 					this.subqCoveringInfo[subselect] = info
 				}

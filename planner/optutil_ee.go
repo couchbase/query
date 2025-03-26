@@ -138,12 +138,13 @@ func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, 
 		if tcost <= 0.0 || tsel <= 0.0 || tcard <= 0.0 || tfrCost <= 0.0 || tfetchCost <= 0.0 {
 			return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
-		icost := base.NewIndexCost(index, tcost, tcard, tsel, tsize, tfrCost, tfetchCost, skipKeys)
+		icost := base.NewIndexCost(index, tcost, tcard, tsel, tsize, tfrCost, tfetchCost,
+			OPT_COST_NOT_AVAIL, OPT_COST_NOT_AVAIL, skipKeys)
 		indexes = append(indexes, icost)
 		spanMap[icost] = span
 	}
 
-	indexes = optutil.ChooseIntersectScan(datastore.IndexQualifiedKeyspacePath(index), indexes)
+	indexes = optutil.ChooseIntersectScan(datastore.IndexQualifiedKeyspacePath(index), indexes, -1)
 
 	var cost, sel, frCost, nrows float64
 	var size int64
@@ -396,8 +397,8 @@ func getUnnestPredSelec(pred expression.Expression, variable string, mapping exp
 }
 
 func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore.Index]*indexEntry,
-	nTerms int, alias string, limit, offset expression.Expression, advisorValidate, singleKeyspace, vector bool,
-	context *PrepareContext) map[datastore.Index]*indexEntry {
+	nTerms int, baseKeyspace *base.BaseKeyspace, limit, offset expression.Expression,
+	advisorValidate, singleKeyspace, vector bool, context *PrepareContext) map[datastore.Index]*indexEntry {
 
 	if keyspace == nil {
 		return sargables
@@ -407,7 +408,6 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 
 	hasPdOrder := false
 	hasEarlyOrder := false
-	orderSelec := OPT_SELEC_NOT_AVAIL
 	for s, e := range sargables {
 		skipKeys := make([]bool, len(e.sargKeys))
 		selectivity := e.selectivity
@@ -422,15 +422,13 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 			// array index without sargable array index key
 			selectivity, cardinality = optutil.AdjustArraySelec(s, selectivity, cardinality)
 		}
-		icost := base.NewIndexCost(s, e.cost, cardinality, selectivity, e.size, e.frCost, e.fetchCost, skipKeys)
+		icost := base.NewIndexCost(s, e.cost, cardinality, selectivity, e.size, e.frCost,
+			e.fetchCost, OPT_COST_NOT_AVAIL, OPT_COST_NOT_AVAIL, skipKeys)
 		if e.IsPushDownProperty(_PUSHDOWN_ORDER) {
 			icost.SetPdOrder()
 			hasPdOrder = true
 			if e.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) {
 				icost.SetExactSpans()
-			}
-			if orderSelec <= 0.0 || selectivity < orderSelec {
-				orderSelec = selectivity
 			}
 		} else if e.HasFlag(IE_HAS_EARLY_ORDER) {
 			icost.SetEarlyOrder()
@@ -438,19 +436,37 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 				icost.SetExactSpans()
 			}
 			hasEarlyOrder = true
-			if orderSelec <= 0.0 || selectivity < orderSelec {
-				orderSelec = selectivity
-			}
 		}
 		indexes = append(indexes, icost)
 	}
 
 	var nlimit, noffset int64
-	if singleKeyspace && orderSelec > 0.0 {
-		nlimit, _ = base.GetStaticInt(limit)
-		noffset, _ = base.GetStaticInt(offset)
-		if nlimit > 0 && noffset > 0 {
-			nlimit += noffset
+	if hasPdOrder && singleKeyspace {
+		allSelec := optutil.GetAllSelec(baseKeyspace.Filters())
+		if allSelec > 0.0 {
+			nlimit, _ = base.GetStaticInt(limit)
+			noffset, _ = base.GetStaticInt(offset)
+			if nlimit > 0 && noffset > 0 {
+				nlimit += noffset
+			}
+			if nlimit > 0 {
+				for _, idx := range indexes {
+					if !idx.HasPdOrder() {
+						continue
+					}
+					// account for "limit" in pushdown order
+					selec := idx.Selectivity()
+					cardinality := idx.Cardinality()
+					tlimit := int64(float64(nlimit)*selec/allSelec + 0.5)
+					if cardinality > float64(tlimit) && tlimit >= 1 {
+						limitCost, _, _, _ := optutil.CalcLimitCostInput(idx.Cost(),
+							cardinality, idx.Size(), idx.FrCost(), tlimit, -1)
+						fetchCost, _, fetchFrCost := optutil.CalcFetchCost(baseKeyspace.Keyspace(), cardinality)
+						limitFetchCost := fetchFrCost + (fetchCost-fetchFrCost)*float64(tlimit-1)/(cardinality-1)
+						idx.SetLimitCost(limitCost, limitFetchCost)
+					}
+				}
+			}
 		}
 	}
 	if hasPdOrder && nTerms > 0 {
@@ -482,10 +498,10 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 			cost := idx.Cost()
 			if nlimit > 0 && idx.HasPdOrder() {
 				// account for "limit" in pushdown order
-				selec := idx.Selectivity()
-				tlimit := int64(float64(nlimit)*selec/orderSelec + 0.5)
-				cost, _, _, _ = optutil.CalcLimitCostInput(cost, idx.Cardinality(),
-					idx.Size(), idx.FrCost(), tlimit, -1)
+				limitCost := idx.LimitCost()
+				if limitCost > 0.0 {
+					cost = limitCost
+				}
 			}
 			if bestIndex == nil {
 				bestIndex = idx
@@ -520,12 +536,16 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 		}
 	}
 
-	adjustIndexSelectivity(indexes, sargables, alias, advisorValidate, vector, context)
+	adjustIndexSelectivity(indexes, sargables, baseKeyspace.Name(), nlimit > 0, advisorValidate, vector, context)
 
 	if vector {
 		indexes = indexes[:1]
 	} else {
-		indexes = optutil.ChooseIntersectScan(keyspace.QualifiedName(), indexes)
+		if nlimit > 0 && (hasPdOrder && !indexes[0].HasPdOrder()) {
+			// if ORDER BY present and the 1st index does not provide index order, reset nlimit
+			nlimit = 0
+		}
+		indexes = optutil.ChooseIntersectScan(keyspace.QualifiedName(), indexes, nlimit)
 	}
 
 	newSargables := make(map[datastore.Index]*indexEntry, len(indexes))
@@ -537,7 +557,7 @@ func optChooseIntersectScan(keyspace datastore.Keyspace, sargables map[datastore
 }
 
 func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.Index]*indexEntry,
-	alias string, considerInternal, vector bool, context *PrepareContext) {
+	alias string, doLimit, considerInternal, vector bool, context *PrepareContext) {
 
 	if len(indexes) <= 1 {
 		return
@@ -545,10 +565,10 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 
 	// first sort the slice
 	sort.Slice(indexes, func(i, j int) bool {
-		return ((indexes[i].ScanCost() < indexes[j].ScanCost()) ||
-			((indexes[i].ScanCost() == indexes[j].ScanCost()) &&
+		return ((indexes[i].ScanCost(doLimit) < indexes[j].ScanCost(doLimit)) ||
+			((indexes[i].ScanCost(doLimit) == indexes[j].ScanCost(doLimit)) &&
 				(indexes[i].Selectivity() < indexes[j].Selectivity())) ||
-			((indexes[i].ScanCost() == indexes[j].ScanCost()) &&
+			((indexes[i].ScanCost(doLimit) == indexes[j].ScanCost(doLimit)) &&
 				(indexes[i].Selectivity() == indexes[j].Selectivity()) &&
 				(indexes[i].Cardinality() < indexes[j].Cardinality())))
 	})
@@ -604,7 +624,7 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 
 	if !vector {
 		// recurse on remaining indexes
-		adjustIndexSelectivity(indexes[1:], sargables, alias, considerInternal, vector, context)
+		adjustIndexSelectivity(indexes[1:], sargables, alias, false, considerInternal, vector, context)
 	}
 }
 

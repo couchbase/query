@@ -824,7 +824,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 	if te.nSargKeys > 0 && te.nSargKeys == snk+snc && se.nSargKeys > snk && be == se {
 		// all te sargable keys are se sargable keys and part of se condition;
 		//  se have more different sragable keys
-		if te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
+		if !shortest && te.cond != nil && (se.cond == nil || !base.SubsetOf(se.cond, te.cond)) {
 			return false
 		}
 		return true
@@ -1264,9 +1264,9 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 		nTerms = len(this.order.Terms())
 	}
 
-	return optChooseIntersectScan(keyspace, sargables, nTerms, node.Alias(),
-		this.limit, this.offset, this.advisorValidate(), len(this.baseKeyspaces) == 1,
-		vector, this.context)
+	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
+	return optChooseIntersectScan(keyspace, sargables, nTerms, baseKeyspace, this.limit, this.offset,
+		this.advisorValidate(), len(this.baseKeyspaces) == 1, vector, this.context)
 }
 
 func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
@@ -1701,7 +1701,9 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				if !fl.IsJoin() {
 					if useCBO {
 						if fl.Selec() > 0.0 {
-							if !subFltr {
+							// filters marked with EXPR_DEFAULT_LIKE has its
+							// selectivity already accounted for in spans
+							if !subFltr && !fltrExpr.HasExprFlag(expression.EXPR_DEFAULT_LIKE) {
 								selec *= fl.Selec()
 							}
 						} else {

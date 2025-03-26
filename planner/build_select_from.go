@@ -206,7 +206,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			builderCopy = this.Copy()
 			optimizer := this.context.Optimizer()
 			ops, subOps, coveringOps, filter, hasOrder, err = optimizer.OptimizeQueryBlock(builderCopy, node.From(), limit,
-				offset, order, distinct)
+				offset, order, distinct, this.advisorValidate())
 			if err != nil {
 				return err
 			}

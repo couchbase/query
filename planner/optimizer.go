@@ -20,7 +20,7 @@ import (
 type Optimizer interface {
 	Copy() Optimizer
 	OptimizeQueryBlock(builder Builder, node algebra.Node, limit, offset expression.Expression,
-		order *algebra.Order, distinct algebra.ResultTerms) (
+		order *algebra.Order, distinct algebra.ResultTerms, advisorValidate bool) (
 		[]plan.Operator, []plan.Operator, []plan.CoveringOperator, expression.Expression, bool, error)
 }
 
@@ -58,7 +58,7 @@ type Builder interface {
 	MarkJoinFilterHints(children, subChildren []plan.Operator) error
 	CheckBitFilters(qPlan, subPlan []plan.Operator)
 	CheckJoinFilterHints(qPlan, subPlan []plan.Operator) (hintError bool, err error)
-	DoCoveringTransformation(ops []plan.Operator, covers []plan.CoveringOperator) error
+	DoCoveringTransformation(ops []plan.Operator, covers []plan.CoveringOperator, aggs algebra.Aggregates) error
 	RemoveFromSubqueries(ops ...plan.Operator)
 	NoExecute() bool
 	SubqCoveringInfo() map[*algebra.Subselect]CoveringSubqInfo
@@ -418,9 +418,28 @@ func (this *builder) CheckBitFilters(qPlan, subPlan []plan.Operator) {
 }
 
 // perform covering transformation for the final plan
-func (this *builder) DoCoveringTransformation(ops []plan.Operator, covers []plan.CoveringOperator) error {
+func (this *builder) DoCoveringTransformation(ops []plan.Operator, covers []plan.CoveringOperator, aggs algebra.Aggregates) error {
+
+	var err error
+	var groupCoverer *expression.Coverer
+	var aggPartialCoverer *PartialAggCoverer
+	var aggFullCoverer *FullAggCoverer
+
+	// check for group and aggregate pushdown
+	if len(covers) == 1 && covers[0].GroupAggs() != nil {
+		groupCoverer, aggPartialCoverer, aggFullCoverer, err = prepIndexGroupAggs(covers[0], aggs)
+		if err != nil {
+			return err
+		}
+	}
+
+	return this.opsCoveringTransformation(ops, covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
+}
+
+func (this *builder) opsCoveringTransformation(ops []plan.Operator, covers []plan.CoveringOperator,
+	groupCoverer *expression.Coverer, aggPartialCoverer *PartialAggCoverer, aggFullCoverer *FullAggCoverer) error {
 	for _, op := range ops {
-		err := this.opCoveringTransformation(op, covers)
+		err := this.opCoveringTransformation(op, covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -428,10 +447,12 @@ func (this *builder) DoCoveringTransformation(ops []plan.Operator, covers []plan
 	return nil
 }
 
-func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.CoveringOperator) error {
+func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.CoveringOperator,
+	groupCoverer *expression.Coverer, aggPartialCoverer *PartialAggCoverer, aggFullCoverer *FullAggCoverer) error {
 	switch op := op.(type) {
 	case *plan.NLJoin:
-		newExprs, err := doCoverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -445,7 +466,8 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 			}
 		}
 	case *plan.NLNest:
-		newExprs, err := doCoverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.Onclause(), op.Filter()}, covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -467,7 +489,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		exprs = append(exprs, op.Onclause(), op.Filter())
 		exprs = append(exprs, buildExprs...)
 		exprs = append(exprs, probeExprs...)
-		newExprs, err := doCoverExprs(exprs, covers)
+		newExprs, err := doCoverExprs(exprs, covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -475,7 +497,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		op.SetFilter(newExprs[1])
 		op.SetBuildExprs(newExprs[2:(2 + buildLen)])
 		op.SetProbeExprs(newExprs[(2 + buildLen):(2 + buildLen + probeLen)])
-		err = this.opCoveringTransformation(op.Child(), covers)
+		err = this.opCoveringTransformation(op.Child(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -488,7 +510,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		exprs = append(exprs, op.Onclause(), op.Filter())
 		exprs = append(exprs, buildExprs...)
 		exprs = append(exprs, probeExprs...)
-		newExprs, err := doCoverExprs(exprs, covers)
+		newExprs, err := doCoverExprs(exprs, covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -496,13 +518,14 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		op.SetFilter(newExprs[1])
 		op.SetBuildExprs(newExprs[2:(2 + buildLen)])
 		op.SetProbeExprs(newExprs[(2 + buildLen):(2 + buildLen + probeLen)])
-		err = this.opCoveringTransformation(op.Child(), covers)
+		err = this.opCoveringTransformation(op.Child(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 	case *plan.Join:
 		term := op.Term()
-		newExprs, err := doCoverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -510,7 +533,8 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 		op.SetOnFilter(newExprs[1])
 	case *plan.Nest:
 		term := op.Term()
-		newExprs, err := doCoverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{term.JoinKeys(), op.OnFilter()}, covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -535,26 +559,46 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 				return err
 			}
 		}
+		if groupCoverer != nil {
+			err := term.MapExpression(groupCoverer)
+			if err != nil {
+				return err
+			}
+		}
+		if aggPartialCoverer != nil {
+			err := term.MapExpression(aggPartialCoverer)
+			if err != nil {
+				return err
+			}
+		} else if aggFullCoverer != nil {
+			err := term.MapExpression(aggFullCoverer)
+			if err != nil {
+				return err
+			}
+		}
 		if op.Filter() != nil {
-			newExprs, err := doCoverExprs(expression.Expressions{op.Filter()}, covers)
+			newExprs, err := doCoverExprs(expression.Expressions{op.Filter()}, covers,
+				groupCoverer, aggPartialCoverer, aggFullCoverer)
 			if err != nil {
 				return err
 			}
 			op.SetFilter(newExprs[0])
 		}
 	case *plan.ExpressionScan:
-		newExprs, err := doCoverExprs(expression.Expressions{op.FromExpr(), op.Filter()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.FromExpr(), op.Filter()}, covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 		op.SetFromExpr(newExprs[0])
 		op.SetFilter(newExprs[1])
 	case *plan.Sequence:
-		return this.DoCoveringTransformation(op.Children(), covers)
+		return this.opsCoveringTransformation(op.Children(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 	case *plan.Parallel:
-		return this.opCoveringTransformation(op.Child(), covers)
+		return this.opCoveringTransformation(op.Child(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 	case *plan.Filter:
-		newExprs, err := doCoverExprs(expression.Expressions{op.Condition()}, covers)
+		newExprs, err := doCoverExprs(expression.Expressions{op.Condition()}, covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
@@ -574,6 +618,23 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 				}
 			}
 			err := bindings.MapExpressions(coverer)
+			if err != nil {
+				return err
+			}
+		}
+		if groupCoverer != nil {
+			err := bindings.MapExpressions(groupCoverer)
+			if err != nil {
+				return err
+			}
+		}
+		if aggPartialCoverer != nil {
+			err := bindings.MapExpressions(aggPartialCoverer)
+			if err != nil {
+				return err
+			}
+		} else if aggFullCoverer != nil {
+			err := bindings.MapExpressions(aggFullCoverer)
 			if err != nil {
 				return err
 			}
@@ -600,6 +661,28 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 				}
 			}
 		}
+		if groupCoverer != nil || aggPartialCoverer != nil || aggFullCoverer != nil {
+			for i := range terms {
+				resTerm := terms[i].Result()
+				if groupCoverer != nil {
+					err := resTerm.MapExpression(groupCoverer)
+					if err != nil {
+						return err
+					}
+				}
+				if aggPartialCoverer != nil {
+					err := resTerm.MapExpression(aggPartialCoverer)
+					if err != nil {
+						return err
+					}
+				} else if aggFullCoverer != nil {
+					err := resTerm.MapExpression(aggFullCoverer)
+					if err != nil {
+						return err
+					}
+				}
+			}
+		}
 	case *plan.Order:
 		terms := op.Terms()
 		for _, cop := range covers {
@@ -619,33 +702,53 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 				return err
 			}
 		}
+		if groupCoverer != nil {
+			err := terms.MapExpressions(groupCoverer)
+			if err != nil {
+				return err
+			}
+		}
+		if aggPartialCoverer != nil {
+			err := terms.MapExpressions(aggPartialCoverer)
+			if err != nil {
+				return err
+			}
+		} else if aggFullCoverer != nil {
+			err := terms.MapExpressions(aggFullCoverer)
+			if err != nil {
+				return err
+			}
+		}
 	case *plan.InitialGroup:
-		newKeys, err := doCoverExprs(op.Keys(), covers)
+		newKeys, err := doCoverExprs(op.Keys(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
 	case *plan.IntermediateGroup:
-		newKeys, err := doCoverExprs(op.Keys(), covers)
+		newKeys, err := doCoverExprs(op.Keys(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
 	case *plan.FinalGroup:
-		newKeys, err := doCoverExprs(op.Keys(), covers)
+		newKeys, err := doCoverExprs(op.Keys(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
 	case *plan.With:
-		return this.opCoveringTransformation(op.Child(), covers)
+		return this.opCoveringTransformation(op.Child(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 
 		// case *plan.Limit, *plan.Offset:
 	}
 	return nil
 }
 
-func doCoverExprs(exprs expression.Expressions, covers []plan.CoveringOperator) (expression.Expressions, error) {
+func doCoverExprs(exprs expression.Expressions, covers []plan.CoveringOperator,
+	groupCoverer *expression.Coverer, aggPartialCoverer *PartialAggCoverer,
+	aggFullCoverer *FullAggCoverer) (expression.Expressions, error) {
+
 	if len(exprs) == 0 {
 		return exprs, nil
 	}
@@ -670,6 +773,30 @@ func doCoverExprs(exprs expression.Expressions, covers []plan.CoveringOperator) 
 				newExprs[i], err = coverer.Map(newExprs[i])
 				if err != nil {
 					return nil, err
+				}
+			}
+		}
+	}
+
+	if groupCoverer != nil || aggPartialCoverer != nil || aggFullCoverer != nil {
+		for i := 0; i < len(newExprs); i++ {
+			if newExprs[i] != nil {
+				if groupCoverer != nil {
+					newExprs[i], err = groupCoverer.Map(newExprs[i])
+					if err != nil {
+						return nil, err
+					}
+				}
+				if aggPartialCoverer != nil {
+					newExprs[i], err = aggPartialCoverer.Map(newExprs[i])
+					if err != nil {
+						return nil, err
+					}
+				} else if aggFullCoverer != nil {
+					newExprs[i], err = aggFullCoverer.Map(newExprs[i])
+					if err != nil {
+						return nil, err
+					}
 				}
 			}
 		}
@@ -742,6 +869,7 @@ type CoveringSubqInfo interface {
 	AddSubqTermPlan(subPlan *subqTermPlan)
 	CoveringScans() []plan.CoveringOperator
 	SubqueryTerms() []*algebra.SubqueryTerm
+	Aggregates() algebra.Aggregates
 }
 
 func (this *builder) CoverSubSelect(sub *algebra.Subselect, subqUnderJoin bool) (err error) {
@@ -752,7 +880,8 @@ func (this *builder) CoverSubSelect(sub *algebra.Subselect, subqUnderJoin bool) 
 				(!subqUnderJoin && !subqTermPlan.IsJoinEnum()) {
 				continue
 			}
-			err = this.DoCoveringTransformation([]plan.Operator{subqTermPlan.Operator()}, info.CoveringScans())
+			err = this.DoCoveringTransformation([]plan.Operator{subqTermPlan.Operator()},
+				info.CoveringScans(), info.Aggregates())
 			if err != nil {
 				return err
 			}
