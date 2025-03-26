@@ -403,6 +403,11 @@ func (this *Select) CheckSetCorrelated() error {
 	return this.FormalizeSubquery(f, true)
 }
 
+func (this *Select) CheckFormalization() error {
+	f := expression.NewFormalizer("", nil)
+	return this.FormalizeSubquery(f, true)
+}
+
 func (this *Select) IsRecursiveWith() bool {
 	return this.recursiveWith
 }
