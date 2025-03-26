@@ -595,6 +595,21 @@ func (this *builder) recordSubTime(what string, duration time.Duration) {
 	this.subTimes[what] = duration
 }
 
+func (this *builder) inheritSubTimes(builderCopy *builder) {
+	if builderCopy.subTimes == nil {
+		return
+	}
+	if this.subTimes == nil {
+		this.subTimes = make(map[string]time.Duration, len(builderCopy.subTimes))
+	}
+	for what, duration := range builderCopy.subTimes {
+		if existing, ok := this.subTimes[what]; ok {
+			duration += existing
+		}
+		this.subTimes[what] = duration
+	}
+}
+
 const (
 	_SUBQPLAN_JOIN_ENUM = 1 << iota
 	_SUBQPLAN_UNDER_JOIN

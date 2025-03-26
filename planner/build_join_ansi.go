@@ -104,6 +104,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 	alias := right.Alias()
 	useCBO := this.useCBO
 	joinEnum := this.joinEnum()
+	outer := node.Outer()
 
 	var leftBaseKeyspace *base.BaseKeyspace
 	var joinHint algebra.JoinHint
@@ -135,7 +136,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 	case *algebra.KeyspaceTerm:
 		useCBO = useCBO && this.keyspaceUseCBO(alias)
 
-		err := this.processOnclause(alias, node.Onclause(), node.Outer(), node.Pushable())
+		err := this.processOnclause(alias, node.Onclause(), outer, node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -222,7 +223,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr :=
-			this.buildAnsiJoinScan(right, node.Onclause(), filter, node.Outer(), "join")
+			this.buildAnsiJoinScan(right, node.Onclause(), filter, outer, "join")
 
 		if baseKeyspace.HasIndexHintError() {
 			nlIndexHintError = true
@@ -293,7 +294,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					cost, cardinality, size, frCost = primary.Cost(), primary.Cardinality(), primary.Size(), primary.FrCost()
 					if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 						cost, cardinality, size, frCost = getNLJoinCost(this.lastOp, primary, baseKeyspace.Filters(),
-							node.Outer(), "join")
+							outer, "join")
 					} else {
 						useCBO = false
 					}
@@ -365,7 +366,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 
 		// need to get extra filters in the ON-clause that's not the primary join filter
-		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters(), outer)
 		if err != nil {
 			return nil, err
 		}
@@ -380,7 +381,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		frCost = OPT_COST_NOT_AVAIL
 		if this.useCBO && this.keyspaceUseCBO(newKeyspaceTerm.Alias()) {
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, alias)
-			cost, cardinality, size, frCost = getLookupJoinCost(this.lastOp, node.Outer(),
+			cost, cardinality, size, frCost = getLookupJoinCost(this.lastOp, outer,
 				newKeyspaceTerm, rightKeyspace)
 		}
 		if preferHash && !joinEnum {
@@ -393,10 +394,10 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		if nlIndexHintError {
 			baseKeyspace.SetIndexHintError()
 		}
-		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, subPaths, node.Outer(), onFilter, cost, cardinality, size,
+		return plan.NewJoinFromAnsi(keyspace, newKeyspaceTerm, subPaths, outer, onFilter, cost, cardinality, size,
 			frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
-		err := this.processOnclause(alias, node.Onclause(), node.Outer(), node.Pushable())
+		err := this.processOnclause(alias, node.Onclause(), outer, node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -426,7 +427,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 		}
 
 		scans, newOnclause, cost, cardinality, size, frCost, err :=
-			this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), node.Outer(), "join")
+			this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), outer, "join")
 		if err != nil {
 			return nil, err
 		}
@@ -464,6 +465,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 	alias := right.Alias()
 	useCBO := this.useCBO
 	joinEnum := this.joinEnum()
+	outer := node.Outer()
 
 	var leftBaseKeyspace *base.BaseKeyspace
 	var joinHint algebra.JoinHint
@@ -495,7 +497,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 	case *algebra.KeyspaceTerm:
 		useCBO = useCBO && this.keyspaceUseCBO(alias)
 
-		err := this.processOnclause(alias, node.Onclause(), node.Outer(), node.Pushable())
+		err := this.processOnclause(alias, node.Onclause(), outer, node.Pushable())
 		if err != nil {
 			return nil, err
 		}
@@ -571,7 +573,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		this.restoreJoinPlannerState(jps)
 		node.SetOnclause(origOnclause)
 		scans, primaryJoinKeys, newOnclause, newFilter, cost, cardinality, size, frCost, nlErr :=
-			this.buildAnsiJoinScan(right, node.Onclause(), nil, node.Outer(), "nest")
+			this.buildAnsiJoinScan(right, node.Onclause(), nil, outer, "nest")
 
 		if baseKeyspace.HasIndexHintError() {
 			nlIndexHintError = true
@@ -635,7 +637,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 					cost, cardinality, size, frCost = primary.Cost(), primary.Cardinality(), primary.Size(), primary.FrCost()
 					if cost > 0.0 && cardinality > 0.0 && size > 0 && frCost > 0.0 {
 						cost, cardinality, size, frCost = getNLJoinCost(this.lastOp, primary, baseKeyspace.Filters(),
-							node.Outer(), "nest")
+							outer, "nest")
 					} else {
 						useCBO = false
 					}
@@ -711,7 +713,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		newKeyspaceTerm.SetJoinKeys(primaryJoinKeys)
 
 		// need to get extra filters in the ON-clause that's not the primary join filter
-		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters())
+		onFilter, err := this.getOnclauseFilter(baseKeyspace.Filters(), outer)
 		if err != nil {
 			return nil, err
 		}
@@ -722,7 +724,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		frCost = OPT_COST_NOT_AVAIL
 		if this.useCBO && this.keyspaceUseCBO(newKeyspaceTerm.Alias()) {
 			rightKeyspace := base.GetKeyspaceName(this.baseKeyspaces, alias)
-			cost, cardinality, size, frCost = getLookupNestCost(this.lastOp, node.Outer(),
+			cost, cardinality, size, frCost = getLookupNestCost(this.lastOp, outer,
 				newKeyspaceTerm, rightKeyspace)
 		}
 		if preferHash && !joinEnum {
@@ -735,7 +737,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		if nlIndexHintError {
 			baseKeyspace.SetIndexHintError()
 		}
-		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, subPaths, node.Outer(),
+		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, subPaths, outer,
 			onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
 		filter, selec, err := this.getFilter(alias, true, node.Onclause())
@@ -763,7 +765,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		}
 
 		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(),
-			node.Outer(), "nest")
+			outer, "nest")
 		if err != nil {
 			return nil, err
 		}
@@ -1857,10 +1859,10 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, filter expression.
 	return nil
 }
 
-func (this *builder) getOnclauseFilter(filters base.Filters) (expression.Expression, error) {
+func (this *builder) getOnclauseFilter(filters base.Filters, outer bool) (expression.Expression, error) {
 	terms := make(expression.Expressions, 0, len(filters))
 	for _, fltr := range filters {
-		if fltr.IsOnclause() && !fltr.IsPrimaryJoin() {
+		if fltr.IsOnclause() && !fltr.IsPrimaryJoin() && !(outer && fltr.IsDerived()) {
 			terms = append(terms, fltr.FltrExpr())
 		}
 	}

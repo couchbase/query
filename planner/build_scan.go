@@ -135,8 +135,10 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 
 	// for ANSI JOIN, the following process is already done for ON clause filters
 	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_DO_JOIN_FILTER) {
-		if !baseKeyspace.IsOuter() && len(baseKeyspace.JoinFilters()) > 0 {
+		if len(baseKeyspace.JoinFilters()) > 0 {
 			// derive IS NOT NULL predicate
+			// note we specifically allow this to be done for outer keyspace during
+			// join enumeration in order to allow index access
 			var duration time.Duration
 			err, duration = this.deriveNotNullFilter(keyspace, baseKeyspace, this.useCBO,
 				virtualIndexes, this.advisorValidate(), this.context, this.aliases)
