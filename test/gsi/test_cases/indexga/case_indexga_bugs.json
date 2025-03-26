@@ -161,5 +161,24 @@
                 "c3": 15
             }
         ]
+    },
+    {
+        "testcase": "MB-65938",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS NOT MISSING END"
+        },
+        "statements": "SELECT abs(c3) AS c3 FROM orders WHERE test_id = 'indexga' AND type = 'bugs' AND c3 = 10 GROUP BY c3",
+        "results": [
+            {
+                "c3": 10
+            }
+        ]
     }
 ]

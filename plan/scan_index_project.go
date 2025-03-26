@@ -25,10 +25,12 @@ func NewIndexProjection(size int, primary bool) *IndexProjection {
 }
 
 func (this *IndexProjection) Copy() *IndexProjection {
-	return &IndexProjection{
-		EntryKeys:  this.EntryKeys,
+	rv := &IndexProjection{
+		EntryKeys:  make([]int, 0, len(this.EntryKeys)),
 		PrimaryKey: this.PrimaryKey,
 	}
+	rv.EntryKeys = append(rv.EntryKeys, this.EntryKeys...)
+	return rv
 }
 
 func (this *IndexProjection) MarshalJSON() ([]byte, error) {

@@ -116,6 +116,10 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 			return false
 		}
 
+		/* MB-65862. In group intermidiate, final uses v.Equals(pv) == value.FALSE_VALUE.
+		   Because it only recycle. Here we need track even if v, pv contains NULL. Comparison
+		   returns value.VALUE_NULL and we need to track the value.
+		*/
 		if v.Equals(pv) != value.TRUE_VALUE {
 			// MB-65246 ARRAY_AGG() Track only do last element, don't recycle previous once
 			if array_agg, ok := agg.(*algebra.ArrayAgg); ok {

@@ -695,6 +695,22 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		includeSpans = tspan.spans
 	}
 
+	if indexGroupAggs != nil {
+		indexKeyCovers := make(expression.Covers, len(covers))
+		k := 0
+		emptyCover := expression.NewCover(expression.EMPTY_STRING_EXPR)
+		for i := 0; i < len(covers); i++ {
+			if k >= len(indexGroupAggs.DependsOnIndexKeys) || i != indexGroupAggs.DependsOnIndexKeys[k] {
+				indexKeyCovers[i] = emptyCover
+			} else {
+				indexKeyCovers[i] = covers[i]
+				k++
+			}
+
+		}
+		covers = indexKeyCovers
+	}
+
 	// build plan for IndexScan
 	scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, projDistinct,
 		overlapSpans(pred), array, this.offset, this.limit, indexProjection, indexKeyOrders,
