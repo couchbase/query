@@ -244,6 +244,9 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		u, _, _ := cbauth.ExtractCredsGeneric(req.Header)
 		data := make(map[string]interface{}, 7)
 		data["user"] = u
+		if prepared := rv.Prepared(); prepared != nil {
+			data["prepared"] = prepared.Name()
+		}
 		data["request"] = rv.Id().String()
 		data["statement"] = rv.EventStatement()
 		data["natural"] = rv.Natural()
@@ -269,7 +272,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		b, _ := json.Marshal(data)
 		return string(b)
 	}
-	logging.Debuga(dfn)
+	logging.Tracea(dfn)
 	if rv.logger != nil {
 		rv.logger.Infoa(dfn)
 	}
