@@ -172,37 +172,21 @@ func (this *builder) deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspa
 	}
 
 	// next check existing filters
-	terms := make(expression.Expressions, 0, 3)
+	terms := make(map[string]expression.Expression, 8)
 	for _, fl := range baseKeyspace.Filters() {
-		terms = terms[:0]
+		// clear terms
+		for k, _ := range terms {
+			delete(terms, k)
+		}
+
 		pred := fl.FltrExpr()
 		if not, ok := pred.(*expression.Not); ok {
 			pred = not.Operand()
 		}
-		switch pred := pred.(type) {
-		case *expression.IsNotMissing:
-			terms = append(terms, pred.Operand())
-		case *expression.IsNotNull:
-			terms = append(terms, pred.Operand())
-		case *expression.IsValued:
-			terms = append(terms, pred.Operand())
-		case *expression.Eq:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.LE:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.LT:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.Like:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.Between:
-			terms = append(terms, pred.First(), pred.Second(), pred.Third())
-		}
 
-		for _, term := range terms {
-			val := term.String()
-			if val == "" {
-				continue
-			}
+		getTerms(pred, terms, false)
+
+		for val, _ := range terms {
 			if _, ok := keyMap[val]; ok {
 				keyMap[val].derive = false
 				n--
@@ -220,32 +204,21 @@ func (this *builder) deriveNotNullFilter(keyspace datastore.Keyspace, baseKeyspa
 	origKeyspaceNames := make(map[string]string, 1)
 	origKeyspaceNames[baseKeyspace.Name()] = baseKeyspace.Keyspace()
 	for _, jfl := range baseKeyspace.JoinFilters() {
-		terms = terms[:0]
+		// clear terms
+		for k, _ := range terms {
+			delete(terms, k)
+		}
+
 		pred := jfl.FltrExpr()
 		if not, ok := pred.(*expression.Not); ok {
 			pred = not.Operand()
 		}
-		switch pred := pred.(type) {
-		case *expression.Eq:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.LE:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.LT:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.Like:
-			terms = append(terms, pred.First(), pred.Second())
-		case *expression.Between:
-			terms = append(terms, pred.First(), pred.Second(), pred.Third())
-		}
 
-		for _, term := range terms {
+		getTerms(pred, terms, true)
+
+		for val, term := range terms {
 			// check whether the expression references current keyspace
 			if !expression.HasKeyspaceReferences(term, keyspaceNames) {
-				continue
-			}
-
-			val := term.String()
-			if val == "" {
 				continue
 			}
 
@@ -335,4 +308,89 @@ func getOptBits(baseKeyspaces map[string]*base.BaseKeyspace, keyspaces map[strin
 		}
 	}
 	return bits
+}
+
+func addTerm(terms map[string]expression.Expression, preds ...expression.Expression) {
+	for _, pred := range preds {
+		str := pred.String()
+		if str != "" {
+			if _, ok := terms[str]; !ok {
+				terms[str] = pred
+			}
+		}
+	}
+}
+
+func getTerms(pred expression.Expression, terms map[string]expression.Expression, join bool) {
+	switch pred := pred.(type) {
+	case *expression.IsNotMissing:
+		if !join {
+			addTerm(terms, pred.Operand())
+		}
+	case *expression.IsNotNull:
+		if !join {
+			addTerm(terms, pred.Operand())
+		}
+	case *expression.IsValued:
+		if !join {
+			addTerm(terms, pred.Operand())
+		}
+	case *expression.Eq:
+		addTerm(terms, pred.First(), pred.Second())
+	case *expression.LE:
+		addTerm(terms, pred.First(), pred.Second())
+	case *expression.LT:
+		addTerm(terms, pred.First(), pred.Second())
+	case *expression.Like:
+		addTerm(terms, pred.First(), pred.Second())
+	case *expression.Between:
+		addTerm(terms, pred.First(), pred.Second(), pred.Third())
+	case *expression.In:
+		addTerm(terms, pred.First())
+	case *expression.And:
+		// for And under Or
+		for _, child := range pred.Operands() {
+			getTerms(child, terms, join)
+		}
+	case *expression.Or:
+		orTerms := getOrclauseTerms(pred)
+		for str, term := range orTerms {
+			if _, ok := terms[str]; !ok {
+				terms[str] = term
+			}
+		}
+	}
+}
+
+func getOrclauseTerms(or *expression.Or) map[string]expression.Expression {
+	newOr, _ := expression.FlattenOrNoDedup(or)
+	allTerms := make(map[string]expression.Expression)
+	tempTerms := make(map[string]expression.Expression)
+	for i, child := range newOr.Operands() {
+		var terms map[string]expression.Expression
+		if i == 0 {
+			terms = allTerms
+		} else {
+			for k, _ := range tempTerms {
+				delete(tempTerms, k)
+			}
+			terms = tempTerms
+		}
+
+		// use false even for join filters since an arm of or may not be join filterx
+		getTerms(child, terms, false)
+
+		if i > 0 {
+			// only keep common terms
+			for k, _ := range allTerms {
+				if _, ok := tempTerms[k]; !ok {
+					delete(allTerms, k)
+				}
+			}
+			if len(allTerms) == 0 {
+				return nil
+			}
+		}
+	}
+	return allTerms
 }
