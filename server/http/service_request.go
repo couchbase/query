@@ -251,7 +251,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		data["statement"] = rv.EventStatement()
 		data["natural"] = rv.Natural()
 		data["query_context"] = rv.QueryContext()
-		data["named_args"] = httpArgs.getNamedArgs()
+		data["named_args"] = httpArgs.getFormattedNamedArgs()
 		data["client_context_id"] = rv.ClientContextId()
 		// only include fields not already processed in args
 		a := make(map[string]interface{})
@@ -1333,6 +1333,7 @@ type httpRequestArgs interface {
 	getTristateVal(field string, v interface{}) (value.Tristate, errors.Error)
 	getPreparedName(field string, v interface{}) (string, errors.Error)
 	getNamedArgs() map[string]value.Value
+	getFormattedNamedArgs() map[string]value.Value
 	getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error)
 	getCredentials() (*auth.Credentials, errors.Error)
 	getScanVector() (timestamp.Vector, errors.Error)
@@ -1444,6 +1445,18 @@ func (this *urlArgs) storeDirect(f int, parm string, val interface{}) errors.Err
 // A named argument is an argument of the form: $|@<identifier>=json_value
 func (this *urlArgs) getNamedArgs() map[string]value.Value {
 	return this.named
+}
+
+func (this *urlArgs) getFormattedNamedArgs() map[string]value.Value {
+	fnamedArgs := make(map[string]value.Value, len(this.named))
+	for k, v := range this.named {
+		if server.IsSpecialNamedParam(k) {
+			fnamedArgs[k] = server.REDACTED_VALUE
+		} else {
+			fnamedArgs[k] = v
+		}
+	}
+	return fnamedArgs
 }
 
 func getJsonDecoder(r io.Reader) (*json.Decoder, errors.Error) {
@@ -1836,6 +1849,18 @@ func (this *jsonArgs) storeDirect(f int, parm string, val interface{}) errors.Er
 
 func (this *jsonArgs) getNamedArgs() map[string]value.Value {
 	return this.named
+}
+
+func (this *jsonArgs) getFormattedNamedArgs() map[string]value.Value {
+	fnamedArgs := make(map[string]value.Value, len(this.named))
+	for k, v := range this.named {
+		if server.IsSpecialNamedParam(k) {
+			fnamedArgs[k] = server.REDACTED_VALUE
+		} else {
+			fnamedArgs[k] = v
+		}
+	}
+	return fnamedArgs
 }
 
 func (this *jsonArgs) getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error) {

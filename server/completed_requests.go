@@ -675,17 +675,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		}
 	}
 
-	// MB-63043
-	prependDollar := func(namedArgs map[string]value.Value) map[string]value.Value {
-		prependedNamedArgs := make(map[string]value.Value, len(namedArgs))
-
-		for k, v := range namedArgs {
-			prependedNamedArgs["$"+k] = v
-		}
-
-		return prependedNamedArgs
-	}
-	re.NamedArgs = prependDollar(request.RedactedNamedArgs())
+	re.NamedArgs = request.FormattedRedactedNamedArgs()
 	re.PositionalArgs = request.RedactedPositionalArgs()
 
 	re.Users = datastore.CredsString(request.Credentials())

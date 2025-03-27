@@ -123,7 +123,15 @@ func (this *Set) ExecCommand(args []string) (errors.ErrorCode, string) {
 			for i := range names {
 				name := names[i]
 				value := NamedParam[name]
-				werr = printSET(name, fmt.Sprintf("%v", *value))
+				if len(name) > 2 && name[0] == '_' && name[len(name)-1] == '_' {
+					vals := make([]string, len(*value))
+					for i := range vals {
+						vals[i] = "***"
+					}
+					werr = printSET(name, fmt.Sprintf("%v", vals))
+				} else {
+					werr = printSET(name, fmt.Sprintf("%v", *value))
+				}
 				if werr != nil {
 					return processOutputError(werr)
 				}

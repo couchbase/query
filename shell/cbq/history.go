@@ -11,6 +11,7 @@ package main
 import (
 	"bufio"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -35,8 +36,11 @@ func LoadHistory(liner *liner.State, dir string) (errors.ErrorCode, string) {
 	return 0, ""
 }
 
+var redactSpecialNamedParamRegex = regexp.MustCompile(`(\s+-[\$@]_\w+_\s+).*?;`)
+
 func UpdateHistory(liner *liner.State, dir, line string) (errors.ErrorCode, string) {
-	liner.AppendHistory(line)
+	rline := redactSpecialNamedParamRegex.ReplaceAllString(line, "$1***;")
+	liner.AppendHistory(rline)
 	if dir != "" {
 		path := command.GetPath(dir, command.HISTFILE)
 		err_code, err_str := WriteHistoryToFile(liner, path)

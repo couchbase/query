@@ -1039,7 +1039,7 @@ func (this *httpRequest) writeControls(controls bool, prefix, indent string) boo
 		return true
 	}
 
-	namedArgs := this.NamedArgs()
+	namedArgs := this.FormattedRedactedNamedArgs()
 	positionalArgs := this.PositionalArgs()
 
 	if prefix != "" {
@@ -1165,7 +1165,7 @@ func (this *httpRequest) writeControlsXML(controls bool, prefix string, indent s
 		return true
 	}
 
-	namedArgs := this.NamedArgs()
+	namedArgs := this.FormattedRedactedNamedArgs()
 	positionalArgs := this.PositionalArgs()
 
 	var newPrefix string

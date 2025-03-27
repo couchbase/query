@@ -234,7 +234,7 @@ type Request interface {
 
 	Sensitive() bool
 	RedactedStatement() string
-	RedactedNamedArgs() map[string]value.Value
+	FormattedRedactedNamedArgs() map[string]value.Value
 	RedactedPositionalArgs() value.Values
 
 	SessionMemory() uint64
@@ -628,16 +628,33 @@ func (this *BaseRequest) IsPrepare() bool {
 	return this.isPrepare
 }
 
+var REDACTED_VALUE = value.NewValue(map[string]interface{}{"redacted": true})
+
+func IsSpecialNamedParam(param string) bool {
+	return len(param) > 2 && param[0] == '_' && param[len(param)-1] == '_'
+}
+
 func (this *BaseRequest) NamedArgs() map[string]value.Value {
 	return this.namedArgs
 }
 
 var _REDACTED_VALUE = value.NewValue(map[string]interface{}{"redacted": true})
 
-func (this *BaseRequest) RedactedNamedArgs() map[string]value.Value {
+func (this *BaseRequest) FormattedRedactedNamedArgs() map[string]value.Value {
+
 	if !this.Sensitive() {
-		return this.namedArgs
+		prependedNamedArgs := make(map[string]value.Value, len(this.namedArgs))
+
+		for k, v := range this.namedArgs {
+			if IsSpecialNamedParam(k) {
+				prependedNamedArgs["$"+k] = REDACTED_VALUE
+			} else {
+				prependedNamedArgs["$"+k] = v
+			}
+		}
+		return prependedNamedArgs
 	}
+
 	rv := make(map[string]value.Value, len(this.namedArgs))
 	for k, _ := range this.namedArgs {
 		rv[k] = _REDACTED_VALUE
@@ -1581,7 +1598,7 @@ func (this *BaseRequest) EventUsers() []string {
 
 // For audit.Auditable interface.
 func (this *BaseRequest) EventNamedArgs() map[string]interface{} {
-	argsMap := this.RedactedNamedArgs()
+	argsMap := this.FormattedRedactedNamedArgs()
 	ret := make(map[string]interface{}, len(argsMap))
 	for name, argValue := range argsMap {
 		ret[name] = argValue.Actual()
@@ -1840,7 +1857,7 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 	}
 
 	if controls {
-		na := this.RedactedNamedArgs()
+		na := this.FormattedRedactedNamedArgs()
 		if na != nil {
 			item["namedArgs"] = util.InterfaceRedacted(na, redact)
 		}
