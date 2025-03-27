@@ -210,6 +210,7 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 			if err != nil {
 				return err
 			}
+			this.inheritSubTimes(builderCopy)
 		}
 
 		if len(ops) > 0 || len(subOps) > 0 {
@@ -1300,7 +1301,8 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 		// unnest filters can only be evaluated after the UNNEST operation
 		// subquery filters are not pushed down
 		// volatile expressions returns FALSE for EquivalentTo (see FunctionBase.EquivalentTo)
-		if fl.IsUnnest() || fl.HasSubq() || fl.FltrExpr().HasVolatileExpr() {
+		// derived IS NOT NULL filter for outer keyspace
+		if fl.IsUnnest() || fl.HasSubq() || fl.FltrExpr().HasVolatileExpr() || (outer && fl.IsDerived()) {
 			continue
 		}
 

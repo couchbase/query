@@ -439,5 +439,49 @@
                 "m": 30
             }
         ]
+    },
+    {
+        "testcase": "MB-65976 part 1",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' AND v.`covers` IS NOT MISSING END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT l.c11, l.a11, r.c22 FROM shellTest AS l LEFT JOIN shellTest AS r USE HASH(BUILD) ON r.type = \"right\" AND l.c11 = r.c21 WHERE l.type = \"left\" AND l.c11 > 0 AND r.c21 IS MISSING",
+        "results": [
+            {
+                "c11": 4,
+                "a11": [
+                    30,
+                    30,
+                    30
+                ]
+            }
+        ]
+    },
+    {
+        "testcase": "MB-65976 part 2",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'r' END"
+        },
+        "queryParams": {"use_cbo": true},
+        "statements":"SELECT l.c12, r.c22 FROM shellTest AS l JOIN shellTest AS r USE HASH(BUILD) ON r.type = \"right\" AND (l.c11 = r.c21 OR l.c12 = r.c21) AND l.test_id = r.test_id WHERE l.type = \"left\" AND l.c11 IN [1,4]",
+        "results": [
+            {
+                "c12": 10,
+                "c22": 10
+            }
+        ]
     }
 ]
