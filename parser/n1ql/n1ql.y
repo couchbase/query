@@ -5062,9 +5062,9 @@ LPAREN fullselect RPAREN
     $$ = algebra.NewSubquery($4)
     err := $$.Select().CheckSetCorrelated()
     if err != nil {
-        yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in handling of CORRELATED subquery %v", err), $<line>2, $<column>2)
+        yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in handling of CORRELATED subquery %v", err), $<line>3, $<column>3)
     }
-    $$.ExprBase().SetErrorContext($<line>2,$<column>2)
+    $$.ExprBase().SetErrorContext($<line>3,$<column>3)
 }
 |
 LPAREN fullselect RPAREN
