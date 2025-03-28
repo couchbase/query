@@ -216,7 +216,7 @@ func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
 
 	if stmtLimit != nil {
 		if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (size > 0) && (frCost > 0.0) {
-			cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, noffset)
+			cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, -1)
 		}
 		limit := plan.NewLimit(stmtLimit, cost, cardinality, size, frCost)
 		children = append(children, limit)
