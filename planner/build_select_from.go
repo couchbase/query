@@ -405,7 +405,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 					}
 				}
 				if iscan3.HasEarlyLimit() {
-					op, err := this.buildEarlyLimit(iscan3, useCBO)
+					op, err := this.buildEarlyLimit(iscan3, useCBO, iscan3.HasEarlyOffset())
 					if err != nil {
 						return nil, err
 					}
@@ -1448,7 +1448,7 @@ func (this *builder) buildEarlyOrder(iscan3 *plan.IndexScan3, useCBO bool) (plan
 	return orderOp, nil
 }
 
-func (this *builder) buildEarlyLimit(lastOp plan.Operator, useCBO bool) (
+func (this *builder) buildEarlyLimit(lastOp plan.Operator, useCBO, offsetHandled bool) (
 	plan.Operator, error) {
 
 	if this.limit == nil {
@@ -1457,11 +1457,13 @@ func (this *builder) buildEarlyLimit(lastOp plan.Operator, useCBO bool) (
 	cost, cardinality, size, frCost := lastOp.Cost(), lastOp.Cardinality(), lastOp.Size(), lastOp.FrCost()
 	if useCBO {
 		nlimit, _ := base.GetStaticInt(this.limit)
-		noffset := int64(-1)
-		if this.offset != nil {
-			noffset, _ = base.GetStaticInt(this.offset)
+		if this.offset != nil && !offsetHandled {
+			noffset, _ := base.GetStaticInt(this.offset)
+			if noffset > 0 {
+				nlimit += noffset
+			}
 		}
-		cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, noffset)
+		cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, -1)
 	}
 	limitOp := plan.NewLimit(this.limit, cost, cardinality, size, frCost)
 	this.addChildren(limitOp)

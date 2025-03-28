@@ -104,7 +104,7 @@ func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
 				if static {
 					nlimit = lv
 				}
-				cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, nOffset)
+				cost, cardinality, size, frCost = getLimitCost(lastOp, nlimit, -1)
 			}
 			limitOp := plan.NewLimit(stmt.Limit(), cost, cardinality, size, frCost)
 			seqChildren = append(seqChildren, limitOp)
