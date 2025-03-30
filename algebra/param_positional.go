@@ -136,7 +136,13 @@ func (this *PositionalParameter) MapChildren(mapper expression.Mapper) error {
 Returns receiver.
 */
 func (this *PositionalParameter) Copy() expression.Expression {
-	return this
+	rv := &PositionalParameter{
+		position: this.position,
+	}
+
+	rv.BaseCopy(this)
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *PositionalParameter) SurvivesGrouping(groupKeys expression.Expressions, allowed *value.ScopeValue) (

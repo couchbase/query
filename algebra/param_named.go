@@ -138,7 +138,12 @@ func (this *NamedParameter) MapChildren(mapper expression.Mapper) error {
 Returns receiver.
 */
 func (this *NamedParameter) Copy() expression.Expression {
-	return this
+	rv := &NamedParameter{
+		name: this.name,
+	}
+	rv.BaseCopy(this)
+	rv.SetExpr(rv)
+	return rv
 }
 
 func (this *NamedParameter) SurvivesGrouping(groupKeys expression.Expressions, allowed *value.ScopeValue) (
