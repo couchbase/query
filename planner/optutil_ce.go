@@ -294,3 +294,7 @@ func optBuildBitFilterSize(baseKeyspace *base.BaseKeyspace, exprs expression.Exp
 
 	return int(OPT_SIZE_NOT_AVAIL)
 }
+
+func adjustAvgDistSelec(ks *base.BaseKeyspace, advisorValidate bool, baseKeyspaces map[string]*base.BaseKeyspace) {
+	// no-op
+}
