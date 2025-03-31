@@ -1267,6 +1267,9 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 			if this.lastOp != nil {
 				baseKeyspace.SetCardinality(this.lastOp.Cardinality())
 				baseKeyspace.SetSize(this.lastOp.Size())
+				if baseKeyspace.IsKeyspaceTerm() {
+					adjustAvgDistSelec(baseKeyspace, this.advisorValidate(), this.baseKeyspaces)
+				}
 			}
 		}
 

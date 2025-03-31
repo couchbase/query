@@ -716,3 +716,7 @@ func optBuildBitFilterSize(baseKeyspace *base.BaseKeyspace, exprs expression.Exp
 
 	return optutil.CalcBuildBitFilterSize(baseKeyspace, exprs)
 }
+
+func adjustAvgDistSelec(ks *base.BaseKeyspace, advisorValidate bool, baseKeyspaces map[string]*base.BaseKeyspace) {
+	optutil.AdjustAvgDistSelec(ks, advisorValidate, false, baseKeyspaces)
+}
