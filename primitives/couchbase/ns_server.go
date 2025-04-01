@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -389,6 +390,11 @@ func (b *Bucket) obsoleteNode(node string) bool {
 		}
 	}
 	return true
+}
+
+// Assumes that the caller has acquired the required lock to ensure safe access.
+func (b *Bucket) getAbbreviatedUUID() string {
+	return b.UUID[:4] + b.UUID[len(b.UUID)-4:]
 }
 
 func (b *Bucket) GetName() string {
@@ -1143,6 +1149,12 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	}
 	b.vBucketServerMap = unsafe.Pointer(&tmpb.VBSMJson)
 	b.nodeList = unsafe.Pointer(&tmpb.NodesJSON)
+
+	if _, f, l, ok := runtime.Caller(2); ok {
+		logging.Infof("Refreshed bucket %s (%s) (%s|%d)", b.Name, b.getAbbreviatedUUID(), path.Base(f), l)
+	} else {
+		logging.Infof("Refreshed bucket %s (%s)", b.Name, b.getAbbreviatedUUID())
+	}
 
 	b.Unlock()
 	return nil
