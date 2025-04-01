@@ -80,6 +80,14 @@ func (a authUser) GetBuckets() ([]string, error) {
 	return []string{"testbucket"}, nil
 }
 
+func (a authUser) Expiry() int64 {
+	return 0
+}
+
+func (a authUser) Extras() string {
+	return ""
+}
+
 type testCase struct {
 	purpose       string
 	authSource    authSource
