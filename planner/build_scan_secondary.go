@@ -663,13 +663,13 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
 
 	vector := false
-	if useCBO && len(baseKeyspace.VectorFilters()) > 0 {
+	if len(baseKeyspace.VectorFilters()) > 0 {
 		// for now, do not use CBO for consideration of bhive vector index for covering
 		// since we don't yet have proper costing for bhive vector index scan
 		for _, entry := range sargables {
 			if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 				vector = true
-				if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() {
+				if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() && useCBO {
 					useCBO = false
 					break
 				}
@@ -690,8 +690,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		for _, se := range sargables {
 			if se.cost <= 0.0 {
 				cost, selec, card, size, frCost, e := indexScanCost(se.index, se.sargKeys,
-					this.context.RequestId(), se.spans, alias, baseKeyspace.Keyspace(),
-					advisorValidate, this.context)
+					se.sargIncludes, this.context.RequestId(), se.spans, se.includeSpans,
+					alias, baseKeyspace.Keyspace(), advisorValidate, this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
@@ -1393,8 +1393,9 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	advisorValidate := this.advisorValidate()
 	requestId := this.context.RequestId()
 	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
-		cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
-			requestId, entry.spans, alias, baseKeyspace.Keyspace(), advisorValidate, this.context)
+		cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys, entry.sargIncludes,
+			requestId, entry.spans, entry.includeSpans, alias, baseKeyspace.Keyspace(),
+			advisorValidate, this.context)
 		if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 			useCBO = false
 		} else {

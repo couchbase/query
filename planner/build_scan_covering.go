@@ -234,8 +234,8 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 			entry := ce.idxEntry
 			if entry.cost <= 0.0 {
 				cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
-					this.context.RequestId(), entry.spans, alias, keyspace,
-					this.advisorValidate(), this.context)
+					entry.sargIncludes, this.context.RequestId(), entry.spans, entry.includeSpans,
+					alias, keyspace, this.advisorValidate(), this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {

@@ -73,32 +73,43 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, cont
 	return optutil.CalcPrimaryIndexScanCost(primary, requestId, context)
 }
 
-func indexScanCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	spans SargSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
-	float64, float64, float64, int64, float64, error) {
+func indexScanCost(index datastore.Index, sargKeys, sargIncludes expression.Expressions,
+	requestId string, spans, includeSpans SargSpans, alias, keyspace string, advisorValidate bool,
+	context *PrepareContext) (float64, float64, float64, int64, float64, error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
+		var err error
+		includeSel := OPT_SELEC_NOT_AVAIL
+		if len(sargIncludes) > 0 {
+			includeSel, err = indexSelec(index, sargIncludes, nil, true, includeSpans, alias, advisorValidate, context)
+			if err != nil {
+				return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+					OPT_COST_NOT_AVAIL, err
+			}
+		}
 		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, spans.vecExpr,
-			alias, advisorValidate, context)
+			alias, includeSel, advisorValidate, context)
 	case *IntersectSpans:
-		return intersectSpansCost(index, sargKeys, requestId, spans, alias, keyspace, advisorValidate, context)
+		return intersectSpansCost(index, sargKeys, sargIncludes, requestId, spans, includeSpans,
+			alias, keyspace, advisorValidate, context)
 	case *UnionSpans:
-		return unionSpansCost(index, sargKeys, requestId, spans, alias, keyspace, advisorValidate, context)
+		return unionSpansCost(index, sargKeys, sargIncludes, requestId, spans, includeSpans,
+			alias, keyspace, advisorValidate, context)
 	}
 
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
 		errors.NewPlanInternalError("indexScanCost: unexpected span type")
 }
 
-func unionSpansCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	unionSpan *UnionSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
+func unionSpansCost(index datastore.Index, sargKeys, sargIncludes expression.Expressions, requestId string,
+	unionSpan *UnionSpans, includeSpans SargSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
 	float64, float64, float64, int64, float64, error) {
 
 	var cost, sel, frCost, nrows float64
 	var size int64
 	for i, span := range unionSpan.spans {
-		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, keyspace,
-			advisorValidate, context)
+		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, sargIncludes, requestId,
+			span, includeSpans, alias, keyspace, advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
@@ -121,16 +132,16 @@ func unionSpansCost(index datastore.Index, sargKeys expression.Expressions, requ
 	return cost, sel, (sel * nrows), size, frCost, nil
 }
 
-func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, requestId string,
-	intersectSpan *IntersectSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
+func intersectSpansCost(index datastore.Index, sargKeys, sargIncludes expression.Expressions, requestId string,
+	intersectSpan *IntersectSpans, includeSpans SargSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
 	float64, float64, float64, int64, float64, error) {
 
 	spanMap := make(map[*base.IndexCost]SargSpans, len(intersectSpan.spans))
 	indexes := make([]*base.IndexCost, 0, len(intersectSpan.spans))
 	for _, span := range intersectSpan.spans {
 		skipKeys := make([]bool, len(sargKeys))
-		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, requestId, span, alias, keyspace,
-			advisorValidate, context)
+		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, sargIncludes, requestId,
+			span, includeSpans, alias, keyspace, advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
@@ -180,28 +191,28 @@ func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, 
 	return cost, sel, (sel * nrows), size, frCost, nil
 }
 
-func indexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool,
+func indexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool, isInclude bool,
 	spans SargSpans, alias string, considerInternal bool, context *PrepareContext) (
 	sel float64, err error) {
 	switch spans := spans.(type) {
 	case *TermSpans:
-		sel, _ := optutil.CalcIndexSelec(index, "", sargKeys, skipKeys, spans.spans, spans.vecExpr,
-			alias, considerInternal, context)
+		sel, _ := optutil.CalcIndexSelec(index, "", sargKeys, skipKeys, isInclude, spans.spans,
+			spans.vecExpr, alias, considerInternal, context)
 		return sel, nil
 	case *IntersectSpans:
-		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, false, considerInternal, context)
+		return multiIndexSelec(index, sargKeys, skipKeys, isInclude, spans.spans, alias, false, considerInternal, context)
 	case *UnionSpans:
-		return multiIndexSelec(index, sargKeys, skipKeys, spans.spans, alias, true, considerInternal, context)
+		return multiIndexSelec(index, sargKeys, skipKeys, isInclude, spans.spans, alias, true, considerInternal, context)
 	}
 
 	return OPT_SELEC_NOT_AVAIL, errors.NewPlanInternalError("indexSelec: unexpected span type")
 }
 
-func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool,
+func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, skipKeys []bool, isInclude bool,
 	spans []SargSpans, alias string, union, considerInternal bool, context *PrepareContext) (
 	sel float64, err error) {
 	for i, span := range spans {
-		tsel, e := indexSelec(index, sargKeys, skipKeys, span, alias, considerInternal, context)
+		tsel, e := indexSelec(index, sargKeys, skipKeys, isInclude, span, alias, considerInternal, context)
 		if e != nil {
 			return tsel, e
 		}
@@ -600,7 +611,7 @@ func adjustIndexSelectivity(indexes []*base.IndexCost, sargables map[datastore.I
 		}
 		if adjust {
 			skipKeys := idx.SkipKeys()
-			sel, e := indexSelec(idx.Index(), entry.sargKeys, skipKeys, entry.spans,
+			sel, e := indexSelec(idx.Index(), entry.sargKeys, skipKeys, false, entry.spans,
 				alias, considerInternal, context)
 			if e == nil {
 				if entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) &&

@@ -329,7 +329,7 @@ func (this *VirtualIndex) AllowRerank() bool {
 }
 
 func (this *VirtualIndex) RerankFactor() int32 {
-	return 1
+	return -1
 }
 
 func (this *VirtualIndex) DefnStorageStatistics(requestid string) (map[uint64][]map[datastore.IndexStatType]value.Value, errors.Error) {
