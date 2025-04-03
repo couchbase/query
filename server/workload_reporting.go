@@ -220,7 +220,7 @@ type awrCB struct {
 	workerDone             *sync.WaitGroup
 	reporterDone           *sync.WaitGroup
 	current                map[string]*awrUniqueStmt
-	ts                     time.Time
+	ts                     time.Time // start time of the current interval
 	requests               uint64
 	snapshots              uint64
 	start                  time.Time
@@ -496,12 +496,18 @@ func (this *awrCB) Active() bool {
 	return this.enabled && !this.isQuiescent()
 }
 
+// Resets the current interval's set with a new empty set and resets the current interval's start time
+// Returns the previous interval's set and start time
 func (this *awrCB) newSet() (map[string]*awrUniqueStmt, time.Time) {
 	old := this.current
 	oldTs := this.ts
 	this.current = make(map[string]*awrUniqueStmt, this.activeConfig.NumStmts())
 	this.ts = time.Now()
 	return old, oldTs
+}
+
+func (this *awrCB) resetIntervalStartTime() {
+	this.ts = time.Now()
 }
 
 // This holds a copy of the data for the workload reporting from the BaseRequest
@@ -824,6 +830,7 @@ func (this *awrCB) reporter() {
 
 		this.Lock()
 		if len(this.current) == 0 {
+			this.resetIntervalStartTime()
 			this.Unlock()
 			continue
 		}
