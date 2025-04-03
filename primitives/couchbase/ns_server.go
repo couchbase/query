@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"runtime"
 	"strconv"
 	"strings"
@@ -1265,7 +1266,12 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	b.vBucketServerMap = unsafe.Pointer(&tmpb.VBSMJson)
 	b.nodeList = unsafe.Pointer(&tmpb.NodesJSON)
 	b.Capabilities = tmpb.Capabilities // MB-63078 Ensure capabilities are up-to-date too as we can refresh based on them
-	logging.Infof("Refreshed bucket %v (%s)", b.Name, b.getAbbreviatedUUID())
+
+	if _, f, l, ok := runtime.Caller(2); ok {
+		logging.Infof("Refreshed bucket %s (%s) (%s|%d)", b.Name, b.getAbbreviatedUUID(), path.Base(f), l)
+	} else {
+		logging.Infof("Refreshed bucket %s (%s)", b.Name, b.getAbbreviatedUUID())
+	}
 
 	b.Unlock()
 	return nil
