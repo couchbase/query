@@ -230,7 +230,7 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 		// If no plans or not valid
 		this.mutex.Lock()
 		if this.subqueryPlans == nil || subqueryPlans == this.subqueryPlans {
-			expr, err = parser.Parse(udfExpr.String())
+			expr, err = parser.ParseUdf(udfExpr.String())
 			if err == nil {
 				err = setVarNames(expr, varNames)
 			}
@@ -260,7 +260,7 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 	}
 	if trans {
 		// In transaction context regenerate algebra tree
-		expr, err = parser.Parse(udfExpr.String())
+		expr, err = parser.ParseUdf(udfExpr.String())
 		if err == nil {
 			err = setVarNames(expr, varNames)
 		}

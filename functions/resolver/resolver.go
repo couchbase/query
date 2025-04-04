@@ -91,7 +91,7 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
 		if _unmarshalled.Expression != "" {
-			expr, err = parser.Parse(_unmarshalled.Expression)
+			expr, err = parser.ParseUdf(_unmarshalled.Expression)
 			if err != nil {
 				return nil, errors.NewFunctionEncodingError("decode body", name, err)
 			}
