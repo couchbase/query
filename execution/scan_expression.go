@@ -61,8 +61,13 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		useCache := false
+		subq, isSubq := this.plan.FromExpr().(*algebra.Subquery)
+		var subqIsCorrelated bool
+		if isSubq {
+			subqIsCorrelated = subq.IsCorrelated()
+		}
 		if !this.plan.IsCorrelated() {
-			if subq, ok := this.plan.FromExpr().(*algebra.Subquery); ok {
+			if isSubq {
 				// if the subquery evaluation is caching result already, no need
 				// to cache result here
 				useCache = !useSubqCachedResult(subq.Select())
@@ -131,10 +136,18 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		var freeSize uint64
 		if context.UseRequestQuota() {
 			freeSize = ev.Size()
-			err := context.TrackValueSize(freeSize)
-			if err != nil {
-				context.Error(errors.NewMemoryQuotaExceededError())
-				return
+			// Track output of expression evaluation as necessary:
+			// 1. For correlated subqueries:
+			//    The values are already tracked as part of (repeated) execution of the subquery.
+			// 2. For non-correlated subqueries:
+			//    The values come from the subquery result cache and are not tracked (except for first execution).
+			// 3. for non-subqueries, the values are not tracked
+			if !isSubq || !subqIsCorrelated {
+				err := context.TrackValueSize(freeSize)
+				if err != nil {
+					context.Error(errors.NewMemoryQuotaExceededError())
+					return
+				}
 			}
 		}
 

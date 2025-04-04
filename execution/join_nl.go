@@ -145,7 +145,11 @@ loop:
 				} else if joined != nil {
 					joined.Recycle()
 				}
-
+				// Release the size of right_item.
+				// If matched we track joined which includes right_item, if not matched right_item is discarded
+				if context.UseRequestQuota() {
+					context.ReleaseValueSize(right_item.Size())
+				}
 				// TODO break out and child.SendAction(_ACTION_STOP) here for semin-scans
 			} else if child >= 0 {
 				n--
