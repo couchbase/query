@@ -115,10 +115,6 @@ func (this *builder) buildScan(keyspace datastore.Keyspace, node *algebra.Keyspa
 		hints, err = allHints(keyspace, baseKeyspace.IndexHints(), virtualIndexes, this.context.UseFts(), this.context)
 		if nil != hints {
 			defer _INDEX_POOL.Put(hints)
-		} else if len(baseKeyspace.IndexHints()) > 0 {
-			// if index hints are specified but none of the indexes are valid
-			// mark index hint error
-			baseKeyspace.SetIndexHintError()
 		}
 		if err != nil {
 			return
