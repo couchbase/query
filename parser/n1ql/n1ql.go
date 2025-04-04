@@ -72,11 +72,20 @@ func parseStatement(input string, namespace string, queryContext string, udfChec
 }
 
 func ParseExpression(input string) (expression.Expression, error) {
+	return parseExpression(input, false)
+}
+
+func ParseExpressionUdf(input string) (expression.Expression, error) {
+	return parseExpression(input, true)
+}
+
+func parseExpression(input string, udfExpr bool) (expression.Expression, error) {
 	input = strings.TrimSpace(input)
 	reader := strings.NewReader(input)
 	lex := newLexer(NewLexer(reader), nil)
 	lex.nex.ResetOffset()
 	lex.text = input
+	lex.udfExpr = udfExpr
 	lex.nex.ReportError(lex.ScannerError)
 	doParse(lex)
 
@@ -143,6 +152,7 @@ type lexer struct {
 	saved                  int
 	lval                   yySymType
 	stop                   bool
+	udfExpr                bool
 	optimHints             *algebra.OptimHints
 	log                    logging.Log
 }
@@ -371,6 +381,8 @@ func (this *lexer) setExpression(expr expression.Expression) {
 }
 
 func (this *lexer) parsingStatement() bool { return this.parsingStmt }
+
+func (this *lexer) parsingUdfExpression() bool { return !this.parsingStmt && this.udfExpr }
 
 func (this *lexer) getSubString(s, e int) string {
 	return strings.TrimSpace(this.text[s:e])

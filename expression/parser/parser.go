@@ -19,3 +19,7 @@ import (
 func Parse(s string) (expression.Expression, error) {
 	return n1ql.ParseExpression(s)
 }
+
+func ParseUdf(s string) (expression.Expression, error) {
+	return n1ql.ParseExpressionUdf(s)
+}

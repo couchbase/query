@@ -83,7 +83,7 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 		var expr expression.Expression
 		expression := entry["expression"].(string)
 		if expression != "" {
-			expr, err = parser.Parse(expression)
+			expr, err = parser.ParseUdf(expression)
 			if err != nil {
 				return nil, errors.NewFunctionEncodingError("decode body", name, err)
 			}
