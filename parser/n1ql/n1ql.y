@@ -5074,10 +5074,11 @@ LPAREN fullselect RPAREN
 LPAREN fullselect RPAREN
 {
     $$ = algebra.NewSubquery($2)
-    if !yylex.(*lexer).parsingStatement() {
+    if !yylex.(*lexer).parsingStatement() && !yylex.(*lexer).parsingUdfExpression() {
         // when parsing expressions, need to formalize the subquery such that proper identifier flags
         // are set on the subquery expressions, this is required for planning of the subquery
 	// (correlated subquery above already go through formalization with CheckSetCorrelated() call)
+        // (UDF expression goes through formalization separately)
         err := $$.Select().CheckFormalization()
         if err != nil {
             yylex.(*lexer).FatalError(fmt.Sprintf("Unexpected error in formalization of uncorrelated subquery %v", err), $<line>1, $<column>1)
