@@ -77,6 +77,8 @@ type HttpEndpoint struct {
 	trackedUsers        map[string]*userMetrics
 	trackedUsersVersion string
 	usersLock           sync.RWMutex
+	tlsConfigLock       sync.RWMutex
+	tlsConfig           *tls.Config // the TLS configuration for the encrypted port
 }
 
 const (
@@ -231,6 +233,8 @@ func (this *HttpEndpoint) Listen() error {
 	return nil
 }
 
+// Creates/ dynamically updates the TLS configuration for the encrypted port.
+// Once the TLS config is successfully updated, the secure listeners are only started if the listener has not been started already.
 func (this *HttpEndpoint) ListenTLS() error {
 
 	netWs := getNetwProtocol()
@@ -289,39 +293,71 @@ func (this *HttpEndpoint) ListenTLS() error {
 		cfg = http2Srv.TLSConfig
 	}
 
-	srv := &http.Server{
-		Handler:           this.mux,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
+	// Set the new TLS configuration
+	this.tlsConfigLock.Lock()
+	this.tlsConfig = cfg
+	this.tlsConfigLock.Unlock()
 
-	for netW, val := range netWs {
-		var ln net.Listener
-		var err error
+	// Check if the secure listeners for all the protocols supported by the server, have been successfully started.
+	// If not, attempt to start the appropriate listener.
+	if len(this.listenerTLS) < len(netWs) {
+		srv := &http.Server{
+			Handler:           this.mux,
+			ReadHeaderTimeout: 5 * time.Second,
+		}
 
-		for i := 0; i < _MAXRETRIES; i++ {
-			if i != 0 {
-				time.Sleep(_LISTENINTERVAL)
-			}
+		listenerCfg := &tls.Config{
+			// MB-61782: Dynamic update of TLS configuration without closing and re-starting listeners.
+			//
+			// Upon the receiving of a ClientHello message, this callback executes and returns the encrypted port's
+			// TLS configuration, which is then used for the TLS handshake of that particular connection attempt.
+			GetConfigForClient: func(chi *tls.ClientHelloInfo) (*tls.Config, error) {
+				this.tlsConfigLock.RLock()
 
-			ln, err = net.Listen(netW, this.httpsAddr)
-			if err == nil || !strings.Contains(strings.ToLower(err.Error()), "bind address already in use") {
+				// Copy the TLS config pointer.
+				// This is so that an update to the to the encrypted port's TLS configuration, stored in httpEndpoint.tlsConfig,
+				// can be safely made after the callback executes.
+				tls := this.tlsConfig
+				this.tlsConfigLock.RUnlock()
+				return tls, nil
+			},
+		}
+
+		for netW, val := range netWs {
+
+			// Check if the secure listener for the particular protocol has been started
+			if this.listenerTLS[netW] != nil {
 				break
 			}
-		}
 
-		if err != nil {
-			if val == server.TCP_REQ {
-				return fmt.Errorf("Failed to start service: %v", err.Error())
-			} else {
-				logging.Infof("Failed to start service: %v", err.Error())
+			// Attempt to start the secure listener
+			var ln net.Listener
+			var err error
+
+			for i := 0; i < _MAXRETRIES; i++ {
+				if i != 0 {
+					time.Sleep(_LISTENINTERVAL)
+				}
+
+				ln, err = net.Listen(netW, this.httpsAddr)
+				if err == nil || !strings.Contains(strings.ToLower(err.Error()), "bind address already in use") {
+					break
+				}
 			}
-		} else {
-			tls_ln := tls.NewListener(ln, cfg)
-			this.listenerTLS[netW] = tls_ln
-			go srv.Serve(tls_ln)
-			logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: ListenTLS Address - %v", ln.Addr()) })
-		}
 
+			if err != nil {
+				if val == server.TCP_REQ {
+					return fmt.Errorf("Failed to start service: %v", err.Error())
+				} else {
+					logging.Infof("Failed to start service: %v", err.Error())
+				}
+			} else {
+				tls_ln := tls.NewListener(ln, listenerCfg)
+				this.listenerTLS[netW] = tls_ln
+				go srv.Serve(tls_ln)
+				logging.Infoa(func() string { return fmt.Sprintf("HttpEndpoint: ListenTLS Address - %v", ln.Addr()) })
+			}
+		}
 	}
 
 	return nil
@@ -555,21 +591,13 @@ func (this *HttpEndpoint) SetupSSL() error {
 		settingsUpdated := false
 		if (configChange & cbauth.CFG_CHANGE_CERTS_TLSCONFIG) != 0 {
 			logging.Infof(" Certificates have been refreshed by ns server ")
-			closeErr := this.CloseTLS()
-
-			if closeErr != nil && !strings.Contains(strings.ToLower(closeErr.Error()), "closed network connection & use") {
-				logging.Errora(func() string {
-					return fmt.Sprintf("ERROR: Closing TLS listener - %s", closeErr.Error())
-				})
-				return errors.NewAdminEndpointError(closeErr, "error closing tls listenener")
-			}
 
 			tlsErr := this.ListenTLS()
 			if tlsErr != nil {
 				logging.Errora(func() string {
-					return fmt.Sprintf("ERROR: Starting TLS listener - %s", tlsErr.Error())
+					return fmt.Sprintf("Error updating the TLS configuration of the encrypted port: %s", tlsErr.Error())
 				})
-				return errors.NewAdminEndpointError(tlsErr, "error starting tls listener")
+				return errors.NewAdminEndpointError(tlsErr, "Error updating the TLS configuration of the encrypted port.")
 
 			}
 			settingsUpdated = true
