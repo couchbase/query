@@ -102,3 +102,7 @@ func (this *With) UnmarshalJSON(body []byte) error {
 
 	return nil
 }
+
+func (this *With) verify(prepared *Prepared) bool {
+	return this.child.verify(prepared)
+}
