@@ -201,3 +201,7 @@ func unmarshalCycle(body []byte) (*algebra.CycleCheck, error) {
 	cycleCheck := algebra.NewCycleCheck(cycle)
 	return cycleCheck, nil
 }
+
+func (this *With) verify(prepared *Prepared) bool {
+	return this.child.verify(prepared)
+}
