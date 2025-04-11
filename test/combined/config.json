@@ -9,7 +9,7 @@
     "build": "latest",
     "#build": "2263",
     "#comment": "Adjust the couchbase-cli cluster-init command line options to suit.",
-    "cluster-init": "-c localhost --cluster-username Administrator --cluster-password password --services query,data,index --cluster-ramsize 6144 --cluster-index-ramsize 512",
+    "cluster-init": "-c localhost --cluster-username Administrator --cluster-password password --services query,data,index --cluster-ramsize 6144 --cluster-index-ramsize 1024",
     "#comment": "If an existing cluster should be restarted (when running as root)",
     "#restart": true
   },
