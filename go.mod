@@ -89,7 +89,7 @@ require (
 	github.com/aws/smithy-go v1.20.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.22.0 // indirect
-	github.com/blevesearch/bleve-mapping-ui v0.6.0 // indirect
+	github.com/blevesearch/bleve-mapping-ui v0.7.0 // indirect
 	github.com/blevesearch/bleve/v2 v2.5.0 // indirect
 	github.com/blevesearch/bleve_index_api v1.2.7 // indirect
 	github.com/blevesearch/geo v0.1.20 // indirect
