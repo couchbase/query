@@ -1238,6 +1238,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	pool := b.pool
 	uri := b.URI
 	client := pool.client
+	refreshes := b.refreshes
 	b.RUnlock()
 
 	var poolServices PoolServices
@@ -1286,6 +1287,11 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	// of NMVb errors received during bulkGet do not end up over-writing
 	// pool.inUse.
 	b.Lock()
+	if refreshes < b.refreshes {
+		// MB-66085 Another routine has already refreshed the bucket.
+		b.Unlock()
+		return nil
+	}
 
 	for _, pool := range pools {
 		if pool != nil {
