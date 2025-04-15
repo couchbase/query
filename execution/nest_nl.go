@@ -126,7 +126,11 @@ loop:
 				if ok && match {
 					right_items = append(right_items, right_item)
 				}
-
+				// Tracking of right_items happens at the end of the function as part of tracking of joined.Size(),
+				// but release the size of right_item since it has already been tracked in the child operator.
+				if context.UseRequestQuota() {
+					context.ReleaseValueSize(right_item.Size())
+				}
 				// TODO break out and child.SendAction(_ACTION_STOP) here for semi-scans
 			} else if child >= 0 {
 				n--
