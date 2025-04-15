@@ -66,6 +66,8 @@ import (
 	"hash/crc64"
 	"math"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/couchbase/query/value"
 )
@@ -306,50 +308,55 @@ func (ft *FieldType) Copy() FieldType {
 }
 
 func (ft *FieldType) String(indent int) string {
-	result := ft.Type.String()
+	var sb strings.Builder
+	ft.string(indent+2, &sb)
+	return sb.String()
+}
+
+func (ft *FieldType) string(indent int, s *strings.Builder) {
+	s.WriteString(ft.Type.String())
 	if ft.Type == value.OBJECT {
-		result = result + "\n" + ft.subtype.StringIndent(indent+2)
+		s.WriteByte('\n')
+		ft.subtype.stringIndent(indent, s)
 	}
 	if ft.Type == value.ARRAY {
-		var buffer bytes.Buffer
-		for i := 0; i < indent+2; i++ {
-			buffer.WriteString(" ")
-		}
-		var indentStr = buffer.String()
-
-		result = result + "\n"
+		indentStr := strings.Repeat(" ", indent+2)
+		s.WriteByte('\n')
 		for _, elementType := range ft.arrtype.typesSeen {
-			result = result + indentStr + elementType.String(indent+2) + "\n"
+			s.WriteString(indentStr)
+			elementType.string(indent+2, s)
+			s.WriteByte('\n')
 		}
 	}
-
-	return (result)
 }
 
 func (ft *FieldType) StringNoValues(indent int) string {
-	result := ft.Type.String()
+	var s strings.Builder
+	ft.stringNoValues(indent, &s)
+	return s.String()
+}
+
+func (ft *FieldType) stringNoValues(indent int, s *strings.Builder) {
+	s.WriteString(ft.Type.String())
 	if ft.Type == value.OBJECT {
-		result = result + "\n" + ft.subtype.StringIndentNoValues(indent+2)
+		s.WriteByte('\n')
+		ft.subtype.stringIndentNoValues(indent+2, s)
 	}
+
 	if ft.Type == value.ARRAY {
 		//fmt.Printf("   going through %d typesSeen\n",len(ft.arrtype.typesSeen))
-		var buffer bytes.Buffer
-		for i := 0; i < indent+2; i++ {
-			buffer.WriteString(" ")
-		}
-		var indentStr = buffer.String()
+		indentStr := strings.Repeat(" ", indent+2)
 
-		result = result + "\n"
-
+		s.WriteString("\n")
 		names := sortedNamesFT(ft.arrtype.typesSeen)
 		for _, name := range names {
 			elementType := ft.arrtype.typesSeen[name]
 			//fmt.Printf("   got array type: %s\n",elementType.String(0))
-			result = result + indentStr + elementType.StringNoValues(indent+2) + "\n"
+			s.WriteString(indentStr)
+			elementType.stringNoValues(indent+2, s)
+			s.WriteByte('\n')
 		}
 	}
-
-	return (result)
 }
 
 func (ft *FieldType) MarshalJSON() ([]byte, error) {
@@ -462,15 +469,24 @@ func (f *Field) Copy() *Field {
 }
 
 func (f Field) String(indent int) string {
-	result := f.Name + " - " + f.Kind.String(indent)
+	var sb strings.Builder
+	f.string(indent, &sb)
+	return sb.String()
+}
+
+func (f Field) string(indent int, s *strings.Builder) {
+	s.WriteString(f.Name)
+	s.WriteString(" - ")
+
+	f.Kind.string(indent, s)
 
 	if f.Kind.Type != value.NULL && f.Kind.Type != value.OBJECT &&
 		len(f.sampleValues) > 0 {
-		result += " ["
+		s.WriteString(" [")
 		first := true
-		for idx, _ := range f.sampleValues {
+		for idx := range f.sampleValues {
 			if !first {
-				result += ","
+				s.WriteByte(',')
 			} else {
 				first = false
 			}
@@ -479,16 +495,15 @@ func (f Field) String(indent int) string {
 			if len(valBytes) > 20 {
 				valBytes = valBytes[0:20]
 			}
-			result += string(valBytes)
+			s.Write(valBytes)
 		}
-		result += "]"
+		s.WriteByte(']')
 	}
 
 	if f.namesake != nil {
-		result += "\n" + f.namesake.String(indent)
+		s.WriteByte('\n')
+		f.namesake.string(indent, s)
 	}
-
-	return (result)
 }
 
 //
@@ -525,26 +540,40 @@ func (f Field) TruncatedSampleValues() value.Values {
 }
 
 func (f *Field) StringNoType() string {
-	result := f.Name
+	var sb strings.Builder
+	f.stringNoType(&sb)
+	return sb.String()
+}
+
+func (f *Field) stringNoType(sb *strings.Builder) {
+	sb.WriteString(f.Name)
 	if f.Kind.Type == value.OBJECT {
-		result += " " + f.Kind.subtype.StringNoTypes() + " "
+		sb.WriteByte(' ')
+		f.Kind.subtype.stringNoTypes(sb)
+		sb.WriteByte(' ')
 	}
 
 	if f.namesake != nil {
-		result += "\n" + f.namesake.StringNoType()
+		sb.WriteByte('\n')
+		f.namesake.stringNoType(sb)
 	}
-
-	return (result)
 }
 
 func (f *Field) StringNoValues(indent int) string {
-	result := f.Name + " - " + f.Kind.StringNoValues(indent)
+	var s strings.Builder
+	f.stringNoValues(indent, &s)
+	return s.String()
+}
+
+func (f *Field) stringNoValues(indent int, s *strings.Builder) {
+	s.WriteString(f.Name)
+	s.WriteString(" - ")
+	f.Kind.stringNoValues(indent, s)
 
 	if f.namesake != nil {
-		result += "\n" + f.namesake.StringNoValues(indent)
+		s.WriteByte('\n')
+		f.namesake.stringNoValues(indent, s)
 	}
-
-	return (result)
 }
 
 func (f *Field) NameTypeOnly() string {
@@ -996,7 +1025,7 @@ func (s *Schema) CollapseDictionaryFields(numSampleValues int32, dictionary_thre
 		objectFieldCount > int(dictionary_threshold) {
 
 		// make a list of sample keys and sample values for the dictionary
-		sampleValues := make(value.Values, 0)
+		sampleValues := make(value.Values, 0, numSampleValues)
 
 		for _, field := range s.fields {
 			if len(sampleValues) < int(numSampleValues) {
@@ -1236,37 +1265,38 @@ func (s *Schema) EqualTo(other *Schema) bool {
 //
 
 func (s *Schema) String() string {
-	header := fmt.Sprintf("Schema has %d fields, %d docs\n", len(s.fields), s.matchingDocCount)
-	return (header + s.StringIndent(0))
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Schema has %d fields, %d docs\n", len(s.fields), s.matchingDocCount)
+	s.stringIndent(0, &sb)
+	return sb.String()
 }
 
 func (s *Schema) StringIndent(indent int) string {
-	var buffer bytes.Buffer
+	var sb strings.Builder
+	s.stringIndent(indent, &sb)
+	return sb.String()
+}
 
+func (s *Schema) stringIndent(indent int, sb *strings.Builder) {
 	// object fields, if any
-	for idx, _ := range s.fields {
-		for i := 0; i < indent+2; i++ {
-			buffer.WriteString(" ")
-		}
-		buffer.WriteString(s.fields[idx].String(indent + 2))
+	for idx := range s.fields {
+		sb.WriteString(strings.Repeat(" ", indent+2))
+
+		s.fields[idx].string(indent+2, sb)
 		if s.fields[idx].Kind.Type != value.OBJECT && s.fields[idx].Kind.Type != value.ARRAY {
-			buffer.WriteString("\n")
+			sb.WriteByte('\n')
 		}
 	}
 
 	// bare value, if any
 	if s.bareValue != nil {
-		for i := 0; i < indent+2; i++ {
-			buffer.WriteString(" ")
-		}
-		buffer.WriteString(s.bareValue.String(indent + 2))
+		sb.WriteString(strings.Repeat(" ", indent+2))
+
+		s.bareValue.string(indent+2, sb)
 		if s.bareValue.Kind.Type != value.OBJECT && s.bareValue.Kind.Type != value.ARRAY {
-			buffer.WriteString("\n")
+			sb.WriteByte('\n')
 		}
-
 	}
-
-	return (buffer.String())
 }
 
 //
@@ -1274,32 +1304,35 @@ func (s *Schema) StringIndent(indent int) string {
 //
 
 func (s *Schema) StringNoValues() string {
-	header := fmt.Sprintf("Schema has %d fields, %d docs, hash: %d\n", len(s.fields), s.matchingDocCount, s.hashValue)
-	return (header + s.StringIndentNoValues(0))
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Schema has %d fields, %d docs, hash: %d\n", len(s.fields), s.matchingDocCount, s.hashValue)
+	s.stringIndentNoValues(0, &sb)
+	return sb.String()
 }
 
 func (s Schema) StringIndentNoValues(indent int) string {
-	var buffer bytes.Buffer
+	var sb strings.Builder
+	s.stringIndentNoValues(indent, &sb)
+	return sb.String()
+}
 
+func (s Schema) stringIndentNoValues(indent int, sb *strings.Builder) {
 	// for comparison sake, we want the fields in alphabetical order
 	sort.Sort(s.fields)
 
-	for idx, _ := range s.fields {
-		for i := 0; i < indent+2; i++ {
-			buffer.WriteString(" ")
-		}
-		buffer.WriteString(s.fields[idx].StringNoValues(indent + 2))
+	for idx := range s.fields {
+		sb.WriteString(strings.Repeat(" ", indent+2))
+		s.fields[idx].stringNoValues(indent+2, sb)
+
 		if s.fields[idx].Kind.Type != value.OBJECT && s.fields[idx].Kind.Type != value.ARRAY {
-			buffer.WriteString("\n")
+			sb.WriteByte('\n')
 		}
 	}
 
 	// if we have a bare value, add that as well
 	if s.bareValue != nil {
-		buffer.WriteString(s.bareValue.StringNoValues(indent + 2))
+		s.bareValue.stringNoValues(indent+2, sb)
 	}
-
-	return (buffer.String())
 }
 
 //
@@ -1309,13 +1342,24 @@ func (s Schema) StringIndentNoValues(indent int) string {
 
 func (s *Schema) StringWithFrequency(indent int, freqMap map[string]int64, parentName string,
 	matchingDocCount int64) string {
-	var buffer bytes.Buffer
+	var sb strings.Builder
+	s.stringWithFrequency(indent, freqMap, parentName, matchingDocCount, &sb)
+	return s.String()
+}
+
+func (s *Schema) stringWithFrequency(indent int, freqMap map[string]int64, parentName string,
+	matchingDocCount int64, sbuffer *strings.Builder) {
 
 	if parentName == "" {
-		for i := 0; i < indent; i++ { // indentation
-			buffer.WriteString(" ")
-		}
-		buffer.WriteString(fmt.Sprintf("Schema has %d fields, %d docs, hash: %d\n", len(s.fields), matchingDocCount, s.hashValue))
+		sbuffer.WriteString(strings.Repeat(" ", indent))
+
+		sbuffer.WriteString("Schema has ")
+		sbuffer.WriteString(strconv.Itoa(len(s.fields)))
+		sbuffer.WriteString(" fields, ")
+		sbuffer.WriteString(strconv.FormatInt(matchingDocCount, 10))
+		sbuffer.WriteString(" docs, hash: ")
+		sbuffer.WriteString(strconv.FormatUint(s.hashValue, 10))
+		sbuffer.WriteByte('\n')
 	}
 
 	// for comparison sake, we want the fields in alphabetical order
@@ -1326,37 +1370,40 @@ func (s *Schema) StringWithFrequency(indent int, freqMap map[string]int64, paren
 		fieldFreq := freqMap[parentName+field.NameTypeOnly()]
 		//fmt.Printf("Managing field: (%d) %s\n", fieldFreq, parentName+field.NameTypeOnly())
 
-		for i := 0; i < indent+2; i++ { // indentation
-			buffer.WriteString(" ")
-		}
+		sbuffer.WriteString(strings.Repeat(" ", indent+2))
 
-		buffer.WriteString(fmt.Sprintf("- %6.2f: %s - %s",
+		fmt.Fprintf(sbuffer, "- %6.2f: %s - %s",
 			100.0*float32(fieldFreq)/float32(matchingDocCount),
-			field.Name, field.Kind.Type.String()))
+			field.Name, field.Kind.Type.String())
+
 		//buffer.WriteString(fmt.Sprintf("%3d/%d: %s - %s",
 		//	fieldFreq, matchingDocCount,
 		//	field.Name, field.Kind.Type.String()))
 
 		// for objects, need subtype
 		if field.Kind.Type == value.OBJECT {
-			buffer.WriteString(fmt.Sprintf(" %d fields %d docs\n", len(field.Kind.subtype.fields),
-				field.Kind.subtype.matchingDocCount) +
-				field.Kind.subtype.StringWithFrequency(indent+2, freqMap, parentName+field.Name+".", fieldFreq))
+			sbuffer.WriteRune(' ')
+			sbuffer.WriteString(strconv.Itoa(len(field.Kind.subtype.fields)))
+			sbuffer.WriteString(" fields ")
+			sbuffer.WriteString(strconv.FormatInt(field.Kind.subtype.matchingDocCount, 10))
+			sbuffer.WriteString(" docs\n")
+
+			field.Kind.subtype.stringWithFrequency(indent+2, freqMap, parentName+field.Name+".", fieldFreq, sbuffer)
 		}
 
 		// for arrays, we have a set of subtypes
 		if field.Kind.Type == value.ARRAY {
-			buffer.WriteString(fmt.Sprintf(" array with %d subtypes\n", len(field.Kind.arrtype.typesSeen)))
+			sbuffer.WriteString(" array with ")
+			sbuffer.WriteString(strconv.Itoa(len(field.Kind.arrtype.typesSeen)))
+			sbuffer.WriteString(" subtypes\n")
 
 			for _, elementType := range field.Kind.arrtype.typesSeen {
-				for i := 0; i < indent+4; i++ { // indentation
-					buffer.WriteString(" ")
-				}
+				sbuffer.WriteString(strings.Repeat(" ", indent+4))
 
-				buffer.WriteString(elementType.String(indent + 4))
+				elementType.string(indent+4, sbuffer)
 
 				if elementType.Type != value.OBJECT && elementType.Type != value.ARRAY {
-					buffer.WriteString("\n")
+					sbuffer.WriteString("\n")
 				}
 
 			}
@@ -1368,11 +1415,11 @@ func (s *Schema) StringWithFrequency(indent int, freqMap map[string]int64, paren
 		if field.Kind.Type != value.NULL &&
 			field.Kind.Type != value.OBJECT &&
 			len(field.sampleValues) > 0 {
-			buffer.WriteString(" [")
+			sbuffer.WriteString(" [")
 			first := true
 			for _, val := range field.sampleValues {
 				if !first {
-					buffer.WriteString(",")
+					sbuffer.WriteString(",")
 				} else {
 					first = false
 				}
@@ -1381,15 +1428,15 @@ func (s *Schema) StringWithFrequency(indent int, freqMap map[string]int64, paren
 				if len(valBytes) > 20 {
 					valBytes = valBytes[0:20]
 				}
-				buffer.WriteString(string(valBytes))
+				sbuffer.Write(valBytes)
 			}
-			buffer.WriteString("]")
+			sbuffer.WriteString("]")
 		}
 
 		// close with a carriage return
 
 		if field.Kind.Type != value.OBJECT {
-			buffer.WriteString("\n")
+			sbuffer.WriteString("\n")
 		}
 	}
 
@@ -1398,33 +1445,31 @@ func (s *Schema) StringWithFrequency(indent int, freqMap map[string]int64, paren
 		fieldFreq := freqMap[parentName+s.bareValue.NameTypeOnly()]
 
 		for i := 0; i < indent+2; i++ { // indentation
-			buffer.WriteString(" ")
+			sbuffer.WriteString(" ")
 		}
-		buffer.WriteString(fmt.Sprintf("- %6.2f: %s - %s",
+		fmt.Fprintf(sbuffer, "- %6.2f: %s - %s",
 			100.0*float32(fieldFreq)/float32(matchingDocCount),
-			s.bareValue.Name, s.bareValue.Kind.Type.String()))
+			s.bareValue.Name, s.bareValue.Kind.Type.String())
 
 		// for arrays, we have a set of subtypes
 		if s.bareValue.Kind.Type == value.ARRAY {
-			buffer.WriteString(fmt.Sprintf(" array with %d subtypes\n", len(s.bareValue.Kind.arrtype.typesSeen)))
+			sbuffer.WriteString(" array with ")
+			sbuffer.WriteString(strconv.Itoa(len(s.bareValue.Kind.arrtype.typesSeen)))
+			sbuffer.WriteString(" subtypes\n")
 
 			for _, elementType := range s.bareValue.Kind.arrtype.typesSeen {
-				for i := 0; i < indent+4; i++ { // indentation
-					buffer.WriteString(" ")
-				}
+				sbuffer.WriteString(strings.Repeat(" ", indent+4))
 
-				buffer.WriteString(elementType.String(indent + 4))
+				elementType.string(indent+4, sbuffer)
 
 				if elementType.Type != value.OBJECT && elementType.Type != value.ARRAY {
-					buffer.WriteString("\n")
+					sbuffer.WriteString("\n")
 				}
 
 			}
 
 		}
 	}
-
-	return (buffer.String())
 }
 
 //
@@ -1491,30 +1536,34 @@ func UpdateSingleFieldFrequencies(field *Field, freqMap map[string]int64, parent
 //
 
 func (s Schema) StringNoTypes() string {
-	var buffer bytes.Buffer
+	var sb strings.Builder
+	s.stringNoTypes(&sb)
+	return sb.String()
+}
+
+func (s Schema) stringNoTypes(sb *strings.Builder) {
 	first := true
 
-	buffer.WriteString("{")
+	sb.WriteByte('{')
 
 	// for comparison sake, we want the fields in alphabetical order
 	sort.Sort(s.fields)
 
 	for idx, _ := range s.fields {
 		if !first {
-			buffer.WriteString(", ")
+			sb.WriteString(", ")
 		} else {
 			first = false
 		}
 
-		buffer.WriteString(s.fields[idx].StringNoType())
+		s.fields[idx].stringNoType(sb)
 	}
 
 	if s.bareValue != nil {
-		buffer.WriteString(s.bareValue.StringNoType())
+		s.bareValue.stringNoType(sb)
 	}
 
-	buffer.WriteString("}")
-	return (buffer.String())
+	sb.WriteByte('}')
 }
 
 //
