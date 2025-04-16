@@ -23,7 +23,7 @@ func checkCostModel(featureControls uint64) {
 	// no-op
 }
 
-func optDocCount(keyspace string) int64 {
+func optDocCount(keyspace string, useCBO bool) int64 {
 	return -1
 }
 

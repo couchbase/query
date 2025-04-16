@@ -711,7 +711,7 @@ func checkSystemCollection(name string) errors.Error {
 		// make sure the system collection exist, but no need for primary index for migration
 		// to proceed; since index creation may take additonal time, we'll do that at the end
 		// of migration
-		err := ds.CheckSystemCollection(name, "")
+		_, err := ds.CheckSystemCollection(name, "", false, 0)
 		if err != nil {
 			logging.Errorf("UDF migration: Error during UDF migration for bucket %s, system collection unavailable - %v", name, err)
 			return errors.NewMigrationError(_UDF_MIGRATION,
@@ -751,10 +751,15 @@ func createPrimaryIndexes() {
 }
 
 func createPrimaryIndex(ds datastore.Datastore, bucketName string) {
+	// include a random delay of (0 - 10) times 200 milliseconds
 	requestId, _ := util.UUIDV4()
-	err := ds.CheckSystemCollection(bucketName, requestId)
+	empty, err := ds.CheckSystemCollection(bucketName, requestId, false, 200)
 	if err == nil {
-		logging.Infof("UDF migration: Primary index on system collection available for bucket %s", bucketName)
+		if empty {
+			logging.Infof("UDF migration: system collection is empty, primary index not created for bucket %s", bucketName)
+		} else {
+			logging.Infof("UDF migration: Primary index on system collection available for bucket %s", bucketName)
+		}
 	} else if !errors.IsIndexExistsError(err) {
 		logging.Errorf("UDF migration: Error creating primary index on system collection for bucket %s - %v", bucketName, err)
 	}
