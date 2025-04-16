@@ -187,8 +187,8 @@ func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, erro
 	return nil, nil
 }
 
-func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
-	return nil
+func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex bool, randomDeley int) (bool, errors.Error) {
+	return false, nil
 }
 
 func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryContext) (map[string]bool, errors.Error) {

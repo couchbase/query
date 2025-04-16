@@ -85,7 +85,7 @@ type Datastore interface {
 	GetSystemCBOStats() (Keyspace, errors.Error)
 	HasSystemCBOStats() (bool, errors.Error)
 	GetSystemCollection(bucketName string) (Keyspace, errors.Error)
-	CheckSystemCollection(bucketName, requestId string) errors.Error
+	CheckSystemCollection(bucketName, requestId string, forceIndex bool, randomDelay int) (bool, errors.Error)
 
 	StartTransaction(stmtAtomicity bool, context QueryContext) (map[string]bool, errors.Error)
 	CommitTransaction(stmtAtomicity bool, context QueryContext) errors.Error
@@ -827,14 +827,15 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 	}
 
 	// checks the status of or creates (if needed) the primary index
-	primaryFunc := func(bucketName string) errors.Error {
+	primaryFunc := func(bucketName string) (bool, errors.Error) {
+		var empty bool
 		var err errors.Error
 		store := GetDatastore()
 		if store != nil {
 			requestId, _ := util.UUIDV4()
-			err = store.CheckSystemCollection(bucketName, requestId)
+			empty, err = store.CheckSystemCollection(bucketName, requestId, false, 0)
 		}
-		return err
+		return empty, err
 	}
 
 	indexerSEQ, err := systemCollection.Indexer(SEQ_SCAN)
@@ -854,9 +855,14 @@ func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnect
 	// if not successful so far, e.g. if bucket doesn't have SEQ_SCAN support, or if SEQ_SCAN
 	// is disabled, try to wait for the creation of primary index (issued above) synchronously
 	logging.Debugf("Creating primary index on system collection for bucket %s synchronously", systemCollection.Scope().BucketId())
-	err = primaryFunc(systemCollection.Scope().BucketId())
+	var empty bool
+	empty, err = primaryFunc(systemCollection.Scope().BucketId())
 	if err != nil {
 		return nil, nil, err
+	}
+	if empty {
+		// the system collection is empty, and no primary index created
+		return nil, nil, nil
 	}
 	indexer, err := systemCollection.Indexer(GSI)
 	if err != nil {
@@ -910,6 +916,8 @@ func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspac
 
 	conn, index3, err := getSystemCollectonIndexConnection(systemCollection)
 	if err != nil || conn == nil || index3 == nil {
+		// if system collection is empty and no primary index created, there is nothing
+		// to be scanned, we also return here
 		return err
 	}
 	defer func() {
