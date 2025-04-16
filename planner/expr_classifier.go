@@ -30,7 +30,7 @@ func ClassifyExpr(expr expression.Expression, baseKeyspaces map[string]*base.Bas
 	for _, baseKeyspace := range baseKeyspaces {
 		keyspace := baseKeyspace.Keyspace()
 		if keyspace != "" && !baseKeyspace.HasDocCount() {
-			baseKeyspace.SetDocCount(optDocCount(keyspace))
+			baseKeyspace.SetDocCount(optDocCount(keyspace, doSelec))
 			baseKeyspace.SetHasDocCount()
 		}
 	}

@@ -3226,7 +3226,7 @@ func CleanupSystemCollection(namespace string, bucket string) {
 const (
 	_BUCKET_SYSTEM_SCOPE      = "_system"
 	_BUCKET_SYSTEM_COLLECTION = "_query"
-	_BUCKET_SYSTEM_PRIM_INDEX = "#primary"
+	_BUCKET_SYSTEM_PRIM_INDEX = "ix_system_query"
 )
 
 func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datastore.Indexer3) errors.Error {
@@ -3411,7 +3411,7 @@ func (s *store) getNumIndexNodes() (int, errors.Errors) {
 }
 
 // check for existance of system collection, and create primary index if necessary
-func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error {
+func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex bool, randomDelay int) (bool, errors.Error) {
 	sysColl, err := s.GetSystemCollection(bucketName)
 	if err != nil {
 		// make sure the bucket exists before we wait (e.g. index advisor)
@@ -3419,17 +3419,17 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		case errors.E_CB_KEYSPACE_NOT_FOUND, errors.E_CB_BUCKET_NOT_FOUND:
 			defaultPool, er := s.NamespaceByName("default")
 			if er != nil {
-				return er
+				return false, er
 			}
 
 			_, er = defaultPool.BucketByName(bucketName)
 			if er != nil {
-				return er
+				return false, er
 			}
 		case errors.E_CB_SCOPE_NOT_FOUND:
 			// no-op, ignore
 		default:
-			return err
+			return false, err
 		}
 		// wait for system collection to show up
 		maxRetry := 8
@@ -3439,7 +3439,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 			case errors.E_CB_KEYSPACE_NOT_FOUND, errors.E_CB_BUCKET_NOT_FOUND, errors.E_CB_SCOPE_NOT_FOUND:
 				// no-op, ignore these errors
 			default:
-				return err
+				return false, err
 			}
 
 			time.Sleep(interval)
@@ -3451,31 +3451,55 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 			}
 		}
 		if err != nil {
-			return err
+			return false, err
 		} else if sysColl == nil {
-			return errors.NewSystemCollectionError("System collection not available for bucket "+bucketName, nil)
+			return false, errors.NewSystemCollectionError("System collection not available for bucket "+bucketName, nil)
 		}
 	}
 
 	if requestId == "" {
-		return nil
+		return false, nil
+	}
+
+	empty := false
+
+	cnt, err1 := sysColl.Count(datastore.NULL_QUERY_CONTEXT)
+	if err1 != nil {
+		return false, errors.NewSystemCollectionError("Count from system collection for bucket "+bucketName, err1)
+	} else if cnt < 0 {
+		return false, errors.NewSystemCollectionError(fmt.Sprintf("Invalid count (%d) from system collection for bucket %s", cnt, bucketName), nil)
+	} else if cnt == 0 {
+		empty = true
+	}
+	if !forceIndex {
+		// if the system collection is empty, don't create the primary index yet
+		if empty {
+			return empty, nil
+		}
+		if randomDelay > 0 {
+			// random delay requested, use 0-10 times the requested delay (in Milliseconds)
+			delay := rand.Intn(11) * randomDelay
+			if delay > 0 {
+				time.Sleep(time.Duration(delay) * time.Millisecond)
+			}
+		}
 	}
 
 	indexer, er := sysColl.Indexer(datastore.GSI)
 	if er != nil {
-		return er
+		return false, er
 	}
 
 	indexer3, ok := indexer.(datastore.Indexer3)
 	if !ok {
-		return errors.NewInvalidGSIIndexerError("Cannot get primary index on system collection")
+		return false, errors.NewInvalidGSIIndexerError("Cannot get primary index on system collection")
 	}
 
 	sysIndex, er := indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
 	if er != nil {
 		if !errors.IsIndexNotFoundError(er) {
 			// only ignore index not found error
-			return er
+			return false, er
 		}
 
 		// create primary index on system collection if not already exists
@@ -3483,7 +3507,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		er = s.CreateSysPrimaryIndex(_BUCKET_SYSTEM_PRIM_INDEX, requestId, indexer3)
 		if er != nil && !errors.IsIndexExistsError(er) {
 			// ignore index already exist error
-			return er
+			return false, er
 		}
 	} else {
 		// make sure the primary index is ONLINE
@@ -3493,7 +3517,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 		for i := 0; i < maxRetry; i++ {
 			state, _, er1 := sysIndex.State()
 			if er1 != nil {
-				return er1
+				return false, er1
 			}
 			if state == datastore.ONLINE {
 				done = true
@@ -3502,7 +3526,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 				// build system index if it is deferred (e.g. just restored)
 				er = indexer3.BuildIndexes(requestId, sysIndex.Name())
 				if er != nil {
-					return er
+					return false, er
 				}
 			}
 
@@ -3511,18 +3535,18 @@ func (s *store) CheckSystemCollection(bucketName, requestId string) errors.Error
 
 			er = indexer3.Refresh()
 			if er != nil {
-				return er
+				return false, er
 			}
 
 			sysIndex, er = indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
 			if er != nil {
-				return er
+				return false, er
 			}
 		}
 		if !done {
-			return errors.NewSysCollectionPrimaryIndexError(bucketName)
+			return false, errors.NewSysCollectionPrimaryIndexError(bucketName)
 		}
 	}
 
-	return nil
+	return empty, nil
 }
