@@ -1799,6 +1799,9 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	}
 	reqMap["requestTime"] = request.RequestTime().Format(expression.DEFAULT_FORMAT)
 	reqMap["elapsedTime"] = util.FormatDuration(time.Since(request.RequestTime()), durStyle)
+	if request.Timeout() > time.Duration(0) {
+		reqMap["timeout"] = util.FormatDuration(request.Timeout(), durStyle)
+	}
 	if request.ServiceTime().IsZero() {
 		reqMap["executionTime"] = util.FormatDuration(0, durStyle)
 	} else {

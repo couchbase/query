@@ -200,6 +200,9 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				if request.CpuTime() > time.Duration(0) {
 					item.SetField("cpuTime", context.FormatDuration(request.CpuTime()))
 				}
+				if request.Timeout() > time.Duration(0) {
+					item.SetField("timeout", context.FormatDuration(request.Timeout()))
+				}
 				p := request.Output().FmtPhaseCounts()
 				if p != nil {
 					item.SetField("phaseCounts", p)
