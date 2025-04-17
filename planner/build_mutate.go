@@ -55,7 +55,7 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	this.baseKeyspaces[baseKeyspace.Name()] = baseKeyspace
 	kspace := baseKeyspace.Keyspace()
 	if kspace != "" {
-		baseKeyspace.SetDocCount(optDocCount(kspace))
+		baseKeyspace.SetDocCount(optDocCount(kspace, this.useCBO))
 		baseKeyspace.SetHasDocCount()
 	}
 	this.collectKeyspaceNames()

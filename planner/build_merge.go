@@ -36,12 +36,12 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	this.baseKeyspaces[targetKeyspace.Name()] = targetKeyspace
 	srcKeyspace := sourceKeyspace.Keyspace()
 	if srcKeyspace != "" {
-		sourceKeyspace.SetDocCount(optDocCount(srcKeyspace))
+		sourceKeyspace.SetDocCount(optDocCount(srcKeyspace, this.useCBO))
 		sourceKeyspace.SetHasDocCount()
 	}
 	tgtKeyspace := targetKeyspace.Keyspace()
 	if tgtKeyspace != "" {
-		targetKeyspace.SetDocCount(optDocCount(tgtKeyspace))
+		targetKeyspace.SetDocCount(optDocCount(tgtKeyspace, this.useCBO))
 		targetKeyspace.SetHasDocCount()
 	}
 	this.collectKeyspaceNames()

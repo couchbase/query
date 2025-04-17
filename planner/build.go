@@ -556,11 +556,13 @@ func (this *builder) getDocCount(alias string) (docCount int64) {
 	}
 
 	if !baseKeyspace.HasDocCount() {
-		baseKeyspace.SetDocCount(optDocCount(keyspace))
+		docCount = optDocCount(keyspace, this.useCBO)
+		baseKeyspace.SetDocCount(docCount)
 		baseKeyspace.SetHasDocCount()
+	} else {
+		docCount = baseKeyspace.DocCount()
 	}
 
-	docCount = baseKeyspace.DocCount()
 	return
 }
 

@@ -27,12 +27,14 @@ type keyspaceFinder struct {
 	unnestDepends    map[string]*expression.Identifier
 	metadataDuration time.Duration
 	arrayId          int
+	useCBO           bool
 }
 
-func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary string, arrayId int) *keyspaceFinder {
+func newKeyspaceFinder(baseKeyspaces map[string]*base.BaseKeyspace, primary string, arrayId int, useCBO bool) *keyspaceFinder {
 	rv := &keyspaceFinder{
 		baseKeyspaces: baseKeyspaces,
 		arrayId:       arrayId,
+		useCBO:        useCBO,
 	}
 	rv.keyspaceMap = make(map[string]string, len(baseKeyspaces))
 	rv.unnestDepends = make(map[string]*expression.Identifier, len(baseKeyspaces))
@@ -52,7 +54,7 @@ func (this *keyspaceFinder) addKeyspaceAlias(alias string, path *algebra.Path,
 	keyspace := newBaseKeyspace.Keyspace()
 	this.keyspaceMap[alias] = keyspace
 	if keyspace != "" {
-		newBaseKeyspace.SetDocCount(optDocCount(keyspace))
+		newBaseKeyspace.SetDocCount(optDocCount(keyspace, this.useCBO))
 		newBaseKeyspace.SetHasDocCount()
 	}
 	return nil
