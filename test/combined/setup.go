@@ -466,7 +466,7 @@ func configureInstance(c map[string]interface{}) error {
 	}
 	base := []string{"cluster-init"}
 	args := append(base, strings.Split(initArgs, " ")...)
-	logging.Infof("cluster-init args: %v", args)
+	logging.Debugf("cluster-init args: %v", args)
 
 	if !checkWait(_NODE_URL, "Waiting for cluster manager prior to creating cluster...") {
 		return fmt.Errorf("Unable to configure instance.")
@@ -479,7 +479,7 @@ func configureInstance(c map[string]interface{}) error {
 		sb := &strings.Builder{}
 		ic.Stdout = sb
 		err = ic.Run()
-		logging.Infof("Server creation response: %v", strings.TrimSuffix(sb.String(), "\n"))
+		logging.Debugf("Server creation response: %v", strings.TrimSuffix(sb.String(), "\n"))
 		if err != nil {
 			err = fmt.Errorf("%v: %s", err, strings.TrimSuffix(sb.String(), "\n"))
 			if !isHttpConnError(err) {
