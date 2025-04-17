@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"golang.org/x/net/html"
 	"io"
 	"net/http"
 	"net/url"
@@ -24,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/html"
 
 	"github.com/couchbase/query/logging"
 )
@@ -465,7 +466,7 @@ func configureInstance(c map[string]interface{}) error {
 	}
 	base := []string{"cluster-init"}
 	args := append(base, strings.Split(initArgs, " ")...)
-	logging.Debugf("%v", args)
+	logging.Infof("cluster-init args: %v", args)
 
 	if !checkWait(_NODE_URL, "Waiting for cluster manager prior to creating cluster...") {
 		return fmt.Errorf("Unable to configure instance.")
@@ -478,7 +479,7 @@ func configureInstance(c map[string]interface{}) error {
 		sb := &strings.Builder{}
 		ic.Stdout = sb
 		err = ic.Run()
-		logging.Debugf("Server creation response: %v", strings.TrimSuffix(sb.String(), "\n"))
+		logging.Infof("Server creation response: %v", strings.TrimSuffix(sb.String(), "\n"))
 		if err != nil {
 			err = fmt.Errorf("%v: %s", err, strings.TrimSuffix(sb.String(), "\n"))
 			if !isHttpConnError(err) {
