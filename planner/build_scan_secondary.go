@@ -689,13 +689,21 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		keyspace := baseKeyspace.Keyspace()
 		for _, se := range sargables {
 			if se.cost <= 0.0 {
-				cost, selec, card, size, frCost, e := indexScanCost(se.index, se.sargKeys,
+				var limit, offset int64
+				if se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+					!se.HasFlag(IE_LIMIT_OFFSET_COST) && !se.HasFlag(IE_VECTOR_RERANK) && this.limit != nil {
+					limit, offset = this.getLimitOffset(this.limit, this.offset)
+				}
+				cost, selec, card, size, frCost, e := indexScanCost(se, se.sargKeys,
 					se.sargIncludes, this.context.RequestId(), se.spans, se.includeSpans,
-					alias, baseKeyspace.Keyspace(), advisorValidate, this.context)
+					alias, baseKeyspace.Keyspace(), limit, offset, advisorValidate, this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
 					se.cardinality, se.selectivity, se.cost, se.frCost, se.size = card, selec, cost, frCost, size
+				}
+				if limit > 0 || offset > 0 {
+					se.SetFlags(IE_LIMIT_OFFSET_COST, true)
 				}
 			}
 			if shortest && se.fetchCost <= 0.0 {
@@ -705,25 +713,6 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 				} else {
 					useCBO = false
 				}
-			}
-			if se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-				!se.HasFlag(IE_LIMIT_OFFSET_COST) && !se.HasFlag(IE_VECTOR_RERANK) {
-				if se.cost > 0.0 && se.cardinality > 0.0 && se.size > 0 && se.frCost > 0.0 {
-					cost, card, frCost, selec := this.getIndexLimitCost(se.cost, se.cardinality, se.frCost, se.selectivity)
-					if cost > 0.0 && card > 0.0 && frCost > 0.0 && selec > 0.0 {
-						se.cost, se.cardinality, se.frCost, se.selectivity = cost, card, frCost, selec
-						// expect shortest is true when pushdown is set
-						fetchCost, _, _ := getFetchCost(keyspace, card)
-						if fetchCost > 0.0 {
-							se.fetchCost = fetchCost
-						} else {
-							useCBO = false
-						}
-					} else {
-						useCBO = false
-					}
-				}
-				se.SetFlags(IE_LIMIT_OFFSET_COST, true)
 			}
 		}
 	}
@@ -1393,28 +1382,27 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	advisorValidate := this.advisorValidate()
 	requestId := this.context.RequestId()
 	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
-		cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys, entry.sargIncludes,
+		var limit, offset int64
+		if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+			!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil {
+			limit, offset = this.getLimitOffset(this.limit, this.offset)
+		}
+		cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys, entry.sargIncludes,
 			requestId, entry.spans, entry.includeSpans, alias, baseKeyspace.Keyspace(),
-			advisorValidate, this.context)
+			limit, offset, advisorValidate, this.context)
 		if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 			useCBO = false
 		} else {
-			if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-				!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
-				cost, card, frCost, selec = this.getIndexLimitCost(cost, card, frCost, selec)
-				entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
-			}
-			if cost > 0.0 && card > 0.0 && frCost > 0.0 && selec > 0.0 {
-				entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
-				fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
-				if fetchCost > 0.0 {
-					entry.fetchCost = fetchCost
-				} else {
-					useCBO = false
-				}
+			entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
+			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+			if fetchCost > 0.0 {
+				entry.fetchCost = fetchCost
 			} else {
 				useCBO = false
 			}
+		}
+		if limit > 0 || offset > 0 {
+			entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
 		}
 	}
 
@@ -1511,41 +1499,17 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		!entry.HasFlag(IE_VECTOR_RERANK) &&
 		(len(this.baseKeyspaces) == 1) {
 
-		nlimit := int64(-1)
-		noffset := int64(-1)
-		limit := this.limit
-		offset := this.offset
-		if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-			limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
-			if err != nil {
-				return
-			}
-			if offset != nil {
-				offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
-				if err != nil {
-					return
-				}
-			}
-		}
 		cons := true
 		isParam := false
-		lv, static := base.GetStaticInt(limit)
-		if static {
-			nlimit = lv
-		} else {
+		nlimit, noffset := this.getLimitOffset(this.limit, this.offset)
+		if nlimit <= 0 {
 			cons = false
-			switch limit.(type) {
+			switch this.limit.(type) {
 			case *algebra.NamedParameter, *algebra.PositionalParameter:
 				isParam = true
 			}
-		}
-		if offset != nil {
-			ov, static := base.GetStaticInt(offset)
-			if static {
-				noffset = ov
-			} else {
-				cons = false
-			}
+		} else if this.offset != nil && noffset <= 0 {
+			cons = false
 		}
 		if (cons && nlimit > 0) || isParam {
 			doOrder := true
@@ -2094,4 +2058,37 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, index datastor
 	}
 
 	return rv
+}
+
+func (this *builder) getLimitOffset(limit, offset expression.Expression) (int64, int64) {
+	namedArgs := this.context.NamedArgs()
+	positionalArgs := this.context.PositionalArgs()
+
+	nlimit := int64(-1)
+	noffset := int64(-1)
+	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+		var err error
+		limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
+		if err != nil {
+			return -1, -1
+		}
+		if offset != nil {
+			offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
+			if err != nil {
+				return -1, -1
+			}
+		}
+	}
+
+	lv, static := base.GetStaticInt(limit)
+	if static {
+		nlimit = lv
+	}
+	if offset != nil {
+		ov, static := base.GetStaticInt(offset)
+		if static {
+			noffset = ov
+		}
+	}
+	return nlimit, noffset
 }

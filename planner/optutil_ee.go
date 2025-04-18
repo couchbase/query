@@ -76,9 +76,11 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, cont
 	return optutil.CalcPrimaryIndexScanCost(primary, requestId, context)
 }
 
-func indexScanCost(index datastore.Index, sargKeys, sargIncludes expression.Expressions,
-	requestId string, spans, includeSpans SargSpans, alias, keyspace string, advisorValidate bool,
-	context *PrepareContext) (float64, float64, float64, int64, float64, error) {
+func indexScanCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressions,
+	requestId string, spans, includeSpans SargSpans, alias, keyspace string, limit, offset int64,
+	advisorValidate bool, context *PrepareContext) (float64, float64, float64, int64, float64, error) {
+
+	index := entry.index
 	switch spans := spans.(type) {
 	case *TermSpans:
 		var err error
@@ -91,28 +93,28 @@ func indexScanCost(index datastore.Index, sargKeys, sargIncludes expression.Expr
 			}
 		}
 		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, spans.vecExpr,
-			alias, includeSel, advisorValidate, context)
+			alias, includeSel, limit, offset, advisorValidate, context)
 	case *IntersectSpans:
-		return intersectSpansCost(index, sargKeys, sargIncludes, requestId, spans, includeSpans,
-			alias, keyspace, advisorValidate, context)
+		return intersectSpansCost(entry, sargKeys, sargIncludes, requestId, spans, includeSpans,
+			alias, keyspace, limit, offset, advisorValidate, context)
 	case *UnionSpans:
-		return unionSpansCost(index, sargKeys, sargIncludes, requestId, spans, includeSpans,
-			alias, keyspace, advisorValidate, context)
+		return unionSpansCost(entry, sargKeys, sargIncludes, requestId, spans, includeSpans,
+			alias, keyspace, limit, offset, advisorValidate, context)
 	}
 
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
 		errors.NewPlanInternalError("indexScanCost: unexpected span type")
 }
 
-func unionSpansCost(index datastore.Index, sargKeys, sargIncludes expression.Expressions, requestId string,
-	unionSpan *UnionSpans, includeSpans SargSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
-	float64, float64, float64, int64, float64, error) {
+func unionSpansCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressions, requestId string,
+	unionSpan *UnionSpans, includeSpans SargSpans, alias, keyspace string, limit, offset int64,
+	advisorValidate bool, context *PrepareContext) (float64, float64, float64, int64, float64, error) {
 
 	var cost, sel, frCost, nrows float64
 	var size int64
 	for i, span := range unionSpan.spans {
-		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, sargIncludes, requestId,
-			span, includeSpans, alias, keyspace, advisorValidate, context)
+		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(entry, sargKeys, sargIncludes, requestId,
+			span, includeSpans, alias, keyspace, limit, offset, advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
@@ -135,16 +137,17 @@ func unionSpansCost(index datastore.Index, sargKeys, sargIncludes expression.Exp
 	return cost, sel, (sel * nrows), size, frCost, nil
 }
 
-func intersectSpansCost(index datastore.Index, sargKeys, sargIncludes expression.Expressions, requestId string,
-	intersectSpan *IntersectSpans, includeSpans SargSpans, alias, keyspace string, advisorValidate bool, context *PrepareContext) (
-	float64, float64, float64, int64, float64, error) {
+func intersectSpansCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressions, requestId string,
+	intersectSpan *IntersectSpans, includeSpans SargSpans, alias, keyspace string, limit, offset int64,
+	advisorValidate bool, context *PrepareContext) (float64, float64, float64, int64, float64, error) {
 
+	index := entry.index
 	spanMap := make(map[*base.IndexCost]SargSpans, len(intersectSpan.spans))
 	indexes := make([]*base.IndexCost, 0, len(intersectSpan.spans))
 	for _, span := range intersectSpan.spans {
 		skipKeys := make([]bool, len(sargKeys))
-		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(index, sargKeys, sargIncludes, requestId,
-			span, includeSpans, alias, keyspace, advisorValidate, context)
+		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(entry, sargKeys, sargIncludes, requestId,
+			span, includeSpans, alias, keyspace, limit, offset, advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
@@ -231,42 +234,6 @@ func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, ski
 	}
 
 	return sel, nil
-}
-
-func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64) (float64, float64, float64, float64) {
-	namedArgs := this.context.NamedArgs()
-	positionalArgs := this.context.PositionalArgs()
-
-	nlimit := int64(-1)
-	noffset := int64(-1)
-	limit := this.limit
-	offset := this.offset
-	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-		var err error
-		limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
-		if err != nil {
-			return cost, cardinality, frCost, selec
-		}
-		if offset != nil {
-			offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
-			if err != nil {
-				return cost, cardinality, frCost, selec
-			}
-		}
-	}
-
-	lv, static := base.GetStaticInt(limit)
-	if static {
-		nlimit = lv
-	}
-	if offset != nil {
-		ov, static := base.GetStaticInt(offset)
-		if static {
-			noffset = ov
-		}
-	}
-
-	return optutil.IndexLimitCost(nlimit, noffset, cost, cardinality, frCost, selec)
 }
 
 func getIndexProjectionCost(index datastore.Index, indexProjection *plan.IndexProjection,

@@ -233,28 +233,25 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 		for _, ce := range coveringEntries {
 			entry := ce.idxEntry
 			if entry.cost <= 0.0 {
-				cost, selec, card, size, frCost, e := indexScanCost(entry.index, entry.sargKeys,
+				var limit, offset int64
+				if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+					!entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS|_PUSHDOWN_GROUPAGGS|_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER) &&
+					!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil {
+					limit, offset = this.getLimitOffset(this.limit, this.offset)
+				}
+				cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys,
 					entry.sargIncludes, this.context.RequestId(), entry.spans, entry.includeSpans,
-					alias, keyspace, this.advisorValidate(), this.context)
+					alias, keyspace, limit, offset, this.advisorValidate(), this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
 					entry.cardinality, entry.cost, entry.frCost, entry.size, entry.selectivity = card, cost, frCost, size, selec
 				}
-			}
-			if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-				!entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS|_PUSHDOWN_GROUPAGGS|_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER) &&
-				!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
-				if entry.cost > 0.0 && entry.cardinality > 0.0 && entry.size > 0 && entry.frCost > 0.0 {
-					cost, card, frCost, _ := this.getIndexLimitCost(entry.cost, entry.cardinality, entry.frCost, entry.selectivity)
-					if cost > 0.0 && card > 0.0 && frCost > 0.0 {
-						entry.cardinality, entry.cost, entry.frCost = card, cost, frCost
-					} else {
-						useCBO = false
-					}
+				if limit > 0 || offset > 0 {
+					entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
 				}
-				entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
 			}
+
 			if entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS | _PUSHDOWN_GROUPAGGS) {
 				hasGroupAggs = true
 			}
