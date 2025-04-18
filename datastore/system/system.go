@@ -341,7 +341,7 @@ func (s *store) GetSystemCollection(bucketName string) (datastore.Keyspace, erro
 	return nil, nil
 }
 
-func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex bool, randomDeley int) (bool, errors.Error) {
+func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex bool, randomDelay int) (bool, errors.Error) {
 	return false, nil
 }
 
