@@ -1354,6 +1354,10 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 		this.keys = make([]uint32, 0, _SS_INIT_KEYS)
 	}
 	if this.offset < uint32(cap(this.buffer)) && this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) {
+		if !util.UseTemp(this.spill.Name(), int64(len(this.buffer))) {
+			this.reportError(qerrors.NewTempFileQuotaExceededError())
+			return false
+		}
 		// flush the buffer to spill file
 		_, err = this.spill.Write(this.buffer)
 		if err != nil {
@@ -1406,6 +1410,10 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 		this.keys = make([]uint32, 0, _SS_INIT_KEYS)
 	}
 	if this.offset < uint32(cap(this.buffer)) && this.offset+length >= uint32(cap(this.buffer)) {
+		if !util.UseTemp(this.spill.Name(), int64(len(this.buffer))) {
+			this.reportError(qerrors.NewTempFileQuotaExceededError())
+			return false
+		}
 		// flush the buffer to spill file
 		_, err = this.spill.Write(this.buffer)
 		if err != nil {
@@ -1416,7 +1424,7 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 	}
 	this.offset += length
 	if this.offset >= uint32(cap(this.buffer)) {
-		if !util.UseTemp(this.spill.Name(), int64(len(key))) {
+		if !util.UseTemp(this.spill.Name(), int64(length)) {
 			this.reportError(qerrors.NewTempFileQuotaExceededError())
 			return false
 		}
@@ -1861,7 +1869,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						}
 
 						if !this.addDocument(response.Body[ks:ke], response.Body[i:i+int(l)], response.Body[meta:meta+25]) {
-							// addKey will have reported the error already
+							// addDocument will have reported the error already
 							return cancelWorking()
 						}
 						num_docs++
