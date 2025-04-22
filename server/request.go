@@ -1763,6 +1763,9 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 	} else {
 		item["executionTime"] = util.FormatDuration(time.Since(this.ServiceTime()), durStyle)
 	}
+	if this.timeout > time.Duration(0) {
+		item["timeout"] = util.FormatDuration(this.timeout, durStyle)
+	}
 	item["state"] = this.State().StateName()
 	item["scanConsistency"] = this.ScanConsistency()
 	item["n1qlFeatCtrl"] = this.FeatureControls()

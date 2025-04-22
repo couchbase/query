@@ -59,6 +59,7 @@ type RequestLogEntry struct {
 	CpuTime                  time.Duration
 	IoTime                   time.Duration
 	WaitTime                 time.Duration
+	Timeout                  time.Duration
 	QueryContext             string
 	Statement                string
 	StatementType            string
@@ -705,6 +706,8 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	re.CpuTime = request.CpuTime()
 	re.IoTime = request.IoTime()
 	re.WaitTime = request.WaitTime()
+	re.Timeout = request.Timeout()
+
 	if qualifier != "" {
 		re.Qualifier = qualifier
 	}
@@ -767,6 +770,9 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	reqMap["requestTime"] = request.Time.Format(expression.DEFAULT_FORMAT)
 	reqMap["elapsedTime"] = util.FormatDuration(request.ElapsedTime, durStyle)
 	reqMap["serviceTime"] = util.FormatDuration(request.ServiceTime, durStyle)
+	if request.Timeout > time.Duration(0) {
+		reqMap["timeout"] = util.FormatDuration(request.Timeout, durStyle)
+	}
 	if request.TransactionElapsedTime > 0 {
 		reqMap["transactionElapsedTime"] = util.FormatDuration(request.TransactionElapsedTime, durStyle)
 	}
