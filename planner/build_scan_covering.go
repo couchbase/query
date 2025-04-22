@@ -91,19 +91,6 @@ func (this *builder) buildCoveringScan(idxs map[datastore.Index]*indexEntry,
 	origPred := baseKeyspace.OrigPred()
 	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 
-	if useCBO && len(baseKeyspace.VectorFilters()) > 0 {
-		// for now, do not use CBO for consideration of bhive vector index for covering
-		// since we don't yet have proper costing for bhive vector index scan
-		for _, entry := range indexes {
-			if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
-				if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() {
-					useCBO = false
-					break
-				}
-			}
-		}
-	}
-
 	narrays := 0
 	coveringEntries := _COVERING_ENTRY_POOL.Get()
 	defer _COVERING_ENTRY_POOL.Put(coveringEntries)
@@ -232,11 +219,12 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 	if useCBO {
 		for _, ce := range coveringEntries {
 			entry := ce.idxEntry
-			if entry.cost <= 0.0 {
+			// limit_cost indicates whether cost needs to be recalculated due to LIMIT pushdown
+			limit_cost := entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+				!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil
+			if entry.cost <= 0.0 || limit_cost {
 				var limit, offset int64
-				if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-					!entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS|_PUSHDOWN_GROUPAGGS|_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER) &&
-					!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil {
+				if limit_cost {
 					limit, offset = this.getLimitOffset(this.limit, this.offset)
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys,
@@ -247,7 +235,7 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 				} else {
 					entry.cardinality, entry.cost, entry.frCost, entry.size, entry.selectivity = card, cost, frCost, size, selec
 				}
-				if limit > 0 || offset > 0 {
+				if limit_cost {
 					entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
 				}
 			}

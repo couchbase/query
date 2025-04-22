@@ -664,15 +664,10 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 
 	vector := false
 	if len(baseKeyspace.VectorFilters()) > 0 {
-		// for now, do not use CBO for consideration of bhive vector index for covering
-		// since we don't yet have proper costing for bhive vector index scan
 		for _, entry := range sargables {
 			if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 				vector = true
-				if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() && useCBO {
-					useCBO = false
-					break
-				}
+				break
 			}
 		}
 	}
@@ -688,10 +683,12 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		advisorValidate := this.advisorValidate()
 		keyspace := baseKeyspace.Keyspace()
 		for _, se := range sargables {
-			if se.cost <= 0.0 {
+			// limit_cost indicates whether cost needs to be recalculated due to LIMIT pushdown
+			limit_cost := se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+				!se.HasFlag(IE_LIMIT_OFFSET_COST) && !se.HasFlag(IE_VECTOR_RERANK) && this.limit != nil
+			if se.cost <= 0.0 || limit_cost {
 				var limit, offset int64
-				if se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-					!se.HasFlag(IE_LIMIT_OFFSET_COST) && !se.HasFlag(IE_VECTOR_RERANK) && this.limit != nil {
+				if limit_cost {
 					limit, offset = this.getLimitOffset(this.limit, this.offset)
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(se, se.sargKeys,
@@ -702,7 +699,7 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 				} else {
 					se.cardinality, se.selectivity, se.cost, se.frCost, se.size = card, selec, cost, frCost, size
 				}
-				if limit > 0 || offset > 0 {
+				if limit_cost {
 					se.SetFlags(IE_LIMIT_OFFSET_COST, true)
 				}
 			}
@@ -1381,28 +1378,32 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	useCBO := this.useCBO && this.keyspaceUseCBO(alias)
 	advisorValidate := this.advisorValidate()
 	requestId := this.context.RequestId()
-	if useCBO && (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) {
-		var limit, offset int64
-		if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-			!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil {
-			limit, offset = this.getLimitOffset(this.limit, this.offset)
-		}
-		cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys, entry.sargIncludes,
-			requestId, entry.spans, entry.includeSpans, alias, baseKeyspace.Keyspace(),
-			limit, offset, advisorValidate, this.context)
-		if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
-			useCBO = false
-		} else {
-			entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
-			fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
-			if fetchCost > 0.0 {
-				entry.fetchCost = fetchCost
-			} else {
-				useCBO = false
+	if useCBO {
+		// limit_cost indicates whether cost needs to be recalculated due to LIMIT pushdown
+		limit_cost := entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
+			!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil
+		if (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) || limit_cost {
+			var limit, offset int64
+			if limit_cost {
+				limit, offset = this.getLimitOffset(this.limit, this.offset)
 			}
-		}
-		if limit > 0 || offset > 0 {
-			entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
+			cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys, entry.sargIncludes,
+				requestId, entry.spans, entry.includeSpans, alias, baseKeyspace.Keyspace(),
+				limit, offset, advisorValidate, this.context)
+			if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
+				useCBO = false
+			} else {
+				entry.cardinality, entry.selectivity, entry.cost, entry.frCost, entry.size = card, selec, cost, frCost, size
+				fetchCost, _, _ := getFetchCost(baseKeyspace.Keyspace(), card)
+				if fetchCost > 0.0 {
+					entry.fetchCost = fetchCost
+				} else {
+					useCBO = false
+				}
+			}
+			if limit_cost {
+				entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
+			}
 		}
 	}
 
