@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -2735,18 +2736,45 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 	return nil
 }
 
-func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap remapper) (string, bool) {
+var escQuote = regexp.MustCompile(`(\\\\)*(\\\")`)
+
+func getCBORestoreKeyValue(v []byte, doValue bool) (string, []byte, error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, v)
 	bkey, err := oState.FindKey("key")
 	if err != nil {
 		oState.Release()
-		return "", false
+		return "", nil, err
+	}
+	var bvalue []byte
+	if doValue {
+		bvalue, err = oState.FindKey("value")
+		if err != nil {
+			oState.Release()
+			return string(bkey), nil, err
+		}
 	}
 	oState.Release()
 
-	key := strings.Trim(string(bkey), "\"")
-	if key == "" {
+	var key string
+	err = json.Unmarshal(bkey, &key)
+	if err != nil || key == "" {
+		return key, bvalue, err
+	}
+
+	// replace potential problematic document keys from previous backup/restore that contains
+	// (pairs of) multiple escaped quotes with just quotes
+	strIdx := escQuote.FindAllStringIndex(key, -1)
+	if strIdx != nil && (len(strIdx)%2) == 0 {
+		key = escQuote.ReplaceAllString(key, "\"")
+	}
+
+	return key, bvalue, nil
+}
+
+func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap remapper) (string, bool) {
+	key, _, err := getCBORestoreKeyValue(v, false)
+	if err != nil || key == "" {
 		return "", false
 	}
 	parts := strings.Split(key, "::")
@@ -2761,21 +2789,15 @@ func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap r
 }
 
 func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace) errors.Error {
-	var oState json.KeyState
-	json.SetKeyState(&oState, v)
-	bkey, err := oState.FindKey("key")
+	key, bvalue, err := getCBORestoreKeyValue(v, true)
 	if err != nil {
-		oState.Release()
-		return errors.NewServiceErrorBadValue(err, "cbo restore: missing key")
+		if key == "" {
+			return errors.NewServiceErrorBadValue(err, "cbo restore: missing key")
+		} else if bvalue == nil {
+			return errors.NewServiceErrorBadValue(err, "cbo restore: missing value")
+		}
+		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key or value")
 	}
-	bvalue, err := oState.FindKey("value")
-	if err != nil {
-		oState.Release()
-		return errors.NewServiceErrorBadValue(err, "cbo restore: missing value")
-	}
-	oState.Release()
-
-	key := strings.Trim(string(bkey), "\"")
 	if key == "" {
 		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
 	}
@@ -2809,7 +2831,7 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	n, err := base64.StdEncoding.Decode(data, []byte(bvalue[1:len(bvalue)-1]))
 	raw, cerr := snappy.Decode(nil, data[:n])
 	if cerr != nil {
-		return errors.NewServiceErrorBadValue(cerr, "cbo restore: error decoding value"+":"+string(bkey))
+		return errors.NewServiceErrorBadValue(cerr, "cbo restore: error decoding value"+":"+key)
 	}
 
 	pairs := make([]value.Pair, 1)
