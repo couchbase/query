@@ -509,7 +509,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	}
 
 	// build plan for aggregates
-	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, false, indexProjection)
+	indexGroupAggs, indexProjection = this.buildIndexGroupAggs(entry, keys, unnestScan, indexProjection)
 	projDistinct := entry.IsPushDownProperty(_PUSHDOWN_DISTINCT)
 
 	cost, cardinality, size, frCost := OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
