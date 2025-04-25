@@ -43,9 +43,14 @@
             ],
             "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`filter` IS MISSING AND v.`index_group_aggs` IS NOT MISSING END"
         },
-        "statements":"SELECT p.customerId, lineItems.product, COUNT(1) AS cnt FROM purchase p UNNEST p.lineItems WHERE lineItems.product LIKE 'product28%' AND p.test_id = 'unnest' GROUP BY p.customerId, lineItems.product ORDER BY cnt DESC, lineItems.product LIMIT 4",
+        "statements":"SELECT p.customerId, lineItems.product, COUNT(1) AS cnt FROM purchase p UNNEST p.lineItems WHERE lineItems.product LIKE 'product28%' AND p.test_id = 'unnest' GROUP BY p.customerId, lineItems.product ORDER BY cnt DESC, lineItems.product, p.customerId LIMIT 4",
         "ordered": true,
         "results": [
+            {
+                "customerId": "customer118",
+                "product": "product28",
+                "cnt": 2
+            },
             {
                 "customerId": "customer93",
                 "product": "product28",
@@ -59,11 +64,6 @@
             {
                 "customerId": "customer212",
                 "product": "product284",
-                "cnt": 2
-            },
-            {
-                "customerId": "customer813",
-                "product": "product285",
                 "cnt": 2
             }
     ]
