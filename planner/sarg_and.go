@@ -10,17 +10,12 @@ package planner
 
 import (
 	"github.com/couchbase/query/datastore"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 )
 
 func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
-	if this.isVector {
-		return nil, errors.NewPlanInternalError("sarg.VisitAnd: unexpected AND predicate for vector index key: " + pred.String())
-	}
-
 	if base.SubsetOf(pred, this.key) {
 		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil

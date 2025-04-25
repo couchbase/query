@@ -9,17 +9,12 @@
 package planner
 
 import (
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
 )
 
 func (this *sarg) VisitOr(pred *expression.Or) (interface{}, error) {
-	if this.isVector {
-		return nil, errors.NewPlanInternalError("sarg.VisitOr: unexpected OR predicate for vector index key: " + pred.String())
-	}
-
 	if base.SubsetOf(pred, this.key) {
 		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil

@@ -1188,16 +1188,24 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 
 		if err != nil || spans == nil || spans.Size() == 0 {
 			logging.Errora(func() string {
-				return fmt.Sprintf("Sargable index not sarged: pred:<ud>%v</ud> sarg_keys:<ud>%v</ud> error:%v",
-					pred,
-					se.sargKeys,
-					err,
-				)
+				if vpred != nil {
+					return fmt.Sprintf("Sargable index not sarged: pred:<ud>%v</ud> vector_pred:<ud>%v</ud> sarg_keys:<ud>%v</ud> error:%v",
+						pred, vpred, se.sargKeys, err)
+				} else {
+					return fmt.Sprintf("Sargable index not sarged: pred:<ud>%v</ud> sarg_keys:<ud>%v</ud> error:%v",
+						pred, se.sargKeys, err)
+				}
 			})
 
-			return errors.NewPlanError(nil,
-				fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
-					pred.String(), se.sargKeys.String(), err))
+			var errMsg string
+			if vpred != nil {
+				errMsg = fmt.Sprintf("Sargable index not sarged; pred=%v, vector_pred=%v, sarg_keys=%v, error=%v",
+					pred, vpred, se.sargKeys, err)
+			} else {
+				errMsg = fmt.Sprintf("Sargable index not sarged; pred=%v, sarg_keys=%v, error=%v",
+					pred, se.sargKeys, err)
+			}
+			return errors.NewPlanError(nil, errMsg)
 		}
 
 		se.spans = spans
