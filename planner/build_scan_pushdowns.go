@@ -53,8 +53,8 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 					allowRerank = true
 				}
 				if !allowRerank && ann != nil && ann.ReRank() != nil {
-					rrVal := ann.ReRank().Value()
-					if rrVal == nil || rrVal.Truth() {
+					rerankVal := ann.ReRank().Value()
+					if rerankVal == nil || (rerankVal.Type() == value.BOOLEAN && rerankVal.Truth()) {
 						// assume we need to rerank if value is not known
 						rerank = true
 					}

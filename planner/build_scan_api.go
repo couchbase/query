@@ -156,6 +156,9 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 							//    (need vector distance for sorting)
 							//  - expr is not in the ORDER BY clause
 							//    (e.g. in projection list)
+							// note for a vector key we only get here if
+							//  - rerank is not request, or
+							//  - rerank is requested but handled by index
 							indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
 							curKey = true
 						}
