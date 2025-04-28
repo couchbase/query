@@ -47,8 +47,9 @@ type systemRemoteHttp struct {
 }
 
 type commParameters struct {
-	client        *http.Client
-	useSecurePort bool
+	client                *http.Client
+	useSecurePort         bool
+	useInternalClientCert bool
 }
 
 // Returns nil if SetConnectionSecurityConfig has never been called.
@@ -111,7 +112,8 @@ func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile string, certFil
 				},
 				Timeout: 5 * time.Second,
 			},
-			useSecurePort: true,
+			useSecurePort:         true,
+			useInternalClientCert: useInternalClientCert,
 		}
 	}
 	existingCommParams := atomic.SwapPointer(&this.commParams, unsafe.Pointer(cp))
@@ -509,6 +511,8 @@ func (this *systemRemoteHttp) getFullEndpoint(node clustering.QueryNode, endpoin
 		} else {
 			fullEndpoint += "&"
 		}
+
+		// impersonation is only for serverless environments
 		fullEndpoint += "impersonate=" + string(creds)
 	}
 
@@ -531,8 +535,12 @@ func (this *systemRemoteHttp) doRemoteEndpointOp(fullEndpoint string, command st
 
 	request, _ := http.NewRequest(command, fullEndpoint, reader)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	request.SetBasicAuth(u, p)
 	request.Header.Set("User-Agent", couchbase.USER_AGENT)
+
+	// Use Basic Authentication unless internal client certificate is to be used
+	if !cp.useInternalClientCert {
+		request.SetBasicAuth(u, p)
+	}
 
 	resp, err := cp.client.Do(request)
 	if err != nil {

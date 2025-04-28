@@ -14,6 +14,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -157,7 +158,7 @@ func (z *zkConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	return clusters, nil
 }
 
-func (z *zkConfigStore) Authorize(map[string]string, []clustering.Privilege) errors.Error {
+func (z *zkConfigStore) Authorize(*http.Request, []clustering.Privilege) errors.Error {
 	return nil
 }
 

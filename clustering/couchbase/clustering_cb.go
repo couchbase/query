@@ -22,15 +22,18 @@ import (
 	"sync/atomic"
 	"time"
 
+	"net/http"
+
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
-	"github.com/couchbase/query/server/http"
+	qhttp "github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/util"
 )
 
@@ -228,42 +231,34 @@ func (this *cbConfigStore) GetClusters() ([]clustering.Cluster, errors.Error) {
 	return clusters, nil
 }
 
-func (this *cbConfigStore) Authorize(credentials map[string]string, privileges []clustering.Privilege) errors.Error {
-	if len(credentials) == 0 {
-		return errors.NewAdminAuthError(nil, "no credentials provided")
+func (this *cbConfigStore) Authorize(req *http.Request, privileges []clustering.Privilege) errors.Error {
+	// To perform any actions on the configuration store, the request must be authorized for the appropriate privileges.
+	if len(privileges) == 0 {
+		return errors.NewAdminAuthError(nil, "unrecognized authorization request")
 	}
 
-	for username, password := range credentials {
-		auth, err := cbauth.Auth(username, password)
-		if err != nil {
-			return errors.NewAdminAuthError(err, "unable to authenticate with given credential")
-		}
-		for _, requested := range privileges {
-			switch requested {
-			case clustering.PRIV_SYS_ADMIN:
-				isAdmin, err := auth.IsAllowed("cluster.settings!write")
-				if err != nil {
-					return errors.NewAdminAuthError(err, "")
-				}
-				if isAdmin {
-					return nil
-				}
-				return errors.NewAdminAuthError(nil, "sys admin requires administrator credentials")
-			case clustering.PRIV_READ:
-				isPermitted, err := auth.IsAllowed("cluster.settings!read")
-				if err != nil {
-					return errors.NewAdminAuthError(err, "")
-				}
-				if isPermitted {
-					return nil
-				}
-				return errors.NewAdminAuthError(nil, "read not authorized")
-			default:
-				return errors.NewAdminAuthError(nil, fmt.Sprintf("unexpected authorization %v", requested))
-			}
+	privs := auth.NewPrivileges()
+	for _, requested := range privileges {
+		switch requested {
+		case clustering.PRIV_SYS_ADMIN:
+			privs.Add("", auth.PRIV_CLUSTER_SETTINGS_WRITE, auth.PRIV_PROPS_NONE)
+		case clustering.PRIV_READ:
+			privs.Add("", auth.PRIV_CLUSTER_SETTINGS_READ, auth.PRIV_PROPS_NONE)
+		default:
+			return errors.NewAdminAuthError(nil, fmt.Sprintf("unexpected authorization %v", requested))
 		}
 	}
-	return errors.NewAdminAuthError(nil, "unrecognized authorization request")
+
+	creds := auth.NewCredentials()
+	creds.HttpRequest = req
+
+	ds := datastore.GetDatastore()
+	err := ds.Authorize(privs, creds)
+	if err != nil {
+		return errors.NewAdminAuthError(err, "")
+	}
+
+	return nil
 }
 
 const n1qlService = "n1ql"
@@ -806,11 +801,11 @@ func (this *cbCluster) QueryNodeByName(name string) (clustering.QueryNode, error
 	for protocol, port := range this.queryNodeServices[qryNodeName] {
 		switch protocol {
 		case _HTTP:
-			qryNode.Query = makeURL(protocol, queryHost, port, http.ServicePrefix())
-			qryNode.Admin = makeURL(protocol, queryHost, port, http.AdminPrefix())
+			qryNode.Query = makeURL(protocol, queryHost, port, qhttp.ServicePrefix())
+			qryNode.Admin = makeURL(protocol, queryHost, port, qhttp.AdminPrefix())
 		case _HTTPS:
-			qryNode.QuerySSL = makeURL(protocol, queryHost, port, http.ServicePrefix())
-			qryNode.AdminSSL = makeURL(protocol, queryHost, port, http.AdminPrefix())
+			qryNode.QuerySSL = makeURL(protocol, queryHost, port, qhttp.ServicePrefix())
+			qryNode.AdminSSL = makeURL(protocol, queryHost, port, qhttp.AdminPrefix())
 		}
 	}
 

@@ -9,16 +9,12 @@
 package http
 
 import (
-	"bytes"
-	"encoding/base64"
 	"net/http"
 	"net/http/pprof"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/couchbase/cbauth"
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/clustering"
@@ -132,41 +128,13 @@ func (this *HttpEndpoint) doConfigStore() (clustering.ConfigurationStore, errors
 }
 
 func (this *HttpEndpoint) hasAdminAuth(req *http.Request, privilege clustering.Privilege) errors.Error {
-	// retrieve the credentials from the request; the credentials must be specified
-	// using basic authorization format. An error is returned if there is a step that
-	// prevents retrieval of the credentials.
-	authHdr := req.Header["Authorization"]
-	if len(authHdr) == 0 {
-		return errors.NewAdminAuthError(nil, "basic authorization required")
-	}
-
-	auth := authHdr[0]
-	basicPrefix := "Basic "
-	if !strings.HasPrefix(auth, basicPrefix) {
-		return errors.NewAdminAuthError(nil, "basic authorization required")
-	}
-
-	decoded, err := base64.StdEncoding.DecodeString(auth[len(basicPrefix):])
-	if err != nil {
-		return errors.NewAdminDecodingError(err)
-	}
-
-	colonIndex := bytes.IndexByte(decoded, ':')
-	if colonIndex == -1 {
-		return errors.NewAdminAuthError(nil, "incorrect authorization header")
-	}
-
-	user := string(decoded[:colonIndex])
-	password := string(decoded[colonIndex+1:])
-	creds := map[string]string{user: password}
-
 	// Attempt authorization with the cluster
 	configstore, configErr := this.doConfigStore()
 	if configErr != nil {
 		return configErr
 	}
 	sslPrivs := []clustering.Privilege{privilege}
-	authErr := configstore.Authorize(creds, sslPrivs)
+	authErr := configstore.Authorize(req, sslPrivs)
 	if authErr != nil {
 		return authErr
 	}
@@ -479,23 +447,14 @@ func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.EventTypeId = audit.API_ADMIN_SHUTDOWN
 
 	// only permit internal callers
-	u, p, ok := req.BasicAuth()
-	if !ok {
-		return nil, errors.NewAdminAuthError(nil, "")
-	}
+	err, isInternal := endpoint.verifyCredentialsFromRequest(nil, req, af)
 
-	su, _, err := cbauth.GetHTTPServiceAuth(distributed.RemoteAccess().WhoAmI())
 	if err != nil {
 		return nil, errors.NewAdminAuthError(err, "")
 	}
 
-	if u != su {
+	if !isInternal {
 		return nil, errors.NewAdminAuthError(nil, "")
-	}
-
-	_, err = cbauth.Auth(u, p)
-	if err != nil {
-		return nil, errors.NewAdminAuthError(err, "")
 	}
 
 	switch req.Method {

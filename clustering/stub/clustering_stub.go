@@ -18,8 +18,10 @@ Query Node Name, Query Endpoint and Cluster Endpoint.
 package clustering_stub
 
 import (
+	"net/http"
+
 	"github.com/couchbase/query/accounting"
-	"github.com/couchbase/query/accounting/stub"
+	accounting_stub "github.com/couchbase/query/accounting/stub"
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -84,7 +86,7 @@ func NewConfigurationStore() (clustering.ConfigurationStore, errors.Error) {
 	return ConfigurationStoreStub{}, nil
 }
 
-func (ConfigurationStoreStub) Authorize(map[string]string, []clustering.Privilege) errors.Error {
+func (ConfigurationStoreStub) Authorize(*http.Request, []clustering.Privilege) errors.Error {
 	return nil
 }
 

@@ -24,6 +24,8 @@ The logical hierarchy is as follows:
 package clustering
 
 import (
+	"net/http"
+
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -61,7 +63,7 @@ type ConfigurationStore interface {
 	ClusterNames() ([]string, errors.Error)                           // Names of the Clusters in this ConfigurationStore
 	ClusterByName(name string) (Cluster, errors.Error)                // Find a Cluster by name in this ConfigurationStore
 	ConfigurationManager() ConfigurationManager                       // Get a ConfigurationManager for this ConfigurationStore
-	Authorize(map[string]string, []Privilege) errors.Error            // Do authorization returning an error if unsuccessful
+	Authorize(*http.Request, []Privilege) errors.Error                // Do authorization returning an error if unsuccessful
 	WhoAmI() (string, errors.Error)                                   // The Id of the local node, if clustered
 	State() (Mode, errors.Error)                                      // The clustering state of the local node
 	Cluster() (Cluster, errors.Error)                                 // The cluster the local belongs to

@@ -63,6 +63,8 @@ const (
 	PRIV_SWRITE                                 Privilege = 41 // Write to system scope
 	PRIV_XATTRS_WRITE                           Privilege = 42 // Ability to write system xattrs
 	PRIV_SYSTEM_WRITE                           Privilege = 43 // Write access to system namespace
+	PRIV_CLUSTER_SETTINGS_READ                  Privilege = 44 // Read access to cluster settings
+	PRIV_CLUSTER_SETTINGS_WRITE                 Privilege = 45 // Write access to cluster settings
 )
 
 type PrivilegePair struct {
@@ -315,4 +317,15 @@ func GetWebAuth(req *http.Request) (string, string, error) {
 		return u_details[0], u_details[1], nil
 	}
 	return "", "", fmt.Errorf("no valid user details found")
+}
+
+// Returns if the credential string is for an internal user
+// The input credential string can be in the format "domain:username" or just "username".
+func IsUsernameInternal(credString string) bool {
+	parts := strings.Split(credString, ":")
+	if len(parts) == 2 {
+		credString = parts[1]
+	}
+
+	return strings.HasPrefix(credString, "@")
 }

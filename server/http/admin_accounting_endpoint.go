@@ -25,7 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbase/cbauth"
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/algebra"
@@ -34,7 +33,6 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	dictionary "github.com/couchbase/query/datastore/couchbase"
-	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
@@ -44,6 +42,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
@@ -262,7 +261,7 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:stats", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -315,7 +314,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:stats", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -332,7 +331,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 			}
 		}
 	case "DELETE":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:stats", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:stats", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -347,7 +346,7 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_QUERY_STATS), req, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +399,7 @@ func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_QUERY_STATS, req, nil)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_QUERY_STATS), req, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -432,7 +431,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 	af.EventTypeId = audit.API_ADMIN_VITALS
 	switch req.Method {
 	case "GET":
-		err, _ = endpoint.verifyCredentialsFromRequest("system:vitals", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ = endpoint.verifyCredentialsFromRequest(getPrivileges("system:vitals", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -477,26 +476,10 @@ func CaptureVitals(endpoint *HttpEndpoint, w io.Writer) error {
 	return err
 }
 
-// Credentials only come from the basic username/password
-func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) (*auth.Credentials,
-	errors.Error, bool) {
-
-	isInternal := false
-
-	// only avoid auditing for internal users
-	if endpoint.internalUser == "" {
-		endpoint.internalUser, _, _ = cbauth.Default.GetHTTPServiceAuth(distributed.RemoteAccess().WhoAmI())
-	}
+func (endpoint *HttpEndpoint) getCredentialsFromRequest(ds datastore.Datastore, req *http.Request) *auth.Credentials {
 	creds := auth.NewCredentials()
-	user, pass, ok := req.BasicAuth()
-	if ok {
-		creds.Set(user, pass)
-		if endpoint.internalUser == user {
-			isInternal = true
-		}
-	}
 	creds.HttpRequest = req
-	return creds, nil, isInternal
+	return creds
 }
 
 func (endpoint *HttpEndpoint) getImpersonate(req *http.Request) (string, errors.Error) {
@@ -520,34 +503,48 @@ func (endpoint *HttpEndpoint) getImpersonateBucket(req *http.Request) (string, s
 
 func (endpoint *HttpEndpoint) Authorize(req *http.Request) errors.Error {
 	ds := datastore.GetDatastore()
-	creds, err, _ := endpoint.getCredentialsFromRequest(ds, req)
-	if err != nil {
-		return err
-	}
-
+	creds := endpoint.getCredentialsFromRequest(ds, req)
 	privs := auth.NewPrivileges()
 	privs.Add("", auth.PRIV_QUERY_STATS, auth.PRIV_PROPS_NONE)
-	err = ds.Authorize(privs, creds)
+	err := ds.Authorize(privs, creds)
 	return err
 }
 
-func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(api string, priv auth.Privilege, req *http.Request,
+// Authenticates and authorizes a request.
+// Returns if the request was sent from the internal Query service user.
+func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(privileges *auth.Privileges, req *http.Request,
 	af *audit.ApiAuditFields) (errors.Error, bool) {
 
 	ds := datastore.GetDatastore()
-	creds, err, isInternal := endpoint.getCredentialsFromRequest(ds, req)
-	if err != nil {
-		return err, false
-	}
+	creds := endpoint.getCredentialsFromRequest(ds, req)
 
+	err := ds.Authorize(privileges, creds)
+
+	users := datastore.CredsArray(creds)
 	if af != nil {
-		af.Users = creds.Users()
+		af.Users = users
 	}
 
+	if len(users) > 0 {
+		return err, checkInternalQueryUser(users[0], req)
+	}
+
+	return err, false
+}
+
+func getPrivileges(target string, priv auth.Privilege) *auth.Privileges {
 	privs := auth.NewPrivileges()
-	privs.Add(api, priv, auth.PRIV_PROPS_NONE)
-	err = ds.Authorize(privs, creds)
-	return err, isInternal
+	privs.Add(target, priv, auth.PRIV_PROPS_NONE)
+	return privs
+}
+
+// Checks if the request is from the internal Query service user by checking the username and user agent in the request
+func checkInternalQueryUser(username string, req *http.Request) bool {
+	if req.UserAgent() == couchbase.USER_AGENT && auth.IsUsernameInternal(username) {
+		return true
+	}
+
+	return false
 }
 
 func doRedact(req *http.Request) bool {
@@ -565,7 +562,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -584,7 +581,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		defer req.Body.Close()
 
 		// http.BasicAuth eats the body, so verify credentials after getting the body.
-		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -605,7 +602,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		}
 		return "", nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -629,7 +626,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		})
 		return res, nil
 	} else if req.Method == "PATCH" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -720,7 +717,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
 	case "GET", "POST":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -752,14 +749,14 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:functions_cache", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
 		functions.FunctionClear(name, nil)
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:functions_cache", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -802,7 +799,7 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:functions_cache", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -845,14 +842,15 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:dictionary_cache", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
 		dictionary.DropDictCacheEntry(name, true)
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:dictionary_cache", auth.PRIV_SYSTEM_READ),
+			req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -885,7 +883,7 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	af.EventTypeId = audit.API_ADMIN_DICTIONARY
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:dictionary_cache", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -925,7 +923,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	af.Name = name
 
 	if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:tasks_cache", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -935,7 +933,8 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 		}
 		return true, nil
 	} else if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:tasks_cache", auth.PRIV_SYSTEM_READ),
+			req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -995,7 +994,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	af.EventTypeId = audit.API_ADMIN_TASKS
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:tasks_cache", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:tasks_cache", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1059,7 +1058,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	af.EventTypeId = audit.API_ADMIN_BACKUP
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_BACKUP_CLUSTER, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_BACKUP_CLUSTER), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1112,7 +1111,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "restore body")
 		}
 
-		err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_BACKUP_CLUSTER, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_BACKUP_CLUSTER), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1189,7 +1188,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest(bucket, auth.PRIV_BACKUP_BUCKET, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges(bucket, auth.PRIV_BACKUP_BUCKET), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1300,7 +1299,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to read body of request"), "restore body")
 		}
 
-		err, _ := endpoint.verifyCredentialsFromRequest(bucket, auth.PRIV_BACKUP_BUCKET, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges(bucket, auth.PRIV_BACKUP_BUCKET), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1867,13 +1866,14 @@ func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Requ
 	af.Name = txId
 
 	if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:transactions", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
 		return true, transactions.DeleteTransContext(txId, true)
 	} else if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:transactions", auth.PRIV_SYSTEM_READ),
+			req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1902,7 +1902,7 @@ func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	af.EventTypeId = audit.API_ADMIN_TRANSACTIONS
 	switch req.Method {
 	case "GET":
-		err, _ := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:transactions", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1934,7 +1934,8 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	af.Request = requestId
 
 	if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ),
+			req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -1952,7 +1953,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		return processActiveRequest(endpoint, requestId, impersonate, (req.Method == "POST"), doRedact(req), durStyle), nil
 
 	} else if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -2019,7 +2020,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
-	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2080,7 +2081,8 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	af.Request = requestId
 
 	if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests", auth.PRIV_SYSTEM_READ),
+			req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -2097,7 +2099,8 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		return processCompletedRequest(requestId, impersonate, (req.Method == "POST"), doRedact(req), durStyle), nil
 	} else if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests", auth.PRIV_SYSTEM_READ),
+			req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -2136,7 +2139,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
-	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2188,7 +2191,7 @@ func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2221,7 +2224,7 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:active_requests", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2262,7 +2265,7 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2297,7 +2300,7 @@ func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:functions_cache", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:functions_cache", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2308,7 +2311,7 @@ func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:dictionary_cache", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:dictionary_cache", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2319,7 +2322,7 @@ func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:tasks", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:tasks", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2329,7 +2332,7 @@ func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	af *audit.ApiAuditFields) (interface{}, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:transactions", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:transactions", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2465,7 +2468,7 @@ func getMetricData(metric accounting.Metric) map[string]interface{} {
 func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_GC
-	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_CLUSTER_ADMIN, req, af)
+	err, _ := ep.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_CLUSTER_ADMIN), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2503,7 +2506,7 @@ func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_FFDC
-	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_CLUSTER_ADMIN, req, af)
+	err, _ := ep.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_CLUSTER_ADMIN), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2529,7 +2532,7 @@ func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_STREAM_LOG
-	err, _ := ep.verifyCredentialsFromRequest("", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := ep.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2583,7 +2586,7 @@ func doSequenceIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_SEQUENCES
-	err, _ := endpoint.verifyCredentialsFromRequest("system:sequences", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:sequences", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2598,7 +2601,7 @@ func doSequence(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	af.Name = name
 
 	if req.Method == "GET" {
-		err, _ := endpoint.verifyCredentialsFromRequest("system:sequences", auth.PRIV_SYSTEM_READ, req, af)
+		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:sequences", auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -2617,7 +2620,7 @@ func doMigration(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_MIGRATION
-	err, _ := endpoint.verifyCredentialsFromRequest("", auth.PRIV_ADMIN, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_ADMIN), req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2936,8 +2939,8 @@ func doCompletedRequestHistory(endpoint *HttpEndpoint, w http.ResponseWriter, re
 	af.Request = requestId
 
 	if req.Method == "GET" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest("system:completed_requests_history", auth.PRIV_SYSTEM_READ, req,
-			af)
+		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests_history",
+			auth.PRIV_SYSTEM_READ), req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -2983,7 +2986,8 @@ func doCompletedHistoryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest("system:completed_requests_history", auth.PRIV_SYSTEM_READ, req, af)
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests_history", auth.PRIV_SYSTEM_READ),
+		req, af)
 	if err != nil {
 		return nil, err
 	}

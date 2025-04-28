@@ -56,7 +56,6 @@ type HttpEndpoint struct {
 	actives       server.ActiveRequests
 	options       server.ServerOptions
 	connSecConfig datastore.ConnectionSecurityConfig
-	internalUser  string
 	tlsConfigLock sync.RWMutex
 	tlsConfig     *tls.Config // the TLS configuration for the encrypted port
 }
