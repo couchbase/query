@@ -225,7 +225,7 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 			if entry.cost <= 0.0 || limit_cost {
 				var limit, offset int64
 				if limit_cost {
-					limit, offset = this.getLimitOffset(this.limit, this.offset)
+					limit, offset = this.getLimitOffset(entry, this.limit, this.offset)
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys,
 					entry.sargIncludes, this.context.RequestId(), entry.spans, entry.includeSpans,

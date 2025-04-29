@@ -685,11 +685,11 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		for _, se := range sargables {
 			// limit_cost indicates whether cost needs to be recalculated due to LIMIT pushdown
 			limit_cost := se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-				!se.HasFlag(IE_LIMIT_OFFSET_COST) && !se.HasFlag(IE_VECTOR_RERANK) && this.limit != nil
+				!se.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil
 			if se.cost <= 0.0 || limit_cost {
 				var limit, offset int64
 				if limit_cost {
-					limit, offset = this.getLimitOffset(this.limit, this.offset)
+					limit, offset = this.getLimitOffset(se, this.limit, this.offset)
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(se, se.sargKeys,
 					se.sargIncludes, this.context.RequestId(), se.spans, se.includeSpans,
@@ -1393,7 +1393,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		if (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) || limit_cost {
 			var limit, offset int64
 			if limit_cost {
-				limit, offset = this.getLimitOffset(this.limit, this.offset)
+				limit, offset = this.getLimitOffset(entry, this.limit, this.offset)
 			}
 			cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys, entry.sargIncludes,
 				requestId, entry.spans, entry.includeSpans, alias, baseKeyspace.Keyspace(),
@@ -1518,7 +1518,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 
 		cons := true
 		isParam := false
-		nlimit, noffset := this.getLimitOffset(this.limit, this.offset)
+		nlimit, noffset := this.getLimitOffset(entry, this.limit, this.offset)
 		if nlimit <= 0 {
 			cons = false
 			switch this.limit.(type) {
@@ -2077,7 +2077,7 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, index datastor
 	return rv
 }
 
-func (this *builder) getLimitOffset(limit, offset expression.Expression) (int64, int64) {
+func (this *builder) getLimitOffset(entry *indexEntry, limit, offset expression.Expression) (int64, int64) {
 	namedArgs := this.context.NamedArgs()
 	positionalArgs := this.context.PositionalArgs()
 
@@ -2095,6 +2095,17 @@ func (this *builder) getLimitOffset(limit, offset expression.Expression) (int64,
 				return -1, -1
 			}
 		}
+	}
+
+	if entry.IsPushDownProperty(_PUSHDOWN_LIMIT) && entry.HasFlag(IE_VECTOR_RERANK) {
+		factor := 0
+		if index6, ok := entry.index.(datastore.Index6); ok {
+			factor = int(index6.RerankFactor())
+		}
+		if factor <= 0 {
+			factor = plan.RERANK_FACTOR
+		}
+		limit = expandOffsetLimit(offset, limit, factor)
 	}
 
 	lv, static := base.GetStaticInt(limit)
