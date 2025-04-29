@@ -1793,7 +1793,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 	if request.Prepared() != nil {
 		p := request.Prepared()
 		reqMap["preparedName"] = p.Name()
-		reqMap["preparedText"] = p.Text()
+		reqMap["preparedText"] = util.Redacted(p.Text(), redact)
 	}
 	if request.TxId() != "" {
 		reqMap["txid"] = request.TxId()
@@ -1856,10 +1856,11 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 		if prof == server.ProfOn || prof == server.ProfBench {
 			timings := request.GetTimings()
 			if timings != nil {
-				reqMap["timings"] = value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings))
+				reqMap["timings"] = util.InterfaceRedacted(value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings)),
+					redact)
 				p = request.Output().FmtOptimizerEstimates(timings)
 				if p != nil {
-					reqMap["optimizerEstimates"] = value.NewValue(p)
+					reqMap["optimizerEstimates"] = value.NewValue(util.InterfaceRedacted(p, redact))
 				}
 			}
 		}
