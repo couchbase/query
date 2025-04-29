@@ -793,10 +793,6 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	var err errors.Error
 	var elems []*algebra.Path
 
-	nlquery := request.Natural()
-	if nlquery == "" {
-		return false, true
-	}
 	oldState := request.State()
 	request.SetState(PREPROCESSING)
 	defer request.SetState(oldState)
@@ -807,11 +803,66 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		return true, false
 	}
 
-	elems, err = algebra.ParseAndValidatePathList(request.NaturalContext(), "default", request.QueryContext())
-	if err != nil {
-		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
-		request.Failed(this)
+	chatId := request.NaturalChatId()
+	if request.NaturalEndChat() {
+		if chatId == "" {
+			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID))
+			request.Failed(this)
+			return true, false
+		}
+
+		err := natural.ProcessEndChat(chatId, datastore.CredsString(request.Credentials()))
+		if err != nil {
+			request.Fail(err)
+			request.Failed(this)
+			return true, false
+		}
+
+		request.SetNaturalChatId(chatId)
+		request.CompletedNaturalRequest(this)
 		return true, false
+	}
+
+	if request.NaturalBeginChat() {
+
+		if chatId != "" {
+			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_BEGIN_CHAT_FAIL, chatId))
+			request.Failed(this)
+			return true, false
+		}
+
+		naturalcontext := request.NaturalContext()
+		elems, err = algebra.ParseAndValidatePathList(naturalcontext, "default", request.QueryContext())
+		if err != nil {
+			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
+			request.Failed(this)
+			return true, false
+		}
+
+		newchatid, err := natural.ProcessBeginChat(naturalcontext, datastore.CredsString(request.Credentials()), elems)
+		if err != nil {
+			request.Fail(err)
+			request.Failed(this)
+			return true, false
+		}
+
+		request.SetNaturalChatId(newchatid)
+		request.CompletedNaturalRequest(this)
+		return true, false
+	}
+
+	nlquery := request.Natural()
+	if nlquery == "" {
+		return false, true
+	}
+
+	if chatId == "" {
+		elems, err = algebra.ParseAndValidatePathList(request.NaturalContext(), "default", request.QueryContext())
+		if err != nil {
+			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
+			request.Failed(this)
+			return true, false
+		}
 	}
 
 	if !this.setupRequestContext(request) {
@@ -842,9 +893,17 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 
 	var nlAlgebraStmt algebra.Statement
 	var stmt string
-	stmt, nlAlgebraStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
-		nlquery, elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
-		request.ExecutionContext(), request.Output().AddPhaseTime)
+	if chatId != "" {
+		user := datastore.CredsString(request.Credentials())
+		stmt, nlAlgebraStmt, err = natural.ProcessConversationalRequest(request.NaturalCred(), request.NaturalOrganizationId(),
+			nlquery, chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), user,
+			request.ExecutionContext(), request.Output().AddPhaseTime)
+	} else {
+		stmt, nlAlgebraStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
+			nlquery, elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+			request.ExecutionContext(), request.Output().AddPhaseTime)
+	}
+
 	if err != nil {
 		request.Fail(err)
 		request.Failed(this)

@@ -8168,6 +8168,113 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_UNRECOGNIZED_STATEMENT, // 19224
+		symbol:      "E_NL_UNRECOGNIZED_STATEMENT",
+		Description: "Unrecognized natural language statement received",
+		IsUser:      YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MISSING_CHAT_ID, // 19225
+		symbol:      "E_NL_MISSING_CHAT_ID",
+		Description: "missing \"natural_chatid\" parameter for further processing of the request.",
+		IsUser:      YES,
+		Reason: []string{
+			"The \"natural_chatid\" parameter was not specified in a request that is part of an ongoing chat session.",
+			"The END AI CHAT statement misses the \"natural_chatid\" parameter.",
+		},
+		Action: []string{
+			"Include the \"natural_chatid\" parameter in requests that are part of an ongoing chat session.",
+			"Include the \"natural_chatid\" parameter in the END AI CHAT statement.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_NO_SUCH_CHAT, // 19226
+		symbol:      "E_NL_NO_SUCH_CHAT",
+		Description: "no chat found with chatid: «chatid»",
+		IsUser:      YES,
+		Reason: []string{
+			"The chat identified by the «chatid» was not found.",
+			"The chat identified by the «chatid» was replaced by a newer chat in the" +
+				" natural language chat-cache due to inactivity.",
+		},
+		Action: []string{
+			"Ensure the correct \"natural_chatid\" parameter is specified.",
+			"Start a new chat session if the previous session is replaced.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHAT_FAIL, // 19227
+		symbol:      "E_NL_CHAT_FAIL",
+		Description: "Error processing chat request: «failure»",
+		IsUser:      MAYBE,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_BEGIN_CHAT_FAIL, // 19228
+		symbol:      "E_NL_BEGIN_CHAT_FAIL",
+		Description: "Cannot start a new chat session in between the current session: «failure»",
+		IsUser:      YES,
+		Reason: []string{
+			"A BEGIN AI CHAT statement was issued while a chat session is already active.",
+			"The \"natural_chatid\" parameter was specified in a BEGIN AI CHAT statement.",
+		},
+		Action: []string{
+			"Don't specify the \"natural_chatid\" parameter in the BEGIN AI CHAT statement.",
+			"End the current chat session before starting a new one.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHAT_PROMPT_TOO_LARGE, // 19229
+		symbol:      "E_NL_CHAT_PROMPT_TOO_LARGE",
+		Description: "The size of the prompt for the chat has out grown the threshold of: «threshold» < «size of the prompt»",
+		IsUser:      YES,
+		Action: []string{
+			"End the current chat session and start a new one with a smaller prompt summarizing the previous conversation.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHAT_CACHE_FULL, // 19230
+		symbol:      "E_NL_CHAT_CACHE_FULL",
+		Description: "The cache for active chat sessions is full, cannot start a new chat session at the moment",
+		IsUser:      YES,
+		Action: []string{
+			"Analyze the active chat sessions  and end the unnecessary ones to free up space in the cache," +
+				" then retry starting a new chat session.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHAT_WRONG_USER, // 19231
+		symbol:      "E_NL_CHAT_WRONG_USER",
+		Description: "The user associated with the chat session does not match the user making the request.",
+		IsUser:      YES,
+		Reason: []string{
+			"The user that created the chat session is different from the user of the current request.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCRYPTION_READER_CREATE, // 19300
 		symbol:      "E_ENCRYPTION_READER_CREATE",
 		Description: "Failed to create encryption reader",

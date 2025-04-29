@@ -642,6 +642,14 @@ const (
 	E_NL_TIMEOUT                                 ErrorCode = 19221
 	E_NL_REQ_FEAT_DISABLED                       ErrorCode = 19222
 	_RETIRED_19223                               ErrorCode = 19223
+	E_NL_UNRECOGNIZED_STATEMENT                  ErrorCode = 19224
+	E_NL_MISSING_CHAT_ID                         ErrorCode = 19225
+	E_NL_NO_SUCH_CHAT                            ErrorCode = 19226
+	E_NL_CHAT_FAIL                               ErrorCode = 19227
+	E_NL_BEGIN_CHAT_FAIL                         ErrorCode = 19228
+	E_NL_CHAT_PROMPT_TOO_LARGE                   ErrorCode = 19229
+	E_NL_CHAT_CACHE_FULL                         ErrorCode = 19230
+	E_NL_CHAT_WRONG_USER                         ErrorCode = 19231
 	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
 	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
 	E_NO_ENCRYPTION_MANAGER                      ErrorCode = 19302

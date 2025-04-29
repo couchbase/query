@@ -24,6 +24,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -47,6 +48,8 @@ const MAX_KEYSPACES = 4
 const _COMPLETIONS_REQ_BACKOFF_INIT = 1 * time.Second
 const _COMPLETIONS_REQ_RETRY = 5
 
+var _CHAT_LIMIT int
+
 const (
 	// Models
 	GPT4o_2024_05_13 = "gpt-4o-2024-05-13"
@@ -58,6 +61,8 @@ const (
 	waitTimeout          = 20 * time.Second
 	maxCorrectionRetries = 4
 )
+
+var naturalchatHistory *util.GenCache
 
 type naturalReqThrottler struct {
 	gate       chan bool
@@ -132,6 +137,61 @@ func init() {
 	for i := 0; i < maxconcurrency; i++ {
 		nlreqThrottler.nlgate() <- true
 	}
+
+	_CHAT_LIMIT = util.NumCPU() * 2
+
+	naturalchatHistory = util.NewGenCache(_CHAT_LIMIT)
+}
+
+type ChatEntry struct {
+	Id        string
+	prompt    *prompt
+	Keyspaces []*algebra.Path
+	Removed   bool
+	User      string
+	sync.Mutex
+}
+
+func IsChatCacheFull() bool {
+	return naturalchatHistory.Size() >= _CHAT_LIMIT
+}
+
+func AddConversation(ce *ChatEntry, id string) {
+	naturalchatHistory.Add(ce, id, nil)
+}
+
+func GetConversation(id string) interface{} {
+	return naturalchatHistory.Get(id, nil)
+}
+
+func DeleteConversation(id string) {
+	naturalchatHistory.Delete(id, nil)
+}
+
+func ForEachConversation(nonBlocking func(chatId string, entry *ChatEntry) bool, blocking func() bool) {
+	dummyF := func(chatId string, entry interface{}) bool {
+		ce := entry.(*ChatEntry)
+		return nonBlocking(chatId, ce)
+	}
+	naturalchatHistory.ForEach(dummyF, blocking)
+}
+
+func CountCoversations() int {
+	return naturalchatHistory.Size()
+}
+
+func FormatChatEntry(ce *ChatEntry) map[string]interface{} {
+	item := map[string]interface{}{
+		"chatId": ce.Id,
+	}
+
+	keyspaces := make([]interface{}, len(ce.Keyspaces))
+	for i, p := range ce.Keyspaces {
+		keyspaces[i] = p.ProtectedString()
+	}
+	item["keyspaces"] = keyspaces
+	item["prompt"] = value.NewMarshalledValue(ce.prompt)
+	return item
 }
 
 type NaturalContext interface {
@@ -279,7 +339,11 @@ type prompt struct {
 	InitMessages       []message          `json:"initMessages"`
 	CompletionSettings completionSettings `json:"completionSettings"`
 	Messages           []message          `json:"messages"`
+	Size               int
 }
+
+const _INIT_SIZE = 250
+const _MAX_PROMPT_SIZE = util.MiB
 
 func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, forfts bool) (*prompt, errors.Error) {
 	rv := &prompt{
@@ -297,6 +361,7 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, for
 			Seed:        1,
 			Stream:      false,
 		},
+		Size: _INIT_SIZE,
 	}
 
 	var userMessage string
@@ -325,6 +390,7 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, for
 	userMessageBuf.WriteString("\n\nReturn only a single SQL++ statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a query, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
+	rv.Size += userMessageBuf.Len()
 	userMessage = userMessageBuf.String()
 	rv.Messages = []message{
 		message{
@@ -351,6 +417,7 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (
 			Seed:        1,
 			Stream:      false,
 		},
+		Size: _INIT_SIZE,
 	}
 
 	var userMessage string
@@ -390,6 +457,7 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (
 		"\n\nReturn only a single CREATE FUNCTION statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
+	rv.Size += userMessageBuf.Len()
 	userMessage = userMessageBuf.String()
 	rv.Messages = []message{
 		message{
@@ -398,6 +466,89 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (
 		},
 	}
 	return rv, nil
+}
+
+func newSQLIterativePrompt(chat *prompt, naturalPrompt string, forfts bool) *prompt {
+	var userMessage string
+	var userMessageBuf strings.Builder
+
+	userMessageBuf.WriteString("Your goal is to iterate on the previouly generated query by modifying it's code,")
+	userMessageBuf.WriteString(" based on this prompt:")
+	userMessageBuf.WriteString("\"")
+	userMessageBuf.WriteString(naturalPrompt)
+	userMessageBuf.WriteString("\".")
+	userMessageBuf.WriteString("Respond only with code and no explanation." +
+		"\n\nNote query context is unset." +
+		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
+		"\n\nAlias is for ease of use." +
+		"\n\nQuote aliases with grave accent characters.")
+	if forfts {
+		userMessageBuf.WriteString("\n\nAlways add the USE Clause in the query to use the FTS index." +
+			"\n\nFor example, SELECT a.*, ap.* FROM `travel-sample`.`inventory`.`airline` AS a USE INDEX " +
+			"(USING FTS) JOIN `travel-sample`.`inventory`.`airport` AS ap USE INDEX (USING FTS)" +
+			" ON a.country = ap.country WHERE a.country = \"United Kingdom\"" +
+			"\n\nIn other words, always use USE INDEX (USING FTS) in the query.")
+	}
+	userMessageBuf.WriteString("\n\nIf the previous message was a CREATE FUNCTION statement you don't have to repeat a CREATE FUNCTION." +
+		"\nReturn only a single SQL++ statement on a single line." +
+		"\n\nIf you're sure the Prompt can't be used to generate a query, say " +
+		"\n#ERR:\" and then explain why not without prefix.\n\n")
+
+	chat.Size += userMessageBuf.Len()
+	userMessage = userMessageBuf.String()
+	chat.Messages = append(chat.Messages, message{
+		Content: userMessage,
+		Role:    "user",
+	})
+
+	return chat
+}
+
+func newJSUDFIterativePrompt(chat *prompt, naturalPrompt string) *prompt {
+	var userMessage string
+	var userMessageBuf strings.Builder
+
+	userMessageBuf.WriteString("Your goal is to iterate on the previouly generated query by modifying it's code,")
+	userMessageBuf.WriteString(" based on this prompt:")
+	userMessageBuf.WriteString("\"")
+	userMessageBuf.WriteString(naturalPrompt)
+	userMessageBuf.WriteString("\".")
+	userMessageBuf.WriteString("\"\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
+		" no explanation that implements the request in the Prompt." +
+		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
+		"\nAlways comment using multiline comment syntax,i.e /* ... */ as you have construct a SQL++ managed user defined function" +
+		" in a single line." +
+		"\n\nPrompt may request for something trivial such as string manipulation, mathematical calculations, etc." +
+		" Which are not related to the information provided but must always instruct to generate a function." +
+		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ managed user defined function." +
+		"As Capella does not currently support a way to create or manage an external library" +
+		"\n\nExamples:" +
+		"\n\nExample1) shows an example for a request that doesn't use the information provided, example prompt:" +
+		"add 2 numbers. Statement to create a function for the request would be: CREATE FUNCTION add(a,b) LANGUAGE JAVASCRIPT AS" +
+		" 'function add(a,b) { return(a+b);}'" +
+		"\n\nExample2) shows an example for a request that uses the information provided, example prompt:" +
+		"select airlines given country as an argument. Statement to create a function for the request would be: CREATE FUNCTION" +
+		" selectAirline(country) LANGUAGE JAVASCRIPT AS 'function selectAirline(country)" +
+		" {var q = SELECT name as airline_name, callsign as airline_callsign FROM `travel-sample`.`inventory`.`airline` " +
+		"WHERE country = $country; var res = []; for (const doc of q) { var airline = {}; airline.name = doc.airline_name;" +
+		"airline.callsign = doc.airline_callsign; res.push(airline);} return res;}" +
+		"\n\nNote query context is unset." +
+		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
+		"\n\nAlias is for ease of use." +
+		"\n\nQuote aliases with grave accent characters." +
+		"\n\nIf the previous message was not a CREATE FUNCTION statement, use the previous messages to for a CREATE FUNCTION statement." +
+		"\nReturn only a single CREATE FUNCTION statement on a single line." +
+		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
+		"\n#ERR:\" and then explain why not without prefix.\n\n")
+
+	chat.Size += userMessageBuf.Len()
+	userMessage = userMessageBuf.String()
+	chat.Messages = append(chat.Messages, message{
+		Content: userMessage,
+		Role:    "user",
+	})
+
+	return chat
 }
 
 func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, nlCred string) (string, errors.Error) {
@@ -496,7 +647,7 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 	content := chatComplRes.Choices[0].Message.Content
 
 	if n := strings.Index(content, "#ERR"); n != -1 {
-		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP,
+		return content, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP,
 			fmt.Errorf("%s", strings.TrimRight(content[n+6:], "\n `")))
 	}
 
@@ -692,11 +843,11 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 }
 
 func buildRetryPrompt(pmt *prompt, assistantContent string, reason string) *prompt {
-	assitantmessage := message{
+	assistantmessage := message{
 		Role:    "assistant",
 		Content: assistantContent,
 	}
-	pmt.Messages = append(pmt.Messages, assitantmessage)
+	pmt.Messages = append(pmt.Messages, assistantmessage)
 
 	var parseErrorMessage strings.Builder
 	parseErrorMessage.WriteString("The previous response errored out with: ")
@@ -756,6 +907,188 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 	record(execution.NLPARSE, util.Since(parse))
 
 	return content, stmt, nlAlgebraStmt, parseErr
+}
+
+func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string, nloutputOpt naturalOutput,
+	explain, advise bool,
+	user string,
+	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
+
+	waitTime := util.Now()
+	err := throttleRequest()
+	record(execution.NLWAIT, util.Since(waitTime))
+	if err != nil {
+		return "", nil, err
+	}
+
+	getJwt := util.Now()
+	jwt, err := getJWTFromSessionsApi(nlCred, false)
+	record(execution.GETJWT, util.Since(getJwt))
+	if err != nil {
+		return "", nil, err
+	}
+
+	var ce *ChatEntry
+	rv := naturalchatHistory.Get(chatId, nil)
+	if rv != nil {
+		ce = rv.(*ChatEntry)
+	} else {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
+	}
+
+	ce.Lock()
+	defer ce.Unlock()
+	if ce.Removed {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL, fmt.Sprintf("conversation with \"natural_chatid\":%s was deleted", chatId))
+	}
+
+	if ce.User != user {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+	}
+	var prompt *prompt
+	if ce.prompt == nil {
+		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
+		inferschema := util.Now()
+		keyspaceInfo, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context)
+		record(execution.INFERSCHEMA, util.Since(inferschema))
+		if err != nil {
+			return "", nil, err
+		}
+
+		switch nloutputOpt {
+		case SQL:
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, false)
+		case JSUDF:
+			prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery)
+		case FTSSQL:
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, true)
+		default:
+			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
+		}
+		if err != nil {
+			return "", nil, err
+		}
+	} else {
+		switch nloutputOpt {
+		case SQL:
+			prompt = newSQLIterativePrompt(ce.prompt, nlquery, false)
+		case JSUDF:
+			prompt = newJSUDFIterativePrompt(ce.prompt, nlquery)
+		case FTSSQL:
+			prompt = newSQLIterativePrompt(ce.prompt, nlquery, true)
+		default:
+			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
+		}
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	if prompt.Size >= _MAX_PROMPT_SIZE {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PROMPT_TOO_LARGE,
+			logging.HumanReadableSize(int64(prompt.Size), false), logging.HumanReadableSize(_MAX_PROMPT_SIZE, false))
+	}
+
+	chatcompletionreq := util.Now()
+	content, err := doChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
+	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
+	completeConversationPrompt(content, ce, prompt)
+	if err != nil {
+		return "", nil, err
+	}
+
+	parse := util.Now()
+	stmt, err := getStatement(content, nloutputOpt)
+	if err != nil {
+		return "", nil, err
+	}
+
+	if advise || explain {
+		prefix := "advise "
+		if explain {
+			prefix = "explain "
+		}
+		stmt = prefix + stmt
+	}
+
+	var parseErr error
+	var nlAlgebraStmt algebra.Statement
+	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
+	record(execution.NLPARSE, util.Since(parse))
+	if parseErr != nil {
+		retrytime := util.Now()
+		prompt = buildRetryPrompt(prompt, content, parseErr.Error())
+		orgContent := content
+		for i := 1; i < maxCorrectionRetries; i++ {
+			content, stmt, nlAlgebraStmt, parseErr = retryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
+			if parseErr == nil {
+				completeConversationPrompt(content, ce, prompt)
+				record(execution.NLRETRY, util.Since(retrytime))
+				return stmt, nlAlgebraStmt, nil
+			} else {
+				prompt = buildRetryPrompt(prompt, content, parseErr.Error())
+			}
+		}
+		completeConversationPrompt(content, ce, prompt)
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
+			fmt.Sprintf("failed to parse generated statement- %v", orgContent), parseErr)
+	}
+
+	return stmt, nlAlgebraStmt, nil
+}
+
+func completeConversationPrompt(content string, ce *ChatEntry, prompt *prompt) {
+	if content != "" {
+		assistantmessage := message{
+			Role:    "assistant",
+			Content: content,
+		}
+		prompt.Messages = append(prompt.Messages, assistantmessage)
+
+		ce.prompt = prompt
+		naturalchatHistory.Add(ce, ce.Id, nil)
+	}
+}
+
+func ProcessBeginChat(naturalcontext, datastorecreds string, keyspaces []*algebra.Path) (string, errors.Error) {
+
+	if IsChatCacheFull() {
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_CACHE_FULL)
+	}
+
+	chatId, err := util.UUIDV4()
+	if err != nil {
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL, err.Error())
+	}
+
+	ce := &ChatEntry{
+		Id:        chatId,
+		Keyspaces: keyspaces,
+		User:      datastorecreds,
+	}
+	AddConversation(ce, chatId)
+	return chatId, nil
+}
+
+func ProcessEndChat(chatId, datastorecreds string) errors.Error {
+
+	rv := GetConversation(chatId)
+	if rv == nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
+	}
+	ce, ok := rv.(*ChatEntry)
+	if !ok {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL, "failed to cast cache entry")
+	}
+	ce.Lock()
+	if ce.User != datastorecreds {
+		ce.Unlock()
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+	}
+	DeleteConversation(chatId)
+	ce.Removed = true
+	ce.Unlock()
+	return nil
 }
 
 func getStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {

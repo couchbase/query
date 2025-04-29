@@ -93,6 +93,12 @@ type Request interface {
 	NaturalAdvise() bool
 	SetNaturalExplain(exp bool)
 	NaturalExplain() bool
+	SetNaturalBeginChat(beg bool)
+	NaturalBeginChat() bool
+	SetNaturalEndChat(end bool)
+	NaturalEndChat() bool
+	SetNaturalChatId(chatId string)
+	NaturalChatId() string
 	Prepared() *plan.Prepared
 	SetPrepared(prepared *plan.Prepared)
 	Type() string
@@ -449,6 +455,9 @@ type BaseRequest struct {
 	nloutput             string
 	nladvise             bool
 	nlexplain            bool
+	nlchatid             string
+	nlbeginchat          bool
+	nlendchat            bool
 
 	// effectively temporary storage for the TRACE level request logging ahead of being included in completed_requests
 	logContent []interface{}
@@ -1771,6 +1780,30 @@ func (this *BaseRequest) NaturalExplain() bool {
 	return this.nlexplain
 }
 
+func (this *BaseRequest) SetNaturalBeginChat(begin bool) {
+	this.nlbeginchat = begin
+}
+
+func (this *BaseRequest) NaturalBeginChat() bool {
+	return this.nlbeginchat
+}
+
+func (this *BaseRequest) SetNaturalEndChat(end bool) {
+	this.nlendchat = end
+}
+
+func (this *BaseRequest) NaturalEndChat() bool {
+	return this.nlendchat
+}
+
+func (this *BaseRequest) SetNaturalChatId(chatId string) {
+	this.nlchatid = chatId
+}
+
+func (this *BaseRequest) NaturalChatId() string {
+	return this.nlchatid
+}
+
 func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof bool, redact bool) map[string]interface{} {
 	item := make(map[string]interface{}, 32)
 	item["requestId"] = this.Id().String()
@@ -1917,7 +1950,7 @@ func (this *BaseRequest) NaturalTime() time.Duration {
 // light-weight (lighter than a full parser) check if the statement starts with "USING AI"
 // if it does, then extract the optional WITH clause and separate out the natural language request
 var prefixuai = regexp.MustCompile("^[eE][xX][pP][lL][aA][iI][nN][[:space:]]+$|^[aA][dD][vV][iI][sS][eE][[:space:]]+$")
-var uai = regexp.MustCompile("[Uu][Ss][Ii][Nn][Gg][[:space:]]+[Aa][Ii][[:space:]]+")
+var uaipattern = "[Uu][Ss][Ii][Nn][Gg][[:space:]]+[Aa][Ii][[:space:]]+"
 var with = regexp.MustCompile("[Ww][Ii][Tt][Hh][[:space:]]*{")
 var forfts = regexp.MustCompile("^[Ff][Oo][Rr][[:space:]]+[Ff][Tt][Ss][[:space:]]+|" +
 	"^[Ff][Oo][Rr][[:space:]]+[Ff][Ll][Ee][Xx][Ii][Nn][Dd][eE][xX][[:space:]]+")
@@ -1931,6 +1964,12 @@ func stripComments(s string) string {
 	return strings.TrimSpace(s)
 }
 
+var beginchatpattern = "[bB][eE][gG][iI][nN][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
+
+var endchatpattern = "[eE][nN][dD][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
+
+var combinednaturalstatement = regexp.MustCompile((fmt.Sprintf("%s|%s|%s", uaipattern, beginchatpattern, endchatpattern)))
+
 func (this *BaseRequest) ProcessNatural() errors.Error {
 	s := this.Statement()
 	if s == "" {
@@ -1939,7 +1978,36 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 
 	s = stripComments(s)
 
-	m := uai.FindStringIndex(s)
+	m := combinednaturalstatement.FindStringIndex(s)
+	if m == nil {
+		return nil
+	}
+
+	matchString := strings.ToLower(s[m[0]:m[1]])
+
+	switch {
+	case strings.HasPrefix(matchString, "using"):
+		this.SetStatement("")
+		return this.processNaturalUsingAi(m, s)
+
+	case strings.HasPrefix(matchString, "begin"):
+		this.SetNaturalBeginChat(true)
+		this.SetNatural("")
+		this.SetStatement("")
+		return this.processNaturalBeginChat(s[m[1]:])
+
+	case strings.HasPrefix(matchString, "end"):
+		this.SetNaturalEndChat(true)
+		this.SetNatural("")
+		this.SetStatement("")
+		return this.processNaturalEndChat(s[m[1]:])
+
+	default:
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_UNRECOGNIZED_STATEMENT)
+	}
+}
+
+func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 
 	if m == nil || len(m) < 2 {
 		return nil
@@ -1959,8 +2027,6 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 		}
 	}
 	s = s[m[1]:]
-
-	this.SetStatement("")
 
 	m = with.FindStringIndex(s)
 	if m == nil || len(m) < 2 {
@@ -2057,12 +2123,91 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
+		case "chatId":
+			if s, ok := v.(string); ok {
+				this.SetNaturalChatId(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
 		default:
 			return errors.NewAdminUnknownSettingError(k)
 		}
 	}
 	s = s[d.InputOffset():]
 	this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
+	return nil
+}
+
+func (this *BaseRequest) processNaturalBeginChat(s string) errors.Error {
+
+	m1 := with.FindString(s)
+	if m1 == "" {
+		return nil
+	}
+	s = s[len(m1)-1:]
+	d := sys_json.NewDecoder(strings.NewReader(s))
+	var opts map[string]interface{}
+	e := d.Decode(&opts)
+	if e != nil {
+		return errors.NewAdminEncodingError(e)
+	}
+
+	for k, v := range opts {
+		switch k {
+		case "keyspaces":
+			if a, ok := v.([]interface{}); ok {
+				sb := strings.Builder{}
+				for i := range a {
+					if s, ok := a[i].(string); ok {
+						if i > 0 {
+							sb.WriteRune(',')
+						}
+						sb.WriteString(s)
+					} else {
+						return errors.NewAdminSettingTypeError(k, v)
+					}
+				}
+				this.SetNaturalContext(sb.String())
+				logging.Debugf("natural_context: %s", sb.String())
+			} else if s, ok := v.(string); ok {
+				this.SetNaturalContext(s)
+				logging.Debugf("natural_context: %s", s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		default:
+			return errors.NewAdminUnknownSettingError(k)
+		}
+	}
+	return nil
+}
+
+func (this *BaseRequest) processNaturalEndChat(s string) errors.Error {
+
+	m1 := with.FindString(s)
+	if m1 == "" {
+		return nil
+	}
+	s = s[len(m1)-1:]
+	d := sys_json.NewDecoder(strings.NewReader(s))
+	var opts map[string]interface{}
+	e := d.Decode(&opts)
+	if e != nil {
+		return errors.NewAdminEncodingError(e)
+	}
+
+	for k, v := range opts {
+		switch k {
+		case "chatId":
+			if s, ok := v.(string); ok {
+				this.SetNaturalChatId(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		default:
+			return errors.NewAdminUnknownSettingError(k)
+		}
+	}
 	return nil
 }
 

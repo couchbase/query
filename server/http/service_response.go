@@ -126,6 +126,10 @@ func mapErrorToHttpResponse(err errors.Error, def int) int {
 		return http.StatusTooManyRequests
 	case errors.E_SERVICE_NO_CLIENT:
 		return http.StatusBadRequest
+	case errors.E_NL_CHAT_WRONG_USER:
+		return http.StatusUnauthorized
+	case errors.E_NL_NO_SUCH_CHAT:
+		return http.StatusNotFound
 	default:
 		return def
 	}
@@ -181,6 +185,8 @@ func (this *httpRequest) completedNaturalRequestXML(srvr *server.Server) {
 	this.writeStateXML(this.State(), prefix)
 	this.writeGeneratedStatementXML(prefix, indent)
 
+	this.writeNaturalChatIdXML(prefix, indent)
+
 	this.markTimeOfCompletion(time.Now())
 
 	this.writeMetricsXML(srvr.Metrics(), prefix, indent)
@@ -189,7 +195,7 @@ func (this *httpRequest) completedNaturalRequestXML(srvr *server.Server) {
 	this.writeProfileXML(srvr.Profile(), prefix, indent)
 	this.writeControlsXML(srvr.Controls(), prefix, indent)
 	this.writeLogXML(prefix, indent)
-	this.writeString("\n</query>")
+	this.writeString("\n</query>\n")
 }
 
 func (this *httpRequest) completedNaturalRequestJSON(srvr *server.Server) {
@@ -202,6 +208,8 @@ func (this *httpRequest) completedNaturalRequestJSON(srvr *server.Server) {
 	this.writeState(this.State(), prefix)
 
 	this.writeGeneratedStatement(prefix, indent)
+
+	this.writeNaturalChatId(prefix, indent)
 
 	this.markTimeOfCompletion(time.Now())
 
@@ -477,7 +485,7 @@ func (this *httpRequest) writeSignatureXML(server_flag bool, signature value.Val
 }
 
 func (this *httpRequest) writeGeneratedStatement(prefix, indent string) bool {
-	if this.Natural() == "" {
+	if this.Natural() == "" || this.Statement() == "" {
 		return true
 	}
 
@@ -492,7 +500,7 @@ func (this *httpRequest) writeGeneratedStatement(prefix, indent string) bool {
 }
 
 func (this *httpRequest) writeGeneratedStatementXML(prefix, indent string) bool {
-	if this.Natural() == "" {
+	if this.Natural() == "" || this.Statement() == "" {
 		return true
 	}
 	if prefix != "" {
@@ -503,6 +511,29 @@ func (this *httpRequest) writeGeneratedStatementXML(prefix, indent string) bool 
 
 	return this.writeString("<generated_statement>") && this.writeString(html.EscapeString(this.Statement())) &&
 		this.writeString("</generated_statement>")
+}
+
+func (this *httpRequest) writeNaturalChatId(prefix, indent string) bool {
+	if this.NaturalChatId() == "" {
+		return true
+	}
+	return this.writeString(",\n") && this.writeString(prefix) &&
+		this.writeString("\"chatId\": ") && this.writeString("\"") &&
+		this.writeString(this.NaturalChatId()) && this.writeString("\"")
+}
+
+func (this *httpRequest) writeNaturalChatIdXML(prefix, indent string) bool {
+	if this.NaturalChatId() == "" {
+		return true
+	}
+	if prefix != "" {
+		if !this.writeString("\n") || !this.writeString(prefix) {
+			return false
+		}
+	}
+
+	return this.writeString("<chatId>") && this.writeString(this.NaturalChatId()) &&
+		this.writeString("</chatId>")
 }
 
 func (this *httpRequest) prettyStrings(serverPretty, result bool) (string, string) {

@@ -42,6 +42,7 @@ import (
 	functionsStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/natural"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/sanitizer"
@@ -195,6 +196,12 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	migrationHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doMigration, false)
 	}
+	naturalIndexHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doNaturalChatIndex, false)
+	}
+	naturalHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doNaturalChats, false)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -233,13 +240,15 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		backupPrefix + "/backup":                 {handler: globalBackupHandler, methods: []string{"GET", "POST"}},
 		backupPrefix + "/bucket/{bucket}/backup": {handler: bucketBackupHandler, methods: []string{"GET", "POST"}},
 
-		adminPrefix + "/gc":                {handler: forceGCHandler, methods: []string{"GET", "POST"}},
-		adminPrefix + "/ffdc":              {handler: manualFFDCHandler, methods: []string{"POST"}},
-		adminPrefix + "/log/{file}":        {handler: logHandler, methods: []string{"GET"}},
-		adminPrefix + "/log/stream/{file}": {handler: logHandler, methods: []string{"GET"}},
-		indexesPrefix + "/sequences":       {handler: sequenceIndexHandler, methods: []string{"GET"}},
-		sequencesPrefix + "/{name}":        {handler: sequenceHandler, methods: []string{"GET"}},
-		adminPrefix + "/migration":         {handler: migrationHandler, methods: []string{"DELETE"}},
+		adminPrefix + "/gc":                     {handler: forceGCHandler, methods: []string{"GET", "POST"}},
+		adminPrefix + "/ffdc":                   {handler: manualFFDCHandler, methods: []string{"POST"}},
+		adminPrefix + "/log/{file}":             {handler: logHandler, methods: []string{"GET"}},
+		adminPrefix + "/log/stream/{file}":      {handler: logHandler, methods: []string{"GET"}},
+		indexesPrefix + "/sequences":            {handler: sequenceIndexHandler, methods: []string{"GET"}},
+		sequencesPrefix + "/{name}":             {handler: sequenceHandler, methods: []string{"GET"}},
+		adminPrefix + "/migration":              {handler: migrationHandler, methods: []string{"DELETE"}},
+		indexesPrefix + "/natural_chats":        {handler: naturalIndexHandler, methods: []string{"GET"}},
+		adminPrefix + "/natural_chats/{chatId}": {handler: naturalHandler, methods: []string{"GET", "DELETE"}},
 	}
 
 	for route, h := range routeMap {
@@ -3210,4 +3219,70 @@ func doCompletedHistoryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 		}
 	}
 	return completed, nil
+}
+
+func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+
+	_, chatId := router.RequestValue(req, "chatId")
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:natural_chats", auth.PRIV_SYSTEM_READ), req, af)
+	if err != nil {
+		return nil, err
+	}
+
+	impersonate, err1 := endpoint.getImpersonate(req)
+	if err1 != nil {
+		return nil, err1
+	}
+	if req.Method == "GET" {
+		c := natural.GetConversation(chatId)
+		if c != nil {
+			if ce, ok := c.(*natural.ChatEntry); ok {
+				if impersonate != "" && ce.User != impersonate {
+					return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+				}
+				return natural.FormatChatEntry(ce), nil
+			}
+		} else {
+			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
+		}
+	} else if req.Method == "DELETE" {
+		c := natural.GetConversation(chatId)
+		if c != nil {
+			if ce, ok := c.(*natural.ChatEntry); ok && ce != nil {
+				if impersonate != "" && ce.User != impersonate {
+					return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+				}
+				ce.Lock()
+				natural.DeleteConversation(chatId)
+				ce.Removed = true
+				ce.Unlock()
+				return true, nil
+			}
+		} else {
+			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
+		}
+	}
+	return nil, errors.NewServiceErrorHttpMethod(req.Method)
+}
+
+func doNaturalChatIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
+	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+
+	af.EventTypeId = audit.API_DO_NOT_AUDIT
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:natural_chats", auth.PRIV_SYSTEM_READ), req, af)
+	if err != nil {
+		return nil, err
+	}
+
+	numEntries := natural.CountCoversations()
+	chatIds := make([]string, 0, numEntries)
+
+	natural.ForEachConversation(func(chatId string, entry *natural.ChatEntry) bool {
+		chatIds = append(chatIds, chatId)
+		return true
+	}, nil)
+
+	return chatIds, nil
 }

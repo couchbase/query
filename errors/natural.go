@@ -8,7 +8,9 @@
 
 package errors
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	SESSIONS_IKEY       = "sessions_req"
@@ -19,6 +21,7 @@ const (
 	NLCONTEXT_IKEY      = "natural_context"
 	RATE_LIMIT          = "rate_limit"
 	SERVE_NATURAL       = "service_natural_request"
+	SERVE_NATURAL_CHAT  = "service_natural_request_chat"
 )
 
 var naturalErrMap = map[ErrorCode][2]string{
@@ -47,6 +50,14 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_TOO_MANY_WAITERS:           {RATE_LIMIT, "Too many waiters, dropping the request"},
 	E_NL_TIMEOUT:                    {RATE_LIMIT, "Timed out waiting to be processed."},
 	E_NL_REQ_FEAT_DISABLED:          {SERVE_NATURAL, "Natural language request processing is disabled."},
+	E_NL_UNRECOGNIZED_STATEMENT:     {SERVE_NATURAL, "Unrecognized natural language statement received"},
+	E_NL_MISSING_CHAT_ID:            {SERVE_NATURAL_CHAT, "missing \"natural_chatid\" parameter for further processing of the request."},
+	E_NL_NO_SUCH_CHAT:               {SERVE_NATURAL_CHAT, "no chat found with chatid: %s"},
+	E_NL_CHAT_FAIL:                  {SERVE_NATURAL_CHAT, "Error processing chat request: %s"},
+	E_NL_BEGIN_CHAT_FAIL:            {SERVE_NATURAL_CHAT, "Cannot start a new chat session in between the current session: %s"},
+	E_NL_CHAT_PROMPT_TOO_LARGE:      {SERVE_NATURAL_CHAT, "The size of the prompt for the chat has out grown the threshold of: %s < %s"},
+	E_NL_CHAT_CACHE_FULL:            {SERVE_NATURAL_CHAT, "The cache for active chat sessions is full, cannot start a new chat session at the moment"},
+	E_NL_CHAT_WRONG_USER:            {SERVE_NATURAL_CHAT, "The user associated with the chat session does not match the user making the request."},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {

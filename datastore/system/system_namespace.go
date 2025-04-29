@@ -315,6 +315,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	registerKeyspace(p, settings)
 
+	nlChat, e := NewNaturalChatsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, nlChat)
+
 	return nil
 }
 

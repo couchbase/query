@@ -60,6 +60,7 @@ const KEYSPACE_NAME_AUS = "aus"
 const KEYSPACE_NAME_AUS_SETTINGS = "aus_settings"
 const KEYSPACE_NAME_AWR = "awr"
 const KEYSPACE_NAME_SETTINGS = "settings"
+const KEYSPACE_NAME_NATURAL_CHAT = "natural_chats"
 
 const PRIMARY_INDEX_NAME = "#primary"
 
