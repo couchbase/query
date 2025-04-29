@@ -258,8 +258,11 @@ func (this *builder) restoreQueryInfo(saveQInfo *saveQueryInfo) {
 	}
 }
 
+// Initializes a new map for subqueryInfos only if not already created
 func (this *builder) makeSubqueryInfos(l int) {
-	this.subqueryInfos = make(map[*algebra.Select]map[expression.HasExpressions]*advisor.QueryInfo, l)
+	if this.subqueryInfos == nil {
+		this.subqueryInfos = make(map[*algebra.Select]map[expression.HasExpressions]*advisor.QueryInfo, l)
+	}
 }
 
 func (this *builder) startSubqIndexAdvisor() {
