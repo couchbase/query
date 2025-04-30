@@ -1773,7 +1773,7 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 		item["clientContextID"] = cId
 	}
 	if this.Statement() != "" {
-		item["statement"] = this.RedactedStatement()
+		item["statement"] = util.Redacted(this.RedactedStatement(), redact)
 	}
 	if this.Type() != "" {
 		item["statementType"] = this.Type()
@@ -1833,10 +1833,10 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 
 	if p := this.Prepared(); p != nil {
 		item["preparedName"] = p.Name()
-		item["preparedText"] = p.Text()
+		item["preparedText"] = util.Redacted(p.Text(), redact)
 	}
 	if credsString := datastore.CredsString(this.Credentials()); credsString != "" {
-		item["users"] = credsString
+		item["users"] = util.Redacted(credsString, redact)
 	}
 	if remoteAddr := this.RemoteAddr(); remoteAddr != "" {
 		item["remoteAddr"] = remoteAddr
@@ -1851,10 +1851,11 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 	if prof {
 		timings := this.GetTimings()
 		if timings != nil {
-			item["timings"] = value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings))
+			item["timings"] = util.InterfaceRedacted(value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings)),
+				redact)
 			p := this.FmtOptimizerEstimates(timings)
 			if p != nil {
-				item["optimizerEstimates"] = value.NewValue(p)
+				item["optimizerEstimates"] = value.NewValue(util.InterfaceRedacted(p, redact))
 			}
 		}
 	}
