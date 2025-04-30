@@ -118,6 +118,7 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "UPDATE STATISTICS FOR customer INDEX(cust_customerId_lastName_firstName)")
 	runStmt(qc, "UPDATE STATISTICS FOR orders INDEX(ord_customerId_ordersId)")
 	runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_ix11, st_ix21, st_ix23)")
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest(c12)")
 
 	// run with CBO
 	runMatch("case_ansijoin_cbo.json", false, true, qc, t)
@@ -126,6 +127,7 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX st_ix29 on shellTest(META().id)")
 	runStmt(qc, "CREATE INDEX st_ix30 on shellTest(c10,c11,c12,c13,c14,c15,c16) WHERE c16 != c15 AND c14 != \"XX\"")
 	runStmt(qc, "CREATE INDEX st_ix31 on shellTest(c20,c21,c22,c23,c24,c25,c26) WHERE c26 != c25 AND c24 != \"XX\"")
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest(c10,c13,c14,c15,c16,c20,c23,c24,c25,c26)")
 
 	// run with CBO
 	runMatch("case_ansijoin_cbo2.json", false, true, qc, t)
