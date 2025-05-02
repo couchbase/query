@@ -168,7 +168,8 @@ func sargFor(pred expression.Expression, index datastore.Index, key expression.E
 func SargForFilters(filters base.Filters, vpred expression.Expression, entry *indexEntry, keys datastore.IndexKeys,
 	isMissing bool, isArrays []bool, max int, underHash, doSelec bool, baseKeyspace *base.BaseKeyspace,
 	keyspaceNames map[string]string, advisorValidate bool, aliases map[string]bool,
-	exactFilters map[*base.Filter]bool, context *PrepareContext) (SargSpans, bool, SargSpans, bool, error) {
+	exactFilters, exactIncludeFilters map[*base.Filter]bool, context *PrepareContext) (
+	SargSpans, bool, SargSpans, bool, error) {
 
 	sargSpans := make([]SargSpans, max)
 	exactSpan := true
@@ -231,6 +232,17 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 				keyspaceNames, advisorValidate, aliases, context)
 			if err != nil {
 				return nil, exactSpan, nil, flExactInclude, err
+			}
+
+			for _, rs := range flIncludeSpans {
+				if rs != nil && rs.Size() > 0 {
+					valid = true
+					break
+				}
+			}
+
+			if flExactInclude && exactIncludeFilters != nil && valid {
+				exactIncludeFilters[fl] = true
 			}
 
 			exactInclude = exactInclude && flExactInclude

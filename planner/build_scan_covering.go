@@ -641,7 +641,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		if unnestScan {
 			unnestAliases = entry.unnestAliases
 		}
-		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans,
+		filter, cost, cardinality, size, frCost, err = this.getIndexFilter(index, node.Alias(), entry.spans, entry.includeSpans,
 			arrayKey, unnestAliases, covers, filterCovers, entry.cost, entry.cardinality, entry.size, entry.frCost)
 		if err != nil {
 			return nil, 0, err

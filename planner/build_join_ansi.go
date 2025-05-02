@@ -1807,8 +1807,8 @@ func markPlanFlagsSecondaryScans(baseKeyspace *base.BaseKeyspace, scans ...plan.
 		if iscan, ok := scan.(*plan.IndexScan3); ok {
 			sterm := iscan.Term()
 			if sterm != nil && sterm.Alias() == baseKeyspace.Name() {
-				err = markIndexFlags(iscan.Index(), iscan.Spans(), iscan.Filter(),
-					baseKeyspace)
+				err = markIndexFlags(iscan.Index(), iscan.Spans(), iscan.IncludeSpans(),
+					iscan.Filter(), baseKeyspace)
 				if err != nil {
 					return err
 				}
@@ -1824,10 +1824,10 @@ func markPlanFlagsSecondaryScans(baseKeyspace *base.BaseKeyspace, scans ...plan.
 	return nil
 }
 
-func markIndexFlags(index datastore.Index, spans plan.Spans2, filter expression.Expression,
+func markIndexFlags(index datastore.Index, spans, includeSpans plan.Spans2, filter expression.Expression,
 	baseKeyspace *base.BaseKeyspace) error {
 	var err error
-	var keys expression.Expressions
+	var keys, includes expression.Expressions
 	var condition expression.Expression
 
 	alias := baseKeyspace.Name()
@@ -1853,11 +1853,23 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, filter expression.
 			}
 			keys[i] = key
 		}
+		if index6, ok := index.(datastore.Index6); ok {
+			includes = index6.Include()
+			for i, include := range includes {
+				formalizer.SetIndexScope()
+				include, err = formalizer.Map(include.Copy())
+				formalizer.ClearIndexScope()
+				if err != nil {
+					return err
+				}
+				includes[i] = include
+			}
+		}
 	}
 
 	unnestAliases := baseKeyspace.GetUnnestIndexAliases(index)
 
-	optMarkIndexFilters(keys, spans, condition, filter, unnestAliases, baseKeyspace)
+	optMarkIndexFilters(keys, includes, spans, includeSpans, condition, filter, unnestAliases, baseKeyspace)
 
 	return nil
 }

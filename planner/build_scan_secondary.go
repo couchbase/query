@@ -1158,9 +1158,18 @@ func (this *builder) sargIndexes(baseKeyspace *base.BaseKeyspace, underHash bool
 			} else {
 				se.exactFilters = make(map[*base.Filter]bool, len(filters))
 			}
+			if se.exactIncludeFilters != nil {
+				// already considered before, clear the map
+				for k, _ := range se.exactIncludeFilters {
+					delete(se.exactIncludeFilters, k)
+				}
+			} else {
+				se.exactIncludeFilters = make(map[*base.Filter]bool, len(filters))
+			}
 			spans, exactSpans, includeSpans, exactIncludes, err = SargForFilters(filters, vpred,
 				se, se.idxKeys, isMissing, nil, se.maxKeys, underHash, useCBO, baseKeyspace,
-				this.keyspaceNames, advisorValidate, this.aliases, se.exactFilters, this.context)
+				this.keyspaceNames, advisorValidate, this.aliases, se.exactFilters,
+				se.exactIncludeFilters, this.context)
 			if err == nil && (spans != nil || !isOrPred || !se.HasFlag(IE_LEADINGMISSING)) {
 				// If this is OR predicate and no valid span generated, and index
 				// has leading missing, allow it to try with SargFor() below.
@@ -1686,7 +1695,9 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 							// filters marked with EXPR_DEFAULT_LIKE has its
 							// selectivity already accounted for in spans
 							if !subFltr && !fltrExpr.HasExprFlag(expression.EXPR_DEFAULT_LIKE) {
-								selec *= fl.Selec()
+								if _, ok := entry.exactIncludeFilters[fl]; !ok {
+									selec *= fl.Selec()
+								}
 							}
 						} else {
 							useCBO = false

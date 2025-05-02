@@ -1198,7 +1198,7 @@ func expandOffsetLimit(offset, limit expression.Expression, factor int) expressi
 	return nil
 }
 
-func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans SargSpans,
+func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans, sargIncludes SargSpans,
 	arrayKey *expression.All, unnestAliases []string, covers expression.Covers,
 	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64, size int64, frCost float64) (
 	expression.Expression, float64, float64, int64, float64, error) {
@@ -1213,7 +1213,7 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 
 	var filter expression.Expression
 	var selec float64
-	var spans plan.Spans2
+	var spans, includeSpans plan.Spans2
 	if sargSpans != nil {
 		// since we call this function only from covering index scans,
 		// we expect only TermSpans
@@ -1221,10 +1221,15 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 			spans = termSpans.Spans()
 		}
 	}
+	if sargIncludes != nil {
+		if termIncludes, ok := sargIncludes.(*TermSpans); ok {
+			includeSpans = termIncludes.Spans()
+		}
+	}
 
-	if this.useCBO && len(spans) > 0 {
+	if this.useCBO && (len(spans)+len(includeSpans)) > 0 {
 		// mark index filters for seletivity calculation
-		markIndexFlags(index, spans, nil, baseKeyspace)
+		markIndexFlags(index, spans, includeSpans, nil, baseKeyspace)
 	}
 
 	filter, selec, err = this.getFilter(alias, false, nil)

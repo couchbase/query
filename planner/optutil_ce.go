@@ -43,7 +43,7 @@ func optDefLikeSelec(keyspace, key string, advisorValidate bool) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 
-func optMarkIndexFilters(keys expression.Expressions, spans plan.Spans2,
+func optMarkIndexFilters(keys, includes expression.Expressions, spans, includeSpans plan.Spans2,
 	condition, filter expression.Expression, unnestAliases []string, baseKeyspace *base.BaseKeyspace) {
 	// no-op
 }

@@ -87,6 +87,7 @@ type indexEntry struct {
 	flags                uint32
 	unnestAliases        []string
 	exactFilters         map[*base.Filter]bool
+	exactIncludeFilters  map[*base.Filter]bool
 	indexFilters         expression.Expressions
 	orderExprs           expression.Expressions
 	partialSortTermCount int
@@ -230,6 +231,12 @@ func (this *indexEntry) Copy() *indexEntry {
 		rv.exactFilters = make(map[*base.Filter]bool, len(this.exactFilters))
 		for k, v := range this.exactFilters {
 			rv.exactFilters[k] = v
+		}
+	}
+	if len(this.exactIncludeFilters) > 0 {
+		rv.exactIncludeFilters = make(map[*base.Filter]bool, len(this.exactIncludeFilters))
+		for k, v := range this.exactIncludeFilters {
+			rv.exactIncludeFilters[k] = v
 		}
 	}
 
