@@ -63,6 +63,8 @@ const (
 	N1QL_NO_DEF_SELEC                                           // 0x0004000000
 )
 
+const _NOT_APPLICABLE = "N/A"
+
 // Care should be taken that the descriptions accept "disabled" being appended when the bit is set (and "enabled" when not).
 // Don't include retired values - they will just be ignored when describing the feature controls setting.
 var _N1QL_Features = map[uint64]string{
@@ -84,11 +86,11 @@ var _N1QL_Features = map[uint64]string{
 	N1QL_FULL_GET:                            "Only fetch full documents",
 	N1QL_RANDOM_SCAN:                         "Random scans",
 	N1QL_NEW_MERGE:                           "New MERGE",
-	N1QL_NO_DATE_WARNINGS:                    "Date warning suppression",
-	N1QL_USE_SYS_FREE_MEM:                    "Allow system free memory use",
-	N1QL_UNRESTRICTED_ADMISSION_AND_ACTIVITY: "Unrestricted admission and concurrent activity",
-	N1QL_IGNORE_IDXR_META:                    "Ignore indexer metadata changes for prepared statements",
-	N1QL_NATURAL_LANG_REQ:                    "Natural Language Request",
+	N1QL_NO_DATE_WARNINGS:                    _NOT_APPLICABLE,
+	N1QL_USE_SYS_FREE_MEM:                    _NOT_APPLICABLE,
+	N1QL_UNRESTRICTED_ADMISSION_AND_ACTIVITY: _NOT_APPLICABLE,
+	N1QL_IGNORE_IDXR_META:                    _NOT_APPLICABLE,
+	N1QL_NATURAL_LANG_REQ:                    _NOT_APPLICABLE,
 	N1QL_FULL_SPAN_FANOUT:                    "Spans Fanout to 8192",
 	N1QL_NO_DEF_SELEC:                        "No use of default selectivity without histogram",
 }
@@ -128,7 +130,7 @@ func DisabledFeatures(control uint64) []string {
 	disabled := make([]string, 0)
 
 	for flag, feat := range _N1QL_Features {
-		if (control & flag) != 0 { // feature is disabled
+		if (control&flag) != 0 && feat != _NOT_APPLICABLE { // feature is disabled
 			disabled = append(disabled, fmt.Sprintf("%s (%#x)", feat, flag))
 		}
 	}
@@ -162,11 +164,15 @@ func DescribeChangedFeatures(prev uint64, new uint64) string {
 		old := prev & flag
 
 		if old != (new & flag) { // the feature bit has changed
-			changes.WriteString(fmt.Sprintf(", %s (%#x) ", feat, flag))
-			if old != 0 { // the feature bit was 1 i.e the feature used to be DISABLED hence in the new bitset it is now ENABLED
-				changes.WriteString("enabled")
+			if feat == _NOT_APPLICABLE {
+				changes.WriteString(fmt.Sprintf(", bit changed has no effect (%#x)", flag))
 			} else {
-				changes.WriteString("disabled")
+				changes.WriteString(fmt.Sprintf(", %s (%#x) ", feat, flag))
+				if old != 0 { // the feature bit was 1 i.e the feature used to be DISABLED hence in the new bitset it is now ENABLED
+					changes.WriteString("enabled")
+				} else {
+					changes.WriteString("disabled")
+				}
 			}
 		}
 	}
