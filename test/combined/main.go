@@ -41,6 +41,8 @@ var Iterations uint64 = math.MaxUint64
 
 var Notifications map[string]interface{}
 var LastNotification = time.Now()
+var lastFailure time.Time
+var failureCount int
 
 var DataFiles []string
 
@@ -440,7 +442,7 @@ func reportRunFailure(iter uint64, args ...interface{}) {
 		logging.Errorf("Failure when running cbqueryreportgen: %v", err)
 	}
 
-	content := make([]interface{}, len(args)+1, len(args)+2)
+	content := make([]interface{}, len(args)+1, len(args)+3)
 	content[0] = fmt.Sprintf("Iteration %d failed.", iter)
 	copy(content[1:], args)
 
@@ -457,7 +459,28 @@ func reportRunFailure(iter uint64, args ...interface{}) {
 		}
 	}
 
+	// To prevent spamming of test failures, exit if there have been more than 10 failures have occurred too frequently
+	exit := false
+	if !lastFailure.IsZero() && time.Since(lastFailure) < time.Hour {
+		failureCount++
+		lastFailure = time.Now()
+
+		if failureCount >= 10 {
+			content = append(content, fmt.Sprintf("Combined test exiting after %d failures. Please check the logs and analyze.",
+				failureCount))
+			exit = true
+		}
+	} else {
+		failureCount = 1
+		lastFailure = time.Now()
+	}
+
 	notify(content...)
+
+	if exit {
+		logging.Fatalf("Combined test exiting after %d failures.", failureCount)
+		os.Exit(1)
+	}
 }
 
 // runs the initial preparatory SQL statements (if any)
