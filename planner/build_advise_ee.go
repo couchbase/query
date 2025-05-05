@@ -91,7 +91,8 @@ func (this *builder) advise(considerCBO bool, queryInfos map[expression.HasExpre
 	}
 
 	coverIdxMap := advisor.AdviseIdxs(queryInfos,
-		extractExistAndDeferredIdxes(queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Expressions()), context)
+		extractExistAndDeferredIdxes(queryInfos, this.context.IndexApiVersion()), doDNF(stmt.Expressions()),
+		context, this.context)
 
 	this.setAdvisePhase(_VALIDATE)
 	//There are covering indexes to be validated:
