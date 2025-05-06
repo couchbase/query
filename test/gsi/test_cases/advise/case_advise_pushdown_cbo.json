@@ -1,0 +1,170 @@
+[
+  {
+    "statements": "advise select sum(d) from shellTest where a = 10 and b > 20 group by b",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_b_d ON `shellTest`(`a`,`b`,`d`)",
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`a`, `b`)"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`a`, `b`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select sum(d) from shellTest where a = 10 and b > 20 group by b"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where test_id = \"advise\" order by c11 DESC limit 2",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "ORDER pushdown, LIMIT pushdown",
+                  "index_statement": "CREATE INDEX adv_c11DESC_test_id ON `shellTest`(`c11` DESC INCLUDE MISSING) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11` INCLUDE MISSING) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c11`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 from shellTest where test_id = \"advise\" order by c11 DESC limit 2"
+      }
+    ]
+  },
+  {
+    "statements": "advise select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_c_b_d ON `shellTest`(`a`,`c`,`b`,`d`)",
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`a`, `b`, `c`)"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a_b_c ON `shellTest`(`a`,`b`,`c`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`a`, `b`, `c`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select sum(d) from shellTest where a = 10 and b < 10 and c is not null group by c"
+      }
+    ]
+  },
+  {
+    "statements": "advise select avg(c), sum(DISTINCT d) from shellTest where a = 10 and b < 10 group by b",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_a_b_d_c ON `shellTest`(`a`,`b`,`d`,`c`)",
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`a`, `b`)"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a_b ON `shellTest`(`a`,`b`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`a`, `b`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select avg(c), sum(DISTINCT d) from shellTest where a = 10 and b < 10 group by b"
+      }
+    ]
+  },
+  {
+    "statements": "advise select name, pro_account from shellTest where country=$1 and name is not null order by country desc",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "ORDER pushdown",
+                  "index_statement": "CREATE INDEX adv_countryDESC_name_pro_account ON `shellTest`(`country` DESC,`name`,`pro_account`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_country_name ON `shellTest`(`country`,`name`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`country`, `name`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select name, pro_account from shellTest where country=$1 and name is not null order by country desc"
+      }
+    ]
+  }
+]

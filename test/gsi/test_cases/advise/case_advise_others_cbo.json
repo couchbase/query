@@ -1,0 +1,134 @@
+[
+  {
+    "statements": "advise delete from shellTest where c22 in [22, 32] and type like \"%igh%\" and c12 is not missing",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ]
+            }
+          }
+        },
+        "query": "delete from shellTest where c22 in [22, 32] and type like \"%igh%\" and c12 is not missing"
+      }
+    ]
+  },
+  {
+    "statements": "advise merge into shellTest a2 using shellTest a1 on a1.c12=a2.c22 and a1.test_id = \"advise\" when matched then update set a2.type = a1.type",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                  "keyspace_alias": "shellTest_a1",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`test_id`)"
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c22 ON `shellTest`(`c22`)",
+                  "keyspace_alias": "shellTest_a2",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c22`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "merge into shellTest a2 using shellTest a1 on a1.c12=a2.c22 and a1.test_id = \"advise\" when matched then update set a2.type = a1.type"
+      }
+    ]
+  },
+  {
+    "statements": "advise update shellTest set type=\"left\" where length(a21) <= 3 and c21 = 3 and c22 > 30",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c21_length_a21_c22 ON `shellTest`(`c21`,length(`a21`),`c22`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c21`, length(`a21`), `c22`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "update shellTest set type=\"left\" where length(a21) <= 3 and c21 = 3 and c22 > 30"
+      }
+    ]
+  },
+  {
+    "statements": "advise MERGE INTO shellTest t USING [ {\"id\":\"21728\", \"vacancy\": true} , {\"id\":\"21730\", \"vacancy\": true} ] s ON t.id = \"hotel_\" || s.id WHEN MATCHED THEN UPDATE SET t.old_vacancy = t.vacancy, t.vacancy = s.vacancy RETURNING meta(t).id, t.old_vacancy, t.vacancy",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_id ON `shellTest`(`id`)",
+                  "keyspace_alias": "shellTest_t",
+                  "recommending_rule": "Index keys follow order of predicate types: 9. non-static join predicate."
+                }
+              ]
+            }
+          }
+        },
+        "query": "MERGE INTO shellTest t USING [ {\"id\":\"21728\", \"vacancy\": true} , {\"id\":\"21730\", \"vacancy\": true} ] s ON t.id = \"hotel_\" || s.id WHEN MATCHED THEN UPDATE SET t.old_vacancy = t.vacancy, t.vacancy = s.vacancy RETURNING meta(t).id, t.old_vacancy, t.vacancy"
+      }
+    ]
+  },
+  {
+    "statements": "ADVISE MERGE INTO shellTest t USING [ {\"id\":\"21728\", \"vacancy\": true} , {\"id\":\"21730\", \"vacancy\": true} ] s ON t.id || 123 = s.id WHEN MATCHED THEN UPDATE SET t.old_vacancy = t.vacancy, t.vacancy = s.vacancy RETURNING meta(t).id",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_id_concat_123 ON `shellTest`(`id`||123)",
+                  "keyspace_alias": "shellTest_t",
+                  "recommending_rule": "Index keys follow order of predicate types: 9. non-static join predicate."
+                }
+              ]
+            }
+          }
+        },
+        "query": "MERGE INTO shellTest t USING [ {\"id\":\"21728\", \"vacancy\": true} , {\"id\":\"21730\", \"vacancy\": true} ] s ON t.id || 123 = s.id WHEN MATCHED THEN UPDATE SET t.old_vacancy = t.vacancy, t.vacancy = s.vacancy RETURNING meta(t).id"
+      }
+    ]
+  }
+]

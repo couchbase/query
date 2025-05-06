@@ -300,6 +300,7 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 			//   - cardinality
 			//   - sumKeys
 			//   - minKeys
+			//   - pushdown property
 			c_cost := ce.idxEntry.cost
 			c_cardinality := ce.idxEntry.cardinality
 			c_size := ce.idxEntry.size
@@ -434,6 +435,13 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 				i_minKeys += centry.idxEntry.includeKeys
 			}
 			if c_minKeys > i_minKeys {
+				centry = ce
+				i_cost = c_cost
+				i_cardinality = c_cardinality
+				i_size = c_size
+				i_pushdown = c_pushdown
+			}
+			if c_pushdown > i_pushdown {
 				centry = ce
 				i_cost = c_cost
 				i_cardinality = c_cardinality
