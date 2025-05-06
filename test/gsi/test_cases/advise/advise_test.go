@@ -38,6 +38,18 @@ func TestAdvise(t *testing.T) {
 	runMatch("case_advise_lkmissing.json", false, false, qc, t)
 	runMatch("case_advise_bugs.json", false, false, qc, t)
 
+	// cost-based advise
+
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest(c11, c12, c21, c22, DISTINCT a11, DISTINCT a21, DISTINCT a22, type, test_id)")
+
+	runMatch("case_advise_select_cbo.json", false, false, qc, t)
+	runMatch("case_advise_others_cbo.json", false, false, qc, t)
+	runMatch("case_advise_pushdown_cbo.json", false, false, qc, t)
+	runMatch("case_advise_unnest_cbo.json", false, false, qc, t)
+	runMatch("case_advise_bugs_cbo.json", false, false, qc, t)
+
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest DELETE ALL")
+
 	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
 	rr := runStmt(qc, "delete from shellTest where test_id IN [\"advise\"]")
 	if rr.Err != nil {

@@ -1,0 +1,229 @@
+[
+  {
+    "statements": "advise select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_test_id ON `shellTest`(ALL `a11`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a1",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(ALL `a11`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select * from shellTest a1 unnest a1.a11 as a2 where a1.test_id = \"advise\" and a2 < 3"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT lang FROM shellTest s UNNEST SPLIT(s.LanguageWorkedWith, ';') lang WHERE s.PurchaseWhat = 'NA' AND lang != 'NA' group by lang",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_ALL_split_s_LanguageWorkedWith_PurchaseWhat ON `shellTest`(ALL split((`LanguageWorkedWith`), ';'),`PurchaseWhat`)",
+                  "keyspace_alias": "shellTest_s",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(ALL split((`LanguageWorkedWith`), \";\"), `PurchaseWhat`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT lang FROM shellTest s UNNEST SPLIT(s.LanguageWorkedWith, ';') lang WHERE s.PurchaseWhat = 'NA' AND lang != 'NA' group by lang"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE y.flight IS NOT NULL",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "FULL GROUPBY & AGGREGATES pushdown",
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_special_flights_flight ON `shellTest`(ALL ARRAY (ALL ARRAY `y`.`flight` FOR y IN `x`.`special_flights` END) FOR x IN `schedule` END)",
+                  "keyspace_alias": "shellTest"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE y.flight IS NOT NULL"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE x.flight IS NOT NULL",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_schedule_flight ON `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(ALL ARRAY `x`.`flight` FOR x IN `schedule` END)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT count(*) FROM shellTest UNNEST schedule AS x UNNEST x.special_flights AS y WHERE x.flight IS NOT NULL"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT REVERSE (d.`Number`) FROM shellTest st UNNEST st.`a11`.`b11`.`c11` d WHERE REVERSE (d.`Number`) LIKE $pfx and lower(st.id) < 10",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b11_c11_reverse_d_Number_lower_id ON `shellTest`(ALL ARRAY reverse((`d`.`Number`)) FOR d IN ((`a11`).`b11`).`c11` END,lower(`id`))",
+                  "keyspace_alias": "shellTest_st"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT REVERSE (d.`Number`) FROM shellTest st UNNEST st.`a11`.`b11`.`c11` d WHERE REVERSE (d.`Number`) LIKE $pfx and lower(st.id) < 10"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT e FROM shellTest st UNNEST st.`a11`. `b12`.`c13` e WHERE e LIKE $pfx GROUP BY e HAVING COUNT(meta(st).id) > 20",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_a11_b12_c13 ON `shellTest`(ALL ((`a11`).`b12`).`c13`)",
+                  "keyspace_alias": "shellTest_st"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT e FROM shellTest st UNNEST st.`a11`. `b12`.`c13` e WHERE e LIKE $pfx GROUP BY e HAVING COUNT(meta(st).id) > 20"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest st unnest address addr where st.id < 10",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_address_id ON `shellTest`(ALL `address`,`id`)",
+                  "keyspace_alias": "shellTest_st",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(ALL `address`, `id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select * from shellTest st unnest address addr where st.id < 10"
+      }
+    ]
+  },
+  {
+    "statements": "advise SELECT t.type,branch.Id FROM shellTest AS t UNNEST t.branches AS branch WHERE t.type is valued AND branch.Id > (t.cur-2)",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_branches_Id_type_cur_sub_2 ON `shellTest`(ALL ARRAY `branch`.`Id` FOR branch IN `branches` END,`type`,`cur`-2)",
+                  "keyspace_alias": "shellTest_t"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT t.type,branch.Id FROM shellTest AS t UNNEST t.branches AS branch WHERE t.type is valued AND branch.Id > (t.cur-2)"
+      }
+    ]
+  },
+  {
+    "statements": "ADVISE SELECT META(t).id , pg1.description, pg1.num, pg1.name FROM shellTest AS t UNNEST t.chapters AS ch1 UNNEST ch1.pages AS pg1 WHERE t.type = \"book\" AND ch1.num = 1 AND pg1.name LIKE \"page%\" AND t.isbn >= 1",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ALL_chapters_pages_num_name_isbn_type ON `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`ch1`.`num`,`pg1`.`name`) FOR pg1 IN `ch1`.`pages` END) FOR ch1 IN `chapters` END,`isbn`) WHERE `type` = 'book'",
+                  "keyspace_alias": "shellTest_t",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`ch1`.`num`,`pg1`.`name`) FOR pg1 IN `ch1`.`pages` END) FOR ch1 IN `chapters` END, `isbn`, `type`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "SELECT META(t).id , pg1.description, pg1.num, pg1.name FROM shellTest AS t UNNEST t.chapters AS ch1 UNNEST ch1.pages AS pg1 WHERE t.type = \"book\" AND ch1.num = 1 AND pg1.name LIKE \"page%\" AND t.isbn >= 1;"
+      }
+    ]
+  }
+]

@@ -1,0 +1,725 @@
+[
+  {
+    "statements": "advise select * from shellTest where test_id = \"advise\" limit 2",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+              "recommended_indexes": {
+                "indexes": [
+                  {
+                    "index_property":"LIMIT pushdown",
+                    "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
+                    "keyspace_alias": "shellTest"
+                  }
+                ]
+              }
+            }
+        },
+        "query": "select * from shellTest where test_id = \"advise\" limit 2"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where test_id = \"advise\" and c11 < 2",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c11`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select * from shellTest where test_id = \"advise\" and c11 < 2"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where c12 between 10 and 40 and test_id = \"advise\"",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c12`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select * from shellTest where c12 between 10 and 40 and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where (c11 in [1, 2, 3, 4] or c12 between 20 and 30) and test_id = \"advise\"",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+              "recommended_indexes": {
+                "covering_indexes": [
+                  {
+                    "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
+                    "keyspace_alias": "shellTest"
+                  }
+                ]
+              }
+            }
+        },
+        "query": "select c11 from shellTest where (c11 in [1, 2, 3, 4] or c12 between 20 and 30) and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a1",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c12`, `test_id`)"
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a2",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c21`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select * from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40"
+      }
+    ]
+  },
+  {
+    "statements": "advise select a1.c12, a2.c22 from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c21_test_id_c22 ON `shellTest`(`c21`,`c22`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a2"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c12_test_id ON `shellTest`(`c12`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a1",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c12`, `test_id`)"
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a2",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c21`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select a1.c12, a2.c22 from shellTest a1 join shellTest a2 on a1.c11=a2.c21 and a2.test_id = \"advise\" where a1.test_id = \"advise\" and a1.c12 < 40"
+      }
+    ]
+  },
+  {
+    "statements": "advise select s1.*, s2.c22 from shellTest s1 join shellTest s2 on ANY v in s1.a11 SATISFIES v = s2.c22 END and length(s2.a22) < 5 and s2.test_id = \"advise\" and s1.id is not null",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_length_a22_test_id_c22 ON `shellTest`(length(`a22`),`c22`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_s2"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_id ON `shellTest`(`id`)",
+                  "keyspace_alias": "shellTest_s1",
+                  "recommending_rule": "Index keys follow order of predicate types: 7. not null/not missing/valued."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_length_a22_test_id ON `shellTest`(length(`a22`)) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_s2",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select s1.*, s2.c22 from shellTest s1 join shellTest s2 on ANY v in s1.a11 SATISFIES v = s2.c22 END and length(s2.a22) < 5 and s2.test_id = \"advise\" and s1.id is not null"
+      }
+    ]
+  },
+  {
+    "statements": "advise select * from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_a22_test_id ON `shellTest`(DISTINCT ARRAY [`x`, `y`] FOR `x` IN `a21`, `y` IN `a22` END) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select * from shellTest where test_id = \"advise\" and any x in a21, y in a22 satisfies [x, y] < [3, 40] END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where test_id = \"advise\" limit 2",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_property": "LIMIT pushdown",
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11` INCLUDE MISSING) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 from shellTest where test_id = \"advise\" limit 2"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c12 from shellTest where c11 = 4 and c12 between 10 and 40",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c12 from shellTest where c11 = 4 and c12 between 10 and 40"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 + c12 from shellTest where test_id = \"advise\" and c21 > 1",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c21_test_id_c11_add_c12 ON `shellTest`(`c21`,`c11`+`c12`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c21_test_id ON `shellTest`(`c21`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c21`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 + c12 from shellTest where test_id = \"advise\" and c21 > 1"
+      }
+    ]
+  },
+  {
+    "statements": "advise select test_id, length(c22) from shellTest where (c11 > 10 or c11 < 5) and test_id = \"advise\"",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_test_id_length_c22 ON `shellTest`(`c11`,length(`c22`)) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c11`, `test_id`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select test_id, length(c22) from shellTest where (c11 > 10 or c11 < 5) and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select st.a11, score from shellTest st let score = IFMISSING(st.c11.rob,0) + IFMISSING(st.c12.matt,0) + IFMISSING(p.c21.emma,0) + IFMISSING(p.c22.ali,0) where score > 0 and test_id = \"advise\" order by score asc LIMIT 50",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifmissing_p1688208138 ON `shellTest`(ifmissing((`c11`.`rob`), 0)+ifmissing((`c12`.`matt`), 0)+ifmissing(((`p`.`c21`).`emma`), 0)+ifmissing(((`p`.`c22`).`ali`), 0),`a11`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_st"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_ifmissing_c11_rob_0_add_ifmissing_c12_matt_0_add_ifmissing_p123484991 ON `shellTest`(ifmissing((`c11`.`rob`), 0)+ifmissing((`c12`.`matt`), 0)+ifmissing(((`p`.`c21`).`emma`), 0)+ifmissing(((`p`.`c22`).`ali`), 0)) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_st",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than, 10. flavor for partial index."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select st.a11, score from shellTest st let score = IFMISSING(st.c11.rob,0) + IFMISSING(st.c12.matt,0) + IFMISSING(p.c21.emma,0) + IFMISSING(p.c22.ali,0) where score > 0 and test_id = \"advise\" order by score asc LIMIT 50"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21, y in a22 satisfies [x, y] < [3, 40] END and c22 = 20",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22_type ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR `x` IN `a21`, `y` IN `a22` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c22_DISTINCT_a21_a22 ON `shellTest`(`c22`,DISTINCT ARRAY [`x`, `y`] FOR `x` IN `a21`, `y` IN `a22` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing, 5. less than/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select type from shellTest where any x in a21, y in a22 satisfies [x, y] < [3, 40] END and c22 = 20"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\"",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where a11 < 10 or (a11 > 11 and c11 in [10, 20]) or c2 > 30",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a11_c11 ON `shellTest`(`a11`,`c11`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (5. less than/greater than), 3. in."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c2 ON `shellTest`(`c2`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c2`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 from shellTest where a11 < 10 or (a11 > 11 and c11 in [10, 20]) or c2 > 30"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 or x.id > 20 END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.id > 20 END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+                "recommended_indexes": {
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` INCLUDE MISSING)",
+                            "keyspace_alias": "shellTest",
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
+                        }
+                    ]
+                }
+          }
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 AND x.name IS NOT NULL END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name_type ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                }
+               ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 AND x.name IS NOT NULL END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies (any y in x.fields satisfies y.id < 10 and length(y.name) = 20 END) END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                 {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id_length_name_type ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(length((`y`.`name`)),`y`.`id`) FOR `y` IN `x`.`fields` END) FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                 }
+               ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_fields_id_length_name ON `shellTest`(DISTINCT ARRAY (DISTINCT ARRAY FLATTEN_KEYS(length((`y`.`name`)),`y`.`id`) FOR `y` IN `x`.`fields` END) FOR `x` IN `a21` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 2. equality/null/missing."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select type from shellTest where any x in a21 satisfies (any y in x.fields satisfies y.id < 10 and length(y.name) = 20 END) END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\"",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_c12_a11_c11_c22_test_id ON `shellTest`(`c12`,`a11`,`c11`,`c22`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 from shellTest where a11 is not null and ((c11 in [1, 2, 3, 4] and c12 < 10) or (c12 <= 30 and c22 > 50)) and test_id = \"advise\""
+      }
+    ]
+  },
+  {
+    "statements": "advise select c11 from shellTest where a11 < 10 or (a11 > 11 and c11 in [10, 20]) or c2 > 30",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_a11_c11 ON `shellTest`(`a11`,`c11`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 1. Common leading key for disjunction (5. less than/greater than), 3. in."
+                },
+                {
+                  "index_statement": "CREATE INDEX adv_c2 ON `shellTest`(`c2`)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow cost-based order.",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c2`)"
+                }
+              ]
+            }
+          }
+        },
+        "query": "select c11 from shellTest where a11 < 10 or (a11 > 11 and c11 in [10, 20]) or c2 > 30"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 or x.id > 20 END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_type ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                }
+              ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id ON `shellTest`(DISTINCT ARRAY `x`.`id` FOR `x` IN `a21` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.id > 20 END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+                "recommended_indexes": {
+                    "indexes": [
+                        {
+                            "index_statement": "CREATE INDEX adv_type ON `shellTest`(`type` INCLUDE MISSING)",
+                            "keyspace_alias": "shellTest",
+                            "recommending_rule": "Leading index key INCLUDE MISSING."
+                        }
+                    ]
+                }
+          }
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 or x.name is not null END"
+      }
+    ]
+  },
+  {
+    "statements": "advise select type from shellTest where any x in a21 satisfies x.id < 10 AND x.name IS NOT NULL END",
+    "advise": true,
+    "queryParams": {"use_cbo": true},
+    "results": [
+      {
+        "#operator": "Advise",
+        "advice": {
+          "#operator": "IndexAdvice",
+          "adviseinfo": {
+            "recommended_indexes": {
+              "covering_indexes": [
+                 {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name_type ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END,`type`)",
+                  "keyspace_alias": "shellTest"
+                 }
+               ],
+              "indexes": [
+                {
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a21_id_name ON `shellTest`(DISTINCT ARRAY FLATTEN_KEYS(`x`.`id`,`x`.`name`) FOR `x` IN `a21` END)",
+                  "keyspace_alias": "shellTest",
+                  "recommending_rule": "Index keys follow order of predicate types: 5. less than/greater than."
+                }
+              ]
+            }
+          }
+        },
+        "query": "select type from shellTest where any x in a21 satisfies x.id < 10 AND x.name IS NOT NULL END"
+      }
+    ]
+  }
+]
+
