@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -178,16 +179,19 @@ func PrivilegesFromPath(priv auth.Privilege, path *Path) (*auth.Privileges, erro
 /*
 Representation as a N1QL string.
 */
-func (this *KeyspaceTerm) String() (s string) {
+func (this *KeyspaceTerm) String() string {
+	var sb strings.Builder
 
 	if this.path != nil {
-		s = this.path.ProtectedString()
+		sb.WriteString(this.path.ProtectedString())
 	} else {
-		s = this.fromExpr.String()
+		sb.WriteString(this.fromExpr.String())
 	}
 
 	if this.as != "" {
-		s += " as `" + this.as + "`"
+		sb.WriteString(" as `")
+		sb.WriteString(this.as)
+		sb.WriteString("`")
 	}
 
 	v := ""
@@ -196,23 +200,33 @@ func (this *KeyspaceTerm) String() (s string) {
 	}
 	if this.joinKeys != nil {
 		if this.IsIndexJoinNest() {
-			s += " on key " + v + this.joinKeys.String()
+			sb.WriteString(" on key ")
+			sb.WriteString(v)
+			sb.WriteString(this.joinKeys.String())
 		} else {
-			s += " on keys " + v + this.joinKeys.String()
+			sb.WriteString(" on keys ")
+			sb.WriteString(v)
+			sb.WriteString(this.joinKeys.String())
 		}
 	} else {
-		useStr := this.joinHint.String()
+		var sbStr strings.Builder
+		sbStr.WriteString(this.joinHint.String())
 		if this.keys != nil {
-			useStr += " keys " + v + this.keys.String()
+			sbStr.WriteString(" keys ")
+			sbStr.WriteString(v)
+			sbStr.WriteString(this.keys.String())
 		} else if len(this.indexes) > 0 {
-			useStr += " index (" + this.indexes.String() + ")"
+			sbStr.WriteString(" index (")
+			sbStr.WriteString(this.indexes.String())
+			sbStr.WriteString(")")
 		}
-		if len(useStr) > 0 {
-			s += " use" + useStr
+		if sbStr.Len() > 0 {
+			sb.WriteString(" use")
+			sb.WriteString(sbStr.String())
 		}
 	}
 
-	return s
+	return sb.String()
 }
 
 /*

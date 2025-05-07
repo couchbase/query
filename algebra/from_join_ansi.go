@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -103,24 +104,22 @@ func (this *AnsiJoin) Privileges() (*auth.Privileges, errors.Error) {
 Representation as a N1QL string.
 */
 func (this *AnsiJoin) String() string {
-	s := this.left.String()
-
+	var buf strings.Builder
+	buf.WriteString(this.left.String())
 	commaJoin := this.IsCommaJoin()
 	if commaJoin {
-		s += ", "
+		buf.WriteString(", ")
 	} else if this.outer {
-		s += " left outer join "
+		buf.WriteString(" left outer join ")
 	} else {
-		s += " join "
+		buf.WriteString(" join ")
 	}
-
-	s += this.right.String()
+	buf.WriteString(this.right.String())
 	if !commaJoin {
-		s += " on "
-		s += this.onclause.String()
+		buf.WriteString(" on ")
+		buf.WriteString(this.onclause.String())
 	}
-
-	return s
+	return buf.String()
 }
 
 /*

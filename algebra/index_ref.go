@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/datastore"
 )
 
@@ -32,16 +34,19 @@ func (this *IndexRef) Using() datastore.IndexType {
 }
 
 func (this IndexRefs) String() string {
-	s := ""
+	var buf strings.Builder
 	for _, i := range this {
 		if i.name != "" {
-			s += " " + i.name
+			buf.WriteString(" ")
+			buf.WriteString(i.name)
 		}
 		if i.using == datastore.GSI || i.using == datastore.FTS {
-			s += " using " + string(i.using)
+			buf.WriteString(" using ")
+			buf.WriteString(string(i.using))
 		}
-		s += ","
+		buf.WriteString(",")
 	}
+	s := buf.String()
 	if len(s) > 0 {
 		s = s[1:]
 	}

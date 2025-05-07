@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -91,43 +93,54 @@ func (this *Delete) Type() string {
 }
 
 func (this *Delete) String() string {
-	s := "delete "
+	var buf strings.Builder
+	buf.WriteString("delete ")
 	if this.optimHints != nil {
-		s += this.optimHints.String() + " "
+		buf.WriteString(this.optimHints.String())
+		buf.WriteString(" ")
 	}
-	s += "from "
-	s += this.keyspace.Path().ProtectedString()
+	buf.WriteString("from ")
+	buf.WriteString(this.keyspace.Path().ProtectedString())
 	alias := this.keyspace.Alias()
 	if len(alias) > 0 {
-		s += " as " + alias
+		buf.WriteString(" as ")
+		buf.WriteString(alias)
 	}
 	if this.keys != nil {
 		if this.validateKeys {
-			s += " use keys validate " + this.keys.String()
+			buf.WriteString(" use keys validate ")
+			buf.WriteString(this.keys.String())
 		} else {
-			s += " use keys " + this.keys.String()
+			buf.WriteString(" use keys ")
+			buf.WriteString(this.keys.String())
 		}
 	}
 	if this.indexes != nil {
-		s += " use index(" + this.indexes.String() + ")"
+		buf.WriteString(" use index(")
+		buf.WriteString(this.indexes.String())
+		buf.WriteString(")")
 	}
-
 	if this.let != nil {
-		s += " let " + stringBindings(this.let)
+		buf.WriteString(" let ")
+		buf.WriteString(stringBindings(this.let))
 	}
 	if this.where != nil {
-		s += " where " + this.where.String()
+		buf.WriteString(" where ")
+		buf.WriteString(this.where.String())
 	}
 	if this.offset != nil {
-		s += " offset " + this.offset.String()
+		buf.WriteString(" offset ")
+		buf.WriteString(this.offset.String())
 	}
 	if this.limit != nil {
-		s += " limit " + this.limit.String()
+		buf.WriteString(" limit ")
+		buf.WriteString(this.limit.String())
 	}
 	if this.returning != nil {
-		s += " returning " + this.returning.String()
+		buf.WriteString(" returning ")
+		buf.WriteString(this.returning.String())
 	}
-	return s
+	return buf.String()
 }
 
 /*

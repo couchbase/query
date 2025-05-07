@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -321,34 +323,51 @@ func (this *Upsert) Type() string {
 }
 
 func (this *Upsert) String() string {
-	s := "upsert into "
-	s += this.keyspace.Path().ProtectedString()
+	var buf strings.Builder
+	buf.WriteString("upsert into ")
+	buf.WriteString(this.keyspace.Path().ProtectedString())
 	alias := this.keyspace.Alias()
 	if len(alias) > 0 {
-		s += " as `" + alias + "`"
+		buf.WriteString(" as `")
+		buf.WriteString(alias)
+		buf.WriteString("`")
 	}
 	if this.key != nil && this.value != nil {
-		s += " (key " + this.key.String() + ", value " + this.value.String()
+		buf.WriteString(" (key ")
+		buf.WriteString(this.key.String())
+		buf.WriteString(", value ")
+		buf.WriteString(this.value.String())
 		if this.options != nil {
-			s += ", options " + this.options.String()
+			buf.WriteString(", options ")
+			buf.WriteString(this.options.String())
 		}
-		s += ")"
+		buf.WriteString(")")
 	}
 	if this.values != nil && len(this.values) > 0 {
-		s += " values"
-		for _, v := range this.values {
-			s += "(" + v.key.String() + "," + v.value.String()
+		buf.WriteString(" values")
+		var lastValuesElem bool
+		valuesLen := len(this.values)
+		for valuesIdx, v := range this.values {
+			lastValuesElem = valuesIdx == valuesLen-1
+			buf.WriteString("(")
+			buf.WriteString(v.key.String())
+			buf.WriteString(",")
+			buf.WriteString(v.value.String())
 			if v.options != nil {
-				s += "," + v.options.String()
+				buf.WriteString(",")
+				buf.WriteString(v.options.String())
 			}
-			s += "),"
+			buf.WriteString(")")
+			if !lastValuesElem {
+				buf.WriteString(",")
+			}
 		}
-		s = s[:len(s)-1]
 	} else if this.query != nil {
-		s += this.query.String()
+		buf.WriteString(this.query.String())
 	}
 	if this.returning != nil {
-		s += " returning " + this.returning.String()
+		buf.WriteString(" returning ")
+		buf.WriteString(this.returning.String())
 	}
-	return s
+	return buf.String()
 }

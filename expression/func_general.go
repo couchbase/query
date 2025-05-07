@@ -343,12 +343,15 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 	res := make([]interface{}, 0, 32)
 	args := make(value.Values, 0, 1)
 
-	stmt := "SELECT DISTINCT RAW name FROM system:keyspaces WHERE `namespace` = 'default' AND `bucket` IS NOT VALUED "
+	var buf strings.Builder
+	buf.Grow(128) // Pre-allocate buffer for the initial query
+	buf.WriteString("SELECT DISTINCT RAW name FROM system:keyspaces WHERE `namespace` = 'default' AND `bucket` IS NOT VALUED ")
 	if filter != nil && filter.ToString() != "" {
-		stmt += " AND name LIKE ?"
+		buf.WriteString(" AND name LIKE ?")
 		args = append(args, filter)
 	}
-	stmt += " ORDER BY name"
+	buf.WriteString(" ORDER BY name")
+	stmt := buf.String()
 	v, _, err := context.EvaluateStatement(stmt, nil, args, false, true, false, "")
 	if err != nil {
 		return value.MISSING_VALUE, err
@@ -397,8 +400,10 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, errors.NewWarning("Flags exclude all data.")
 	}
 
+	var sb, bucketInfoBuf strings.Builder
 	for i := range buckets {
-		var sb strings.Builder
+		bucketInfoBuf.Reset()
+		bucketInfoBuf.Grow(256) // Pre-allocate buffer for bucket info
 		bucket := buckets[i].(string)
 		posArg := value.Values{value.NewValue(bucket)}
 
@@ -424,7 +429,9 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			if err != nil {
 				return value.MISSING_VALUE, err
 			}
-			s := "CREATE BUCKET `" + bucket + "`"
+			bucketInfoBuf.WriteString("CREATE BUCKET `")
+			bucketInfoBuf.WriteString(bucket)
+			bucketInfoBuf.WriteRune('`')
 			v, ok := v.Index(0)
 			if ok {
 				sb.Reset()
@@ -495,11 +502,12 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 					}
 				}
 				if sb.Len() > 0 {
-					s += " WITH {" + sb.String()[:sb.Len()-1] + "}"
+					bucketInfoBuf.WriteString(" WITH {")
+					bucketInfoBuf.WriteString(sb.String()[:sb.Len()-1])
+					bucketInfoBuf.WriteString("}")
 				}
 			}
-			s += ";"
-			res = append(res, s)
+			res = append(res, bucketInfoBuf.String(), ";")
 		}
 
 		if flags&(_SCOPE_INFO|_COLLECTION_INFO) != 0 {

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -20,23 +21,24 @@ import (
 const _INIT_BUF = 128
 
 type Stringer struct {
-	buf []byte
+	buf strings.Builder
 }
 
 func (this *Stringer) WriteString(s string) {
-	if this.buf == nil {
-		this.buf = make([]byte, 0, _INIT_BUF)
-	}
-	this.buf = append(this.buf, s...)
+	this.buf.WriteString(s)
 }
 
 func (this *Stringer) String() string {
-	rv := util.ByteToString(this.buf)
-	this.buf = nil
-	return rv
+	s := this.buf.String()
+	this.buf.Reset()
+	return s
 }
 
-func NewStringer() *Stringer { return &Stringer{} }
+func NewStringer() *Stringer {
+	s := &Stringer{}
+	s.buf.Grow(_INIT_BUF)
+	return s
+}
 
 func (this *Stringer) Visit(expr Expression) string {
 	_, err := expr.Accept(this)
@@ -681,12 +683,13 @@ type PathToString struct {
 	MapperBase
 
 	alias string
-	path  string
+	path  strings.Builder
 }
 
 func NewPathToString() *PathToString {
 	stringer := NewStringer()
 	rv := &PathToString{}
+	rv.path.Grow(128) // Pre-allocate buffer for path
 	rv.SetMapper(rv)
 	rv.SetMapFunc(func(expr Expression) (Expression, error) {
 		switch expr2 := expr.(type) {
@@ -702,12 +705,14 @@ func NewPathToString() *PathToString {
 			if sv != "" {
 				_, err := rv.Map(expr2.First())
 				if err == nil {
-					if rv.path != "" {
-						rv.path += "."
+					if rv.path.Len() > 0 {
+						rv.path.WriteString(".")
 					}
-					rv.path += "`" + sv + "`"
+					rv.path.WriteString("`")
+					rv.path.WriteString(sv)
+					rv.path.WriteString("`")
 					if expr2.CaseInsensitive() {
-						rv.path += "i"
+						rv.path.WriteString("i")
 					}
 					return expr, nil
 				}
@@ -715,7 +720,9 @@ func NewPathToString() *PathToString {
 		case *Element:
 			_, err := rv.Map(expr2.First())
 			if err == nil {
-				rv.path += "[" + stringer.Visit(expr2.Second()) + "]"
+				rv.path.WriteString("[")
+				rv.path.WriteString(stringer.Visit(expr2.Second()))
+				rv.path.WriteString("]")
 				return expr, nil
 			}
 			return expr, nil
@@ -732,7 +739,7 @@ func PathString(expr Expression) (alias, path string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	return rv.alias, rv.path, err
+	return rv.alias, rv.path.String(), err
 }
 
 const _NAME_CAP = 16

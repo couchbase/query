@@ -414,7 +414,7 @@ func PathFromParts(elements ...string) string {
 }
 
 func pathFromParts(forceBackticks bool, isContext bool, elements ...string) string {
-	acc := ""
+	var sb strings.Builder
 	lastIndex := len(elements) - 1
 	if isContext {
 		lastIndex--
@@ -429,27 +429,26 @@ func pathFromParts(forceBackticks bool, isContext bool, elements ...string) stri
 		}
 		// Wrap any element that contains "." in back-ticks.
 		if forceBackticks || strings.IndexByte(s, '.') >= 0 {
-			acc += "`"
-			acc += s
-			acc += "`"
+			sb.WriteString("`")
+			sb.WriteString(s)
+			sb.WriteString("`")
 		} else {
-			acc += s
+			sb.WriteString(s)
 		}
 		// Add a separator. ":" after a namespace, else "."
 		if i < lastIndex {
 			// Need a separator.
 			if i == 0 {
-				acc += ":"
+				sb.WriteString(":")
 			} else {
-				acc += "."
+				sb.WriteString(".")
 			}
 		} else if isContext && i == 0 {
-
 			// always terminate namespaces with ':' for scopes
-			acc += ":"
+			sb.WriteString(":")
 		}
 	}
-	return acc
+	return sb.String()
 }
 
 // this is used for operator marshalling

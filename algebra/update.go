@@ -86,86 +86,126 @@ func (this *Update) Type() string {
 }
 
 func (this *Update) String() string {
-	s := "update "
+	var buf strings.Builder
+	buf.WriteString("update ")
 	if this.optimHints != nil {
-		s += this.optimHints.String() + " "
+		buf.WriteString(this.optimHints.String())
+		buf.WriteString(" ")
 	}
-	s += this.keyspace.Path().ProtectedString()
+	buf.WriteString(this.keyspace.Path().ProtectedString())
 	alias := this.keyspace.Alias()
 	if len(alias) > 0 {
-		s += " as `" + alias + "`"
+		buf.WriteString(" as `")
+		buf.WriteString(alias)
+		buf.WriteString("`")
 	}
 	if this.keys != nil {
 		if this.validateKeys {
-			s += " use keys validate " + this.keys.String()
+			buf.WriteString(" use keys validate ")
+			buf.WriteString(this.keys.String())
 		} else {
-			s += " use keys " + this.keys.String()
+			buf.WriteString(" use keys ")
+			buf.WriteString(this.keys.String())
 		}
 	}
 	if this.indexes != nil {
-		s += " use index(" + this.indexes.String() + ")"
+		buf.WriteString(" use index(")
+		buf.WriteString(this.indexes.String())
+		buf.WriteString(")")
 	}
 	if this.let != nil {
-		s += " let " + stringBindings(this.let)
+		buf.WriteString(" let ")
+		buf.WriteString(stringBindings(this.let))
 	}
 	if this.set != nil {
-		s += " set"
-		for _, v := range this.set.Terms() {
+		buf.WriteString(" set")
+		var lastSetTerm bool
+		setTermsLen := len(this.set.Terms())
+		for setTermIdx, v := range this.set.Terms() {
+			lastSetTerm = setTermIdx == setTermsLen-1
 			if v.meta != nil {
-				s += " " + v.meta.String() + "." + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+				buf.WriteString(" ")
+				buf.WriteString(v.meta.String())
+				buf.WriteString(".")
+				buf.WriteString(strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "("))
 			} else {
-				s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+				buf.WriteString(" ")
+				buf.WriteString(strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "("))
 			}
-			s += " = " + v.value.String()
+			buf.WriteString(" = ")
+			buf.WriteString(v.value.String())
 			if v.updateFor != nil {
-				s += " for "
-				for _, b := range v.updateFor.Bindings() {
-					s += b.String() + ","
+				buf.WriteString(" for ")
+				var lastUpdForBindTerm bool
+				updForBindingsLen := len(v.updateFor.Bindings())
+				for updForBindIdx, b := range v.updateFor.Bindings() {
+					lastUpdForBindTerm = updForBindIdx == updForBindingsLen-1
+					buf.WriteString(b.String())
+					if !lastUpdForBindTerm {
+						buf.WriteString(",")
+					}
 				}
-				s = s[:len(s)-1]
 				if v.updateFor.When() != nil {
-					s += " when " + v.updateFor.When().String()
+					buf.WriteString(" when ")
+					buf.WriteString(v.updateFor.When().String())
 				}
-				s += " end"
+				buf.WriteString(" end")
 			}
-			s += ","
+			if !lastSetTerm {
+				buf.WriteString(",")
+			}
 		}
-		s = s[:len(s)-1]
 	}
 	if this.unset != nil {
-		s += " unset"
-		for _, v := range this.unset.Terms() {
+		buf.WriteString(" unset")
+		var lastUnsetTerm bool
+		unsetTermsLen := len(this.unset.Terms())
+		for unsetTermIdx, v := range this.unset.Terms() {
+			lastUnsetTerm = unsetTermIdx == unsetTermsLen-1
 			if v.meta != nil {
-				s += " " + v.meta.String() + "." + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+				buf.WriteString(" ")
+				buf.WriteString(v.meta.String())
+				buf.WriteString(".")
+				buf.WriteString(strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "("))
 			} else {
-				s += " " + strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "(")
+				buf.WriteString(" ")
+				buf.WriteString(strings.TrimPrefix(strings.TrimSuffix(v.path.String(), ")"), "("))
 			}
 			if v.updateFor != nil {
-				s += " for "
-				for _, b := range v.updateFor.Bindings() {
-					s += b.String() + ","
+				buf.WriteString(" for ")
+				var lastUpdForTerm bool
+				updateForBindingsLen := len(v.updateFor.Bindings())
+				for updForBindIdx, b := range v.updateFor.Bindings() {
+					lastUpdForTerm = updForBindIdx == updateForBindingsLen-1
+					buf.WriteString(b.String())
+					if !lastUpdForTerm {
+						buf.WriteString(",")
+					}
 				}
-				s = s[:len(s)-1]
 				if v.updateFor.When() != nil {
-					s += " when " + v.updateFor.When().String()
+					buf.WriteString(" when ")
+					buf.WriteString(v.updateFor.When().String())
 				}
-				s += " end"
+				buf.WriteString(" end")
 			}
-			s += ","
+			if !lastUnsetTerm {
+				buf.WriteString(",")
+			}
 		}
-		s = s[:len(s)-1]
 	}
-
 	if this.where != nil {
-		s += " where " + this.where.String()
+		buf.WriteString(" where ")
+		buf.WriteString(this.where.String())
 	}
 	if this.limit != nil {
-		s += " limit " + this.limit.String()
+		buf.WriteString(" limit ")
+		buf.WriteString(this.limit.String())
 	}
 	if this.returning != nil {
-		s += " returning " + this.returning.String()
+		buf.WriteString(" returning ")
+		buf.WriteString(this.returning.String())
 	}
-	return s
+	return buf.String()
 }
 
 /*

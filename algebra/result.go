@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -145,38 +146,38 @@ func (this *Projection) HasSystemXattrs() bool {
 Representation as a N1QL string.
 */
 func (this *Projection) String() string {
-	s := ""
+	var buf strings.Builder
 
 	if this.distinct {
-		s += "distinct "
+		buf.WriteString("distinct ")
 	}
 
 	if this.raw {
-		s += "raw "
+		buf.WriteString("raw ")
 	}
 
 	for i, term := range this.terms {
 		if i > 0 {
-			s += ", "
+			buf.WriteString(", ")
 		}
 
-		s += term.String()
+		buf.WriteString(term.String())
 	}
 
 	if this.exclude != nil {
-		s += " exclude "
+		buf.WriteString(" exclude ")
 		first := true
 		for _, c := range this.exclude {
 			if !first {
-				s += ","
+				buf.WriteString(",")
 			} else {
 				first = false
 			}
-			s += c.String()
+			buf.WriteString(c.String())
 		}
 	}
 
-	return s
+	return buf.String()
 }
 
 /*

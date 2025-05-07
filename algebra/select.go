@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -196,27 +198,30 @@ func (this *Select) Privileges() (*auth.Privileges, errors.Error) {
 Representation as a N1QL string.
 */
 func (this *Select) String() string {
-	var s string
+	var sb strings.Builder
 
 	if this.with != nil {
-		s += withBindings(this.with.Bindings(), this.with.IsRecursive())
+		sb.WriteString(withBindings(this.with.Bindings(), this.with.IsRecursive()))
 	}
 
-	s += this.subresult.String()
+	sb.WriteString(this.subresult.String())
 
 	if this.order != nil {
-		s += " " + this.order.String()
+		sb.WriteString(" ")
+		sb.WriteString(this.order.String())
 	}
 
 	if this.limit != nil {
-		s += " limit " + this.limit.String()
+		sb.WriteString(" limit ")
+		sb.WriteString(this.limit.String())
 	}
 
 	if this.offset != nil {
-		s += " offset " + this.offset.String()
+		sb.WriteString(" offset ")
+		sb.WriteString(this.offset.String())
 	}
 
-	return s
+	return sb.String()
 }
 
 /*
@@ -508,16 +513,17 @@ func withBindings(withs expression.Withs, recursive bool) string {
 		return ""
 	}
 
-	s := "WITH "
+	var sb strings.Builder
+	sb.WriteString("WITH ")
 	if recursive {
-		s += "RECURSIVE "
+		sb.WriteString("RECURSIVE ")
 	}
 	for i, with := range withs {
 		if i > 0 {
-			s += ", "
+			sb.WriteString(", ")
 		}
-		s += with.String()
+		sb.WriteString(with.String())
 	}
 
-	return s
+	return sb.String()
 }

@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -281,7 +283,11 @@ func (this *Union) Accept(visitor NodeVisitor) (interface{}, error) {
 Representation as a N1QL string.
 */
 func (this *Union) String() string {
-	return this.first.String() + " union " + this.second.String()
+	var sb strings.Builder
+	sb.WriteString(this.first.String())
+	sb.WriteString(" union ")
+	sb.WriteString(this.second.String())
+	return sb.String()
 }
 
 /*
@@ -324,7 +330,11 @@ func (this *UnionAll) Accept(visitor NodeVisitor) (interface{}, error) {
 Representation as a N1QL string.
 */
 func (this *UnionAll) String() string {
-	return this.first.String() + " union all " + this.second.String()
+	var sb strings.Builder
+	sb.WriteString(this.first.String())
+	sb.WriteString(" union all ")
+	sb.WriteString(this.second.String())
+	return sb.String()
 }
 
 /*
@@ -364,7 +374,11 @@ func (this *Intersect) Accept(visitor NodeVisitor) (interface{}, error) {
 Representation as a N1QL string.
 */
 func (this *Intersect) String() string {
-	return this.first.String() + " intersect " + this.second.String()
+	var sb strings.Builder
+	sb.WriteString(this.first.String())
+	sb.WriteString(" intersect ")
+	sb.WriteString(this.second.String())
+	return sb.String()
 }
 
 /*
@@ -405,7 +419,11 @@ func (this *IntersectAll) Accept(visitor NodeVisitor) (interface{}, error) {
 Representation as a N1QL string.
 */
 func (this *IntersectAll) String() string {
-	return this.first.String() + " intersect all " + this.second.String()
+	var sb strings.Builder
+	sb.WriteString(this.first.String())
+	sb.WriteString(" intersect all ")
+	sb.WriteString(this.second.String())
+	return sb.String()
 }
 
 /*
@@ -445,7 +463,11 @@ func (this *Except) Accept(visitor NodeVisitor) (interface{}, error) {
 Representation as a N1QL string.
 */
 func (this *Except) String() string {
-	return this.first.String() + " except " + this.second.String()
+	var sb strings.Builder
+	sb.WriteString(this.first.String())
+	sb.WriteString(" except ")
+	sb.WriteString(this.second.String())
+	return sb.String()
 }
 
 /*
@@ -486,5 +508,9 @@ func (this *ExceptAll) Accept(visitor NodeVisitor) (interface{}, error) {
 Representation as a N1QL string.
 */
 func (this *ExceptAll) String() string {
-	return this.first.String() + " except all " + this.second.String()
+	var sb strings.Builder
+	sb.WriteString(this.first.String())
+	sb.WriteString(" except all ")
+	sb.WriteString(this.second.String())
+	return sb.String()
 }

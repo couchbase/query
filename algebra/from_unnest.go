@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -77,21 +78,24 @@ func (this *Unnest) Privileges() (*auth.Privileges, errors.Error) {
 Representation as a N1QL string.
 */
 func (this *Unnest) String() string {
-	s := this.left.String()
+	var sb strings.Builder
+	sb.WriteString(this.left.String())
 
 	if this.outer {
-		s += " left outer unnest "
+		sb.WriteString(" left outer unnest ")
 	} else {
-		s += " unnest "
+		sb.WriteString(" unnest ")
 	}
 
-	s += this.expr.String()
+	sb.WriteString(this.expr.String())
 
 	if this.as != "" {
-		s += " as `" + this.as + "`"
+		sb.WriteString(" as `")
+		sb.WriteString(this.as)
+		sb.WriteString("`")
 	}
 
-	return s
+	return sb.String()
 }
 
 /*

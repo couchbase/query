@@ -188,7 +188,7 @@ func (this *OptimHints) RemoveSubqTermHints(alias string) {
 }
 
 func (this *OptimHints) String() string {
-	var s string
+	var sb strings.Builder
 	var r map[string]interface{}
 	found := false
 	for _, hint := range this.hints {
@@ -197,7 +197,7 @@ func (this *OptimHints) String() string {
 		}
 		if found {
 			if !this.jsonStyle {
-				s += " "
+				sb.WriteString(" ")
 			}
 		} else {
 			if this.jsonStyle {
@@ -208,7 +208,7 @@ func (this *OptimHints) String() string {
 		if this.jsonStyle {
 			addJSONHint(r, hint)
 		} else {
-			s += hint.FormatHint(this.jsonStyle)
+			sb.WriteString(hint.FormatHint(this.jsonStyle))
 		}
 	}
 
@@ -217,10 +217,21 @@ func (this *OptimHints) String() string {
 	}
 
 	if this.jsonStyle {
+		var jsonSb strings.Builder
 		bytes, _ := json.Marshal(r)
-		return "/*+ " + string(bytes) + " */"
+		jsonSb.WriteString("/*+ ")
+		jsonSb.Write(bytes)
+		jsonSb.WriteString(" */")
+		return jsonSb.String()
 	}
-	return "/*+ " + s + " */"
+
+	// For non-JSON style, we need to wrap the existing content
+	content := sb.String()
+	sb.Reset()
+	sb.WriteString("/*+ ")
+	sb.WriteString(content)
+	sb.WriteString(" */")
+	return sb.String()
 }
 
 func addJSONHint(r map[string]interface{}, hint OptimHint) {

@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
@@ -147,33 +149,33 @@ func (this *Group) Expressions() expression.Expressions {
 Representation as a N1QL string.
 */
 func (this *Group) String() string {
-	s := ""
-
+	var buf strings.Builder
 	if len(this.by) > 0 {
-		s += " group by "
-
+		buf.WriteString(" group by ")
 		for i, b := range this.by {
 			if i > 0 {
-				s += ", "
+				buf.WriteString(", ")
 			}
-
-			s += b.String()
+			buf.WriteString(b.String())
 		}
 	}
 
 	if this.groupAs != "" {
-		s += " GROUP AS " + this.groupAs
+		buf.WriteString(" GROUP AS ")
+		buf.WriteString(this.groupAs)
 	}
 
 	if this.letting != nil {
-		s += " letting " + stringBindings(this.letting)
+		buf.WriteString(" letting ")
+		buf.WriteString(stringBindings(this.letting))
 	}
 
 	if this.having != nil {
-		s += " having " + this.having.String()
+		buf.WriteString(" having ")
+		buf.WriteString(this.having.String())
 	}
 
-	return s
+	return buf.String()
 }
 
 /*

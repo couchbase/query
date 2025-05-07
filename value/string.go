@@ -276,7 +276,11 @@ func (this stringValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 Append a low-valued byte to string.
 */
 func (this stringValue) Successor() Value {
-	return stringValue(string(this) + " ")
+	var buf strings.Builder
+	buf.Grow(len(this) + 1) // Pre-allocate buffer size
+	buf.WriteString(string(this))
+	buf.WriteRune(' ')
+	return stringValue(buf.String())
 }
 
 func (this stringValue) Track() {
