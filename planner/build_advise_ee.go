@@ -208,7 +208,9 @@ func generateIdxAdvice(queryInfos map[expression.HasExpressions]*advisor.QueryIn
 					found := false
 					for _, info := range infos {
 						if info.EquivalentTo(cIdx, false) {
-							info.AddAlias(cIdx.GetAlias())
+							if info.GetAlias() != cIdx.GetAlias() {
+								info.AddAlias(cIdx.GetAlias())
+							}
 							found = true
 							break
 						}
