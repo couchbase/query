@@ -188,7 +188,7 @@
                   "keyspace_alias": "shellTest_d",
                   "recommending_rule": "Index keys follow cost-based order.",
                   "update_statistics": "UPDATE STATISTICS FOR `shellTest`(ALL ARRAY (ALL ARRAY FLATTEN_KEYS(`b`.`x`,`b`.`y`) FOR b IN object_values((`a`.`o`)) END) FOR a IN `a1` END, `c1`, `c2`)"
-               }
+                }
               ]
             }
           }
@@ -297,10 +297,10 @@
             "recommended_indexes": {
               "indexes": [
                 {
-                    "index_statement": "CREATE INDEX adv_DISTINCT_a1_c1 ON `shellTest`(DISTINCT ARRAY `v` FOR `v` IN `a1` END,`c1`)",
+                  "index_statement": "CREATE INDEX adv_DISTINCT_a1_c1 ON `shellTest`(DISTINCT ARRAY `v` FOR `v` IN `a1` END,`c1`)",
                   "keyspace_alias": "shellTest",
                   "recommending_rule": "Index keys follow cost-based order.",
-                    "update_statistics": "UPDATE STATISTICS FOR `shellTest`(DISTINCT ARRAY `v` FOR `v` IN `a1` END, `c1`)"
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(DISTINCT ARRAY `v` FOR `v` IN `a1` END, `c1`)"
                 }
               ]
             }

@@ -189,7 +189,7 @@
     ]
   },
   {
-    "statements": "ADVISE SELECT META(t).id , pg1.description, pg1.num, pg1.name FROM shellTest AS t UNNEST t.chapters AS ch1 UNNEST ch1.pages AS pg1 WHERE t.type = \"book\" AND ch1.num = 1 AND pg1.name LIKE \"page%\" AND t.isbn >= 1;",
+    "statements": "ADVISE SELECT META(t).id , pg1.description, pg1.num, pg1.name FROM shellTest AS t UNNEST t.chapters AS ch1 UNNEST ch1.pages AS pg1 WHERE t.type = \"book\" AND ch1.num = 1 AND pg1.name LIKE \"page%\" AND t.isbn >= 1",
     "advise": true,
     "results": [
       {

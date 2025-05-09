@@ -145,6 +145,10 @@
             "recommended_indexes": {
               "covering_indexes": [
                 {
+                  "index_statement": "CREATE INDEX adv_c12_test_id_c11 ON `shellTest`(`c12`,`c11`) WHERE `test_id` = 'advise'",
+                  "keyspace_alias": "shellTest_a1"
+                },
+                {
                   "index_statement": "CREATE INDEX adv_c21_test_id_c22 ON `shellTest`(`c21`,`c22`) WHERE `test_id` = 'advise'",
                   "keyspace_alias": "shellTest_a2"
                 }
