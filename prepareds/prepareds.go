@@ -102,9 +102,13 @@ func PreparedsRemotePrime() {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 
+	var preparedPrimeReport []*PrimeReport
+	var getRemoteKeysFailed errors.Error
+
 	// try each host until we get something
 	for left > 0 {
 		count := 0
+		failed := 0
 
 		// choose a random host
 		n := r1.Intn(left)
@@ -121,6 +125,11 @@ func PreparedsRemotePrime() {
 			continue
 		}
 
+		preparedPrimeReportEntry := &PrimeReport{
+			StartTime: time.Now(),
+		}
+		decodeFailedReason := map[string]string{}
+
 		// get the keys
 		distributed.RemoteAccess().GetRemoteKeys([]string{host}, "prepareds",
 			func(id string) bool {
@@ -134,6 +143,9 @@ func PreparedsRemotePrime() {
 							_, err := DecodePrepared(name, encoded_plan, true, logging.NULL_LOG)
 							if err == nil {
 								count++
+							} else {
+								failed++
+								decodeFailedReason[name] = err.Error()
 							}
 						}
 					},
@@ -142,11 +154,38 @@ func PreparedsRemotePrime() {
 				return true
 			}, nil)
 
+		preparedPrimeReportEntry.Success = count
+		preparedPrimeReportEntry.Failed = failed
+		preparedPrimeReportEntry.Host = host
+
+		if len(decodeFailedReason) > 0 {
+			preparedPrimeReportEntry.Reason = decodeFailedReason
+		} else if getRemoteKeysFailed != nil {
+			preparedPrimeReportEntry.Reason = getRemoteKeysFailed.Error()
+		}
+
+		preparedPrimeReportEntry.EndTime = time.Now()
+		preparedPrimeReport = append(preparedPrimeReport, preparedPrimeReportEntry)
 		// we found stuff, that's good enough
 		if count > 0 {
 			break
 		}
 	}
+
+	if len(preparedPrimeReport) > 0 {
+		if buf, err := json.Marshal(preparedPrimeReport); err == nil {
+			logging.Infof("Prepared statement cache prime completed: %v", string(buf))
+		}
+	}
+}
+
+type PrimeReport struct {
+	Host      string      `json:"host"`
+	StartTime time.Time   `json:"startTime"`
+	EndTime   time.Time   `json:"endTime"`
+	Reason    interface{} `json:"reason,omitempty"`
+	Success   int         `json:"success"`
+	Failed    int         `json:"failed"`
 }
 
 // preparedCache implements planner.PlanCache
