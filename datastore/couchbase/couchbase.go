@@ -2381,13 +2381,14 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 			if e != nil || k == nil {
 				break
 			}
+			field := util.ByteToString(k)
 			for i := 0; i < len(projection); i++ {
-				if projection[i] == util.ByteToString(k) {
-					v, e := scan.NextUnmarshaledValue()
+				if projection[i] == field {
+					v1, e := scan.NextValue()
 					if e != nil {
 						break proj
 					}
-					val.SetField(projection[i], value.NewValue(v))
+					val.SetField(projection[i], value.NewParsedValue(v1, (v.DataType&gomemcached.DatatypeFlagJSON != 0)))
 					found++
 					break
 				}
