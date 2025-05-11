@@ -404,7 +404,7 @@ func (this *Select) CheckSetCorrelated() error {
 }
 
 func (this *Select) CheckFormalization() error {
-	f := expression.NewFormalizer("", nil)
+	f := expression.NewChkSubqueryFormalizer("", nil)
 	return this.FormalizeSubquery(f, true)
 }
 
