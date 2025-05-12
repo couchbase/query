@@ -113,9 +113,10 @@ func (this *ExpressionTerm) Formalize(parent *expression.Formalizer) (f *express
 		ident = identExpr.Identifier()
 	}
 
-	// if checking for correlation, don't reset this.isKeyspace since the formalizer (parent)
-	// does not have information on the parent query (from parsing the CORRELATED subquery)
-	if this.keyspaceTerm != nil && !parent.IsCheckCorrelation() {
+	// if parsing subquery expression (correlated or non-correlated), don't reset this.isKeyspace
+	// since the formalizer (parent) does not have information on the parent query
+	// (this.isKeyspace was determined in parser by whether the expr has parantheses around it)
+	if this.keyspaceTerm != nil && !parent.IsCheckSubquery() && !parent.IsCheckCorrelation() {
 		path := this.keyspaceTerm.Path()
 
 		// MB-46856 if the expression path is longer than 1, use the bucket

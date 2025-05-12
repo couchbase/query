@@ -293,6 +293,57 @@
                 ]
             }
         ]
+    },
+    {
+	"testcase": "MB-66660, part-1, WITH alias reference in FROM clause of subquery",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries` SATISFIES ANY u WITHIN v.`plan`.`~children` SATISFIES u.`#operator` = 'ExpressionScan' AND u.`expr` = '`w1`' END AND CONTAINS(v.`subquery`, '(`w1`)') END"
+        },
+        "statements": "WITH w1 AS ( [{\"a\":\"f1\", \"b\":10}]), w2 AS (SELECT RAW OBJECT v.a:v.b FOR v IN (SELECT x.* FROM w1 AS x) END) SELECT w2",
+        "results": [
+            {
+                "w2": [
+                    {
+                        "f1": 10
+                    }
+                ]
+            }
+        ]
+    },
+    {
+	"testcase": "MB-66660, part-2, WITH alias reference in non-FROM clause of subquery",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries`[0].`plan`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'st_idx1' END"
+        },
+        "statements": "WITH w1 AS ([10, 20]), w2 AS  (SELECT c11, c12, test_id FROM shellTest d WHERE c11 IS NOT MISSING AND c12 IN w1 AND type = \"left\") SELECT w2",
+        "results": [
+            {
+                "w2": [
+                    {
+                        "c11": 1,
+                        "c12": 10,
+                        "test_id": "withs"
+                    },
+                    {
+                        "c11": 2,
+                        "c12": 20,
+                        "test_id": "withs"
+                    }
+                ]
+            }
+        ]
     }
 ]
 

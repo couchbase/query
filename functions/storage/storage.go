@@ -125,7 +125,7 @@ func Migrate() {
 	if bucketCount == newBucketCount {
 		migrating = _MIGRATING
 
-		go migrateAll()
+		go migrateAll(bucketCount)
 
 		return
 	}
@@ -457,12 +457,14 @@ func SupportedBackupVersion() int {
 	return datastore.BACKUP_NOT_POSSIBLE
 }
 
-func migrateAll() {
+func migrateAll(bucketCount int) {
 
 	// TODO KV doesn't like being hammered straight away so wait for KV to prime before migrating
 	countDown := time.Since(countDownStarted)
-	if countDown < _GRACE_PERIOD {
-		time.Sleep(_GRACE_PERIOD - countDown)
+	if bucketCount > 0 && countDown < _GRACE_PERIOD {
+		toSleep := _GRACE_PERIOD - countDown
+		logging.Infof("UDF migration: Warming up for %d seconds", toSleep)
+		time.Sleep(toSleep)
 	}
 
 	// is migration complete?
@@ -476,7 +478,7 @@ func migrateAll() {
 	}
 	migratingLock.Unlock()
 
-	logging.Infof("UDF migration: Start migration of all buckets")
+	logging.Infof("UDF migration: Start migration of all buckets (%d)", bucketCount)
 
 	// if we are here, we know we have an extended datastore
 	ds := datastore.GetDatastore().(datastore.Datastore2)

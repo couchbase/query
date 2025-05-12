@@ -158,9 +158,9 @@ This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
 func (this *Subquery) Formalize(parent *expression.Formalizer) error {
-	if parent != nil && parent.IsCheckCorrelation() {
-		// when checking correlation, do not go into subqueries,
-		// since the subqueries themselves are marked by CORRELATED
+	if parent != nil && (parent.IsCheckCorrelation() || parent.IsCheckSubquery()) {
+		// when parsing subquery expression, do not go into nested subqueries,
+		// since the subqueries themselves will be handled separately in the parser
 		return nil
 	}
 
