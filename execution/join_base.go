@@ -119,6 +119,7 @@ func (this *joinBase) joinFetch(keyspace datastore.Keyspace, subPaths []string, 
 func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue,
 	outer bool, onFilter expression.Expression, alias string, context *opContext) bool {
 
+	useQuota := context.UseRequestQuota()
 	for _, item := range this.joinBatch {
 		foundKeys := 0
 		if len(pairMap) > 0 {
@@ -132,7 +133,6 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 
 		matched := false
 		if foundKeys != 0 {
-			useQuota := context.UseRequestQuota()
 			for _, key := range item.Keys {
 				var alreadyAccountedForSize uint64
 
@@ -165,14 +165,6 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 
 				joined.SetField(alias, av)
 
-				if useQuota {
-					err := context.TrackValueSize(joined.RecalculateSize() - alreadyAccountedForSize)
-					if err != nil {
-						context.Error(err)
-						return false
-					}
-				}
-
 				if onFilter != nil {
 					result, err := onFilter.Evaluate(joined, context)
 					if err != nil {
@@ -184,15 +176,27 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 					}
 				}
 
+				if useQuota {
+					err := context.TrackValueSize(joined.RecalculateSize() - alreadyAccountedForSize)
+					if err != nil {
+						context.Error(err)
+						return false
+					}
+				}
+
 				matched = true
 				if !this.sendItem(joined) {
 					return false
 				}
 			}
 		}
-		if outer && !matched {
-			if !this.sendItem(item.Value) {
-				return false
+		if !matched {
+			if outer {
+				if !this.sendItem(item.Value) {
+					return false
+				}
+			} else if useQuota {
+				context.ReleaseValueSize(item.Value.Size())
 			}
 		}
 	}
@@ -202,8 +206,8 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 
 func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]value.AnnotatedValue,
 	outer bool, onFilter expression.Expression, alias string, context *opContext) bool {
-	useQuota := context.UseRequestQuota()
 
+	useQuota := context.UseRequestQuota()
 	for _, item := range this.joinBatch {
 		var alreadyAccountedForSize uint64
 
@@ -276,6 +280,8 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 			if !this.sendItem(av) {
 				return false
 			}
+		} else if useQuota {
+			context.ReleaseValueSize(item.Value.Size())
 		}
 	}
 
