@@ -261,6 +261,17 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.term.JoinKeys() != nil {
+			_, err = planContext.Map(this.term.JoinKeys())
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
 	return nil
 }
 

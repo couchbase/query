@@ -13,6 +13,7 @@ import (
 )
 
 type readonly struct {
+	planContext *planContext
 }
 
 func (this *readonly) Readonly() bool {
@@ -30,7 +31,16 @@ func (this *readonly) ImplicitArrayKey() *expression.All {
 	return nil
 }
 
+func (this *readonly) PlanContext() *planContext {
+	return this.planContext
+}
+
+func (this *readonly) SetPlanContext(planContext *planContext) {
+	this.planContext = planContext
+}
+
 type readwrite struct {
+	planContext *planContext
 }
 
 func (this *readwrite) Readonly() bool {
@@ -39,6 +49,14 @@ func (this *readwrite) Readonly() bool {
 
 func (this *readwrite) verify(prepared *Prepared) bool {
 	return true
+}
+
+func (this *readwrite) PlanContext() *planContext {
+	return this.planContext
+}
+
+func (this *readwrite) SetPlanContext(planContext *planContext) {
+	this.planContext = planContext
 }
 
 // optimizer estimates

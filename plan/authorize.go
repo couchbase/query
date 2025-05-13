@@ -124,7 +124,7 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		return err
 	}
-	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
+	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child, this.PlanContext())
 	return err
 }
 

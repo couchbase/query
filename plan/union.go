@@ -67,6 +67,8 @@ func (this *UnionAll) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	planContext := this.PlanContext()
+
 	this.children = make([]Operator, 0, len(_unmarshalled.Children))
 
 	for _, raw_child := range _unmarshalled.Children {
@@ -79,7 +81,7 @@ func (this *UnionAll) UnmarshalJSON(body []byte) error {
 			return err
 		}
 
-		child_op, err := MakeOperator(child_type.Op_name, raw_child)
+		child_op, err := MakeOperator(child_type.Op_name, raw_child, planContext)
 		if err != nil {
 			return err
 		}

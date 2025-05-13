@@ -221,6 +221,14 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 	this.partialSortTermCount = _unmarshalled.PartialSortTermCount
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		err = this.terms.MapExpressions(planContext)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

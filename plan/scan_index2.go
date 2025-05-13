@@ -341,6 +341,23 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 	}
 	this.index = index2
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		if this.offset != nil {
+			_, err = planContext.Map(this.offset)
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
 	return nil
 }
 

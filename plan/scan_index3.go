@@ -756,11 +756,36 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if index3, ok := index.(datastore.Index3); ok {
-		this.index = index3
-		return nil
+	index3, ok := index.(datastore.Index3)
+	if !ok {
+		return fmt.Errorf("Unable to find Index for %v", index.Name())
 	}
-	return fmt.Errorf("Unable to find Index for %v", index.Name())
+	this.index = index3
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		if this.offset != nil {
+			_, err = planContext.Map(this.offset)
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
+		if this.filter != nil {
+			_, err = planContext.Map(this.filter)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (this *IndexScan3) verify(prepared *Prepared) bool {

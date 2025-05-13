@@ -147,6 +147,20 @@ func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 	this.groupAs = _unmarshalled.GroupAs
 	this.groupAsFields = _unmarshalled.GroupAsFields
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		err = this.keys.MapExpressions(planContext)
+		if err != nil {
+			return err
+		}
+		for _, agg := range this.aggregates {
+			err = agg.Children().MapExpressions(planContext)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -270,6 +284,20 @@ func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 	this.flags = _unmarshalled.Flags
 	this.groupAs = _unmarshalled.GroupAs
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		err = this.keys.MapExpressions(planContext)
+		if err != nil {
+			return err
+		}
+		for _, agg := range this.aggregates {
+			err = agg.Children().MapExpressions(planContext)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -381,6 +409,20 @@ func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 	this.flags = _unmarshalled.Flags
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		err = this.keys.MapExpressions(planContext)
+		if err != nil {
+			return err
+		}
+		for _, agg := range this.aggregates {
+			err = agg.Children().MapExpressions(planContext)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }

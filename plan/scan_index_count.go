@@ -220,8 +220,13 @@ func (this *IndexCountScan) UnmarshalJSON(body []byte) error {
 	if !ok {
 		return errors.NewPlanInternalError("Unable to find Count() for index")
 	}
-
 	this.index = countIndex
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
 	return nil
 }
 

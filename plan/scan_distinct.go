@@ -167,7 +167,9 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	scan_op, err := MakeOperator(scan_type.Operator, _unmarshalled.Scan)
+	planContext := this.PlanContext()
+
+	scan_op, err := MakeOperator(scan_type.Operator, _unmarshalled.Scan, planContext)
 	if err != nil {
 		return err
 	}
@@ -189,6 +191,21 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
+
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		if this.offset != nil {
+			_, err = planContext.Map(this.offset)
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }

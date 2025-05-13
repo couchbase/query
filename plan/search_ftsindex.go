@@ -280,6 +280,11 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 		return fmt.Errorf("Unable to find Index for %v", this.index.Name())
 	}
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
 	return nil
 }
 

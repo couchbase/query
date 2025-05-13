@@ -126,7 +126,7 @@ func (this *Explain) UnmarshalJSON(body []byte) error {
 
 	// Subqueries is printed in explain for informational purposes only
 
-	op, err := MakeOperator(op_type.Operator, _unmarshalled.Op)
+	op, err := MakeOperator(op_type.Operator, _unmarshalled.Op, this.PlanContext())
 	if err != nil {
 		return err
 	}

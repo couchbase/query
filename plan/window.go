@@ -85,5 +85,15 @@ func (this *WindowAggregate) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		for _, agg := range this.aggregates {
+			err = agg.Children().MapExpressions(planContext)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }

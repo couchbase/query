@@ -162,6 +162,11 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 		this.cacheResult = true
 	}
 
+	planContext := this.PlanContext()
+	if planContext != nil && this.term != nil {
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
 	return err
 }
 
@@ -268,6 +273,11 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	}
 
 	this.nested_loop = _unmarshalled.UnderNL
+
+	planContext := this.PlanContext()
+	if planContext != nil && this.term != nil {
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
 
 	return err
 }

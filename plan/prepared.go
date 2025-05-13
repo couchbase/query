@@ -252,7 +252,9 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 			return 0, err
 		}
 	}
-	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator)
+
+	planContext := newPlanContext(nil)
+	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
 
 	return _unmarshalled.Version, err
 }

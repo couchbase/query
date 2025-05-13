@@ -11,11 +11,12 @@ package plan
 import "encoding/json"
 
 type Sequence struct {
-	children []Operator `json:"~children"`
+	planContext *planContext
+	children    []Operator `json:"~children"`
 }
 
 func NewSequence(children ...Operator) *Sequence {
-	return &Sequence{children}
+	return &Sequence{nil, children}
 }
 
 func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
@@ -76,7 +77,7 @@ func (this *Sequence) UnmarshalJSON(body []byte) error {
 			return err
 		}
 
-		child_op, err := MakeOperator(child_type.Op_name, raw_child)
+		child_op, err := MakeOperator(child_type.Op_name, raw_child, this.planContext)
 		if err != nil {
 			return err
 		}
@@ -115,4 +116,12 @@ func (this *Sequence) Size() int64 {
 func (this *Sequence) FrCost() float64 {
 	last_child := len(this.children) - 1
 	return this.children[last_child].FrCost()
+}
+
+func (this *Sequence) PlanContext() *planContext {
+	return this.planContext
+}
+
+func (this *Sequence) SetPlanContext(planContext *planContext) {
+	this.planContext = planContext
 }

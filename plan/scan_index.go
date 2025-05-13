@@ -301,7 +301,22 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	}
 
 	this.index, err = this.indexer.IndexById(_unmarshalled.IndexId)
-	return err
+	if err != nil {
+		return err
+	}
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
+	return nil
 }
 
 func (this *IndexScan) verify(prepared *Prepared) bool {

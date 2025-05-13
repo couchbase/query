@@ -198,6 +198,8 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	planContext := this.PlanContext()
+
 	this.scans = make([]SecondaryScan, 0, len(_unmarshalled.Scans))
 
 	for _, raw_scan := range _unmarshalled.Scans {
@@ -210,7 +212,7 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 			return err
 		}
 
-		scan_op, err := MakeOperator(scan_type.Operator, raw_scan)
+		scan_op, err := MakeOperator(scan_type.Operator, raw_scan, planContext)
 		if err != nil {
 			return err
 		}
@@ -228,6 +230,13 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 	this.allScan = _unmarshalled.AllScan
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
+
+	if planContext != nil && this.limit != nil {
+		_, err = planContext.Map(this.limit)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

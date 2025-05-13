@@ -76,5 +76,13 @@ func (this *Limit) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		_, err = planContext.Map(this.expr)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

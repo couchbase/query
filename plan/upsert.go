@@ -185,8 +185,16 @@ func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 			_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As)
 		this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	}
+	if err != nil {
+		return err
+	}
 
-	return err
+	planContext := this.PlanContext()
+	if planContext != nil {
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
+	return nil
 }
 
 func (this *SendUpsert) verify(prepared *Prepared) bool {

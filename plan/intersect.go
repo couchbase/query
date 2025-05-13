@@ -86,6 +86,8 @@ func (this *IntersectAll) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	planContext := this.PlanContext()
+
 	for i, child := range []json.RawMessage{_unmarshalled.First, _unmarshalled.Second} {
 		var op_type struct {
 			Operator string `json:"#operator"`
@@ -97,9 +99,9 @@ func (this *IntersectAll) UnmarshalJSON(body []byte) error {
 		}
 
 		if i == 0 {
-			this.first, err = MakeOperator(op_type.Operator, child)
+			this.first, err = MakeOperator(op_type.Operator, child, planContext)
 		} else {
-			this.second, err = MakeOperator(op_type.Operator, child)
+			this.second, err = MakeOperator(op_type.Operator, child, planContext)
 		}
 
 		if err != nil {

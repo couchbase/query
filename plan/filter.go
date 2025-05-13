@@ -111,5 +111,13 @@ func (this *Filter) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil && this.cond != nil {
+		_, err = planContext.Map(this.cond)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

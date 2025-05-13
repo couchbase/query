@@ -151,8 +151,22 @@ func (this *SendDelete) UnmarshalJSON(body []byte) error {
 			_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As)
 		this.keyspace, err = datastore.GetKeyspace(this.term.Path().Parts()...)
 	}
+	if err != nil {
+		return err
+	}
 
-	return err
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
+	return nil
 }
 
 func (this *SendDelete) verify(prepared *Prepared) bool {

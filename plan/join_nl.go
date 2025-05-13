@@ -155,9 +155,26 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.child, err = MakeOperator(child_type.Op_name, raw_child)
+	planContext := this.PlanContext()
+
+	this.child, err = MakeOperator(child_type.Op_name, raw_child, planContext)
 	if err != nil {
 		return err
+	}
+
+	if planContext != nil {
+		if this.onclause != nil {
+			_, err = planContext.Map(this.onclause)
+			if err != nil {
+				return err
+			}
+		}
+		if this.filter != nil {
+			_, err = planContext.Map(this.filter)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

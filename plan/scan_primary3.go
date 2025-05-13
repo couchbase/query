@@ -236,12 +236,30 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if primary, ok := index.(datastore.PrimaryIndex3); ok {
-		this.index = primary
-		return nil
+	primary, ok := index.(datastore.PrimaryIndex3)
+	if !ok {
+		return fmt.Errorf("Unable to find Primary Index3 for %v", index.Name())
+	}
+	this.index = primary
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		if this.offset != nil {
+			_, err = planContext.Map(this.offset)
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
 	}
 
-	return fmt.Errorf("Unable to find Primary Index3 for %v", index.Name())
+	return nil
 }
 
 func (this *PrimaryScan3) verify(prepared *Prepared) bool {

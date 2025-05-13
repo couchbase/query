@@ -176,6 +176,23 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.term.JoinKeys() != nil {
+			_, err = planContext.Map(this.term.JoinKeys())
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
+		if this.onFilter != nil {
+			_, err = planContext.Map(this.onFilter)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

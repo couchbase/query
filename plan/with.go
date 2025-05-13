@@ -104,7 +104,13 @@ func (this *With) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		return err
 	}
-	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		planContext.addWiths(withs)
+	}
+
+	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child, planContext)
 	if err != nil {
 		return err
 	}

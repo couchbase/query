@@ -14,12 +14,13 @@ import (
 )
 
 type Parallel struct {
+	planContext    *planContext
 	child          Operator
 	maxParallelism int
 }
 
 func NewParallel(child Operator, maxParallelism int) *Parallel {
-	return &Parallel{child, maxParallelism}
+	return &Parallel{nil, child, maxParallelism}
 }
 
 func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
@@ -86,7 +87,7 @@ func (this *Parallel) UnmarshalJSON(body []byte) error {
 	}
 
 	this.maxParallelism = _unmarshalled.MaxParallelism
-	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child)
+	this.child, err = MakeOperator(child_type.Operator, _unmarshalled.Child, this.planContext)
 	return err
 }
 
@@ -112,4 +113,12 @@ func (this *Parallel) FrCost() float64 {
 
 func GetMaxParallelism() int {
 	return runtime.NumCPU()
+}
+
+func (this *Parallel) PlanContext() *planContext {
+	return this.planContext
+}
+
+func (this *Parallel) SetPlanContext(planContext *planContext) {
+	this.planContext = planContext
 }

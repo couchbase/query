@@ -76,5 +76,13 @@ func (this *Let) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		err = planContext.pushBindings(this.bindings, false)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

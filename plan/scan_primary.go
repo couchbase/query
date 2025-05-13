@@ -145,12 +145,23 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	}
 
 	primary, ok := index.(datastore.PrimaryIndex)
-	if ok {
-		this.index = primary
-		return nil
+	if !ok {
+		return fmt.Errorf("Unable to unmarshal %s as primary index.", _unmarshalled.Index)
+	}
+	this.index = primary
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		planContext.addKeyspaceAlias(this.term.Alias())
 	}
 
-	return fmt.Errorf("Unable to unmarshal %s as primary index.", _unmarshalled.Index)
+	return nil
 }
 
 func (this *PrimaryScan) verify(prepared *Prepared) bool {

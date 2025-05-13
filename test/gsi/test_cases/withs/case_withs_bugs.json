@@ -374,6 +374,33 @@
                 ]
             }
         ]
+    },
+    {
+	"testcase": "MB-66699, WITH alias reference in non-FROM clause of subquery, covering",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries`[0].`plan`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'st_idx1' AND v.`covers` IS NOT MISSING END"
+        },
+        "statements": "WITH w1 AS ([10, 20]), w2 AS  (SELECT c11, c12 FROM shellTest d WHERE c11 IS NOT MISSING AND c12 IN w1 AND type = \"left\") SELECT w2",
+        "results": [
+            {
+                "w2": [
+                    {
+                        "c11": 1,
+                        "c12": 10
+                    },
+                    {
+                        "c11": 2,
+                        "c12": 20
+                    }
+                ]
+            }
+        ]
     }
 ]
 

@@ -224,6 +224,11 @@ func (this *IndexCountDistinctScan2) UnmarshalJSON(body []byte) error {
 	}
 	this.index = countIndex2
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
 	return nil
 }
 

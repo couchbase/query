@@ -220,6 +220,14 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		err = this.projection.MapExpressions(planContext)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -334,6 +342,14 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 
 	this.projection = projection
 	this.terms = project_terms
+
+	planContext := this.PlanContext()
+	if planContext != nil {
+		err = this.projection.MapExpressions(planContext)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }

@@ -162,5 +162,20 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		_, err = planContext.Map(this.fromExpr)
+		if err != nil {
+			return err
+		}
+		planContext.addExprTermAlias(this.alias)
+		if this.filter != nil {
+			_, err = planContext.Map(this.filter)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return err
 }

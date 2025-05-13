@@ -96,5 +96,13 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+	if planContext != nil {
+		_, err = planContext.Map(this.keys)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

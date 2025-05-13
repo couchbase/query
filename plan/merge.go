@@ -228,6 +228,8 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 		}
 	}
 
+	planContext := this.PlanContext()
+
 	ops := []json.RawMessage{
 		_unmarshalled.Update,
 		_unmarshalled.Delete,
@@ -250,11 +252,11 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 
 		switch i {
 		case 0:
-			this.update, err = MakeOperator(op_type.Operator, child)
+			this.update, err = MakeOperator(op_type.Operator, child, planContext)
 		case 1:
-			this.delete, err = MakeOperator(op_type.Operator, child)
+			this.delete, err = MakeOperator(op_type.Operator, child, planContext)
 		case 2:
-			this.insert, err = MakeOperator(op_type.Operator, child)
+			this.insert, err = MakeOperator(op_type.Operator, child, planContext)
 		}
 
 		if err != nil {
@@ -279,6 +281,41 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	if _unmarshalled.InsertFilter != "" {
 		if this.insertFilter, err = parser.Parse(_unmarshalled.InsertFilter); err != nil {
 			return err
+		}
+	}
+
+	if planContext != nil {
+		if this.limit != nil {
+			_, err = planContext.Map(this.limit)
+			if err != nil {
+				return err
+			}
+		}
+		if this.key != nil {
+			_, err = planContext.Map(this.key)
+			if err != nil {
+				return err
+			}
+			// legacy style, need to add target here
+			planContext.addKeyspaceAlias(this.ref.Alias())
+		}
+		if this.updateFilter != nil {
+			_, err = planContext.Map(this.updateFilter)
+			if err != nil {
+				return err
+			}
+		}
+		if this.deleteFilter != nil {
+			_, err = planContext.Map(this.deleteFilter)
+			if err != nil {
+				return err
+			}
+		}
+		if this.insertFilter != nil {
+			_, err = planContext.Map(this.insertFilter)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

@@ -14,7 +14,7 @@ import (
 
 // Helper function to create a specific operator given its name
 // (used as a key by GetOperator) and body in raw bytes
-func MakeOperator(name string, body []byte) (Operator, error) {
+func MakeOperator(name string, body []byte, context *planContext) (Operator, error) {
 	which_op, has_op := GetOperator(name)
 
 	if !has_op {
@@ -22,6 +22,9 @@ func MakeOperator(name string, body []byte) (Operator, error) {
 	}
 
 	new_op := which_op.New()
+	if context != nil {
+		new_op.SetPlanContext(context)
+	}
 	err := new_op.UnmarshalJSON(body)
 
 	return new_op, err

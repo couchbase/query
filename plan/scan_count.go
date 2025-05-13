@@ -89,7 +89,12 @@ func (this *CountScan) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
-	return err
+	planContext := this.PlanContext()
+	if planContext != nil {
+		planContext.addKeyspaceAlias(this.term.Alias())
+	}
+
+	return nil
 }
 
 func (this *CountScan) verify(prepared *Prepared) bool {

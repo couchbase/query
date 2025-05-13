@@ -96,6 +96,9 @@ type Operator interface {
 	Cardinality() float64
 	Size() int64
 	FrCost() float64
+
+	PlanContext() *planContext
+	SetPlanContext(planContext *planContext)
 }
 
 type CoveringOperator interface {
