@@ -19,10 +19,11 @@ import (
 Bit flags for formalizer flags
 */
 const (
-	FORM_MAP_SELF     = 1 << iota // Map SELF to keyspace: used in sarging index
-	FORM_MAP_KEYSPACE             // Map keyspace to SELF: used in creating index
-	FORM_INDEX_SCOPE              // formalizing index key or index condition
-	FORM_IN_FUNCTION              // We are in function invocation
+	FORM_MAP_SELF        = 1 << iota // Map SELF to keyspace: used in sarging index
+	FORM_MAP_KEYSPACE                // Map keyspace to SELF: used in creating index
+	FORM_INDEX_SCOPE                 // formalizing index key or index condition
+	FORM_IN_FUNCTION                 // We are setting variables for function invocation
+	FORM_CHK_CORRELATION             // Check correlation
 )
 
 const (
@@ -87,8 +88,13 @@ type Formalizer struct {
 
 func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	rv := newFormalizer(keyspace, parent, false, false)
-	if parent != nil && parent.InFunction() {
-		rv.flags |= FORM_IN_FUNCTION
+	if parent != nil {
+		if parent.IsCheckCorrelation() {
+			rv.flags |= FORM_CHK_CORRELATION
+		}
+		if parent.InFunction() {
+			rv.flags |= FORM_IN_FUNCTION
+		}
 	}
 	return rv
 }
@@ -104,6 +110,12 @@ func NewKeyspaceFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	rv := newFormalizer(keyspace, parent, false, false)
 	rv.flags |= FORM_IN_FUNCTION
+	return rv
+}
+
+func NewChkCorrelationFormalizer(keyspace string, parent *Formalizer) *Formalizer {
+	rv := newFormalizer(keyspace, parent, false, false)
+	rv.flags |= FORM_CHK_CORRELATION
 	return rv
 }
 
@@ -188,6 +200,10 @@ func (this *Formalizer) mapKeyspace() bool {
 
 func (this *Formalizer) InFunction() bool {
 	return (this.flags & FORM_IN_FUNCTION) != 0
+}
+
+func (this *Formalizer) IsCheckCorrelation() bool {
+	return (this.flags & FORM_CHK_CORRELATION) != 0
 }
 
 func (this *Formalizer) indexScope() bool {
@@ -395,6 +411,16 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		return expr, nil
 	}
 
+	if this.IsCheckCorrelation() {
+		// if this comes from a CORRELATED subquery, the formalizer does not have references
+		// to the parent query's information; assumes correlation in this case
+		if this.correlation == nil {
+			this.correlation = make(map[string]uint32)
+		}
+		this.correlation[identifier] |= IDENT_IS_CORRELATED
+		return expr, nil
+	}
+
 	if this.keyspace == "" {
 		return nil, errors.NewAmbiguousReferenceError(identifier, expr.ErrorContext())
 	}
@@ -429,7 +455,7 @@ func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
 Formalize META() functions defined on indexes.
 */
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
-	if !this.mapKeyspace() {
+	if !this.mapKeyspace() && !this.IsCheckCorrelation() {
 		fnName := expr.Name()
 		if fnName == "meta" || fnName == "search_meta" || fnName == "search_score" {
 			if len(expr.Operands()) == 0 {
@@ -814,6 +840,10 @@ func (this *Formalizer) CheckCorrelated() bool {
 		}
 	}
 
+	if !correlated && this.IsCheckCorrelation() && len(this.correlation) > 0 {
+		correlated = true
+	}
+
 	return correlated
 }
 
@@ -828,8 +858,12 @@ func (this *Formalizer) AddCorrelatedIdentifiers(correlation map[string]uint32) 
 		if _, ok := this.identifiers.Field(k); !ok {
 			v, ok1 := this.allowed.Field(k)
 			if !ok1 {
-				if this.FuncVariable(k) {
+				if this.IsCheckCorrelation() {
+					v = value.NewValue(uint32(IDENT_IS_CORRELATED | identFlags))
+				} else if this.FuncVariable(k) {
 					v = value.NewValue(uint32(IDENT_IS_FUNC_VAR | identFlags))
+				} else if this.WithAlias(k) {
+					v = value.NewValue(uint32(IDENT_IS_WITH_ALIAS | identFlags))
 				} else {
 					return errors.NewFormalizerInternalError(fmt.Sprintf("correlation reference %s is not in allowed map", k))
 				}
