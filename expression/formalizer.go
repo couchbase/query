@@ -24,6 +24,7 @@ const (
 	FORM_INDEX_SCOPE                 // formalizing index key or index condition
 	FORM_IN_FUNCTION                 // We are setting variables for function invocation
 	FORM_CHK_CORRELATION             // Check correlation
+	FORM_CHK_SUBQUERY                // Subquery expressioni parsing
 )
 
 const (
@@ -92,6 +93,9 @@ func NewFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 		if parent.IsCheckCorrelation() {
 			rv.flags |= FORM_CHK_CORRELATION
 		}
+		if parent.IsCheckSubquery() {
+			rv.flags |= FORM_CHK_SUBQUERY
+		}
 		if parent.InFunction() {
 			rv.flags |= FORM_IN_FUNCTION
 		}
@@ -116,6 +120,12 @@ func NewFunctionFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 func NewChkCorrelationFormalizer(keyspace string, parent *Formalizer) *Formalizer {
 	rv := newFormalizer(keyspace, parent, false, false)
 	rv.flags |= FORM_CHK_CORRELATION
+	return rv
+}
+
+func NewChkSubqueryFormalizer(keyspace string, parent *Formalizer) *Formalizer {
+	rv := newFormalizer(keyspace, parent, false, false)
+	rv.flags |= FORM_CHK_SUBQUERY
 	return rv
 }
 
@@ -204,6 +214,10 @@ func (this *Formalizer) InFunction() bool {
 
 func (this *Formalizer) IsCheckCorrelation() bool {
 	return (this.flags & FORM_CHK_CORRELATION) != 0
+}
+
+func (this *Formalizer) IsCheckSubquery() bool {
+	return (this.flags & FORM_CHK_SUBQUERY) != 0
 }
 
 func (this *Formalizer) indexScope() bool {
@@ -419,6 +433,8 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 		}
 		this.correlation[identifier] |= IDENT_IS_CORRELATED
 		return expr, nil
+	} else if this.IsCheckSubquery() {
+		return expr, nil
 	}
 
 	if this.keyspace == "" {
@@ -455,7 +471,7 @@ func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
 Formalize META() functions defined on indexes.
 */
 func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
-	if !this.mapKeyspace() && !this.IsCheckCorrelation() {
+	if !this.mapKeyspace() && !this.IsCheckCorrelation() && !this.IsCheckSubquery() {
 		fnName := expr.Name()
 		if fnName == "meta" || fnName == "search_meta" || fnName == "search_score" {
 			if len(expr.Operands()) == 0 {

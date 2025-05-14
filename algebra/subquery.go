@@ -141,21 +141,20 @@ func (this *Subquery) SurvivesGrouping(groupKeys expression.Expressions, allowed
 This method calls FormalizeSubquery to qualify all the children
 of the query, and returns an error if any.
 */
-func (this *Subquery) Formalize(parent *expression.Formalizer) error {
-	if parent != nil && parent.IsCheckCorrelation() {
-		// when checking correlation, do not go into subqueries,
-		// since the subqueries themselves are marked by CORRELATED
-		return nil
-	}
-	err := this.query.FormalizeSubquery(parent, true)
-	if err != nil {
-		return err
+func (this *Subquery) Formalize(parent *expression.Formalizer) (err error) {
+	// when parsing subquery expression, do not go into nested subqueries,
+	// since the subqueries themselves have been handled separately in the parser
+	if parent == nil || !(parent.IsCheckCorrelation() || parent.IsCheckSubquery()) {
+		err = this.query.FormalizeSubquery(parent, true)
+		if err != nil {
+			return err
+		}
 	}
 
 	// if the subquery is correlated, add the correlation reference to
 	// the parent formalizer such that any nested correlation can be detected
 	// at the next level
-	if this.query.IsCorrelated() {
+	if parent != nil && this.query.IsCorrelated() {
 		err = parent.AddCorrelatedIdentifiers(this.query.GetCorrelation())
 	}
 
