@@ -190,12 +190,14 @@ func (this *joinBase) joinEntries(keyCount map[string]int, pairMap map[string]va
 				}
 			}
 		}
-		if outer && !matched {
-			if !this.sendItem(item.Value) {
-				return false
+		if !matched {
+			if outer {
+				if !this.sendItem(item.Value) {
+					return false
+				}
+			} else if useQuota {
+				context.ReleaseValueSize(item.Value.Size())
 			}
-		} else if useQuota {
-			context.ReleaseValueSize(item.Value.Size())
 		}
 	}
 
