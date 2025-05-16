@@ -190,6 +190,7 @@ type Output interface {
 const (
 	CONTEXT_IS_ADVISOR = 1 << iota // Advisor() function
 	CONTEXT_PRESERVE_PROJECTION_ORDER
+	CONTEXT_IS_ADVISE // Advise statement
 )
 
 // Per operator context
@@ -1804,6 +1805,18 @@ func (this *Context) SetAdvisor() {
 
 func (this *Context) IsAdvisor() bool {
 	return (this.flags & CONTEXT_IS_ADVISOR) != 0
+}
+
+func (this *Context) SetAdvise() {
+	this.flags |= CONTEXT_IS_ADVISE
+}
+
+func (this *Context) UnsetAdvise() {
+	this.flags &^= CONTEXT_IS_ADVISE
+}
+
+func (this *Context) IsAdvise() bool {
+	return (this.flags & CONTEXT_IS_ADVISE) != 0
 }
 
 func (this *Context) SetPreserveProjectionOrder(on bool) bool {
