@@ -2013,6 +2013,8 @@ func newContext(output *ausOutput) (*execution.Context, errors.Error) {
 		ctx.SetMemorySession(memory.Register())
 	}
 
+	ctx.SetAUS()
+
 	return ctx, nil
 }
 
