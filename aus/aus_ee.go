@@ -171,6 +171,11 @@ func Enabled() bool {
 	return ausCfg.initialized && ausCfg.settings.enable
 }
 
+// Returns if AUS is initialized
+func Initialized() bool {
+	return ausCfg.initialized
+}
+
 // Sets up AUS for the node. Must only be called post-migration of CBO stats.
 func startupAus() {
 
@@ -1645,7 +1650,7 @@ func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-cha
 		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
 	}
 
-	taskCtx := newTaskContext(task, _AUS_COORDINATION_DOC_PREFIX+task.version)
+	taskCtx := newTaskContext(task, _AUS_COORDINATION_DOC_PREFIX+task.version+"::")
 
 	var timedOut bool
 	timer := time.NewTimer(task.endTime.Sub(task.startTime))
@@ -1825,7 +1830,7 @@ func (this *ausConfig) scheduleCleanupTask(version string) (bool, errors.Error) 
 		return true, nil
 	}
 
-	startTime := time.Now().Add(time.Second * 30)
+	startTime := time.Now().Add(time.Second)
 
 	if !runningAusEnd.IsZero() {
 		// implies there is an AUS task running
@@ -1834,7 +1839,7 @@ func (this *ausConfig) scheduleCleanupTask(version string) (bool, errors.Error) 
 	}
 
 	if !runningCleanupEnd.IsZero() {
-		if !startTime.After(runningCleanupEnd) {
+		if startTime.Before(runningCleanupEnd) {
 			startTime = runningCleanupEnd.Add(time.Second * 30)
 		}
 	}
@@ -1861,7 +1866,7 @@ func execCleanupTask(context scheduler.Context, parms interface{}, stopChannel <
 	logging.Infof("AUS: [%s] Configurations of cleanup task: start_time: %v end_time: %v internal version: %v",
 		task.sessionName, task.startTime.Format(util.DEFAULT_FORMAT), task.endTime.Format(util.DEFAULT_FORMAT), task.version)
 
-	taskCtx := newTaskContext(task, _AUS_CLEANUP_COORDINATION_DOC_PREFIX+task.version)
+	taskCtx := newTaskContext(task, _AUS_CLEANUP_COORDINATION_DOC_PREFIX+task.version+"::")
 
 	var timedOut bool
 	timer := time.NewTimer(task.endTime.Sub(task.startTime))

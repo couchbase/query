@@ -21,6 +21,11 @@ func InitAus(server *server.Server) {
 	// do nothing
 }
 
+// Returns if AUS is initialized
+func Initialized() bool {
+	return false
+}
+
 // Returns if AUS is enabled
 func Enabled() bool {
 	return false

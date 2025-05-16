@@ -1095,11 +1095,15 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		awr := server.AwrCB.Config()
 
 		// Backup global AUS settings
-		aus, err := aus.FetchAus()
-		if err != nil {
-			aus = nil
+		var ausSettings map[string]interface{}
+		if aus.Initialized() {
+			var err errors.Error
+			ausSettings, err = aus.FetchAus()
+			if err != nil {
+				ausSettings = nil
+			}
 		}
-		return makeBackupHeader(data, nil, nil, awr, aus, nil), nil
+		return makeBackupHeader(data, nil, nil, awr, ausSettings, nil), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1162,16 +1166,22 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		// Restore global AUS settings
-		if ausGlobal != nil { // non-nil if a suitable backup image version
-			var mAus map[string]interface{}
-			err2 := json.Unmarshal(ausGlobal, &mAus)
-			if err2 != nil {
-				return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
-			}
+		// ausGlobal is non-nil if a suitable backup image version
+		if ausGlobal != nil {
+			if !aus.Initialized() {
+				logging.Errorf("AUS: Cannot restore global settings as the feature is not supported or not initialized." +
+					" The feature is only available on Enterprise Edition clusters migrated to a supported version.")
+			} else {
+				var mAus map[string]interface{}
+				err2 := json.Unmarshal(ausGlobal, &mAus)
+				if err2 != nil {
+					return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
+				}
 
-			err2, _ = aus.SetAus(mAus, true, true)
-			if err2 != nil {
-				return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
+				err2, _ = aus.SetAus(mAus, true, true)
+				if err2 != nil {
+					return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
+				}
 			}
 		}
 	default:
@@ -1279,12 +1289,16 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		// Backup keyspace level AUS settings
-		ausSettings, err := aus.BackupAusSettings("default", bucket, func(pathParts []string) bool {
-			return filterEval(pathParts, include, exclude, true)
-		})
+		var ausSettings []interface{}
+		if aus.Initialized() {
+			var err errors.Error
+			ausSettings, err = aus.BackupAusSettings("default", bucket, func(pathParts []string) bool {
+				return filterEval(pathParts, include, exclude, true)
+			})
 
-		if err != nil {
-			return nil, err
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return makeBackupHeader(fns, seqs, cbo, nil, nil, ausSettings), nil
@@ -1439,34 +1453,38 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 		// Restore keyspace level AUS settings
 		if ausSettings != nil {
-			remap, err = newRemapper(req.FormValue("remap"), "aus setting")
+			if !aus.Initialized() {
+				logging.Errorf("AUS: Cannot restore keyspace level settings as the feature is not supported or not initialized." +
+					" The feature is only available on Enterprise Edition clusters migrated to a supported version.")
+			} else {
+				remap, err = newRemapper(req.FormValue("remap"), "aus setting")
 
-			if err != nil {
-				return nil, err
-			}
-			index = 0
-			json.SetIndexState(&iState, ausSettings)
-			for {
-				v, err := iState.FindIndex(index)
 				if err != nil {
-					iState.Release()
-					return nil, errors.NewServiceErrorBadValue(err, "restore aus setting")
+					return nil, err
 				}
+				index = 0
+				json.SetIndexState(&iState, ausSettings)
+				for {
+					v, err := iState.FindIndex(index)
+					if err != nil {
+						iState.Release()
+						return nil, errors.NewServiceErrorBadValue(err, "restore aus setting")
+					}
 
-				if string(v) == "" {
-					break
+					if string(v) == "" {
+						break
+					}
+
+					index++
+
+					err1 := doAusSettingsRestore(v, bucket, include, exclude, remap)
+					if err1 != nil {
+						iState.Release()
+						return nil, err1
+					}
 				}
-
-				index++
-
-				err1 := doAusSettingsRestore(v, bucket, include, exclude, remap)
-				if err1 != nil {
-					iState.Release()
-					return nil, err1
-				}
+				iState.Release()
 			}
-			iState.Release()
-
 		}
 
 		// after restoring cleanup any stale entries in the system collection
