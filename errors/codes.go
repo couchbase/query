@@ -185,6 +185,8 @@ const (
 	E_VECTOR_CONSTANT_INDEX_KEY                  ErrorCode = 3408
 	E_PLAN                                       ErrorCode = 4000
 	E_REPREPARE                                  ErrorCode = 4001
+	W_PLAN_VERSION_MISMATCH                      ErrorCode = 4002
+	W_PLAN_VERIFY                                ErrorCode = 4003
 	E_NO_TERM_NAME                               ErrorCode = 4010
 	E_DUPLICATE_ALIAS                            ErrorCode = 4020
 	E_DUPLICATE_WITH_ALIAS                       ErrorCode = 4021

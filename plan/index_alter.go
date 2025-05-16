@@ -153,11 +153,11 @@ func (this *AlterIndex) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *AlterIndex) verify(prepared *Prepared) bool {
+func (this *AlterIndex) verify(prepared *Prepared) errors.Error {
 	if this.index == nil {
 		this.index, this.deferredError = this.indexer.IndexByName(this.node.Name())
 		if this.deferredError != nil {
-			return false
+			return this.deferredError
 		}
 	}
 	return verifyIndex(this.index, this.indexer, nil, prepared)

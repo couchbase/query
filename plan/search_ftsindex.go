@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -288,7 +289,7 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *IndexFtsSearch) verify(prepared *Prepared) bool {
+func (this *IndexFtsSearch) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, verifyCovers(this.covers, this.keyspace), prepared)
 }
 

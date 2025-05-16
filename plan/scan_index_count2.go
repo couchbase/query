@@ -232,7 +232,7 @@ func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *IndexCountScan2) verify(prepared *Prepared) bool {
+func (this *IndexCountScan2) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }
 

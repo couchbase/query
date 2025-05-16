@@ -62,7 +62,7 @@ func (this *QueryPlan) Subqueries() map[*algebra.Select]Operator {
 	return this.subqueries
 }
 
-func (this *QueryPlan) Verify(prepared *Prepared) bool {
+func (this *QueryPlan) Verify(prepared *Prepared) errors.Error {
 	return this.op.verify(prepared)
 }
 
@@ -90,7 +90,7 @@ type Operator interface {
 	Readonly() bool                              // Used to determine read-only compliance
 	New() Operator                               // Dynamic constructor; used for unmarshaling
 
-	verify(prepared *Prepared) bool // Check that the operator can reference keyspaces and indexes
+	verify(prepared *Prepared) errors.Error // Check that the operator can reference keyspaces and indexes
 
 	Cost() float64
 	Cardinality() float64

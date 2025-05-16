@@ -14,6 +14,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
@@ -164,6 +165,6 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *PrimaryScan) verify(prepared *Prepared) bool {
+func (this *PrimaryScan) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }

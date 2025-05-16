@@ -11,6 +11,8 @@
 package plan
 
 import (
+	"fmt"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -23,40 +25,43 @@ func verifyCovers(covers expression.Covers, keyspace datastore.Keyspace) datasto
 	return nil
 }
 
-func verifyIndex(index datastore.Index, indexer datastore.Indexer, keyspace datastore.Keyspace, prepared *Prepared) bool {
+func verifyIndex(index datastore.Index, indexer datastore.Indexer, keyspace datastore.Keyspace, prepared *Prepared) errors.Error {
 	if indexer == nil {
-		return false
+		if keyspace != nil {
+			return errors.NewPlanVerificationError(fmt.Sprintf("failed to load the indexer for the keyspace: %s", keyspace.Name()), nil)
+		} else {
+			return errors.NewPlanVerificationError("Failed to load the indexer for the keyspace", nil)
+		}
 	}
 
 	indexer.Refresh()
 
 	state, _, _ := index.State()
 	if state != datastore.ONLINE {
-		return false
+		return errors.NewPlanVerificationError(fmt.Sprintf("Index: %s is not online", index.Name()), nil)
 	}
 
 	// Checking state is not enough on its own: if the index no longer exists, because we have a
 	// stale reference...
 	idx, err := indexer.IndexById(index.Id())
 	if idx == nil || err != nil {
-		return false
+		return errors.NewPlanVerificationError(fmt.Sprintf("Index: %s does not exist", index.Id()), err)
 	}
 
 	// amend prepared statement version so that next time we avoid checks
 	if prepared != nil {
-		rv := prepared.addIndexer(indexer)
-		if keyspace != nil {
-			_, rv2 := verifyKeyspace(keyspace, prepared)
-			return rv && rv2
+		err := prepared.addIndexer(indexer)
+		if err == nil && keyspace != nil {
+			_, err = verifyKeyspace(keyspace, prepared)
 		}
-		return rv
+		return err
 	}
-	return true
+	return nil
 }
 
-func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.Keyspace, bool) {
+func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.Keyspace, errors.Error) {
 	if keyspace == nil {
-		return keyspace, true
+		return keyspace, nil
 	}
 	var ks datastore.Keyspace
 	var err errors.Error
@@ -92,8 +97,12 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 		meta = namespace.(datastore.KeyspaceMetadata)
 	}
 
-	if ks == nil || err != nil || ks.Uid() != keyspace.Uid() {
-		return keyspace, false
+	if ks == nil || err != nil {
+		return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Keyspace: %s not found", keyspace.Id()), err)
+	}
+
+	if ks.Uid() != keyspace.Uid() {
+		return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Keyspace: %s uuid has changed from %s to %s", keyspace.Id(), keyspace.Uid(), ks.Uid()), nil)
 	}
 
 	// amend prepared statement version so that next time we avoid checks
@@ -102,10 +111,10 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 	}
 
 	// return newly found keyspace just in case it has been refreshed
-	return ks, true
+	return ks, nil
 }
 
-func verifyScope(scope datastore.Scope, prepared *Prepared) (datastore.Scope, bool) {
+func verifyScope(scope datastore.Scope, prepared *Prepared) (datastore.Scope, errors.Error) {
 	var scp datastore.Scope
 	var err errors.Error
 	var meta datastore.KeyspaceMetadata
@@ -118,7 +127,7 @@ func verifyScope(scope datastore.Scope, prepared *Prepared) (datastore.Scope, bo
 		meta = b.(datastore.KeyspaceMetadata)
 	}
 	if scp == nil || err != nil {
-		return scope, false
+		return scope, errors.NewPlanVerificationError(fmt.Sprintf("Scope: %s not found", scope.Id()), err)
 	}
 
 	// amend prepared statement version so that next time we avoid checks
@@ -127,10 +136,10 @@ func verifyScope(scope datastore.Scope, prepared *Prepared) (datastore.Scope, bo
 	}
 
 	// return newly found keyspace just in case it has been refreshed
-	return scp, true
+	return scp, nil
 }
 
-func verifyBucket(bucket datastore.Bucket, prepared *Prepared) (datastore.Bucket, bool) {
+func verifyBucket(bucket datastore.Bucket, prepared *Prepared) (datastore.Bucket, errors.Error) {
 	var bkt datastore.Bucket
 	var err errors.Error
 	var meta datastore.KeyspaceMetadata
@@ -139,8 +148,12 @@ func verifyBucket(bucket datastore.Bucket, prepared *Prepared) (datastore.Bucket
 	bkt, err = namespace.BucketById(bucket.Id())
 	meta = namespace.(datastore.KeyspaceMetadata)
 
-	if bkt == nil || err != nil || bkt.Uid() != bucket.Uid() {
-		return bucket, false
+	if bkt == nil || err != nil {
+		return bucket, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s not found", bucket.Name()), err)
+	}
+
+	if bkt.Uid() != bucket.Uid() {
+		return bucket, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s uuid has changed from %s to %s", bucket.Name(), bucket.Uid(), bkt.Uid()), nil)
 	}
 
 	// amend prepared statement version so that next time we avoid checks
@@ -149,7 +162,7 @@ func verifyBucket(bucket datastore.Bucket, prepared *Prepared) (datastore.Bucket
 	}
 
 	// return newly found bucket just in case it has been refreshed
-	return bkt, true
+	return bkt, nil
 }
 
 /*

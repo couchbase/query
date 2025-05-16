@@ -10,6 +10,8 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/errors"
 )
 
 type IntersectAll struct {
@@ -118,6 +120,10 @@ func (this *IntersectAll) UnmarshalJSON(body []byte) error {
 	return err
 }
 
-func (this *IntersectAll) verify(prepared *Prepared) bool {
-	return this.first.verify(prepared) && this.second.verify(prepared)
+func (this *IntersectAll) verify(prepared *Prepared) errors.Error {
+	err := this.first.verify(prepared)
+	if err != nil {
+		return err
+	}
+	return this.second.verify(prepared)
 }

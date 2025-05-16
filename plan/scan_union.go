@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/util"
@@ -283,14 +284,14 @@ func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *UnionScan) verify(prepared *Prepared) bool {
+func (this *UnionScan) verify(prepared *Prepared) errors.Error {
 	for _, scan := range this.scans {
-		if !scan.verify(prepared) {
-			return false
+		if err := scan.verify(prepared); err != nil {
+			return err
 		}
 	}
 
-	return true
+	return nil
 }
 
 func (this *UnionScan) Equals(i interface{}) bool {

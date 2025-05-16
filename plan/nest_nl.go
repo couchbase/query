@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
@@ -178,6 +179,6 @@ func (this *NLNest) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *NLNest) verify(prepared *Prepared) bool {
+func (this *NLNest) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }

@@ -9,6 +9,7 @@
 package plan
 
 import (
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 )
 
@@ -20,8 +21,8 @@ func (this *readonly) Readonly() bool {
 	return true
 }
 
-func (this *readonly) verify(prepared *Prepared) bool {
-	return true
+func (this *readonly) verify(prepared *Prepared) errors.Error {
+	return nil
 }
 
 func (this *readonly) SetImplicitArrayKey(arrayKey *expression.All) {
@@ -47,8 +48,8 @@ func (this *readwrite) Readonly() bool {
 	return false
 }
 
-func (this *readwrite) verify(prepared *Prepared) bool {
-	return true
+func (this *readwrite) verify(prepared *Prepared) errors.Error {
+	return nil
 }
 
 func (this *readwrite) PlanContext() *planContext {

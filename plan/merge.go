@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
@@ -322,18 +323,18 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *Merge) verify(prepared *Prepared) bool {
-	var result bool
+func (this *Merge) verify(prepared *Prepared) errors.Error {
+	var err errors.Error
 
-	this.keyspace, result = verifyKeyspace(this.keyspace, prepared)
-	if result && this.insert != nil {
-		result = this.insert.verify(prepared)
+	this.keyspace, err = verifyKeyspace(this.keyspace, prepared)
+	if err == nil && this.insert != nil {
+		err = this.insert.verify(prepared)
 	}
-	if result && this.delete != nil {
-		result = this.delete.verify(prepared)
+	if err == nil && this.delete != nil {
+		err = this.delete.verify(prepared)
 	}
-	if result && this.update != nil {
-		result = this.update.verify(prepared)
+	if err == nil && this.update != nil {
+		err = this.update.verify(prepared)
 	}
-	return result
+	return err
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/algebra/unmarshal"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
@@ -363,9 +364,9 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *SendUpdate) verify(prepared *Prepared) bool {
-	var res bool
+func (this *SendUpdate) verify(prepared *Prepared) errors.Error {
+	var err errors.Error
 
-	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
-	return res
+	this.keyspace, err = verifyKeyspace(this.keyspace, prepared)
+	return err
 }

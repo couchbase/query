@@ -14,6 +14,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/couchbase/query/util"
 )
 
 type YesNoMaybe int
@@ -2493,6 +2495,39 @@ var errData = []ErrData{
 		Action: []string{
 			"Prepare the statement under a new name.",
 			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        W_PLAN_VERSION_MISMATCH, // 4002
+		symbol:      "W_PLAN_VERSION_MISMATCH",
+		Description: "plan was prepared by a newer engine",
+		Reason: []string{
+			fmt.Sprintf("The planVersion in the encoded plan exceeds the plan version supported by the current server: %d", util.PLAN_VERSION),
+		},
+		Action: []string{
+			"Upgrade the server to a version that supports the planVersion specified in the encoded plan.",
+			"The mismatch triggered a re-prepare; verify that the re-prepared plan uses the expected indexes.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        W_PLAN_VERIFY, // 4003
+		symbol:      "W_PLAN_VERIFY",
+		Description: "Failed to verify plan: «reason»",
+		Reason: []string{
+			"Keyspace, scope or index referenced in the plan is missing or has changed since the plan was generated.",
+			"Index is no longer online or does not exist.",
+			"Keyspace UUID has changed, indicating recreation.",
+		},
+		Action: []string{
+			"Ensure that all referenced keyspaces, scopes, buckets, and indexes still exist and are online.",
+			"Failure in verification led to a re-prepare; inspect the re-prepared plan." +
+				"If it appears sub-optimal, force prepare the statement after making the required changes.",
 		},
 		AppliesTo: []string{
 			"Server",

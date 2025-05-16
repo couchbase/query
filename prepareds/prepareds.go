@@ -110,6 +110,7 @@ func PreparedsRemotePrime() {
 	for left > 0 {
 		count := 0
 		failed := 0
+		reprepared := 0
 
 		// choose a random host
 		n := r1.Intn(left)
@@ -129,7 +130,8 @@ func PreparedsRemotePrime() {
 		preparedPrimeReportEntry := &PrimeReport{
 			StartTime: time.Now(),
 		}
-		decodeFailedReason := map[string]string{}
+		decodeFailedReason := map[string]errors.Error{}
+		decodeReprepReason := map[string]errors.Errors{}
 
 		// get the keys
 		distributed.RemoteAccess().GetRemoteKeys([]string{host}, "prepareds",
@@ -141,12 +143,16 @@ func PreparedsRemotePrime() {
 					func(doc map[string]interface{}) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
-							_, err := DecodePrepared(name, encoded_plan, true, logging.NULL_LOG)
+							_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, logging.NULL_LOG)
 							if err == nil {
 								count++
+								if reprepareCause != nil {
+									reprepared++
+									decodeReprepReason[name] = reprepareCause
+								}
 							} else {
 								failed++
-								decodeFailedReason[name] = err.Error()
+								decodeFailedReason[name] = err
 							}
 						}
 					},
@@ -159,12 +165,17 @@ func PreparedsRemotePrime() {
 
 		preparedPrimeReportEntry.Success = count
 		preparedPrimeReportEntry.Failed = failed
+		preparedPrimeReportEntry.Reprepared = reprepared
 		preparedPrimeReportEntry.Host = host
 
 		if len(decodeFailedReason) > 0 {
 			preparedPrimeReportEntry.Reason = decodeFailedReason
 		} else if getRemoteKeysFailed != nil {
 			preparedPrimeReportEntry.Reason = getRemoteKeysFailed.Error()
+		}
+
+		if len(decodeReprepReason) > 0 {
+			preparedPrimeReportEntry.RepreparedReason = decodeReprepReason
 		}
 
 		preparedPrimeReportEntry.EndTime = time.Now()
@@ -183,12 +194,14 @@ func PreparedsRemotePrime() {
 }
 
 type PrimeReport struct {
-	Host      string      `json:"host"`
-	StartTime time.Time   `json:"startTime"`
-	EndTime   time.Time   `json:"endTime"`
-	Reason    interface{} `json:"reason,omitempty"`
-	Success   int         `json:"success"`
-	Failed    int         `json:"failed"`
+	Host             string      `json:"host"`
+	StartTime        time.Time   `json:"startTime"`
+	EndTime          time.Time   `json:"endTime"`
+	Reason           interface{} `json:"reason,omitempty"`
+	Success          int         `json:"success"`
+	Failed           int         `json:"failed"`
+	Reprepared       int         `json:"reprepared"`
+	RepreparedReason interface{} `json:"repreparedReason,omitempty"`
 }
 
 // preparedCache implements planner.PlanCache
@@ -584,7 +597,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			func(doc map[string]interface{}) {
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
-					prepared, err = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime, true, log)
+					prepared, err, _ = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime, true, log)
 				}
 			},
 			func(warn errors.Error) {
@@ -604,7 +617,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 
 			// counters have changed. fetch new values
 			if !good && !metaCheck {
-				good = prepared.Verify()
+				good = prepared.Verify() == nil
 			}
 		} else {
 
@@ -618,7 +631,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			} else {
 
 				// nada - have to go the long way
-				good = prepared.Verify()
+				good = prepared.Verify() == nil
 				if good {
 					ce.populated = true
 				}
@@ -674,18 +687,18 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 	})
 }
 
-func DecodePrepared(prepared_name string, prepared_stmt string, reprep bool, log logging.Log) (*plan.Prepared, errors.Error) {
+func DecodePrepared(prepared_name string, prepared_stmt string, reprep bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
 	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, log)
 }
 
 func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool,
-	phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error) {
+	phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
 
 	added := true
 
-	prepared, err := unmarshalPrepared(prepared_stmt, phaseTime, reprep, log)
+	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, log)
 	if err != nil {
-		return nil, err
+		return nil, err, nil
 	}
 
 	// MB-19509 we now have to check that the encoded plan matches
@@ -696,32 +709,32 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// if it isn't, encoded name and query context before comparing to key
 	if queryContext != "" {
 		if prepared_key != prepared.Name() {
-			return nil, errors.NewEncodingNameMismatchError(prepared_name, prepared.Name())
+			return nil, errors.NewEncodingNameMismatchError(prepared_name, prepared.Name()), nil
 		}
 		if queryContext != prepared.QueryContext() {
-			return nil, errors.NewEncodingContextMismatchError(prepared_name, queryContext, prepared.QueryContext())
+			return nil, errors.NewEncodingContextMismatchError(prepared_name, queryContext, prepared.QueryContext()), nil
 		}
 	} else {
 		name := encodeName(prepared.Name(), prepared.QueryContext())
 		if prepared_key != name {
-			return nil, errors.NewEncodingNameMismatchError(prepared_name, name)
+			return nil, errors.NewEncodingNameMismatchError(prepared_name, name), nil
 		}
 	}
 
 	// we don't trust anything strangers give us.
 	// check the plan and populate metadata counters
 	// reprepare if no good
-	good := prepared.Verify()
-	if !good {
+	verifyErr := prepared.Verify()
+	if verifyErr != nil {
 		newPrepared, prepErr := reprepare(prepared, nil, phaseTime, log)
 		if prepErr == nil {
 			prepared = newPrepared
 		} else {
-			return nil, prepErr
+			return nil, prepErr, nil
 		}
 	}
 
-	prepareds.add(prepared, good, track,
+	prepareds.add(prepared, verifyErr == nil, track,
 		func(oldEntry *CacheEntry) bool {
 
 			// MB-19509: if the entry exists already, the new plan must
@@ -740,13 +753,20 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 		})
 
 	if added {
-		return prepared, nil
+		var reprepReason errors.Errors
+		if unmarshallErr != nil {
+			reprepReason = append(reprepReason, unmarshallErr)
+		}
+		if verifyErr != nil {
+			reprepReason = append(reprepReason, verifyErr)
+		}
+		return prepared, nil, reprepReason
 	} else {
-		return nil, errors.NewPreparedEncodingMismatchError(prepared_name)
+		return nil, errors.NewPreparedEncodingMismatchError(prepared_name), nil
 	}
 }
 
-func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error) {
+func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Error) {
 	prepared, bytes, diffVersion, err := plan.NewPreparedFromEncodedPlan(encoded)
 	if err != nil {
 		if reprep && len(bytes) > 0 {
@@ -762,20 +782,26 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, lo
 					prepared.SetText(stmt)
 					pl, _ := reprepare(prepared, nil, phaseTime, log)
 					if pl != nil {
-						return pl, nil
+						return pl, nil, err
 					}
 				}
+			} else {
+				err = errors.NewUnrecognizedPreparedError(fmt.Errorf("Couldn't find the \"text\" field in the encoded plan"))
 			}
 		}
-		return nil, err
+		return nil, err, nil
 	} else if reprep && diffVersion > 0 {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
-		return reprepare(prepared, nil, phaseTime, log)
+		pl, err := reprepare(prepared, nil, phaseTime, log)
+		if err != nil {
+			return nil, err, nil
+		}
+		return pl, nil, errors.NewPlanVersionChange()
 	} else {
 		prepared.SetEncodedPlan(encoded)
 	}
-	return prepared, nil
+	return prepared, nil, nil
 }
 
 func distributePrepared(name, plan string) {

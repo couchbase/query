@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -210,7 +211,7 @@ func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *DistinctScan) verify(prepared *Prepared) bool {
+func (this *DistinctScan) verify(prepared *Prepared) errors.Error {
 	return this.scan.verify(prepared)
 }
 

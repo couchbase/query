@@ -1287,7 +1287,7 @@ func (this *opContext) VerifySubqueryPlans(expr expression.Expression, subqPlans
 	verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
 		var good, local bool
 		if qp, ok := splan.(*plan.QueryPlan); ok {
-			good = qp.Verify(prepared)
+			good = qp.Verify(prepared) == nil
 		}
 
 		if good && isk != nil {

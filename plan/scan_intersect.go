@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -266,14 +267,14 @@ func flattenIntersectScans(scans, buf []SecondaryScan) []SecondaryScan {
 	return buf
 }
 
-func (this *IntersectScan) verify(prepared *Prepared) bool {
+func (this *IntersectScan) verify(prepared *Prepared) errors.Error {
 	for _, scan := range this.scans {
-		if !scan.verify(prepared) {
-			return false
+		if err := scan.verify(prepared); err != nil {
+			return err
 		}
 	}
 
-	return true
+	return nil
 }
 
 func (this *IntersectScan) Equals(i interface{}) bool {

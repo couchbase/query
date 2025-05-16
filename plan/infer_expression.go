@@ -83,7 +83,3 @@ func (this *InferExpression) UnmarshalJSON(body []byte) error {
 	this.node = algebra.NewInferExpression(expr, _unmarshalled.Using, with)
 	return nil
 }
-
-func (this *InferExpression) verify(prepared *Prepared) bool {
-	return true
-}

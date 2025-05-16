@@ -10,8 +10,10 @@ package plan
 
 import (
 	"encoding/json"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -96,9 +98,9 @@ func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *CreateCollection) verify(prepared *Prepared) bool {
-	var res bool
+func (this *CreateCollection) verify(prepared *Prepared) errors.Error {
+	var err errors.Error
 
-	this.scope, res = verifyScope(this.scope, prepared)
-	return res
+	this.scope, err = verifyScope(this.scope, prepared)
+	return err
 }

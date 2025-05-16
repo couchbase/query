@@ -10,6 +10,8 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/errors"
 )
 
 type UnionAll struct {
@@ -94,12 +96,12 @@ func (this *UnionAll) UnmarshalJSON(body []byte) error {
 	return err
 }
 
-func (this *UnionAll) verify(prepared *Prepared) bool {
+func (this *UnionAll) verify(prepared *Prepared) errors.Error {
 	for _, child := range this.children {
-		if !child.verify(prepared) {
-			return false
+		if err := child.verify(prepared); err != nil {
+			return err
 		}
 	}
 
-	return true
+	return nil
 }

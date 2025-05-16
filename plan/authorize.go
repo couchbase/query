@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 type Authorize struct {
@@ -128,6 +129,6 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 	return err
 }
 
-func (this *Authorize) verify(prepared *Prepared) bool {
+func (this *Authorize) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }

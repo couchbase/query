@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 )
 
 // Drop collection
@@ -88,9 +89,9 @@ func (this *DropCollection) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *DropCollection) verify(prepared *Prepared) bool {
-	var res bool
+func (this *DropCollection) verify(prepared *Prepared) errors.Error {
+	var err errors.Error
 
-	this.scope, res = verifyScope(this.scope, prepared)
-	return res
+	this.scope, err = verifyScope(this.scope, prepared)
+	return err
 }

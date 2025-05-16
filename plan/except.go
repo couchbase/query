@@ -10,6 +10,8 @@ package plan
 
 import (
 	"encoding/json"
+
+	"github.com/couchbase/query/errors"
 )
 
 type ExceptAll struct {
@@ -118,6 +120,12 @@ func (this *ExceptAll) UnmarshalJSON(body []byte) error {
 	return err
 }
 
-func (this *ExceptAll) verify(prepared *Prepared) bool {
-	return this.first.verify(prepared) && this.second.verify(prepared)
+func (this *ExceptAll) verify(prepared *Prepared) errors.Error {
+	err := this.first.verify(prepared)
+	if err != nil {
+		return err
+	}
+
+	err = this.second.verify(prepared)
+	return err
 }

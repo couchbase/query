@@ -10,8 +10,11 @@ package plan
 
 import (
 	"encoding/json"
+	"fmt"
+
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/value"
 )
 
@@ -85,14 +88,14 @@ func (this *AlterSequence) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *AlterSequence) verify(prepared *Prepared) bool {
-	res := true
+func (this *AlterSequence) verify(prepared *Prepared) errors.Error {
+	var err errors.Error
 	if this.node.Name().Scope() != "" {
 		scope, err := datastore.GetScope(this.node.Name().Namespace(), this.node.Name().Bucket(), this.node.Name().Scope())
 		if err != nil {
-			return false
+			return errors.NewPlanVerificationError(fmt.Sprintf("Scope: %s.%s not found", this.node.Name().Bucket(), this.node.Name().Scope()), err)
 		}
-		_, res = verifyScope(scope, prepared)
+		_, err = verifyScope(scope, prepared)
 	}
-	return res
+	return err
 }

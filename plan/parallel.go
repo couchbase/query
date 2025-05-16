@@ -11,6 +11,8 @@ package plan
 import (
 	"encoding/json"
 	"runtime"
+
+	"github.com/couchbase/query/errors"
 )
 
 type Parallel struct {
@@ -91,7 +93,7 @@ func (this *Parallel) UnmarshalJSON(body []byte) error {
 	return err
 }
 
-func (this *Parallel) verify(prepared *Prepared) bool {
+func (this *Parallel) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
 

@@ -230,9 +230,9 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func (this *CreateIndex) verify(prepared *Prepared) bool {
-	var res bool
+func (this *CreateIndex) verify(prepared *Prepared) errors.Error {
+	var err errors.Error
 
-	this.keyspace, res = verifyKeyspace(this.keyspace, prepared)
-	return res
+	this.keyspace, err = verifyKeyspace(this.keyspace, prepared)
+	return err
 }

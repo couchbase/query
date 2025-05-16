@@ -13,6 +13,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"sort"
 	"strconv"
@@ -426,7 +427,7 @@ func (this *Prepared) IndexScanKeyspaces() (rv map[string]interface{}) {
 }
 
 // Locking is handled by the top level caller!
-func (this *Prepared) addIndexer(indexer datastore.Indexer) bool {
+func (this *Prepared) addIndexer(indexer datastore.Indexer) errors.Error {
 	indexer.Refresh()
 	version := indexer.MetadataVersion()
 	noChanges := util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META)
@@ -437,11 +438,14 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) bool {
 			// any indexer metadata version change and we return false for force a re-prepare
 			rv := noChanges || this.indexers[i].version == version
 			this.indexers[i].version = version
-			return rv
+			if !rv {
+				return errors.NewPlanVerificationError(fmt.Sprintf("Metadata version changed for the indexer: %s", indexer.Name()), nil)
+			}
+			return nil
 		}
 	}
 	this.indexers = append(this.indexers, idxVersion{indexer, version})
-	return true
+	return nil
 }
 
 // Locking is handled by the top level caller!
@@ -478,23 +482,25 @@ func (this *Prepared) MetadataCheck() bool {
 }
 
 // verify prepared+subquery plans
-func (this *Prepared) Verify() bool {
-	good := this.Operator.verify(this)
-	if good {
+func (this *Prepared) Verify() errors.Error {
+	err := this.Operator.verify(this)
+	if err == nil {
 		subqueryPlans := this.GetSubqueryPlans(false)
 		if subqueryPlans != nil {
 			// Verify subquery plans
 			verifyF := func(key *algebra.Select, options uint32, plan, isk interface{}) (bool, bool) {
-				var good, local bool
+				var local bool
+				var subqerr errors.Error
 				if qp, ok := plan.(*QueryPlan); ok {
-					good = qp.PlanOp().verify(this)
+					subqerr = qp.PlanOp().verify(this)
 				}
-				return good, local
+				err = subqerr
+				return subqerr == nil, local
 			}
-			good, _ = subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
+			subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
 		}
 	}
-	return good
+	return err
 }
 
 // Subquery plans of prepared statement

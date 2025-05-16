@@ -52,6 +52,16 @@ func NewReprepareError(e error) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewPlanVersionChange() Error {
+	return &err{level: WARNING, ICode: W_PLAN_VERSION_MISMATCH, IKey: "plan_unmarshal_error",
+		InternalMsg: "plan was prepared by a newer engine", InternalCaller: CallerN(1)}
+}
+
+func NewPlanVerificationError(msg string, e error) Error {
+	return &err{level: WARNING, ICode: W_PLAN_VERIFY, IKey: "plan_verify_error", cause: e,
+		InternalMsg: fmt.Sprintf("Failed to verify plan: %s", msg), InternalCaller: CallerN(1)}
+}
+
 /* error numbers 4010, 4020, 4025 moved to semantics.go */
 
 func NewSubqueryMissingKeysError(keyspace string) Error {
