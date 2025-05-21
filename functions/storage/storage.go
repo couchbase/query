@@ -463,7 +463,7 @@ func migrateAll(bucketCount int) {
 	countDown := time.Since(countDownStarted)
 	if bucketCount > 0 && countDown < _GRACE_PERIOD {
 		toSleep := _GRACE_PERIOD - countDown
-		logging.Infof("UDF migration: Warming up for %d seconds", toSleep)
+		logging.Infof("UDF migration: Warming up for %.4f seconds", toSleep.Seconds())
 		time.Sleep(toSleep)
 	}
 
