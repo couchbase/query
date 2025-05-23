@@ -34,6 +34,7 @@ const (
 	META_PLAN
 	META_OPT_ESTIMATES
 	META_DISTRIBUTIONS
+	META_PLAN_VERSION
 	META_BYSEQNO
 	META_REVSEQNO
 	META_LOCKTIME
@@ -54,6 +55,7 @@ var metaNames = map[int]string{
 	META_PLAN:           "plan",
 	META_OPT_ESTIMATES:  "optimizerEstimates",
 	META_DISTRIBUTIONS:  "distributions",
+	META_PLAN_VERSION:   "planVersion",
 	META_BYSEQNO:        "byseqno",
 	META_REVSEQNO:       "revseqno",
 	META_LOCKTIME:       "locktime",
@@ -216,6 +218,7 @@ type metaData struct {
 	flags         uint32
 	expiration    uint32
 	lockTime      uint32
+	planVersion   int32
 	nru           byte
 }
 
@@ -250,6 +253,9 @@ func (this *metaData) size() uint64 {
 	}
 	if this.valid&META_DISTRIBUTIONS != 0 {
 		sz += AnySize(this.distributions)
+	}
+	if this.valid&META_PLAN_VERSION != 0 {
+		sz += AnySize(this.planVersion)
 	}
 	return sz
 }
@@ -333,6 +339,12 @@ func (this *metaData) writeSpill(w io.Writer, buf []byte) error {
 	}
 	if this.valid&META_DISTRIBUTIONS != 0 {
 		err = writeSpillValue(w, this.distributions, buf)
+		if err != nil {
+			return err
+		}
+	}
+	if this.valid&META_PLAN_VERSION != 0 {
+		err = writeSpillValue(w, this.planVersion, buf)
 		if err != nil {
 			return err
 		}
@@ -461,6 +473,13 @@ func (this *metaData) readSpill(trackMem func(int64) error, r io.Reader, buf []b
 		}
 		this.distributions = v
 	}
+	if this.valid&META_PLAN_VERSION != 0 {
+		v, err = readSpillValue(nil, r, buf)
+		if err != nil {
+			return err
+		}
+		this.planVersion = v.(int32)
+	}
 	if this.valid&META_BYSEQNO != 0 {
 		v, err = readSpillValue(nil, r, buf)
 		if err != nil {
@@ -507,7 +526,7 @@ type annotatedValue struct {
 	flags           uint8
 }
 
-const _DEF_META_SIZE = 17
+const _DEF_META_SIZE = 18
 
 func (this *annotatedValue) GetMetaMap() map[string]interface{} {
 	if this.meta == nil {
@@ -748,6 +767,8 @@ func (this *annotatedValue) GetMetaField(id int) interface{} {
 		return this.meta.optEst
 	case META_DISTRIBUTIONS:
 		return this.meta.distributions
+	case META_PLAN_VERSION:
+		return this.meta.planVersion
 	case META_BYSEQNO:
 		return this.meta.bySeqNo
 	case META_REVSEQNO:
@@ -792,6 +813,8 @@ func (this *annotatedValue) SetMetaField(id int, v interface{}) {
 		this.meta.optEst = v
 	case META_DISTRIBUTIONS:
 		this.meta.distributions = v
+	case META_PLAN_VERSION:
+		this.meta.planVersion, _ = v.(int32)
 	case META_BYSEQNO:
 		this.meta.bySeqNo, _ = v.(uint64)
 	case META_REVSEQNO:
