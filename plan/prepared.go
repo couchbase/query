@@ -27,6 +27,11 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+const (
+	_PLAN_VERSION_DUMMY        = -1  // unused, e.g. for SubqueryPlans
+	_PLAN_VERSION_ORDER_OFFSET = 720 // Order with Offset behavioral change
+)
+
 type Prepared struct {
 	Operator
 	signature       value.Value
@@ -49,6 +54,7 @@ type Prepared struct {
 	keyspaces          []ksVersion
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
+	planVersion        int
 
 	userAgent  string
 	users      string
@@ -70,42 +76,42 @@ type ksVersion struct {
 func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
 	optimHints *algebra.OptimHints) *Prepared {
 
+	var planVersion int
+	if operator != nil {
+		// only set planVersion if a valid plan is provided
+		planVersion = util.PLAN_VERSION
+	}
 	return &Prepared{
 		Operator:           operator,
 		signature:          signature,
 		optimHints:         optimHints,
 		indexScanKeyspaces: indexScanKeyspaces,
+		planVersion:        planVersion,
 	}
 }
 
-func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, int, errors.Error) {
-	r := 0
+func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
 	prepared := NewPrepared(nil, nil, nil, nil)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
-		return prepared, nil, r, errors.NewPreparedDecodingError(err)
+		return prepared, nil, errors.NewPreparedDecodingError(err)
 	}
 	var buf bytes.Buffer
 	buf.Write(decoded)
 	reader, err := gzip.NewReader(&buf)
 	if err != nil {
-		return prepared, nil, r, errors.NewPreparedDecodingError(err)
+		return prepared, nil, errors.NewPreparedDecodingError(err)
 	}
 	prepared_bytes, err := ioutil.ReadAll(reader)
 	if err != nil {
-		return prepared, nil, r, errors.NewPreparedDecodingError(err)
+		return prepared, nil, errors.NewPreparedDecodingError(err)
 	}
-	version, err := prepared.unmarshalInternal(prepared_bytes)
+	err = prepared.unmarshalInternal(prepared_bytes)
 	if err != nil {
-		return prepared, prepared_bytes, r, errors.NewUnrecognizedPreparedError(err)
+		return prepared, prepared_bytes, errors.NewUnrecognizedPreparedError(err)
 	}
 
-	if version < util.PLAN_VERSION {
-		r = -1
-	} else if version > util.PLAN_VERSION {
-		r = 1
-	}
-	return prepared, nil, r, nil
+	return prepared, nil, nil
 }
 
 func (this *Prepared) MarshalJSON() ([]byte, error) {
@@ -162,11 +168,10 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
-	_, err := this.unmarshalInternal(body)
-	return err
+	return this.unmarshalInternal(body)
 }
 
-func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
+func (this *Prepared) unmarshalInternal(body []byte) error {
 	var _unmarshalled struct {
 		Operator           json.RawMessage        `json:"operator"`
 		Signature          json.RawMessage        `json:"signature"`
@@ -196,12 +201,12 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 
 	err := json.Unmarshal(body, &_unmarshalled)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	err = json.Unmarshal(_unmarshalled.Operator, &op_type)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	if _unmarshalled.ApiVersion < datastore.INDEX_API_MIN {
@@ -220,11 +225,12 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
+	this.planVersion = _unmarshalled.Version
 
 	if _unmarshalled.PreparedTime != "" {
 		prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
 		if err != nil {
-			return 0, err
+			return err
 		}
 		this.preparedTime = prepTime
 	} else {
@@ -250,14 +256,14 @@ func (this *Prepared) unmarshalInternal(body []byte) (int, error) {
 	if len(_unmarshalled.OptimHints) > 0 {
 		this.optimHints, err = unmarshalOptimHints(_unmarshalled.OptimHints)
 		if err != nil {
-			return 0, err
+			return err
 		}
 	}
 
 	planContext := newPlanContext(nil)
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
 
-	return _unmarshalled.Version, err
+	return err
 }
 
 func (this *Prepared) Signature() value.Value {
@@ -390,7 +396,7 @@ func (this *Prepared) BuildEncodedPlan() (string, error) {
 	var b bytes.Buffer
 
 	r := make(map[string]interface{}, 5)
-	r["planVersion"] = util.PLAN_VERSION
+	r["planVersion"] = this.planVersion
 	this.marshalInternal(r)
 	json_bytes, err := json.Marshal(r)
 	if err != nil {
@@ -501,6 +507,14 @@ func (this *Prepared) Verify() errors.Error {
 		}
 	}
 	return err
+}
+
+func (this *Prepared) PlanVersion() int {
+	return this.planVersion
+}
+
+func (this *Prepared) SetDummyPlanVersion() {
+	this.planVersion = _PLAN_VERSION_DUMMY
 }
 
 // Subquery plans of prepared statement

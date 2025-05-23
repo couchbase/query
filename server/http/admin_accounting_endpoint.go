@@ -672,6 +672,10 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		if len(txPlans) > 0 {
 			itemMap["txPlans"] = txPlans
 		}
+		planVersion := entry.Prepared.PlanVersion()
+		if planVersion >= util.MIN_PLAN_VERSION {
+			itemMap["planVersion"] = planVersion
+		}
 
 		// Subquery plans
 		sqPlans := entry.Prepared.GetSubqueryPlansEntry()

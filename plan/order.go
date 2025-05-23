@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
@@ -250,6 +251,15 @@ func (this *Order) ClipValues() bool {
 
 func (this *Order) CanSpill() bool {
 	return (this.flags & _CAN_SPILL) != 0
+}
+
+func (this *Order) verify(prepared *Prepared) errors.Error {
+	// if the prepared plan version is < _PLAN_VERSION_ORDER_OFFSET, and offset is being done,
+	// need to reprepare (including if planVersion is not set)
+	if this.offset != nil && prepared.planVersion != _PLAN_VERSION_DUMMY && prepared.planVersion < _PLAN_VERSION_ORDER_OFFSET {
+		return errors.NewPlanVerificationError(fmt.Sprintf("Order with Offset in plan version %d", prepared.planVersion), nil)
+	}
+	return nil
 }
 
 func OrderFallbackNum() int {
