@@ -55,7 +55,7 @@ func InitAWR() {
 		var m map[string]interface{}
 		if err := json.Unmarshal(val, &m); err == nil {
 			if n, ok := m["node"]; ok && n != thisNode {
-				if err = AwrCB.SetConfig(m, false); err != nil {
+				if err, _ = AwrCB.SetConfig(m, false); err != nil {
 					logging.Errorf(_AWR_MSG+"Failed to update configuration: %v", err)
 				}
 			}
@@ -275,7 +275,8 @@ func (this *awrCB) isQuiescent() bool {
 	return atomic.LoadUint32(&this.state) == _AWR_QUIESCENT
 }
 
-func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
+// Returns an error and a list of warnings
+func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, errors.Errors) {
 
 	cfg, ok := i.(map[string]interface{})
 	if !ok {
@@ -283,11 +284,11 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 			s = strings.TrimSpace(s)
 			if len(s) > 0 {
 				if err := json.Unmarshal([]byte(s), &cfg); err != nil {
-					return errors.NewAWRError(errors.E_AWR_CONFIG, err)
+					return errors.NewAWRError(errors.E_AWR_CONFIG, err), nil
 				}
 			}
 		} else {
-			return errors.NewAWRError(errors.E_AWR_CONFIG, fmt.Errorf("Invalid type ('%T') for configuration.", i))
+			return errors.NewAWRError(errors.E_AWR_CONFIG, fmt.Errorf("Invalid type ('%T') for configuration.", i)), nil
 		}
 	}
 
@@ -312,62 +313,62 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 			case "threshold":
 				if _, ok := v.(string); ok {
 					if ok, _ := checkDuration(v); !ok {
-						return errors.NewAWRInvalidSettingError(k, v, nil)
+						return errors.NewAWRInvalidSettingError(k, v, nil), nil
 					}
 
 					err := target.setThreshold(getDuration(v))
 					if err != nil {
-						return err
+						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil)
+					return errors.NewAWRInvalidSettingError(k, v, nil), nil
 				}
 			case "interval":
 				if _, ok := v.(string); ok {
 					if ok, _ := checkDuration(v); !ok {
-						return errors.NewAWRInvalidSettingError(k, v, nil)
+						return errors.NewAWRInvalidSettingError(k, v, nil), nil
 					}
 
 					err := target.setInterval(getDuration(v))
 					if err != nil {
-						return err
+						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil)
+					return errors.NewAWRInvalidSettingError(k, v, nil), nil
 				}
 			case "queue_len":
 				if n, ok := v.(int64); ok {
 					err := target.setQueueLen(int(n))
 					if err != nil {
-						return err
+						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil)
+					return errors.NewAWRInvalidSettingError(k, v, nil), nil
 				}
 			case "num_statements":
 				if n, ok := v.(int64); ok {
 					err := target.setNumStmts(int(n))
 					if err != nil {
-						return err
+						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil)
+					return errors.NewAWRInvalidSettingError(k, v, nil), nil
 				}
 			case "enabled":
 				if enabled, ok := v.(bool); ok {
 					start = enabled
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil)
+					return errors.NewAWRInvalidSettingError(k, v, nil), nil
 				}
 			case "location":
 				if ks, ok := v.(string); ok {
 					if ks != "" {
 						parts := algebra.ParsePath(ks)
 						if parts[0] != "default" && parts[0] != "" {
-							return errors.NewAWRInvalidSettingError(k, ks, fmt.Errorf("Invalid namespace"))
+							return errors.NewAWRInvalidSettingError(k, ks, fmt.Errorf("Invalid namespace")), nil
 						} else if len(parts) != 2 && len(parts) != 4 {
 							return errors.NewAWRInvalidSettingError(k, ks,
-								fmt.Errorf("Invalid path (must resolve to 2 or 4 parts)"))
+								fmt.Errorf("Invalid path (must resolve to 2 or 4 parts)")), nil
 						} else if parts[0] == "" {
 							parts[0] = "default"
 						}
@@ -377,16 +378,18 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 						target.setLocation("")
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil)
+					return errors.NewAWRInvalidSettingError(k, v, nil), nil
 				}
 			default:
-				return errors.NewAdminUnknownSettingError(k)
+				return errors.NewAdminUnknownSettingError(k), nil
 			}
 		}
 	}
 	if target.sameAs(&this.config) && this.enabled == start {
-		return nil
+		return nil, nil
 	}
+
+	locChanged := target.Location() != "" && (target.Location() != this.config.Location())
 
 	this.Lock()
 	this.config = target
@@ -405,6 +408,14 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 		this.Stop()
 	}
 
+	// If the location was changed and the configuration was updated with no error, add a warning
+	warnings := make(errors.Errors, 0, 1)
+	if err == nil && locChanged {
+		msg := recommendedIndexWarning(target.Location())
+		warnings = append(warnings, errors.NewAWRWarning(msg))
+		logging.Warnf(_AWR_MSG + msg)
+	}
+
 	if distribute {
 		dcfg := this.distribConfig()
 		err1 := metakv.Set(_AWR_MKV_CONFIG, dcfg, nil)
@@ -419,7 +430,7 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) errors.Error {
 		}
 	}
 
-	return err
+	return err, warnings
 }
 
 func (this *awrCB) distribConfig() []byte {
@@ -887,4 +898,18 @@ func (this *awrCB) reporter() {
 		}
 	}
 	logging.Debugf("[%p] complete", this)
+}
+
+func recommendedIndexWarning(location string) string {
+	var idxDef string
+	if location != "" {
+		idxDef = fmt.Sprintf(" The recommended index definition is: CREATE INDEX idx_awr ON %s(META().id)", location)
+	}
+
+	msg := "It is recommended to create an index on the document key i.e META().id in the configured AWR keyspace location."
+	if idxDef != "" {
+		msg += idxDef
+	}
+
+	return msg
 }

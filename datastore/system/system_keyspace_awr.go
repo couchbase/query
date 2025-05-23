@@ -94,7 +94,14 @@ func (b *awrKeyspace) Update(updates value.Pairs, context datastore.QueryContext
 		v := updates[i].Value.Actual()
 		if m, ok := v.(map[string]interface{}); ok {
 
-			err := server.AwrCB.SetConfig(m, true)
+			err, warnings := server.AwrCB.SetConfig(m, true)
+
+			if len(warnings) > 0 {
+				for _, w := range warnings {
+					context.Warning(w)
+				}
+			}
+
 			if err != nil {
 				errs = append(errs, err)
 			} else {

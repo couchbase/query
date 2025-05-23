@@ -1620,6 +1620,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        W_AWR_WARNING, // 2504
+		symbol:      "E_AWR_WARNING",
+		Description: "Warning during AWR operation.",
+		Reason: []string{
+			"An AWR operation encountered a condition that needs attention.",
+		},
+		Action: []string{
+			"Check the error message for recommended actions. Or consult the documentation for guidance.",
+		},
+		IsWarning: true,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PARSE_SYNTAX, // 3000
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",

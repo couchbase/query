@@ -74,3 +74,8 @@ func NewAWRInvalidSettingError(setting string, value interface{}, cause error) E
 	return &err{level: EXCEPTION, ICode: E_AWR_SETTING, InternalCaller: CallerN(1), IKey: "service.workload_report.setting",
 		InternalMsg: fmt.Sprintf(" Invalid value '%v' for workload setting '%s'.", value, setting), cause: c}
 }
+
+func NewAWRWarning(message string) Error {
+	return &err{level: WARNING, ICode: W_AWR_WARNING, InternalCaller: CallerN(1), IKey: "service.workload_report.warning",
+		InternalMsg: message}
+}

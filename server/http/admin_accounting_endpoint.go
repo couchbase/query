@@ -1163,7 +1163,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
 			}
 			// Note: the "keyspace" is not remapped and has to be updated manually
-			err1 = server.AwrCB.SetConfig(m, true)
+			err1, _ = server.AwrCB.SetConfig(m, true)
 			if err1 != nil {
 				return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
 			}
