@@ -743,7 +743,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 }
 
 func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error) {
-	prepared, bytes, diffVersion, err := plan.NewPreparedFromEncodedPlan(encoded)
+	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded)
 	if err != nil {
 		if reprep && len(bytes) > 0 {
 
@@ -764,7 +764,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, lo
 			}
 		}
 		return nil, err
-	} else if reprep && diffVersion > 0 {
+	} else if reprep && (prepared.PlanVersion() > util.PLAN_VERSION) {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
 		return reprepare(prepared, nil, phaseTime, log)

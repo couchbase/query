@@ -244,6 +244,15 @@ func (this *Order) CanSpill() bool {
 	return (this.flags & _CAN_SPILL) != 0
 }
 
+func (this *Order) verify(prepared *Prepared) bool {
+	// if the prepared plan version is < _PLAN_VERSION_ORDER_OFFSET, and offset is being done,
+	// need to reprepare (including if planVersion is not set)
+	if this.offset != nil && prepared.planVersion != _PLAN_VERSION_DUMMY && prepared.planVersion < _PLAN_VERSION_ORDER_OFFSET {
+		return false
+	}
+	return true
+}
+
 func OrderFallbackNum() int {
 	return _FALLBACK_NUM
 }
