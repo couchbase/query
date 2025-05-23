@@ -638,15 +638,21 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 
 		// clear collections that have disappeared
 		if oldScope != nil {
-
-			// MB-43070 only have one stat cleaner
-			if atomic.AddInt32(&oldScope.cleaning, 1) == 1 {
-				for n, _ := range oldScope.keyspaces {
-					if scope.keyspaces[n] == nil {
-						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
+			checked := false
+			for n, _ := range oldScope.keyspaces {
+				if scope.keyspaces[n] == nil {
+					if !checked {
+						checked = true
+						// MB-43070 only have one stat cleaner
+						if atomic.AddInt32(&oldScope.cleaning, 1) != 1 {
+							break
+						}
 					}
+
+					DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
 				}
 			}
+
 			// always check for releasing indexers
 			for n, _ := range oldScope.keyspaces {
 				if _, copied := copiedIndexers[n]; !copied && oldScope.keyspaces[n] != nil {
