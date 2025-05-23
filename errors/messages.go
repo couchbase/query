@@ -2511,6 +2511,7 @@ var errData = []ErrData{
 			"Upgrade the server to a version that supports the planVersion specified in the encoded plan.",
 			"The mismatch triggered a re-prepare; verify that the re-prepared plan uses the expected indexes.",
 		},
+		IsWarning: true,
 		AppliesTo: []string{
 			"Server",
 		},
@@ -2529,6 +2530,7 @@ var errData = []ErrData{
 			"Failure in verification led to a re-prepare; inspect the re-prepared plan." +
 				"If it appears sub-optimal, force prepare the statement after making the required changes.",
 		},
+		IsWarning: true,
 		AppliesTo: []string{
 			"Server",
 		},
