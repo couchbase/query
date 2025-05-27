@@ -62,7 +62,7 @@ func ReplaceParameters(pred expression.Expression, namedArgs map[string]value.Va
 
 func IsDerivedExpr(expr expression.Expression) bool {
 	return expr != nil && expr.HasExprFlag(expression.EXPR_DERIVED_FROM_LIKE|expression.EXPR_DERIVED_RANGE1|
-		expression.EXPR_DERIVED_RANGE2)
+		expression.EXPR_DERIVED_RANGE2|expression.EXPR_DERIVED_FROM_ISOBJECT)
 }
 
 func IgnoreFilter(fl *Filter) bool {
