@@ -28,7 +28,7 @@ func TestSystem(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	runMatch("case_system_my_user_info.json", false, false, qc, t)
-	//runMatch("case_system_prepareds.json", false, false, qc, t)
-	//runMatch("case_system_user_info.json", false, false, qc, t)
+	runMatch("case_system_prepareds.json", false, false, qc, t)
+	runMatch("case_system_user_info.json", false, false, qc, t)
 
 }

@@ -206,7 +206,7 @@ func (this *preparedCache) GetText(text string, offset int) string {
 	// statment, use of string vs identifier for the statement name...)s
 	// makes the text verification fails, while it should't
 	prepare := text[:offset]
-	i := strings.Index(strings.ToUpper(prepare), "FORCE")
+	i := strings.Index(strings.ToUpper(prepare), " FORCE")
 	if i < 0 {
 		return text
 	}
