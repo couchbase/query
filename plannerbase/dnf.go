@@ -235,12 +235,8 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 		exp = expression.NewAnd(exp1, exp2)
 		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsObject:
-		exp1 := expression.NewGE(expr.Operand(), expression.EMPTY_OBJECT_EXPR)
-		exp2 := expr.Copy()
-		exp1.SetExprFlag(expression.EXPR_DERIVED_RANGE1)
-		exp2.SetExprFlag(expression.EXPR_DERIVED_RANGE2)
-		exp = expression.NewAnd(exp1, exp2)
-		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
+		exp = expression.NewGE(expr.Operand(), expression.EMPTY_OBJECT_EXPR)
+		expr.SetExprFlag(expression.EXPR_DERIVED_FROM_ISOBJECT)
 		return exp, nil // Avoid infinite recursion
 	default:
 		return expr, nil // Avoid infinite recursion

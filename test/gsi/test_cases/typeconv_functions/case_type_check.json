@@ -169,6 +169,20 @@
             ]
         }
     ]
+},
+{
+   "testcase": "MB-66955",
+   "statements":"SELECT o.custId, ol.qty FROM orders o UNNEST o.orderlines AS ol WHERE o.type = \"order\" AND IS_OBJECT(ol) AND ol.productId LIKE \"tea%\"",
+   "results": [
+       {
+            "custId": "customer312",
+            "qty": 1
+       },
+       {
+            "custId": "customer12",
+            "qty": 1
+       }
+    ]
 }
 
 ]
