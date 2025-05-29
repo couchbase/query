@@ -56,6 +56,8 @@ func TestVectors(t *testing.T) {
 
 	runMatch("case_composite_no_pushdown.json", false, true, qc, t)
 
+	runMatch("case_composite_rerank.json", false, true, qc, t)
+
 	runMatch("case_composite_error.json", false, false, qc, t)
 
 	runStmt(qc, "DROP INDEX idx_vec2 on product._default.vectors")
