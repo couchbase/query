@@ -62,6 +62,26 @@ func TestVectors(t *testing.T) {
 
 	runStmt(qc, "DROP INDEX idx_vec2 on product._default.vectors")
 
+	// Bhive index test cases
+
+	fmt.Println("Bhive vector index")
+
+	runStmt(qc, "CREATE VECTOR INDEX idx_vec3 on product._default.vectors(vec VECTOR) WITH {'dimension': 128, 'train_list': 10000, 'description': 'IVF32,SQ8', 'similarity': 'L2'}")
+
+	runMatch("case_bhive_single_key.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_vec3 on product._default.vectors")
+
+	fmt.Println("Bhive vector index with include columns")
+
+	runStmt(qc, "CREATE VECTOR INDEX idx_vec4 on product._default.vectors(vec VECTOR) INCLUDE (brand, size, color) WITH {'dimension': 128, 'train_list': 10000, 'description': 'IVF32,SQ8', 'similarity': 'L2'}")
+
+	runMatch("case_bhive_include.json", false, true, qc, t)
+
+	runMatch("case_bhive_error.json", false, false, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_vec4 on product._default.vectors")
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX ix_prod_id on product._default.vectors")
 
