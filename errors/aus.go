@@ -24,7 +24,7 @@ func getSchemaHelp(setting string) string {
 		help = "UTC or IANA timezone."
 	case "schedule.days":
 		help = "List of text string names of the days of the week."
-	case "enable", "all_buckets":
+	case "enable", "all_buckets", "create_missing_statistics":
 		help = "boolean."
 	case "update_statistics_timeout":
 		help = "Integer representing a duration in seconds."

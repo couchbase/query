@@ -86,7 +86,10 @@ type ausGlobalSettings struct {
 	allBuckets       bool
 	changePercentage int
 	schedule         ausSchedule
-	version          string
+	// Whether AUS should create statistics that are missing.
+	// If false, AUS will only update existing statistics.
+	createMissing bool
+	version       string
 }
 
 type ausSchedule struct {
@@ -355,10 +358,11 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 
 		// The default global settings document
 		bytes, err := json.Marshal(map[string]interface{}{
-			"enable":            false,
-			"all_buckets":       false,
-			"change_percentage": 10,
-			"internal_version":  "default",
+			"enable":                    false,
+			"all_buckets":               false,
+			"change_percentage":         10,
+			"internal_version":          "default",
+			"create_missing_statistics": false,
 		})
 
 		if err != nil {
@@ -452,6 +456,12 @@ func setAusHelper(settings interface{}, distribute bool, restore bool) (obj ausG
 					return obj, err, nil
 				}
 				obj.schedule = sched
+			case "create_missing_statistics":
+				if c, ok := v.(bool); !ok {
+					return obj, errors.NewAusDocInvalidSettingsValue(k, v), nil
+				} else {
+					obj.createMissing = c
+				}
 			case "internal_version":
 				if vv, ok := v.(string); ok {
 					obj.version = vv
@@ -491,6 +501,13 @@ func setAusHelper(settings interface{}, distribute bool, restore bool) (obj ausG
 			settings["change_percentage"] = 10
 			obj.changePercentage = 10
 			warnings = append(warnings, errors.NewAusDocMissingSetting("change_percentage", 10))
+		}
+
+		// If "create_missing_statistics" is not set, the default value is "false"
+		if _, ok := settings["create_missing_statistics"]; !ok {
+			settings["create_missing_statistics"] = false
+			obj.createMissing = false
+			warnings = append(warnings, errors.NewAusDocMissingSetting("create_missing_statistics", false))
 		}
 
 		// Add the new settings document to metakv
@@ -1703,6 +1720,7 @@ func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-cha
 	ausCfg.setRunningAusEnd(false, task.endTime)
 	allBuckets := ausCfg.settings.allBuckets
 	globalChangePercentage := ausCfg.settings.changePercentage
+	createMissing := ausCfg.settings.createMissing
 	ausCfg.Unlock()
 
 	logging.Infof(
@@ -1738,7 +1756,8 @@ func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-cha
 			return
 		}
 
-		updated := aus.AutoUpdateStatistics(keyspace, changePerc, settings.update_stats_timeout, statupdater, taskContext)
+		updated := aus.AutoUpdateStatistics(keyspace, changePerc, settings.update_stats_timeout, createMissing,
+			statupdater, taskContext)
 		if updated {
 			keyspacesUpdated = append(keyspacesUpdated, keyspace.QualifiedName())
 		}
