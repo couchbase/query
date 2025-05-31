@@ -904,7 +904,7 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 	}
 
 	// Allow array indexes to cover ANY predicates
-	if pred != nil && entry.exactSpans && implicitAnyCover(entry, false, uint64(0)) {
+	if pred != nil && entry.hasExactSpans() && implicitAnyCover(entry, false, uint64(0)) {
 		covers, err := CoversFor(pred, origPred, keys, context)
 		if err != nil {
 			return nil, nil, err

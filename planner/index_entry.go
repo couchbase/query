@@ -311,6 +311,10 @@ func (this *indexEntry) scanCost() float64 {
 	return this.cost
 }
 
+func (this *indexEntry) hasExactSpans() bool {
+	return this.exactSpans && (len(this.includes) == 0 || this.includeSpans == nil || this.exactIncludes)
+}
+
 func isPushDownProperty(pushDownProperty, property PushDownProperties) bool {
 	if property == _PUSHDOWN_NONE {
 		return (pushDownProperty == property)
