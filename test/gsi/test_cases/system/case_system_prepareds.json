@@ -6,8 +6,10 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime",
 			"queryContext",
-			"reqType"
+			"reqType",
+			"users"
 		],
 		"userArgs": {
 			"Administrator": "password"
@@ -96,8 +98,10 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime",
 			"queryContext",
-			"reqType"
+			"reqType",
+			"users"
 		],
 		"userArgs": {
 			"Administrator": "password"
@@ -227,8 +231,10 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime",
 			"queryContext",
-			"reqType"
+			"reqType",
+			"users"
 		],
 		"userArgs": {
 			"Administrator": "password"
@@ -316,8 +322,10 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime",
 			"queryContext",
-			"reqType"
+			"reqType",
+			"users"
 		],
 		"userArgs": {
 			"Administrator": "password"
