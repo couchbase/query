@@ -1277,8 +1277,8 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	//  Return the start date when the step value is 0.
-	var s int64
-	if s = int64(step); s == 0 {
+	var s = int64(step)
+	if s == 0 {
 		ts, err := timeToStr(t1, fmt1)
 		if err != nil {
 			return setWarning(context, err)
@@ -1506,6 +1506,13 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 		return setWarning(context, errors.W_DATE_NON_INT_VALUE, n)
 	}
 
+	//  Return the start date when the step value is 0.
+	var s = int64(step)
+	if s == 0 {
+		ts := timeToMillis(t1)
+		return value.NewValue([]interface{}{ts}), nil
+	}
+
 	// If the two dates are the same, return an empty array.
 	if t1.Equal(t2) {
 		return value.EMPTY_ARRAY_VALUE, nil
@@ -1535,7 +1542,7 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
-	capacity = capacity / int64(step)
+	capacity = capacity / s
 	if err != nil {
 		return setWarning(context, err)
 	}
