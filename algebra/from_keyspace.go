@@ -529,6 +529,12 @@ func (this *KeyspaceTerm) SetPrimaryJoin() {
 	}
 }
 
+func (this *KeyspaceTerm) UnsetPrimaryJoin() {
+	if this.IsAnsiJoinOp() {
+		this.property &^= TERM_PRIMARY_JOIN
+	}
+}
+
 /*
 Set COMMA JOIN property
 */

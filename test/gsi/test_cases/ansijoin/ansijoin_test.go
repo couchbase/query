@@ -128,6 +128,8 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "CREATE INDEX st_ix30 on shellTest(c10,c11,c12,c13,c14,c15,c16) WHERE c16 != c15 AND c14 != \"XX\"")
 	runStmt(qc, "CREATE INDEX st_ix31 on shellTest(c20,c21,c22,c23,c24,c25,c26) WHERE c26 != c25 AND c24 != \"XX\"")
 	runStmt(qc, "UPDATE STATISTICS FOR shellTest(c10,c13,c14,c15,c16,c20,c23,c24,c25,c26)")
+	runStmt(qc, "CREATE INDEX re_ix01 on review(parentKey, cityKey)")
+	runStmt(qc, "UPDATE STATISTICS FOR review(parentKey, cityKey)")
 
 	// run with CBO
 	runMatch("case_ansijoin_cbo2.json", false, true, qc, t)
@@ -136,12 +138,14 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.st_ix29")
 	runStmt(qc, "DROP INDEX shellTest.st_ix30")
 	runStmt(qc, "DROP INDEX shellTest.st_ix31")
+	runStmt(qc, "DROP INDEX review.re_ix01")
 
 	// DELETE optimizer statistics
 	runStmt(qc, "UPDATE STATISTICS FOR purchase DELETE ALL")
 	runStmt(qc, "UPDATE STATISTICS FOR customer DELETE ALL")
 	runStmt(qc, "UPDATE STATISTICS FOR orders DELETE ALL")
 	runStmt(qc, "UPDATE STATISTICS FOR shellTest DELETE ALL")
+	runStmt(qc, "UPDATE STATISTICS FOR review DELETE ALL")
 
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX customer.cust_lastName_firstName_customerId")

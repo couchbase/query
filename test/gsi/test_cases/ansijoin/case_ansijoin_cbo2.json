@@ -77,6 +77,24 @@
                 "x": null
             }
         ]
+    },
+    {
+        "testcase": "MB-67035",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true,
+                    "cost": true,
+                    "cardinality": true
+                }
+            ],
+            "statement": "SELECT true AS present, p.cost IS NOT MISSING AS cost, p.cardinality IS NOT MISSING AS cardinality FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'r1' END"
+        },
+        "queryParams": {"use_cbo": true, "n1ql_feat_ctrl": 67108940},
+        "statements":"SELECT r5.field2 FROM review r1 LEFT OUTER JOIN review r2 ON meta(r1).id = r2.parentKey INNER JOIN review r3 ON meta(r2).id = r3.parentKey AND r3.cityKey = meta(r1).id INNER JOIN review r4 ON meta(r3).id = r4.parentKey INNER JOIN review r5 ON meta(r4).id = r5.parentKey INNER JOIN review r6 ON meta(r5).id = r6.parentKey WHERE r1.parentKey = 'xx' AND r3.field1 = 'yy'",
+        "results": [
+        ]
     }
 ]
 
