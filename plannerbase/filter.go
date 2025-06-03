@@ -208,6 +208,10 @@ func (this *Filter) SetPrimaryJoin() {
 	this.fltrFlags |= FLTR_PRIMARY_JOIN
 }
 
+func (this *Filter) UnsetPrimaryJoin() {
+	this.fltrFlags &^= FLTR_PRIMARY_JOIN
+}
+
 func (this *Filter) IsPrimaryJoin() bool {
 	return (this.fltrFlags & FLTR_PRIMARY_JOIN) != 0
 }

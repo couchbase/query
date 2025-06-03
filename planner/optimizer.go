@@ -225,6 +225,9 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 	} else {
 		this.lastOp = this.children[len(this.children)-1]
 	}
+
+	var ksTerm *algebra.KeyspaceTerm
+	var filters base.Filters
 	if hash {
 		innerPlan = plan.CopyOperators(innerPlan)
 		innerSubPlan = plan.CopyOperators(innerSubPlan)
@@ -241,10 +244,13 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 		if !ok {
 			return nil, nil, nil, nil, errors.NewPlanInternalError("buildJoinOp: baseKeyspace not found for " + innerAlias)
 		}
-		filters := baseKeyspace.Filters()
+		filters = baseKeyspace.Filters()
 		if len(filters) > 0 {
 			filters.SaveIndexFlag()
 			defer filters.RestoreIndexFlag()
+		}
+		if term, ok := baseKeyspace.Node().(*algebra.KeyspaceTerm); ok {
+			ksTerm = term
 		}
 	}
 
@@ -297,6 +303,12 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 				}
 				this.addChildren(nljoin)
 			}
+			if ksTerm != nil && ksTerm.IsPrimaryJoin() {
+				ksTerm.UnsetPrimaryJoin()
+				for _, fl := range filters {
+					fl.UnsetPrimaryJoin()
+				}
+			}
 		}
 	} else if nest != nil {
 		if hash {
@@ -326,6 +338,12 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 					this.addChildren(this.addSubchildrenParallel())
 				}
 				this.addChildren(nlnest)
+			}
+			if ksTerm != nil && ksTerm.IsPrimaryJoin() {
+				ksTerm.UnsetPrimaryJoin()
+				for _, fl := range filters {
+					fl.UnsetPrimaryJoin()
+				}
 			}
 		}
 	}
