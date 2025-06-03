@@ -27,6 +27,7 @@ func TestDateFunctions(t *testing.T) {
 	runStmt(qc, "CREATE PRIMARY INDEX ON orders")
 
 	runMatch("case_func_date.json", false, false, qc, t)
+	runMatch("case_bugs.json", false, false, qc, t)
 
 	_, _, errcs := runStmt(qc, "delete from orders where test_id IN [\"datefunc\"]")
 	if errcs != nil {

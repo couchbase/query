@@ -1179,6 +1179,13 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
+	//  Return the start date when the step value is 0.
+	var s = int64(step)
+	if s == 0 {
+		ts := timeToStr(t1, fmt1)
+		return value.NewValue([]interface{}{ts}), nil
+	}
+
 	// If the two dates are the same, return an empty array.
 	if t1.Equal(t2) {
 		return value.EMPTY_ARRAY_VALUE, nil
@@ -1205,7 +1212,7 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
-	capacity = capacity / int64(step)
+	capacity = capacity / s
 	if err != nil {
 		return value.NULL_VALUE, err
 	}
@@ -1372,6 +1379,13 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 		return value.NULL_VALUE, nil
 	}
 
+	//  Return the start date when the step value is 0.
+	var s = int64(step)
+	if s == 0 {
+		ts := timeToMillis(t1)
+		return value.NewValue([]interface{}{ts}), nil
+	}
+
 	// If the two dates are the same, return an empty array.
 	if t1.String() == t2.String() {
 		return value.EMPTY_ARRAY_VALUE, nil
@@ -1398,7 +1412,7 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 
 	//Define capacity of the slice using dateDiff
 	capacity, err := dateDiff(t1, t2, partStr)
-	capacity = capacity / int64(step)
+	capacity = capacity / s
 	if err != nil {
 		return value.NULL_VALUE, err
 	}
