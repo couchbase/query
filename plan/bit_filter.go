@@ -331,7 +331,7 @@ func (this *ProbeBitFilterBase) GetProbeBitFilters() BitFilters {
 
 func (this *ProbeBitFilterBase) RemoveProbeBitFilter(alias string) {
 	for i, bf := range this.probeBitFilters {
-		if bf.alias == alias {
+		if bf != nil && bf.alias == alias {
 			this.probeBitFilters[i] = nil
 		}
 	}
