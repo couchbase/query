@@ -725,7 +725,7 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 
 		if skipVerify {
 			tr = &http.Transport{
-				TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
+				TLSClientConfig:     &tls.Config{InsecureSkipVerify: skipVerify},
 				MaxIdleConnsPerHost: MaxIdleConnsPerHost,
 			}
 		} else {
