@@ -346,7 +346,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 		Transport: &http.Transport{
 			ForceAttemptHTTP2: true,
 			TLSClientConfig: &tls.Config{
-				// Default value of SSL Verification in libcurl is true
+				/// By default libcurl performs SSL certificate validation
 				InsecureSkipVerify: false,
 			},
 		},
@@ -459,13 +459,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 				}
 			}
 
-			if inputVal.Truth() {
-				transport.TLSClientConfig.InsecureSkipVerify = true
-
-			} else {
-				transport.TLSClientConfig.InsecureSkipVerify = false
-
-			}
+			transport.TLSClientConfig.InsecureSkipVerify = inputVal.Truth()
 		case "keepalive-time":
 			if inputVal.Type() != value.NUMBER {
 				return nil, fmt.Errorf("Incorrect type for keepalive-time option in CURL ")
