@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"sort"
@@ -441,12 +442,13 @@ func Init(logDir string) {
 		}
 	}()
 
+	cbLogDir = filepath.Clean(logDir)
+
 	// This should not happen. But logging an error in case it does.
-	if logDir == "" {
+	if cbLogDir == "" {
 		logging.Errorf("FFDC: No log directory specified. FFDC files have no capture path.")
 	}
 
-	cbLogDir = logDir
 	pidString = fmt.Sprintf("%08d", os.Getpid())
 	capturePath := GetPath()
 	logging.Infof("FFDC: Capture path: %v", capturePath)

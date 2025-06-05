@@ -17,7 +17,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"runtime/debug"
@@ -2560,6 +2560,8 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 	}
 
 	_, fileParam := router.RequestValue(req, "file")
+
+	// The fileParam is already URL decoded
 	if fileParam == "" {
 		fileParam = "query.log"
 	}
@@ -2569,7 +2571,16 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 	var e error
 	var n int64
 
-	fileName := path.Join(ffdc.GetPath(), fileParam)
+	logDir := ffdc.GetPath()
+	if logDir == "" {
+		return nil, errors.NewAdminLogError(fmt.Errorf("Couchbase log directory not set"))
+	}
+
+	fileName := filepath.Join(logDir, fileParam)
+
+	if logDir != filepath.Dir(fileName) {
+		return nil, errors.NewAdminLogError(fmt.Errorf("Attempt to access a file outside of Couchbase log directory"))
+	}
 
 	adt := make(map[string]interface{}, 2)
 	adt["file"] = fileName
