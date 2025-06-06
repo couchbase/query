@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"runtime"
 	"runtime/pprof"
 	"sort"
@@ -424,7 +425,8 @@ func GetPath() string {
 		}
 		_path = p
 	}
-	return _path
+
+	return filepath.Clean(_path)
 }
 
 func Init() {
