@@ -2503,21 +2503,36 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 		runtime.ReadMemStats(&before)
 		runtime.GC()
 		runtime.ReadMemStats(&after)
-		logging.Warnf("Admin endpoint forced GC. Freed: %v", ffdc.Human(before.HeapAlloc-after.HeapAlloc))
+		var freed uint64
+		if before.HeapAlloc >= after.HeapAlloc {
+			freed = before.HeapAlloc - after.HeapAlloc
+		}
+		logging.Warnf("Admin endpoint forced GC. Freed: %v", ffdc.Human(freed))
 		resp["status"] = "GC invoked"
-		resp["freed"] = (before.HeapAlloc - after.HeapAlloc)
+		resp["freed"] = freed
 	case "POST":
 		var before runtime.MemStats
 		var after runtime.MemStats
 		runtime.ReadMemStats(&before)
 		debug.FreeOSMemory()
 		runtime.ReadMemStats(&after)
+
+		var freed uint64
+		if before.HeapAlloc >= after.HeapAlloc {
+			freed = before.HeapAlloc - after.HeapAlloc
+		}
+
+		var released uint64
+		if after.HeapReleased >= before.HeapReleased {
+			released = after.HeapReleased - before.HeapReleased
+		}
+
 		logging.Warnf("Admin endpoint forced GC. Freed: %v Released: %v",
-			ffdc.Human(before.HeapAlloc-after.HeapAlloc),
-			ffdc.Human(after.HeapReleased-before.HeapReleased))
+			ffdc.Human(freed),
+			ffdc.Human(released))
 		resp["status"] = "GC invoked and memory released"
-		resp["freed"] = (before.HeapAlloc - after.HeapAlloc)
-		resp["released"] = (after.HeapReleased - before.HeapReleased)
+		resp["freed"] = freed
+		resp["released"] = released
 	}
 	return resp, nil
 }
