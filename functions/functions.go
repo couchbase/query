@@ -45,6 +45,7 @@ type FunctionName interface {
 	Path() []string
 	Name() string
 	Key() string
+	ProtectedKey() string // Full name of the function with appropriate backticks
 	IsGlobal() bool
 	QueryContext() string
 	Signature(object map[string]interface{})
@@ -176,6 +177,10 @@ func (name *MockName) Name() string {
 
 func (name *MockName) Key() string {
 	return name.namespace + ":" + name.name
+}
+
+func (name *MockName) ProtectedKey() string {
+	return name.Key()
 }
 
 func (name *MockName) IsGlobal() bool {
