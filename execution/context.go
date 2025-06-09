@@ -927,7 +927,10 @@ func (this *Context) ProducerThrottleQuota() uint64 {
 func (this *Context) TrackValueSize(size uint64) errors.Error {
 	sz, _, err := this.memorySession.Track(size)
 	// uncomment when debugging tracking issues
-	//logging.DBG("MEM: [%p] track: %v (%v) %v", this, size, sz, errors.CallerN(1))
+	//logging.Infof("MEM: [%p] track: %v (%v) %v", this, size, sz, errors.CallerN(1))
+	if this.logLevel >= logging.INFO {
+		this.Infof("MEM: [%p]  track: %v (%v) %v", this, size, sz, errors.CallerN(1))
+	}
 	this.output.TrackMemory(sz)
 	if this.memoryQuota > 0 && sz > this.memoryQuota {
 		return errors.NewMemoryQuotaExceededError()
@@ -936,10 +939,12 @@ func (this *Context) TrackValueSize(size uint64) errors.Error {
 }
 
 func (this *Context) ReleaseValueSize(size uint64) {
-	this.memorySession.Track(^(size - 1))
-	// uncomment when debugging tracking issues (and comment out line above)
-	//sz, _, _ := this.memorySession.Track(^(size - 1))
-	//logging.DBG("MEM: [%p] release: %v (%v) %v", this, size, sz, errors.CallerN(1))
+	sz, _, _ := this.memorySession.Track(^(size - 1))
+	// uncomment when debugging tracking issues
+	//logging.Infof("MEM: [%p] release: %v (%v) %v", this, size, sz, errors.CallerN(1))
+	if this.logLevel >= logging.INFO {
+		this.Infof("MEM: [%p] release: %v (%v) %v", this, size, sz, errors.CallerN(1))
+	}
 }
 
 func (this *Context) Release() {
