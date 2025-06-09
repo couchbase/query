@@ -126,11 +126,15 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 
 				curKey := false
 				vector := false
+				hasRerank := false
 				var vecExpr *expression.ApproxVectorDistance
 				if indexKey.HasAttribute(datastore.IK_VECTOR) && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 					vector = true
 					if tspans, ok := entry.spans.(*TermSpans); ok {
 						vecExpr = tspans.vecExpr
+						if vecExpr != nil && vecExpr.ReRank() != nil {
+							hasRerank = true
+						}
 					} else {
 						// not expected, add to index projection to be safe
 						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
@@ -149,10 +153,11 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 							indexProjection.PrimaryKey = true
 							primaryKey = true
 						} else if !vector ||
-							!entry.IsPushDownProperty(_PUSHDOWN_ORDER) ||
+							(!entry.IsPushDownProperty(_PUSHDOWN_ORDER) && !hasRerank) ||
 							!expr.HasExprFlag(expression.EXPR_ORDER_BY) {
 							// if vector key, need to include it if:
 							//  - order is not pushed down to indexer
+							//    and rerank is not requested
 							//    (need vector distance for sorting)
 							//  - expr is not in the ORDER BY clause
 							//    (e.g. in projection list)

@@ -103,6 +103,8 @@ outer:
 
 		idxKeys := entry.idxKeys
 		keys := entry.keys
+		vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
+		var vecExpr *expression.ApproxVectorDistance
 		var err error
 
 		// Matches execution.spanScan.RunOnce()
@@ -111,8 +113,8 @@ outer:
 			keys = append(keys, id)
 		}
 
-		if entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
-			idxKeys, _, err = replaceVectorKey(idxKeys, entry, true)
+		if vector {
+			idxKeys, vecExpr, err = replaceVectorKey(idxKeys, entry, true)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -163,6 +165,14 @@ outer:
 
 		entry.pushDownProperty = this.indexPushDownProperty(entry, keys, nil, pred, origPred,
 			alias, nil, false, true, (len(this.baseKeyspaces) == 1), implicitAny)
+
+		// in vector query, if rerank is requested but ORDER/LIMIT cannot be pushed down,
+		// then rerank cannot be done in the index, need to Fetch in this case (to rerank)
+		if vector && vecExpr != nil && vecExpr.ReRank() != nil &&
+			(!entry.IsPushDownProperty(_PUSHDOWN_ORDER) || !entry.IsPushDownProperty(_PUSHDOWN_LIMIT)) {
+			continue outer
+		}
+
 		coveringEntries[index] = &coveringEntry{
 			idxEntry:         entry,
 			filterCovers:     filterCovers,
