@@ -768,9 +768,11 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 
 		if skipVerify {
 			tr = &http.Transport{
-				TLSClientConfig:     &tls.Config{InsecureSkipVerify: skipVerify},
+				TLSClientConfig:     &tls.Config{},
 				MaxIdleConnsPerHost: MaxIdleConnsPerHost,
 			}
+
+			tr.TLSClientConfig.InsecureSkipVerify = skipVerify
 		} else {
 			cfg, err := ClientConfigForX509(caFile, certFile, keyFile, privateKeyPassphrase)
 			if err != nil {
