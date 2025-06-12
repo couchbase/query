@@ -83,6 +83,11 @@ func IsRefreshRequired(err error) bool {
 	return false
 }
 
+func IsBucketNotFound(err error) bool {
+	return strings.Contains(err.Error(), BUCKET_NOT_FOUND) ||
+		strings.Contains(err.Error(), BUCKET_UUID_MISMATCH)
+}
+
 // Return true if a collection is not known
 func IsUnknownCollection(err error) bool {
 
@@ -109,6 +114,10 @@ type doDescriptor struct {
 	amendReplica    bool
 	pool            *connectionPool
 }
+
+const BUCKET_UUID_MISMATCH = "Bucket uuid does not match the requested"
+const BUCKET_NOT_FOUND = "Bucket not found"
+const HTTP_404 = "HTTP error 404"
 
 // Given a vbucket number, returns a memcached connection to it.
 // The connection must be returned to its pool after use.
@@ -161,9 +170,24 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached
 		return conn, pool, nil
 	} else if err == errNoPool {
 		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
-			b.Refresh()
-			desc.backOffAttempts++
-			desc.retry = true
+			rerr := b.Refresh()
+			if rerr != nil {
+				desc.retry = true
+				errStr := rerr.Error()
+				switch {
+				case strings.Contains(errStr, BUCKET_UUID_MISMATCH):
+					desc.retry = false
+					desc.errorString = BUCKET_UUID_MISMATCH + " %v : %v"
+				case strings.Contains(errStr, HTTP_404):
+					desc.retry = false
+					desc.errorString = BUCKET_NOT_FOUND + " %v : %v"
+				default:
+					desc.backOffAttempts++
+				}
+			} else {
+				desc.retry = true
+				desc.backOffAttempts++
+			}
 		} else {
 			desc.errorString = "Connection Error no pool %v : %v"
 		}
@@ -458,6 +482,10 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 		if err != nil {
 			if desc.retry {
 				continue
+			}
+
+			if desc.errorString != "" {
+				return fmt.Errorf(desc.errorString, b.Name, err)
 			}
 			return err
 		}
@@ -808,10 +836,11 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 			conn, pool, err := b.getVbConnection(uint32(vb), desc)
 			if err != nil {
 				if !desc.retry {
-					ech <- err
 					if desc.errorString != "" {
-						logging.Infof(desc.errorString, b.Name, err)
+						err = fmt.Errorf(desc.errorString, b.Name, err)
+						logging.Infof("%v", err.Error())
 					}
+					ech <- err
 					return err
 				}
 				if lastError == nil || err.Error() != lastError.Error() || maxBulkRetries-1 == desc.attempts {

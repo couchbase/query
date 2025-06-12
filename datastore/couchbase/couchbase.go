@@ -2090,8 +2090,13 @@ func (b *keyspace) fetch(fullName, qualifiedName, scopeName, collectionName stri
 			if cb.IsReadTimeOutError(err) {
 				logging.Errorf(err.Error())
 			}
+
 			_, err = processIfMCError(errors.FALSE, err, keys[0], qualifiedName)
-			return []errors.Error{errors.NewCbBulkGetError(err, "")}
+			if cb.IsBucketNotFound(err) {
+				return []errors.Error{errors.NewCbBulkGetError(err, "", errors.FALSE)}
+			} else {
+				return []errors.Error{errors.NewCbBulkGetError(err, "", errors.TRUE)}
+			}
 		}
 	}
 

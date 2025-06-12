@@ -1738,6 +1738,12 @@ func (cqueue *rswCancelQueue) runWorker() {
 									desc.attempts++
 									continue
 								}
+
+								if desc.errorString != "" {
+									logging.Infof("Range scan cancel failed - %v", fmt.Sprintf(desc.errorString, b.Name, err))
+								} else {
+									logging.Infof("Range scan cancel failed for bucket: %s - %v", b.Name, err)
+								}
 								conn = nil
 							}
 							break
@@ -1908,10 +1914,15 @@ func (queue *rswQueue) runWorker() {
 								desc.attempts++
 								continue
 							}
-							if vbscan.retries > 0 {
+							var connErr = err
+							if desc.errorString != "" {
+								connErr = fmt.Errorf(desc.errorString, b.Name, err)
+							}
+							if vbscan.retries > 0 && !IsBucketNotFound(connErr) {
 								vbscan.setupRetry()
 							} else {
-								vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, err))
+								vbscan.reportError(qerrors.NewSSError(qerrors.E_SS_CONN, connErr))
+								logging.Errorf("Range Scan %s failed - %v", vbscan, connErr, vbscan.scan.log)
 							}
 							conn = nil
 							run = false

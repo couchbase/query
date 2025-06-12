@@ -54,7 +54,7 @@ func NewCbKeyspaceCountError(e error, msg string) Error {
 
 // Error code 12007 is retired. Do not reuse.
 
-func NewCbBulkGetError(e error, msg string) Error {
+func NewCbBulkGetError(e error, msg string, retry Tristate) Error {
 	var c interface{}
 	if e != nil {
 		m := make(map[string]interface{})
@@ -63,7 +63,7 @@ func NewCbBulkGetError(e error, msg string) Error {
 	}
 
 	return &err{level: EXCEPTION, ICode: E_CB_BULK_GET, IKey: "datastore.couchbase.bulk_get_error", ICause: e, cause: c,
-		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: TRUE}
+		InternalMsg: "Error performing bulk get operation " + msg, InternalCaller: CallerN(1), retry: Tristate(retry)}
 }
 
 func NewCbDMLError(e error, msg string, casMismatch bool, r Tristate, k string, ks string) Error {
