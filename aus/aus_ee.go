@@ -1030,7 +1030,7 @@ func DropScope(namespace string, bucket string, scope string, scopeUid string) {
 	dPairs := make(value.Pairs, 0, _BATCH_SIZE)
 
 	for _, prefix := range []string{_AUS_SETTING_DOC_PREFIX, _AUS_CHANGE_DOC_PREFIX} {
-		err := datastore.ScanSystemCollection(bucket, prefix+scopeUid+"::",
+		datastore.ScanSystemCollection(bucket, prefix+scopeUid+"::",
 			func(systemCollection datastore.Keyspace) errors.Error {
 				context = datastore.GetDurableQueryContextFor(systemCollection)
 				return nil
@@ -1039,11 +1039,7 @@ func DropScope(namespace string, bucket string, scope string, scopeUid string) {
 				dPairs = append(dPairs, value.Pair{Name: key})
 
 				if len(dPairs) >= _BATCH_SIZE {
-					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
-					if len(mErrs) > 0 {
-						logging.Errorf("AUS: Errors during cleanup of stale documents in the scope %s with Uid %s. Error: %v",
-							algebra.PathFromParts(namespace, bucket, scope), scopeUid, mErrs[0])
-					}
+					systemCollection.Delete(dPairs, context, false)
 					dPairs = dPairs[:0]
 				}
 
@@ -1051,19 +1047,10 @@ func DropScope(namespace string, bucket string, scope string, scopeUid string) {
 			},
 			func(systemCollection datastore.Keyspace) errors.Error {
 				if len(dPairs) > 0 {
-					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
-					if len(mErrs) > 0 {
-						logging.Errorf("AUS: Errors during cleanup of stale documents in the scope %s with Uid %s. Error: %v",
-							algebra.PathFromParts(namespace, bucket, scope), scopeUid, mErrs[0])
-					}
+					systemCollection.Delete(dPairs, context, false)
 				}
 				return nil
 			})
-
-		if err != nil {
-			logging.Errorf("AUS: Errors during cleanup of stale documents in the scope %s with Uid %s. Error: %v",
-				algebra.PathFromParts(namespace, bucket, scope), scopeUid, err)
-		}
 
 		dPairs = dPairs[:0]
 	}
@@ -1080,7 +1067,7 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 	dPairs := make(value.Pairs, 0, _BATCH_SIZE)
 
 	for _, prefix := range []string{_AUS_SETTING_DOC_PREFIX, _AUS_CHANGE_DOC_PREFIX} {
-		err := datastore.ScanSystemCollection(bucket, prefix+scopeUid+"::"+collectionUid+"::",
+		datastore.ScanSystemCollection(bucket, prefix+scopeUid+"::"+collectionUid+"::",
 			func(systemCollection datastore.Keyspace) errors.Error {
 				context = datastore.GetDurableQueryContextFor(systemCollection)
 				return nil
@@ -1089,11 +1076,7 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 				dPairs = append(dPairs, value.Pair{Name: key})
 
 				if len(dPairs) >= _BATCH_SIZE {
-					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
-					if len(mErrs) > 0 {
-						logging.Errorf("AUS: Error during cleanup of stale documents in collection %s with Uid %s. Error: %v",
-							algebra.PathFromParts(namespace, bucket, scope, collection), collectionUid, mErrs[0])
-					}
+					systemCollection.Delete(dPairs, context, false)
 					dPairs = dPairs[:0]
 				}
 
@@ -1101,20 +1084,10 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 			},
 			func(systemCollection datastore.Keyspace) errors.Error {
 				if len(dPairs) > 0 {
-					_, _, mErrs := systemCollection.Delete(dPairs, context, false)
-					if len(mErrs) > 0 {
-						logging.Errorf("AUS: Errors during cleanup of stale documents in collection %s with Uid %s. Error: %v",
-							algebra.PathFromParts(namespace, bucket, scope, collection), collectionUid, mErrs[0])
-					}
-
+					systemCollection.Delete(dPairs, context, false)
 				}
 				return nil
 			})
-
-		if err != nil {
-			logging.Errorf("AUS: Errors during cleanup of stale documents in collection %s with Uid %s. Error: %v",
-				algebra.PathFromParts(namespace, bucket, scope, collection), collectionUid, err)
-		}
 
 		dPairs = dPairs[:0]
 	}
@@ -2025,7 +1998,7 @@ func newContext(output *ausOutput) (*execution.Context, errors.Error) {
 		creds, datastore.NOT_SET, &ZeroScanVectorSource{}, output, nil, qServer.MaxIndexAPI(),
 		util.GetN1qlFeatureControl(), "", util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_FLEXINDEX),
 		util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_CBO), server.GetNewOptimizer(), datastore.DEF_KVTIMEOUT,
-		qServer.Timeout())
+		0)
 
 	if qServer.MemoryQuota() > 0 {
 		ctx.SetMemoryQuota(qServer.MemoryQuota())
