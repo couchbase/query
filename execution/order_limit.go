@@ -149,7 +149,7 @@ func (this *OrderLimit) afterItems(context *Context) {
 					return !this.stopped
 				}
 			})
-			if err != nil {
+			if err != nil && !this.stopped && this.isRunning() {
 				context.Error(err)
 			}
 			logging.Debuga(func() string { return this.values.Stats() })

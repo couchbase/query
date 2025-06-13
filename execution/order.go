@@ -145,7 +145,7 @@ func (this *Order) processItem(item value.AnnotatedValue, context *Context) bool
 		this.makeMinimal(item, context)
 	}
 	err := this.values.Append(item)
-	if err != nil {
+	if err != nil && !this.stopped && this.isRunning() {
 		context.Error(err)
 	}
 	return err == nil
@@ -180,7 +180,7 @@ func (this *Order) afterItems(context *Context) {
 			}
 			return this.sendItem(av)
 		})
-		if err != nil {
+		if err != nil && !this.stopped && this.isRunning() {
 			context.Error(err)
 		}
 		logging.Debuga(func() string { return this.values.Stats() })

@@ -154,7 +154,11 @@ func (this *PartSortOrder) processItem(item value.AnnotatedValue, context *Conte
 		return true
 	}
 	this.last = nil
-	context.Error(err)
+
+	if !this.stopped && this.isRunning() {
+		context.Error(err)
+	}
+
 	return false
 }
 
@@ -199,7 +203,10 @@ func (this *PartSortOrder) sortAndStream(context *Context) bool {
 			return true
 		})
 		if err != nil {
-			context.Error(err)
+			if !this.stopped && this.isRunning() {
+				context.Error(err)
+			}
+
 			return false
 		}
 	}
