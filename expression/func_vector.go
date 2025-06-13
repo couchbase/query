@@ -272,7 +272,7 @@ func (this *ApproxVectorDistance) MinArgs() int {
 }
 
 func (this *ApproxVectorDistance) MaxArgs() int {
-	return 5
+	return 6
 }
 
 func (this *ApproxVectorDistance) Constructor() FunctionConstructor {
@@ -324,6 +324,13 @@ func (this *ApproxVectorDistance) Nprobes() Expression {
 func (this *ApproxVectorDistance) ReRank() Expression {
 	if len(this.operands) > 4 {
 		return this.operands[4]
+	}
+	return nil
+}
+
+func (this *ApproxVectorDistance) TopNScan() Expression {
+	if len(this.operands) > 5 {
+		return this.operands[5]
 	}
 	return nil
 }

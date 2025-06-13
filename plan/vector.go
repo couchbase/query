@@ -22,16 +22,18 @@ type IndexVector struct {
 	IndexKeyPos int
 	Probes      expression.Expression
 	ReRank      expression.Expression
+	TopNScan    expression.Expression
 	SquareRoot  bool
 }
 
 func NewIndexVector(queryVector expression.Expression, indexKeyPos int,
-	probes, reRank expression.Expression, squareRoot bool) *IndexVector {
+	probes, reRank, topNScan expression.Expression, squareRoot bool) *IndexVector {
 	return &IndexVector{
 		QueryVector: queryVector,
 		IndexKeyPos: indexKeyPos,
 		Probes:      probes,
 		ReRank:      reRank,
+		TopNScan:    topNScan,
 		SquareRoot:  squareRoot,
 	}
 }
@@ -42,6 +44,7 @@ func (this *IndexVector) Copy() *IndexVector {
 		IndexKeyPos: this.IndexKeyPos,
 		Probes:      expression.Copy(this.Probes),
 		ReRank:      expression.Copy(this.ReRank),
+		TopNScan:    expression.Copy(this.TopNScan),
 	}
 }
 
@@ -54,6 +57,12 @@ func (this *IndexVector) EquivalentTo(other *IndexVector) bool {
 		(this.Probes != nil && other.Probes == nil) {
 		return false
 	} else if this.Probes != nil && !this.Probes.EquivalentTo(other.Probes) {
+		return false
+	}
+	if (this.TopNScan == nil && other.TopNScan != nil) ||
+		(this.TopNScan != nil && other.TopNScan == nil) {
+		return false
+	} else if this.TopNScan != nil && !this.TopNScan.EquivalentTo(other.TopNScan) {
 		return false
 	}
 	if (this.ReRank == nil && other.ReRank != nil) ||
@@ -80,6 +89,9 @@ func (this *IndexVector) MarshalBase(f func(map[string]interface{})) map[string]
 	if this.ReRank != nil {
 		rv["re_rank"] = this.ReRank
 	}
+	if this.TopNScan != nil {
+		rv["top_nscan"] = this.TopNScan
+	}
 	if this.SquareRoot {
 		rv["square_root"] = this.SquareRoot
 	}
@@ -92,6 +104,7 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 		IndexKeyPos int    `json:"index_key_pos"`
 		Probes      string `json:"probes"`
 		ReRank      string `json:"re_rank"`
+		TopNScan    string `json:"top_nscan"`
 		SquareRoot  bool   `json:"square_root"`
 	}
 
@@ -119,6 +132,13 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.ReRank != "" {
 		this.ReRank, err = parser.Parse(_unmarshalled.ReRank)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.TopNScan != "" {
+		this.TopNScan, err = parser.Parse(_unmarshalled.TopNScan)
 		if err != nil {
 			return err
 		}

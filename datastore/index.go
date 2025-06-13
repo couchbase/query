@@ -519,6 +519,7 @@ type IndexVector struct {
 	QueryVector []float32 // query vector
 	IndexKeyPos int       // vector key pos in index
 	Probes      int       // nprobes
+	TopNScan    int       // TopNScan for Bhive Index, Override default only when  > 0
 	ReRank      bool      // rerank
 }
 

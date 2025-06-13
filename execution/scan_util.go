@@ -176,6 +176,18 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 		indexVector.Probes = int(probes)
 	}
 
+	if planIndexVector.TopNScan != nil {
+		topNScanVal, err := planIndexVector.TopNScan.Evaluate(parent, context)
+		if err != nil {
+			return errors.NewEvaluationError(err, "index vector parameter: topNScan")
+		}
+		topNScan, ok := value.IsIntValue(topNScanVal)
+		if !ok {
+			return errors.NewInvalidTopNScan("not an integer")
+		}
+		indexVector.TopNScan = int(topNScan)
+	}
+
 	if planIndexVector.ReRank != nil {
 		avVal, err := planIndexVector.ReRank.Evaluate(parent, context)
 		if err != nil {

@@ -4346,6 +4346,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_INVALID_TOPNSCAN, // 5434
+		symbol:      "E_INVALID_TOPNSCAN",
+		Description: "Invalid parameter (TopNScan) specified for vector function: <<msg>>.",
+		Reason: []string{
+			"An invalid parameter (TopNScan) is specified for vector function: <<msg>>.",
+		},
+		Action: []string{
+			"Revise the vector function to use a proper parameter (TopNScan).",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MEMORY_QUOTA_EXCEEDED, // 5500
 		symbol:      "E_MEMORY_QUOTA_EXCEEDED",
 		Description: "Request has exceeded memory quota.",

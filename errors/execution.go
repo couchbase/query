@@ -578,6 +578,12 @@ func NewInvalidReRank(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewInvalidTopNScan(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_INVALID_TOPNSCAN, IKey: "execution.vector_index.topnscan",
+		InternalMsg:    "Invalid parameter (TopNScan) specified for vector search function: " + msg,
+		InternalCaller: CallerN(1)}
+}
+
 func NewMaxHeapSizeExceeded(heapSize, maxHeapSize int, name string) Error {
 	return &err{level: EXCEPTION, ICode: E_MAXHEAP_SIZE_EXCEEDED, IKey: "execution.vector_index.maxheap_size",
 		InternalMsg: fmt.Sprintf("Total heap size for (Limit + Offset) (%d) exceeded maximum heap size (%d)"+

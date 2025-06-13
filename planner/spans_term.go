@@ -53,9 +53,10 @@ func (this *TermSpans) CreateScan(
 			if index6.AllowRerank() {
 				reRank = this.vecExpr.ReRank()
 			}
+			topNScan := this.vecExpr.TopNScan()
 			squareRoot := this.vecExpr.NeedSquareRoot()
 			indexVector = plan.NewIndexVector(this.vecExpr.QueryVector(), this.vecPos,
-				this.vecExpr.Nprobes(), reRank, squareRoot)
+				this.vecExpr.Nprobes(), reRank, topNScan, squareRoot)
 		} else {
 			indexKeyNames = nil
 			indexPartitionSets = nil
