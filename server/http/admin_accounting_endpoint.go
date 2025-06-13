@@ -2439,7 +2439,7 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 		return nil, errors.NewAdminLogError(fmt.Errorf("Couchbase log directory not set"))
 	}
 
-	fileName := filepath.Join(logDir, fileParam)
+	fileName := filepath.Clean(filepath.Join(logDir, fileParam))
 
 	if logDir != filepath.Dir(fileName) {
 		return nil, errors.NewAdminLogError(fmt.Errorf("Attempt to access a file outside of Couchbase log directory"))
