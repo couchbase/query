@@ -109,7 +109,7 @@ func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {
 	var newSize uint64
 
 	top := atomic.AddUint64(&this.inUseMemory, size)
-	currentLimit := this.currentLimit
+	currentLimit := atomic.LoadUint64(&this.currentLimit)
 	max := this.manager.max
 
 	// only amend the curren memory limit if the manager has a limit
@@ -129,11 +129,11 @@ func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {
 }
 
 func (this *memorySession) Allocated() uint64 {
-	return this.currentLimit
+	return atomic.LoadUint64(&this.currentLimit)
 }
 
 func (this *memorySession) Release() {
-	size := this.currentLimit - _MEMORY_TOKEN
+	size := atomic.LoadUint64(&this.currentLimit) - _MEMORY_TOKEN
 	if size > 0 {
 		atomic.AddUint64(&this.manager.curr, ^(size - 1))
 	}
