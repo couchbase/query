@@ -16,8 +16,8 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func verifyCovers(covers expression.Covers, keyspace datastore.Keyspace) datastore.Keyspace {
-	if covers != nil {
+func verifyCoversAndSeqScan(covers expression.Covers, keyspace datastore.Keyspace, indexer datastore.Indexer) datastore.Keyspace {
+	if (indexer != nil && indexer.Name() == datastore.SEQ_SCAN) || covers != nil {
 		return keyspace
 	}
 	return nil
@@ -70,6 +70,10 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 		namespace := bucket.Namespace()
 		d, _ := bucket.DefaultKeyspace()
 
+		b, _ := namespace.BucketById(bucket.Id())
+		if b != nil && b.Uid() != bucket.Uid() {
+			return keyspace, false
+		}
 		// if this is the default collection for a bucket, we're done
 		if d != nil && d.Name() == keyspace.Name() && d.Id() == keyspace.Id() {
 			ks = d

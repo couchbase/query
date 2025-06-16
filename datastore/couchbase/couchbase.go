@@ -1383,7 +1383,11 @@ func (p *namespace) BucketNames() ([]string, errors.Error) {
 }
 
 func (p *namespace) BucketById(name string) (datastore.Bucket, errors.Error) {
-	return p.keyspaceByName(name)
+	k, err := p.keyspaceByName(name)
+	if err != nil {
+		return nil, err
+	}
+	return k, err
 }
 
 func (p *namespace) BucketByName(name string) (datastore.Bucket, errors.Error) {
