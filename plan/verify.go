@@ -70,7 +70,11 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 		namespace := bucket.Namespace()
 		d, _ := bucket.DefaultKeyspace()
 
-		b, _ := namespace.BucketById(bucket.Id())
+		b, err := namespace.BucketById(bucket.Id())
+		if err != nil {
+			return keyspace, false
+		}
+
 		if b != nil && b.Uid() != bucket.Uid() {
 			return keyspace, false
 		}
