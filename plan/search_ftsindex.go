@@ -290,7 +290,7 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 }
 
 func (this *IndexFtsSearch) verify(prepared *Prepared) errors.Error {
-	return verifyIndex(this.index, this.indexer, verifyCovers(this.covers, this.keyspace), prepared)
+	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
 
 func (this *IndexFtsSearch) Equals(i interface{}) bool {

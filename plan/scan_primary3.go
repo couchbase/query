@@ -264,5 +264,5 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 }
 
 func (this *PrimaryScan3) verify(prepared *Prepared) errors.Error {
-	return verifyIndex(this.index, this.indexer, nil, prepared)
+	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(nil, this.keyspace, this.indexer), prepared)
 }

@@ -363,7 +363,7 @@ func (this *IndexScan2) UnmarshalJSON(body []byte) error {
 }
 
 func (this *IndexScan2) verify(prepared *Prepared) errors.Error {
-	return verifyIndex(this.index, this.indexer, verifyCovers(this.covers, this.keyspace), prepared)
+	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
 
 func (this *IndexScan2) Equals(i interface{}) bool {
