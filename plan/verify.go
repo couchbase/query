@@ -76,7 +76,11 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 		namespace := bucket.Namespace()
 		d, _ := bucket.DefaultKeyspace()
 
-		b, _ := namespace.BucketById(bucket.Id())
+		b, err := namespace.BucketById(bucket.Id())
+		if err != nil {
+			return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s not found", bucket.Id()), nil)
+		}
+
 		if b != nil && b.Uid() != bucket.Uid() {
 			return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s uuid has changed from %s to %s", bucket.Id(), b.Uid(), bucket.Uid()), nil)
 		}
