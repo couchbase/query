@@ -60,6 +60,9 @@ func Config(maxMiB uint64, valPercent uint, servicers []int) {
 	manager.valPercent = valPercent
 	manager.nodeQuota = maxMiB
 	manager.setting = maxMiB * uint64(valPercent) / 100
+	if maxMiB > 0 && manager.setting == 0 {
+		manager.setting = maxMiB
+	}
 	manager.max = manager.setting * _MB
 
 	// we reserve a memory token for each configured servicer so that
@@ -72,7 +75,7 @@ func Config(maxMiB uint64, valPercent uint, servicers []int) {
 		manager.max = c
 		manager.setting = c / _MEMORY_TOKEN
 		logging.Infof("Amending memory manager max from requested %v MiB to %v", maxMiB,
-			logging.HumanReadableSize(int64(manager.setting), false))
+			logging.HumanReadableSize(int64(manager.max), false))
 	}
 	atomic.AddUint64(&manager.curr, ^(manager.reserved - 1))
 	atomic.AddUint64(&manager.curr, c)
