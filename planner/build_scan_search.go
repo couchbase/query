@@ -109,15 +109,8 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 	}
 
 	pred := baseKeyspace.DnfPred()
-	vecPred := baseKeyspace.GetVectorPred()
 	alias := node.Alias()
-	coveringExprs := expression.Expressions{id}
-	if pred != nil {
-		coveringExprs = append(coveringExprs, pred)
-	}
-	if vecPred != nil {
-		coveringExprs = append(coveringExprs, vecPred)
-	}
+	coveringExprs := expression.Expressions{pred, id}
 
 	for _, expr := range this.getExprsToCover() {
 		if !expression.IsCovered(expr, alias, coveringExprs, false) {
