@@ -452,16 +452,20 @@ func NewInvalidQueryVector(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewMemoryQuotaExceededError() Error {
+func NewMemoryQuotaExceededError(inuse, limit uint64) Error {
+	c := make(map[string]interface{})
+	c["caller"] = CallerN(2)
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
-		InternalMsg:    "Request has exceeded memory quota",
-		InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Request has exceeded memory quota (inuse: %v limit: %v)", inuse, limit),
+		cause:       c, InternalCaller: CallerN(1)}
 }
 
-func NewNodeQuotaExceededError() Error {
+func NewNodeQuotaExceededError(curr, limit uint64) Error {
+	c := make(map[string]interface{})
+	c["caller"] = CallerN(3)
 	return &err{level: EXCEPTION, ICode: E_NODE_QUOTA_EXCEEDED, IKey: "execution.node_quota.exceeded",
-		InternalMsg:    "Query node has run out of memory",
-		InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Query node has run out of memory (curr: %v limit: %v)", curr, limit),
+		cause:       c, InternalCaller: CallerN(1)}
 }
 
 func NewTenantQuotaExceededError(t string, u string, r, l uint64) Error {

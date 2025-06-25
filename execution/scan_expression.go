@@ -145,7 +145,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			if !isSubq || !subqIsCorrelated {
 				err := context.TrackValueSize(freeSize)
 				if err != nil {
-					context.Error(errors.NewMemoryQuotaExceededError())
+					context.Error(err)
 					return
 				}
 			}
@@ -208,7 +208,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				}
 				err := context.TrackValueSize(av.Size() - actSz)
 				if err != nil {
-					context.Error(errors.NewMemoryQuotaExceededError())
+					context.Error(err)
 					av.Recycle()
 					return
 				}
