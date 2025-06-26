@@ -60,6 +60,9 @@ func Config(maxMiB uint64, valPercent uint, servicers []int) {
 	manager.valPercent = valPercent
 	manager.nodeQuota = maxMiB
 	manager.setting = maxMiB * uint64(valPercent) / 100
+	if maxMiB > 0 && manager.setting == 0 {
+		manager.setting = maxMiB
+	}
 	manager.max = manager.setting * _MB
 
 	// we reserve a memory token for each configured servicer so that
