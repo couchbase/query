@@ -1191,6 +1191,17 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SERVICE_LOW_MEMORY, // 1204
+		symbol:      "E_SERVICE_LOW_MEMORY",
+		Description: "request halted: free memory below «threshold»" + "%" + " of available memory",
+		Reason: []string{
+			"The request was halted by admission control due to low available memory.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ADMIN_CONNECTION, // 2000
 		symbol:      "E_ADMIN_CONNECTION",
 		Description: "Error connecting to «what»",

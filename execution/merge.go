@@ -80,7 +80,7 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 					context.ReleaseValueSize(uint64(-size))
 				} else {
 					if err := context.TrackValueSize(uint64(size)); err != nil {
-						context.Fatal(errors.NewMemoryQuotaExceededError())
+						context.Fatal(err)
 						return err
 					}
 				}

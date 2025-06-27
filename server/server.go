@@ -1612,7 +1612,7 @@ func (this *Server) controlActiveProcessing(perc uint64) bool {
 		if paused == 0 {
 			// stop the largest memory consumer
 			req := reqs[len(reqs)-1]
-			req.Halt(errors.NewNodeQuotaExceededError())
+			req.Halt(errors.NewLowMemory(_ADMISSION_MIN_FREE_MEM_PERCENT))
 			logging.Infof(_ADMISSION_MSG_PREFIX+"%v: halted.", req.Id())
 		}
 		rv = true

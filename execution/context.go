@@ -932,8 +932,8 @@ func (this *Context) TrackValueSize(size uint64) errors.Error {
 		this.Infof("MEM: [%p]  track: %v (%v) %v", this, size, sz, errors.CallerN(1))
 	}
 	this.output.TrackMemory(sz)
-	if this.memoryQuota > 0 && sz > this.memoryQuota {
-		return errors.NewMemoryQuotaExceededError()
+	if memQuota := this.memoryQuota; memQuota > 0 && sz > memQuota {
+		return errors.NewMemoryQuotaExceededError(sz, memQuota)
 	}
 	return err
 }

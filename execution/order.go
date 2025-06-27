@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/accounting"
-	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/system"
@@ -94,7 +93,7 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 				context.ReleaseValueSize(uint64(-size))
 			} else {
 				if err := context.TrackValueSize(uint64(size)); err != nil {
-					context.Fatal(errors.NewMemoryQuotaExceededError())
+					context.Fatal(err)
 					return err
 				}
 			}

@@ -124,7 +124,7 @@ func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {
 		newCurr := atomic.AddUint64(&this.manager.curr, newSize)
 		if newCurr > max {
 			atomic.AddUint64(&this.manager.curr, ^(newSize - 1))
-			return top, newSize, errors.NewNodeQuotaExceededError()
+			return top, newSize, errors.NewNodeQuotaExceededError(newCurr, max)
 		}
 		atomic.AddUint64(&this.currentLimit, newSize)
 	}
