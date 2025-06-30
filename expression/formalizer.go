@@ -25,7 +25,7 @@ const (
 	FORM_INDEX_SCOPE                 // formalizing index key or index condition
 	FORM_IN_FUNCTION                 // We are in function invocation
 	FORM_CHK_CORRELATION             // Check correlation
-	FORM_CHK_SUBQUERY                // Subquery expressioni parsing
+	FORM_CHK_SUBQUERY                // Subquery expression parsing
 )
 
 const (
@@ -464,6 +464,8 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 			this.correlation = make(map[string]uint32)
 		}
 		this.correlation[identifier] |= IDENT_IS_CORRELATED
+		expr.SetKeyspaceAlias(true)
+		expr.SetCorrelated(true)
 		return expr, nil
 	} else if this.IsCheckSubquery() {
 		return expr, nil
