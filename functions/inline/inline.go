@@ -178,6 +178,7 @@ func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	privileges := auth.NewPrivileges()
+
 	for _, s := range subqueries {
 		sub := s.(*algebra.Subquery)
 		sp, e := sub.Select().Privileges()
@@ -188,6 +189,7 @@ func (this *inlineBody) Privileges() (*auth.Privileges, errors.Error) {
 		privileges.AddAll(sp)
 	}
 
+	privileges.AddAll(this.expr.Privileges())
 	return privileges, nil
 }
 
