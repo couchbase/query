@@ -2,7 +2,7 @@
     {
         "description": "MB-57903 - CREATE FUNCTION",
         "statements": "CREATE OR REPLACE FUNCTION Test_Func(data) LANGUAGE INLINE AS ( ( SELECT RAW (SELECT RAW data) ) )",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-57903 - SELECT",
@@ -42,12 +42,12 @@
     {
         "description": "MB-59084 - CREATE FUNCTION 1",
         "statements": "CREATE OR REPLACE FUNCTION Test_Func1(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN shellTest r USE NL ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-59084 - CREATE FUNCTION 2",
         "statements": "CREATE OR REPLACE FUNCTION Test_Func2(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN (SELECT s.* FROM shellTest s WHERE s.c1 > 0) AS r USE NL ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-59084 - SELECT 1",
@@ -146,7 +146,7 @@
     {
         "description": "MB-59183 - CREATE FUNCTION",
         "statements": "CREATE OR REPLACE FUNCTION Test_Func3(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN data AS r USE NL ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 ) )",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-59183 - SELECT",
@@ -198,12 +198,12 @@
     {
         "description": "MB-59082 - CREATE FUNCTION 1",
         "statements": "CREATE OR REPLACE FUNCTION Test_Func4(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN (SELECT s.* FROM shellTest s WHERE s.c1 > 0) AS r USE HASH(BUILD) ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 AND r.c2 = data ) )",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-59082 - CREATE FUNCTION 2",
         "statements": "CREATE OR REPLACE FUNCTION Test_Func5(data) LANGUAGE INLINE AS ( ( SELECT l, r FROM shellTest l JOIN (SELECT s.* FROM shellTest s WHERE s.c1 > 0 AND s.c2 = data) AS r USE HASH(BUILD) ON l.c3 = r.c3 WHERE l.c1 > 0 AND r.c1 > 0 ) )",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-59082 - SELECT 1",
@@ -302,7 +302,7 @@
     {
         "description": "MB-63147 - CREATE FUNCTION",
         "statements": "CREATE OR REPLACE FUNCTION Test_CTE_Corr(data) LANGUAGE INLINE AS ( ( WITH CTE_1 AS ( SELECT 1 AS CTE_1_Value ) , CTE_2 AS ( SELECT c.*, data FROM CTE_1 c ) SELECT * FROM CTE_2 ) )",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-63147 - EXECUTE FUNCTION",
@@ -326,7 +326,7 @@
     {
         "description": "MB-64408 - CREATE FUNCTION",
         "statements": "CREATE OR REPLACE FUNCTION nested_any_cte(v1, v2) { ( WITH cte1 AS (SELECT c1 FROM shellTest WHERE c1 > v1), cte2 AS ( SELECT c12 FROM shellTest st WHERE st.c11 IN (SELECT RAW c1 FROM cte1) AND ANY x IN st.a11 SATISFIES ANY a IN x.na SATISFIES a > v2 END END ) SELECT * FROM cte2 ) }",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-64408 - EXECUTE FUNCTION",
@@ -354,12 +354,12 @@
     {
         "description": "MB-64409 - CREATE FUNCTION 1",
         "statements": "CREATE OR REPLACE FUNCTION `func-1`() { ( SELECT 1 ) }",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-64409 - CREATE FUNCTION 2",
         "statements": "CREATE OR REPLACE FUNCTION `func2`() { ( SELECT `func-1`() ) }",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-64409 - EXECUTE FUNCTION",
@@ -389,12 +389,12 @@
     {
         "description": "MB-64423 - CREATE DUMMY FUNCTION",
         "statements": "CREATE OR REPLACE FUNCTION udf_recursion() { ( SELECT 1 ) }",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-64423 - CREATE FUNCTION",
         "statements": "CREATE OR REPLACE FUNCTION udf_recursion(Item, AllItems, NumberOfRecursion) {( CASE WHEN NumberOfRecursion-1 < 0 then \"end\" WHEN Item.parentId is missing then Item ELSE udf_recursion(AllItems.[Item.parentId], AllItems, NumberOfRecursion-1) END ) }",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-64423 - EXECUTE FUNCTION",
@@ -413,7 +413,7 @@
     {
         "description": "MB-64684 - CREATE FUNCTION",
         "statements": "CREATE or REPLACE FUNCTION func1(id)  { ( SELECT RAW ARRAY (ARRAY {\"b\": FIRST v3 FOR v3 IN v1.a1 WHEN v1.a = v3 END } FOR v2 IN v1.a1 END) FOR v1 IN [{\"a\":1, \"a1\":[1,2]}] END FROM shellTest USE KEYS id) }",
-        "results":[]
+        "results": []
     },
     {
         "description": "MB-64684 - EXECUTE FUNCTION",
@@ -436,6 +436,31 @@
     {
         "description": "MB-64684 - DROP FUNCTION",
         "statements": "DROP FUNCTION func1",
+        "results": []
+    },
+    {
+        "description": "MB-67389 - CREATE FUNCTION",
+        "statements": "create or replace function i1() { curl(\"http://127.0.0.1:8091/settings/querySettings\", {\"user\":\"Administrator:password\", \"ciphers\":\"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA\"}).queryCompletedThreshold }",
+        "results": []
+    },
+    {
+        "description": "MB-67389 - EXECUTE FUNCTION (user without query_external_access role)",
+        "statements": "execute function i1()",
+        "error": "User does not have credentials to run queries using the CURL() function. Add role query_external_access to allow the statement to run."
+    },
+    {
+        "description": "MB-67389 - EXECUTE FUNCTION (user with query_external_access role)",
+        "statements": "execute function i1()",
+        "userArgs": {
+            "Administrator": "password"
+        },
+        "results": [
+            1000
+        ]
+    },
+    {
+        "description": "MB-67389 - DROP FUNCTION",
+        "statements": "drop function i1",
         "results": []
     }
 ]
