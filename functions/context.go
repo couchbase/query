@@ -55,7 +55,7 @@ type Context interface {
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
-	PreserveProjectionOrder() bool
+	SetPreserveProjectionOrder(on bool) bool
 	Park(stop func(bool), changeCallerState bool)
 	Resume(changeCallerState bool)
 	IsPrepared() bool
