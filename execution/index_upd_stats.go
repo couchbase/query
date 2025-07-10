@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/util"
 )
@@ -118,6 +119,10 @@ func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}
 	query := "UPDATE STATISTICS FOR " + fullName + " INDEX(" + allNames + ")"
 	_, _, err1 := context.EvaluateStatement(query, nil, nil, false, true, false, "")
 	if err1 != nil {
+		// error should already be logged during the scheduled UPDATE STATISTICS statement,
+		// no need to repeat the same error, just log the fact that this is an automatic
+		// UPDATE STATISTICS statement
+		logging.Errorf("Error during automatic UPDATE STATISTICS from index CREATE/BUILD.")
 		return nil, []errors.Error{errors.NewIndexUpdStatsError(allNames, "error running Update Statistics statement", err1)}
 	}
 	return nil, nil
