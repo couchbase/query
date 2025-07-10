@@ -14,6 +14,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
 )
@@ -100,6 +101,10 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 			} else {
 				break
 			}
+		}
+		errs := context.GetErrors()
+		if len(errs) > 0 {
+			logging.Errorf("Error during UPDATE STATISTICS. Statement: %s; Error: %v", this.plan.Node().String(), errs)
 		}
 	})
 }

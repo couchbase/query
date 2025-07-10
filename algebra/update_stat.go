@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -172,6 +173,66 @@ func (this *UpdateStatistics) Delete() bool {
 
 func (this *UpdateStatistics) IndexAll() bool {
 	return this.indexAll
+}
+
+func (this *UpdateStatistics) String() string {
+	path := this.keyspace.path
+	if path == nil {
+		// not expected
+		return ""
+	}
+	using := false
+	var sb strings.Builder
+	sb.WriteString("UPDATE STATISTICS FOR ")
+	sb.WriteString(path.ProtectedString())
+	if this.delete {
+		if len(this.terms) == 0 {
+			sb.WriteString(" DELETE ALL")
+		} else {
+			sb.WriteString(" DELETE (")
+			for i, term := range this.terms {
+				if i > 0 {
+					sb.WriteString(", ")
+				}
+				sb.WriteString(strings.Trim(term.String(), "\""))
+			}
+			sb.WriteString(")")
+		}
+	} else if this.indexAll {
+		sb.WriteString(" INDEX ALL")
+		using = true
+	} else if len(this.indexes) > 0 {
+		sb.WriteString(" INDEX (")
+		for i, idx := range this.indexes {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(strings.Trim(idx.String(), "\""))
+		}
+		sb.WriteString(")")
+		using = true
+	} else if len(this.terms) > 0 {
+		sb.WriteString(" (")
+		for i, term := range this.terms {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(strings.Trim(term.String(), "\""))
+		}
+		sb.WriteString(")")
+	}
+	if using && this.using != datastore.DEFAULT {
+		// currently only GSI indexes supported
+		switch this.using {
+		case datastore.GSI:
+			sb.WriteString(" USING GSI")
+		}
+	}
+	if this.with != nil {
+		sb.WriteString(" WITH ")
+		sb.WriteString(this.with.ToString())
+	}
+	return sb.String()
 }
 
 func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
