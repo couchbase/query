@@ -773,7 +773,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		}
 		if useCBO {
 			sargables = this.chooseIntersectScan(sargables, node, vector)
-		} else {
+		}
+		if len(sargables) > 1 {
 			// remove any early order indicator
 			for _, entry := range sargables {
 				entry.UnsetFlags(IE_HAS_EARLY_ORDER)
