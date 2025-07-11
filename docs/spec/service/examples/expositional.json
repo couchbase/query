@@ -1,0 +1,25 @@
+{
+  "requestID": "6d77dc41-3cab-4e00-9c54-f60fcc2e0fab",
+  "signature": {
+    "airline": "json"
+  },
+  "results": [
+    {
+      "airline": "B6"
+    },
+    {
+      "airline": "EK"
+    },
+    {
+      "airline": "SV"
+    }
+  ],
+  "status": "success",
+  "metrics": {
+    "elapsedTime": "86.226474ms",
+    "executionTime": "86.072996ms",
+    "resultCount": 3,
+    "resultSize": 48,
+    "serviceLoad": 12
+  }
+}

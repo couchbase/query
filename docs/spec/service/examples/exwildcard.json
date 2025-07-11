@@ -1,0 +1,22 @@
+{
+  "requestID": "716f5e7b-557a-44a6-a372-9a98611c5b5e",
+  "signature": {
+    "id": "json"
+  },
+  "results": [
+    {
+      "id": "hotel_10025"
+    },
+    {
+      "id": "hotel_10026"
+    }
+  ],
+  "status": "success",
+  "metrics": {
+    "elapsedTime": "64.11756ms",
+    "executionTime": "63.993854ms",
+    "resultCount": 2,
+    "resultSize": 40,
+    "serviceLoad": 12
+  }
+}

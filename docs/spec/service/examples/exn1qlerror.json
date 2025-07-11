@@ -1,0 +1,18 @@
+{
+  "requestID": "27087759-07af-431d-a3d7-29080f870e56",
+  "errors": [
+    {
+      "code": 3000,
+      "msg": "syntax error - line 1, column 7, near 'SLECT', at: name"
+    }
+  ],
+  "status": "fatal",
+  "metrics": {
+    "elapsedTime": "1.478631ms",
+    "executionTime": "1.393274ms",
+    "resultCount": 0,
+    "resultSize": 0,
+    "serviceLoad": 12,
+    "errorCount": 1
+  }
+}

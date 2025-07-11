@@ -1,0 +1,283 @@
+openapi: 3.0.3
+info:
+  title: Query Functions REST API
+  version: '7.6'
+  description: |-
+    The Query Functions REST API is a secondary API provided by the Query service.
+    This API enables you to manage the JavaScript libraries and objects that are used to create SQL++ user-defined functions.
+
+servers:
+  - url: '{scheme}://{host}:{port}'
+    description: The URL scheme, host, and port are as follows.
+    variables:
+      scheme:
+        default: http
+        description: |-
+          The URL scheme.
+          Use `https` for secure access.
+        enum:
+          - http
+          - https
+      host:
+        default: localhost
+        description: The host name or IP address of a node running the Query Service.
+      port:
+        default: "8093"
+        description: |-
+          The Query Service REST port.
+          Use `18093` for secure access.
+        enum:
+          - "8093"
+          - "18093"
+
+paths:
+  /evaluator/v1/libraries:
+    get:
+      operationId: get_collection
+      summary: Read All Libraries
+      parameters:
+        - name: bucket
+          schema:
+            type: string
+          in: query
+          required: false
+          description: |-
+            For scoped libraries only.
+            The bucket from which to fetch libraries.
+        - name: scope
+          schema:
+            type: string
+          in: query
+          required: false
+          description: |-
+            For scoped libraries only.
+            The scope from which to fetch libraries.
+      description: |-
+        Returns all libraries and functions.
+
+
+        By default, this operation returns all global libraries and functions, and all scoped libraries and functions.
+        To return all the libraries and functions in a single scope, specify a bucket and scope.
+      security:
+        - Global: []
+        - Scope: []
+      responses:
+        "200":
+          description: An array of objects, each giving information about a single library.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Libraries"
+              examples:
+                get_collection_all:
+                  summary: All Libraries
+                  value:
+                    $ref: 'examples/get_collection_all.json'
+                get_collection_scope:
+                  summary: Scoped Libraries
+                  value:
+                    $ref: 'examples/get_collection_scope.json'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /evaluator/v1/libraries/{library}:
+    parameters:
+      - $ref: "#/components/parameters/PathLibrary"
+      - $ref: "#/components/parameters/QueryBucket"
+      - $ref: "#/components/parameters/QueryScope"
+    get:
+      operationId: get_library
+      summary: Read a Library
+      description: |-
+        Returns a library with all its functions.
+
+
+        By default, this operation returns a global library.
+        For a scoped library, you must specify the bucket and scope.
+      security:
+        - Global: []
+        - Scope: []
+      responses:
+        "200":
+          description: An object with a single property, giving information about the specified library.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Functions"
+              examples:
+                get_library_global:
+                  summary: Global Library
+                  value:
+                    $ref: 'examples/get_library_global.json'
+                get_library_scope:
+                  summary: Scoped Library
+                  value:
+                    $ref: 'examples/get_library_scope.json'
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/LibraryNotFound"
+    post:
+      operationId: post_library
+      summary: Create or Update a Library
+      description: |-
+        Creates the specified library and its associated functions.
+        If the specified library exists, the existing library is overwritten.
+
+
+        By default, this operation creates or updates a global library.
+        For a scoped library, you must specify the bucket and scope.
+      requestBody:
+        required: true
+        description: The JavaScript code for all functions in the library.
+        content:
+          application/json:
+            schema:
+              type: string
+              example: function f2c(f) { return (5/9)*(f-32); }
+              x-has-example: true
+      security:
+        - Global: []
+        - Scope: []
+      responses:
+        "200":
+          $ref: "#/components/responses/OK"
+        "400":
+          description: |-
+            Bad request.
+            The body of the request may be incorrect, or the path may not conform to the schema.
+        "404":
+          $ref: "#/components/responses/LibraryNotFound"
+    delete:
+      operationId: delete_library
+      summary: Delete a Library
+      description: |-
+        Deletes the specified library entirely.
+
+        By default, this operation deletes a global library.
+        For a scoped library, you must specify the bucket and scope.
+      security:
+        - Global: []
+        - Scope: []
+      responses:
+        "200":
+          $ref: "#/components/responses/OK"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/LibraryNotFound"
+
+components:
+ parameters:
+  PathLibrary:
+    name: library
+    schema:
+      type: string
+    in: path
+    required: true
+    description: The name of a library.
+
+  QueryBucket:
+    name: bucket
+    schema:
+      type: string
+    in: query
+    required: false
+    description: |-
+      For scoped libraries only.
+      The bucket in which the library is stored.
+    
+  QueryScope:
+    name: scope
+    schema:
+      type: string
+    in: query
+    required: false
+    description: |-
+      For scoped libraries only.
+      The scope in which the library is stored.
+
+ schemas:
+  Libraries:
+    type: object
+    title: Library
+    properties:
+      name:
+        type: string
+        description: The name of a library.
+        example: math
+        x-has-example: true
+      bucket:
+        type: string
+        description: |-
+          For scoped libraries, the bucket in which the library is stored.
+          For global libraries, this string is empty.
+        example: travel-sample
+        x-has-example: true
+      scope:
+        type: string
+        description: |-
+          For scoped libraries, the scope in which the library is stored.
+          For global libraries, this string is empty.
+        example: inventory
+        x-has-example: true
+      code:
+        type: string
+        description: |-
+          The JavaScript code for all functions in the library.
+        example: function add(a, b) { return a + b; }
+                 function mul(a, b) { return a * b; }
+        x-has-example: true
+    required:
+      - name
+      - bucket
+      - scope
+      - code
+
+  Functions:
+    type: object
+    title: Functions
+    additionalProperties:
+      x-additionalPropertiesName: library
+      type: string
+      description: |-
+        The JavaScript code for all functions in the library.
+
+        The name of the property is the name of the library.
+      example: function add(a, b) { return a + b; }
+               function mul(a, b) { return a * b; }
+      x-has-example: true
+
+ responses:
+  OK:
+    description: The operation was successful.
+
+  LibraryNotFound:
+    description: |-
+      Not found.
+      The library name in the path may be incorrect, or the bucket and scope may be specified incorrectly.
+
+  BadRequest:
+    description: |-
+      Bad request.
+      The path may not conform to the schema.
+
+ securitySchemes:
+  Global:
+    type: http
+    scheme: basic
+    description: |-
+      To manage global libraries, users must have the *Manage Global External Functions* RBAC role.
+
+      This role enables you to create, read, update, or delete any global library, but does not give you access to any scoped libraries.
+
+  Scope:
+    type: http
+    scheme: basic
+    description: |-
+      To manage scoped libraries, users must have the *Manage Scope External Functions* RBAC role, with permissions on the specified bucket and scope.
+
+      This role enables you to create, read, update, or delete any library in the scope to which you have access, but does not give you access to any other scoped libraries.
+      In addition, this role enables you to read any global library, but not to create, update, or delete them.

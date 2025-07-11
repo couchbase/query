@@ -1,0 +1,18 @@
+{
+  "requestID": "d30b805f-6c1e-44ec-9aec-35ff711a6e88",
+  "errors": [
+    {
+      "code": 12003,
+      "msg": "Keyspace not found in CB datastore: default:travel-sample.inventory.motel"
+    }
+  ],
+  "status": "fatal",
+  "metrics": {
+    "elapsedTime": "3.096786ms",
+    "executionTime": "2.468282ms",
+    "resultCount": 0,
+    "resultSize": 0,
+    "serviceLoad": 12,
+    "errorCount": 1
+  }
+}

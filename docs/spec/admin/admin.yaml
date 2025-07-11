@@ -1,0 +1,2290 @@
+openapi: 3.0.3
+info:
+  title: Query Admin REST API
+  version: '7.6'
+  description: |-
+    The Query Admin REST API is a secondary API provided by the Query service.
+    This API enables you to retrieve statistics about the clusters and nodes running the Query service; view or specify node-level settings; and view or delete requests.
+
+servers:
+  - url: '{scheme}://{host}:{port}'
+    description: The URL scheme, host, and port are as follows.
+    variables:
+      scheme:
+        default: http
+        description: |-
+          The URL scheme.
+          Use `https` for secure access.
+        enum:
+          - http
+          - https
+      host:
+        default: localhost
+        description: The host name or IP address of a node running the Query Service.
+      port:
+        default: "8093"
+        description: |-
+          The Query Service REST port.
+          Use `18093` for secure access.
+        enum:
+          - "8093"
+          - "18093"
+
+tags:
+  - name: configuration
+    description: Operations for cluster and node configuration.
+  - name: prepared statements
+    description: Operations for prepared statements.
+  - name: active requests
+    description: Operations for active requests.
+  - name: completed requests
+    description: Operations for completed requests.
+  - name: statistics
+    description: Operations for query statistics.
+  - name: settings
+    description: Operations for query settings.
+  - name: default
+    description: Other operations.
+
+# Absolute links begin with /server/7.6 -- this must be replaced for every branch.
+# Relative links point to a location relative to the REST API reference page by default.
+
+# The output of this spec is used in more than one location.
+# The x-desc-refs attribute is used to override links when content is transcluded to other locations.
+
+# The AsciiDoc Markdown converter does not recognize HTML tags like <a id="foo">.
+# Use the x-desc-name vendor extension to specify the anchor for a property.
+
+# The x-desc-more attribute provides additional descriptive text for the static AsciiDoc output.
+# It is not displayed in the Redocly output.
+
+paths:
+  /admin/clusters:
+    get:
+      operationId: get_clusters
+      summary: Read All Clusters
+      description: Returns information about all clusters.
+      tags:
+        - configuration
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of objects, each of which gives information about one cluster.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Clusters"
+
+  /admin/clusters/{cluster}:
+    get:
+      operationId: get_cluster
+      summary: Read a Cluster
+      parameters:
+        - $ref: "#/components/parameters/PathCluster"
+      description: Returns information about the specified cluster.
+      tags:
+        - configuration
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object giving information about the specified cluster.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clusters"
+
+  /admin/clusters/{cluster}/nodes:
+    get:
+      operationId: get_nodes
+      summary: Read All Nodes
+      parameters:
+        - $ref: "#/components/parameters/PathCluster"
+      description: Returns information about all nodes in the specified cluster.
+      tags:
+        - configuration
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of objects, each of which gives information about one node.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Nodes"
+
+  /admin/clusters/{cluster}/nodes/{node}:
+    get:
+      operationId: get_node
+      summary: Read a Node
+      parameters:
+        - $ref: "#/components/parameters/PathCluster"
+        - $ref: "#/components/parameters/PathNode"
+      description: Returns information about the specified node in the specified cluster.
+      tags:
+        - configuration
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object giving information about the specified node.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Nodes"
+
+  /admin/config:
+    get:
+      operationId: get_config
+      summary: Read Configuration
+      description: Returns the configuration of the query service on the cluster.
+      tags:
+        - configuration
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object giving information about the specified node.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Nodes"
+
+  /admin/prepareds:
+    get:
+      operationId: get_prepareds
+      summary: Retrieve All Prepared Statements
+      description: |-
+        Returns all prepared statements.
+      tags:
+        - prepared statements
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of objects, each of which contains information about one prepared statement.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Statements"
+
+  /admin/prepareds/{name}:
+    get:
+      operationId: get_prepared
+      summary: Retrieve a Prepared Statement
+      parameters:
+        - $ref: "#/components/parameters/PathName"
+      description: |-
+        Returns the specified prepared statement.
+      tags:
+        - prepared statements
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object containing information about the specified prepared statement.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Statements"
+    delete:
+      operationId: delete_prepared
+      summary: Delete a Prepared Statement
+      parameters:
+        - $ref: "#/components/parameters/PathName"
+      description: |-
+        Deletes the specified prepared statement.
+      tags:
+        - prepared statements
+      security:
+        - Default: []
+      responses:
+        200:
+          description: The prepared statement was successfully deleted.
+        500:
+          description: Returns an error message if the prepared statement could not be found.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /admin/active_requests:
+    get:
+      operationId: get_active_requests
+      summary: Retrieve All Active Requests
+      description: |-
+        Returns all active query requests.
+      tags:
+        - active requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of objects, each of which contains information about one active request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Requests"
+
+  /admin/active_requests/{request}:
+    get:
+      operationId: get_active_request
+      summary: Retrieve an Active Request
+      parameters:
+        - $ref: "#/components/parameters/PathRequest"
+      description: |-
+        Returns the specified active query request.
+      tags:
+        - active requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object containing information about the specified active request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Requests"
+    delete:
+      operationId: delete_active_request
+      summary: Delete an Active Request
+      parameters:
+        - $ref: "#/components/parameters/PathRequest"
+      description: |-
+        Terminates the specified active query request.
+      tags:
+        - active requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: The active request was successfully terminated.
+        500:
+          description: Returns an error message if the active request could not be found.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /admin/completed_requests:
+    get:
+      operationId: get_completed_requests
+      summary: Retrieve All Completed Requests
+      description: |-
+        Returns all completed requests.
+      tags:
+        - completed requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of objects, each of which contains information about one completed request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Requests"
+
+  /admin/completed_requests/{request}:
+    get:
+      operationId: get_completed_request
+      summary: Retrieve a Completed Request
+      parameters:
+        - $ref: "#/components/parameters/PathRequest"
+      description: |-
+        Returns the specified completed request.
+      tags:
+        - completed requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object containing information about the specified completed request.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Requests"
+    delete:
+      operationId: delete_completed_request
+      summary: Delete a Completed Request
+      parameters:
+        - $ref: "#/components/parameters/PathRequest"
+      description: |-
+        Purges the specified completed request.
+      tags:
+        - completed requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: The completed request was successfully purged.
+        500:
+          description: Returns an error message if the completed request could not be found.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /admin/indexes/prepareds:
+    get:
+      operationId: get_prepared_indexes
+      summary: Retrieve Prepared Index Statements
+      description: |-
+        Returns all prepared index statements.
+
+        * Use [Retrieve a Prepared Statement](#get_prepared) to get information about a prepared index statement.
+        * Use [Delete a Prepared Statement](#delete_prepared) to delete a prepared index statement.
+      tags:
+        - prepared statements
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of strings, each of which is the name of a prepared index statement.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  description: |-
+                    The name of the prepared statement.
+                    This may be a UUID that was assigned automatically, or a name that was user-specified when the statement was created.
+
+  /admin/indexes/active_requests:
+    get:
+      operationId: get_active_indexes
+      summary: Retrieve Active Index Requests
+      description: |-
+        Returns all active index requests.
+
+        * Use [Retrieve an Active Request](#get_active_request) to get information about an active index request.
+        * Use [Delete an Active Request](#delete_active_request) to terminate an active index request.
+      tags:
+        - active requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of strings, each of which is the requestID of an active index request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  description: Unique request ID internally generated for the query.
+
+  /admin/indexes/completed_requests:
+    get:
+      operationId: get_completed_indexes
+      summary: Retrieve Completed Index Requests
+      description: |-
+        Returns all completed index requests.
+
+        * Use [Retrieve a Completed Request](#get_completed_request) to get information about a completed index request.
+        * Use [Delete a Completed Request](#delete_completed_request) to purge a completed index request.
+      tags:
+        - completed requests
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An array of strings, each of which is the requestID of a completed index request.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  description: Unique request ID internally generated for the query.
+
+  /admin/ping:
+    get:
+      operationId: get_ping
+      summary: Ping
+      description: Returns a minimal response, indicating that the service is running and reachable.
+      tags:
+        - default
+      responses:
+        200:
+          description: An empty object.
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                {}
+
+  /admin/gc:
+    get:
+      operationId: get_gc
+      summary: Run Garbage Collector
+      description: |-
+        Runs the garbage collector.
+
+        A message is written to `query.log` whenever the garbage collector endpoint is invoked.
+      tags:
+        - default
+      security:
+        - Default: []
+      responses:
+        200:
+          description: Indicates that the garbage collector was invoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Garbage"
+              example:
+                $ref: 'examples/get_gc.json'
+        401:
+          description: |-
+            Error 10000: authentication failure.
+            The invoking user is not a valid full-admin user.
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      operationId: post_gc
+      summary: Run Garbage Collector and Release Memory
+      description: |-
+        Run the garbage collector and attempts to return freed memory to the OS.
+
+        A message is written to `query.log` whenever the garbage collector endpoint is invoked.
+      tags:
+        - default
+      security:
+        - Default: []
+      responses:
+        200:
+          description: Indicates that the garbage collector was invoked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Garbage"
+              example:
+                $ref: 'examples/post_gc.json'
+        401:
+          description: |-
+            Error 10000: authentication failure.
+            The invoking user is not a valid full-admin user.
+          content:
+            application/json:
+              schema:
+                type: object
+
+  # /admin/ssl_cert:
+  #   get:
+  #     deprecated: true
+
+  /admin/vitals:
+    get:
+      operationId: get_vitals
+      summary: Retrieve Vitals
+      description: |-
+        Returns data about the running state and health of the query engine.
+        This information can be very useful to assess the current workload and performance characteristics of a query engine, and hence load-balance the requests being sent to various query engines.
+      tags:
+        - statistics
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object containing all vital statistics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vitals"
+
+  /admin/stats:
+    get:
+      operationId: get_stats
+      summary: Retrieve All Statistics
+      description: Returns all statistics.
+      tags:
+        - statistics
+      security:
+        - Default: []
+      responses:
+        200:
+          description: |-
+            An object containing all statistics.
+            Each statistic consists of a top-level statistic name and a metric name.
+            Each statistic has a different set of metrics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Statistics"
+
+  /admin/stats/{stat}:
+    get:
+      operationId: get_stat
+      summary: Retrieve a Statistic
+      parameters:
+        - $ref: "#/components/parameters/PathStat"
+      description: Returns the specified statistic.
+      tags:
+        - statistics
+      security:
+        - Default: []
+      responses:
+        200:
+          description: |-
+            An object containing all metrics for the specified statistic.
+            Each statistic has a different set of metrics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Metrics"
+
+  /debug/vars:
+    get:
+      operationId: get_debug_vars
+      summary: Get Debug Variables
+      description: Currently unused.
+      tags:
+        - statistics
+      responses:
+        302:
+          description: Redirects to the [Retrieve All Statistics](#get_stats) endpoint.
+          content:
+            text/html:
+              schema:
+                type: string
+                format: text/html
+
+  /admin/settings:
+    get:
+      operationId: get_settings
+      summary: Retrieve Node-Level Query Settings
+      description: |-
+        Returns node-level query settings.
+      tags:
+        - settings
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object giving node-level query settings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    post:
+      operationId: post_settings
+      summary: Update Node-Level Query Settings
+      description: |-
+        Updates node-level query settings.
+      tags:
+        - settings
+      security:
+        - Default: []
+      requestBody:
+        description: An object specifying node-level query settings.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Settings"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/Settings"
+      responses:
+        200:
+          description: An object giving node-level query settings, including the latest changes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+components:
+ schemas:
+  Clusters:
+    type: object
+    title: Cluster Information
+    properties:
+      name:
+        type: string
+        description: The name of the cluster.
+      datastore:
+        type: string
+        description: The URL of the datastore.
+      configstore:
+        type: string
+        description: The URL of the configstore.
+      accountstore:
+        type: string
+        description: The URL of the accountstore.
+      version:
+        type: string
+
+  Nodes:
+    type: object
+    title: Node Information
+    properties:
+      cluster:
+        type: string
+        description: The name of the cluster.
+      name:
+        type: string
+        description: The URL of the node, including port number.
+      queryEndpoint:
+        type: string
+        description: The HTTP URL of the query endpoint.
+      adminEndpoint:
+        type: string
+        description: The HTTP URL of the admin endpoint.
+      querySecure:
+        type: string
+        description: The HTTPS URL of the query endpoint.
+      adminSecure:
+        type: string
+        description: The HTTPS URL of the admin endpoint.
+      options:
+        type: string
+
+  Requests:
+    type: object
+    title: Requests
+    properties:
+      clientContextID:
+        type: string
+        description: |-
+          The opaque ID or context provided by the client.
+        x-desc-more: |-
+          Refer to the [request-level][client_context_id] `client_context_id` parameter for more information.
+
+          [client_context_id]: ../n1ql-rest-query/index.html#client_context_id
+        x-desc-refs: |-
+          [client_context_id]: #client_context_id
+      elapsedTime:
+        type: string
+        format: duration
+        description: |-
+          The time taken from when the request was acknowledged by the service to when the request was completed.
+          It includes the time taken by the service to schedule the request.
+      errorCount:
+        type: integer
+        description: Total number of errors encountered while executing the query.
+      memoryQuota:
+        type: integer
+        description: |-
+          The memory quota for the request, in MB.
+          This property is only returned if a memory quota is set for the query.
+      node:
+        type: string
+        description: IP address and port number of the node where the query is executed.
+      phaseCounts:
+        type: object
+        description: |-
+          Count of documents processed at selective phases involved in the query execution, such as authorize, index scan, fetch, parse, plan, run, etc.
+
+          For active requests, this property is dynamic, depending on the documents processed by various phases up to this moment in time.
+          Polling the active requests again may return different values.
+        example:
+          {
+            "fetch": 16,
+            "indexScan": 187
+          }
+        x-has-example: true
+      phaseOperators:
+        type: object
+        description: |-
+          Indicates the numbers of each kind of query operator involved in different phases of the query processing.
+
+          For instance, a non-covering index path might involve one index scan and one fetch operator.
+          A join would probably involve two or more fetches, one per keyspace.
+          A union select would have twice as many operator counts, one per each branch of the union.
+        example:
+          {
+            "authorize": 1,
+            "fetch": 1,
+            "indexScan": 2
+          }
+        x-has-example: true
+      phaseTimes:
+        type: object
+        description: |-
+          Cumulative execution times for various phases involved in the query execution, such as authorize, index scan, fetch, parse, plan, run, etc.
+
+          For active requests, this property is dynamic, depending on the documents processed by various phases up to this moment in time.
+          Polling the active requests again may return different values.
+        example:
+          {
+            "authorize": "823.631µs",
+            "fetch": "656.873µs",
+            "indexScan": "29.146543ms",
+            "instantiate": "236.221µs",
+            "parse": "826.382µs",
+            "plan": "11.831101ms",
+            "run": "16.892181ms"
+          }
+        x-has-example: true
+      remoteAddr:
+        type: string
+        description: IP address and port number of the client application, from where the query is received.
+      requestId:
+        type: string
+        format: uuid
+        description: Unique request ID internally generated for the query.
+      requestTime:
+        type: string
+        format: date-time
+        description: Timestamp when the query is received.
+      resultCount:
+        type: integer
+        description: Total number of documents returned in the query result.
+      resultSize:
+        type: integer
+        description: Total number of bytes returned in the query result.
+      scanConsistency:
+        type: string
+        description: The value of the query setting Scan Consistency used for the query.
+      serviceTime:
+        type: string
+        format: duration
+        description: Total amount of calendar time taken to complete the query.
+      state:
+        type: string
+        description: |-
+          The state of the query execution, such as `completed`, `running`, `cancelled`.
+
+          Note that the `completed` state means that the request was started and completed by the Query service, but it does not mean that it was necessarily successful.
+          The request could have been successful, or completed with errors.
+
+          To find requests that were successful, use this field in conjunction with the `errorCount` field: search for requests whose state is `completed` and whose error count is `0`.
+      statement:
+        type: string
+        description: The query statement being executed.
+      useCBO:
+        type: boolean
+        description: Whether the cost-based optimizer is enabled for the query.
+      usedMemory:
+        type: integer
+        description: |-
+          The amount of document memory used to execute the request.
+          This property is only returned if a memory quota is set for the query.
+      userAgent:
+        type: string
+        description: Name of the client application or program that issued the query.
+      users:
+        type: string
+        description: Username with whose privileges the query is run.
+
+  Statements:
+    type: object
+    title: Prepared Statements
+    required:
+      - encoded_plan
+      - name
+      - statement
+      - uses
+    properties:
+      encoded_plan:
+        type: string
+        description: The full prepared statement in encoded format.
+      featureControls:
+        type: integer
+        description: |-
+          This property is provided for technical support only.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      indexApiVersion:
+        type: integer
+        description: |-
+          This property is provided for technical support only.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      name:
+        type: string
+        description: |-
+          The name of the prepared statement.
+          This may be a UUID that was assigned automatically, or a name that was user-specified when the statement was created.
+      namespace:
+        type: string
+        description: |-
+          The namespace in which the prepared statement is stored.
+          Currently, only the `default` namespace is available.
+      node:
+        type: string
+        description: |-
+          The node on which the prepared statement is stored.
+      statement:
+        type: string
+        description: The text of the query.
+      uses:
+        type: integer
+        description: The count of times the prepared statement has been executed.
+      avgElapsedTime:
+        type: string
+        format: duration
+        description: |-
+          The mean time taken from when the request to execute the prepared statement was acknowledged by the service, to when the request was completed.
+          It includes the time taken by the service to schedule the request.
+
+          This property is only returned when the prepared statement has been executed.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      avgServiceTime:
+        type: string
+        format: duration
+        description: |-
+          The mean amount of calendar time taken to complete the execution of the prepared statement.
+
+          This property is only returned when the prepared statement has been executed.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      lastUse:
+        type: string
+        format: date-time
+        description: |-
+          Date and time of last use.
+
+          This property is only returned when the prepared statement has been executed.
+      maxElapsedTime:
+        type: string
+        format: duration
+        description: |-
+          The maximum time taken from when the request to execute the prepared statement was acknowledged by the service, to when the request was completed.
+          It includes the time taken by the service to schedule the request.
+
+          This property is only returned when the prepared statement has been executed.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      maxServiceTime:
+        type: string
+        format: duration
+        description: |-
+          The maximum amount of calendar time taken to complete the execution of the prepared statement.
+
+          This property is only returned when the prepared statement has been executed.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      minElapsedTime:
+        type: string
+        format: duration
+        description: |-
+          The minimum time taken from when the request to execute the prepared statement was acknowledged by the service, to when the request was completed.
+          It includes the time taken by the service to schedule the request.
+
+          This property is only returned when the prepared statement has been executed.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      minServiceTime:
+        type: string
+        format: duration
+        description: |-
+          The minimum amount of calendar time taken to complete the execution of the prepared statement.
+
+          This property is only returned when the prepared statement has been executed.
+          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+
+  Vitals:
+    type: object
+    title: Vital Statistics
+    properties:
+      bucket.IO.stats:
+        type: object
+        description: The number of reads and retries for each bucket.
+      uptime:
+        type: string
+        format: duration
+        description: The uptime of the query engine.
+      local.time:
+        type: string
+        format: date-time
+        description: The local time of the query engine.
+      version:
+        type: string
+        description: The version of the query engine.
+      total.threads:
+        type: integer
+        description: The number of active threads used by the query engine.
+      cores:
+        type: integer
+        description: The maximum number of logical cores available to the query engine.
+      ffdc.total:
+        type: integer
+        description: The total number of times FFDC has been invoked since the last restart.
+      gc.num:
+        type: integer
+        format: int64
+        description: The target heap size of the next garbage collection cycle.
+      gc.pause.time:
+        type: string
+        format: duration
+        description: The total time spent pausing for garbage collection since the query engine started (ns).
+      gc.pause.percent:
+        type: integer
+        format: int64
+        description: The percentage of time spent pausing for garbage collection since the last time the statistics were checked.
+      healthy:
+        type: boolean
+        description: False when either the unbounded or plus request queues are full; true otherwise.
+      host.memory.free:
+        type: integer
+        format: int64
+        description: Amount of free memory on the host.
+      host.memory.quota:
+        type: integer
+        format: int64
+        description: |-
+          The host memory quota.
+          This reflects the node-quota setting.
+      host.memory.total:
+        type: integer
+        format: int64
+        description: Total memory on the host.
+      host.memory.value_quota:
+        type: integer
+        format: int64
+        description: This the total document memory quota on the node.
+      load:
+        type: integer
+        description: A calculation for how busy the server is.
+      loadfactor:
+        type: integer
+        description: The moving 15 minute average of the load calculation.
+      memory.usage:
+        type: integer
+        format: int64
+        description: |-
+          The amount of memory allocated for heap objects (bytes).
+          This increases as heap objects are allocated, and decreases as objects are freed.
+      memory.total:
+        type: integer
+        format: int64
+        description: |-
+          The cumulative amount of memory allocated for heap objects (bytes).
+          This increases as heap objects are allocated, but does not decrease when objects are freed.
+      memory.system:
+        type: integer
+        format: int64
+        description: |-
+          The total amount of memory obtained from the operating system (bytes).
+          This measures the virtual address space reserved by the query engine for heaps, stacks, and other internal data structures.
+      node:
+        type: string
+        description: The name or IP address and port of the node.
+      node.allocated.values:
+        type: integer
+        description: |-
+          The total number of values allocated to contain documents or computations around documents.
+          (This is only of relevance internally.)
+      node.memory.usage:
+        type: integer
+        description: The currently allocated document memory on the node.
+      cpu.user.percent:
+        type: integer
+        format: int64
+        description: |-
+          CPU usage.
+          The percentage of time spent executing user code since the last time the statistics were checked.
+      cpu.sys.percent:
+        type: integer
+        format: int64
+        description: |-
+          CPU usage.
+          The percentage of time spent executing system code since the last time the statistics were checked.
+      process.memory.usage:
+        type: integer
+        description: Current process memory use.
+      process.percore.cpupercent:
+        type: number
+        description: Average CPU usage per core.
+      process.rss:
+        type: integer
+        description: Process RSS (bytes)
+      process.service.usage:
+        type: integer
+        description: The number of active servicers for the dominant workload &mdash; unbound queue servicers or plus queue servicers.
+      request.completed.count:
+        type: integer
+        description: Total number of completed requests.
+      request.active.count:
+        type: integer
+        description: Total number of active requests.
+      request.per.sec.1min:
+        type: number
+        description: |-
+          Number of query requests processed per second.
+          1-minute exponentially weighted moving average.
+      request.per.sec.5min:
+        type: number
+        description: |-
+          Number of query requests processed per second.
+          5-minute exponentially weighted moving average.
+      request.per.sec.15min:
+        type: number
+        description: |-
+          Number of query requests processed per second.
+          15-minute exponentially weighted moving average.
+      request.queued.count:
+        type: integer
+        description: Number of queued requests.
+      request.quota.used.hwm:
+        type: integer
+        description: High water mark for request quota use.
+      request_time.mean:
+        type: string
+        format: duration
+        description: |-
+          End-to-end time to process a query.
+          The mean value.
+      request_time.median:
+        type: string
+        format: duration
+        description: |-
+          End-to-end time to process a query.
+          The median value.
+      request_time.80percentile:
+        type: string
+        format: duration
+        description: |-
+          End-to-end time to process a query.
+          The 80th percentile.
+      request_time.95percentile:
+        type: string
+        format: duration
+        description: |-
+          End-to-end time to process a query.
+          The 95th percentile.
+      request_time.99percentile:
+        type: string
+        format: duration
+        description: |-
+          End-to-end time to process a query.
+          The 99th percentile.
+      request.prepared.percent:
+        type: integer
+        description: Percentage of requests that are prepared statements.
+      servicers.paused.count:
+        type: integer
+        description: |-
+          Number of servicers temporarily paused due to memory pressure.
+          (Applies to serverless environments only.)
+      servicers.paused.total:
+        type: integer
+        description: |-
+          Number of times servicers have been temporarily paused.
+          (Applies to serverless environments only.)
+      temp.hwm:
+        type: integer
+        description: |-
+          High water mark for temp space use directly by query.
+          (Doesn't include use by the GSI and Search clients.)
+      temp.usage:
+        type: integer
+        description: |-
+          Current Query temp space use.
+          (Doesn't include use by the GSI and Search clients.)
+
+  Statistics:
+    type: object
+    title: Statistics
+    properties:
+      active_requests.count:
+        type: integer
+        description: Total number of active requests.
+      at_plus.count:
+        type: integer
+        description: Total number of query requests with `at_plus` index consistency.
+      audit_actions.count:
+        type: integer
+        description: |-
+          The total number of audit records sent to the server.
+          Some requests cause more than one audit record to be emitted.
+          Records in the output queue that have not yet been sent to the server are not counted.
+      audit_actions_failed.count:
+        type: integer
+        description: The total number of audit records sent to the server that failed.
+      audit_requests_filtered.count:
+        type: integer
+        description: The number of potentially auditable requests that cause no audit action to be taken.
+      audit_requests_total.count:
+        type: integer
+        description: The total number of potentially auditable requests sent to the query engine.
+      cancelled.count:
+        type: integer
+        description: Total number of cancelled requests.
+      deletes.count:
+        type: integer
+        description: Total number of DELETE operations.
+      errors.count:
+        type: integer
+        description: The total number of query errors returned so far.
+      index_scans.count:
+        type: integer
+        description: Total number of secondary index scans.
+      inserts.count:
+        type: integer
+        description: Total number of INSERT operations.
+      invalid_requests.count:
+        type: integer
+        description: Total number of requests for unsupported endpoints.
+      mutations.count:
+        type: integer
+        description: Total number of document mutations.
+      prepared.count:
+        type: integer
+        description: Total number of prepared statements executed.
+      primary_scans.count:
+        type: integer
+        description: Total number of primary index scans.
+      queued_requests.count:
+        type: integer
+        description: Total number of queued requests.
+      request_time.count:
+        type: integer
+        description: Total end-to-end time to process all queries (ns).
+      request_timer.15m.rate:
+        type: number
+        description: |-
+          Number of query requests processed per second.
+          15-minute exponentially weighted moving average.
+      request_timer.1m.rate:
+        type: number
+        description: |-
+          Number of query requests processed per second.
+          1-minute exponentially weighted moving average.
+      request_timer.5m.rate:
+        type: number
+        description: |-
+          Number of query requests processed per second.
+          5-minute exponentially weighted moving average.
+      request_timer.75%:
+        type: number
+        description: |-
+          End-to-end time to process a query (ns).
+          The 75th percentile.
+      request_timer.95%:
+        type: number
+        description: |-
+          End-to-end time to process a query (ns).
+          The 95th percentile.
+      request_timer.99%:
+        type: number
+        description: |-
+          End-to-end time to process a query (ns).
+          The 99th percentile.
+      request_timer.99.9%:
+        type: number
+        description: |-
+          End-to-end time to process a query (ns).
+          The 99.9th percentile.
+      request_timer.count:
+        type: integer
+        description: Total number of query requests.
+      request_timer.max:
+        type: integer
+        description: |-
+          End-to-end time to process a query (ns).
+          The maximum value.
+      request_timer.mean:
+        type: number
+        description: |-
+          End-to-end time to process a query (ns).
+          The mean value.
+      request_timer.mean.rate:
+        type: number
+        description: |-
+          Number of query requests processed per second.
+          Mean rate since the query service started.
+      request_timer.median:
+        type: number
+        description: |-
+          End-to-end time to process a query (ns).
+          The median value.
+      request_timer.min:
+        type: integer
+        description: |-
+          End-to-end time to process a query (ns).
+          The minimum value.
+      request_timer.stddev:
+        type: number
+        description: |-
+          End-to-end time to process a query (ns).
+          The standard deviation.
+      requests.count:
+        type: integer
+        description: Total number of query requests.
+      requests_1000ms.count:
+        type: integer
+        description: Number of queries that take longer than 1000ms.
+      requests_250ms.count:
+        type: integer
+        description: Number of queries that take longer than 250ms.
+      requests_5000ms.count:
+        type: integer
+        description: Number of queries that take longer than 5000ms.
+      requests_500ms.count:
+        type: integer
+        description: Number of queries that take longer than 500ms.
+      result_count.count:
+        type: integer
+        description: Total number of results (documents) returned by the query engine.
+      result_size.count:
+        type: integer
+        description: Total size of data returned by the query engine (bytes).
+      scan_plus.count:
+        type: integer
+        description: Total number of query requests with `request_plus` index consistency.
+      selects.count:
+        type: integer
+        description: Total number of SELECT requests.
+      service_time.count:
+        type: integer
+        description: Time to execute all queries (ns).
+      unbounded.count:
+        type: integer
+        description: Total number of query requests with `not_bounded` index consistency.
+      updates.count:
+        type: integer
+        description: Total number of UPDATE requests.
+      warnings.count:
+        type: integer
+        description: The total number of query warnings returned so far.
+
+  Metrics:
+    type: object
+    title: Metrics
+    properties:
+      count:
+        type: integer
+        description: A single value that represents the current state.
+      15m.rate:
+        type: number
+        description: 15-minute exponentially weighted moving average.
+      1m.rate:
+        type: number
+        description: 1-minute exponentially weighted moving average.
+      5m.rate:
+        type: number
+        description: 5-minute exponentially weighted moving average.
+      mean.rate:
+        type: number
+        description: Mean rate since the query service started.
+      max:
+        type: integer
+        description: The maximum value.
+      mean:
+        type: number
+        description: The mean value.
+      median:
+        type: number
+        description: The median value.
+      min:
+        type: integer
+        description: The minimum value.
+      stddev:
+        type: number
+        description: The standard deviation.
+      75%:
+        type: number
+        description: The 75th percentile.
+      95%:
+        type: number
+        description: The 95th percentile.
+      99%:
+        type: number
+        description: The 99th percentile.
+      99.9%:
+        type: number
+        description: The 99.9th percentile.
+
+  Settings:
+    type: object
+    title: Settings
+    properties:
+      atrcollection:
+        type: string
+        default: ""
+        example: default:`travel-sample`.transaction.test
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: atrcollection-srv
+        description: |-
+          Specifies the collection where [active transaction records][additional-storage-use] are stored.
+          The collection must be present.
+          If not specified, the active transaction record is stored in the default collection in the default scope in the bucket containing the first mutated document within the transaction.
+
+          The value must be a string in the form `"bucket.scope.collection"` or `"namespace:bucket.scope.collection"`.
+          If any part of the path contains a special character, that part of the path must be delimited in backticks &grave;&grave;.
+
+          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+        x-desc-more: |-
+          The [request-level][atrcollection_req] `atrcollection` parameter specifies this property per request.
+          If a request does not include this parameter, the node-level `atrcollection` setting will be used.
+
+          [atrcollection_req]: ../n1ql-rest-query/index.html#atrcollection_req
+        x-desc-refs: |-
+          [atrcollection_req]: #atrcollection_req
+      auto-prepare:
+        type: boolean
+        default: false
+        example: true
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: auto-prepare
+        description: |-
+          Specifies whether the query engine should create a prepared statement every time a SQL++ request is submitted, whether the PREPARE statement is included or not.
+          
+          Refer to [Auto-Prepare][auto-prepare] for more information.
+
+          [auto-prepare]: /server/7.6/n1ql/n1ql-language-reference/prepare.html#auto-prepare
+      cleanupclientattempts:
+        type: boolean
+        default: true
+        example: false
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: cleanupclientattempts
+        description: |-
+          When enabled, the Query service preferentially aims to clean up just transactions that it has created, leaving transactions for the distributed cleanup process only when it is forced to.
+        x-desc-more: |-
+          The [cluster-level][queryCleanupClientAttempts] `queryCleanupClientAttempts` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryCleanupClientAttempts]: ../n1ql-rest-settings/index.html#queryCleanupClientAttempts
+        x-desc-refs: |-
+          [queryCleanupClientAttempts]: #queryCleanupClientAttempts
+      cleanuplostattempts:
+        type: boolean
+        default: true
+        example: false
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: cleanuplostattempts
+        description: |-
+          When enabled, the Query service takes part in the distributed cleanup process, and cleans up expired transactions created by any client.
+        x-desc-more: |-
+          The [cluster-level][queryCleanupLostAttempts] `queryCleanupLostAttempts` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryCleanupLostAttempts]: ../n1ql-rest-settings/index.html#queryCleanupLostAttempts
+        x-desc-refs: |-
+          [queryCleanupLostAttempts]: #queryCleanupLostAttempts
+      cleanupwindow:
+        type: string
+        format: duration
+        default: 60s
+        example: 30s
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: cleanupwindow
+        description: |-
+          Specifies how frequently the Query service checks its subset of [active transaction records][additional-storage-use] for cleanup.
+          Decreasing this setting causes expiration transactions to be found more swiftly, with the tradeoff of increasing the number of reads per second used for the scanning process.
+
+          The value for this setting is a string.
+          Its format includes an amount and a mandatory unit, e.g. `10ms` (10 milliseconds) or `0.5s` (half a second).
+          Valid units are:
+
+          * `ns` (nanoseconds)
+          * `us` (microseconds)
+          * `ms` (milliseconds)
+          * `s` (seconds)
+          * `m` (minutes)
+          * `h` (hours)
+
+          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+        x-desc-more: |-
+          The [cluster-level][queryCleanupWindow] `queryCleanupWindow` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryCleanupWindow]: ../n1ql-rest-settings/index.html#queryCleanupWindow
+        x-desc-refs: |-
+          [queryCleanupWindow]: #queryCleanupWindow
+      completed:
+        type: object
+        title: Logging Parameters
+        default: {"aborted": null, "threshold": 1000}
+        example: {"user": "marco", "error": 12003}
+        x-desc-name: completed
+        description: |-
+          A nested object that sets the parameters for the completed requests catalog.
+          All completed requests that match these parameters are tracked in the completed requests catalog.
+
+          Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
+
+          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+        properties:
+          aborted:
+            type: boolean
+            default: null
+            example: true
+            x-has-default: true
+            x-has-example: true
+            description: If true, all requests that generate a panic are logged.
+          client:
+            type: string
+            default: ""
+            example: "172.1.2.3"
+            x-has-default: true
+            x-has-example: true
+            description: |-
+              The IP address of the client.
+              If specified, all completed requests from this IP address are logged.
+          context:
+            type: string
+            description: |-
+              The opaque ID or context provided by the client.
+              If specified, all completed requests with this client context ID are logged.
+            x-desc-more: |-
+              Refer to the [request-level][client_context_id] `client_context_id` parameter for more information.
+
+              [client_context_id]: ../n1ql-rest-query/index.html#client_context_id
+            x-desc-refs: |-
+              [client_context_id]: #client_context_id
+          error:
+            type: integer
+            format: int32
+            default: null
+            example: 12003
+            x-has-default: true
+            x-has-example: true
+            description: |-
+              An error number.
+              If specified, all completed queries returning this error number are logged.
+          tag:
+            type: string
+            default: ""
+            example: "both_user_and_error"
+            x-has-default: true
+            x-has-example: true
+            description: |-
+              A unique string which tags a set of qualifiers.
+
+              Refer to [Configure Completed Requests][sys-completed-config] for more information.
+
+              [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          threshold:
+            type: integer
+            format: int32
+            default: 1000
+            example: 7000
+            x-has-default: true
+            x-has-example: true
+            description: |-
+              A duration in milliseconds.
+              If specified, all completed queries lasting longer than this threshold are logged.
+
+              This is another way of specifying the `completed-threshold` setting.
+          user: 
+            type: string
+            default: ""
+            example: "marco"
+            x-has-default: true
+            x-has-example: true
+            description: |-
+              A user name, as given in the request credentials.
+              If specified, all completed queries with this user name are logged.
+          errors: 
+            type: integer
+            format: int32
+            example: 5
+            x-has-example: true
+            description: |-
+              The number of errors.
+              If specified, all completed queries that return at least this many errors are logged. 
+              Queries with fewer errors are not logged.
+      completed-limit:
+        type: integer
+        format: int32
+        default: 4000
+        example: 7000
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: completed-limit
+        description: |-
+          Sets the number of requests to be logged in the completed requests catalog.
+          As new completed requests are added, old ones are removed.
+
+          Increase this when the completed request keyspace is not big enough to track the slow requests, such as when you want a larger sample of slow requests.
+
+          Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
+
+          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+        x-desc-more: |-
+          The [cluster-level][queryCompletedLimit] `queryCompletedLimit` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryCompletedLimit]: ../n1ql-rest-settings/index.html#queryCompletedLimit
+        x-desc-refs: |-
+          [queryCompletedLimit]: #queryCompletedLimit
+      completed-max-plan-size:
+        type: integer
+        format: int32
+        default: 262144
+        minimum: 0
+        maximum: 20840448
+        x-has-default: true
+        x-desc-name: completed-max-plan-size
+        description: |-
+          A plan size in bytes.
+          Limits the size of query execution plans that can be logged in the completed requests catalog.
+          Values larger than the maximum limit are silently treated as the maximum limit.
+          Queries with plans larger than this are not logged.
+          You must obtain execution plans for such queries via profiling or using the EXPLAIN statement.
+
+          Refer to [Configure Completed Requests][sys-completed-config] for more information.
+
+          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+        x-desc-more: |-
+          The [cluster-level][queryCompletedMaxPlanSize] `queryCompletedMaxPlanSize` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryCompletedMaxPlanSize]: ../n1ql-rest-settings/index.html#queryCompletedMaxPlanSize
+        x-desc-refs: |-
+          [queryCompletedMaxPlanSize]: #queryCompletedMaxPlanSize
+      completed-stream-size:
+        type: integer
+        format: int32
+        default: 0
+        x-desc-name: completed-stream-size
+        x-desc-status: Couchbase Server 7.6.4
+        description: |-
+          A file size in MiB.
+          When specified, completed requests are saved to the Couchbase Server `logs` directory.
+          Completed requests are saved to GZIP archives with the prefix `local_request_log`.
+          The value of this property determines the size of the data to retain, per node.
+
+          Specify `0` (the default) to disable completed request streaming.
+
+          Completed request streaming is available in Couchbase Server 7.6.4 and later.
+
+          Refer to [Stream Completed Requests][sys-history] for more information and examples.
+
+          [sys-history]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
+      completed-threshold:
+        type: integer
+        format: int32
+        default: 1000
+        example: 7000
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: completed-threshold
+        description: |-
+          A duration in milliseconds.
+          All completed queries lasting longer than this threshold are logged in the completed requests catalog.
+
+          Specify `0` to track all requests, independent of duration.
+          Specify any negative number to track none.
+
+          Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
+
+          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+        x-desc-more: |-
+          The [cluster-level][queryCompletedThreshold] `queryCompletedThreshold` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryCompletedThreshold]: ../n1ql-rest-settings/index.html#queryCompletedThreshold
+        x-desc-refs: |-
+          [queryCompletedThreshold]: #queryCompletedThreshold
+      controls:
+        type: boolean
+        default: false
+        example: true
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: controls-srv
+        description: |-
+          Specifies if there should be a controls section returned with the request results.
+
+          When set to `true`, the query response document includes a controls section with runtime information provided along with the request, such as positional and named parameters or settings.
+
+          NOTE: If the request qualifies for caching, these values will also be cached in the `completed_requests` system keyspace.
+        x-desc-more: |-
+          The [request-level][controls_req] `controls` parameter specifies this property per request.
+          If a request does not include this parameter, the node-level `controls` setting will be used.
+
+          [controls_req]: ../n1ql-rest-query/index.html#controls_req
+        x-desc-refs: |-
+          [controls_req]: #controls_req
+      cpuprofile:
+        type: string
+        default: ""
+        example: /tmp/info.txt
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: cpuprofile
+        description: |-
+          The absolute path and filename to write the CPU profile to a local file.
+
+          The output file includes a controls section and performance measurements, such as memory allocation and garbage collection, to pinpoint bottlenecks and ways to improve your code execution.
+
+          NOTE: If `cpuprofile` is left running too long, it can slow the system down as its file size increases.
+
+          To stop `cpuprofile`, run with the empty setting of `""`.
+      debug:
+        type: boolean
+        default: false
+        example: true
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: debug
+        description: |-
+          Use debug mode.
+
+          When set to `true`, extra logging is provided.
+      distribute:
+        type: boolean
+        example: true
+        x-has-example: true
+        x-desc-name: distribute
+        description: |-
+          This field is only available with the POST method.
+          When specified alongside other settings, this field instructs the node that is processing the request to cascade those settings to all other query nodes.
+          The actual value of this field is ignored.
+      functions-limit:
+        type: integer
+        format: int32
+        default: 16384
+        example: 7000
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: functions-limit
+        description: Maximum number of user-defined functions.
+      keep-alive-length:
+        type: integer
+        format: int32
+        default: 16384
+        example: 7000
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: keep-alive-length
+        description: Maximum size of buffered result.
+      loglevel:
+        type: string
+        default: INFO
+        enum: ["DEBUG","TRACE","INFO","WARN","ERROR","SEVERE","NONE"]
+        example: DEBUG
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: loglevel
+        description: |-
+          Log level used in the logger.
+
+          All values, in descending order of data:
+
+          * `DEBUG` &mdash; For developers.
+          Writes everything.
+
+          * `TRACE` &mdash; For developers.
+          Less info than `DEBUG`.
+
+          * `INFO` &mdash; For admin & customers.
+          Lists warnings & errors.
+
+          * `WARN` &mdash; For admin.
+          Only abnormal items.
+
+          * `ERROR` &mdash; For admin.
+          Only errors to be fixed.
+
+          * `SEVERE` &mdash; For admin.
+          Major items, like crashes.
+
+          * `NONE` &mdash; Doesn't write anything.
+        x-desc-more: |-
+          The [cluster-level][queryLogLevel] `queryLogLevel` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryLogLevel]: ../n1ql-rest-settings/index.html#queryLogLevel
+        x-desc-refs: |-
+          [queryLogLevel]: #queryLogLevel
+      max-index-api:
+        type: integer
+        format: int32
+        x-desc-name: max-index-api
+        description: |-
+          Max index API.
+          This setting is provided for technical support only.
+      max-parallelism:
+        type: integer
+        format: int32
+        default: 1
+        example: 0
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: max-parallelism-srv
+        description: |-
+          Specifies the maximum parallelism for queries on this node.
+
+          If the value is zero or negative, the maximum parallelism is restricted to the number of allowed cores.
+          Similarly, if the value is greater than the number of allowed cores, the maximum parallelism is restricted to the number of allowed cores.
+
+          (The number of allowed cores is the same as the number of logical CPUs.
+          In Community Edition, the number of allowed cores cannot be greater than 4.
+          In Enterprise Edition, there is no limit to the number of allowed cores.)
+          Refer to [Max Parallelism][max-parallelism] for more information.
+
+          [max-parallelism]: /server/7.6/n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
+        x-desc-more: |-
+          The [cluster-level][queryMaxParallelism] `queryMaxParallelism` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, there is a [request-level][max_parallelism_req] `max_parallelism` parameter.
+          If a request includes this parameter, it will be capped by the node-level `max-parallelism` setting.
+
+          NOTE: To enable queries to run in parallel, you must specify the cluster-level `queryMaxParallelism` parameter, or specify the node-level `max-parallelism` parameter on all Query nodes.
+
+          [queryMaxParallelism]: ../n1ql-rest-settings/index.html#queryMaxParallelism
+          [max_parallelism_req]: ../n1ql-rest-query/index.html#max_parallelism_req
+        x-desc-refs: |-
+          [queryMaxParallelism]: #queryMaxParallelism
+          [max_parallelism_req]: #max_parallelism_req
+      memory-quota:
+        type: integer
+        format: int32
+        default: 0
+        example: 4
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: memory-quota-srv
+        description: |-
+          Specifies the maximum amount of memory a request may use on this node, in MB.
+
+          Specify `0` (the default value) to disable.
+          When disabled, there is no quota.
+
+          This parameter enforces a ceiling on the memory used for the tracked documents required for processing a request.
+          It does not take into account any other memory that might be used to process a request, such as the stack, the operators, or some intermediate values.
+
+          Within a transaction, this setting enforces the memory quota for the transaction by tracking the
+          delta table and the transaction log (approximately).
+        x-desc-more: |-
+          The [cluster-level][queryMemoryQuota] `queryMemoryQuota` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][memory_quota_req] `memory_quota` parameter specifies this property per request.
+          If a request includes this parameter, it will be capped by the node-level `memory-quota` setting.
+
+          [queryMemoryQuota]: ../n1ql-rest-settings/index.html#queryMemoryQuota
+          [memory_quota_req]: ../n1ql-rest-query/index.html#memory_quota_req
+        x-desc-refs: |-
+          [queryMemoryQuota]: #queryMemoryQuota
+          [memory_quota_req]: #memory_quota_req
+      memprofile:
+        type: string
+        default: ""
+        example: /tmp/memory-usage.log
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: memprofile
+        description: |-
+          Filename to write the diagnostic memory usage log.
+
+          NOTE: If `memprofile` is left running too long, it can slow the system down as its file size increases.
+
+          To stop `memprofile`, run with the empty setting of `""`.
+      mutexprofile:
+        type: boolean
+        default: false
+        x-has-default: true
+        x-desc-name: mutexprofile
+        description: |-
+          Mutex profile.
+          This setting is provided for technical support only.
+      n1ql-feat-ctrl:
+        type: integer
+        # type should be [string, integer] but swagger2markup cannot process
+        # fix with move to Redocly / openapi-generator
+        format: int32
+        default: 76
+        example: 16460
+        x-example: "0x1"
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: n1ql-feat-ctrl
+        description: |-
+          SQL++ feature control.
+          This setting is provided for technical support only.
+          The value may be an integer, or a string representing a hexadecimal number.
+        x-desc-more: |-
+          The [cluster-level][queryN1QLFeatCtrl] `queryN1QLFeatCtrl` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryN1QLFeatCtrl]: ../n1ql-rest-settings/index.html#queryN1QLFeatCtrl
+        x-desc-refs: |-
+          [queryN1QLFeatCtrl]: #queryN1QLFeatCtrl
+      node-quota:
+        type: integer
+        format: int32
+        default: 0
+        x-has-default: true
+        x-desc-name: node-quota
+        description: |-
+          Sets the soft memory limit for the Query service on this node, in MB.
+          The garbage collector tries to keep below this target.
+          It is not a hard, absolute limit, and memory usage may exceed this value.
+
+          When set to `0` (the default), the Query service sets a default soft memory limit for the node.
+          To do this, the Query service calculates the difference between the total system RAM and 90% of the total system RAM:
+
+          `Total System RAM - (0.9 * Total System RAM)`
+
+          - If the difference is greater than 8 GiB, the default soft memory limit is set to the total system RAM minus 8 GiB.
+
+          - If the difference is 8 GiB or less, the default soft memory limit is set to 90% of the total system RAM.
+        x-desc-more: |-
+          The [cluster-level][queryNodeQuota] `queryNodeQuota` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryNodeQuota]: ../n1ql-rest-settings/index.html#queryNodeQuota
+        x-desc-refs: |-
+          [queryNodeQuota]: #queryNodeQuota
+      node-quota-val-percent:
+        type: integer
+        format: int32
+        default: 67
+        minimum: 0
+        maximum: 100
+        x-has-default: true
+        x-desc-name: node-quota-val-percent
+        description: |-
+          The percentage of the `node-quota` that is dedicated to tracked value content memory across all active requests on this node.
+          (The `memory-quota` setting specifies the maximum amount of document memory an individual request may use on this node.)
+        x-desc-more: |-
+          The [cluster-level][queryNodeQuotaValPercent] `queryNodeQuotaValPercent` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryNodeQuotaValPercent]: ../n1ql-rest-settings/index.html#queryNodeQuotaValPercent
+        x-desc-refs: |-
+          [queryNodeQuotaValPercent]: #queryNodeQuotaValPercent
+      num-cpus:
+        type: integer
+        format: int32
+        default: 0
+        x-has-default: true
+        x-desc-name: num-cpus
+        description: |-
+          The number of CPUs the Query service can use on this node.
+          Note that this setting requires a restart of the Query service to take effect.
+
+          When set to `0` (the default), the Query service can use all available CPUs, up to the limits described below.
+
+          The number of CPUs can never be greater than the number of logical CPUs.
+          In Community Edition, the number of allowed CPUs cannot be greater than 4.
+          In Enterprise Edition, there is no limit to the number of allowed CPUs.
+        x-desc-more: |-
+          The [cluster-level][queryNumCpus] `queryNumCpus` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryNumCpus]: ../n1ql-rest-settings/index.html#queryNumCpus
+        x-desc-refs: |-
+          [queryNumCpus]: #queryNumCpus
+      numatrs:
+        type: string
+        x-desc-name: numatrs-srv
+        description: |-
+          Specifies the total number of [active transaction records][additional-storage-use].
+
+          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+        x-desc-more: |-
+          The [cluster-level][queryNumAtrs] `queryNumAtrs` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][numatrs_req] `numatrs` parameter specifies this property per request.
+          The minimum of that and the node-level `numatrs` setting is applied.
+
+          [queryNumAtrs]: ../n1ql-rest-settings/index.html#queryNumAtrs
+          [numatrs_req]: ../n1ql-rest-query/index.html#numatrs_req
+        x-desc-refs: |-
+          [queryNumAtrs]: #queryNumAtrs
+          [numatrs_req]: #numatrs_req
+      pipeline-batch:
+        type: integer
+        format: int32
+        default: 16
+        example: 64
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: pipeline-batch-srv
+        description: |-
+          Controls the number of items execution operators can batch for Fetch from the KV.
+        x-desc-more: |-
+          The [cluster-level][queryPipelineBatch] `queryPipelineBatch` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][pipeline_batch_req] `pipeline_batch` parameter specifies this property per request.
+          The minimum of that and the node-level `pipeline-batch` setting is applied.
+
+          [queryPipelineBatch]: ../n1ql-rest-settings/index.html#queryPipelineBatch
+          [pipeline_batch_req]: ../n1ql-rest-query/index.html#pipeline_batch_req
+        x-desc-refs: |-
+          [queryPipelineBatch]: #queryPipelineBatch
+          [pipeline_batch_req]: #pipeline_batch_req
+      pipeline-cap:
+        type: integer
+        format: int32
+        default: 512
+        example: 1024
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: pipeline-cap-srv
+        description: |-
+          Maximum number of items each execution operator can buffer between various operators.
+        x-desc-more: |-
+          The [cluster-level][queryPipelineCap] `queryPipelineCap` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][pipeline_cap_req] `pipeline_cap` parameter specifies this property per request.
+          The minimum of that and the node-level `pipeline-cap` setting is applied.
+
+          [queryPipelineCap]: ../n1ql-rest-settings/index.html#queryPipelineCap
+          [pipeline_cap_req]: ../n1ql-rest-query/index.html#pipeline_cap_req
+        x-desc-refs: |-
+          [queryPipelineCap]: #queryPipelineCap
+          [pipeline_cap_req]: #pipeline_cap_req
+      plus-servicers:
+        type: integer
+        format: int32
+        example: 16
+        x-has-example: true
+        x-desc-name: plus-servicers
+        description: |-
+          The number of service threads for transactions where the scan consistency is `request_plus` or `at_plus`.
+          The default is 16 times the number of logical cores.
+      prepared-limit:
+        type: integer
+        format: int32
+        default: 16384
+        example: 65536
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: prepared-limit
+        description: |-
+          Maximum number of prepared statements in the cache.
+          When this cache reaches the limit, the least recently used prepared statements will be discarded as new prepared statements are created.
+        x-desc-more: |-
+          The [cluster-level][queryPreparedLimit] `queryPreparedLimit` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryPreparedLimit]: ../n1ql-rest-settings/index.html#queryPreparedLimit
+        x-desc-refs: |-
+          [queryPreparedLimit]: #queryPreparedLimit
+      pretty:
+        type: boolean
+        default: false
+        example: true
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: pretty-srv
+        description: |-
+          Specifies whether query results are returned in pretty format.
+        x-desc-more: |-
+          The [request-level][pretty_req] `pretty` parameter specifies this property per request.
+          If a request does not include this parameter, the node-level setting is used, which defaults to `false`.
+
+          [pretty_req]: ../n1ql-rest-query/index.html#pretty_req
+        x-desc-refs: |-
+          [pretty_req]: #pretty_req
+      profile:
+        type: string
+        default: "off"
+        example: "phases"
+        x-has-default: true
+        x-has-example: true
+        enum: ["off","phases","timings"]
+        x-desc-name: profile-srv
+        description: |-
+          Specifies if there should be a profile section returned with the request results.
+          The valid values are:
+
+          * `off` &mdash; No profiling information is added to the query response.
+
+          * `phases` &mdash; The query response includes a profile section with stats and details about various phases of the query plan and execution.
+          Three phase times will be included in the `system:active_requests` and `system:completed_requests` monitoring keyspaces.
+
+          * `timings` &mdash; Besides the phase times, the profile section of the query response document will include a full query plan with timing and information about the number of processed documents at each phase.
+          This information will be included in the `system:active_requests` and `system:completed_requests` keyspaces.
+
+          NOTE: If `profile` is not set as one of the above values, then the profile setting does not change.
+
+          Refer to [Monitoring and Profiling Details][monitor-profile-details] for more information and examples.
+
+          [monitor-profile-details]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#monitor-profile-details
+        x-desc-more: |-
+          The [request-level][profile_req] `profile` parameter specifies this property per request.
+          If a request does not include this parameter, the node-level `profile` setting will be used.
+
+          [profile_req]: ../n1ql-rest-query/index.html#profile_req
+        x-desc-refs: |-
+          [profile_req]: #profile_req
+      request-size-cap:
+        type: integer
+        format: int32
+        default: 67108864
+        example: 70000
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: request-size-cap
+        description: Maximum size of a request.
+      scan-cap:
+        type: integer
+        format: int32
+        default: 512
+        example: 1024
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: scan-cap-srv
+        description: |-
+          Maximum buffered channel size between the indexer client and the query service for index scans.
+          This parameter controls when to use scan backfill.
+
+          Use `0` or a negative number to disable.
+          Smaller values reduce GC, while larger values reduce indexer backfill.
+        x-desc-more: |-
+          The [cluster-level][queryScanCap] `queryScanCap` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][scan_cap_req] `scan_cap` parameter specifies this property per request.
+          The minimum of that and the node-level `scan-cap` setting is applied.
+
+          [queryScanCap]: ../n1ql-rest-settings/index.html#queryScanCap
+          [scan_cap_req]: ../n1ql-rest-query/index.html#scan_cap_req
+        x-desc-refs: |-
+          [queryScanCap]: #queryScanCap
+          [scan_cap_req]: #scan_cap_req
+      servicers:
+        type: integer
+        format: int32
+        default: 32
+        example: 8
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: servicers
+        description: |-
+          The number of service threads for the query.
+          The default is 4 times the number of cores on the query node.
+      timeout:
+        type: integer
+        format: int64
+        default: 0
+        example: 500000000
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: timeout-srv
+        description: |-
+          Maximum time to spend on the request before timing out (ns).
+
+          The value for this setting is an integer, representing a duration in nanoseconds.
+          It must not be delimited by quotes, and must not include a unit.
+
+          Specify `0` (the default value) or a negative integer to disable.
+          When disabled, no timeout is applied and the request runs for however long it takes.
+        x-desc-more: |-
+          The [cluster-level][queryTimeout] `queryTimeout` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][timeout_req] `timeout` parameter specifies this property per request.
+          The minimum of that and the node-level `timeout` setting is applied.
+
+          [queryTimeout]: ../n1ql-rest-settings/index.html#queryTimeout
+          [timeout_req]: ../n1ql-rest-query/index.html#timeout_req
+        x-desc-refs: |-
+          [queryTimeout]: #queryTimeout
+          [timeout_req]: #timeout_req
+      txtimeout:
+        type: integer
+        format: int64
+        default: 0
+        example: 500000000
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: txtimeout-srv
+        description: |-
+          Maximum time to spend on a transaction before timing out (ns).
+          This setting only applies to requests containing the `BEGIN TRANSACTION` statement, or to requests where the [tximplicit][tximplicit] parameter is set.
+          For all other requests, it is ignored.
+
+          The value for this setting is an integer, representing a duration in nanoseconds.
+          It must not be delimited by quotes, and must not include a unit.
+
+          Specify `0` (the default value) to disable.
+          When disabled, no timeout is applied and the transaction runs for however long it takes.
+
+          [tximplicit]: ../n1ql-rest-query/index.html#tximplicit
+        x-desc-more: |-
+          The [cluster-level][queryTxTimeout] `queryTxTimeout` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][txtimeout_req] `txtimeout` parameter specifies this property per request.
+          The minimum of that and the node-level `txtimeout` setting is applied.
+
+          [queryTxTimeout]: ../n1ql-rest-settings/index.html#queryTxTimeout
+          [txtimeout_req]: ../n1ql-rest-query/index.html#txtimeout_req
+        x-desc-refs: |-
+          [tximplicit]: #tximplicit
+          [queryTxTimeout]: #queryTxTimeout
+          [txtimeout_req]: #txtimeout_req
+      use-cbo:
+        type: boolean
+        default: true
+        example: false
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: use-cbo-srv
+        description: |-
+          Specifies whether the cost-based optimizer is enabled.
+        x-desc-more: |-
+          The [cluster-level][queryUseCBO] `queryUseCBO` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          In addition, the [request-level][use_cbo_req] `use_cbo` parameter specifies this property per request.
+          If a request does not include this parameter, the node-level setting is used, which defaults to `true`.
+
+          [queryUseCBO]: ../n1ql-rest-settings/index.html#queryUseCBO
+          [use_cbo_req]: ../n1ql-rest-query/index.html#use_cbo_req
+        x-desc-refs: |-
+          [queryUseCBO]: #queryUseCBO
+          [use_cbo_req]: #use_cbo_req
+      use-replica:
+        type: string
+        default: unset
+        enum: ["off","on","unset"]
+        example: "on"
+        x-has-default: true
+        x-has-example: true
+        x-desc-name: use-replica-srv
+        description: |-
+          Specifies whether a query can fetch data from a replica vBucket if active vBuckets are inaccessible.
+          The possible values are:
+
+          * `off` &mdash; read from replica is disabled for all queries and cannot be overridden at request level.
+
+          * `on` &mdash; read from replica is enabled for all queries, but can be disabled at request level.
+
+          * `unset` &mdash; read from replica is enabled or disabled at request level.
+
+          Do not enable read from replica when you require consistent results.
+          Only SELECT queries that are not within a transaction can read from replica.
+
+          Reading from replica is only possible if the cluster uses Couchbase Server 7.6.0 or later.
+
+          Note that KV range scans cannot currently be started on a replica vBucket.
+          If a query uses sequential scan and a data node becomes unavailable, the query might return an error, even if read from replica is enabled for the request.
+        x-desc-more: |-
+          The [cluster-level][queryUseReplica] `queryUseReplica` setting specifies the default for this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is overwritten for all nodes in the cluster.
+
+          In addition, the [request-level][use_replica_req] `use_replica` parameter specifies this property per request.
+          If a request does not include this parameter, or if the request-level parameter is `unset`, the node-level setting is used.
+          If the request-level parameter and the node-level setting are both `unset`, read from replica is disabled for that request.
+
+          [queryUseReplica]: ../n1ql-rest-settings/index.html#queryUseReplica
+          [use_replica_req]: ../n1ql-rest-query/index.html#use_replica_req
+        x-desc-refs: |-
+          [queryUseReplica]: #queryUseReplica
+          [use_replica_req]: #use_replica_req
+
+  Garbage:
+    type: object
+    title: Garbage Collection
+    properties:
+      freed:
+        type: integer
+        description: The amount of memory freed.
+      released:
+        type: integer
+        description: |-
+          Only returned by the POST method.
+          The amount of memory released to the OS.
+      status:
+        type: string
+        description: The status of the garbage collector.
+    required:
+      - freed
+      - status
+
+ parameters:
+  PathStat:
+    name: stat
+    in: path
+    required: true
+    schema:
+     type: string
+     enum:
+      - active_requests
+      - at_plus
+      - audit_actions
+      - audit_actions_failed
+      - audit_requests_filtered
+      - audit_requests_total
+      - cancelled
+      - deletes
+      - errors
+      - index_scans
+      - inserts
+      - invalid_requests
+      - mutations
+      - prepared
+      - primary_scans
+      - queued_requests
+      - request_time
+      - request_timer
+      - requests
+      - requests_1000ms
+      - requests_250ms
+      - requests_5000ms
+      - requests_500ms
+      - result_count
+      - result_size
+      - scan_plus
+      - selects
+      - service_time
+      - unbounded
+      - updates
+      - warnings
+    description: |-
+      The name of a statistic.
+      Only top-level statistic names can be used.
+      You cannot specify a metric.
+
+  PathName:
+    name: name
+    schema:
+     type: string
+    in: path
+    required: true
+    description: |-
+      The name of a prepared statement.
+      This may be a UUID that was assigned automatically, or a name that was user-specified when the statement was created.
+
+  PathRequest:
+    name: request
+    schema:
+     type: string
+    in: path
+    required: true
+    description: |-
+      The name of a request.
+      This is the `requestID` that was assigned automatically when the statement was created.
+
+  PathCluster:
+    name: cluster
+    schema:
+     type: string
+    in: path
+    required: true
+    description: The name of a cluster.
+
+  PathNode:
+    name: node
+    schema:
+     type: string
+    in: path
+    required: true
+    description: The name of a node.
+
+ securitySchemes:
+  Default:
+    type: http
+    scheme: basic
+    description: |-
+      The Admin API supports admin credentials.
+      Credentials can be passed via HTTP headers (HTTP basic authentication).
