@@ -262,77 +262,80 @@ func (this *opContext) AdminContext() (interface{}, error) {
 // Per request context
 
 type Context struct {
-	requestId           string
-	stmtType            string
-	datastore           datastore.Datastore
-	systemstore         datastore.Systemstore
-	namespace           string
-	indexApiVersion     int
-	featureControls     uint64
-	queryContext        string
-	useFts              bool
-	useCBO              bool
-	useReplica          bool
-	optimizer           planner.Optimizer
-	readonly            bool
-	maxParallelism      int
-	scanCap             int64
-	pipelineCap         int64
-	pipelineBatch       int
-	isPrepared          bool
-	reqDeadline         time.Time
-	now                 time.Time
-	namedArgs           map[string]value.Value
-	positionalArgs      value.Values
-	credentials         *auth.Credentials
-	firstCreds          string
-	firstCredsSet       bool
-	consistency         datastore.ScanConsistency
-	originalConsistency datastore.ScanConsistency
-	scanVectorSource    timestamp.ScanVectorSource
-	output              Output
-	prepared            *plan.Prepared
-	subExecTrees        *subqueryArrayMap
-	subqueryPlans       *algebra.SubqueryPlans
-	subresults          *subqueryMap
-	httpRequest         *http.Request
-	mutex               sync.RWMutex
-	allowlist           map[string]interface{}
-	inlistHashMap       map[*expression.In]*expression.InlistHash
-	inlistHashLock      sync.RWMutex
-	memoryQuota         uint64
-	reqTimeout          time.Duration
-	deltaKeyspaces      map[string]bool
-	durabilityLevel     datastore.DurabilityLevel
-	durabilityTimeout   time.Duration
-	txContext           *transactions.TranContext
-	txTimeout           time.Duration
-	txImplicit          bool
-	txData              []byte
-	txDataVal           value.Value
-	atrCollection       string
-	numAtrs             int
-	kvTimeout           time.Duration
-	preserveExpiry      bool
-	flags               uint32
-	recursionCount      int32
-	result              func(context *Context, item value.AnnotatedValue) bool
-	likeRegexMap        map[*expression.Like]*expression.LikeRegex
-	udfValueMap         *sync.Map
-	udfHandleMap        map[*executionHandle]bool
-	tracked             bool
-	bitFilterMap        map[string]*BitFilterTerm
-	bitFilterLock       sync.RWMutex
-	tenantCtx           tenant.Context
-	memorySession       memory.MemorySession
-	keysToSkip          *sync.Map
-	keysToSkipSize      uint64
-	keysToSkipMaxSize   uint64
-	planPreparedTime    time.Time // time the plan was created
-	logLevel            logging.Level
-	errorLimit          int
-	udfStmtExecTrees    *udfExecTreeMap // cache of execution trees of embedded N1QL statements in Javascript/Golang UDFs
-	durationStyle       util.DurationStyle
+	requestId                 string
+	stmtType                  string
+	datastore                 datastore.Datastore
+	systemstore               datastore.Systemstore
+	namespace                 string
+	indexApiVersion           int
+	featureControls           uint64
+	queryContext              string
+	useFts                    bool
+	useCBO                    bool
+	useReplica                bool
+	optimizer                 planner.Optimizer
+	readonly                  bool
+	maxParallelism            int
+	scanCap                   int64
+	pipelineCap               int64
+	pipelineBatch             int
+	isPrepared                bool
+	reqDeadline               time.Time
+	now                       time.Time
+	namedArgs                 map[string]value.Value
+	positionalArgs            value.Values
+	credentials               *auth.Credentials
+	firstCreds                string
+	firstCredsSet             bool
+	consistency               datastore.ScanConsistency
+	originalConsistency       datastore.ScanConsistency
+	scanVectorSource          timestamp.ScanVectorSource
+	output                    Output
+	prepared                  *plan.Prepared
+	subExecTrees              *subqueryArrayMap
+	subqueryPlans             *algebra.SubqueryPlans
+	subresults                *subqueryMap
+	httpRequest               *http.Request
+	mutex                     sync.RWMutex
+	allowlist                 map[string]interface{}
+	inlistHashMap             map[*expression.In]*expression.InlistHash
+	inlistHashLock            sync.RWMutex
+	memoryQuota               uint64
+	reqTimeout                time.Duration
+	deltaKeyspaces            map[string]bool
+	durabilityLevel           datastore.DurabilityLevel
+	durabilityTimeout         time.Duration
+	txContext                 *transactions.TranContext
+	txTimeout                 time.Duration
+	txImplicit                bool
+	txData                    []byte
+	txDataVal                 value.Value
+	atrCollection             string
+	numAtrs                   int
+	kvTimeout                 time.Duration
+	preserveExpiry            bool
+	flags                     uint32
+	recursionCount            int32
+	result                    func(context *Context, item value.AnnotatedValue) bool
+	likeRegexMap              map[*expression.Like]*expression.LikeRegex
+	udfValueMap               *sync.Map
+	udfHandleMap              map[*executionHandle]bool
+	tracked                   bool
+	bitFilterMap              map[string]*BitFilterTerm
+	bitFilterLock             sync.RWMutex
+	tenantCtx                 tenant.Context
+	memorySession             memory.MemorySession
+	keysToSkip                *sync.Map
+	keysToSkipSize            uint64
+	keysToSkipMaxSize         uint64
+	planPreparedTime          time.Time // time the plan was created
+	logLevel                  logging.Level
+	errorLimit                int
+	udfStmtExecTrees          *udfExecTreeMap // cache of execution trees of embedded N1QL statements in Javascript/Golang UDFs
+	durationStyle             util.DurationStyle
+	reqLoggingEnabled         bool
+	serverDebugLoggingEnabled bool
+	logMemTracking            func(reqLog bool, srvLog bool, size uint64, sz uint64, track bool, context *Context)
 
 	// Key: unique identifier of the Inline UDF, Value: Info on the function body of Inline UDFs executed in the query
 	inlineUdfEntries map[string]*inlineUdfEntry
@@ -404,53 +407,56 @@ func (this *Context) Copy() *Context {
 	rv := &Context{
 		requestId: this.requestId,
 		// do NOT copy stmtType
-		datastore:           this.datastore,
-		systemstore:         this.systemstore,
-		namespace:           this.namespace,
-		readonly:            this.readonly,
-		maxParallelism:      this.maxParallelism,
-		scanCap:             this.scanCap,
-		pipelineCap:         this.pipelineCap,
-		pipelineBatch:       this.pipelineBatch,
-		now:                 this.now,
-		credentials:         this.credentials,
-		consistency:         this.consistency,
-		originalConsistency: this.originalConsistency,
-		scanVectorSource:    this.scanVectorSource,
-		output:              this.output,
-		result:              this.result,
-		httpRequest:         this.httpRequest,
-		indexApiVersion:     this.indexApiVersion,
-		featureControls:     this.featureControls,
-		useReplica:          this.useReplica,
-		queryContext:        this.queryContext,
-		useFts:              this.useFts,
-		useCBO:              this.useCBO,
-		deltaKeyspaces:      this.deltaKeyspaces,
-		txTimeout:           this.txTimeout,
-		txImplicit:          this.txImplicit,
-		txContext:           this.txContext,
-		txData:              this.txData,
-		txDataVal:           this.txDataVal,
-		kvTimeout:           this.kvTimeout,
-		atrCollection:       this.atrCollection,
-		numAtrs:             this.numAtrs,
-		preserveExpiry:      this.preserveExpiry,
-		flags:               this.flags,
-		reqTimeout:          this.reqTimeout,
-		memoryQuota:         this.memoryQuota,
-		allowlist:           this.allowlist,
-		udfValueMap:         this.udfValueMap,
-		recursionCount:      this.recursionCount,
-		tenantCtx:           this.tenantCtx,
-		memorySession:       this.memorySession,
-		keysToSkip:          this.keysToSkip,
-		keysToSkipSize:      this.keysToSkipSize,
-		keysToSkipMaxSize:   this.keysToSkipMaxSize,
-		planPreparedTime:    this.planPreparedTime,
-		logLevel:            this.logLevel,
-		errorLimit:          this.errorLimit,
-		durationStyle:       this.durationStyle,
+		datastore:                 this.datastore,
+		systemstore:               this.systemstore,
+		namespace:                 this.namespace,
+		readonly:                  this.readonly,
+		maxParallelism:            this.maxParallelism,
+		scanCap:                   this.scanCap,
+		pipelineCap:               this.pipelineCap,
+		pipelineBatch:             this.pipelineBatch,
+		now:                       this.now,
+		credentials:               this.credentials,
+		consistency:               this.consistency,
+		originalConsistency:       this.originalConsistency,
+		scanVectorSource:          this.scanVectorSource,
+		output:                    this.output,
+		result:                    this.result,
+		httpRequest:               this.httpRequest,
+		indexApiVersion:           this.indexApiVersion,
+		featureControls:           this.featureControls,
+		useReplica:                this.useReplica,
+		queryContext:              this.queryContext,
+		useFts:                    this.useFts,
+		useCBO:                    this.useCBO,
+		deltaKeyspaces:            this.deltaKeyspaces,
+		txTimeout:                 this.txTimeout,
+		txImplicit:                this.txImplicit,
+		txContext:                 this.txContext,
+		txData:                    this.txData,
+		txDataVal:                 this.txDataVal,
+		kvTimeout:                 this.kvTimeout,
+		atrCollection:             this.atrCollection,
+		numAtrs:                   this.numAtrs,
+		preserveExpiry:            this.preserveExpiry,
+		flags:                     this.flags,
+		reqTimeout:                this.reqTimeout,
+		memoryQuota:               this.memoryQuota,
+		allowlist:                 this.allowlist,
+		udfValueMap:               this.udfValueMap,
+		recursionCount:            this.recursionCount,
+		tenantCtx:                 this.tenantCtx,
+		memorySession:             this.memorySession,
+		keysToSkip:                this.keysToSkip,
+		keysToSkipSize:            this.keysToSkipSize,
+		keysToSkipMaxSize:         this.keysToSkipMaxSize,
+		planPreparedTime:          this.planPreparedTime,
+		logLevel:                  this.logLevel,
+		errorLimit:                this.errorLimit,
+		durationStyle:             this.durationStyle,
+		reqLoggingEnabled:         this.reqLoggingEnabled,
+		serverDebugLoggingEnabled: this.serverDebugLoggingEnabled,
+		logMemTracking:            this.logMemTracking,
 		// suqbery/udf information should share the same info
 		subExecTrees:     this.subExecTrees,
 		udfStmtExecTrees: this.udfStmtExecTrees,
@@ -465,7 +471,6 @@ func (this *Context) Copy() *Context {
 
 	rv.SetPreserveProjectionOrder(false) // always reset on copy
 	rv.SetDurability(this.DurabilityLevel(), this.DurabilityTimeout())
-
 	return rv
 }
 
@@ -889,13 +894,48 @@ func (this *Context) ProducerThrottleQuota() uint64 {
 	return this.memoryQuota / 10
 }
 
+func logMemTracking(reqLog bool, srvLog bool, size uint64, sz uint64, track bool, context *Context) {
+	if !reqLog && !srvLog {
+		return
+	}
+
+	allocMemory := memory.AllocatedMemory()
+	trackOrRelease := "release"
+	if track {
+		trackOrRelease = "track"
+	}
+
+	if reqLog {
+		context.Infof("MEM: [%p]  %v: %v (%v) %v %v", context, trackOrRelease, size, sz, allocMemory, errors.CallerN(2))
+	}
+
+	if srvLog {
+		logging.Debugf("MEM: [%p] [%v] %v: %v (%v) %v %v", context, context.requestId, trackOrRelease,
+			size, sz, allocMemory, errors.CallerN(2))
+	}
+}
+
+func (this *Context) SetupMemTrackingLogging(serverLogLevel logging.Level) {
+	if this.logMemTracking != nil {
+		return
+	}
+
+	this.reqLoggingEnabled = this.logLevel >= logging.INFO
+	this.serverDebugLoggingEnabled = serverLogLevel >= logging.DEBUG
+
+	if this.reqLoggingEnabled || this.serverDebugLoggingEnabled {
+		this.logMemTracking = logMemTracking
+	} else {
+		this.logMemTracking = func(reqLog, srvLog bool, size, sz uint64, track bool, context *Context) {}
+	}
+}
+
 func (this *Context) TrackValueSize(size uint64) errors.Error {
 	sz, _, err := this.memorySession.Track(size)
 	// uncomment when debugging tracking issues
 	//logging.Infof("MEM: [%p] track: %v (%v) %v", this, size, sz, errors.CallerN(1))
-	if this.logLevel >= logging.INFO {
-		this.Infof("MEM: [%p]  track: %v (%v) %v", this, size, sz, errors.CallerN(1))
-	}
+
+	this.logMemTracking(this.reqLoggingEnabled, this.serverDebugLoggingEnabled, size, sz, true, this)
 	this.output.TrackMemory(sz)
 	if memQuota := this.memoryQuota; memQuota > 0 && sz > memQuota {
 		return errors.NewMemoryQuotaExceededError(sz, memQuota)
@@ -907,9 +947,7 @@ func (this *Context) ReleaseValueSize(size uint64) {
 	sz, _, _ := this.memorySession.Track(^(size - 1))
 	// uncomment when debugging tracking issues
 	//logging.Infof("MEM: [%p] release: %v (%v) %v", this, size, sz, errors.CallerN(1))
-	if this.logLevel >= logging.INFO {
-		this.Infof("MEM: [%p] release: %v (%v) %v", this, size, sz, errors.CallerN(1))
-	}
+	this.logMemTracking(this.reqLoggingEnabled, this.serverDebugLoggingEnabled, size, sz, false, this)
 }
 
 func (this *Context) Release() {

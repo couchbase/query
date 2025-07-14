@@ -779,6 +779,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetPreserveProjectionOrder(!request.SortProjection())
 	context.SetLogLevel(request.LogLevel())
 	context.SetDurationStyle(request.DurationStyle())
+	context.SetupMemTrackingLogging(logging.LogLevel())
 
 	if request.TxId() != "" {
 		err := context.SetTransactionInfo(request.TxId(), request.TxStmtNum())
