@@ -323,9 +323,18 @@ func (this sliceValue) SetIndex(index int, val interface{}) error {
 
 	switch val := val.(type) {
 	case missingValue:
+		curVal := this[index]
 		this[index] = nil
+		v, ok := curVal.(Value)
+		if ok {
+			v.Recycle()
+		}
 	default:
 		this[index] = val
+		v, ok := val.(Value)
+		if ok {
+			v.Track()
+		}
 	}
 
 	return nil
