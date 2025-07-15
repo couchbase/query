@@ -210,9 +210,14 @@ func (this *ScopeValue) CopyForUpdate() Value {
 func (this *ScopeValue) SetField(field string, val interface{}) error {
 	err := this.Value.SetField(field, val)
 	if err == nil {
-		v, ok := val.(Value)
-		if ok {
-			v.Track()
+		switch this.Value.(type) {
+		case objectValue:
+			// Track() already done, no-op
+		default:
+			v, ok := val.(Value)
+			if ok {
+				v.Track()
+			}
 		}
 	}
 	return err
