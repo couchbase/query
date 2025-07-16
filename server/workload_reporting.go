@@ -48,6 +48,7 @@ const (
 	_AWR_MAX_PLAN           = 512
 	_AWR_READY_WAIT_INTRVL  = time.Second
 	_AWR_HOSTNAME_REFRESH   = 20 * time.Minute // Time interval for hostname refresh
+	_AWR_MAX_NUM_STMTS      = 100000
 )
 
 func InitAWR() {
@@ -135,8 +136,9 @@ func (this *awrConfig) setLocation(ks string) {
 }
 
 func (this *awrConfig) setQueueLen(v int) errors.Error {
-	if v <= 0 {
-		return errors.NewAWRInvalidSettingError("queue_len", v, nil)
+	max := util.NumCPU() * _AWR_CPU_MULTIPLIER * 2
+	if v <= 0 || v > max {
+		return errors.NewAWRInvalidSettingError("queue_len", v, 1, max, nil)
 	}
 
 	this.queueLen = v
@@ -144,8 +146,8 @@ func (this *awrConfig) setQueueLen(v int) errors.Error {
 }
 
 func (this *awrConfig) setNumStmts(v int) errors.Error {
-	if v <= 0 {
-		return errors.NewAWRInvalidSettingError("num_statements", v, nil)
+	if v <= 0 || v > _AWR_MAX_NUM_STMTS {
+		return errors.NewAWRInvalidSettingError("num_statements", v, 1, _AWR_MAX_NUM_STMTS, nil)
 	}
 
 	this.numStmts = v
@@ -154,7 +156,7 @@ func (this *awrConfig) setNumStmts(v int) errors.Error {
 
 func (this *awrConfig) setThreshold(v time.Duration) errors.Error {
 	if v < time.Duration(0) {
-		return errors.NewAWRInvalidSettingError("threshold", v, nil)
+		return errors.NewAWRInvalidSettingError("threshold", v, time.Duration(0), nil, nil)
 	}
 
 	this.threshold = v
@@ -162,8 +164,8 @@ func (this *awrConfig) setThreshold(v time.Duration) errors.Error {
 }
 
 func (this *awrConfig) setInterval(v time.Duration) errors.Error {
-	if v <= time.Duration(0) || v < _AWR_MIN_INTERVAL {
-		return errors.NewAWRInvalidSettingError("interval", v, nil)
+	if v < _AWR_MIN_INTERVAL {
+		return errors.NewAWRInvalidSettingError("interval", v, _AWR_MIN_INTERVAL, nil, nil)
 	}
 
 	this.interval = v
@@ -172,13 +174,13 @@ func (this *awrConfig) setInterval(v time.Duration) errors.Error {
 
 func (this *awrConfig) getStorageCollection() (datastore.Keyspace, error) {
 	if this.location == "" {
-		return nil, errors.NewAWRInvalidSettingError("location", "", nil)
+		return nil, errors.NewAWRInvalidSettingError("location", "", nil, nil, nil)
 	}
 	parts := algebra.ParsePath(this.location)
 	var ks datastore.Keyspace
 	var err error
 	if parts[0] != "default" && parts[0] != "" {
-		return nil, errors.NewAWRInvalidSettingError("location", this.location, fmt.Errorf("Invalid namespace."))
+		return nil, errors.NewAWRInvalidSettingError("location", this.location, nil, nil, fmt.Errorf("Invalid namespace."))
 	}
 	for {
 		ks, err = datastore.GetKeyspace(parts...)
@@ -313,7 +315,7 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, erro
 			case "threshold":
 				if _, ok := v.(string); ok {
 					if ok, _ := checkDuration(v); !ok {
-						return errors.NewAWRInvalidSettingError(k, v, nil), nil
+						return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 					}
 
 					err := target.setThreshold(getDuration(v))
@@ -321,12 +323,12 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, erro
 						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil), nil
+					return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 				}
 			case "interval":
 				if _, ok := v.(string); ok {
 					if ok, _ := checkDuration(v); !ok {
-						return errors.NewAWRInvalidSettingError(k, v, nil), nil
+						return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 					}
 
 					err := target.setInterval(getDuration(v))
@@ -334,7 +336,7 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, erro
 						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil), nil
+					return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 				}
 			case "queue_len":
 				if n, ok := v.(int64); ok {
@@ -343,7 +345,7 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, erro
 						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil), nil
+					return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 				}
 			case "num_statements":
 				if n, ok := v.(int64); ok {
@@ -352,22 +354,22 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, erro
 						return err, nil
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil), nil
+					return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 				}
 			case "enabled":
 				if enabled, ok := v.(bool); ok {
 					start = enabled
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil), nil
+					return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 				}
 			case "location":
 				if ks, ok := v.(string); ok {
 					if ks != "" {
 						parts := algebra.ParsePath(ks)
 						if parts[0] != "default" && parts[0] != "" {
-							return errors.NewAWRInvalidSettingError(k, ks, fmt.Errorf("Invalid namespace")), nil
+							return errors.NewAWRInvalidSettingError(k, ks, nil, nil, fmt.Errorf("Invalid namespace")), nil
 						} else if len(parts) != 2 && len(parts) != 4 {
-							return errors.NewAWRInvalidSettingError(k, ks,
+							return errors.NewAWRInvalidSettingError(k, ks, nil, nil,
 								fmt.Errorf("Invalid path (must resolve to 2 or 4 parts)")), nil
 						} else if parts[0] == "" {
 							parts[0] = "default"
@@ -378,7 +380,7 @@ func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, erro
 						target.setLocation("")
 					}
 				} else {
-					return errors.NewAWRInvalidSettingError(k, v, nil), nil
+					return errors.NewAWRInvalidSettingError(k, v, nil, nil, nil), nil
 				}
 			default:
 				return errors.NewAdminUnknownSettingError(k), nil

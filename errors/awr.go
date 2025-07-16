@@ -18,15 +18,29 @@ var _awr = map[ErrorCode][2]string{
 	E_AWR_DISTRIB: {"distribution", "Error distributing workload settings"},
 }
 
-func getAWRSchemaHelp(setting string) string {
+func getAWRSchemaHelp(setting string, min, max interface{}) string {
 	var help string
 	switch setting {
 	case "threshold":
-		help = "A valid duration string. The duration must be at least 0 seconds. (e.g. \"1m30s\")"
+		help = "A valid duration string. (e.g. \"1m30s\")"
+		if min != nil {
+			help = fmt.Sprintf("%s The duration must be at least %v.", help, min)
+		}
 	case "interval":
-		help = "A valid duration string. The duration must be at least 1 minute. (e.g. \"1m30s\")"
-	case "queue_len", "num_statements":
+		help = "A valid duration string. (e.g. \"1m30s\")"
+		if min != nil {
+			help = fmt.Sprintf("%s The duration must be at least %v.", help, min)
+		}
+	case "queue_len":
 		help = "A positive integer."
+		if max != nil {
+			help = fmt.Sprintf("%s The maximum allowable value is %v.", help, max)
+		}
+	case "num_statements":
+		help = "A positive integer."
+		if max != nil {
+			help = fmt.Sprintf("%s The maximum allowable value is %v.", help, max)
+		}
 	case "enabled":
 		help = "A boolean value."
 	case "location":
@@ -61,9 +75,9 @@ func NewAWRError(code ErrorCode, args ...interface{}) Error {
 	return e
 }
 
-func NewAWRInvalidSettingError(setting string, value interface{}, cause error) Error {
+func NewAWRInvalidSettingError(setting string, value interface{}, min, max interface{}, cause error) Error {
 	c := make(map[string]interface{}, 2)
-	if help := getAWRSchemaHelp(setting); help != "" {
+	if help := getAWRSchemaHelp(setting, min, max); help != "" {
 		c["help"] = help
 	}
 
@@ -72,7 +86,7 @@ func NewAWRInvalidSettingError(setting string, value interface{}, cause error) E
 	}
 
 	return &err{level: EXCEPTION, ICode: E_AWR_SETTING, InternalCaller: CallerN(1), IKey: "service.workload_report.setting",
-		InternalMsg: fmt.Sprintf(" Invalid value '%v' for workload setting '%s'.", value, setting), cause: c}
+		InternalMsg: fmt.Sprintf("Invalid value '%v' for workload setting '%s'.", value, setting), cause: c}
 }
 
 func NewAWRWarning(message string) Error {
