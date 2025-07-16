@@ -453,16 +453,34 @@ func (this objectValue) Field(field string) (Value, bool) {
 func (this objectValue) SetField(field string, val interface{}) error {
 	switch val := val.(type) {
 	case missingValue:
-		delete(this, field)
+		curVal, ok := this[field]
+		if ok {
+			delete(this, field)
+			v, ok := curVal.(Value)
+			if ok {
+				v.Recycle()
+			}
+		}
 	default:
 		this[field] = val
+		v, ok := val.(Value)
+		if ok {
+			v.Track()
+		}
 	}
 
 	return nil
 }
 
 func (this objectValue) UnsetField(field string) error {
-	delete(this, field)
+	curVal, ok := this[field]
+	if ok {
+		delete(this, field)
+		v, ok := curVal.(Value)
+		if ok {
+			v.Recycle()
+		}
+	}
 	return nil
 }
 

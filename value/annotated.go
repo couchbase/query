@@ -641,9 +641,14 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 	} else {
 		err = this.Value.SetField(field, val)
 		if err == nil {
-			v, ok := val.(Value)
-			if ok {
-				v.Track()
+			switch this.Value.(type) {
+			case objectValue:
+				// Track() already done, no-op
+			default:
+				v, ok := val.(Value)
+				if ok {
+					v.Track()
+				}
 			}
 		}
 	}

@@ -401,6 +401,51 @@
                 ]
             }
         ]
+    },
+    {
+	"testcase": "MB-67432",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
+        },
+        "statements": "SELECT r.* FROM (WITH w1 AS (ARRAY {\"c1\":1} FOR v IN ARRAY_RANGE(0,5) END), w2 AS (SELECT d.c10, a1 FROM {\"c10\":1, \"a1\":[{\"c20\":\"xyz\"}]} AS d UNNEST d.a1) SELECT n.* FROM w2 AS n LEFT JOIN w1 AS r1 ON r1.c1 = n.c10 ) AS r",
+        "results": [
+            {
+                "a1": {
+                    "c20": "xyz"
+                },
+                "c10": 1
+            },
+            {
+                "a1": {
+                    "c20": "xyz"
+                },
+                "c10": 1
+            },
+            {
+                "a1": {
+                    "c20": "xyz"
+                },
+                "c10": 1
+            },
+            {
+                "a1": {
+                    "c20": "xyz"
+                },
+                "c10": 1
+            },
+            {
+                "a1": {
+                    "c20": "xyz"
+                },
+                "c10": 1
+            }
+        ]
     }
 ]
 
