@@ -65,6 +65,7 @@ import (
 	"fmt"
 	"hash/crc64"
 	"math"
+	"math/rand"
 	"sort"
 	"strconv"
 	"strings"
@@ -88,15 +89,20 @@ type ArrayType struct {
 	typesSeen         map[string]FieldType // map from type string to type object, i.e. hash table for types
 	minItems          int
 	maxItems          int
+	sampleSize        int
 	mergedObjectTypes SchemaFlavors        // similar types merged together into flavors
 	nonObjectTypes    map[string]FieldType // nonobject types needed for schema
 }
 
-func NewArrayType(val value.Value) *ArrayType {
+func NewArrayType(val value.Value, arraySampleSize int32, maxNestingDepth int32, depth int32) (*ArrayType, value.Value) {
 	// sanity check
 	if val.Type() != value.ARRAY {
 		fmt.Errorf("Tried to create array type with non array.")
-		return nil
+		return nil, val
+	}
+
+	if maxNestingDepth > 0 && depth >= maxNestingDepth {
+		val = value.NewValue([]interface{}{})
 	}
 
 	// get the underlying slice
@@ -109,13 +115,48 @@ func NewArrayType(val value.Value) *ArrayType {
 	// from the string description to the type, so we can avoid dups
 
 	//fmt.Printf("Creating array type size: %d...\n",len(arr))
+	if arraySampleSize == 0 {
+		result.sampleSize = 0
+		return result, value.NewValue([]interface{}{})
+	}
+
+	arrsamplesize := int(arraySampleSize)
+	arrlen := len(arr)
+	if arrsamplesize > 0 {
+		if arrlen > arrsamplesize {
+			shrinkArrayRandomly := func(arr []interface{}, sampleSize int32) []interface{} {
+				usedIndices := make(map[int]bool, sampleSize)
+				indices := make([]int, 0, sampleSize)
+				shrunkenArr := make([]interface{}, 0, sampleSize)
+				for len(indices) < int(sampleSize) {
+					randomIndex := rand.Intn(arrlen)
+					if !usedIndices[randomIndex] {
+						usedIndices[randomIndex] = true
+						indices = append(indices, randomIndex)
+					}
+				}
+				sort.Slice(indices, func(i, j int) bool { return indices[i] < indices[j] })
+				for _, index := range indices {
+					shrunkenArr = append(shrunkenArr, arr[index])
+				}
+				return shrunkenArr
+			}
+
+			arr = shrinkArrayRandomly(arr, arraySampleSize)
+			result.sampleSize = arrsamplesize
+		} else {
+			result.sampleSize = arrlen
+		}
+	}
 
 	result.typesSeen = make(map[string]FieldType)
+	var valres value.Values
 	for index := 0; index < len(arr); index++ { // get the type of each element in the array
 		arrVal, found := val.Index(index)
 
 		if found { // we got the value from the array
-			newType := NewFieldType(arrVal) // make a type for the value
+			newType, newArrVal := NewFieldType(arrVal, arraySampleSize, maxNestingDepth, depth) // make a type for the value
+			valres = append(valres, newArrVal)
 			newTypeKey := newType.StringNoValues(0)
 
 			// if we have seen this type before, merge it in, otherwise add it to the map
@@ -137,13 +178,14 @@ func NewArrayType(val value.Value) *ArrayType {
 		}
 	}
 
-	return result
+	return result, value.NewValue(valres)
 }
 
 func (at *ArrayType) Copy() *ArrayType {
 	copyType := new(ArrayType)
 	copyType.minItems = at.minItems
 	copyType.maxItems = at.maxItems
+	copyType.sampleSize = at.sampleSize
 	copyType.typesSeen = at.typesSeen
 	copyType.mergedObjectTypes = at.mergedObjectTypes
 	copyType.nonObjectTypes = at.nonObjectTypes
@@ -277,21 +319,21 @@ type FieldType struct {
 
 // infer the type from a sample value
 
-func NewFieldType(val value.Value) FieldType {
+func NewFieldType(val value.Value, arraySampleSize int32, maxNestingDepth int32, depth int32) (FieldType, value.Value) {
 	fieldType := new(FieldType)
 	fieldType.Type = val.Type()
 
 	// for object types, the subtype is a schema for the object
 	if val.Type() == value.OBJECT {
-		fieldType.subtype = NewSchemaFromValue(val)
+		fieldType.subtype, val = NewSchemaFromValue(val, arraySampleSize, maxNestingDepth, depth+1)
 	}
 
 	// for array types, fill in arrtype
 	if val.Type() == value.ARRAY {
-		fieldType.arrtype = NewArrayType(val)
+		fieldType.arrtype, val = NewArrayType(val, arraySampleSize, maxNestingDepth, depth+1)
 	}
 
-	return (*fieldType)
+	return *fieldType, val
 }
 
 func (ft *FieldType) Copy() FieldType {
@@ -373,6 +415,9 @@ func (ft *FieldType) MarshalJSON() ([]byte, error) {
 		r["minItems"] = ft.arrtype.minItems
 		r["maxItems"] = ft.arrtype.maxItems
 		r["items"] = ft.arrtype
+		if ft.arrtype.sampleSize > -1 {
+			r["sampleSize"] = ft.arrtype.sampleSize
+		}
 	}
 	return json.Marshal(r)
 }
@@ -422,20 +467,22 @@ type Field struct {
 	percentMatchingDocs *float32
 	isDictionary        bool
 	namesake            *Field
+	nestingDepth        int32
 }
 
 // make a Field given an AnnotatePair from a document
 
-func NewField(name string, val value.Value) Field {
+func NewField(name string, val value.Value, arraySampleSize int32, maxNestingDepth int32, depth int32) (Field, value.Value) {
 	field := new(Field)
 	field.Name = name
-	field.Kind = NewFieldType(val)
+	field.Kind, val = NewFieldType(val, arraySampleSize, maxNestingDepth, depth)
 	field.sampleValues = make(value.Values, 1)
 	field.sampleValues[0] = val
 	field.isDictionary = false
 	field.namesake = nil
+	field.nestingDepth = depth
 
-	return (*field)
+	return *field, val
 }
 
 // make a Dictionary Field
@@ -460,6 +507,7 @@ func (f *Field) Copy() *Field {
 	copyField.numMatchingDocs = f.numMatchingDocs
 	copyField.percentMatchingDocs = f.percentMatchingDocs
 	copyField.isDictionary = f.isDictionary
+	copyField.nestingDepth = f.nestingDepth
 
 	if f.namesake != nil {
 		copyField.namesake = f.namesake.Copy()
@@ -625,7 +673,12 @@ func (f *Field) GetJSONMap() map[string]interface{} {
 			r["minItems"] = f.Kind.arrtype.minItems
 			r["maxItems"] = f.Kind.arrtype.maxItems
 			r["items"] = f.Kind.arrtype
+			if f.Kind.arrtype.sampleSize > -1 {
+				r["sampleSize"] = f.Kind.arrtype.sampleSize
+			}
 		}
+
+		r["nestingDepth"] = f.nestingDepth
 
 		//
 		// complex case: we have multiple types for the same field name, need to iterate over namesakes
@@ -686,8 +739,12 @@ func (f *Field) GetJSONMap() map[string]interface{} {
 				r["minItems"] = f.Kind.arrtype.minItems
 				r["maxItems"] = f.Kind.arrtype.maxItems
 				r["items"] = f.Kind.arrtype
+				if f.Kind.arrtype.sampleSize > -1 {
+					r["sampleSize"] = f.Kind.arrtype.sampleSize
+				}
 			}
 
+			r["nestingDepth"] = f.nestingDepth
 			// move on to the next one
 			f = f.namesake
 		}
@@ -892,6 +949,7 @@ type Schema struct {
 	hashValue        uint64
 	byteSize         uint64
 	matchingDocCount int64
+	nestingDepth     int32
 }
 
 func (s *Schema) GetDocCount() int64 {
@@ -906,7 +964,8 @@ func (s *Schema) GetFieldCount() int {
 
 func NewSchema(doc []value.AnnotatedPair) *Schema {
 	if len(doc) > 0 {
-		return (NewSchemaFromValue(doc[0].Value))
+		sch, _ := (NewSchemaFromValue(doc[0].Value, 0, -1, 0))
+		return sch
 	} else {
 		fmt.Println("Error, zero size doc.")
 		return (nil)
@@ -915,20 +974,25 @@ func NewSchema(doc []value.AnnotatedPair) *Schema {
 
 // make a schema out of an object-typed Value
 
-func NewSchemaFromValue(val value.Value) *Schema {
+func NewSchemaFromValue(val value.Value, arraySampleSize int32, maxNestingDepth int32, depth int32) (*Schema, value.Value) {
 	schema := new(Schema)
 	schema.matchingDocCount = 1
 	// the normal case is objects comprised of fields
 	if val.Type() == value.OBJECT {
 		schema.bareValue = nil
+		if maxNestingDepth > -1 && depth > maxNestingDepth {
+			val = value.NewValue(map[string]interface{}{})
+		}
+
 		elements := val.Fields()
 		if len(elements) > 0 {
 			schema.fields = make([]Field, 0, len(elements))
 			for name, v2 := range elements {
-				schema.fields = append(schema.fields, NewField(name, value.NewValue(v2)))
+				f, v := NewField(name, value.NewValue(v2), arraySampleSize, maxNestingDepth, depth)
+				val.SetField(name, v)
+				schema.fields = append(schema.fields, f)
 			}
 		}
-
 		if av, ok := val.(value.AnnotatedValue); ok {
 			if x := av.GetMetaField(value.META_XATTRS); x != nil {
 				// low probability of a conflict with an existing document field
@@ -940,7 +1004,8 @@ func NewSchemaFromValue(val value.Value) *Schema {
 					}
 					name = fmt.Sprintf("xattrs:%d", i)
 				}
-				schema.fields = append(schema.fields, NewField(name, value.NewValue(x)))
+				f, _ := NewField(name, value.NewValue(x), arraySampleSize, maxNestingDepth, depth)
+				schema.fields = append(schema.fields, f)
 			}
 		}
 
@@ -948,7 +1013,8 @@ func NewSchemaFromValue(val value.Value) *Schema {
 
 		// it is also possible to have a bare string, boolean, number, or array
 	} else {
-		bareField := NewField("bare", val)
+		var bareField Field
+		bareField, val = NewField("bare", val, arraySampleSize, maxNestingDepth, depth)
 		schema.bareValue = &bareField
 	}
 
@@ -960,7 +1026,7 @@ func NewSchemaFromValue(val value.Value) *Schema {
 	if debug {
 		fmt.Printf("Created schema hashValue: %d for schema %s\n", schema.hashValue, schema.StringNoTypes())
 	}
-	return (schema)
+	return schema, val
 }
 
 // make a copy of a schema
@@ -1078,6 +1144,38 @@ func (s *Schema) RemoveExtraSamples(numSampleValues int32, similarityMetric floa
 			//fmt.Printf("  truncd field: %s ns %d nsv %d\n", field.Name, len(field.sampleValues), numSampleValues)
 		}
 
+	}
+}
+
+func (s *Schema) DiscardSamplesBeforeMerge() {
+	if s.fields != nil {
+		for idx, _ := range s.fields {
+			s.fields[idx].sampleValues = nil
+			if s.fields[idx].Kind.subtype != nil {
+				s.fields[idx].Kind.subtype.DiscardSamplesBeforeMerge()
+			}
+			if s.fields[idx].Kind.arrtype != nil {
+				for _, typeSeen := range s.fields[idx].Kind.arrtype.typesSeen {
+					if typeSeen.subtype != nil {
+						typeSeen.subtype.DiscardSamplesBeforeMerge()
+					}
+				}
+			}
+		}
+	}
+	if s.bareValue != nil {
+		s.bareValue.sampleValues = nil
+		if s.bareValue.Kind.subtype != nil {
+			s.bareValue.Kind.subtype.DiscardSamplesBeforeMerge()
+		}
+
+		if s.bareValue.Kind.arrtype != nil {
+			for _, typeSeen := range s.bareValue.Kind.arrtype.typesSeen {
+				if typeSeen.subtype != nil {
+					typeSeen.subtype.DiscardSamplesBeforeMerge()
+				}
+			}
+		}
 	}
 }
 
@@ -1718,6 +1816,9 @@ func (c SchemaCollection) AddSchema(newSchema *Schema, numSampleValues int32) {
 	if matchArray == nil {
 		matchArray = make([]*Schema, 1)
 		matchArray[0] = newSchema
+		if numSampleValues == 0 {
+			newSchema.DiscardSamplesBeforeMerge()
+		}
 		if debug {
 			fmt.Printf("No matching bucket, creating new bucket for schema %d.\n", newSchema.hashValue)
 			if len(matchArray) > 0 && len(matchArray[0].fields) > 0 {
@@ -1744,6 +1845,9 @@ func (c SchemaCollection) AddSchema(newSchema *Schema, numSampleValues int32) {
 
 		// if we didn't find it, append it to matchArray
 		if !found {
+			if numSampleValues == 0 {
+				newSchema.DiscardSamplesBeforeMerge()
+			}
 			matchArray = append(matchArray, newSchema)
 			if debug {
 				fmt.Println("Schema not in bucket, appending to bucket chain")

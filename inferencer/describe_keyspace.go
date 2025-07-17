@@ -36,6 +36,8 @@ type DescribeOptions struct {
 	SampleSize          int
 	SimilarityMetric    float32
 	NumSampleValues     int32
+	ArraySampleSize     int32
+	MaxNestingDepth     int32
 	DictionaryThreshold int32
 	InferTimeout        int32
 	MaxSchemaMB         int32
@@ -98,7 +100,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 		}
 
 		// make a schema out of the JSON document
-		aSchema := NewSchemaFromValue(doc)
+		aSchema, _ := NewSchemaFromValue(doc, options.ArraySampleSize, options.MaxNestingDepth, 0)
 
 		// add it to the collection
 
@@ -179,6 +181,8 @@ func processWith(context datastore.QueryContext, with value.Value) (*DescribeOpt
 		SampleSize:          1000,
 		SimilarityMetric:    float32(0.6),
 		NumSampleValues:     5,
+		ArraySampleSize:     -1, // -1 means no sample size,i.e use all values
+		MaxNestingDepth:     -1, // -1 means no limit on nesting depth
 		DictionaryThreshold: 10,
 		InferTimeout:        60, // don't spend more than 60 seconds on any bucket
 		MaxSchemaMB:         10, // if the schema is bigger than 10MB, don't return
@@ -237,6 +241,10 @@ func processWith(context datastore.QueryContext, with value.Value) (*DescribeOpt
 			options.SimilarityMetric = float32(v)
 		case "num_sample_values":
 			options.NumSampleValues = int32(v)
+		case "array_sample_size":
+			options.ArraySampleSize = int32(v)
+		case "max_nesting_depth":
+			options.MaxNestingDepth = int32(v)
 		case "dictionary_threshold":
 			options.DictionaryThreshold = int32(v)
 		case "infer_timeout":
