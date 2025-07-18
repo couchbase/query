@@ -103,12 +103,12 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntry, node *algebra.KeyspaceTerm,
 	baseKeyspace *base.BaseKeyspace, id expression.Expression) (plan.SecondaryScan, int, error) {
 
+	pred := baseKeyspace.DnfPred()
 	// no JOINS or no UNNEST
-	if this.cover == nil || len(flex) == 0 || len(this.baseKeyspaces) > 1 {
+	if this.cover == nil || len(flex) == 0 || len(this.baseKeyspaces) > 1 || pred == nil {
 		return nil, 0, nil
 	}
 
-	pred := baseKeyspace.DnfPred()
 	alias := node.Alias()
 	coveringExprs := expression.Expressions{pred, id}
 
