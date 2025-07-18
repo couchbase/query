@@ -78,6 +78,9 @@ const (
 	PRIMARY_SCAN_FTS
 	INDEX_SCAN_SEQ
 	PRIMARY_SCAN_SEQ
+	INDEX_SCAN_CVI
+	INDEX_SCAN_HVI
+	FTS_SEARCH_SVI
 
 	// Expression layer
 	ADVISOR
@@ -101,6 +104,8 @@ const (
 	SETUP
 	QUEUED
 	PIPELINE_PAUSED
+	VECTOR_DISTANCE
+	APPROX_VECTOR_DISTANCE
 	PHASES // Sizer
 )
 
@@ -141,6 +146,9 @@ var _PHASE_NAMES = []string{
 	PRIMARY_SCAN_FTS: "primaryScan.FTS",
 	INDEX_SCAN_SEQ:   "indexScan.Seq",
 	PRIMARY_SCAN_SEQ: "primaryScan.Seq",
+	INDEX_SCAN_CVI:   "indexScan.CVI",
+	INDEX_SCAN_HVI:   "indexScan.HVI",
+	FTS_SEARCH_SVI:   "ftsSearch.SVI",
 
 	ADVISOR: "advisor",
 
@@ -161,6 +169,8 @@ var _PHASE_NAMES = []string{
 	SETUP:                  "setup",
 	QUEUED:                 "queued",
 	PIPELINE_PAUSED:        "pausedPipeline",
+	VECTOR_DISTANCE:        "vector_distance",
+	APPROX_VECTOR_DISTANCE: "approx_vector_distance",
 	PHASES:                 "unknown",
 }
 
@@ -823,6 +833,12 @@ func (this *Context) AddPhaseOperator(p Phases) {
 
 func (this *Context) AddPhaseCount(p Phases, c uint64) {
 	this.output.AddPhaseCount(p, c)
+}
+
+func (this *Context) AddFunctionsPhaseCount(fname string, c uint64) {
+	if p, ok := FunctionsPhaseCount[fname]; ok {
+		this.output.AddPhaseCount(p, c)
+	}
 }
 
 func (this *Context) AddPhaseTime(phase Phases, duration time.Duration) {
@@ -2247,9 +2263,17 @@ var phaseAggs = map[Phases]Phases{
 	INDEX_SCAN_GSI:   INDEX_SCAN,
 	INDEX_SCAN_FTS:   INDEX_SCAN,
 	INDEX_SCAN_SEQ:   INDEX_SCAN,
+	INDEX_SCAN_HVI:   INDEX_SCAN,
+	INDEX_SCAN_CVI:   INDEX_SCAN,
 	PRIMARY_SCAN_GSI: PRIMARY_SCAN,
 	PRIMARY_SCAN_FTS: PRIMARY_SCAN,
 	PRIMARY_SCAN_SEQ: PRIMARY_SCAN,
+	FTS_SEARCH_SVI:   FTS_SEARCH,
+}
+
+var FunctionsPhaseCount = map[string]Phases{
+	"vector_distance":        VECTOR_DISTANCE,
+	"approx_vector_distance": APPROX_VECTOR_DISTANCE,
 }
 
 func (this *Context) DurationStyle() util.DurationStyle {

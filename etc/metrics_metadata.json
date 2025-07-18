@@ -567,5 +567,345 @@
 		"type": "counter",
 		"added": "7.6.6",
 		"help": "The total number of ffdc occurrences"
+	},
+	"n1ql_requests_gsi": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ GSI requests."
+	},
+	"n1ql_requests_search": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ FTS requests."
+	},
+	"n1ql_requests_cvi": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ GSI Composite VECTOR requests."
+	},
+	"n1ql_requests_hvi": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ GSI Hyperscale VECTOR requests."
+	},
+	"n1ql_requests_svi": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_requests_vector": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ VECTOR requests."
+	},
+	"n1ql_fts_searches": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ FTS Searches."
+	},
+	"n1ql_index_scans_cvi": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of Composite VECTOR index scans."
+	},
+	"n1ql_index_scans_hvi": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of Hyperscale VECTOR index scans."
+	},
+	"n1ql_fts_searches_svi": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ FTS Vetcor Searches."
+	},
+	"n1ql_vector_distance_func": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "The number of VECTOR_DISTANCE() calls made by statements."
+	},
+	"n1ql_approx_vector_distance_func": {
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "The number of APPROX_VECTOR_DISTANCE() calls made by statements."
+	},
+	"n1ql_request_timer_count": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The number of SQL++ requests."
+	},
+	"n1ql_request_timer_min": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MIN latency of SQL++ requests."
+	},
+	"n1ql_request_timer_max": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MAX latency of SQL++ requests."
+	},
+	"n1ql_request_timer_mean": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEAN latency of SQL++ requests."
+	},
+	"n1ql_request_timer_stddev": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The STDDEV latency of SQL++ requests."
+	},
+	"n1ql_request_timer_median": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEDIAN latency of SQL++ requests."
+	},
+	"n1ql_request_timer_p75": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 75% latency of SQL++ requests."
+	},
+	"n1ql_request_timer_p95": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 95% latency of SQL++ requests."
+	},
+	"n1ql_request_timer_p99": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99% latency of SQL++ requests."
+	},
+	"n1ql_request_timer_p99point9": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99.9% latency of SQL++ requests."
+	},
+	"n1ql_request_timer_mean_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The mean.rate latency of SQL++ requests."
+	},
+	"n1ql_request_timer_1m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 1m.rate latency of SQL++ requests."
+	},
+	"n1ql_request_timer_5m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 5m.rate latency of SQL++ requests."
+	},
+	"n1ql_request_timer_15m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 15m.rate latency of SQL++ requests."
+	},
+	"n1ql_cvi_request_timer_count": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The number of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_min": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MIN latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_max": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MAX latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_mean": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEAN latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_stddev": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The STDDEV latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_median": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEDIAN latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_p75": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 75% latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_p95": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 95% latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_p99": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99% latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_p99point9": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99.9% latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_mean_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The mean.rate latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_1m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 1m.rate latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_5m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 5m.rate latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_cvi_request_timer_15m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 15m.rate latency of SQL++ Composite VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_count": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The number of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_min": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MIN latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_max": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MAX latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_mean": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEAN latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_stddev": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The STDDEV latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_median": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEDIAN latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_p75": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 75% latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_p95": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 95% latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_p99": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99% latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_p99point9": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99.9% latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_mean_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The mean.rate latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_1m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 1m.rate latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_5m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 5m.rate latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_hvi_request_timer_15m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 15m.rate latency of SQL++ Hyperscale VECTOR requests."
+	},
+	"n1ql_svi_request_timer_count": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The number of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_min": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MIN latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_max": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MAX latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_mean": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEAN latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_stddev": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The STDDEV latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_median": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The MEDIAN latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_p75": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 75% latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_p95": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 95% latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_p99": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99% latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_p99point9": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 99.9% latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_mean_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The mean.rate latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_1m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 1m.rate latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_5m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 5m.rate latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_svi_request_timer_15m_rate": {
+		"type": "gauge",
+		"added": "8.0.0",
+		"help": "The 15m.rate latency of SQL++ FTS VECTOR requests."
 	}
 }

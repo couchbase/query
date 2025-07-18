@@ -487,10 +487,8 @@ var _FUNCTIONS = map[string]Function{
 	"recursive_cte": &RecursiveCte{},
 
 	"isvector":               &IsVector{},
-	"knn":                    &VectorDistance{},
 	"vector_distance":        &VectorDistance{},
 	"knn_distance":           &VectorDistance{},
-	"ann":                    &ApproxVectorDistance{},
 	"approx_vector_distance": &ApproxVectorDistance{},
 	"ann_distance":           &ApproxVectorDistance{},
 	"decode_vector":          &DecodeVector{},

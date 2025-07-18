@@ -133,6 +133,12 @@ func (this *FunctionBase) Init(name string, operands ...Expression) {
 	this.operands = operands
 }
 
+func (this *FunctionBase) AddPhaseCount(context Context, c uint64) {
+	if phaseCountContext, ok := context.(FunctionsPhaseCount); ok {
+		phaseCountContext.AddFunctionsPhaseCount(this.name, c)
+	}
+}
+
 func (this *FunctionBase) Indexable() bool {
 	if this.volatile() {
 		return false

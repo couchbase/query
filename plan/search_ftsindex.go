@@ -308,10 +308,11 @@ type FTSSearchInfo struct {
 	limit   expression.Expression
 	order   []string
 	outName string
+	vector  bool
 }
 
 func NewFTSSearchInfo(field, query, options, offset, limit expression.Expression,
-	order []string, outName string) *FTSSearchInfo {
+	order []string, outName string, vector bool) *FTSSearchInfo {
 
 	return &FTSSearchInfo{
 		field:   field,
@@ -321,6 +322,7 @@ func NewFTSSearchInfo(field, query, options, offset, limit expression.Expression
 		limit:   limit,
 		order:   order,
 		outName: outName,
+		vector:  vector,
 	}
 }
 
@@ -333,6 +335,7 @@ func (this *FTSSearchInfo) Copy() *FTSSearchInfo {
 		limit:   expression.Copy(this.limit),
 		order:   this.order,
 		outName: this.outName,
+		vector:  this.vector,
 	}
 }
 
@@ -346,6 +349,10 @@ func (this *FTSSearchInfo) FieldName() expression.Expression {
 
 func (this *FTSSearchInfo) Query() expression.Expression {
 	return this.query
+}
+
+func (this *FTSSearchInfo) Vector() bool {
+	return this.vector
 }
 
 func (this *FTSSearchInfo) Options() expression.Expression {
@@ -393,6 +400,9 @@ func (this *FTSSearchInfo) MarshalBase(f func(map[string]interface{})) map[strin
 	if len(this.order) > 0 {
 		r["order"] = this.order
 	}
+	if this.vector {
+		r["vector"] = this.vector
+	}
 
 	r["outname"] = this.outName
 
@@ -411,6 +421,7 @@ func (this *FTSSearchInfo) UnmarshalJSON(body []byte) error {
 		Limit   string   `json:"limit"`
 		Order   []string `json:"order"`
 		OutName string   `json:"outname"`
+		Vector  bool     `json:"vector"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -455,6 +466,7 @@ func (this *FTSSearchInfo) UnmarshalJSON(body []byte) error {
 
 	this.order = _unmarshalled.Order
 	this.outName = _unmarshalled.OutName
+	this.vector = _unmarshalled.Vector
 
 	return nil
 }

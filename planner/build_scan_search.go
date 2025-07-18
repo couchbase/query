@@ -89,7 +89,8 @@ func (this *builder) buildSearchCovering(searchSargables []*indexEntry, node *al
 		this.resetOrderOffsetLimit()
 	}
 	hasDeltaKeySpace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
-	scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, covers, filterCovers, hasDeltaKeySpace)
+	scan := this.CreateFTSSearch(entry.index, node, sfn, searchOrders, covers, filterCovers,
+		hasDeltaKeySpace, entry.HasFlag(IE_SEARCH_KNN))
 	if scan != nil {
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		this.coveringScans = append(this.coveringScans, scan)
@@ -148,7 +149,8 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 	this.resetProjection()
 
 	hasDeltaKeySpace := this.context.HasDeltaKeyspace(baseKeyspace.Keyspace())
-	scan := this.CreateFTSSearch(bentry.index, node, sfn, searchOrders, covers, nil, hasDeltaKeySpace)
+	scan := this.CreateFTSSearch(bentry.index, node, sfn, searchOrders, covers, nil,
+		hasDeltaKeySpace, bentry.HasFlag(IE_SEARCH_KNN))
 	if scan != nil {
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		this.coveringScans = append(this.coveringScans, scan)
@@ -161,11 +163,11 @@ func (this *builder) buildFlexSearchCovering(flex map[datastore.Index]*indexEntr
 
 func (this *builder) CreateFTSSearch(index datastore.Index, node *algebra.KeyspaceTerm,
 	sfn *search.Search, order []string, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value, hasDeltaKeySpace bool) plan.SecondaryScan {
+	filterCovers map[*expression.Cover]value.Value, hasDeltaKeySpace, vector bool) plan.SecondaryScan {
 
 	return plan.NewIndexFtsSearch(index, node,
 		plan.NewFTSSearchInfo(expression.NewConstant(sfn.FieldName()), sfn.Query(), sfn.Options(),
-			this.offset, this.limit, order, sfn.OutName()), covers, filterCovers,
+			this.offset, this.limit, order, sfn.OutName(), vector), covers, filterCovers,
 		hasDeltaKeySpace, this.hasBuilderFlag(BUILDER_NL_INNER))
 }
 
@@ -490,6 +492,9 @@ func (this *builder) sargableFlexSearchIndex(idx datastore.Index, flexRequest *d
 	entry.setSearchOrders(resp.SearchOrders)
 	entry.pushDownProperty = pushDownProperty
 	entry.numIndexedKeys = resp.NumIndexedKeys
+	if resp.ContainsKNN {
+		entry.SetFlags(IE_SEARCH_KNN, true)
+	}
 	return entry, nil
 }
 

@@ -20,12 +20,12 @@ import (
 
 // AccountingStore represents a store for maintaining all accounting data (metrics, statistics, events)
 type AccountingStore interface {
-	Id() string                                                       // Id of this AccountingStore
-	URL() string                                                      // URL to this AccountingStore
-	MetricRegistry() MetricRegistry                                   // The MetricRegistry that this AccountingStore is managing
-	Vitals(util.DurationStyle) (map[string]interface{}, errors.Error) // The Vital Signs of the entity that this AccountingStore
-	ExternalVitals(map[string]interface{}) map[string]interface{}     // Vitals comeing from outside
-	NewCounter() Counter                                              // Create individual metrics
+	Id() string                                                             // Id of this AccountingStore
+	URL() string                                                            // URL to this AccountingStore
+	MetricRegistry() MetricRegistry                                         // The MetricRegistry that this AccountingStore is managing
+	Vitals(bool, util.DurationStyle) (map[string]interface{}, errors.Error) // The Vital Signs of the entity that this AccountingStore
+	ExternalVitals(map[string]interface{}) map[string]interface{}           // Vitals comeing from outside
+	NewCounter() Counter                                                    // Create individual metrics
 	NewGauge() Gauge
 	NewMeter() Meter
 	NewTimer() Timer
@@ -209,6 +209,19 @@ const (
 	FFDC_SML
 	FFDC_TOTAL
 
+	FTS_SEARCHES
+	INDEX_SCANS_CVI
+	INDEX_SCANS_HVI
+	FTS_SEARCHES_SVI
+	VECTOR_DISTANCE_FUNC
+	APPROX_VECTOR_DISTANCE_FUNC
+	REQUESTS_GSI
+	REQUESTS_SEARCH
+	REQUESTS_VI
+	REQUESTS_HVI
+	REQUESTS_CVI
+	REQUESTS_SVI
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -266,8 +279,10 @@ const (
 	_AUDIT_ACTIONS           = "audit_actions"
 	_AUDIT_ACTIONS_FAILED    = "audit_actions_failed"
 
-	REQUEST_RATE  = "request_rate"
-	REQUEST_TIMER = "request_timer"
+	REQUEST_TIMER     = "request_timer"
+	CVI_REQUEST_TIMER = "cvi_request_timer"
+	HVI_REQUEST_TIMER = "hvi_request_timer"
+	SVI_REQUEST_TIMER = "svi_request_timer"
 
 	// user error metrics
 	_TIMEOUTS                  = "timeouts"
@@ -298,6 +313,19 @@ const (
 
 	// gauges
 	USED_MEMORY_HWM = "used_memory_hwm"
+
+	_FTS_SEARCHES                = "fts_searches"
+	_INDEX_SCANS_CVI             = "index_scans_cvi"
+	_INDEX_SCANS_HVI             = "index_scans_hvi"
+	_FTS_SEARCHES_SVI            = "fts_searches_svi"
+	_VECTOR_DISTANCE_FUNC        = "vector_distance_func"
+	_APPROX_VECTOR_DISTANCE_FUNC = "approx_vector_distance_func"
+	_REQUESTS_GSI                = "requests_gsi"
+	_REQUESTS_SEARCH             = "requests_search"
+	_REQUESTS_VI                 = "requests_vector"
+	_REQUESTS_HVI                = "requests_hvi"
+	_REQUESTS_CVI                = "requests_cvi"
+	_REQUESTS_SVI                = "requests_svi"
 )
 
 // please keep in sync with the mnemonics
@@ -374,6 +402,19 @@ var metricNames = []string{
 	FFDC_MAN_COUNT,
 	FFDC_SML_COUNT,
 	FFDC_TOTAL_COUNT,
+
+	_FTS_SEARCHES,
+	_INDEX_SCANS_CVI,
+	_INDEX_SCANS_HVI,
+	_FTS_SEARCHES_SVI,
+	_VECTOR_DISTANCE_FUNC,
+	_APPROX_VECTOR_DISTANCE_FUNC,
+	_REQUESTS_GSI,
+	_REQUESTS_SEARCH,
+	_REQUESTS_VI,
+	_REQUESTS_HVI,
+	_REQUESTS_CVI,
+	_REQUESTS_SVI,
 }
 
 var gaugeNames = []string{
@@ -430,7 +471,7 @@ var errMetricsMap = map[errors.ErrorCode]CounterId{
 
 var acctstore AccountingStore
 var counters []Counter = make([]Counter, len(metricNames))
-var requestTimer Timer
+var requestTimer, cviRequestTimer, hviRequestTimer, sviRequestTimer Timer
 var gauges []Gauge = make([]Gauge, len(gaugeNames))
 
 // Use the given AccountingStore to create counters for all the metrics we are interested in:
@@ -442,6 +483,9 @@ func RegisterMetrics(acctStore AccountingStore) {
 	}
 
 	requestTimer = ms.Timer(REQUEST_TIMER)
+	cviRequestTimer = ms.Timer(CVI_REQUEST_TIMER)
+	hviRequestTimer = ms.Timer(HVI_REQUEST_TIMER)
+	sviRequestTimer = ms.Timer(SVI_REQUEST_TIMER)
 
 	for id, name := range gaugeNames {
 		gauges[id] = ms.Gauge(name)
@@ -449,10 +493,11 @@ func RegisterMetrics(acctStore AccountingStore) {
 }
 
 // Record request metrics
-func RecordMetrics(request_time, service_time, transaction_time time.Duration, result_count int, result_size int, error_count int,
-	warn_count int, errs errors.Errors, stmt string, prepared bool, cancelled bool, index_scans int, primary_scans int,
-	index_scans_gsi int, primary_scans_gsi int, index_scans_fts int, primary_scans_fts int, index_scans_seq int,
-	primary_scans_seq int, scanConsistency string, used_memory uint64) {
+func RecordMetrics(request_time, service_time, transaction_time time.Duration, result_count, result_size, error_count,
+	warn_count int, errs errors.Errors, stmt string, prepared, cancelled bool, index_scans, primary_scans,
+	index_scans_gsi, primary_scans_gsi, index_scans_fts, primary_scans_fts, index_scans_seq, primary_scans_seq,
+	fts_searches, index_scans_cvi, index_scans_hvi, fts_searches_svi, vector_distance, approx_vector_distance int,
+	scanConsistency string, used_memory uint64) {
 
 	if acctstore == nil {
 		return
@@ -483,6 +528,12 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration, r
 	counters[PRIMARY_SCANS_FTS].Inc(int64(primary_scans_fts))
 	counters[INDEX_SCANS_SEQ].Inc(int64(index_scans_seq))
 	counters[PRIMARY_SCANS_SEQ].Inc(int64(primary_scans_seq))
+	counters[FTS_SEARCHES].Inc(int64(fts_searches))
+	counters[INDEX_SCANS_CVI].Inc(int64(index_scans_cvi))
+	counters[INDEX_SCANS_HVI].Inc(int64(index_scans_hvi))
+	counters[FTS_SEARCHES_SVI].Inc(int64(fts_searches_svi))
+	counters[VECTOR_DISTANCE_FUNC].Inc(int64(vector_distance))
+	counters[APPROX_VECTOR_DISTANCE_FUNC].Inc(int64(approx_vector_distance))
 	counters[REQUEST_TIME].Inc(int64(request_time))
 	counters[SERVICE_TIME].Inc(int64(service_time))
 	counters[TRANSACTION_TIME].Inc(int64(transaction_time))
@@ -490,6 +541,28 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration, r
 	counters[RESULT_SIZE].Inc(int64(result_size))
 	counters[ERRORS].Inc(int64(error_count))
 	counters[WARNINGS].Inc(int64(warn_count))
+
+	if fts_searches > 0 {
+		counters[REQUESTS_SEARCH].Inc(1)
+	}
+	if index_scans_gsi > 0 {
+		counters[REQUESTS_GSI].Inc(1)
+	}
+	if fts_searches_svi > 0 {
+		sviRequestTimer.Update(request_time)
+		counters[REQUESTS_SVI].Inc(1)
+	}
+	if index_scans_cvi > 0 {
+		cviRequestTimer.Update(request_time)
+		counters[REQUESTS_CVI].Inc(1)
+	}
+	if index_scans_hvi > 0 {
+		hviRequestTimer.Update(request_time)
+		counters[REQUESTS_HVI].Inc(1)
+	}
+	if (index_scans_cvi + index_scans_hvi + fts_searches_svi + vector_distance + approx_vector_distance) > 0 {
+		counters[REQUESTS_VI].Inc(1)
+	}
 
 	requestTimer.Update(request_time)
 

@@ -42,7 +42,7 @@ func (AccountingStoreStub) MetricRegistry() accounting.MetricRegistry {
 	return MetricRegistryStub{}
 }
 
-func (AccountingStoreStub) Vitals(util.DurationStyle) (map[string]interface{}, errors.Error) {
+func (AccountingStoreStub) Vitals(bool, util.DurationStyle) (map[string]interface{}, errors.Error) {
 	return nil, nil
 }
 

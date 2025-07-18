@@ -288,7 +288,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		}
 
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
-		scan := this.CreateFTSSearch(index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace)
+		scan := this.CreateFTSSearch(index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace, entry.HasFlag(IE_SEARCH_KNN))
 		if entry == orderEntry {
 			scans[0] = scan
 		} else {
@@ -311,7 +311,8 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		}
 
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
-		scan := this.CreateFTSSearch(entry.index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace)
+		scan := this.CreateFTSSearch(entry.index, node, sfn, sOrders, nil, nil,
+			hasDeltaKeyspace, entry.HasFlag(IE_SEARCH_KNN))
 		if entry == orderEntry {
 			scans[0] = scan
 		} else {

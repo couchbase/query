@@ -78,11 +78,14 @@ func (g *gometricsAccountingStore) CompletedRequests() int64 {
 	return request_timer.Count()
 }
 
-func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]interface{}, errors.Error) {
+func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyle) (map[string]interface{}, errors.Error) {
 	var mem runtime.MemStats
 
 	runtime.ReadMemStats(&mem)
 	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
+	cvi_timer := g.registry.Timer(accounting.CVI_REQUEST_TIMER)
+	hvi_timer := g.registry.Timer(accounting.HVI_REQUEST_TIMER)
+	svi_timer := g.registry.Timer(accounting.SVI_REQUEST_TIMER)
 	prepared := g.registry.Counter(accounting.PREPAREDS)
 	used_memory_hwm := g.registry.Gauge(accounting.USED_MEMORY_HWM)
 	spillsOrder := g.registry.Counter(accounting.SPILLS_ORDER_STR)
@@ -112,33 +115,50 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 		prepPercent = 0.0
 	}
 	rv := map[string]interface{}{
-		"uptime":                    util.FormatDuration(uptime, style),
-		"local.time":                now.Format(util.DEFAULT_FORMAT),
-		"version":                   util.VERSION,
-		"total.threads":             runtime.NumGoroutine(),
-		"cores":                     runtime.GOMAXPROCS(0),
-		"gc.num":                    mem.NextGC,
-		"gc.pause.time":             util.FormatDuration(time.Duration(mem.PauseTotalNs), style),
-		"gc.pause.percent":          util.RoundPlaces(pausePerc, 4),
-		"memory.usage":              mem.Alloc,
-		"memory.total":              mem.TotalAlloc,
-		"memory.system":             mem.Sys,
-		"cpu.user.percent":          util.RoundPlaces(uPerc, 4),
-		"cpu.sys.percent":           util.RoundPlaces(sPerc, 4),
-		"request.completed.count":   totCount,
-		"request.active.count":      int64(actCount),
-		"request.quota.used.hwm":    used_memory_hwm.Value(),
-		"request.per.sec.1min":      util.RoundPlaces(request_timer.Rate1(), 4),
-		"request.per.sec.5min":      util.RoundPlaces(request_timer.Rate5(), 4),
-		"request.per.sec.15min":     util.RoundPlaces(request_timer.Rate15(), 4),
-		"request_time.mean":         util.FormatDuration(time.Duration(request_timer.Mean()), style),
-		"request_time.median":       util.FormatDuration(time.Duration(request_timer.Percentile(.5)), style),
-		"request_time.80percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.8)), style),
-		"request_time.95percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.95)), style),
-		"request_time.99percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.99)), style),
-		"request.prepared.percent":  prepPercent,
-		"spills.order":              spillsOrder.Count(),
+		"uptime":                   util.FormatDuration(uptime, style),
+		"local.time":               now.Format(util.DEFAULT_FORMAT),
+		"version":                  util.VERSION,
+		"total.threads":            runtime.NumGoroutine(),
+		"cores":                    runtime.GOMAXPROCS(0),
+		"gc.num":                   mem.NextGC,
+		"gc.pause.time":            util.FormatDuration(time.Duration(mem.PauseTotalNs), style),
+		"gc.pause.percent":         util.RoundPlaces(pausePerc, 4),
+		"memory.usage":             mem.Alloc,
+		"memory.total":             mem.TotalAlloc,
+		"memory.system":            mem.Sys,
+		"cpu.user.percent":         util.RoundPlaces(uPerc, 4),
+		"cpu.sys.percent":          util.RoundPlaces(sPerc, 4),
+		"request.active.count":     int64(actCount),
+		"request.quota.used.hwm":   used_memory_hwm.Value(),
+		"request.prepared.percent": prepPercent,
+		"spills.order":             spillsOrder.Count(),
 	}
+	if backward {
+		rv["request.completed.count"] = totCount
+		rv["request.per.sec.1min"] = util.RoundPlaces(request_timer.Rate1(), 4)
+		rv["request.per.sec.5min"] = util.RoundPlaces(request_timer.Rate5(), 4)
+		rv["request.per.sec.15min"] = util.RoundPlaces(request_timer.Rate15(), 4)
+		rv["request_time.mean"] = util.FormatDuration(time.Duration(request_timer.Mean()), style)
+		rv["request_time.median"] = util.FormatDuration(time.Duration(request_timer.Percentile(.5)), style)
+		rv["request_time.80percentile"] = util.FormatDuration(time.Duration(request_timer.Percentile(.8)), style)
+		rv["request_time.95percentile"] = util.FormatDuration(time.Duration(request_timer.Percentile(.95)), style)
+		rv["request_time.99percentile"] = util.FormatDuration(time.Duration(request_timer.Percentile(.99)), style)
+	} else if rtv := requestTimes(request_timer, style); len(rtv) > 0 {
+		rv["requests"] = rtv
+	}
+
+	if rtv := requestTimes(cvi_timer, style); len(rtv) > 0 {
+		rv["cvi_requests"] = rtv
+	}
+
+	if rtv := requestTimes(hvi_timer, style); len(rtv) > 0 {
+		rv["hvi_requests"] = rtv
+	}
+
+	if rtv := requestTimes(svi_timer, style); len(rtv) > 0 {
+		rv["svi_requests"] = rtv
+	}
+
 	g.Lock()
 	_, rss, total, free, _, err := system.GetSystemStats(g.stats, false, true)
 	if err == nil {
@@ -162,6 +182,23 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 	server.RequestsFileStreamStats(rv)
 	server.AwrCB.Vitals(rv)
 	return rv, nil
+}
+
+func requestTimes(timer accounting.Timer, style util.DurationStyle) (rv map[string]interface{}) {
+	count := timer.Count()
+	if count >= 0 {
+		rv = make(map[string]interface{}, 10)
+		rv["completed.count"] = count
+		rv["per.sec.1min"] = util.RoundPlaces(timer.Rate1(), 4)
+		rv["per.sec.5min"] = util.RoundPlaces(timer.Rate5(), 4)
+		rv["per.sec.15min"] = util.RoundPlaces(timer.Rate15(), 4)
+		rv["time_mean"] = util.FormatDuration(time.Duration(timer.Mean()), style)
+		rv["time_median"] = util.FormatDuration(time.Duration(timer.Percentile(.5)), style)
+		rv["time_80p"] = util.FormatDuration(time.Duration(timer.Percentile(.8)), style)
+		rv["time_95p"] = util.FormatDuration(time.Duration(timer.Percentile(.95)), style)
+		rv["time_99p"] = util.FormatDuration(time.Duration(timer.Percentile(.99)), style)
+	}
+	return
 }
 
 func (g *gometricsAccountingStore) ExternalVitals(vitals map[string]interface{}) map[string]interface{} {

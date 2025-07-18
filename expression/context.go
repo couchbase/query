@@ -118,3 +118,8 @@ type SequenceContext interface {
 	NextSequenceValue(name string) (int64, errors.Error)
 	PrevSequenceValue(name string) (int64, errors.Error)
 }
+
+type FunctionsPhaseCount interface {
+	Context
+	AddFunctionsPhaseCount(fname string, c uint64)
+}

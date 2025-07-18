@@ -37,7 +37,15 @@ func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
 	rv := &IndexScan3{plan: plan}
 	newBase(&rv.base, context)
 	rv.phase = INDEX_SCAN
-	if p, ok := indexerPhase[plan.Index().Indexer().Name()]; ok {
+	if plan.IndexVector() != nil {
+		if index6, ok := plan.Index().(datastore.Index6); ok {
+			if index6.IsBhive() {
+				rv.phase = INDEX_SCAN_HVI
+			} else {
+				rv.phase = INDEX_SCAN_CVI
+			}
+		}
+	} else if p, ok := indexerPhase[plan.Index().Indexer().Name()]; ok {
 		rv.phase = p.index
 	}
 	rv.output = rv

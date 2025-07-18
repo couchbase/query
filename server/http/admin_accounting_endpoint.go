@@ -270,19 +270,19 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
 		stats := make(map[string]interface{})
 		for name, metric := range reg.Counters() {
-			addMetricData(name, stats, getMetricData(metric))
+			addMetricData(name, stats, getMetricData(metric, true))
 		}
 		for name, metric := range reg.Gauges() {
-			addMetricData(name, stats, getMetricData(metric))
+			addMetricData(name, stats, getMetricData(metric, true))
 		}
 		for name, metric := range reg.Timers() {
-			addMetricData(name, stats, getMetricData(metric))
+			addMetricData(name, stats, getMetricData(metric, true))
 		}
 		for name, metric := range reg.Meters() {
-			addMetricData(name, stats, getMetricData(metric))
+			addMetricData(name, stats, getMetricData(metric, true))
 		}
 		for name, metric := range reg.Histograms() {
-			addMetricData(name, stats, getMetricData(metric))
+			addMetricData(name, stats, getMetricData(metric, true))
 		}
 		for name := range localData {
 			addMetricData(name, stats, getLocalData(endpoint.server, name))
@@ -325,7 +325,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 		} else {
 			metric := reg.Get(name)
 			if metric != nil {
-				return getMetricData(metric), nil
+				return getMetricData(metric, true), nil
 			} else {
 				return nil, nil
 			}
@@ -364,6 +364,15 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		w.Write([]byte("n1ql_" + name + " "))
 		w.Write([]byte(fmt.Sprintf("%v\n", metric.Value())))
 	}
+
+	for name, metric := range reg.Timers() {
+		for mn, mv := range getMetricData(metric, false) {
+			w.Write([]byte("# TYPE n1ql_" + name + "_" + mn + " gauge\n"))
+			w.Write([]byte("n1ql_" + name + "_" + mn + " "))
+			w.Write([]byte(fmt.Sprintf("%v\n", mv)))
+		}
+	}
+
 	for name, metric := range localData {
 		w.Write([]byte("# TYPE n1ql_" + name + " " + metric + "\n"))
 		w.Write([]byte("n1ql_" + name + " "))
@@ -437,7 +446,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 		}
 		acctStore := endpoint.server.AccountingStore()
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
-		rvm, err := acctStore.Vitals(durStyle)
+		rvm, err := acctStore.Vitals(true, durStyle)
 		if dbg && err == nil {
 			store := datastore.GetDatastore()
 			if store != nil {
@@ -464,7 +473,7 @@ func CaptureVitals(endpoint *HttpEndpoint, w io.Writer) error {
 	acctStore := endpoint.server.AccountingStore()
 	var err error
 	var v map[string]interface{}
-	v, err = acctStore.Vitals(util.SECONDS)
+	v, err = acctStore.Vitals(false, util.SECONDS)
 	if err != nil {
 		return err
 	}
@@ -2442,7 +2451,7 @@ func localValue(serv *server.Server, metric string) interface{} {
 	return nil
 }
 
-func getMetricData(metric accounting.Metric) map[string]interface{} {
+func getMetricData(metric accounting.Metric, stats bool) map[string]interface{} {
 	values := make(map[string]interface{})
 	switch metric := metric.(type) {
 	case accounting.Counter:
@@ -2451,10 +2460,18 @@ func getMetricData(metric accounting.Metric) map[string]interface{} {
 		values["value"] = metric.Value()
 	case accounting.Meter:
 		values["count"] = metric.Count()
-		values["1m.rate"] = metric.Rate1()
-		values["5m.rate"] = metric.Rate5()
-		values["15m.rate"] = metric.Rate15()
-		values["mean.rate"] = metric.RateMean()
+		if stats {
+			values["1m.rate"] = metric.Rate1()
+			values["5m.rate"] = metric.Rate5()
+			values["15m.rate"] = metric.Rate15()
+			values["mean.rate"] = metric.RateMean()
+		} else {
+			values["1m_rate"] = metric.Rate1()
+			values["5m_rate"] = metric.Rate5()
+			values["15m_rate"] = metric.Rate15()
+			values["mean_rate"] = metric.RateMean()
+		}
+
 	case accounting.Timer:
 		ps := metric.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
 		values["count"] = metric.Count()
@@ -2463,14 +2480,25 @@ func getMetricData(metric accounting.Metric) map[string]interface{} {
 		values["mean"] = metric.Mean()
 		values["stddev"] = metric.StdDev()
 		values["median"] = ps[0]
-		values["75%"] = ps[1]
-		values["95%"] = ps[2]
-		values["99%"] = ps[3]
-		values["99.9%"] = ps[4]
-		values["1m.rate"] = metric.Rate1()
-		values["5m.rate"] = metric.Rate5()
-		values["15m.rate"] = metric.Rate15()
-		values["mean.rate"] = metric.RateMean()
+		if stats {
+			values["75%"] = ps[1]
+			values["95%"] = ps[2]
+			values["99%"] = ps[3]
+			values["99.9%"] = ps[4]
+			values["1m.rate"] = metric.Rate1()
+			values["5m.rate"] = metric.Rate5()
+			values["15m.rate"] = metric.Rate15()
+			values["mean.rate"] = metric.RateMean()
+		} else {
+			values["p75"] = ps[1]
+			values["p95"] = ps[2]
+			values["p99"] = ps[3]
+			values["p99point9"] = ps[4]
+			values["1m_rate"] = metric.Rate1()
+			values["5m_rate"] = metric.Rate5()
+			values["15m_rate"] = metric.Rate15()
+			values["mean_rate"] = metric.RateMean()
+		}
 	case accounting.Histogram:
 		ps := metric.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
 		values["count"] = metric.Count()
@@ -2479,10 +2507,17 @@ func getMetricData(metric accounting.Metric) map[string]interface{} {
 		values["mean"] = metric.Mean()
 		values["stddev"] = metric.StdDev()
 		values["median"] = ps[0]
-		values["75%"] = ps[1]
-		values["95%"] = ps[2]
-		values["99%"] = ps[3]
-		values["99.9%"] = ps[4]
+		if stats {
+			values["75%"] = ps[1]
+			values["95%"] = ps[2]
+			values["99%"] = ps[3]
+			values["99.9%"] = ps[4]
+		} else {
+			values["p75"] = ps[1]
+			values["p95"] = ps[2]
+			values["p99"] = ps[3]
+			values["p99point9"] = ps[4]
+		}
 	}
 	return values
 }

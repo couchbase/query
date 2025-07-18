@@ -71,7 +71,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 
 		// currently we query ourselves because there isn't a direct path from datastore/system to server
 		if nodeName == whoAmI {
-			doc, err := b.namespace.store.acctStore.Vitals(context.DurationStyle())
+			doc, err := b.namespace.store.acctStore.Vitals(true, context.DurationStyle())
 			if err != nil {
 				context.Error(err)
 			}

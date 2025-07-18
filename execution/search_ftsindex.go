@@ -37,6 +37,10 @@ func NewIndexFtsSearch(plan *plan.IndexFtsSearch, context *Context) *IndexFtsSea
 	rv.plan = plan
 
 	newBase(&rv.base, context)
+	rv.phase = FTS_SEARCH
+	if plan.SearchInfo().Vector() {
+		rv.phase = FTS_SEARCH_SVI
+	}
 	rv.output = rv
 	return rv
 }
@@ -62,7 +66,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 		active := this.active()
 		defer this.close(context)
 		this.switchPhase(_EXECTIME)
-		this.setExecPhase(FTS_SEARCH, context)
+		this.setExecPhaseWithAgg(this.Phase(), context)
 		defer func() { this.switchPhase(_NOTIME) }() // accrue current phase's time
 		defer this.notify()                          // Notify that I have stopped
 		if !active {
@@ -74,7 +78,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
 			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
-				FTS_SEARCH, context, this.plan.Covers())
+				this.Phase(), context, this.plan.Covers())
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
@@ -90,7 +94,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 
 		var countDocs = func() {
 			if docs > 0 {
-				context.AddPhaseCount(FTS_SEARCH, docs)
+				context.AddPhaseCountWithAgg(this.Phase(), docs)
 			}
 		}
 		defer countDocs()
@@ -149,7 +153,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 						ok = this.sendItem(av)
 						docs++
 						if docs > _PHASE_UPDATE_COUNT {
-							context.AddPhaseCount(FTS_SEARCH, docs)
+							context.AddPhaseCountWithAgg(this.Phase(), docs)
 							docs = 0
 						}
 					}

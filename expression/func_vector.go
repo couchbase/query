@@ -147,6 +147,7 @@ func (this *VectorDistance) QueryVector() Expression {
 }
 
 func (this *VectorDistance) Evaluate(item value.Value, context Context) (value.Value, error) {
+	defer this.AddPhaseCount(context, 1)
 	if (this.flags & _VECTOR_QVEC_CHECKED) == 0 {
 		rv, err := vectorDistance(this.metric, this.operands, true, item, context)
 		this.flags |= _VECTOR_QVEC_CHECKED
@@ -155,7 +156,8 @@ func (this *VectorDistance) Evaluate(item value.Value, context Context) (value.V
 	return vectorDistance(this.metric, this.operands, false, item, context)
 }
 
-func vectorDistance(metric VectorMetric, operands Expressions, checkQVec bool, item value.Value, context Context) (value.Value, error) {
+func vectorDistance(metric VectorMetric, operands Expressions, checkQVec bool,
+	item value.Value, context Context) (value.Value, error) {
 	var queryVec value.Value
 	vec, err := operands[0].Evaluate(item, context)
 	if err == nil {
@@ -340,6 +342,7 @@ func (this *ApproxVectorDistance) NeedSquareRoot() bool {
 }
 
 func (this *ApproxVectorDistance) Evaluate(item value.Value, context Context) (value.Value, error) {
+	defer this.AddPhaseCount(context, 1)
 	if (this.flags & _VECTOR_QVEC_CHECKED) == 0 {
 		rv, err := vectorDistance(this.metric, this.operands, true, item, context)
 		this.flags |= _VECTOR_QVEC_CHECKED
