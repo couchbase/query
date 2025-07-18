@@ -261,7 +261,7 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 		this.SetTransactionStartTime(context.TxContext().TxStartTime())
 		this.SetTxTimeout(context.TxContext().TxTimeout())
 	}
-	context.Release()
+
 	if tenant.IsServerless() {
 		units := tenant.RecordCU(context.TenantCtx(), this.CpuTime(), this.UsedMemory())
 		this.AddTenantUnits(tenant.QUERY_CU, units)
