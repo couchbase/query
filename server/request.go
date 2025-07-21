@@ -1510,6 +1510,10 @@ func (this *BaseRequest) CompleteRequest(requestTime, serviceTime, transaction_t
 		this.stopGate.Done()
 		this.timings = nil
 	}
+
+	if this.executionContext != nil {
+		this.executionContext.Release()
+	}
 }
 
 // this function exists to make sure that if a panic occurs in the Done() machinery
