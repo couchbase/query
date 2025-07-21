@@ -105,7 +105,7 @@ func Register() MemorySession {
 }
 
 func AllocatedMemory() uint64 {
-	return manager.curr
+	return atomic.LoadUint64(&manager.curr)
 }
 
 func (this *memorySession) Track(size uint64) (uint64, uint64, errors.Error) {
