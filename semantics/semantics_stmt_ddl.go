@@ -149,7 +149,7 @@ var bucketFieldDefinitions = map[string]bucketFieldDef{
 	"replicaIndex":           {value.NUMBER, false, 0, 1, []interface{}{0, 1}},
 	"conflictResolutionType": {value.STRING, false, nil, nil, []interface{}{"seqno", "lww"}},
 	"storageBackend":         {value.STRING, false, nil, nil, []interface{}{"couchstore", "magma"}},
-
+	"numVBuckets":            {value.NUMBER, false, nil, nil, []interface{}{128, 1024}},
 	"evictionPolicy": {value.STRING, true, nil, nil, []interface{}{
 		"valueOnly", "fullEviction", "noEviction", "nruEviction"}},
 	"durabilityMinLevel": {value.STRING, true, nil, nil, []interface{}{

@@ -19,6 +19,7 @@ import (
 const (
 	_RAM_QUOTA           = "ramQuota"
 	_STORAGE_BACKEND     = "storageBackend"
+	_NUM_VBUCKETS        = "numVBuckets"
 	_MAGMA               = "magma"
 	_MIN_RAM_QUOTA       = 100
 	_MIN_RAM_QUOTA_MAGMA = 1024
