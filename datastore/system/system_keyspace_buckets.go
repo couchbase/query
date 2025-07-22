@@ -141,6 +141,7 @@ func (b *bucketKeyspace) fetchOne(ns string, bn string) (value.AnnotatedValue, e
 				"namespace":    namespace.Name(),
 				"name":         bucket.Name(),
 				"path":         path(namespace.Name(), bucket.Name()),
+				"uuid":         bucket.Uid(),
 			})
 			if m, ok := bucket.(interface{ MetadataVersion() uint64 }); ok {
 				doc.SetField("manifest_id", m.MetadataVersion())
