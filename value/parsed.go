@@ -144,8 +144,11 @@ func (this *parsedValue) ToString() string {
 }
 
 func (this *parsedValue) MarshalJSON() ([]byte, error) {
-	if this.raw != nil {
-		return this.raw, nil
+	this.RLock()
+	raw := this.raw
+	this.RUnlock()
+	if raw != nil {
+		return raw, nil
 	}
 	return this.unwrap().MarshalJSON()
 }
@@ -155,7 +158,9 @@ func (this *parsedValue) WriteXML(order []string, w io.Writer, prefix, indent st
 }
 
 func (this *parsedValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
+	this.RLock()
 	raw := this.raw
+	this.RUnlock()
 	if raw == nil || order != nil {
 		return this.unwrap().WriteJSON(order, w, prefix, indent, fast)
 	} else if prefix != "" || indent != "" {
@@ -298,8 +303,12 @@ func (this *parsedValue) CopyForUpdate() Value {
 
 // Delayed parsing
 func (this *parsedValue) Field(field string) (Value, bool) {
-	if this.parsed != nil {
-		return this.parsed.Field(field)
+	this.RLock()
+	parsed := this.parsed
+	raw := this.raw
+	this.RUnlock()
+	if parsed != nil {
+		return parsed.Field(field)
 	}
 
 	if this.parsedType != OBJECT {
@@ -316,7 +325,6 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 		}
 	}
 
-	raw := this.raw
 	if raw != nil {
 		var res []byte
 		var err error
@@ -394,8 +402,12 @@ func (this *parsedValue) UnsetField(field string) error {
 
 // Delayed parsing
 func (this *parsedValue) Index(index int) (Value, bool) {
-	if this.parsed != nil {
-		return this.parsed.Index(index)
+	this.RLock()
+	parsed := this.parsed
+	raw := this.raw
+	this.RUnlock()
+	if parsed != nil {
+		return parsed.Index(index)
 	}
 
 	if this.parsedType != ARRAY {
@@ -416,7 +428,6 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		}
 	}
 
-	raw := this.raw
 	if raw != nil {
 		var res []byte
 		var err error
@@ -442,7 +453,7 @@ func (this *parsedValue) Index(index int) (Value, bool) {
 		// so we do a scan anyway
 		useState := this.useState && goahead == 1
 		if useState {
-			json.SetIndexState(&this.indexState, this.raw)
+			json.SetIndexState(&this.indexState, raw)
 			res, err = this.indexState.FindIndex(index)
 		} else {
 			res, err = json.FindIndex(raw, index)
@@ -525,14 +536,20 @@ func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
 }
 
 func (this *parsedValue) pfSize() int {
-	if this.fields != nil && len(this.fields) > _NUM_PARSED_FIELDS {
-		return len(this.fields)
+	this.RLock()
+	fields := this.fields
+	this.RUnlock()
+	if fields != nil && len(fields) > _NUM_PARSED_FIELDS {
+		return len(fields)
 	}
 	return _NUM_PARSED_FIELDS
 }
 
 func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interface{} {
+	this.RLock()
 	raw := this.raw
+	parsed := this.parsed
+	this.RUnlock()
 	var rex *regexp.Regexp
 
 	if re != nil {
@@ -596,22 +613,22 @@ func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interfa
 				rv = append(rv, map[string]interface{}{"name": string(key), "val": NewParsedValue(val, true)})
 			}
 		}
-	} else if this.parsed != nil && this.parsed.Type() == OBJECT {
+	} else if parsed != nil && parsed.Type() == OBJECT {
 		if re != nil {
-			for key, val := range this.parsed.Fields() {
+			for key, val := range parsed.Fields() {
 				if rex.FindStringSubmatchIndex(string(key)) != nil {
 					rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
 				}
 			}
 		} else if len(min) != 0 || len(max) != 0 {
-			for key, val := range this.parsed.Fields() {
+			for key, val := range parsed.Fields() {
 				if (len(min) == 0 || strings.Compare(min, string(key)) <= 0) &&
 					(len(max) == 0 || strings.Compare(max, string(key)) == 1) {
 					rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
 				}
 			}
 		} else {
-			for key, val := range this.parsed.Fields() {
+			for key, val := range parsed.Fields() {
 				rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
 			}
 		}
@@ -661,25 +678,31 @@ func (this *parsedValue) Recycle() {
 		logging.Infof("parsed value already recycled")
 		return
 	}
-	if this.parsed != nil {
-		this.parsed.Recycle()
-		this.parsed = nil
+	this.Lock()
+	parsed := this.parsed
+	this.parsed = nil
+	fields := this.fields
+	this.fields = nil
+	elements := this.elements
+	this.elements = nil
+	this.raw = nil
+	this.Unlock()
+
+	if parsed != nil {
+		parsed.Recycle()
 	}
-	if this.fields != nil {
-		for i, field := range this.fields {
-			this.fields[i] = nil
+	if fields != nil {
+		for i, field := range fields {
+			fields[i] = nil
 			field.Recycle()
 		}
-		this.fields = nil
 	}
-	if this.elements != nil {
-		for i, element := range this.elements {
-			this.elements[i] = nil
+	if elements != nil {
+		for i, element := range elements {
+			elements[i] = nil
 			element.Recycle()
 		}
-		this.elements = nil
 	}
-	this.raw = nil
 	parsedPool.Put(this)
 }
 
@@ -702,40 +725,49 @@ func (this *parsedValue) Size() uint64 {
 // Delayed parse.
 func (this *parsedValue) unwrap() Value {
 	if this.raw != nil {
-		if this.parsedType == BINARY {
-			this.parsed = binaryValue(this.raw)
-		} else {
-			p, err := json.SimpleUnmarshal(this.raw)
-			if err != nil {
-				this.parsedType = BINARY
+		process := true
+		this.Lock()
+		if this.raw != nil {
+			if this.parsedType == BINARY {
 				this.parsed = binaryValue(this.raw)
 			} else {
-				this.parsed = NewValue(p)
+				p, err := json.SimpleUnmarshal(this.raw)
+				if err != nil {
+					this.parsedType = BINARY
+					this.parsed = binaryValue(this.raw)
+				} else {
+					this.parsed = NewValue(p)
+				}
 			}
-		}
 
-		// Release raw memory when no longer needed
-		this.raw = nil
-		if atomic.AddInt32(&this.used, 1) == 1 {
-			this.keyState.Release()
-			this.indexState.Release()
+			// Release raw memory when no longer needed
+			this.raw = nil
 		} else {
-			this.cleanupState = true
+			process = false
 		}
-		atomic.AddInt32(&this.used, -1)
-		if this.fields != nil || this.elements != nil {
-			this.Lock()
-			for i, field := range this.fields {
-				this.fields[i] = nil
-				field.Recycle()
+		this.Unlock()
+		if process {
+			if atomic.AddInt32(&this.used, 1) == 1 {
+				this.keyState.Release()
+				this.indexState.Release()
+			} else {
+				this.cleanupState = true
 			}
-			this.fields = nil
-			for i, element := range this.elements {
-				this.elements[i] = nil
-				element.Recycle()
+			atomic.AddInt32(&this.used, -1)
+			if this.fields != nil || this.elements != nil {
+				this.Lock()
+				for i, field := range this.fields {
+					this.fields[i] = nil
+					field.Recycle()
+				}
+				this.fields = nil
+				for i, element := range this.elements {
+					this.elements[i] = nil
+					element.Recycle()
+				}
+				this.elements = nil
+				this.Unlock()
 			}
-			this.elements = nil
-			this.Unlock()
 		}
 	}
 
