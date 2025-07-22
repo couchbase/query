@@ -54,8 +54,8 @@ type Context interface {
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
+	SetPreserveProjectionOrder(on bool) bool
 	IsAdmin() bool
-	PreserveProjectionOrder() bool
 	IsPrepared() bool
 }
 

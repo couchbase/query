@@ -762,12 +762,14 @@ func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 
 func handleSortProjection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	sp, err := httpArgs.getTristateVal(parm, val)
-	if err != nil || sp == value.FALSE {
-		rv.SetSortProjection(false)
-	} else {
-		rv.SetSortProjection(true)
+	if err == nil {
+		if sp == value.FALSE {
+			rv.SetSortProjection(false)
+		} else {
+			rv.SetSortProjection(true)
+		}
 	}
-	return nil
+	return err
 }
 
 func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {

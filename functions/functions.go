@@ -490,7 +490,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 	readonly := (modifiers & READONLY) != 0
 
 	if switchContext == value.TRUE || (switchContext == value.NONE && (readonly != context.Readonly() ||
-		name.QueryContext() != context.QueryContext())) || context.PreserveProjectionOrder() {
+		name.QueryContext() != context.QueryContext())) {
 		var ok bool
 		newContext, ok = context.NewQueryContext(name.QueryContext(), readonly).(Context)
 		if !ok {
@@ -498,7 +498,9 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 		}
 	}
 	start := util.Now()
+	prevPreserveProjOrder := context.SetPreserveProjectionOrder(false)
 	val, err := languages[lang].Execute(name, body, modifiers, values, newContext)
+	context.SetPreserveProjectionOrder(prevPreserveProjOrder)
 
 	// update stats
 	serviceTime := util.Now().Sub(start)
