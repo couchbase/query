@@ -445,9 +445,9 @@ func NewValue(val interface{}) Value {
 	case []byte:
 		return NewParsedValue(val, false)
 	case []interface{}:
-		return sliceValue(val)
+		return newSliceValue(val)
 	case map[string]interface{}:
-		return objectValue(val)
+		return newObjectValue(val)
 	case *parsedValue:
 		return val
 	case int:
@@ -457,25 +457,25 @@ func NewValue(val interface{}) Value {
 		for i, v := range val {
 			rv[i] = v
 		}
-		return sliceValue(rv)
+		return newSliceValue(rv)
 	case []Value:
 		rv := make([]interface{}, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
-		return sliceValue(rv)
+		return newSliceValue(rv)
 	case []AnnotatedValue:
 		rv := make([]interface{}, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
-		return sliceValue(rv)
+		return newSliceValue(rv)
 	case map[string]Value:
 		rv := make(map[string]interface{}, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
-		return objectValue(rv)
+		return newObjectValue(rv)
 	default:
 		for _, c := range _CONVERSIONS {
 			if reflect.TypeOf(val).ConvertibleTo(c) {

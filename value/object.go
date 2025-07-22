@@ -26,6 +26,12 @@ type objectValue map[string]interface{}
 
 var EMPTY_OBJECT_VALUE = objectValue(map[string]interface{}{})
 
+func newObjectValue(obj map[string]interface{}) objectValue {
+	rv := objectValue(obj)
+	rv.Track()
+	return rv
+}
+
 func (this objectValue) String() string {
 	return marshalString(this)
 }
@@ -606,7 +612,7 @@ func (this objectValue) Successor() Value {
 
 	n := names[len(names)-1]
 	s[n] = NewValue(this[n]).Successor()
-	return objectValue(s)
+	return newObjectValue(s)
 }
 
 func (this objectValue) Track() {

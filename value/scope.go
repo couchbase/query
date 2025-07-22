@@ -58,7 +58,7 @@ func newScopeValue(nested bool) *ScopeValue {
 
 func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 	rv := newScopeValue(false)
-	rv.Value = objectValue(val)
+	rv.Value = newObjectValue(val)
 	rv.parent = parent
 	if parent != nil {
 		parent.Track()
