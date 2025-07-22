@@ -166,6 +166,7 @@ func (b *scopeKeyspace) fetchOne(ns, bn, sn string) (value.AnnotatedValue, error
 					"namespace_id": namespace.Id(),
 					"namespace":    namespace.Name(),
 					"bucket":       bucket.Name(),
+					"bucket_uuid":  bucket.Uid(),
 					"name":         scope.Name(),
 					"path":         path(namespace.Name(), bucket.Name(), scope.Name()),
 				})

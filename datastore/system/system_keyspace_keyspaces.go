@@ -211,6 +211,11 @@ func (b *keyspaceKeyspace) fetchOne(ns string, ks string, context datastore.Quer
 				"name":         keyspace.Name(),
 				"path":         path(namespace.Name(), keyspace.Name()),
 			})
+
+			if bucket, ok := keyspace.(datastore.Bucket); ok {
+				doc.SetField("bucket_uuid", bucket.Uid())
+			}
+
 			if b.info {
 				var d datastore.Keyspace
 
@@ -265,6 +270,7 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context dat
 						"id":           keyspace.Id(),
 						"name":         keyspace.Name(),
 						"bucket":       bucket.Name(),
+						"bucket_uuid":  bucket.Uid(),
 						"scope":        scope.Name(),
 						"path":         path(namespace.Name(), bucket.Name(), scope.Name(), keyspace.Name()),
 					})
