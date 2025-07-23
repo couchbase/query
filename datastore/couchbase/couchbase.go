@@ -3424,29 +3424,52 @@ func CleanupSystemCollection(namespace string, bucket string) {
 		} else if strings.HasPrefix(key, "udf::") {
 			parts := strings.Split(key, "::")
 			functions.FunctionClear(bucket+"."+parts[1], nil)
-		} else if strings.HasPrefix(key, "cbo::") {
-			parts := strings.Split(key, "::")
-			keyspace, isKeyspace := GetCBOKeyspace(parts[len(parts)-1])
-			if isKeyspace {
-				DropDictCacheEntry(keyspace, false)
-			}
+		}
+	}
+
+	processStaleCBOEntries := func(keyspaces []string) {
+		for _, keyspace := range keyspaces {
+			DropDictCacheEntry(keyspace, false)
 		}
 	}
 
 	pairs := make([]value.Pair, 0, _BATCH_SIZE)
 	errorCount := 0
 	deletedCount := 0
+	var staleCBOKeyspaces []string
 
 	datastore.ScanSystemCollection(bucket, "", nil,
 		func(key string, systemCollection datastore.Keyspace) errors.Error {
 			logging.Debugf("Key: %v", key)
 			parts := strings.Split(key, "::")
 			toDelete := false
+			isCBOKeyspaceDoc := false
 
 			if len(parts) == 3 && (parts[0] == "seq" || parts[0] == "cbo" || parts[0] == "udf") {
 				path := parts[len(parts)-1]
 				if parts[0] == "cbo" {
-					path, _ = GetCBOKeyspace(path)
+					keyspace, keyspaceMayContainUUID, isKeyspaceDoc, err := GetCBOKeyspaceFromKey(path)
+					if err != nil {
+						errorCount++
+						return nil
+					}
+
+					path = keyspace
+					isCBOKeyspaceDoc = isKeyspaceDoc
+
+					// Resolve UUIDs in the doc key to actual scope and collection names
+					if keyspaceMayContainUUID {
+						resolvedPath, found, err1 := GetCBOKeyspaceFromDoc(key, bucket, true)
+						if err1 != nil {
+							errorCount++
+							return nil
+						} else if !found {
+							return nil
+						}
+
+						path = resolvedPath
+					}
+
 				}
 				elements := strings.Split(path, ".")
 				if len(elements) == 2 {
@@ -3459,6 +3482,15 @@ func CleanupSystemCollection(namespace string, bucket string) {
 					}
 					if err != nil {
 						toDelete = true
+
+						if isCBOKeyspaceDoc {
+							sb := strings.Builder{}
+							sb.WriteString("default:")
+							sb.WriteString(bucket)
+							sb.WriteString(".")
+							sb.WriteString(path)
+							staleCBOKeyspaces = append(staleCBOKeyspaces, sb.String())
+						}
 					}
 				}
 			} else if len(parts) > 2 && parts[0] == "aus_setting" {
@@ -3521,6 +3553,9 @@ func CleanupSystemCollection(namespace string, bucket string) {
 					}
 					deletedCount += len(pairs) - len(errs)
 					pairs = pairs[:0]
+
+					processStaleCBOEntries(staleCBOKeyspaces)
+					staleCBOKeyspaces = staleCBOKeyspaces[:0]
 				}
 			}
 			return nil
@@ -3536,6 +3571,8 @@ func CleanupSystemCollection(namespace string, bucket string) {
 					logging.Debugf("%v:%v - %v", namespace, bucket, errs[0])
 				}
 				deletedCount += len(pairs) - len(errs)
+				processStaleCBOEntries(staleCBOKeyspaces)
+				staleCBOKeyspaces = staleCBOKeyspaces[:0]
 			}
 			return nil
 		})
