@@ -12,7 +12,9 @@ import (
 	"io"
 	"sync"
 
+	atomic "github.com/couchbase/go-couchbase/platform"
 	json "github.com/couchbase/go_json"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
 
@@ -20,6 +22,7 @@ import (
 type marshalledValue struct {
 	raw        interface{}
 	marshalled Value
+	refCnt     int32 // to check for recycling
 	sync.RWMutex
 }
 
@@ -27,6 +30,7 @@ func NewMarshalledValue(raw interface{}) Value {
 
 	rv := &marshalledValue{}
 	rv.raw = raw
+	rv.refCnt = 1
 	return rv
 }
 
@@ -157,18 +161,51 @@ func (this *marshalledValue) Successor() Value {
 	return this.unwrap().Successor()
 }
 
+// for Track()/Recycle(), if the value is not yet unwrapped, only handle refCnt, no need to call
+// unwrap() since the point of using marshalledValue is to delay the actual Marshal until absolutely
+// necessary (i.e. actually using the underlying value).
+// if the value is already unwrapped, just pass on to the underlying value
+
 func (this *marshalledValue) Track() {
-	this.unwrap().Track()
+	this.RLock()
+	raw := this.raw
+	marshalled := this.marshalled
+	this.RUnlock()
+	if raw != nil {
+		atomic.AddInt32(&this.refCnt, 1)
+	} else if marshalled != nil {
+		marshalled.Track()
+	}
 }
 
 func (this *marshalledValue) Recycle() {
-	this.Lock()
-	this.raw = nil
-	if this.marshalled != nil {
-		this.marshalled.Recycle()
-		this.marshalled = nil
+	this.RLock()
+	raw := this.raw
+	marshalled := this.marshalled
+	this.RUnlock()
+	if raw != nil {
+		// do no recycle if this value still being used
+		refcnt := atomic.AddInt32(&this.refCnt, -1)
+		if refcnt > 0 {
+			return
+		}
+		if refcnt < 0 {
+
+			// TODO enable
+			// panic("marshalled value already recycled")
+			logging.Infof("marshalled value already recycled")
+			return
+		}
+		this.Lock()
+		this.raw = nil
+		if this.marshalled != nil {
+			this.marshalled.Recycle()
+			this.marshalled = nil
+		}
+		this.Unlock()
+	} else if marshalled != nil {
+		marshalled.Recycle()
 	}
-	this.Unlock()
 }
 
 func (this *marshalledValue) Tokens(set *Set, options Value) *Set {
@@ -199,6 +236,16 @@ func (this *marshalledValue) unwrap() Value {
 				this.marshalled = NewParsedValue(marshalled, true)
 			}
 			this.raw = nil
+
+			// if there are refCnts, transfer the references to the underlying value
+			// this needs to be done inside the lock such that we ensure all Track()
+			// calls happen before any potential Recycle() calls
+			refCnt := atomic.LoadInt32(&this.refCnt)
+			// NewValue should have added 1 refCnt already
+			for i := int32(0); i < refCnt-1; i++ {
+				this.marshalled.Track()
+			}
+			atomic.StoreInt32(&this.refCnt, 0)
 		}
 		this.Unlock()
 	}

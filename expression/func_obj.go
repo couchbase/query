@@ -1525,15 +1525,20 @@ func (this *ObjectRename) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	old := old_name.ToString()
-	val, ok := obj.Field(old)
+	oldName := old_name.ToString()
+	val, ok := obj.Field(oldName)
 	if !ok {
 		return obj, nil
 	}
 
+	newName := new_name.ToString()
+	if newName == oldName {
+		return obj, nil
+	}
+
 	rv := obj.CopyForUpdate()
-	rv.UnsetField(old)
-	rv.SetField(new_name.ToString(), val)
+	rv.SetField(newName, val)
+	rv.UnsetField(oldName)
 	return rv, nil
 }
 
