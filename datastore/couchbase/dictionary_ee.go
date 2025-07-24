@@ -124,8 +124,12 @@ func chkSysBucket() {
 	}
 }
 
-func GetCBOKeyspace(key string) (string, bool) {
-	return dictionary.GetKeyspace(key)
+func GetCBOKeyspaceFromKey(key string) (keyspace string, keyspaceMayContainUUID bool, isKeyspaceDoc bool, err errors.Error) {
+	return dictionary.GetKeyspaceFromKey(key)
+}
+
+func GetCBOKeyspaceFromDoc(docKey string, bucket string, sysStore bool) (string, bool, errors.Error) {
+	return dictionary.GetKeyspaceFromDoc(docKey, bucket, sysStore)
 }
 
 const _GRACE_PERIOD = 2 * time.Second

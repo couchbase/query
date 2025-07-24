@@ -85,8 +85,12 @@ func chkSysBucket() {
 	// no-op
 }
 
-func GetCBOKeyspace(key string) (string, bool) {
-	return "", false
+func GetCBOKeyspaceFromKey(key string) (keyspace string, keyspaceMayContainUUID bool, isKeyspaceDoc bool, err errors.Error) {
+	return "", false, false, nil
+}
+
+func GetCBOKeyspaceFromDoc(docKey string, bucket string, sysStore bool) (string, bool, errors.Error) {
+	return "", false, nil
 }
 
 type chkIndexDict struct {

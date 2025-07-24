@@ -1160,7 +1160,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 					return nil
 				}
 				parts := strings.Split(key, "::")
-				path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
+				path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
 				p := algebra.ParsePath(path)
 				if !filterEval(p, include, exclude) {
 					return nil
@@ -2677,7 +2677,7 @@ func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap r
 		return "", false
 	}
 	parts := strings.Split(key, "::")
-	path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
+	path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
 	fullPath := "default:" + b + "." + path
 	p := algebra.ParsePath(fullPath)
 	if !filterEval(p, include, exclude) {
@@ -2708,7 +2708,7 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	if len(parts) != 3 {
 		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
 	}
-	path, _ := dictionary.GetCBOKeyspace(parts[len(parts)-1])
+	path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
 	fullPath := "default:" + b + "." + path
 	p := algebra.ParsePath(fullPath)
 	if len(p) != 4 {
