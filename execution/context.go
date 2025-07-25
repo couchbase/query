@@ -437,6 +437,8 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		queryMutex:       &sync.RWMutex{},
 	}
 
+	rv.SetupMemTrackingLogging(logging.LogLevel())
+
 	if rv.maxParallelism <= 0 || rv.maxParallelism > util.NumCPU() {
 		rv.maxParallelism = util.NumCPU()
 	}

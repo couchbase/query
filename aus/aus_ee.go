@@ -1296,7 +1296,6 @@ type taskContext struct {
 	task           taskInfo
 	abort          bool
 	coordKeyPrefix string
-	stopFn         func()
 	err            errors.Error
 	errCount       int
 }
@@ -1321,18 +1320,6 @@ func (this *taskContext) AddError(err errors.Error) {
 	this.Unlock()
 }
 
-func (this *taskContext) SetStopHandler(stop func()) {
-	this.Lock()
-	this.stopFn = stop
-	this.Unlock()
-}
-
-func (this *taskContext) UnsetStopHandler() {
-	this.Lock()
-	this.stopFn = nil
-	this.Unlock()
-}
-
 func (this *taskContext) Stopped() bool {
 	return this.abort
 }
@@ -1340,22 +1327,23 @@ func (this *taskContext) Stopped() bool {
 func (this *taskContext) stop() {
 	this.Lock()
 	this.abort = true
-	stopFunc := this.stopFn
 	this.Unlock()
-
-	if stopFunc != nil {
-		stopFunc()
-	}
 }
 
-func (this *taskContext) GetExecutionSetup() (query_ee.Context, *datastore.ValueConnection, errors.Error) {
+func (this *taskContext) GetExecutionSetup() (query_ee.AusContext, *datastore.ValueConnection, errors.Error) {
 	op := newAusOutput()
 	ctx, err := newContext(op)
 	if err != nil {
 		return nil, nil, err
 	}
-	op.activeUpdStat = datastore.NewValueConnection(ctx)
-	return ctx, op.activeUpdStat, nil
+
+	ausCtx := &ausContext{
+		Context:     ctx,
+		taskContext: this,
+	}
+
+	op.context = ausCtx
+	return ausCtx, datastore.NewValueConnection(ausCtx), nil
 }
 
 func extractTaskInfo(parms interface{}) (taskInfo, bool) {
@@ -2000,8 +1988,12 @@ func newContext(output *ausOutput) (*execution.Context, errors.Error) {
 		util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_CBO), server.GetNewOptimizer(), datastore.DEF_KVTIMEOUT,
 		0)
 
-	if qServer.MemoryQuota() > 0 {
-		ctx.SetMemoryQuota(qServer.MemoryQuota())
+	memQuota := qServer.MemoryQuota()
+	if memQuota > 0 {
+		ctx.SetMemoryQuota(memQuota)
+	}
+
+	if memQuota > 0 || memory.Quota() > 0 {
 		ctx.SetMemorySession(memory.Register())
 	}
 
@@ -2062,10 +2054,25 @@ func (this *ZeroScanVectorSource) Type() int32 {
 	return timestamp.NO_VECTORS
 }
 
+type ausContext struct {
+	*execution.Context
+	taskContext *taskContext
+	output      *ausOutput
+	stopped     bool
+}
+
+func (this *ausContext) IsActive() bool {
+	return !this.stopped && !this.taskContext.Stopped()
+}
+
+func (this *ausContext) stop() {
+	this.stopped = true
+}
+
 // context.Output implementation for executions in AUS related operations
 type ausOutput struct {
-	err           errors.Error
-	activeUpdStat *datastore.ValueConnection
+	err     errors.Error
+	context *ausContext
 }
 
 func newAusOutput() *ausOutput {
@@ -2085,21 +2092,30 @@ func (this *ausOutput) CloseResults() {
 func (this *ausOutput) Abort(err errors.Error) {
 	if this.err == nil {
 		this.err = err
-		this.stopActiveUpdStat()
+
+		if this.context != nil {
+			this.context.stop()
+		}
 	}
 }
 
 func (this *ausOutput) Fatal(err errors.Error) {
 	if this.err == nil {
 		this.err = err
-		this.stopActiveUpdStat()
+
+		if this.context != nil {
+			this.context.stop()
+		}
 	}
 }
 
 func (this *ausOutput) Error(err errors.Error) {
 	if this.err == nil {
 		this.err = err
-		this.stopActiveUpdStat()
+
+		if this.context != nil {
+			this.context.stop()
+		}
 	}
 }
 
@@ -2217,13 +2233,4 @@ func (this *ausOutput) GetErrorCount() int {
 	}
 
 	return 1
-}
-
-func (this *ausOutput) stopActiveUpdStat() {
-	if this.activeUpdStat != nil {
-		select {
-		case this.activeUpdStat.StopChannel() <- false:
-		default:
-		}
-	}
 }
