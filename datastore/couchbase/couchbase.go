@@ -3469,7 +3469,6 @@ func CleanupSystemCollection(namespace string, bucket string) {
 
 						path = resolvedPath
 					}
-
 				}
 				elements := strings.Split(path, ".")
 				if len(elements) == 2 {
@@ -3482,7 +3481,6 @@ func CleanupSystemCollection(namespace string, bucket string) {
 					}
 					if err != nil {
 						toDelete = true
-
 						if isCBOKeyspaceDoc {
 							sb := strings.Builder{}
 							sb.WriteString("default:")

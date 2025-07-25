@@ -190,5 +190,5 @@ func FullSpanFanout(isInclude bool) int {
 	} else if isInclude {
 		return 4 * INCLUDE_SPAN_FANOUT
 	}
-	return 4 * FULL_SPAN_FANOUT
+	return 16 * FULL_SPAN_FANOUT
 }

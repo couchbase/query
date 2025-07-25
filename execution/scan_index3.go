@@ -397,6 +397,9 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 			return
 		}
 	}
+	if context.reqLoggingEnabled {
+		context.Debugf("'%s':'%s' has %v Spans", qplan.Term().Alias(), index3.Name(), len(dspans))
+	}
 
 	offset := evalLimitOffset(qplan.Offset(), parent, int64(0), qplan.Covering(), &this.operatorCtx)
 	limit := evalLimitOffset(qplan.Limit(), parent, math.MaxInt64, qplan.Covering(), &this.operatorCtx)
