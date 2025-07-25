@@ -159,6 +159,9 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					item.SetMetaField(value.META_OPT_ESTIMATES, value.NewValue(o))
 				}
 				item.SetId(key)
+				if node != "" {
+					item.SetField("node", node)
+				}
 				keysMap[key] = item
 			})
 		}
