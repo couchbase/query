@@ -304,6 +304,10 @@ func (this *IndexScan3) scan(context *Context, conn *datastore.IndexConnection, 
 		return
 	}
 
+	if context.reqLoggingEnabled {
+		context.Debugf("'%s':'%s' has %v Spans", this.plan.Term().Alias(), plan.Index().Name(), len(dspans))
+	}
+
 	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), this.plan.Covering(), &this.operatorCtx)
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, this.plan.Covering(), &this.operatorCtx)
 	scanVector := context.ScanVectorSource().ScanVector(plan.Term().Namespace(), plan.Term().Path().Bucket())

@@ -184,5 +184,5 @@ func FullSpanFanout() int {
 	if IsFeatureEnabled(GetN1qlFeatureControl(), N1QL_FULL_SPAN_FANOUT) {
 		return FULL_SPAN_FANOUT
 	}
-	return 4 * FULL_SPAN_FANOUT
+	return 16 * FULL_SPAN_FANOUT
 }
