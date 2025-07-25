@@ -150,7 +150,9 @@ func (b *requestLogHistoryKeyspace) Fetch(keys []string, keysMap map[string]valu
 		if ook {
 			meta["optimizerEstimates"] = value.NewValue(o)
 		}
-		localValue.SetField("node", node)
+		if node != "" {
+			localValue.SetField("node", node)
+		}
 		localValue.SetField("~file", rangeNum)
 		localValue.SetId(docKey)
 		keysMap[key] = localValue
