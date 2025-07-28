@@ -1103,13 +1103,13 @@ func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int, shortest bool) *i
 		if be == se && s_redundantSargKey {
 			if t_pushdown > s_pushdown {
 				be = te
-			} else if t_pushdown == s_pushdown {
+			} else if t_pushdown == s_pushdown && !t_redundantSargKey {
 				be = nil
 			}
 		} else if be == te && t_redundantSargKey {
 			if s_pushdown > t_pushdown {
 				be = se
-			} else if s_pushdown == t_pushdown {
+			} else if s_pushdown == t_pushdown && !s_redundantSargKey {
 				be = nil
 			}
 		}
