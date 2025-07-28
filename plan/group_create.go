@@ -55,6 +55,7 @@ func (this *CreateGroup) MarshalBase(f func(map[string]interface{})) map[string]
 	if ok {
 		r["roles"] = roles
 	}
+	r["ifNotExists"] = !this.node.FailIfExists()
 	if f != nil {
 		f(r)
 	}
@@ -63,12 +64,13 @@ func (this *CreateGroup) MarshalBase(f func(map[string]interface{})) map[string]
 
 func (this *CreateGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_        string   `json:"#operator"`
-		Group    string   `json:"group"`
-		DescSet  bool     `json:"desc_set"`
-		Desc     string   `json:"desc"`
-		RolesSet bool     `json:"roles_set"`
-		Roles    []string `json:"roles"`
+		_           string   `json:"#operator"`
+		Group       string   `json:"group"`
+		DescSet     bool     `json:"desc_set"`
+		Desc        string   `json:"desc"`
+		RolesSet    bool     `json:"roles_set"`
+		Roles       []string `json:"roles"`
+		IfNotExists bool     `json:"ifNotExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -84,6 +86,6 @@ func (this *CreateGroup) UnmarshalJSON(body []byte) error {
 		roles = value.NewValue(_unmarshalled.Roles)
 	}
 
-	this.node = algebra.NewCreateGroup(_unmarshalled.Group, desc, roles)
+	this.node = algebra.NewCreateGroup(_unmarshalled.Group, !_unmarshalled.IfNotExists, desc, roles)
 	return nil
 }

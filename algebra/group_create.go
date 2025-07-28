@@ -20,16 +20,18 @@ import (
 type CreateGroup struct {
 	statementBase
 
-	group     string   `json:"user"`
-	desc_set  bool     `json:"desc_set"`
-	desc      string   `json:"desc"`
-	roles_set bool     `json:"roles_set"`
-	roles     []string `json:"roles"`
+	group        string   `json:"user"`
+	desc_set     bool     `json:"desc_set"`
+	desc         string   `json:"desc"`
+	roles_set    bool     `json:"roles_set"`
+	roles        []string `json:"roles"`
+	failIfExists bool     `json:"failIfExists"`
 }
 
-func NewCreateGroup(group string, desc value.Value, roles value.Value) *CreateGroup {
+func NewCreateGroup(group string, failIfExists bool, desc value.Value, roles value.Value) *CreateGroup {
 	rv := &CreateGroup{
-		group: group,
+		group:        group,
+		failIfExists: failIfExists,
 	}
 	if desc != nil {
 		rv.desc_set = true
@@ -78,6 +80,10 @@ func (this *CreateGroup) Group() string {
 	return this.group
 }
 
+func (this *CreateGroup) FailIfExists() bool {
+	return this.failIfExists
+}
+
 func (this *CreateGroup) Desc() (string, bool) {
 	return this.desc, this.desc_set
 }
@@ -89,6 +95,7 @@ func (this *CreateGroup) Roles() ([]string, bool) {
 func (this *CreateGroup) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createGroup"}
 	r["group"] = this.group
+	r["failIfExists"] = this.failIfExists
 	r["desc_set"] = this.desc_set
 	if this.desc_set {
 		r["desc"] = this.desc

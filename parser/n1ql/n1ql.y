@@ -2807,11 +2807,11 @@ LPAREN key_val_options_expr_header RPAREN opt_where
  *************************************************/
 
 create_user:
-CREATE USER user user_opts
+CREATE USER opt_if_not_exists user user_opts
 {
     var name, groups value.Value
     var password expression.Expression
-    for _, v := range $4 {
+    for _, v := range $5 {
         switch v.name {
         case "name":
             if name != nil { return yylex.(*lexer).FatalError("User attributes may only be specified once.", v.line, v.column) }
@@ -2829,7 +2829,7 @@ CREATE USER user user_opts
             groups = value.NewValue(va)
         }
     }
-    $$ = algebra.NewCreateUser($3,password,name,groups)
+    $$ = algebra.NewCreateUser($4, $3, password,name,groups)
 }
 ;
 
@@ -2861,9 +2861,9 @@ ALTER USER user user_opts
 ;
 
 drop_user:
-DROP USER user
+DROP USER opt_if_exists user
 {
-    $$ = algebra.NewDropUser($3)
+    $$ = algebra.NewDropUser($4, $3)
 }
 ;
 
@@ -2958,10 +2958,10 @@ groups COMMA permitted_identifiers
  *************************************************/
 
 create_group:
-CREATE GROUP group_name group_opts
+CREATE GROUP opt_if_not_exists group_name group_opts
 {
     var desc, roles value.Value
-    for _, v := range $4 {
+    for _, v := range $5 {
         switch v.name {
         case "desc":
             if desc != nil { return yylex.(*lexer).FatalError("Group attributes may only be specified once.", v.line, v.column) }
@@ -2976,7 +2976,7 @@ CREATE GROUP group_name group_opts
             roles = value.NewValue(va)
         }
     }
-    $$ = algebra.NewCreateGroup($3,desc,roles)
+    $$ = algebra.NewCreateGroup($4, $3, desc,roles)
 }
 ;
 
@@ -3004,9 +3004,9 @@ ALTER GROUP group_name group_opts
 ;
 
 drop_group:
-DROP GROUP group_name
+DROP GROUP opt_if_exists group_name
 {
-    $$ = algebra.NewDropGroup($3)
+    $$ = algebra.NewDropGroup($4, $3)
 }
 ;
 
@@ -3315,24 +3315,14 @@ opt_with_clause
 ;
 
 create_bucket:
-CREATE BUCKET permitted_identifiers opt_if_not_exists opt_def_with_clause
+CREATE BUCKET opt_if_not_exists permitted_identifiers opt_def_with_clause
 {
-    $$ = algebra.NewCreateBucket($3, $4, $5)
+    $$ = algebra.NewCreateBucket($4, $3, $5)
 }
 |
-CREATE BUCKET IF NOT EXISTS permitted_identifiers opt_def_with_clause
+CREATE DATABASE opt_if_not_exists permitted_identifiers opt_def_with_clause
 {
-    $$ = algebra.NewCreateBucket($6, false, $7)
-}
-|
-CREATE DATABASE permitted_identifiers opt_if_not_exists opt_def_with_clause
-{
-    $$ = algebra.NewCreateBucket($3, $4, $5)
-}
-|
-CREATE DATABASE IF NOT EXISTS permitted_identifiers opt_def_with_clause
-{
-    $$ = algebra.NewCreateBucket($6, false, $7)
+    $$ = algebra.NewCreateBucket($4, $3, $5)
 }
 ;
 
@@ -3361,24 +3351,14 @@ ALTER DATABASE permitted_identifiers with_clause
  *************************************************/
 
 drop_bucket:
-DROP BUCKET permitted_identifiers opt_if_exists
+DROP BUCKET opt_if_exists permitted_identifiers
 {
-    $$ = algebra.NewDropBucket($3, $4)
+    $$ = algebra.NewDropBucket($4, $3)
 }
 |
-DROP BUCKET IF EXISTS permitted_identifiers
+DROP DATABASE opt_if_exists permitted_identifiers
 {
-    $$ = algebra.NewDropBucket($5, false)
-}
-|
-DROP DATABASE permitted_identifiers opt_if_exists
-{
-    $$ = algebra.NewDropBucket($3, $4)
-}
-|
-DROP DATABASE IF EXISTS permitted_identifiers
-{
-    $$ = algebra.NewDropBucket($5, false)
+    $$ = algebra.NewDropBucket($4, $3)
 }
 ;
 

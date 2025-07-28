@@ -64,7 +64,9 @@ func (this *DropGroup) RunOnce(context *Context, parent value.Value) {
 
 		err := context.datastore.GetGroupInfo(&g)
 		if err != nil {
-			context.Error(errors.NewGroupNotFoundError(g.Id))
+			if this.plan.Node().FailIfNotExists() {
+				context.Error(errors.NewGroupNotFoundError(g.Id))
+			}
 		} else {
 			err := context.datastore.DeleteGroup(&g)
 			if err != nil {

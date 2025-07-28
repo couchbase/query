@@ -580,13 +580,13 @@ var statement_syntax = map[string][][]string{
 		[]string{"LPAREN", "key_val_options_expr_header", "RPAREN", "[where]"},
 	},
 	"create_user": [][]string{
-		[]string{"CREATE", "USER", "user", "user_opts"},
+		[]string{"CREATE", "USER", "[if_not_exists]", "user", "user_opts"},
 	},
 	"alter_user": [][]string{
 		[]string{"ALTER", "USER", "user", "user_opts"},
 	},
 	"drop_user": [][]string{
-		[]string{"DROP", "USER", "user"},
+		[]string{"DROP", "USER", "[if_exists]", "user"},
 	},
 	"user_opts": [][]string{
 		[]string{"user_opts", "user_opt"},
@@ -607,13 +607,13 @@ var statement_syntax = map[string][][]string{
 		[]string{"groups", "COMMA", "permitted_identifiers"},
 	},
 	"create_group": [][]string{
-		[]string{"CREATE", "GROUP", "group_name", "group_opts"},
+		[]string{"CREATE", "GROUP", "[if_not_exists]", "group_name", "group_opts"},
 	},
 	"alter_group": [][]string{
 		[]string{"ALTER", "GROUP", "group_name", "group_opts"},
 	},
 	"drop_group": [][]string{
-		[]string{"DROP", "GROUP", "group_name"},
+		[]string{"DROP", "GROUP", "[if_exists]", "group_name"},
 	},
 	"group_name": [][]string{
 		[]string{"permitted_identifiers"},
@@ -694,20 +694,16 @@ var statement_syntax = map[string][][]string{
 		[]string{"[with_clause]"},
 	},
 	"create_bucket": [][]string{
-		[]string{"CREATE", "BUCKET", "permitted_identifiers", "[if_not_exists]", "[def_with_clause]"},
-		[]string{"CREATE", "BUCKET", "IF", "NOT", "EXISTS", "permitted_identifiers", "[def_with_clause]"},
-		[]string{"CREATE", "DATABASE", "permitted_identifiers", "[if_not_exists]", "[def_with_clause]"},
-		[]string{"CREATE", "DATABASE", "IF", "NOT", "EXISTS", "permitted_identifiers", "[def_with_clause]"},
+		[]string{"CREATE", "BUCKET", "[if_not_exists]", "permitted_identifiers", "[def_with_clause]"},
+		[]string{"CREATE", "DATABASE", "[if_not_exists]", "permitted_identifiers", "[def_with_clause]"},
 	},
 	"alter_bucket": [][]string{
 		[]string{"ALTER", "BUCKET", "permitted_identifiers", "with_clause"},
 		[]string{"ALTER", "DATABASE", "permitted_identifiers", "with_clause"},
 	},
 	"drop_bucket": [][]string{
-		[]string{"DROP", "BUCKET", "permitted_identifiers", "[if_exists]"},
-		[]string{"DROP", "BUCKET", "IF", "EXISTS", "permitted_identifiers"},
-		[]string{"DROP", "DATABASE", "permitted_identifiers", "[if_exists]"},
-		[]string{"DROP", "DATABASE", "IF", "EXISTS", "permitted_identifiers"},
+		[]string{"DROP", "BUCKET", "[if_exists]", "permitted_identifiers"},
+		[]string{"DROP", "DATABASE", "[if_exists]", "permitted_identifiers"},
 	},
 	"create_scope": [][]string{
 		[]string{"CREATE", "SCOPE", "named_scope_ref", "[if_not_exists]"},

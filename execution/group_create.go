@@ -65,7 +65,9 @@ func (this *CreateGroup) RunOnce(context *Context, parent value.Value) {
 
 		err := context.datastore.GetGroupInfo(&g)
 		if err == nil {
-			context.Error(errors.NewGroupExistsError(g.Id))
+			if this.plan.Node().FailIfExists() {
+				context.Error(errors.NewGroupExistsError(g.Id))
+			}
 		} else {
 			if r, ok := this.plan.Node().Roles(); !ok {
 				context.Error(errors.NewGroupAttributeError("roles", "required"))

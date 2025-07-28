@@ -72,7 +72,9 @@ func (this *CreateUser) RunOnce(context *Context, parent value.Value) {
 
 		err := context.datastore.GetUserInfo(&u)
 		if err == nil {
-			context.Error(errors.NewUserExistsError(u.Domain + ":" + u.Id))
+			if this.plan.Node().FailIfExists() {
+				context.Error(errors.NewUserExistsError(u.Domain + ":" + u.Id))
+			}
 		} else {
 			p, ok := this.plan.Node().Password()
 			if ok {

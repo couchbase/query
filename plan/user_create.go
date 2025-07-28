@@ -62,6 +62,7 @@ func (this *CreateUser) MarshalBase(f func(map[string]interface{})) map[string]i
 	if ok {
 		r["name"] = name
 	}
+	r["ifNotExists"] = !this.node.FailIfExists()
 	if f != nil {
 		f(r)
 	}
@@ -78,6 +79,7 @@ func (this *CreateUser) UnmarshalJSON(body []byte) error {
 		Groups      []string `json:"groups"`
 		NameSet     bool     `json:"name_set"`
 		Name        string   `json:"name"`
+		IfNotExists bool     `json:"ifNotExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -101,6 +103,6 @@ func (this *CreateUser) UnmarshalJSON(body []byte) error {
 		groups = value.NewValue(_unmarshalled.Groups)
 	}
 
-	this.node = algebra.NewCreateUser(_unmarshalled.User, password, name, groups)
+	this.node = algebra.NewCreateUser(_unmarshalled.User, !_unmarshalled.IfNotExists, password, name, groups)
 	return nil
 }

@@ -44,6 +44,7 @@ func (this *DropGroup) MarshalJSON() ([]byte, error) {
 func (this *DropGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DropGroup"}
 	r["group"] = this.node.Group()
+	r["ifExists"] = !this.node.FailIfNotExists()
 	if f != nil {
 		f(r)
 	}
@@ -52,8 +53,9 @@ func (this *DropGroup) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *DropGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_     string `json:"#operator"`
-		Group string `json:"group"`
+		_        string `json:"#operator"`
+		Group    string `json:"group"`
+		IfExists bool   `json:"ifExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -61,6 +63,6 @@ func (this *DropGroup) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.node = algebra.NewDropGroup(_unmarshalled.Group)
+	this.node = algebra.NewDropGroup(_unmarshalled.Group, !_unmarshalled.IfExists)
 	return nil
 }

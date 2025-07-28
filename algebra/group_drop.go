@@ -20,12 +20,14 @@ import (
 type DropGroup struct {
 	statementBase
 
-	group string `json:"group"`
+	group           string `json:"group"`
+	failIfNotExists bool   `json:"failIfNotExists"`
 }
 
-func NewDropGroup(group string) *DropGroup {
+func NewDropGroup(group string, failIfNotExists bool) *DropGroup {
 	rv := &DropGroup{
-		group: group,
+		group:           group,
+		failIfNotExists: failIfNotExists,
 	}
 
 	rv.stmt = rv
@@ -63,10 +65,14 @@ func (this *DropGroup) Group() string {
 	return this.group
 }
 
+func (this *DropGroup) FailIfNotExists() bool {
+	return this.failIfNotExists
+}
+
 func (this *DropGroup) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "dropGroup"}
 	r["group"] = this.group
-
+	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)
 }
 

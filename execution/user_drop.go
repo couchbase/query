@@ -72,7 +72,9 @@ func (this *DropUser) RunOnce(context *Context, parent value.Value) {
 
 		err := context.datastore.GetUserInfo(&u)
 		if err != nil {
-			context.Error(errors.NewUserNotFoundError(u.Domain + ":" + u.Id))
+			if this.plan.Node().FailIfNotExists() {
+				context.Error(errors.NewUserNotFoundError(u.Domain + ":" + u.Id))
+			}
 		} else {
 			err := context.datastore.DeleteUser(&u)
 			if err != nil {

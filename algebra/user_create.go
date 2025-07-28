@@ -27,11 +27,13 @@ type CreateUser struct {
 	groups       []string              `json:"groups"`
 	name_set     bool                  `json:"name_set"`
 	name         string                `json:"name"`
+	failIfExists bool                  `json:"failIfExists"`
 }
 
-func NewCreateUser(user string, password expression.Expression, name value.Value, groups value.Value) *CreateUser {
+func NewCreateUser(user string, failIfExists bool, password expression.Expression, name value.Value, groups value.Value) *CreateUser {
 	rv := &CreateUser{
-		user: user,
+		user:         user,
+		failIfExists: failIfExists,
 	}
 	if password != nil {
 		rv.password_set = true
@@ -102,6 +104,10 @@ func (this *CreateUser) Groups() ([]string, bool) {
 	return this.groups, this.groups_set
 }
 
+func (this *CreateUser) FailIfExists() bool {
+	return this.failIfExists
+}
+
 func (this *CreateUser) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createUser"}
 	r["user"] = this.user
@@ -117,6 +123,7 @@ func (this *CreateUser) MarshalJSON() ([]byte, error) {
 	if this.name_set {
 		r["name"] = this.name
 	}
+	r["failIfExists"] = this.failIfExists
 
 	return json.Marshal(r)
 }

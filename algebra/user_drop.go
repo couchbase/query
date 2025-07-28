@@ -20,12 +20,14 @@ import (
 type DropUser struct {
 	statementBase
 
-	user string `json:"user"`
+	user            string `json:"user"`
+	failIfNotExists bool   `json:"failIfNotExists"`
 }
 
-func NewDropUser(user string) *DropUser {
+func NewDropUser(user string, failIfNotExists bool) *DropUser {
 	rv := &DropUser{
-		user: user,
+		user:            user,
+		failIfNotExists: failIfNotExists,
 	}
 
 	rv.stmt = rv
@@ -68,9 +70,14 @@ func (this *DropUser) User() string {
 	return this.user
 }
 
+func (this *DropUser) FailIfNotExists() bool {
+	return this.failIfNotExists
+}
+
 func (this *DropUser) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "dropUser"}
 	r["user"] = this.user
+	r["failIfNotExists"] = this.failIfNotExists
 
 	return json.Marshal(r)
 }

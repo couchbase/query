@@ -44,6 +44,7 @@ func (this *DropUser) MarshalJSON() ([]byte, error) {
 func (this *DropUser) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
 	r := map[string]interface{}{"#operator": "DropUser"}
 	r["user"] = this.node.User()
+	r["ifExists"] = !this.node.FailIfNotExists()
 	if f != nil {
 		f(r)
 	}
@@ -52,8 +53,9 @@ func (this *DropUser) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *DropUser) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_    string `json:"#operator"`
-		User string `json:"user"`
+		_        string `json:"#operator"`
+		User     string `json:"user"`
+		IfExists bool   `json:"ifExists"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -61,6 +63,6 @@ func (this *DropUser) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.node = algebra.NewDropUser(_unmarshalled.User)
+	this.node = algebra.NewDropUser(_unmarshalled.User, !_unmarshalled.IfExists)
 	return nil
 }
