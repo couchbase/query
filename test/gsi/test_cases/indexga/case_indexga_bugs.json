@@ -180,5 +180,25 @@
                 "c3": 10
             }
         ]
+    },
+    {
+        "testcase": "MB-67549",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_group_aggs` IS NOT MISSING AND v.`index_order` IS NOT MISSING END"
+        },
+        "statements": "SELECT abs(c3) AS abs, count(1) AS cnt FROM orders WHERE test_id = 'indexga' AND type = 'bugs' AND abs(c3) > 10 GROUP BY abs(c3) ORDER BY abs",
+        "results": [
+            {
+                "abs": 15,
+                "cnt": 2
+            }
+        ]
     }
 ]

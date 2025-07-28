@@ -439,7 +439,7 @@ couter:
 		for tc, _ := range coveringEntries {
 			if sc != tc {
 				te := coveringEntries[tc].idxEntry
-				if be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond); be != nil {
+				if be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond, false); be != nil {
 					if be == te {
 						delete(coveringEntries, sc)
 						continue couter

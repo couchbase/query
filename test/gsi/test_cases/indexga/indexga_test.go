@@ -37,12 +37,14 @@ func TestGroupagg(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ixga201 ON orders(c1, a1, c2, c3) WHERE test_id = 'indexga' AND type = 'bugs'")
 	runStmt(qc, "CREATE INDEX ixga202 ON orders(c10, DISTINCT a1) WHERE test_id = 'indexga' AND type = 'bugs'")
 	runStmt(qc, "CREATE INDEX ixga203 ON orders(c3, abs(c3)) WHERE test_id = 'indexga' AND type = 'bugs'")
+	runStmt(qc, "CREATE INDEX ixga204 ON orders(abs(c3)) WHERE test_id = 'indexga' AND type = 'bugs'")
 
 	runMatch("case_indexga_bugs.json", false, true, qc, t)
 
 	runStmt(qc, "DROP INDEX orders.ixga201")
 	runStmt(qc, "DROP INDEX orders.ixga202")
 	runStmt(qc, "DROP INDEX orders.ixga203")
+	runStmt(qc, "DROP INDEX orders.ixga204")
 
 	// misc bugs with primary index
 	runStmt(qc, "CREATE PRIMARY INDEX oprimary ON orders")

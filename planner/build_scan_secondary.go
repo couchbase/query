@@ -500,6 +500,9 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 				allKey, _ := ak.(*expression.All)
 				entry.setArrayKey(allKey, apos)
 			}
+			if hasRedundantSargKeys(keys, skeys) {
+				entry.SetFlags(IE_HAS_REDUNDANT_SARG_KEY, true)
+			}
 
 			if n > 0 {
 				sargables[index] = entry
@@ -700,7 +703,7 @@ func narrowerOrEquivalent(se, te *indexEntry, shortest, corrSubq bool, predFc ma
 
 	snk, snc := matchedKeysConditions(se, te, shortest, predFc)
 
-	be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond)
+	be := bestIndexBySargableKeys(se, te, se.nEqCond, te.nEqCond, shortest)
 	if be == te { // te is better index
 		return false
 	}
@@ -1055,6 +1058,23 @@ func hasArrayIndexKey(keys expression.Expressions) bool {
 	return false
 }
 
+func hasRedundantSargKeys(keys datastore.IndexKeys, skeys []bool) bool {
+	for i := 0; i < len(keys); i++ {
+		if i >= len(skeys) || !skeys[i] {
+			continue
+		}
+		for j := i + 1; j < len(keys); j++ {
+			if j >= len(skeys) || !skeys[j] {
+				continue
+			}
+			if keys[i].Expr.DependsOn(keys[j].Expr) || keys[j].Expr.DependsOn(keys[i].Expr) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEntry,
 	node *algebra.KeyspaceTerm) map[datastore.Index]*indexEntry {
 
@@ -1073,7 +1093,31 @@ func (this *builder) chooseIntersectScan(sargables map[datastore.Index]*indexEnt
 		this.advisorValidate(), len(this.baseKeyspaces) == 1, this.context)
 }
 
-func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
+func bestIndexBySargableKeys(se, te *indexEntry, snc, tnc int, shortest bool) *indexEntry {
+	be := bestIndexBySargKeys(se, te, snc, tnc)
+	if !shortest && be != nil {
+		s_pushdown := se.PushDownProperty()
+		t_pushdown := te.PushDownProperty()
+		s_redundantSargKey := se.HasFlag(IE_HAS_REDUNDANT_SARG_KEY)
+		t_redundantSargKey := te.HasFlag(IE_HAS_REDUNDANT_SARG_KEY)
+		if be == se && s_redundantSargKey {
+			if t_pushdown > s_pushdown {
+				be = te
+			} else if t_pushdown == s_pushdown {
+				be = nil
+			}
+		} else if be == te && t_redundantSargKey {
+			if s_pushdown > t_pushdown {
+				be = se
+			} else if s_pushdown == t_pushdown {
+				be = nil
+			}
+		}
+	}
+	return be
+}
+
+func bestIndexBySargKeys(se, te *indexEntry, snc, tnc int) *indexEntry {
 	si := 0
 	ti := 0
 	for si < len(se.skeys) && ti < len(te.skeys) {
