@@ -72,7 +72,18 @@ func (this *CreateBucket) RunOnce(context *Context, parent value.Value) {
 		if with != nil {
 			// add a default ramQuota if not specified, according to the storage type
 			if _, ok := with.Field(_RAM_QUOTA); !ok {
+				// Check if storage is magma and if numVBuckets is specified. If it is not specified, default numVBuckets is 128 and need to use the MIN_RAM_QUOTA.
+				useMagmaQuota := false
 				if v, ok := with.Field(_STORAGE_BACKEND); ok && v.Type() == value.STRING && v.ToString() == _MAGMA {
+					// If numVBuckets is specified and is 1024
+					if nv, ok := with.Field(_NUM_VBUCKETS); ok {
+						if numVBuckets, ok := value.IsIntValue(nv); ok && numVBuckets == 1024 {
+							useMagmaQuota = true
+						}
+					}
+				}
+
+				if useMagmaQuota {
 					with.SetField(_RAM_QUOTA, _MIN_RAM_QUOTA_MAGMA)
 				} else {
 					with.SetField(_RAM_QUOTA, _MIN_RAM_QUOTA)
