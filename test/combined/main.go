@@ -360,9 +360,11 @@ func main() {
 			continue
 		}
 
-		if err := addAdviseIndexes(); err != nil {
-			reportRunFailure(iter, "Failed to advise query.", err)
-			continue
+		if DB.createIndexes {
+			if err := addAdviseIndexes(); err != nil {
+				reportRunFailure(iter, "Failed to advise query.", err)
+				continue
+			}
 		}
 
 		if err := DB.create(); err != nil {

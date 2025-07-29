@@ -39,7 +39,9 @@
     "#comment": "-1 for infinite iterations.",
     "iterations": -1,
     "request": {
-      "#comment": "Any standard request parameters."
+      "#comment": "Any standard request parameters.",
+      "auto_prepare": true,
+      "auto_execute": true
     }
   },
   "statements": {
@@ -76,6 +78,8 @@
     },
     "#comment": "If UPDATE STATISTICS commands should be run after loading the data.",
     "update_statistics": true,
+    "#comment": "If indexes should be created.",
+    "create_indexes": false,
     "#comment": "Configuration for AWR.",
     "awr": {
       "enabled": true,

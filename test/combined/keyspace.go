@@ -39,7 +39,7 @@ func newKeyspace(name string) (*Keyspace, error) {
 	return ks, nil
 }
 
-func NewKeyspace(i interface{}) (*Keyspace, map[string]interface{}, error) {
+func NewKeyspace(i interface{}, createIndexes bool) (*Keyspace, map[string]interface{}, error) {
 	logging.Tracef("%v", i)
 	keyspace, ok := i.(map[string]interface{})
 	if !ok {
@@ -68,14 +68,16 @@ func NewKeyspace(i interface{}) (*Keyspace, map[string]interface{}, error) {
 		ks.schemas = append(ks.schemas, s)
 	}
 
-	indexes, ok := keyspace["indexes"].([]interface{})
-	if ok {
-		for j := range indexes {
-			idx, err := NewIndex(indexes[j])
-			if err != nil {
-				return nil, nil, fmt.Errorf("Keyspace %s \"indexes\" element %d is not valid: %v", ks.name, j, err)
+	if createIndexes {
+		indexes, ok := keyspace["indexes"].([]interface{})
+		if ok {
+			for j := range indexes {
+				idx, err := NewIndex(indexes[j])
+				if err != nil {
+					return nil, nil, fmt.Errorf("Keyspace %s \"indexes\" element %d is not valid: %v", ks.name, j, err)
+				}
+				ks.indexes = append(ks.indexes, idx)
 			}
-			ks.indexes = append(ks.indexes, idx)
 		}
 	}
 

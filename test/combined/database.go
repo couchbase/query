@@ -77,6 +77,7 @@ type Database struct {
 	bucketConfig    map[string]map[string]interface{}
 	queryConfig     map[string]interface{}
 	updateStats     bool
+	createIndexes   bool
 	randomKeyspaces *RandomRange
 	rkSchemaDocs    *RandomRange
 	rkSchemas       *RandomRange
@@ -161,6 +162,14 @@ func NewDatabase(i interface{}) (*Database, error) {
 		}
 	}
 
+	v, ok = database["create_indexes"]
+	if ok {
+		if db.createIndexes, ok = v.(bool); !ok {
+			logging.Fatalf("\"create_indexes\" is not a boolean.")
+			return nil, os.ErrNotExist
+		}
+	}
+
 	v, ok = database["awr"]
 	if ok {
 		if m, ok := v.(map[string]interface{}); ok {
@@ -200,7 +209,7 @@ func NewDatabase(i interface{}) (*Database, error) {
 			return nil, fmt.Errorf("Keyspaces element %d is not an object (%T).", i, keyspaces[i])
 		}
 
-		ks, bc, err := NewKeyspace(keyspace)
+		ks, bc, err := NewKeyspace(keyspace, db.createIndexes)
 		if err != nil {
 			return nil, fmt.Errorf("\"keyspaces\"[%d]: %v", i, err)
 		}
