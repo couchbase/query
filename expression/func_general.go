@@ -408,10 +408,10 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		posArg := value.Values{value.NewValue(bucket)}
 
 		if flags&_BUCKET_INFO != 0 {
-			stmt = "SELECT bucketType, storageBackend, quota.ram ramQuota, replicaNumber, replicaIndex, maxTTL, compressionMode, " +
+			stmt = "SELECT bucketType, storageBackend, quota.rawRAM ramQuota, replicaNumber, replicaIndex, maxTTL, compressionMode, " +
 				"conflictResolutionType, evictionPolicy, threadsNumber, durabilityMinLevel, purgeInterval," +
 				"controllers.`flush` AS flushEnabled, magmaSeqTreeDataBlockSize, historyRetentionCollectionDefault," +
-				"historyRetentionBytes, historyRetentionSeconds, autoCompactionSettings.parallelDBAndViewCompaction," +
+				"historyRetentionBytes, historyRetentionSeconds, numVBuckets, autoCompactionSettings.parallelDBAndViewCompaction," +
 				"autoCompactionSettings.databaseFragmentationThreshold.percentage AS " +
 				"`databaseFragmentationThreshold[percentage]`," +
 				"autoCompactionSettings.databaseFragmentationThreshold.size AS `databaseFragmentationThreshold[size]`," +
@@ -460,7 +460,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 						skip = fv.ToString() == "passive"
 					case "threadsNumber":
 						skip = value.AsNumberValue(fv).Int64() == 3
-					case "maxTTL", "historyRetentionBytes", "historyRetentionSeconds":
+					case "maxTTL", "historyRetentionBytes", "historyRetentionSeconds", "numVBuckets":
 						skip = value.AsNumberValue(fv).Int64() == 0
 					case "conflictResolutionType":
 						skip = fv.ToString() == "seqno"
@@ -507,7 +507,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 					bucketInfoBuf.WriteString("}")
 				}
 			}
-			res = append(res, bucketInfoBuf.String(), ";")
+			res = append(res, bucketInfoBuf.String()+";")
 		}
 
 		if flags&(_SCOPE_INFO|_COLLECTION_INFO) != 0 {
