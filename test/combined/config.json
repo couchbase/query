@@ -40,8 +40,7 @@
     "iterations": -1,
     "request": {
       "#comment": "Any standard request parameters.",
-      "auto_prepare": true,
-      "auto_execute": true
+      "auto_prepare": true
     }
   },
   "statements": {
