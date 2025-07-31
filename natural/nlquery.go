@@ -70,6 +70,7 @@ type naturalOutput int
 const (
 	SQL naturalOutput = iota
 	JSUDF
+	FTSSQL
 	UNDEFINED_NATURAL_OUTPUT
 )
 
@@ -79,6 +80,8 @@ func NewNaturalOutput(s string) naturalOutput {
 		return SQL
 	case "JSUDF":
 		return JSUDF
+	case "FTSSQL":
+		return FTSSQL
 	default:
 		return UNDEFINED_NATURAL_OUTPUT
 	}
@@ -91,6 +94,8 @@ func (n naturalOutput) String() string {
 		s = "SQL"
 	case JSUDF:
 		s = "JSUDF"
+	case FTSSQL:
+		s = "FTSSQL"
 	default:
 		s = "UNDEFINED_NATURAL_OUTPUT"
 	}
@@ -276,7 +281,7 @@ type prompt struct {
 	Messages           []message          `json:"messages"`
 }
 
-func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prompt, errors.Error) {
+func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, forfts bool) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -309,8 +314,15 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*p
 		"\n\nNote query context is unset." +
 		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
 		"\n\nAlias is for ease of use." +
-		"\n\nQuote aliases with grave accent characters." +
-		"\n\nReturn only a single SQL++ statement on a single line." +
+		"\n\nQuote aliases with grave accent characters.")
+	if forfts {
+		userMessageBuf.WriteString("\n\nAlways add the USE Clause in the query to use the FTS index." +
+			"\n\nFor example, SELECT a.*, ap.* FROM `travel-sample`.`inventory`.`airline` AS a USE INDEX " +
+			"(USING FTS) JOIN `travel-sample`.`inventory`.`airport` AS ap USE INDEX (USING FTS)" +
+			" ON a.country = ap.country WHERE a.country = \"United Kingdom\"" +
+			"\n\nIn other words, always use USE INDEX (USING FTS) in the query.")
+	}
+	userMessageBuf.WriteString("\n\nReturn only a single SQL++ statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a query, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
 	userMessage = userMessageBuf.String()
@@ -622,9 +634,11 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 	var prompt *prompt
 	switch nloutputOpt {
 	case SQL:
-		prompt, err = newSQLPrompt(keyspaceInfo, nlquery)
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, false)
 	case JSUDF:
 		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery)
+	case FTSSQL:
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, true)
 	default:
 		err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 	}
@@ -744,23 +758,12 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 	return content, stmt, nlAlgebraStmt, parseErr
 }
 
-func GetStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {
-	switch nloutputOpt {
-	case SQL:
-		return getSQLContent(content), nil
-	case JSUDF:
-		return getJsContent(content), nil
-	default:
-		return "", errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
-	}
-}
-
 func getStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {
 	if content == "" {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, "empty response")
 	}
 	switch nloutputOpt {
-	case SQL:
+	case SQL, FTSSQL:
 		return getSQLContent(content), nil
 	case JSUDF:
 		return getJsContent(content), nil

@@ -782,6 +782,9 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	if request.NaturalTime != 0 {
 		reqMap["naturalLanguageProcessingTime"] = util.FormatDuration(request.NaturalTime, durStyle)
 	}
+	if request.NaturalOutput != "" {
+		reqMap["naturalLanguageOutput"] = util.Redacted(request.NaturalOutput, redact)
+	}
 	reqMap["resultCount"] = request.ResultCount
 	reqMap["resultSize"] = request.ResultSize
 	reqMap["errorCount"] = request.ErrorCount

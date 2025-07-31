@@ -831,6 +831,8 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			nloutputOpt = natural.SQL
 		case natural.JSUDF:
 			nloutputOpt = natural.JSUDF
+		case natural.FTSSQL:
+			nloutputOpt = natural.FTSSQL
 		}
 	}
 	if err != nil {

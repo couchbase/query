@@ -1896,6 +1896,8 @@ func (this *BaseRequest) NaturalTime() time.Duration {
 var prefixuai = regexp.MustCompile("^[eE][xX][pP][lL][aA][iI][nN][[:space:]]+$|^[aA][dD][vV][iI][sS][eE][[:space:]]+$")
 var uai = regexp.MustCompile("[Uu][Ss][Ii][Nn][Gg][[:space:]]+[Aa][Ii][[:space:]]+")
 var with = regexp.MustCompile("[Ww][Ii][Tt][Hh][[:space:]]*{")
+var prefixwith = regexp.MustCompile("^[Ff][Oo][Rr][[:space:]]+[Ff][Tt][Ss][[:space:]]+|" +
+	"^[Ff][Oo][Rr][[:space:]]+[Ff][Ll][Ee][Xx][Ii][Nn][Dd][eE][xX][[:space:]]+")
 
 func (this *BaseRequest) ProcessNatural() errors.Error {
 	s := this.Statement()
@@ -1926,12 +1928,23 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 
 	this.SetStatement("")
 
-	m1 := with.FindString(s)
-	if m1 == "" {
+	m = with.FindStringIndex(s)
+	if m == nil || len(m) < 2 {
 		this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
 		return nil
 	}
-	s = s[len(m1)-1:]
+	if m[0] != 0 {
+		spref := s[:m[0]]
+		sp := prefixwith.FindString(spref)
+		if sp == "" {
+			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for WITH: %v",
+				spref))
+		}
+		if sp = strings.TrimSpace(strings.ToLower(sp)); sp == "for fts" || sp == "for flexindex" {
+			this.SetNaturalOutput("ftssql")
+		}
+	}
+	s = s[m[1]-1:]
 
 	d := sys_json.NewDecoder(strings.NewReader(s))
 	var opts map[string]interface{}
