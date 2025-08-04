@@ -255,7 +255,9 @@ func createBucket(name string, config map[string]interface{}) error {
 			logging.Debugf("Checking bucket availability: %d/%d", retry, _RETRY_COUNT)
 			resp, err = doNodeGet(target)
 			if err != nil || resp.StatusCode == http.StatusOK {
-				resp.Body.Close()
+				if resp != nil && resp.Body != nil {
+					resp.Body.Close()
+				}
 				break
 			}
 			//logging.DBG("%v", resp.Status)
