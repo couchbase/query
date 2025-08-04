@@ -288,12 +288,15 @@ func install(pkg string) error {
 		}
 	}
 
-	logging.Debugf("removing")
-	rm := exec.Command(dpkg, "--no-pager", "-P", "couchbase-server")
-	err = rm.Run()
-	if err != nil {
-		logging.Errorf("Package removal returned: %v", err)
-		return err
+	var rm *exec.Cmd
+	if err = exec.Command(dpkg, "--no-pager", "-s", "couchbase-server").Run(); err != nil {
+		logging.Debugf("removing")
+		rm := exec.Command(dpkg, "--no-pager", "-P", "couchbase-server")
+		err = rm.Run()
+		if err != nil {
+			logging.Errorf("Package removal returned: %v", err)
+			return err
+		}
 	}
 
 	// ensure the installation location is clear
