@@ -907,5 +907,25 @@
 		"type": "gauge",
 		"added": "8.0.0",
 		"help": "The 15m.rate latency of SQL++ FTS VECTOR requests."
+	},
+	"n1ql_requests_natural_total":{
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ Natural Language requests."
+	},
+	"n1ql_requests_natural_sql":{
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ Natural Language SQL requests."
+	},
+	"n1ql_requests_natural_jsudf":{
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ Natural Language JSUDF requests."
+	},
+	"n1ql_requests_natural_ftssql":{
+		"type": "counter",
+		"added": "8.0.0",
+		"help": "Total number of SQL++ Natural Language FTSSQL requests."
 	}
 }

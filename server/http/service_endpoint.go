@@ -654,6 +654,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 	accounting.RecordMetrics(request_time, service_time, transaction_time, request.resultCount,
 		request.resultSize, request.GetErrorCount(), request.GetWarningCount(), request.Errors(), request.Type(),
 		prepared, (request.State() != server.COMPLETED),
+		request.Natural() != "", request.NaturalOutput(),
 		int(request.PhaseOperator(execution.INDEX_SCAN)),
 		int(request.PhaseOperator(execution.PRIMARY_SCAN)),
 		int(request.PhaseOperator(execution.INDEX_SCAN_GSI)),

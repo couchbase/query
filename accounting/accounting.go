@@ -222,6 +222,11 @@ const (
 	REQUESTS_CVI
 	REQUESTS_SVI
 
+	REQUESTS_NATURAL_TOTAL
+	REQUESTS_NATURAL_SQL
+	REQUESTS_NATURAL_JSUDF
+	REQUESTS_NATURAL_FTSSQL
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -326,6 +331,11 @@ const (
 	_REQUESTS_HVI                = "requests_hvi"
 	_REQUESTS_CVI                = "requests_cvi"
 	_REQUESTS_SVI                = "requests_svi"
+
+	_REQUESTS_NATURAL_TOTAL  = "requests_natural_total"
+	_REQUESTS_NATURAL_SQL    = "requests_natural_sql"
+	_REQUESTS_NATURAL_JSUDF  = "requests_natural_jsudf"
+	_REQUESTS_NATURAL_FTSSQL = "requests_natural_ftssql"
 )
 
 // please keep in sync with the mnemonics
@@ -415,6 +425,11 @@ var metricNames = []string{
 	_REQUESTS_HVI,
 	_REQUESTS_CVI,
 	_REQUESTS_SVI,
+
+	_REQUESTS_NATURAL_TOTAL,
+	_REQUESTS_NATURAL_SQL,
+	_REQUESTS_NATURAL_JSUDF,
+	_REQUESTS_NATURAL_FTSSQL,
 }
 
 var gaugeNames = []string{
@@ -493,10 +508,14 @@ func RegisterMetrics(acctStore AccountingStore) {
 }
 
 // Record request metrics
-func RecordMetrics(request_time, service_time, transaction_time time.Duration, result_count, result_size, error_count,
-	warn_count int, errs errors.Errors, stmt string, prepared, cancelled bool, index_scans, primary_scans,
-	index_scans_gsi, primary_scans_gsi, index_scans_fts, primary_scans_fts, index_scans_seq, primary_scans_seq,
-	fts_searches, index_scans_cvi, index_scans_hvi, fts_searches_svi, vector_distance, approx_vector_distance int,
+func RecordMetrics(request_time, service_time, transaction_time time.Duration,
+	result_count, result_size, error_count, warn_count int,
+	errs errors.Errors, stmt string,
+	prepared, cancelled bool,
+	natural bool, naturaloutput string,
+	index_scans, primary_scans, index_scans_gsi, primary_scans_gsi, index_scans_fts,
+	primary_scans_fts, index_scans_seq, primary_scans_seq, fts_searches, index_scans_cvi,
+	index_scans_hvi, fts_searches_svi, vector_distance, approx_vector_distance int,
 	scanConsistency string, used_memory uint64) {
 
 	if acctstore == nil {
@@ -570,6 +589,13 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration, r
 		counters[PREPARED].Inc(1)
 	}
 
+	if natural {
+		counters[REQUESTS_NATURAL_TOTAL].Inc(1)
+		if nt := naturalRequestType(naturaloutput); error_count == 0 && nt != UNKNOWN {
+			counters[nt].Inc(1)
+		}
+	}
+
 	// Determine slow metrics based on request duration
 	slowMetrics := slowMetricsMap[_DURATION_0MS]
 
@@ -632,6 +658,19 @@ func requestType(stmt string) CounterId {
 		return DELETES
 	case "START_TRANSACTION":
 		return TRANSACTIONS
+	}
+	return UNKNOWN
+}
+
+func naturalRequestType(naturaloutput string) CounterId {
+
+	switch strings.ToUpper(naturaloutput) {
+	case "SQL":
+		return REQUESTS_NATURAL_SQL
+	case "JSUDF":
+		return REQUESTS_NATURAL_JSUDF
+	case "FTSSQL":
+		return REQUESTS_NATURAL_FTSSQL
 	}
 	return UNKNOWN
 }
