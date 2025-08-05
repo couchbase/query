@@ -215,6 +215,11 @@ func (this *IndexScan3) SetEarlyOrderExprs(earlyOrderExprs expression.Expression
 	this.earlyOrderExprs = earlyOrderExprs
 }
 
+func (this *IndexScan3) UnsetEarlyOrder() {
+	this.flags &^= (ISCAN_EARLY_ORDER | ISCAN_EARLY_LIMIT | ISCAN_EARLY_OFFSET)
+	this.earlyOrderExprs = nil
+}
+
 func anyRenameExpressions(arrayKey *expression.All, spans Spans2) (err error) {
 	if arrayKey == nil {
 		return nil

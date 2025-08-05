@@ -249,6 +249,10 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		scan := this.CreateFTSSearch(index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace)
 		if entry == orderEntry {
+			// if a vector index provides order, use it (no intersect scan)
+			if entry.HasFlag(IE_SEARCH_KNN) {
+				return scan, entry.maxKeys, nil
+			}
 			scans[0] = scan
 		} else {
 			scans = append(scans, scan)
@@ -272,6 +276,10 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		this.collectIndexKeyspaceNames(baseKeyspace.Keyspace())
 		scan := this.CreateFTSSearch(entry.index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace)
 		if entry == orderEntry {
+			// if a vector index provides order, use it (no intersect scan)
+			if entry.HasFlag(IE_SEARCH_KNN) {
+				return scan, entry.maxKeys, nil
+			}
 			scans[0] = scan
 		} else {
 			scans = append(scans, scan)
@@ -282,12 +290,33 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		}
 	}
 
+	// single scan
 	if len(scans) == 1 {
 		this.orderScan = scans[0]
 		return scans[0], sargLength, nil
 	} else if scans[0] == nil && len(scans) == 2 {
 		return scans[1], sargLength, nil
-	} else if scans[0] == nil {
+	}
+
+	// intersect scan
+
+	if len(flex)+len(searchSargables) > 0 {
+		// need to unset early order for intersect scan
+		// only needed when FTS index is involved; for intersect scan with GSI indexes only
+		// this was already done earlier
+		found := false
+		for _, sc := range scans {
+			if iscan, ok := sc.(*plan.IndexScan3); ok && iscan.HasEarlyOrder() {
+				iscan.UnsetEarlyOrder()
+				found = true
+			}
+		}
+		if found {
+			this.resetOrderOffsetLimit()
+		}
+	}
+
+	if scans[0] == nil {
 		cost, cardinality, size, frCost := this.intersectScanCost(node, scans[1:]...)
 		return plan.NewIntersectScan(limit, indexAll, cost, cardinality, size, frCost, scans[1:]...), sargLength, nil
 	} else {
