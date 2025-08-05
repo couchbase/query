@@ -1986,7 +1986,7 @@ func newContext(output *ausOutput) (*execution.Context, errors.Error) {
 		creds, datastore.NOT_SET, &ZeroScanVectorSource{}, output, nil, qServer.MaxIndexAPI(),
 		util.GetN1qlFeatureControl(), "", util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_FLEXINDEX),
 		util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_CBO), server.GetNewOptimizer(), datastore.DEF_KVTIMEOUT,
-		0)
+		0, logging.NONE)
 
 	memQuota := qServer.MemoryQuota()
 	if memQuota > 0 {

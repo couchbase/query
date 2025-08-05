@@ -912,7 +912,8 @@ func (this *Server) setupRequestContext(request Request) bool {
 		maxParallelism, request.ScanCap(), request.PipelineCap(), request.PipelineBatch(),
 		request.NamedArgs(), request.PositionalArgs(), request.Credentials(), request.ScanConsistency(),
 		request.ScanVectorSource(), request.Output(), nil, request.IndexApiVersion(), request.FeatureControls(),
-		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer, request.KvTimeout(), request.Timeout())
+		request.QueryContext(), request.UseFts(), request.UseCBO(), optimizer, request.KvTimeout(), request.Timeout(),
+		request.LogLevel())
 	context.SetAllowlist(this.allowlist)
 	context.SetDurability(request.DurabilityLevel(), request.DurabilityTimeout())
 	context.SetScanConsistency(request.ScanConsistency(), request.OriginalScanConsistency())
@@ -920,7 +921,6 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetTracked(request.Tracked())
 	context.SetTenantCtx(request.TenantCtx())
 	context.SetPreserveProjectionOrder(!request.SortProjection())
-	context.SetLogLevel(request.LogLevel())
 	context.SetDurationStyle(request.DurationStyle())
 	context.SetUserAgent(request.UserAgent())
 	context.SetUsers(datastore.CredsString(request.Credentials()))

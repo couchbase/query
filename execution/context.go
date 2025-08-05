@@ -393,7 +393,8 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 	credentials *auth.Credentials, consistency datastore.ScanConsistency,
 	scanVectorSource timestamp.ScanVectorSource, output Output,
 	prepared *plan.Prepared, indexApiVersion int, featureControls uint64, queryContext string,
-	useFts, useCBO bool, optimizer planner.Optimizer, kvTimeout, reqTimeout time.Duration) *Context {
+	useFts, useCBO bool, optimizer planner.Optimizer, kvTimeout, reqTimeout time.Duration,
+	reqLog logging.Level) *Context {
 
 	rv := &Context{
 		requestId:        requestId,
@@ -436,7 +437,7 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		durationStyle:    util.LEGACY,
 		queryMutex:       &sync.RWMutex{},
 	}
-
+	rv.logLevel = reqLog
 	rv.SetupMemTrackingLogging(logging.LogLevel())
 
 	if rv.maxParallelism <= 0 || rv.maxParallelism > util.NumCPU() {
