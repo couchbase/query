@@ -136,6 +136,16 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		indexProjection = this.buildIndexProjection(nil, nil, nil, true, nil)
 	}
 
+	// if SEARCH() function is doing vector search, we cannot evaluate the SEARCH() function
+	// as a filter, it must be evaluated by IndexFtsSearch
+	hasSearchKNN := false
+	for _, entry := range searchSargables {
+		if entry.HasFlag(IE_SEARCH_KNN) {
+			hasSearchKNN = true
+			break
+		}
+	}
+
 	for index, entry := range indexes {
 		// skip primary index with no sargable keys. Able to do PrimaryScan
 		if index.IsPrimary() && entry.minKeys == 0 {
@@ -250,7 +260,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		scan := this.CreateFTSSearch(index, node, sfn, sOrders, nil, nil, hasDeltaKeyspace)
 		if entry == orderEntry {
 			// if a vector index provides order, use it (no intersect scan)
-			if entry.HasFlag(IE_SEARCH_KNN) {
+			if entry.HasFlag(IE_SEARCH_KNN) && !hasSearchKNN {
 				return scan, entry.maxKeys, nil
 			}
 			scans[0] = scan
@@ -265,9 +275,6 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 	for _, entry := range searchSargables {
 		sfn := entry.sargKeys[0].(*search.Search)
-		if entry.HasFlag(IE_SEARCH_KNN) {
-			indexAll = true
-		}
 		sOrders := searchOrders
 		if entry != orderEntry {
 			sOrders = nil
@@ -288,6 +295,10 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		if entry.maxKeys > sargLength {
 			sargLength = entry.maxKeys
 		}
+	}
+
+	if hasSearchKNN {
+		indexAll = true
 	}
 
 	// single scan
