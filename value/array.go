@@ -27,6 +27,12 @@ EMPTY_ARRAY_VALUE is initialized as a slice of interface.
 var EMPTY_ARRAY_VALUE Value = sliceValue([]interface{}{})
 var TRUE_ARRAY_VALUE Value = sliceValue([]interface{}{true})
 
+func newSliceValue(sl []interface{}) sliceValue {
+	rv := sliceValue(sl)
+	rv.Track()
+	return rv
+}
+
 func (this sliceValue) String() string {
 	return marshalString(this)
 }
@@ -323,9 +329,18 @@ func (this sliceValue) SetIndex(index int, val interface{}) error {
 
 	switch val := val.(type) {
 	case missingValue:
+		curVal := this[index]
 		this[index] = nil
+		v, ok := curVal.(Value)
+		if ok {
+			v.Recycle()
+		}
 	default:
 		this[index] = val
+		v, ok := val.(Value)
+		if ok {
+			v.Track()
+		}
 	}
 
 	return nil
@@ -627,9 +642,11 @@ func (this *listValue) Successor() Value {
 }
 
 func (this *listValue) Track() {
+	this.slice.Track()
 }
 
 func (this *listValue) Recycle() {
+	this.slice.Recycle()
 }
 
 func (this *listValue) Tokens(set *Set, options Value) *Set {

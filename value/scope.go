@@ -58,7 +58,7 @@ func newScopeValue(nested bool) *ScopeValue {
 
 func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
 	rv := newScopeValue(false)
-	rv.Value = objectValue(val)
+	rv.Value = newObjectValue(val)
 	rv.parent = parent
 	if parent != nil {
 		parent.Track()
@@ -210,9 +210,14 @@ func (this *ScopeValue) CopyForUpdate() Value {
 func (this *ScopeValue) SetField(field string, val interface{}) error {
 	err := this.Value.SetField(field, val)
 	if err == nil {
-		v, ok := val.(Value)
-		if ok {
-			v.Track()
+		switch this.Value.(type) {
+		case objectValue:
+			// Track() already done, no-op
+		default:
+			v, ok := val.(Value)
+			if ok {
+				v.Track()
+			}
 		}
 	}
 	return err
