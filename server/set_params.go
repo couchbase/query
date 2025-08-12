@@ -362,17 +362,40 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 	return err
 }
 
-func compareMaps(m1 map[string]interface{}, m2 map[string]interface{}) bool {
-	if len(m1) != len(m2) {
-		return false
-	}
-	for k, v := range m1 {
-		v2, ok := m2[k]
-		if !ok || v != v2 {
-			return false
+func compare(a, b interface{}) bool {
+	switch av := a.(type) {
+	case map[string]interface{}:
+		if bv, ok := b.(map[string]interface{}); ok {
+			if len(av) != len(bv) {
+				return false
+			}
+			for k, v := range av {
+				bvv, ok := bv[k]
+				if !ok || !compare(v, bvv) {
+					return false
+				}
+			}
+			return true
 		}
+		return false
+	case []interface{}:
+		if bv, ok := b.([]interface{}); ok {
+			if len(av) != len(bv) {
+				return false
+			}
+			for i := 0; i < len(av); i++ {
+				if !compare(av[i], bv[i]) {
+					return false
+				}
+			}
+			return true
+		}
+		return false
+	case interface{ Equals(interface{}) bool }:
+		return av.Equals(b)
+	default:
+		return a == b
 	}
-	return true
 }
 
 func reportChangedValues(prev map[string]interface{}, current map[string]interface{}) {
@@ -384,7 +407,7 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 			switch vt := v.(type) {
 			case map[string]interface{}:
 				pt := p.(map[string]interface{})
-				same = compareMaps(vt, pt)
+				same = compare(vt, pt)
 			case []interface{}:
 				pt := p.([]interface{})
 				if len(vt) == len(pt) {
@@ -394,7 +417,7 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 							switch vtt := vt[i].(type) {
 							case map[string]interface{}:
 								ptt := pt[i].(map[string]interface{})
-								same = compareMaps(vtt, ptt)
+								same = compare(vtt, ptt)
 							default:
 								same = vt[i] == pt[i]
 							}
