@@ -149,7 +149,7 @@
 	"n1ql_node_memory": {
 		"type": "gauge",
 		"added": "7.6.0",
-		"help": "The total size of in use memory in the query node.",
+		"help": "The total size of document memory in use, allocated from the node-wide document memory quota. This quota is defined only when node-quota and node-quota-val-percent settings are set.",
 		"unit": "bytes"
 	},
 	"n1ql_prepared": {
@@ -272,7 +272,7 @@
 	"n1ql_tenant_memory": {
 		"type": "gauge",
 		"added": "7.6.0",
-		"help": "The total size of in use tenant memory.",
+		"help": "The total size of document memory in use, allocated from the tenant-wide document memory quota.",
 		"notes": "This is a metric specific to serverless.",
 		"labels": [
 			"bucket"
