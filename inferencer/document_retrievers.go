@@ -451,6 +451,10 @@ func MakeUnifiedDocumentRetriever(name string, context datastore.QueryContext, k
 					for _, idx := range ilist {
 						if state, _, err := idx.State(); err == nil && state == datastore.ONLINE && !idx.IsPrimary() {
 							if i3, ok := idx.(datastore.Index3); ok {
+								// Skip bhive index which not allowed to scan whole index
+								if i6, ok6 := idx.(datastore.Index6); ok6 && i6.IsBhive() {
+									continue secondary_indexes
+								}
 								if udr.isFlagOff(ALLOW_ARRAY_INDEXES) {
 									keys := i3.RangeKey()
 									for _, key := range keys {
