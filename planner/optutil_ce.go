@@ -57,6 +57,11 @@ func optCheckRangeExprs(baseKeyspaces map[string]*base.BaseKeyspace, advisorVali
 	// no-op
 }
 
+func optCheckUnnestRangeExprs(primKeyspace, unnestKeyspace *base.BaseKeyspace, unnestExpr expression.Expression,
+	advisorValidate bool, context *PrepareContext) {
+	// no-op
+}
+
 func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, context *PrepareContext) (
 	float64, float64, int64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL

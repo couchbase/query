@@ -144,11 +144,13 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 				keyspaceNames[primKeyspace.Name()] = primKeyspace.Keyspace()
 				for alias, _ := range primKeyspace.GetUnnests() {
 					unnestKeyspace, _ := this.baseKeyspaces[alias]
+					var unnestExpr expression.Expression
 					for _, un := range unnests {
 						if un.Alias() == alias {
+							unnestExpr = un.Expression()
 							for _, fl := range unnestKeyspace.Filters() {
 								if !fl.IsSelecDone() {
-									sel := getUnnestPredSelec(fl.FltrExpr(), alias, un.Expression(), keyspaceNames,
+									sel := getUnnestPredSelec(fl.FltrExpr(), alias, unnestExpr, keyspaceNames,
 										this.advisorValidate(), this.context)
 									fl.SetSelec(sel)
 									fl.SetSelecDone()
@@ -156,6 +158,8 @@ func (this *builder) visitFrom(node *algebra.Subselect, group *algebra.Group,
 							}
 						}
 					}
+					optCheckUnnestRangeExprs(primKeyspace, unnestKeyspace, unnestExpr,
+						this.advisorValidate(), this.context)
 				}
 			}
 		}
