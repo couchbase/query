@@ -1,0 +1,30 @@
+[
+    {
+        "testcase": "NestedLoop join on empty expr with RIGHT JOIN and USE NL hint. Explain",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' END"
+        },
+        "statements":"SELECT l.c11, l.c12, r.c22 FROM shellTest l JOIN shellTest r USE KEYS [\"test21_ansijoin\", \"test22_ansijoin\"] ON r.type = \"right\" AND l.c11 = r.c21 WHERE l.type = \"left\" AND l.c11 > 0 ORDER BY l.c11",
+        "ordered": true,
+        "results": [
+        {
+            "c11": 1,
+            "c12": 10,
+            "c22": 10
+        },
+        {
+            "c11": 2,
+            "c12": 20,
+            "c22": 20
+        }
+    ]
+    }
+]
+
