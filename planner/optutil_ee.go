@@ -97,8 +97,8 @@ func indexScanCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressi
 					OPT_COST_NOT_AVAIL, err
 			}
 		}
-		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, spans.vecExpr,
-			alias, includeSel, limit, offset, advisorValidate, context)
+		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, spans.vecExpr, alias, includeSel,
+			limit, offset, entry.HasFlag(IE_VECTOR_KEY_SARGABLE), advisorValidate, context)
 	case *IntersectSpans:
 		return intersectSpansCost(entry, sargKeys, sargIncludes, requestId, spans, includeSpans,
 			alias, keyspace, limit, offset, advisorValidate, context)
