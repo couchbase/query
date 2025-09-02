@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Query Functions REST API
-  version: '7.6'
+  version: '8.0'
   description: |-
     The Query Functions REST API is a secondary API provided by the Query service.
     This API enables you to manage the JavaScript libraries and objects that are used to create SQL++ user-defined functions.
@@ -188,7 +188,7 @@ components:
     description: |-
       For scoped libraries only.
       The bucket in which the library is stored.
-    
+
   QueryScope:
     name: scope
     schema:

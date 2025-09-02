@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Query Settings REST API
-  version: '7.6'
+  version: '8.0'
   description: |-
     The Query Settings REST API is provided by the Query service.
     This API enables you to view or specify cluster-level Query settings.
@@ -135,7 +135,7 @@ paths:
               schema:
                 type: object
 
-# Absolute links begin with /server/7.6 -- this must be replaced for every branch.
+# Absolute links begin with /server/8.0 -- this must be replaced for every branch.
 # Relative links point to a location relative to the REST API reference page by default.
 
 # The output of this spec is used in more than one location.
@@ -208,7 +208,7 @@ components:
           * `m` (minutes)
           * `h` (hours)
 
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [node-level][cleanupwindow] `cleanupwindow` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -232,7 +232,7 @@ components:
 
           Refer to [Configure the Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [node-level][completed-limit] `completed-limit` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -257,7 +257,7 @@ components:
 
           Refer to [Configure the Completed Requests][sys-completed-config] for more information.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [node-level][completed-max-plan-size] `completed-max-plan-size` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -282,7 +282,7 @@ components:
 
           Refer to [Configure the Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [node-level][completed-threshold] `completed-threshold` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -349,7 +349,7 @@ components:
 
           Refer to [Max Parallelism][max-parallelism] for more information.
 
-          [max-parallelism]: /server/7.6/n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
+          [max-parallelism]: ../n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
         x-desc-more: |-
           The [node-level][max-parallelism-srv] `max-parallelism` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -463,7 +463,7 @@ components:
         description: |-
           Specifies the total number of [active transaction records][additional-storage-use] for all Query nodes in the cluster.
 
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [node-level][numatrs-srv] `numatrs` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -661,7 +661,7 @@ components:
         x-has-example: true
         x-desc-name: queryTmpSpaceDir
         description: |-
-          The path to which the indexer writes temporary backfill files, to store any transient data during query processing.
+          The path to which the Index Service writes temporary backfill files, and the Query Service writes spill files, to store any transient data during query processing.
 
           The specified path must already exist.
           Only absolute paths are allowed.
@@ -676,7 +676,8 @@ components:
         x-has-example: true
         x-desc-name: queryTmpSpaceSize
         description: |-
-          The maximum size of temporary backfill files (MB).
+          In MiB, the maximum size of temporary backfill files for each indexer, and the maximum size of temporary files for spilled sorting and other operations.
+          In a cluster with both secondary indexing and full text search, the limit for disk space use is three times this setting.
 
           Setting the size to `0` disables backfill.
           Setting the size to `-1` means the size is unlimited.
