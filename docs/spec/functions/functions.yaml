@@ -188,7 +188,7 @@ components:
     description: |-
       For scoped libraries only.
       The bucket in which the library is stored.
-    
+
   QueryScope:
     name: scope
     schema:

@@ -232,7 +232,7 @@ components:
 
           Refer to [Configure the Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [node-level][completed-limit] `completed-limit` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -257,7 +257,7 @@ components:
 
           Refer to [Configure the Completed Requests][sys-completed-config] for more information.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [node-level][completed-max-plan-size] `completed-max-plan-size` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -282,7 +282,7 @@ components:
 
           Refer to [Configure the Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [node-level][completed-threshold] `completed-threshold` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -349,7 +349,7 @@ components:
 
           Refer to [Max Parallelism][max-parallelism] for more information.
 
-          [max-parallelism]: /server/7.6/n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
+          [max-parallelism]: ../n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
         x-desc-more: |-
           The [node-level][max-parallelism-srv] `max-parallelism` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.

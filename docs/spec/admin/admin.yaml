@@ -1331,10 +1331,10 @@ components:
         x-desc-name: auto-prepare
         description: |-
           Specifies whether the query engine should create a prepared statement every time a SQL++ request is submitted, whether the PREPARE statement is included or not.
-          
+
           Refer to [Auto-Prepare][auto-prepare] for more information.
 
-          [auto-prepare]: /server/7.6/n1ql/n1ql-language-reference/prepare.html#auto-prepare
+          [auto-prepare]: ../n1ql/n1ql-language-reference/prepare.html#auto-prepare
       cleanupclientattempts:
         type: boolean
         default: true
@@ -1410,7 +1410,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         properties:
           aborted:
             type: boolean
@@ -1460,7 +1460,7 @@ components:
 
               Refer to [Configure Completed Requests][sys-completed-config] for more information.
 
-              [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+              [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
           threshold:
             type: integer
             format: int32
@@ -1473,7 +1473,7 @@ components:
               If specified, all completed queries lasting longer than this threshold are logged.
 
               This is another way of specifying the `completed-threshold` setting.
-          user: 
+          user:
             type: string
             default: ""
             example: "marco"
@@ -1482,14 +1482,14 @@ components:
             description: |-
               A user name, as given in the request credentials.
               If specified, all completed queries with this user name are logged.
-          errors: 
+          errors:
             type: integer
             format: int32
             example: 5
             x-has-example: true
             description: |-
               The number of errors.
-              If specified, all completed queries that return at least this many errors are logged. 
+              If specified, all completed queries that return at least this many errors are logged.
               Queries with fewer errors are not logged.
       completed-limit:
         type: integer
@@ -1507,7 +1507,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [cluster-level][queryCompletedLimit] `queryCompletedLimit` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1532,7 +1532,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [cluster-level][queryCompletedMaxPlanSize] `queryCompletedMaxPlanSize` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1558,7 +1558,7 @@ components:
 
           Refer to [Stream Completed Requests][sys-history] for more information and examples.
 
-          [sys-history]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
+          [sys-history]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
       completed-threshold:
         type: integer
         format: int32
@@ -1576,7 +1576,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [cluster-level][queryCompletedThreshold] `queryCompletedThreshold` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1722,7 +1722,7 @@ components:
           In Enterprise Edition, there is no limit to the number of allowed cores.)
           Refer to [Max Parallelism][max-parallelism] for more information.
 
-          [max-parallelism]: /server/7.6/n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
+          [max-parallelism]: ../n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
         x-desc-more: |-
           The [cluster-level][queryMaxParallelism] `queryMaxParallelism` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -2007,7 +2007,7 @@ components:
 
           Refer to [Monitoring and Profiling Details][monitor-profile-details] for more information and examples.
 
-          [monitor-profile-details]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#monitor-profile-details
+          [monitor-profile-details]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#monitor-profile-details
         x-desc-more: |-
           The [request-level][profile_req] `profile` parameter specifies this property per request.
           If a request does not include this parameter, the node-level `profile` setting will be used.

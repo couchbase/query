@@ -240,7 +240,7 @@ components:
 
           Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
 
-          [section_srh_tlm_n1b]: /server/7.6/n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
+          [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
         x-has-example: true
         example:
           - LAX
@@ -275,7 +275,7 @@ components:
 
           Refer to [Auto-Execute][auto-execute] for more information.
 
-          [auto-execute]: /server/7.6/n1ql/n1ql-language-reference/prepare.html#auto-execute
+          [auto-execute]: ../n1ql/n1ql-language-reference/prepare.html#auto-execute
         x-has-default: true
         x-has-example: true
         default: false
@@ -566,7 +566,7 @@ components:
 
           If both `prepared` and `statement` are present and non-empty, an error is returned.
 
-          [execute]: /server/7.6/n1ql/n1ql-language-reference/execute.html
+          [execute]: ../n1ql/n1ql-language-reference/execute.html
         x-has-example: true
         example: "[127.0.0.1:8091]pricy_hotel"
       preserve_expiry:
@@ -719,7 +719,7 @@ components:
           If the request contains a `BEGIN TRANSACTION` statement, or a DML statement with the `tximplicit` parameter set to `true`, then this parameter sets the transactional scan consistency.
           Refer to [Transactional Scan Consistency][transactional-scan-consistency] for details.
 
-          [transactional-scan-consistency]: /server/7.6/n1ql/n1ql-manage/query-settings.html#transactional-scan-consistency
+          [transactional-scan-consistency]: ../n1ql/n1ql-manage/query-settings.html#transactional-scan-consistency
         enum: ["not_bounded", "at_plus", "request_plus", "statement_plus"]
         x-has-default: true
         x-has-example: true
@@ -992,7 +992,7 @@ components:
 
           Refer to [Flex Indexes][flex-indexes] for more information.
 
-          [flex-indexes]: /server/7.6/n1ql/n1ql-language-reference/flex-indexes.html
+          [flex-indexes]: ../n1ql/n1ql-language-reference/flex-indexes.html
         x-has-default: true
         x-has-example: true
         default: false
@@ -1053,7 +1053,7 @@ components:
 
         Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
 
-        [section_srh_tlm_n1b]: /server/7.6/n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
+        [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
       example: LAX
       x-has-example: true
   Credentials:
