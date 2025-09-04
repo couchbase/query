@@ -243,6 +243,13 @@ func (this boolValue) SliceTail(start int) (Value, bool) {
 }
 
 /*
+Returns NULL_VALUE
+*/
+func (this boolValue) Append(elems []interface{}) (Value, bool) {
+	return NULL_VALUE, false
+}
+
+/*
 Returns the input buffer as is.
 */
 func (this boolValue) Descendants(buffer []interface{}) []interface{} {

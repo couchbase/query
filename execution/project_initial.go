@@ -184,7 +184,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 	pv := value.NewAnnotatedValue(sv)
 	pv.ShareAnnotations(item)
 
-	p := value.NewValue(make(map[string]interface{}, n+(this.plan.StarTermCount()*7)))
+	p := value.NewTrackedValue(make(map[string]interface{}, n+(this.plan.StarTermCount()*7)))
 
 	var order map[string]int
 	nextOrder := 0
@@ -221,36 +221,32 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			}
 			// check if we must copy to support the EXCLUDE clause; check if term is referenced in an exclusion (first element)
 			// as alias is constant we can cache the result
-			switch {
-			case term.MustCopy() == value.NONE && len(exclusions) > 0:
-				found := false
-				for i := range exclusions {
-					if exclusions[i][0][0] == 'i' && strings.ToLower(exclusions[i][0][1:]) == strings.ToLower(alias) {
-						found = true
-						break
-					} else if exclusions[i][0][1:] == alias {
-						found = true
-						break
+			if term.MustCopy() == value.NONE {
+				if len(exclusions) > 0 {
+					found := false
+					for i := range exclusions {
+						if exclusions[i][0][0] == 'i' && strings.ToLower(exclusions[i][0][1:]) == strings.ToLower(alias) {
+							found = true
+							break
+						} else if exclusions[i][0][1:] == alias {
+							found = true
+							break
+						}
 					}
-				}
-				if found {
-					v = v.CopyForUpdate()
-					if this.exclusions != nil {
-						term.SetMustCopy(value.TRUE)
-					}
-				} else {
-					v.Track() // track the reference when we're not copying
-					if this.exclusions != nil {
+					if found {
+						v = v.CopyForUpdate()
+						if this.exclusions != nil {
+							term.SetMustCopy(value.TRUE)
+						}
+					} else if this.exclusions != nil {
 						term.SetMustCopy(value.FALSE)
 					}
 				}
-			case term.MustCopy() == value.TRUE:
+			} else if term.MustCopy() == value.TRUE {
 				v = v.CopyForUpdate()
-			default:
-				v.Track() // track the reference when we're not copying
 			}
 
-			p.SetField(alias, v) // p doesn't handle tracking
+			p.SetField(alias, v)
 
 			// Explicit aliases override data
 			if term.Result().As() != "" {

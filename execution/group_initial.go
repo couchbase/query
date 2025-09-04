@@ -117,17 +117,11 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		}
 
 		if v.Equals(pv) != value.TRUE_VALUE {
-			// MB-65246 ARRAY_AGG() Track only do last element, don't recycle previous once
+			// MB-65246, MB-68296, for ARRAY_AGG() Track happens in the aggregate itself
 			if array_agg, ok := agg.(*algebra.ArrayAgg); ok {
 				if array_agg.Distinct() {
 					recycle = false
 					releaseSize = 0
-				} else if array, ok := v.Actual().([]interface{}); ok {
-					if l := len(array) - 1; l > 0 {
-						if v1, ok := v.Index(l); ok {
-							v1.Track()
-						}
-					}
 				}
 			} else {
 				// maintain a reference count for each aggregate as appropriate
@@ -145,6 +139,7 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 
 	// Update the Group Key's entry in the Map with the Group As field in the item
 	if this.plan.GroupAs() != "" {
+		groupAsAlias := this.plan.GroupAs()
 		// Create the entry for the Group As array field
 		groupAs := make(map[string]interface{}, len(this.plan.GroupAsFields()))
 		itemAct := item.Actual().(map[string]interface{})
@@ -158,18 +153,20 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		}
 
 		// Add the Group As field to the groupKey's entry in the map
-		groupAsField, ok := gv.Field(this.plan.GroupAs())
-
-		var act []interface{}
+		groupAsField, ok := gv.Field(groupAsAlias)
 		if !ok {
-			act = make([]interface{}, 0, 1)
-		} else {
-			act = groupAsField.Actual().([]interface{})
+			groupAsField = value.NewTrackedValue(make([]interface{}, 0, len(groupAs)))
 		}
 
-		groupAsVal := value.NewValue(groupAs)
-		act = append(act, groupAsVal)
-		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
+		groupAsVal := value.NewTrackedValue(groupAs)
+		groupAsField, ok = groupAsField.Append([]interface{}{groupAsVal})
+		if !ok {
+			context.Fatal(errors.NewGroupUpdateError(nil, fmt.Sprintf("Group As append failed for alias %s", groupAsAlias)))
+			item.Recycle()
+			return false
+		}
+
+		gv.SetField(groupAsAlias, groupAsField)
 		if releaseSize > 0 {
 			// don't release the quota associated with the item since it has been included in the payload
 			if releaseSize > groupAsVal.Size() {

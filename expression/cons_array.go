@@ -57,7 +57,7 @@ func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.V
 			}
 			aa[i] = arg
 		}
-		return value.NewValue(aa), nil
+		return value.NewTrackedValue(aa), nil
 	}
 }
 

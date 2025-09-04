@@ -171,6 +171,10 @@ func (this binaryValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
+func (this binaryValue) Append(elems []interface{}) (Value, bool) {
+	return NULL_VALUE, false
+}
+
 func (this binaryValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }

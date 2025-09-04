@@ -204,6 +204,13 @@ func (this missingValue) SliceTail(start int) (Value, bool) {
 }
 
 /*
+Returns MISSING_VALUE.
+*/
+func (this missingValue) Append(elems []interface{}) (Value, bool) {
+	return MISSING_VALUE, false
+}
+
+/*
 Returns the input buffer as is.
 */
 func (this missingValue) Descendants(buffer []interface{}) []interface{} {
