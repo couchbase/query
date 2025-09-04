@@ -1057,8 +1057,8 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 		}
 	}
 	if len(rv) > 0 {
-		vbg.ch <- rv
 		atomic.AddUint64(&vbg.b.readCount, uint64(len(rv)))
+		vbg.ch <- rv
 	}
 	return delay
 }

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Query Admin REST API
-  version: '7.6'
+  version: '8.0'
   description: |-
     The Query Admin REST API is a secondary API provided by the Query service.
     This API enables you to retrieve statistics about the clusters and nodes running the Query service; view or specify node-level settings; and view or delete requests.
@@ -46,7 +46,7 @@ tags:
   - name: default
     description: Other operations.
 
-# Absolute links begin with /server/7.6 -- this must be replaced for every branch.
+# Absolute links begin with /server/8.0 -- this must be replaced for every branch.
 # Relative links point to a location relative to the REST API reference page by default.
 
 # The output of this spec is used in more than one location.
@@ -667,6 +667,15 @@ components:
           [client_context_id]: ../n1ql-rest-query/index.html#client_context_id
         x-desc-refs: |-
           [client_context_id]: #client_context_id
+      cpuTime:
+        type: string
+        format: duration
+        description: |-
+          The total sum of [execTime][exec_time] across all operators.
+
+          [exec_time]: ../n1ql-rest-query/index.html#exec_time
+        x-has-example: true
+        example: "90.734075ms"
       elapsedTime:
         type: string
         format: duration
@@ -676,6 +685,15 @@ components:
       errorCount:
         type: integer
         description: Total number of errors encountered while executing the query.
+      ioTime:
+        type: string
+        format: duration
+        description: |-
+          The total sum of [servTime][serv_time] across all operators.
+
+          [serv_time]: ../n1ql-rest-query/index.html#serv_time
+        x-has-example: true
+        example: "752.858519ms"
       memoryQuota:
         type: integer
         description: |-
@@ -754,6 +772,17 @@ components:
         type: string
         format: duration
         description: Total amount of calendar time taken to complete the query.
+      sessionMemory:
+        type: integer
+        format: bytes
+        description: |-
+          The memory session size for the request, in bytes.
+
+          Each request has a dedicated memory session.
+          When a query requires a document or value, memory is allocated from this session based on the size of the document or value.
+          Once the document or value is processed, the allocated memory is returned back to the session, enabling it to be reused by the request.
+
+          This metric is available only when `node-quota` and `node-quota-val-percent` are configured for the node.
       state:
         type: string
         description: |-
@@ -780,6 +809,28 @@ components:
       users:
         type: string
         description: Username with whose privileges the query is run.
+      waitTime:
+        type: string
+        format: duration
+        description: |-
+          The total sum of [kernTime][kern_time] across all operators.
+
+          [kern_time]: ../n1ql-rest-query/index.html#kern_time
+        x-has-example: true
+        example: "1.201307s"
+      ~analysis:
+          type: array
+          items:
+            type: string
+          description: |-
+            An array of text phrases that provide a basic analysis of the request execution.
+            These phrases highlight notable aspects of the execution, such as high document counts during primary scans or warnings related to memory and resource usages.
+          x-has-example: true
+          example:
+              [
+                "High IO time",
+                "High primary scan document count"
+              ]
 
   Statements:
     type: object
@@ -1314,7 +1365,7 @@ components:
           The value must be a string in the form `"bucket.scope.collection"` or `"namespace:bucket.scope.collection"`.
           If any part of the path contains a special character, that part of the path must be delimited in backticks &grave;&grave;.
 
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [request-level][atrcollection_req] `atrcollection` parameter specifies this property per request.
           If a request does not include this parameter, the node-level `atrcollection` setting will be used.
@@ -1331,10 +1382,10 @@ components:
         x-desc-name: auto-prepare
         description: |-
           Specifies whether the query engine should create a prepared statement every time a SQL++ request is submitted, whether the PREPARE statement is included or not.
-          
+
           Refer to [Auto-Prepare][auto-prepare] for more information.
 
-          [auto-prepare]: /server/7.6/n1ql/n1ql-language-reference/prepare.html#auto-prepare
+          [auto-prepare]: ../n1ql/n1ql-language-reference/prepare.html#auto-prepare
       cleanupclientattempts:
         type: boolean
         default: true
@@ -1390,7 +1441,7 @@ components:
           * `m` (minutes)
           * `h` (hours)
 
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [cluster-level][queryCleanupWindow] `queryCleanupWindow` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1410,7 +1461,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         properties:
           aborted:
             type: boolean
@@ -1460,7 +1511,7 @@ components:
 
               Refer to [Configure Completed Requests][sys-completed-config] for more information.
 
-              [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+              [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
           threshold:
             type: integer
             format: int32
@@ -1473,7 +1524,7 @@ components:
               If specified, all completed queries lasting longer than this threshold are logged.
 
               This is another way of specifying the `completed-threshold` setting.
-          user: 
+          user:
             type: string
             default: ""
             example: "marco"
@@ -1482,14 +1533,25 @@ components:
             description: |-
               A user name, as given in the request credentials.
               If specified, all completed queries with this user name are logged.
-          errors: 
+          statement:
+            type: string
+            default: ""
+            example: "%FIND USER%"
+            x-has-default: true
+            x-has-example: true
+            description: |-
+              A LIKE search pattern to match against the query text.
+              If specified, all completed queries where the pattern is found are logged.
+          plan:
+            $ref: "#/components/schemas/Logging_Parameters_Plan"
+          errors:
             type: integer
             format: int32
             example: 5
             x-has-example: true
             description: |-
               The number of errors.
-              If specified, all completed queries that return at least this many errors are logged. 
+              If specified, all completed queries that return at least this many errors are logged.
               Queries with fewer errors are not logged.
       completed-limit:
         type: integer
@@ -1507,7 +1569,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [cluster-level][queryCompletedLimit] `queryCompletedLimit` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1532,7 +1594,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [cluster-level][queryCompletedMaxPlanSize] `queryCompletedMaxPlanSize` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1545,7 +1607,6 @@ components:
         format: int32
         default: 0
         x-desc-name: completed-stream-size
-        x-desc-status: Couchbase Server 7.6.4
         description: |-
           A file size in MiB.
           When specified, completed requests are saved to the Couchbase Server `logs` directory.
@@ -1554,11 +1615,9 @@ components:
 
           Specify `0` (the default) to disable completed request streaming.
 
-          Completed request streaming is available in Couchbase Server 7.6.4 and later.
-
           Refer to [Stream Completed Requests][sys-history] for more information and examples.
 
-          [sys-history]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
+          [sys-history]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
       completed-threshold:
         type: integer
         format: int32
@@ -1576,7 +1635,7 @@ components:
 
           Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
 
-          [sys-completed-config]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+          [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
           The [cluster-level][queryCompletedThreshold] `queryCompletedThreshold` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1722,7 +1781,7 @@ components:
           In Enterprise Edition, there is no limit to the number of allowed cores.)
           Refer to [Max Parallelism][max-parallelism] for more information.
 
-          [max-parallelism]: /server/7.6/n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
+          [max-parallelism]: ../n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
         x-desc-more: |-
           The [cluster-level][queryMaxParallelism] `queryMaxParallelism` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1883,7 +1942,7 @@ components:
         description: |-
           Specifies the total number of [active transaction records][additional-storage-use].
 
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [cluster-level][queryNumAtrs] `queryNumAtrs` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -2007,7 +2066,7 @@ components:
 
           Refer to [Monitoring and Profiling Details][monitor-profile-details] for more information and examples.
 
-          [monitor-profile-details]: /server/7.6/n1ql/n1ql-manage/monitoring-n1ql-query.html#monitor-profile-details
+          [monitor-profile-details]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#monitor-profile-details
         x-desc-more: |-
           The [request-level][profile_req] `profile` parameter specifies this property per request.
           If a request does not include this parameter, the node-level `profile` setting will be used.
@@ -2181,6 +2240,44 @@ components:
         x-desc-refs: |-
           [queryUseReplica]: #queryUseReplica
           [use_replica_req]: #use_replica_req
+
+  Logging_Parameters_Plan:
+    title: Plan Qualifier
+    description: |-
+      An object, or an array of objects, containing one or more field:value pairs to match against the query plan.
+      Each pair describes a field in the query plan and the value it must have.
+      All completed queries where the specified field:value pairs are found in the plan are logged.
+    oneOf:
+      - $ref: '#/components/schemas/Logging_Parameters_Plan_Pairs'
+      - type: array
+        title: 'Repeated Field:Value Pairs'
+        description: An array of objects, each containing one or more field:value pairs.
+        example:
+          - index: ix1
+          - index: ix2
+        items:
+          $ref: '#/components/schemas/Logging_Parameters_Plan_Pairs'
+
+  Logging_Parameters_Plan_Pairs:
+    type: object
+    title: 'Field:Value Pairs'
+    default: {}
+    example:
+      index: ix1
+      '#operator': IntersectScan
+    description: An object containing one or more field:value pairs.
+    additionalProperties:
+      x-additionalPropertiesName: field
+      description: |-
+        A field:value pair describing a field in the query plan, and the value that the field must have for the request to be logged.
+        The name of the property is the name of the field in the query plan.
+        The value may be a string, number, array, or any other JSON value.
+
+        Within a single JSON object, if multiple field:value pairs are specified, then all pairs must be matched (using AND).
+        For example, `{"index": "ix1", "#operator": "IntersectScan"}` specifies that if the query plan has an `index` field with the value `"ix1"` AND has an `IntersectScan` operator, then the request should be logged.
+
+        Within an array of JSON objects, each field:value pair must be unique, but fields can be repeated.
+        For example, `[{"index": "ix1"}, {"index": "ix2"}]` specifies that if the query plan has an `index` field with the value `"ix1"` AND another `index` field with the value `"ix2"`, then the request should be logged.
 
   Garbage:
     type: object

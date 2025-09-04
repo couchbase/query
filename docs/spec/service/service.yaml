@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Query Service REST API
-  version: '7.6'
+  version: '8.0'
   description: |-
     The Query Service REST API is provided by the Query service.
     This API enables you to run SQL++ queries and set request-level parameters.
@@ -120,7 +120,7 @@ paths:
         "503":
           $ref: '#/components/responses/ServiceUnavailable'
 
-# Absolute links begin with /server/7.6 -- this must be replaced for every branch.
+# Absolute links begin with /server/8.0 -- this must be replaced for every branch.
 # Relative links point to a location relative to the REST API reference page by default.
 
 # The output of this spec is used in more than one location.
@@ -240,7 +240,7 @@ components:
 
           Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
 
-          [section_srh_tlm_n1b]: /server/7.6/n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
+          [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
         x-has-example: true
         example:
           - LAX
@@ -256,7 +256,7 @@ components:
           The value must be a string in the form `"bucket.scope.collection"` or `"namespace:bucket.scope.collection"`.
           If any part of the path contains a special character, that part of the path must be delimited in backticks &grave;&grave;.
 
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [node-level][atrcollection-srv] `atrcollection` setting specifies the default for this parameter for a single node.
           The request-level parameter overrides the node-level setting.
@@ -275,7 +275,7 @@ components:
 
           Refer to [Auto-Execute][auto-execute] for more information.
 
-          [auto-execute]: /server/7.6/n1ql/n1ql-language-reference/prepare.html#auto-execute
+          [auto-execute]: ../n1ql/n1ql-language-reference/prepare.html#auto-execute
         x-has-default: true
         x-has-example: true
         default: false
@@ -352,7 +352,7 @@ components:
           If not specified, the default durability level is `"majority"`.
           Set the durability level to `"none"` or `""` to specify no durability.
 
-          [durability]: /server/7.6/learn/data/durability.html
+          [durability]: /server/8.0/learn/data/durability.html
         enum:
           - ""
           - none
@@ -367,8 +367,8 @@ components:
         type: string
         x-desc-name: encoded_plan
         description: |-
-          In Couchbase Server 6.5 and later, this parameter is ignored and has no effect.
-          It is included for compatibility with previous versions of Couchbase Server.
+          In clusters running Couchbase Server 6.5 and later, this parameter is ignored and has no effect.
+          It is included for compatibility with previous versions.
       encoding:
         type: string
         x-desc-name: encoding
@@ -490,6 +490,112 @@ components:
           Currently, only the `default` namespace is available.
         x-has-example: true
         example: default
+      natural:
+        type: string
+        x-desc-name: natural
+        x-desc-status: Couchbase Server 8.0
+        description: |-
+          The prompt for a natural language request.
+          The Query Service uses the prompt to generate a SQL++ statement.
+
+          If the generated statement is a SELECT statement, the generated statement is returned and executed automatically.
+
+          If the generated statement is not a SELECT statement, the generated statement is returned, but not executed.
+          In this case, you must verify the statement and execute it in a separate request.
+
+          Natural language requests use the Couchbase Capella iQ service as a backend.
+          You must have a Couchbase Capella account to make a natural language request.
+
+          This parameter is available in clusters running Couchbase Server 8.0 and later.
+
+          To use this parameter, you must also specify the `natural_cred`, `natural_orgid`, and `natural_context` parameters.
+          If you don't specify all four parameters, the Query Service returns an error.
+        x-has-example: true
+        example: Show me count of airlines per country
+      natural_cred:
+        type: string
+        format: password
+        x-desc-name: natural_cred
+        x-desc-status: Couchbase Server 8.0
+        description: |-
+          The Couchbase Capella credentials for a natural language request, in the form `username:password`.
+          Be careful not to expose the credentials in log files or other output.
+
+          Natural language requests use the Couchbase Capella iQ service as a backend.
+          You must have a Couchbase Capella account to make a natural language request.
+
+          This parameter is available in clusters running Couchbase Server 8.0 and later.
+
+          To use this parameter, you must also specify the `natural`, `natural_orgid`, and `natural_context` parameters.
+          If you don't specify all four parameters, the Query Service returns an error.
+        x-has-example: true
+        example: username:password
+      natural_orgid:
+        type: string
+        format: uuid
+        x-desc-name: natural_orgid
+        x-desc-status: Couchbase Server 8.0
+        description: |-
+          The Couchbase Capella organization ID for a natural language request.
+
+          Natural language requests use the Couchbase Capella iQ service as a backend.
+          You must have a Couchbase Capella account to make a natural language request.
+
+          This parameter is available in clusters running Couchbase Server 8.0 and later.
+
+          To use this parameter, you must also specify the `natural`, `natural_cred`, and `natural_context` parameters.
+          If you don't specify all four parameters, the Query Service returns an error.
+      natural_context:
+        type: string
+        x-desc-name: natural_context
+        x-desc-status: Couchbase Server 8.0
+        description: |-
+          A list of paths specifying keyspaces for a natural language request.
+          The Query Service infers the schema of each keyspace, in order to give more precise responses from the natural language request.
+
+          The parameter may contain up to four paths, separated by commas.
+          Spaces are allowed.
+          Each path may be:
+
+          * A full path, in the form `bucket.scope.collection` or `namespace:bucket.scope.collection`.
+
+          * A path prefix, in the form `namespace:bucket` or `bucket`, to specify the default collection in the default scope.
+
+          * A partial path, in the form `collection`.
+            In this case, you must specify the `query_context` parameter to provide the bucket and scope.
+
+          Natural language requests use the Couchbase Capella iQ service as a backend.
+          You must have a Couchbase Capella account to make a natural language request.
+
+          This parameter is available in clusters running Couchbase Server 8.0 and later.
+
+          To use this parameter, you must also specify the `natural`, `natural_cred`, and `natural_orgid` parameters.
+          If you don't specify all four parameters, the Query Service returns an error.
+        x-has-example: true
+        example: travel-sample, travel-sample.inventory.airline, airline
+      natural_output:
+        type: string
+        x-desc-name: natural_output
+        x-desc-status: Couchbase Server 8.0
+        description: |-
+          Specifies the required output for a natural language request.
+
+          * `sql` &mdash;
+            The output is a SQL++ statement.
+
+          * `jsudf` &mdash;
+            The output is a `CREATE FUNCTION` statement which you can use to generate a SQL++ managed JavaScript user-defined function.
+
+          * `ftssql` &mdash;
+            The output is a SQL++ statement which can use a Flex index, if available.
+
+          Natural language requests use the Couchbase Capella iQ service as a backend.
+          You must have a Couchbase Capella account to make a natural language request.
+
+          This parameter is available in clusters running Couchbase Server 8.0 and later.
+        x-has-default: true
+        default: sql
+        enum: ["sql", "jsudf", "ftssql"]
       numatrs:
         type: integer
         format: int32
@@ -498,7 +604,7 @@ components:
           Specifies the total number of [active transaction records][additional-storage-use].
           Must be a positive integer.
 
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [node-level][numatrs-srv] `numatrs` setting specifies the default for this parameter for a single node.
           The request-level parameter overrides the node-level setting.
@@ -559,14 +665,14 @@ components:
         type: string
         x-desc-name: prepared
         description: |-
-          _Required_ if `statement` not provided.
+          _Required_ if `statement` or `natural` not provided.
 
           The name of the prepared SQL++ statement to be executed.
           Refer to [EXECUTE][execute] for examples.
 
           If both `prepared` and `statement` are present and non-empty, an error is returned.
 
-          [execute]: /server/7.6/n1ql/n1ql-language-reference/execute.html
+          [execute]: ../n1ql/n1ql-language-reference/execute.html
         x-has-example: true
         example: "[127.0.0.1:8091]pricy_hotel"
       preserve_expiry:
@@ -719,7 +825,7 @@ components:
           If the request contains a `BEGIN TRANSACTION` statement, or a DML statement with the `tximplicit` parameter set to `true`, then this parameter sets the transactional scan consistency.
           Refer to [Transactional Scan Consistency][transactional-scan-consistency] for details.
 
-          [transactional-scan-consistency]: /server/7.6/n1ql/n1ql-manage/query-settings.html#transactional-scan-consistency
+          [transactional-scan-consistency]: ../n1ql/n1ql-manage/query-settings.html#transactional-scan-consistency
         enum: ["not_bounded", "at_plus", "request_plus", "statement_plus"]
         x-has-default: true
         x-has-example: true
@@ -816,7 +922,7 @@ components:
         type: string
         x-desc-name: statement
         description: |-
-          _Required_ if `prepared` not provided.
+          _Required_ if `prepared` or `natural` not provided.
 
           Any valid SQL++ statement for a POST request, or a read-only SQL++ statement (SELECT, EXPLAIN) for a GET request.
 
@@ -992,7 +1098,7 @@ components:
 
           Refer to [Flex Indexes][flex-indexes] for more information.
 
-          [flex-indexes]: /server/7.6/n1ql/n1ql-language-reference/flex-indexes.html
+          [flex-indexes]: ../n1ql/n1ql-language-reference/flex-indexes.html
         x-has-default: true
         x-has-example: true
         default: false
@@ -1047,13 +1153,18 @@ components:
 
         1. The `$` character or the `@` character.
         2. An identifier that specifies the name of the parameter.
-            This must start with an alpha character, followed by one or more alphanumeric characters.
+            This starts with an optional underscore (`_`), followed by an alpha character, followed by one or more alphanumeric characters, and ends with an optional underscore (`_`).
+
+        If the named parameter contains sensitive information, start and end the name of the parameter (after the initial `$` or `@`) with an underscore (`_`).
+        This masks the parameter value in the active requests catalog, the completed requests catalog, the response `controls` section, the cbq shell file history, and the query logs.
+        When masked, a string parameter value is replaced by asterisks (`*`); other parameter values are replaced by `null`.
+        Parameter masking is available in clusters running Couchbase Server 7.6.8 and later.
 
         The value of the named parameter can be any JSON value.
 
         Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
 
-        [section_srh_tlm_n1b]: /server/7.6/n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
+        [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
       example: LAX
       x-has-example: true
   Credentials:
@@ -1085,6 +1196,13 @@ components:
       clientContextID:
         type: string
         description: The client context ID of the request, if one was supplied &mdash; see `client_context_id` in [Request Parameters](#Request).
+      generated_statement:
+        type: string
+        x-desc-status: Couchbase Server 8.0
+        description: |-
+          The generated statement, if the request was a natural language prompt.
+        x-has-example: true
+        example: SELECT country, COUNT(*) AS `airline_count` FROM `travel-sample`.`inventory`.`airline` AS `a` GROUP BY country
       signature:
         type: object
         description: |-
@@ -1188,9 +1306,11 @@ components:
     properties:
       elapsedTime:
         type: string
+        format: duration
         description: The total time taken for the request, that is the time from when the request was received until the results were returned.
       executionTime:
         type: string
+        format: duration
         description: The time taken for the execution of the request, that is the time from when query execution started until the results were returned.
       resultCount:
         type: integer
@@ -1200,6 +1320,12 @@ components:
         type: integer
         format: unsigned
         description: The total number of bytes in the results.
+      naturalLanguageProcessingTime:
+        type: string
+        format: duration
+        description: |-
+          The total time spent processing a natural language request.
+          The cumulation of authentication, collecting schema, and time waiting for the response from the LLM, or wait time for the natural language request to be serviced.
       mutationCount:
         type: integer
         description: The number of mutations that were made during the request.
@@ -1226,6 +1352,17 @@ components:
         type: integer
         format: unsigned
         description: The number of warnings that occurred during the request.
+      sessionMemory:
+        type: integer
+        format: bytes
+        description: |-
+          The memory session size for the request, in bytes.
+
+          Each request has a dedicated memory session.
+          When a query requires a document or value, memory is allocated from this session based on the size of the document or value.
+          Once the document or value is processed, the allocated memory is returned back to the session, enabling it to be reused by the request.
+
+          This metric is available only when `node-quota` and `node-quota-val-percent` are configured for the node.
 
   Controls:
     type: object
@@ -1354,18 +1491,21 @@ components:
               execTime:
                 type: string
                 format: duration
+                x-desc-name: exec_time
                 description: Time spent executing the operator code inside SQL++ query engine.
                 x-has-example: true
                 example: "128.434µs"
               kernTime:
                 type: string
                 format: duration
+                x-desc-name: kern_time
                 description: Time spent waiting to be scheduled for CPU time.
                 x-has-example: true
                 example: "15.027879ms"
               servTime:
                 type: string
                 format: duration
+                x-desc-name: serv_time
                 description: |-
                   Time spent waiting for another service, such as index or data.
 
@@ -1377,6 +1517,40 @@ components:
           '~child':
             type: object
             description: Further nested operators, each with their own execution timings.
+      ioTime:
+        type: string
+        format: duration
+        description: |
+          The total sum of [servTime](#serv_time) across all operators.
+        x-has-example: true
+        example: "752.858519ms"
+      waitTime:
+        type: string
+        format: duration
+        description: |
+          The total sum of [kernTime](#kern_time) across all operators.
+        x-has-example: true
+        example: "1.201307s"
+      cpuTime:
+        type: string
+        format: duration
+        description: |
+          The total sum of [execTime](#exec_time) across all operators.
+        x-has-example: true
+        example: "90.734075ms"
+      ~analysis:
+          type: array
+          items:
+            type: string
+          description: |
+            An array of text phrases that provide a basic analysis of the request execution.
+            These phrases highlight notable aspects of the execution, such as high document counts during primary scans or warnings related to memory and resource usages.
+          x-has-example: true
+          example:
+              [
+                "High IO time",
+                "High primary scan document count"
+              ]
 
  securitySchemes:
   Header:
