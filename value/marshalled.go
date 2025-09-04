@@ -131,6 +131,10 @@ func (this *marshalledValue) SliceTail(start int) (Value, bool) {
 	return this.unwrap().SliceTail(start)
 }
 
+func (this *marshalledValue) Append(elems []interface{}) (Value, bool) {
+	return this.unwrap().Append(elems)
+}
+
 func (this *marshalledValue) Descendants(buffer []interface{}) []interface{} {
 	return this.unwrap().Descendants(buffer)
 }

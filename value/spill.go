@@ -28,6 +28,8 @@ const (
 	_SPILL_TYPE_VALUE_SCOPE
 	_SPILL_TYPE_VALUE_PARSED
 	_SPILL_TYPE_VALUE // 0x87
+	_SPILL_TYPE_VALUE_TRACKED_SLICE
+	_SPILL_TYPE_VALUE_TRACKED_OBJECT
 	_SPILL_TYPE_SLICE_ANNOTATED
 	_SPILL_TYPE_SLICE_VALUE
 	_SPILL_TYPE_SLICE_VALUES
@@ -35,7 +37,7 @@ const (
 	_SPILL_TYPE_MAP_VALUE
 	_SPILL_TYPE_MAP_VALUE_INT
 
-	_SPILL_TYPE_MAP // 0x8e
+	_SPILL_TYPE_MAP // 0x90
 	_SPILL_TYPE_SLICE
 	_SPILL_TYPE_NIL
 	_SPILL_TYPE_BOOL
@@ -47,7 +49,7 @@ const (
 	_SPILL_TYPE_UINT64
 	_SPILL_TYPE_FLOAT32
 	_SPILL_TYPE_FLOAT64
-	_SPILL_TYPE_STRING // 0x9a
+	_SPILL_TYPE_STRING // 0x9c
 	_SPILL_TYPE_JSON
 	_SPILL_TYPE_INT16_MAP
 	_SPILL_TYPE_INT16
@@ -401,6 +403,14 @@ func readSpillValue(trackMem func(int64) error, r io.Reader, buf []byte) (interf
 		if err == nil {
 			v = NewValue(val)
 		}
+	case _SPILL_TYPE_VALUE_TRACKED_SLICE:
+		val := &trackedSliceValue{}
+		err = val.ReadSpill(trackMem, r, buf)
+		v = val
+	case _SPILL_TYPE_VALUE_TRACKED_OBJECT:
+		val := &trackedObjectValue{}
+		err = val.ReadSpill(trackMem, r, buf)
+		v = val
 	// fundamental types
 	case _SPILL_TYPE_MAP:
 		v, err = readSpillMap(trackMem, r, buf)

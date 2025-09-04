@@ -74,7 +74,7 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 		}
 	}
 
-	return value.NewValue(m), nil
+	return value.NewTrackedValue(m), nil
 }
 
 func (this *ObjectConstruct) PropagatesMissing() bool {

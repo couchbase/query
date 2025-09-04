@@ -1,0 +1,461 @@
+[
+    {
+       "description":"MB-61613",
+       "statements":"SELECT t from (SELECT 1) t",
+       "results":[
+          {
+             "t": {
+                 "$1": 1
+             }
+          }
+       ]
+    },
+    {
+       "description":"MB-63420, part 1",
+       "statements":"SELECT MAX([d.dateAdded, d])[1].* exclude description, reviewList FROM ( SELECT d1.* FROM product d1 WHERE d1.test_id = 'agg_func' AND d1.type = 'product' ) AS d GROUP BY d.color ORDER BY MAX([d.dateAdded, d])[1].unitPrice DESC LIMIT 5",
+       "results":[
+          {
+              "categories": [
+                  "Home Improvement"
+              ],
+              "color": "salmon",
+              "dateAdded": "2014-04-06T15:52:18Z",
+              "dateModified": "2014-05-06T15:52:18Z",
+              "imageURL": "http://ecx.images-amazon.com/images/I/31I2MnOy4hL._SL300_.jpg",
+              "name": "TOTO SW564T695-12 Washlet S400 Elongated Front Toilet Seat for G-Max Toilets with Auto Flush System, Sedona Beige",
+              "productId": "product293",
+              "test_id": "agg_func",
+              "type": "product",
+              "unitPrice": 1094.46
+          },
+          {
+              "categories": [
+                  "Kitchen & Bath Fixtures"
+              ],
+              "color": "black",
+              "dateAdded": "2014-04-06T15:52:18Z",
+              "dateModified": "2014-05-06T15:52:18Z",
+              "imageURL": "http://ecx.images-amazon.com/images/I/31S31ThQuaL._SL300_.jpg",
+              "name": "TOTO MS854114SG-01 Ultramax Elongated One Piece Toilet with Sanagloss, Cotton White",
+              "productId": "product513",
+              "test_id": "agg_func",
+              "type": "product",
+              "unitPrice": 475.79
+          },
+          {
+              "categories": [
+                  "Cycling"
+              ],
+              "color": "cyan",
+              "dateAdded": "2014-05-06T15:52:19Z",
+              "dateModified": "2014-05-06T15:52:19Z",
+              "imageURL": "http://ecx.images-amazon.com/images/I/31Q5VwQbn8L._SL300_.jpg",
+              "name": "Yakima SwingDaddy 4-Bike Hitch Mount Rack (2-Inch Receiver)",
+              "productId": "product762",
+              "test_id": "agg_func",
+              "type": "product",
+              "unitPrice": 383.99
+          },
+          {
+              "categories": [
+                  "Kitchen & Bath Fixtures"
+              ],
+              "color": "orange",
+              "dateAdded": "2014-05-06T15:52:18Z",
+              "dateModified": "2014-05-06T15:52:18Z",
+              "imageURL": "http://ecx.images-amazon.com/images/I/41HVmqGpN4L._SL300_.jpg",
+              "name": "Kraus KPF-1612 Single Lever Pull Out Kitchen Faucet, Chrome",
+              "productId": "product423",
+              "test_id": "agg_func",
+              "type": "product",
+              "unitPrice": 160
+          },
+          {
+              "categories": [
+                  "Lamps & Light Fixtures"
+              ],
+              "color": "fuchsia",
+              "dateAdded": "2014-05-06T15:52:18Z",
+              "dateModified": "2014-05-06T15:52:18Z",
+              "imageURL": "http://ecx.images-amazon.com/images/I/51hXEzIRBLL._SL300_.jpg",
+              "name": "Nora Lighting NRS80-482SA Tear Drop Glass Shade Monorail Head",
+              "productId": "product389",
+              "test_id": "agg_func",
+              "type": "product",
+              "unitPrice": 87.06
+          }
+       ]
+    },
+    {
+       "description":"MB-63420, part 2",
+       "statements":"SELECT MAX([d.dateAdded, d][1]).* exclude description, reviewList FROM ( SELECT d1.* FROM product d1 WHERE d1.test_id = 'agg_func' AND d1.type = 'product' ) AS d GROUP BY d.color ORDER BY MAX([d.dateAdded, d][1]).unitPrice DESC LIMIT 5",
+       "results": [
+          {
+             "categories": [
+                 "Watches"
+             ],
+             "color": "maroon",
+             "dateAdded": "2014-01-06T15:52:18Z",
+             "dateModified": "2014-05-06T15:52:18Z",
+             "imageURL": "http://ecx.images-amazon.com/images/I/518wfSy3fhL._SY220_.jpg",
+             "name": "Casio Men's PRW2500T-7CR Pathfinder Triple Sensor Tough Solar Digital Multi-Function Titanium Pathfinder Watch",
+             "productId": "product17",
+             "test_id": "agg_func",
+             "type": "product",
+             "unitPrice": 289.9
+          },
+          {
+             "categories": [
+                 "Watches"
+             ],
+             "color": "lime",
+             "dateAdded": "2013-12-07T15:52:18Z",
+             "dateModified": "2014-05-06T15:52:18Z",
+             "imageURL": "http://ecx.images-amazon.com/images/I/51UjoBBu1NL._SY220_.jpg",
+             "name": "Invicta Men's 6983 Pro Diver Collection Chronograph Blue Dial Black Polyurethane Watch",
+             "productId": "product19",
+             "test_id": "agg_func",
+             "type": "product",
+             "unitPrice": 199.99
+          },
+          {
+             "categories": [
+                 "Watches"
+             ],
+             "color": "olive",
+             "dateAdded": "2014-03-07T15:52:18Z",
+             "dateModified": "2014-05-06T15:52:18Z",
+             "imageURL": "http://ecx.images-amazon.com/images/I/414r4k0gdVL._SX170_.jpg",
+             "name": "Michael Kors Midsized Chronograph Gold Tone Womens Watch MK5055",
+             "productId": "product16",
+             "test_id": "agg_func",
+             "type": "product",
+             "unitPrice": 189.99
+          },
+          {
+             "categories": [
+                 "Watches"
+             ],
+             "color": "orange",
+             "dateAdded": "2013-06-10T15:52:18Z",
+             "dateModified": "2014-05-06T15:52:18Z",
+             "imageURL": "http://ecx.images-amazon.com/images/I/51EOSMDVvkL._SL300_.jpg",
+             "name": "Seiko Men's SKX781 ",
+             "productId": "product20",
+             "test_id": "agg_func",
+             "type": "product",
+             "unitPrice": 168.01
+          },
+          {
+             "categories": [
+                 "Watches"
+             ],
+             "color": "yellow",
+             "dateAdded": "2014-01-06T15:52:18Z",
+             "dateModified": "2014-05-06T15:52:18Z",
+             "imageURL": "http://ecx.images-amazon.com/images/I/51XzOy4QZOL._SY220_.jpg",
+             "name": "Anne Klein Women's AK/1077MPTT Swarovski Crystal Accented Rectangle Two-Tone Bracelet Watch",
+             "productId": "product21",
+             "test_id": "agg_func",
+             "type": "product",
+             "unitPrice": 84.03
+          }
+       ]
+    },
+    {
+       "description":"MB-67432",
+       "statements":"SELECT n.* FROM (SELECT d.c10, a1 FROM {\"c10\":1, \"a1\":[{\"c20\":\"xyz\"}]} AS d UNNEST d.a1) AS n JOIN [{\"c1\":1}, {\"c1\":1},{\"c1\":1},{\"c1\":1},{\"c1\":1}] AS r1 ON r1.c1 = n.c10",
+       "results": [
+          {
+             "a1": {
+                 "c20": "xyz"
+             },
+             "c10": 1
+          },
+          {
+             "a1": {
+                 "c20": "xyz"
+             },
+             "c10": 1
+          },
+          {
+             "a1": {
+                 "c20": "xyz"
+             },
+             "c10": 1
+          },
+          {
+             "a1": {
+                 "c20": "xyz"
+             },
+             "c10": 1
+          },
+          {
+             "a1": {
+                 "c20": "xyz"
+             },
+             "c10": 1
+          }
+       ]
+    },
+    {
+       "description":"MB-65476, part 1",
+       "statements":"SELECT p.color, ARRAY_LENGTH(p.a1) AS a1_len FROM ( SELECT d.color, ARRAY_AGG(DISTINCT d) AS a1 FROM (SELECT d1.* FROM product AS d1 WHERE d1.test_id = 'agg_func' AND d1.type = 'product') AS d GROUP BY d.color ) AS p ORDER BY p.color",
+       "results": [
+          {
+              "color": "azure",
+              "a1_len": 41
+          },
+          {
+              "color": "black",
+              "a1_len": 39
+          },
+          {
+              "color": "blue",
+              "a1_len": 23
+          },
+          {
+              "color": "cyan",
+              "a1_len": 23
+          },
+          {
+              "color": "fuchsia",
+              "a1_len": 26
+          },
+          {
+              "color": "gold",
+              "a1_len": 24
+          },
+          {
+              "color": "green",
+              "a1_len": 27
+          },
+          {
+              "color": "grey",
+              "a1_len": 37
+          },
+          {
+              "color": "indigo",
+              "a1_len": 31
+          },
+          {
+              "color": "ivory",
+              "a1_len": 32
+          },
+          {
+              "color": "lavender",
+              "a1_len": 22
+          },
+          {
+              "color": "lime",
+              "a1_len": 26
+          },
+          {
+              "color": "magenta",
+              "a1_len": 21
+          },
+          {
+              "color": "maroon",
+              "a1_len": 33
+          },
+          {
+              "color": "mint green",
+              "a1_len": 18
+          },
+          {
+              "color": "olive",
+              "a1_len": 25
+          },
+          {
+              "color": "orange",
+              "a1_len": 29
+          },
+          {
+              "color": "orchid",
+              "a1_len": 28
+          },
+          {
+              "color": "pink",
+              "a1_len": 24
+          },
+          {
+              "color": "plum",
+              "a1_len": 32
+          },
+          {
+              "color": "purple",
+              "a1_len": 34
+          },
+          {
+              "color": "red",
+              "a1_len": 28
+          },
+          {
+              "color": "salmon",
+              "a1_len": 33
+          },
+          {
+              "color": "silver",
+              "a1_len": 28
+          },
+          {
+              "color": "sky blue",
+              "a1_len": 34
+          },
+          {
+              "color": "tan",
+              "a1_len": 32
+          },
+          {
+              "color": "teal",
+              "a1_len": 27
+          },
+          {
+              "color": "turquoise",
+              "a1_len": 31
+          },
+          {
+              "color": "violet",
+              "a1_len": 30
+          },
+          {
+              "color": "white",
+              "a1_len": 26
+          },
+          {
+              "color": "yellow",
+              "a1_len": 36
+          }
+       ]
+    },
+    {
+       "description":"MB-65476, part 2",
+       "statements":"SELECT p.color, ARRAY_LENGTH(p.a1) AS a1_len FROM ( SELECT d.color, ARRAY_AGG(d) AS a1 FROM (SELECT d1.* FROM product AS d1 WHERE d1.test_id = 'agg_func' AND d1.type = 'product') AS d GROUP BY d.color ) AS p ORDER BY p.color",
+       "results": [
+          {
+              "color": "azure",
+              "a1_len": 41
+          },
+          {
+              "color": "black",
+              "a1_len": 39
+          },
+          {
+              "color": "blue",
+              "a1_len": 23
+          },
+          {
+              "color": "cyan",
+              "a1_len": 23
+          },
+          {
+              "color": "fuchsia",
+              "a1_len": 26
+          },
+          {
+              "color": "gold",
+              "a1_len": 24
+          },
+          {
+              "color": "green",
+              "a1_len": 27
+          },
+          {
+              "color": "grey",
+              "a1_len": 37
+          },
+          {
+              "color": "indigo",
+              "a1_len": 31
+          },
+          {
+              "color": "ivory",
+              "a1_len": 32
+          },
+          {
+              "color": "lavender",
+              "a1_len": 22
+          },
+          {
+              "color": "lime",
+              "a1_len": 26
+          },
+          {
+              "color": "magenta",
+              "a1_len": 21
+          },
+          {
+              "color": "maroon",
+              "a1_len": 33
+          },
+          {
+              "color": "mint green",
+              "a1_len": 18
+          },
+          {
+              "color": "olive",
+              "a1_len": 25
+          },
+          {
+              "color": "orange",
+              "a1_len": 29
+          },
+          {
+              "color": "orchid",
+              "a1_len": 28
+          },
+          {
+              "color": "pink",
+              "a1_len": 24
+          },
+          {
+              "color": "plum",
+              "a1_len": 32
+          },
+          {
+              "color": "purple",
+              "a1_len": 34
+          },
+          {
+              "color": "red",
+              "a1_len": 28
+          },
+          {
+              "color": "salmon",
+              "a1_len": 33
+          },
+          {
+              "color": "silver",
+              "a1_len": 28
+          },
+          {
+              "color": "sky blue",
+              "a1_len": 34
+          },
+          {
+              "color": "tan",
+              "a1_len": 32
+          },
+          {
+              "color": "teal",
+              "a1_len": 27
+          },
+          {
+              "color": "turquoise",
+              "a1_len": 31
+          },
+          {
+              "color": "violet",
+              "a1_len": 30
+          },
+          {
+              "color": "white",
+              "a1_len": 26
+          },
+          {
+              "color": "yellow",
+              "a1_len": 36
+          }
+       ]
+    }
+]

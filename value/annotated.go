@@ -642,7 +642,7 @@ func (this *annotatedValue) SetField(field string, val interface{}) error {
 		err = this.Value.SetField(field, val)
 		if err == nil {
 			switch this.Value.(type) {
-			case objectValue:
+			case *trackedObjectValue:
 				// Track() already done, no-op
 			default:
 				v, ok := val.(Value)
@@ -690,9 +690,6 @@ func (this *annotatedValue) RecalculateSize() uint64 {
 
 func (this *annotatedValue) SetValue(v Value) {
 	this.Value = v
-	if v != nil {
-		v.Track()
-	}
 }
 
 func (this *annotatedValue) GetValue() Value {
@@ -733,10 +730,6 @@ func (this *annotatedValue) SetAttachment(key int16, val interface{}) {
 		this.attachments = make(map[int16]interface{}, _DEFAULT_ATTACHMENT_SIZE)
 	}
 	this.attachments[key] = val
-	v, ok := val.(Value)
-	if ok {
-		v.Track()
-	}
 }
 
 func (this *annotatedValue) RemoveAttachment(key int16) {
@@ -1021,9 +1014,6 @@ func (this *annotatedValue) SetProjection(proj Value, order []string) {
 	if this != proj {
 		this.original = this.Value
 		this.Value = proj
-		if proj != nil {
-			proj.Track()
-		}
 	}
 	this.projectionOrder = order
 }

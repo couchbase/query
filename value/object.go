@@ -26,12 +26,6 @@ type objectValue map[string]interface{}
 
 var EMPTY_OBJECT_VALUE = objectValue(map[string]interface{}{})
 
-func newObjectValue(obj map[string]interface{}) objectValue {
-	rv := objectValue(obj)
-	rv.Track()
-	return rv
-}
-
 func (this objectValue) String() string {
 	return marshalString(this)
 }
@@ -387,6 +381,8 @@ func (this objectValue) Equals(other Value) Value {
 		return objectEquals(this, other)
 	case copiedObjectValue:
 		return objectEquals(this, other.objectValue)
+	case *trackedObjectValue:
+		return objectEquals(this, other.objectValue)
 	default:
 		return FALSE_VALUE
 	}
@@ -399,6 +395,8 @@ func (this objectValue) EquivalentTo(other Value) bool {
 		return objectEquivalent(this, other)
 	case copiedObjectValue:
 		return objectEquivalent(this, other.objectValue)
+	case *trackedObjectValue:
+		return objectEquivalent(this, other.objectValue)
 	default:
 		return false
 	}
@@ -410,6 +408,8 @@ func (this objectValue) Collate(other Value) int {
 	case objectValue:
 		return objectCollate(this, other)
 	case copiedObjectValue:
+		return objectCollate(this, other.objectValue)
+	case *trackedObjectValue:
 		return objectCollate(this, other.objectValue)
 	default:
 		return int(OBJECT - other.Type())
@@ -426,6 +426,8 @@ func (this objectValue) Compare(other Value) Value {
 	case objectValue:
 		return objectCompare(this, other)
 	case copiedObjectValue:
+		return objectCompare(this, other.objectValue)
+	case *trackedObjectValue:
 		return objectCompare(this, other.objectValue)
 	default:
 		return intValue(int(OBJECT - other.Type()))
@@ -457,21 +459,29 @@ func (this objectValue) Field(field string) (Value, bool) {
 }
 
 func (this objectValue) SetField(field string, val interface{}) error {
+	return this.setField(field, val, false)
+}
+
+func (this objectValue) setField(field string, val interface{}, track bool) error {
 	switch val := val.(type) {
 	case missingValue:
 		curVal, ok := this[field]
 		if ok {
 			delete(this, field)
-			v, ok := curVal.(Value)
-			if ok {
-				v.Recycle()
+			if track {
+				v, ok := curVal.(Value)
+				if ok {
+					v.Recycle()
+				}
 			}
 		}
 	default:
 		this[field] = val
-		v, ok := val.(Value)
-		if ok {
-			v.Track()
+		if track {
+			v, ok := val.(Value)
+			if ok {
+				v.Track()
+			}
 		}
 	}
 
@@ -479,12 +489,18 @@ func (this objectValue) SetField(field string, val interface{}) error {
 }
 
 func (this objectValue) UnsetField(field string) error {
+	return this.unsetField(field, false)
+}
+
+func (this objectValue) unsetField(field string, track bool) error {
 	curVal, ok := this[field]
 	if ok {
 		delete(this, field)
-		v, ok := curVal.(Value)
-		if ok {
-			v.Recycle()
+		if track {
+			v, ok := curVal.(Value)
+			if ok {
+				v.Recycle()
+			}
 		}
 	}
 	return nil
@@ -515,6 +531,13 @@ func (this objectValue) Slice(start, end int) (Value, bool) {
 Returns NULL_VALUE.
 */
 func (this objectValue) SliceTail(start int) (Value, bool) {
+	return NULL_VALUE, false
+}
+
+/*
+Returns NULL_VALUE.
+*/
+func (this objectValue) Append(elems []interface{}) (Value, bool) {
 	return NULL_VALUE, false
 }
 
@@ -612,23 +635,13 @@ func (this objectValue) Successor() Value {
 
 	n := names[len(names)-1]
 	s[n] = NewValue(this[n]).Successor()
-	return newObjectValue(s)
+	return objectValue(s)
 }
 
 func (this objectValue) Track() {
-	for _, v := range this {
-		if val, ok := v.(Value); ok {
-			val.Track()
-		}
-	}
 }
 
 func (this objectValue) Recycle() {
-	for _, v := range this {
-		if val, ok := v.(Value); ok {
-			val.Recycle()
-		}
-	}
 }
 
 func (this objectValue) Tokens(set *Set, options Value) *Set {
@@ -697,6 +710,62 @@ func (this objectValue) unwrap() Value {
 }
 
 var _SMALL_OBJECT_VALUE = objectValue(map[string]interface{}{"": nil})
+
+// trackedObjectValue is just like objectValue, except it does extra Track()/Recycle() for its subelements
+type trackedObjectValue struct {
+	objectValue
+}
+
+func newTrackedObjectValue(obj map[string]interface{}) *trackedObjectValue {
+	return &trackedObjectValue{objectValue: objectValue(obj)}
+}
+
+func (this *trackedObjectValue) CopyForUpdate() Value {
+	return &trackedObjectValue{objectValue: objectValue(copyMap(this.objectValue, copyForUpdate))}
+}
+
+func (this *trackedObjectValue) SetField(field string, val interface{}) error {
+	return this.objectValue.setField(field, val, true)
+}
+
+func (this *trackedObjectValue) UnsetField(field string) error {
+	return this.objectValue.unsetField(field, true)
+}
+
+func (this *trackedObjectValue) Track() {
+	for _, v := range this.objectValue {
+		if val, ok := v.(Value); ok {
+			val.Track()
+		}
+	}
+}
+
+func (this *trackedObjectValue) Recycle() {
+	for _, v := range this.objectValue {
+		if val, ok := v.(Value); ok {
+			val.Recycle()
+		}
+	}
+}
+
+func (this *trackedObjectValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE_TRACKED_OBJECT}
+	_, err := w.Write([]byte(b))
+	if err == nil {
+		err = writeSpillValue(w, (map[string]interface{})(this.objectValue), buf)
+	}
+	return err
+}
+
+func (this *trackedObjectValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
+	if err == nil && v != nil {
+		this.objectValue = objectValue(v.(map[string]interface{}))
+	} else {
+		this.objectValue = nil
+	}
+	return err
+}
 
 func objectEquals(obj1, obj2 map[string]interface{}) Value {
 	if len(obj1) != len(obj2) {

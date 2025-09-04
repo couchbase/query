@@ -118,7 +118,7 @@ func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Cont
 	if this.Distinct() {
 		return setAdd(item, cumulative, false), nil
 	} else {
-		return this.cumulatePart(value.NewValue([]interface{}{item}), cumulative, context)
+		return this.cumulatePart(value.NewTrackedValue([]interface{}{item}), cumulative, context)
 	}
 }
 
@@ -175,13 +175,16 @@ func (this *ArrayAgg) cumulatePart(part, cumulative value.Value, context Context
 	actual := part.Actual()
 	switch actual := actual.(type) {
 	case []interface{}:
-		array := cumulative.Actual()
-		switch array := array.(type) {
-		case []interface{}:
-			return value.NewValue(append(array, actual...)), nil
-		default:
-			return nil, fmt.Errorf("Invalid ARRAY_AGG %v of type %T.", array, array)
+		if cumulative.Type() == value.ARRAY {
+			var ok bool
+			cumulative, ok = cumulative.Append(actual)
+			if ok {
+				return cumulative, nil
+			}
 		}
+
+		array := cumulative.Actual()
+		return nil, fmt.Errorf("Invalid ARRAY_AGG %v of type %T.", array, array)
 	default:
 		return nil, fmt.Errorf("Invalid partial ARRAY_AGG %v of type %T.", actual, actual)
 	}
