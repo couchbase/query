@@ -330,6 +330,12 @@ type Value interface {
 	SliceTail(start int) (Value, bool)
 
 	/*
+	   Appending to an array. For all non array/slice values it
+	   returns a NULL_VALUE and false.
+	*/
+	Append(elems []interface{}) (Value, bool)
+
+	/*
 	   Lists the descendants of an array or object in depth first
 	   order (multilevel list flattening) by appending to an input
 	   buffer and returning it.
@@ -445,9 +451,9 @@ func NewValue(val interface{}) Value {
 	case []byte:
 		return NewParsedValue(val, false)
 	case []interface{}:
-		return newSliceValue(val)
+		return sliceValue(val)
 	case map[string]interface{}:
-		return newObjectValue(val)
+		return objectValue(val)
 	case *parsedValue:
 		return val
 	case int:
@@ -457,25 +463,25 @@ func NewValue(val interface{}) Value {
 		for i, v := range val {
 			rv[i] = v
 		}
-		return newSliceValue(rv)
+		return sliceValue(rv)
 	case []Value:
 		rv := make([]interface{}, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
-		return newSliceValue(rv)
+		return sliceValue(rv)
 	case []AnnotatedValue:
 		rv := make([]interface{}, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
-		return newSliceValue(rv)
+		return sliceValue(rv)
 	case map[string]Value:
 		rv := make(map[string]interface{}, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
-		return newObjectValue(rv)
+		return objectValue(rv)
 	default:
 		for _, c := range _CONVERSIONS {
 			if reflect.TypeOf(val).ConvertibleTo(c) {
@@ -484,6 +490,17 @@ func NewValue(val interface{}) Value {
 		}
 
 		panic(fmt.Sprintf("Cannot create value for type %T.", val))
+	}
+}
+
+func NewTrackedValue(val interface{}) Value {
+	switch val := val.(type) {
+	case []interface{}:
+		return newTrackedSliceValue(val)
+	case map[string]interface{}:
+		return newTrackedObjectValue(val)
+	default:
+		panic(fmt.Sprintf("Cannot create trackedValue for type %T.", val))
 	}
 }
 

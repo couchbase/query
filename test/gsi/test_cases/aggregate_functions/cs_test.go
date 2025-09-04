@@ -32,6 +32,7 @@ func TestAggregateFunctions(t *testing.T) {
 	runMatch("case_distinct.json", false, false, qc, t)
 	runMatch("case_group_by_having.json", false, false, qc, t)
 	runMatch("case_median_stddev_variance.json", false, false, qc, t)
+	runMatch("case_bugs.json", false, false, qc, t)
 
 	runStmt(qc, "CREATE INDEX index_custId on orders(custId) WHERE test_id = \"agg_func\"")
 	runMatch("case_group_by_group_as.json", false, true, qc, t)

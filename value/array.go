@@ -27,12 +27,6 @@ EMPTY_ARRAY_VALUE is initialized as a slice of interface.
 var EMPTY_ARRAY_VALUE Value = sliceValue([]interface{}{})
 var TRUE_ARRAY_VALUE Value = sliceValue([]interface{}{true})
 
-func newSliceValue(sl []interface{}) sliceValue {
-	rv := sliceValue(sl)
-	rv.Track()
-	return rv
-}
-
 func (this sliceValue) String() string {
 	return marshalString(this)
 }
@@ -194,6 +188,8 @@ func (this sliceValue) Equals(other Value) Value {
 		return arrayEquals(this, other.sliceValue)
 	case *listValue:
 		return arrayEquals(this, other.slice)
+	case *trackedSliceValue:
+		return arrayEquals(this, other.sliceValue)
 	default:
 		return FALSE_VALUE
 	}
@@ -208,6 +204,8 @@ func (this sliceValue) EquivalentTo(other Value) bool {
 		return arrayEquivalent(this, other.sliceValue)
 	case *listValue:
 		return arrayEquivalent(this, other.slice)
+	case *trackedSliceValue:
+		return arrayEquivalent(this, other.sliceValue)
 	default:
 		return false
 	}
@@ -222,6 +220,8 @@ func (this sliceValue) Collate(other Value) int {
 		return arrayCollate(this, other.sliceValue)
 	case *listValue:
 		return arrayCollate(this, other.slice)
+	case *trackedSliceValue:
+		return arrayCollate(this, other.sliceValue)
 	default:
 		return int(ARRAY - other.Type())
 	}
@@ -240,6 +240,8 @@ func (this sliceValue) Compare(other Value) Value {
 		return arrayCompare(this, other.sliceValue)
 	case *listValue:
 		return arrayCompare(this, other.slice)
+	case *trackedSliceValue:
+		return arrayCompare(this, other.sliceValue)
 	default:
 		return intValue(int(ARRAY - other.Type()))
 	}
@@ -319,6 +321,10 @@ if anything else, add the value at the particular index.
 For all other cases, return a nil.
 */
 func (this sliceValue) SetIndex(index int, val interface{}) error {
+	return this.setIndex(index, val, false)
+}
+
+func (this sliceValue) setIndex(index int, val interface{}, track bool) error {
 	if index < 0 {
 		index = len(this) + index
 	}
@@ -331,15 +337,19 @@ func (this sliceValue) SetIndex(index int, val interface{}) error {
 	case missingValue:
 		curVal := this[index]
 		this[index] = nil
-		v, ok := curVal.(Value)
-		if ok {
-			v.Recycle()
+		if track {
+			v, ok := curVal.(Value)
+			if ok {
+				v.Recycle()
+			}
 		}
 	default:
 		this[index] = val
-		v, ok := val.(Value)
-		if ok {
-			v.Track()
+		if track {
+			v, ok := val.(Value)
+			if ok {
+				v.Track()
+			}
 		}
 	}
 
@@ -387,6 +397,10 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 	}
 
 	return MISSING_VALUE, false
+}
+
+func (this sliceValue) Append(elems []interface{}) (Value, bool) {
+	return sliceValue(append(this, elems...)), true
 }
 
 func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
@@ -439,19 +453,9 @@ func (this sliceValue) Successor() Value {
 }
 
 func (this sliceValue) Track() {
-	for _, v := range this {
-		if val, ok := v.(Value); ok {
-			val.Track()
-		}
-	}
 }
 
 func (this sliceValue) Recycle() {
-	for _, v := range this {
-		if val, ok := v.(Value); ok {
-			val.Recycle()
-		}
-	}
 }
 
 func (this sliceValue) Tokens(set *Set, options Value) *Set {
@@ -621,6 +625,10 @@ func (this *listValue) SliceTail(start int) (Value, bool) {
 	return this.slice.SliceTail(start)
 }
 
+func (this *listValue) Append(elems []interface{}) (Value, bool) {
+	return this.slice.Append(elems)
+}
+
 func (this *listValue) Descendants(buffer []interface{}) []interface{} {
 	return this.slice.Descendants(buffer)
 }
@@ -671,6 +679,73 @@ func (this *listValue) Size() uint64 {
 
 func (this *listValue) unwrap() Value {
 	return this
+}
+
+// trackedSliceValue is just like sliceValue, except it does extra Track()/Recycle() for its subelements
+type trackedSliceValue struct {
+	sliceValue
+}
+
+func newTrackedSliceValue(sl []interface{}) *trackedSliceValue {
+	for _, v := range sl {
+		if val, ok := v.(Value); ok {
+			val.Track()
+		}
+	}
+	return &trackedSliceValue{sliceValue: sliceValue(sl)}
+}
+
+func (this *trackedSliceValue) CopyForUpdate() Value {
+	return &trackedSliceValue{sliceValue: sliceValue(copySlice(this.sliceValue, copyForUpdate))}
+}
+
+func (this *trackedSliceValue) SetIndex(index int, val interface{}) error {
+	return this.sliceValue.setIndex(index, val, true)
+}
+
+func (this *trackedSliceValue) Append(elems []interface{}) (Value, bool) {
+	// track new additions
+	for _, elem := range elems {
+		if val, ok := elem.(Value); ok {
+			val.Track()
+		}
+	}
+	return &trackedSliceValue{sliceValue: sliceValue(append(this.sliceValue, elems...))}, true
+}
+
+func (this *trackedSliceValue) Track() {
+	for _, v := range this.sliceValue {
+		if val, ok := v.(Value); ok {
+			val.Track()
+		}
+	}
+}
+
+func (this *trackedSliceValue) Recycle() {
+	for _, v := range this.sliceValue {
+		if val, ok := v.(Value); ok {
+			val.Recycle()
+		}
+	}
+}
+
+func (this *trackedSliceValue) WriteSpill(w io.Writer, buf []byte) error {
+	b := []byte{_SPILL_TYPE_VALUE_TRACKED_SLICE}
+	_, err := w.Write(b)
+	if err == nil {
+		err = writeSpillValue(w, ([]interface{})(this.sliceValue), buf)
+	}
+	return err
+}
+
+func (this *trackedSliceValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
+	v, err := readSpillValue(trackMem, r, buf)
+	if err == nil && v != nil {
+		this.sliceValue = sliceValue(v.([]interface{}))
+	} else {
+		this.sliceValue = nil
+	}
+	return err
 }
 
 func arrayEquals(array1, array2 []interface{}) Value {
