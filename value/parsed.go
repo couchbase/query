@@ -524,6 +524,19 @@ func (this *parsedValue) SliceTail(start int) (Value, bool) {
 }
 
 /*
+Return NULL_VALUE if parsedType is not ARRAY. If it is then parse
+the receiver and call the values corresponding Append with the
+elements as input arguments.
+*/
+func (this *parsedValue) Append(elems []interface{}) (Value, bool) {
+	if this.parsedType != ARRAY {
+		return NULL_VALUE, false
+	}
+
+	return this.unwrap().Append(elems)
+}
+
+/*
 Return the buffer if the parsedType is binary. If not call parse and
 then the Descendants method on that value with the input buffer.
 */
