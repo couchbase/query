@@ -730,7 +730,9 @@ func (this *seqScan) coordinator(b *Bucket, scanTimeout time.Duration) {
 				// pick a random scan to start from so there is a greater chance of spreading load
 				n := rand.Int() % len(vbScans)
 				for i := 0; i < len(vbScans) && remaining > 0; i++ {
-					if queues[vbScans[n].queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER {
+					// check if the scan is in READY state to avoid queueing the same scan multiple times
+					state_check := vbRsState(atomic.LoadInt32((*int32)(&vbScans[n].state))) == _VBS_READY
+					if queues[vbScans[n].queue] < _SS_MAX_CONCURRENT_VBSCANS_PER_SERVER && state_check {
 						if !this.queueVBScan(vbScans[n]) {
 							cancelAll()
 							return
