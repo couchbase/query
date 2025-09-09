@@ -35,7 +35,7 @@ func optExprSelec(keyspaces map[string]string, pred expression.Expression, advis
 	return OPT_SELEC_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
 
-func optDefInSelec(keyspace, key string, advisorValidate bool) float64 {
+func optDefInSelec(keyspace, alias string, key expression.Expression, advisorValidate bool) float64 {
 	return OPT_SELEC_NOT_AVAIL
 }
 

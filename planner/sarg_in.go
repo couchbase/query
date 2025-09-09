@@ -50,7 +50,9 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 	var err error
 	var keyspaces map[string]string
 	if this.doSelec {
-		defSelec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String(), this.advisorValidate)
+		selec = this.getSelec(pred)
+		defSelec = optDefInSelec(this.baseKeyspace.Keyspace(), this.baseKeyspace.Name(),
+			this.key, this.advisorValidate)
 		if !this.isJoin {
 			keyspaces = make(map[string]string, 1)
 			keyspaces[this.baseKeyspace.Name()] = this.baseKeyspace.Keyspace()
@@ -124,7 +126,6 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 			arrayMinMax = true
 			arrayKey = static
 			dynamicIn = true
-			selec = defSelec
 		}
 		if arrayMinMax {
 			if dynamicIn {
