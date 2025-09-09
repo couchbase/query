@@ -49,8 +49,8 @@ func optExprSelec(keyspaces map[string]string, pred expression.Expression, advis
 	return sel, arrSel
 }
 
-func optDefInSelec(keyspace, key string, advisorValidate bool) float64 {
-	return optutil.DefInSelec(keyspace, key, advisorValidate)
+func optDefInSelec(keyspace, alias string, key expression.Expression, advisorValidate bool) float64 {
+	return optutil.DefInSelec(keyspace, alias, key, advisorValidate)
 }
 
 func optDefLikeSelec(keyspace, key string, advisorValidate bool) float64 {
