@@ -70,7 +70,8 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 
 		selec := OPT_SELEC_NOT_AVAIL
 		if this.doSelec {
-			selec = optDefInSelec(this.baseKeyspace.Keyspace(), this.key.String(), this.advisorValidate)
+			selec = optDefInSelec(this.baseKeyspace.Keyspace(), this.baseKeyspace.Name(),
+				this.key, this.advisorValidate)
 		}
 		expr := expression.NewConstant(val)
 		range2 := plan.NewRange2(expr, expr, datastore.BOTH, selec, OPT_SELEC_NOT_AVAIL, 0)
