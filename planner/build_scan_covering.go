@@ -168,7 +168,7 @@ outer:
 
 		// in vector query, if rerank is requested but ORDER/LIMIT cannot be pushed down,
 		// then rerank cannot be done in the index, need to Fetch in this case (to rerank)
-		if vector && vecExpr != nil && vecExpr.ReRank() != nil &&
+		if vector && vecExpr != nil && vecExpr.HasReRank(true) &&
 			(!entry.IsPushDownProperty(_PUSHDOWN_ORDER) || !entry.IsPushDownProperty(_PUSHDOWN_LIMIT)) {
 			continue outer
 		}
@@ -867,15 +867,12 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 			return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search predicate not available")
 		}
 
-		reRank := vecExpr.ReRank()
-		if reRank != nil {
+		if vecExpr.HasReRank(true) {
 			index6, ok := entry.index.(datastore.Index6)
 			if !ok {
 				return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search index not index6")
 			}
-			reRankVal := reRank.Value()
-			if reRankVal == nil || (reRankVal.Type() == value.BOOLEAN && reRankVal.Truth() &&
-				(!index6.IsBhive() || !index6.AllowRerank())) {
+			if !index6.IsBhive() || !index6.AllowRerank() {
 				// if ReRank is specified but unknown, or it's true, cannot cover
 				// exception: BHive index that allows reranking can cover
 				vecExpr = nil
@@ -1070,15 +1067,12 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (
 		return keys, nil, errors.NewPlanInternalError("replaceVectorKey: vector search predicate not available")
 	}
 
-	reRank := vecExpr.ReRank()
-	if reRank != nil && cover {
+	if vecExpr.HasReRank(true) && cover {
 		index6, ok := entry.index.(datastore.Index6)
 		if !ok {
 			return keys, nil, errors.NewPlanInternalError("replaceVectorKey: vector search index not index6")
 		}
-		reRankVal := reRank.Value()
-		if reRankVal == nil || (reRankVal.Type() == value.BOOLEAN && reRankVal.Truth() &&
-			(!index6.IsBhive() || !index6.AllowRerank())) {
+		if !index6.IsBhive() || !index6.AllowRerank() {
 			// if ReRank is specified but unknown, or it's true, cannot cover
 			// exception: BHive index that allows reranking can cover
 			return keys, nil, nil

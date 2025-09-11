@@ -1575,13 +1575,10 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	coverExprs := make(expression.Expressions, 0, len(idxKeys)+len(includes)+1)
 	for _, key := range idxKeys {
 		if isArray, _, _ := key.Expr.IsArrayIndexKey(); !isArray && !key.HasAttribute(datastore.IK_VECTOR) {
-			if ann, ok := key.Expr.(*expression.ApproxVectorDistance); ok && ann.ReRank() != nil {
-				rerankVal := ann.ReRank().Value()
+			if ann, ok := key.Expr.(*expression.ApproxVectorDistance); ok && ann.HasReRank(true) {
 				// assume we need to rerank if value is not known
-				if rerankVal == nil || (rerankVal.Type() == value.BOOLEAN && rerankVal.Truth()) {
-					// if rerank requested, do not use early order
-					continue
-				}
+				// if rerank requested, do not use early order
+				continue
 			}
 			coverExprs = append(coverExprs, key.Expr)
 		}

@@ -132,7 +132,7 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 					vector = true
 					if tspans, ok := entry.spans.(*TermSpans); ok {
 						vecExpr = tspans.vecExpr
-						if vecExpr != nil && vecExpr.ReRank() != nil {
+						if vecExpr != nil && vecExpr.HasReRank(true) {
 							hasRerank = true
 						}
 					} else {
