@@ -756,13 +756,14 @@ processing:
 						returnCount += int64(len(keys))
 						start += batch
 					}
-					err := vbscan.truncate()
-					if err != nil {
-						cancelAll()
-						this.reportError(err.(qerrors.Error))
-						return
-					}
 				}
+				err := vbscan.truncate()
+				if err != nil {
+					cancelAll()
+					this.reportError(err.(qerrors.Error))
+					return
+				}
+
 				if this.limit > 0 && returnLimit == 0 {
 					break processing
 				}
