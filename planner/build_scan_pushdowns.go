@@ -52,12 +52,9 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 				if index6, ok := entry.index.(datastore.Index6); ok && index6.AllowRerank() {
 					allowRerank = true
 				}
-				if !allowRerank && ann != nil && ann.ReRank() != nil {
-					rerankVal := ann.ReRank().Value()
-					if rerankVal == nil || (rerankVal.Type() == value.BOOLEAN && rerankVal.Truth()) {
-						// assume we need to rerank if value is not known
-						rerank = true
-					}
+				if !allowRerank && ann != nil && ann.HasReRank(true) {
+					// assume we need to rerank if value is not known
+					rerank = true
 				}
 			}
 			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys, nil, pushDownProperty)

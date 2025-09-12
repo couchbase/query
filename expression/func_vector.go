@@ -330,6 +330,22 @@ func (this *ApproxVectorDistance) ReRank() Expression {
 	return nil
 }
 
+func (this *ApproxVectorDistance) HasReRank(useVar bool) bool {
+	if len(this.operands) > 4 {
+		rerankExpr := this.operands[4]
+		if rerankExpr != nil {
+			rerankVal := rerankExpr.Value()
+			// if the value is unknown, the caller decides whether to treat it as true or false
+			if rerankVal == nil {
+				return useVar
+			} else if rerankVal.Type() == value.BOOLEAN && rerankVal.Truth() {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (this *ApproxVectorDistance) TopNScan() Expression {
 	if len(this.operands) > 5 {
 		return this.operands[5]
