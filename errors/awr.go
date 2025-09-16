@@ -93,3 +93,9 @@ func NewAWRWarning(message string) Error {
 	return &err{level: WARNING, ICode: W_AWR_WARNING, InternalCaller: CallerN(1), IKey: "service.workload_report.warning",
 		InternalMsg: message}
 }
+
+func NewAwrNotSupportedError() Error {
+	return &err{level: EXCEPTION, ICode: E_AWR_NOT_SUPPORTED, IKey: "awr.not_supported",
+		InternalMsg:    "Workload reporting is not supported in Community Edition. It is an enterprise level feature.",
+		InternalCaller: CallerN(1)}
+}

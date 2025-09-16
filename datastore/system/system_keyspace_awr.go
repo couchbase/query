@@ -89,6 +89,10 @@ func (b *awrKeyspace) Update(updates value.Pairs, context datastore.QueryContext
 	var errs []errors.Error
 	var mutations int
 	var preserved value.Pairs
+	if !b.namespace.store.enterprise {
+		errs = append(errs, errors.NewAwrNotSupportedError())
+		return mutations, preserved, errs
+	}
 
 	for i := range updates {
 		v := updates[i].Value.Actual()

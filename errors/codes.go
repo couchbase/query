@@ -124,6 +124,7 @@ const (
 	E_AWR_CONFIG                                 ErrorCode = 2502
 	E_AWR_DISTRIB                                ErrorCode = 2503
 	W_AWR_WARNING                                ErrorCode = 2504
+	E_AWR_NOT_SUPPORTED                          ErrorCode = 2505
 	E_PARSE_SYNTAX                               ErrorCode = 3000
 	E_ERROR_CONTEXT                              ErrorCode = 3005
 	E_PARSE_INVALID_ESCAPE_SEQUENCE              ErrorCode = 3006
