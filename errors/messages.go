@@ -1646,6 +1646,20 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_AWR_NOT_SUPPORTED, // 2505
+		symbol:      "E_AWR_NOT_SUPPORTED",
+		Description: "Workload reporting is not supported in Community Edition. It is an enterprise level feature.",
+		Reason: []string{
+			"An Workload reporting related operation was attempted on a Community Edition Couchbase cluster.",
+		},
+		Action: []string{
+			"Consult the documentation for the feature you are trying to use.",
+		},
+		AppliesTo: []string{
+			"Community Edition",
+		},
+	},
+	{
 		Code:        E_PARSE_SYNTAX, // 3000
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",

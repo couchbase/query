@@ -68,6 +68,7 @@ const scanTimeout = 30 * time.Second
 type store struct {
 	actualStore              datastore.Datastore
 	acctStore                accounting.AccountingStore
+	enterprise               bool
 	systemDatastoreNamespace *namespace
 }
 
@@ -365,8 +366,9 @@ func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexCo
 	defer conn.Sender().Close()
 }
 
-func NewDatastore(actualStore datastore.Datastore, acctStore accounting.AccountingStore) (datastore.Systemstore, errors.Error) {
-	s := &store{actualStore: actualStore, acctStore: acctStore}
+func NewDatastore(actualStore datastore.Datastore, acctStore accounting.AccountingStore,
+	enterprise bool) (datastore.Systemstore, errors.Error) {
+	s := &store{actualStore: actualStore, acctStore: acctStore, enterprise: enterprise}
 
 	e := s.loadNamespace()
 	if e != nil {

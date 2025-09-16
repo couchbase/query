@@ -19,8 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/couchbase/go_json"
-
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
@@ -411,7 +410,7 @@ func makeMockServer() *server.Server {
 	}
 
 	datastore.SetDatastore(store)
-	sys, err := system.NewDatastore(store, nil)
+	sys, err := system.NewDatastore(store, nil, true)
 	server, err := server.NewServer(store, sys, nil, nil, "default",
 		false, 10, 10, 4, 4, 0, 0, false, false, false, true, server.ProfOff, false, nil)
 	if err != nil {

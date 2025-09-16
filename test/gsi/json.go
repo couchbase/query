@@ -486,7 +486,7 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 		logging.Errorf("Could not connect to acctstore: %v", err)
 	}
 
-	sys, err := system.NewDatastore(ds, acctstore)
+	sys, err := system.NewDatastore(ds, acctstore, true)
 	if err != nil {
 		logging.Errorf("%v", err.Error())
 		os.Exit(1)

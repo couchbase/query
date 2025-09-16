@@ -352,7 +352,7 @@ func main() {
 	// Initialize dictionary cache
 	server_package.InitDictionaryCache(*DICTIONARY_CACHE_LIMIT)
 
-	sys, err := system.NewDatastore(datastore, acctstore)
+	sys, err := system.NewDatastore(datastore, acctstore, *ENTERPRISE)
 	if err != nil {
 		logging.Errorf("%v", err.Error())
 		os.Exit(1)
