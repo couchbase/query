@@ -51,6 +51,9 @@ do
   if [ ${i} = "orders" ]
   then
     Roles="${Roles},query_manage_sequences[${i}:seqs],query_use_sequences[${i}:seqs]"
+  elif [ ${i} = "customer" ]
+  then
+    Roles="${Roles},query_manage_sequences[${i}:_default],query_manage_functions[${i}:_default]"
   fi
   curl --silent -X PUT $UsersSite$Id -d name=$Name -d roles=${Roles} -d password=$Password -u $Auth > /dev/null
 done

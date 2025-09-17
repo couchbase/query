@@ -1,0 +1,90 @@
+[
+    {
+        "description": "Test ExtractDDL with customer bucket",
+        "statements": "SELECT EXTRACTDDL('customer') AS ddl_statements;",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE OR REPLACE FUNCTION `add_numbers`(`a`, `b`) LANGUAGE INLINE AS a + b;",
+                    "CREATE OR REPLACE FUNCTION `ejs1`() LANGUAGE JAVASCRIPT AS \"ej1\" AT \"lib1\";",
+                    "CREATE OR REPLACE FUNCTION `no_param_func`() LANGUAGE INLINE AS 42;",
+                    "CREATE OR REPLACE FUNCTION `test_func`() LANGUAGE JAVASCRIPT AS \"function test_func() { return \"hello\"; }\";",
+                    "CREATE OR REPLACE FUNCTION `test_inline_func`(`x`) LANGUAGE INLINE AS x * 2;",
+                    "CREATE OR REPLACE FUNCTION `variadic_func`(...) LANGUAGE INLINE AS args[0] + args[1];",
+                    "CREATE BUCKET `customer` WITH {'numVBuckets':64,'ramQuota':250,'storageBackend':'magma'};",
+                    "CREATE INDEX `test_index` ON `customer`(`name`) ;",
+                    "CREATE SEQUENCE `default`:`customer`.`_default`.`test_sequence` START WITH 100 CACHE 10 NO CYCLE INCREMENT BY 5 MINVALUE -9223372036854775808;",
+                    "CREATE OR REPLACE FUNCTION `customer`.`_default`.`scoped_multiply`(`x`, `y`) LANGUAGE INLINE AS x * y;",
+                    "PREPARE test_prepared_stmt AS SELECT * FROM customer WHERE name = $1;"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL with bucket flag for customer bucket",
+        "statements": "SELECT EXTRACTDDL('customer', {'flags': ['bucket']}) AS ddl_statements",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE BUCKET `customer` WITH {'numVBuckets':64,'ramQuota':250,'storageBackend':'magma'};"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL with index flag for customer bucket",
+        "statements": "SELECT EXTRACTDDL('customer', {'flags': ['index']}) AS ddl_statements",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE INDEX `test_index` ON `customer`(`name`) ;"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL with sequence flag for customer bucket",
+        "statements": "SELECT EXTRACTDDL('customer', {'flags': ['sequence']}) AS ddl_statements",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE SEQUENCE `default`:`customer`.`_default`.`test_sequence` START WITH 100 CACHE 10 NO CYCLE INCREMENT BY 5 MINVALUE -9223372036854775808;"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL with prepared flag for customer bucket",
+        "statements": "SELECT EXTRACTDDL('customer', {'flags': ['prepared']}) AS ddl_statements",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "PREPARE test_prepared_stmt AS SELECT * FROM customer WHERE name = $1;"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL with function flag for customer bucket",
+        "statements": "SELECT EXTRACTDDL('customer', {'flags': ['function']}) AS ddl_statements",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE OR REPLACE FUNCTION `add_numbers`(`a`, `b`) LANGUAGE INLINE AS a + b;",
+                    "CREATE OR REPLACE FUNCTION `ejs1`() LANGUAGE JAVASCRIPT AS \"ej1\" AT \"lib1\";",
+                    "CREATE OR REPLACE FUNCTION `no_param_func`() LANGUAGE INLINE AS 42;",
+                    "CREATE OR REPLACE FUNCTION `test_func`() LANGUAGE JAVASCRIPT AS \"function test_func() { return \"hello\"; }\";",
+                    "CREATE OR REPLACE FUNCTION `test_inline_func`(`x`) LANGUAGE INLINE AS x * 2;",
+                    "CREATE OR REPLACE FUNCTION `variadic_func`(...) LANGUAGE INLINE AS args[0] + args[1];",
+                    "CREATE OR REPLACE FUNCTION `customer`.`_default`.`scoped_multiply`(`x`, `y`) LANGUAGE INLINE AS x * y;"
+                ]
+            }
+        ]
+    }
+]
