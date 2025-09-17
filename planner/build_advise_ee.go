@@ -426,7 +426,7 @@ func (this *builder) appendQueryInfo(scan plan.Operator, keyspace datastore.Keys
 				this.indexCollector.setUnCovering()
 			}
 			if this.advisePhase == _VALIDATE {
-				if this.indexCollector.property != 0 {
+				if this.indexCollector.property != 0 || this.indexCollector.vector {
 					this.validatedIdxes = append(this.validatedIdxes, this.indexCollector.indexInfos...)
 				}
 				this.indexCollector = nil

@@ -25,6 +25,7 @@ type scanIdxCol struct {
 	alias         string
 	indexInfos    iaplan.IndexInfos
 	covering      bool
+	vector        bool
 	validatePhase bool
 	property      uint32
 }
@@ -113,6 +114,7 @@ func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error
 		info.SetProperty(len(op.Covers()) > 0, op.Limit() != nil, op.Offset() != nil,
 			len(op.OrderTerms()) > 0, op.GroupAggs() != nil, op.HasEarlyOrder())
 		this.property = info.Property()
+		this.vector = info.HasVectorInfo()
 		this.addIndexInfo(info)
 	}
 	return nil, nil
