@@ -938,6 +938,12 @@ processing:
 						heap.Init(&vbScans)
 						heapPrepared = true
 					} else {
+						for i := range vbScans {
+							// make sure we have the first key properly loaded
+							if vbScans[i].currentKey == 0 && !vbScans[i].seek(0) {
+								logging.Debugf("BUG: [%08x] scan seek failed", this.scanNum, this.log)
+							}
+						}
 						heap.Fix(&vbScans, 0)
 					}
 					// stream results (merge sorting) until one vb is empty
@@ -1211,6 +1217,7 @@ func (this *vbRangeScan) truncate() error {
 	if this.keys != nil {
 		this.keys = this.keys[:0]
 	}
+	this.currentKey = 0
 	if this.spill != nil {
 		var size int64
 		size, err = this.spill.Seek(0, os.SEEK_END)
@@ -1516,9 +1523,6 @@ func (this *vbRangeScan) validateSingleKey(conn *memcached.Client) bool {
 	this.kvOpsComplete = true
 	if !ok {
 		// success but no data
-		if this.keys != nil {
-			this.keys = this.keys[:0]
-		}
 		err = this.truncate()
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
@@ -1591,9 +1595,6 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				// success but no data
 				logging.Debugf("%s no data for scan: %v", this, resp)
 				this.kvOpsComplete = true
-				if this.keys != nil {
-					this.keys = this.keys[:0]
-				}
 				err = this.truncate()
 				if err != nil {
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
