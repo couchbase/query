@@ -2283,9 +2283,10 @@ func makeSparseVector(args map[string]interface{}) (*scanVectorEntries, errors.E
 }
 
 func makeFullVector(args []interface{}) (*scanVectorEntries, errors.Error) {
-	if len(args) != SCAN_VECTOR_SIZE {
+	l := len(args)
+	if l != SCAN_VECTOR_SIZE && l != SCAN_VECTOR_SIZE0 && l != SCAN_VECTOR_SIZE1 {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR,
-			fmt.Sprintf("array of %d entries", SCAN_VECTOR_SIZE))
+			fmt.Sprintf("array of (%d, %d, %d) entries", SCAN_VECTOR_SIZE0, SCAN_VECTOR_SIZE1, SCAN_VECTOR_SIZE))
 	}
 	entries := make([]timestamp.Entry, len(args))
 	for i, arg := range args {
@@ -2309,6 +2310,8 @@ func makeFullVector(args []interface{}) (*scanVectorEntries, errors.Error) {
 	}, nil
 }
 
+const SCAN_VECTOR_SIZE0 = 64
+const SCAN_VECTOR_SIZE1 = 128
 const SCAN_VECTOR_SIZE = 1024
 
 type scanConfigImpl struct {
