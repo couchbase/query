@@ -1193,8 +1193,10 @@ func (this *vbRangeScan) setContinueFromLastKey() {
 		this.continueFrom = nil
 		return
 	}
+	currentKey := this.currentKey
 	this.seek(len(this.keys) - 1)
 	this.setContinueFrom(this.current(), true)
+	this.seek(currentKey)
 }
 
 func (this *vbRangeScan) release() {
