@@ -287,6 +287,8 @@ const (
 	_COLLECTION_INFO
 	_INDEX_INFO
 	_SEQUENCE_INFO
+	_FUNCTION_INFO
+	_PREPARED_INFO
 )
 
 type ExtractDDL struct {
@@ -299,6 +301,138 @@ func NewExtractDDL(operands ...Expression) Function {
 
 	rv.expr = rv
 	return rv
+}
+
+// buildFunctionDDL builds a CREATE FUNCTION DDL statement from function metadata,
+// handling unlimited parameters like GetDDLFromDefinition
+func buildFunctionDDL(funcVal value.Value, bucket string) string {
+	var b strings.Builder
+
+	// Get the nested "functions" object from the system:functions document
+	functions, ok := funcVal.Field("functions")
+	if !ok {
+		return ""
+	}
+
+	// Get identity and definition from the functions object
+	identity, ok := functions.Field("identity")
+	if !ok {
+		return ""
+	}
+	definition, ok := functions.Field("definition")
+	if !ok {
+		return ""
+	}
+
+	// Get function name
+	name, ok := identity.Field("name")
+	if !ok {
+		return ""
+	}
+
+	// Build function name with scope if scoped function
+	b.WriteString("CREATE OR REPLACE FUNCTION ")
+	if bucket != "" {
+		// Scoped function
+		scope, ok := identity.Field("scope")
+		if !ok {
+			return ""
+		}
+		b.WriteRune('`')
+		b.WriteString(bucket)
+		b.WriteString("`.`")
+		b.WriteString(scope.ToString())
+		b.WriteString("`.`")
+		b.WriteString(name.ToString())
+		b.WriteRune('`')
+	} else {
+		// Global function
+		b.WriteRune('`')
+		b.WriteString(name.ToString())
+		b.WriteRune('`')
+	}
+
+	// Handle parameters
+	b.WriteRune('(')
+	if p, ok := definition.Field("parameters"); ok {
+		// Regular parameters exist - iterate through all of them
+		for i := 0; ; i++ {
+			v, ok := p.Index(i)
+			if !ok {
+				break
+			}
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteRune('`')
+			b.WriteString(v.ToString())
+			b.WriteRune('`')
+		}
+	} else {
+		// No parameters field - this indicates a variadic function
+		b.WriteString("...")
+	}
+	b.WriteRune(')')
+
+	// Get language
+	lang, ok := definition.Field("#language")
+	if !ok {
+		return ""
+	}
+	b.WriteString(" LANGUAGE ")
+	b.WriteString(strings.ToUpper(lang.ToString()))
+	b.WriteString(" AS ")
+
+	// Handle body based on language
+	switch lang.ToString() {
+	case "inline":
+		if text, ok := definition.Field("text"); ok {
+			b.WriteString(text.ToString())
+		} else {
+			return ""
+		}
+	case "javascript":
+		if text, ok := definition.Field("text"); ok {
+			// N1QL managed JS UDF: CREATE FUNCTION func() LANGUAGE JAVASCRIPT AS "function func() { ... }";
+			textStr := text.String()
+			// Remove ALL escape characters, backslashes
+			textStr = strings.ReplaceAll(textStr, "\\n", "")
+			textStr = strings.ReplaceAll(textStr, "\\t", "")
+			textStr = strings.ReplaceAll(textStr, "\\r", "")
+			textStr = strings.ReplaceAll(textStr, "\\", "")
+			b.WriteString(textStr)
+		} else if obj, objOk := definition.Field("object"); objOk {
+			if lib, libOk := definition.Field("library"); libOk {
+				// Externally managed JS UDF: CREATE FUNCTION func() LANGUAGE JAVASCRIPT AS "objName" AT "libraryName";
+				objStr := obj.String()
+				// Remove ALL escape characters, backslashes from object name
+				objStr = strings.ReplaceAll(objStr, "\\n", "")
+				objStr = strings.ReplaceAll(objStr, "\\t", "")
+				objStr = strings.ReplaceAll(objStr, "\\r", "")
+				objStr = strings.ReplaceAll(objStr, "\\", "")
+
+				libStr := lib.String()
+				// Remove ALL escape characters, backslashes from library name
+				libStr = strings.ReplaceAll(libStr, "\\n", "")
+				libStr = strings.ReplaceAll(libStr, "\\t", "")
+				libStr = strings.ReplaceAll(libStr, "\\r", "")
+				libStr = strings.ReplaceAll(libStr, "\\", "")
+
+				b.WriteString(objStr)
+				b.WriteString(" AT ")
+				b.WriteString(libStr)
+			} else {
+				return ""
+			}
+		} else {
+			return ""
+		}
+	default:
+		return ""
+	}
+
+	b.WriteRune(';')
+	return b.String()
 }
 
 func (this *ExtractDDL) Accept(visitor Visitor) (interface{}, error) {
@@ -357,11 +491,8 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		return value.MISSING_VALUE, err
 	}
 	buckets := v.Actual().([]interface{})
-	if len(buckets) == 0 {
-		return value.MISSING_VALUE, errors.NewWarning("No bucket(s) found or missing permissions.")
-	}
 
-	flags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO
+	flags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO | _FUNCTION_INFO | _PREPARED_INFO
 	if f, ok := with.Field("flags"); ok {
 		if f.Type() == value.STRING {
 			f = value.NewValue([]interface{}{f})
@@ -385,6 +516,10 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 						flags |= _INDEX_INFO
 					case "sequence":
 						flags |= _SEQUENCE_INFO
+					case "function":
+						flags |= _FUNCTION_INFO
+					case "prepared":
+						flags |= _PREPARED_INFO
 					default:
 						return value.MISSING_VALUE, errors.NewWarning(fmt.Sprintf("Invalid flag: %v", act[i]))
 					}
@@ -396,8 +531,35 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			return value.MISSING_VALUE, errors.NewWarning("Invalid flags.")
 		}
 	}
-	if flags&(_BUCKET_INFO|_SCOPE_INFO|_COLLECTION_INFO|_INDEX_INFO|_SEQUENCE_INFO) == 0 {
+	if flags&(_BUCKET_INFO|_SCOPE_INFO|_COLLECTION_INFO|_INDEX_INFO|_SEQUENCE_INFO|_FUNCTION_INFO|_PREPARED_INFO) == 0 {
 		return value.NULL_VALUE, errors.NewWarning("Flags exclude all data.")
+	}
+
+	// Check if bucket-related operations are requested but no buckets found
+	bucketRelatedFlags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO
+	if len(buckets) == 0 && (flags&bucketRelatedFlags) != 0 {
+		// Only return error if ONLY bucket-related flags are requested (no prepared or function flags)
+		if (flags & (_PREPARED_INFO | _FUNCTION_INFO)) == 0 { // If neither prepared nor function flags are set
+			return value.MISSING_VALUE, errors.NewWarning("No bucket(s) found or missing permissions.")
+		}
+	}
+
+	// Extract global functions first (independent of buckets)
+	if flags&_FUNCTION_INFO != 0 {
+		stmt := "SELECT functions FROM system:functions " +
+			"WHERE functions.identity.type = 'global' " +
+			"ORDER BY functions.identity.name"
+		v, _, err := context.EvaluateStatement(stmt, nil, nil, false, true, false, "")
+		if err != nil {
+			return value.MISSING_VALUE, err
+		}
+		globalFunctions := v.Actual().([]interface{})
+		for _, gf := range globalFunctions {
+			funcVal := value.NewValue(gf)
+			if ddl := buildFunctionDDL(funcVal, ""); ddl != "" {
+				res = append(res, ddl)
+			}
+		}
 	}
 
 	var sb, bucketInfoBuf strings.Builder
@@ -608,6 +770,38 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			sequences := v.Actual().([]interface{})
 			res = append(res, sequences...)
 		}
+
+		if flags&_FUNCTION_INFO != 0 {
+			// Extract scoped functions for this specific bucket
+			stmt = "SELECT functions FROM system:functions " +
+				"WHERE functions.identity.type = 'scope' AND functions.identity.`bucket` = ? " +
+				"ORDER BY functions.identity.`scope`, functions.identity.name"
+			v, _, err = context.EvaluateStatement(stmt, nil, posArg, false, true, false, "")
+			if err != nil {
+				return value.MISSING_VALUE, err
+			}
+			scopedFunctions := v.Actual().([]interface{})
+			for _, sf := range scopedFunctions {
+				funcVal := value.NewValue(sf)
+				if ddl := buildFunctionDDL(funcVal, bucket); ddl != "" {
+					res = append(res, ddl)
+				}
+			}
+		}
+	}
+
+	if flags&_PREPARED_INFO != 0 {
+		// Extract PREPARE statements used to prepare queries
+		// The statement field already contains the full PREPARE statement with semicolon
+		stmt = "SELECT RAW statement " +
+			"FROM system:prepareds " +
+			"ORDER BY name"
+		v, _, err := context.EvaluateStatement(stmt, nil, nil, false, true, false, "")
+		if err != nil {
+			return value.MISSING_VALUE, err
+		}
+		prepareds := v.Actual().([]interface{})
+		res = append(res, prepareds...)
 	}
 
 	return value.NewValue(res), nil
