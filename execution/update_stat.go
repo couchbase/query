@@ -116,6 +116,10 @@ func getIndexes(context *opContext, parent value.Value, keyspace datastore.Keysp
 	if err != nil {
 		return nil, err
 	}
+	err = indexer.Refresh()
+	if err != nil {
+		return nil, err
+	}
 
 	var idxNames []string
 	if len(idxExprs) > 0 {
