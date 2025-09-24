@@ -369,7 +369,8 @@
                       "covering_indexes": [
                           {
                               "index_statement": "CREATE INDEX adv_type_c21 ON `shellTest`(`type`,`c21`)",
-                              "keyspace_alias": "shellTest"
+                              "keyspace_alias": "shellTest",
+                              "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`type`, `c21`)"
                           }
                       ]
                   }
@@ -394,7 +395,8 @@
                       "covering_indexes": [
                           {
                               "index_statement": "CREATE INDEX adv_type_c21 ON `shellTest`(`type`,`c21`)",
-                              "keyspace_alias": "shellTest"
+                              "keyspace_alias": "shellTest",
+                              "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`type`, `c21`)"
                           }
                       ]
                   }
@@ -419,7 +421,8 @@
                       "covering_indexes": [
                           {
                               "index_statement": "CREATE INDEX adv_type_c21 ON `shellTest`(`type`,`c21`)",
-                              "keyspace_alias": "shellTest"
+                              "keyspace_alias": "shellTest",
+                              "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`type`, `c21`)"
                           }
                       ]
                   }

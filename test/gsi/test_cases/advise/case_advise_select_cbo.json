@@ -14,7 +14,9 @@
                   {
                     "index_property":"LIMIT pushdown",
                     "index_statement": "CREATE INDEX adv_test_id ON `shellTest`(`test_id`)",
-                    "keyspace_alias": "shellTest"
+                    "keyspace_alias": "shellTest",
+                    "recommending_rule": "Index keys follow cost-based order.",
+                    "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`test_id`)"
                   }
                 ]
               }
@@ -90,7 +92,8 @@
                 "covering_indexes": [
                   {
                     "index_statement": "CREATE INDEX adv_test_id_c11_c12 ON `shellTest`(`test_id`,`c11`,`c12`)",
-                    "keyspace_alias": "shellTest"
+                    "keyspace_alias": "shellTest",
+                    "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`test_id`, `c11`, `c12`)"
                   }
                 ]
               }
@@ -146,11 +149,13 @@
               "covering_indexes": [
                 {
                   "index_statement": "CREATE INDEX adv_c12_test_id_c11 ON `shellTest`(`c12`,`c11`) WHERE `test_id` = 'advise'",
-                  "keyspace_alias": "shellTest_a1"
+                  "keyspace_alias": "shellTest_a1",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c12`, `test_id`)"
                 },
                 {
                   "index_statement": "CREATE INDEX adv_c21_test_id_c22 ON `shellTest`(`c21`,`c22`) WHERE `test_id` = 'advise'",
-                  "keyspace_alias": "shellTest_a2"
+                  "keyspace_alias": "shellTest_a2",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c21`, `test_id`)"
                 }
               ],
               "indexes": [
@@ -250,7 +255,8 @@
                 {
                   "index_property": "LIMIT pushdown",
                   "index_statement": "CREATE INDEX adv_c11_test_id ON `shellTest`(`c11` INCLUDE MISSING) WHERE `test_id` = 'advise'",
-                  "keyspace_alias": "shellTest"
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c11`, `test_id`)"
                 }
               ]
             }
@@ -274,7 +280,8 @@
               "covering_indexes": [
                 {
                   "index_statement": "CREATE INDEX adv_c11_c12 ON `shellTest`(`c11`,`c12`)",
-                  "keyspace_alias": "shellTest"
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c11`, `c12`)"
                 }
               ]
             }
@@ -298,7 +305,8 @@
               "covering_indexes": [
                 {
                   "index_statement": "CREATE INDEX adv_c21_test_id_c11_add_c12 ON `shellTest`(`c21`,`c11`+`c12`) WHERE `test_id` = 'advise'",
-                  "keyspace_alias": "shellTest"
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c21`, `test_id`)"
                 }
               ],
               "indexes": [
@@ -330,7 +338,8 @@
               "covering_indexes": [
                 {
                   "index_statement": "CREATE INDEX adv_c11_test_id_length_c22 ON `shellTest`(`c11`,length(`c22`)) WHERE `test_id` = 'advise'",
-                  "keyspace_alias": "shellTest"
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c11`, `test_id`)"
                 }
               ],
               "indexes": [
