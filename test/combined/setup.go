@@ -289,7 +289,9 @@ func install(pkg string) error {
 	}
 
 	var rm *exec.Cmd
-	if err = exec.Command(dpkg, "--no-pager", "-s", "couchbase-server").Run(); err != nil {
+	logging.Infof("Checking for existing installation")
+	if err = exec.Command(dpkg, "--no-pager", "-s", "couchbase-server").Run(); err == nil {
+		logging.Infof("Existing installation found, removing package")
 		logging.Debugf("removing")
 		rm := exec.Command(dpkg, "--no-pager", "-P", "couchbase-server")
 		err = rm.Run()
@@ -297,6 +299,8 @@ func install(pkg string) error {
 			logging.Errorf("Package removal returned: %v", err)
 			return err
 		}
+	} else {
+		logging.Infof("No existing installation found")
 	}
 
 	// ensure the installation location is clear
@@ -333,7 +337,7 @@ func install(pkg string) error {
 		}
 	}
 
-	logging.Debugf("installing")
+	logging.Infof("Installing Couchbase server")
 	install := exec.Command(dpkg, "-i", pkg)
 	stdout, err := install.StdoutPipe()
 	if err != nil {
