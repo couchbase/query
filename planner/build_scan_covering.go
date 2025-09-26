@@ -219,6 +219,9 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 			}
 			if entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS | _PUSHDOWN_GROUPAGGS) {
 				hasGroupAggs = true
+				if useCBO {
+					useCBO = this.checkMinMaxOptimization(entry, alias, keyspace)
+				}
 			}
 			if entry.IsPushDownProperty(_PUSHDOWN_ORDER | _PUSHDOWN_PARTIAL_ORDER) {
 				hasOrder = true
@@ -715,6 +718,72 @@ func (this *builder) getExprsToCover() expression.Expressions {
 	newExprs = append(newExprs, exprs...)
 	newExprs = append(newExprs, this.where)
 	return newExprs
+}
+
+func (this *builder) checkMinMaxOptimization(entry *indexEntry, alias, keyspace string) bool {
+	useCBO := true
+	// check for MIN/MAX pushdown optimization, if
+	//  - FULL GROUP/AGGREGATE pushdown
+	//  - no GROUP BY clause
+	//  - single aggregate, MIN or MAX
+	//  - single index span
+	//  - aggregate is on either index leading key, or all previous index keys have equality
+	if entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS) &&
+		this.group != nil && len(this.group.By()) == 0 && len(this.aggs) == 1 {
+		desc := false
+		var op expression.Expression
+		switch agg := this.aggs[0].(type) {
+		case *algebra.Min:
+			op = agg.Operands()[0]
+		case *algebra.Max:
+			op = agg.Operands()[0]
+			desc = true
+		}
+		var spans plan.Spans2
+		if tspans, ok := entry.spans.(*TermSpans); ok {
+			spans = tspans.spans
+		}
+		if op != nil && len(spans) > 0 {
+			keys := entry.idxSargKeys
+			keyPos := -1
+			for i := range spans[0].Ranges {
+				if i >= len(keys) {
+					break
+				} else if i > 0 && len(spans) > 1 {
+					// only allow multiple spans if it's leading key
+					break
+				}
+				if op.EquivalentTo(keys[i].Expr) {
+					if indexKeyIsDescCollation(i, keys) == desc {
+						keyPos = i
+					}
+					break
+				} else if eq, _ := entry.spans.EquivalenceRangeAt(i); !eq {
+					break
+				}
+			}
+			if keyPos >= 0 {
+				missing := false
+				null := false
+				if !desc {
+					null = true
+					if keyPos > 0 || entry.HasFlag(IE_LEADINGMISSING) {
+						missing = true
+					}
+				}
+				cost, cardinality, frCost, err := getIndexMinMaxCost(alias, keyspace, keys[keyPos].Expr,
+					entry.cost, entry.cardinality, entry.frCost, missing, null, this.advisorValidate())
+				if err != nil {
+					return useCBO
+				} else if cost > 0.0 && cardinality > 0.0 && frCost > 0.0 {
+					entry.cost, entry.cardinality, entry.frCost = cost, cardinality, frCost
+				} else {
+					useCBO = false
+				}
+			}
+		}
+	}
+	return useCBO
 }
 
 func mapFilterCovers(fc map[expression.Expression]value.Value, fullCover bool) map[*expression.Cover]value.Value {

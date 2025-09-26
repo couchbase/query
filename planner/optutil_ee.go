@@ -261,6 +261,13 @@ func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64)
 	return optutil.IndexLimitCost(nlimit, noffset, cost, cardinality, frCost, selec)
 }
 
+func getIndexMinMaxCost(alias, keyspace string, indexKey expression.Expression,
+	cost, cardinality, frCost float64, missing, null, advisorValidate bool) (
+	float64, float64, float64, error) {
+	return optutil.CalcIndexMinMaxCost(alias, keyspace, indexKey, cost, cardinality, frCost,
+		missing, null, advisorValidate)
+}
+
 func getIndexProjectionCost(index datastore.Index, indexProjection *plan.IndexProjection,
 	cardinality float64) (float64, float64, int64, float64) {
 	return optutil.CalcIndexProjectionCost(index, indexProjection, cardinality, 0, 0, 0)
