@@ -822,3 +822,63 @@ func (this *ExtractDDL) MinArgs() int {
 func (this *ExtractDDL) MaxArgs() int {
 	return 2
 }
+
+type SanitizeStatement struct {
+	FunctionBase
+}
+
+func NewSanitizeStatement(operands ...Expression) Function {
+	rv := &SanitizeStatement{}
+	rv.Init("sanitize_statement", operands...)
+	rv.expr = rv
+	return rv
+}
+
+func (this *SanitizeStatement) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *SanitizeStatement) Type() value.Type { return value.OBJECT }
+
+func (this *SanitizeStatement) Evaluate(item value.Value, context Context) (value.Value, error) {
+	var stmt string
+	if len(this.operands) > 0 {
+		arg, err := this.operands[0].Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			return value.MISSING_VALUE, nil
+		} else if arg.Type() != value.STRING {
+			return value.NULL_VALUE, nil
+		}
+		stmt = arg.ToString()
+	} else {
+		return value.NULL_VALUE, nil
+	}
+
+	strStmt, paramMap, err := context.SanitizeStatement(stmt)
+	if err != nil {
+		return nil, err
+	}
+
+	rv := value.NewValue(map[string]interface{}{
+		"statement":     strStmt,
+		"parametersMap": paramMap,
+	})
+
+	return rv, nil
+}
+
+func (this *SanitizeStatement) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewSanitizeStatement(operands...)
+	}
+}
+
+func (this *SanitizeStatement) MaxArgs() int {
+	return 1
+}
+
+func (this *SanitizeStatement) MinArgs() int {
+	return 1
+}

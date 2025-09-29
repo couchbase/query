@@ -60,6 +60,7 @@ type Context interface {
 	Park(stop func(bool), changeCallerState bool)
 	Resume(changeCallerState bool)
 	IsPrepared() bool
+	SanitizeStatement(stmt string) (string, value.Value, error)
 }
 
 type CurlContext interface {

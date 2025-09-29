@@ -57,6 +57,7 @@ type Context interface {
 	SetPreserveProjectionOrder(on bool) bool
 	IsAdmin() bool
 	IsPrepared() bool
+	SanitizeStatement(stmt string) (string, value.Value, error)
 }
 
 type ExecutionHandle interface {

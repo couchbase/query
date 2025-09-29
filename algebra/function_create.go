@@ -9,6 +9,10 @@
 package algebra
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -113,4 +117,100 @@ func (this *CreateFunction) Privileges() (*auth.Privileges, errors.Error) {
 
 func (this *CreateFunction) Type() string {
 	return "CREATE_FUNCTION"
+}
+
+func (this *CreateFunction) String() string {
+
+	var s strings.Builder
+	s.WriteString("CREATE ")
+	if this.replace {
+		s.WriteString("OR REPLACE ")
+	}
+	s.WriteString("FUNCTION ")
+	if !this.failIfExists {
+		s.WriteString("IF NOT EXISTS ")
+	}
+	s.WriteString(this.name.ProtectedKey())
+	funcbody := map[string]interface{}{}
+	this.body.Body(funcbody)
+	parameters := funcbody["parameters"]
+	s.WriteString("(")
+	if parameters != nil {
+		if paramList, ok := parameters.([]value.Value); ok {
+			for i, p := range paramList {
+				if i > 0 {
+					s.WriteString(", ")
+				}
+				s.WriteString(p.ToString())
+			}
+		}
+	} else {
+		s.WriteString("...")
+	}
+	s.WriteString(")")
+
+	language, ok := funcbody["#language"].(string)
+	if ok {
+		switch language {
+		case "inline":
+			s.WriteString(" LANGUAGE ")
+			s.WriteString(strings.ToUpper(language))
+			expression := funcbody["expression"].(string)
+			s.WriteString(" AS ")
+			s.WriteString(expression)
+		case "javascript":
+			s.WriteString(" LANGUAGE ")
+			s.WriteString(strings.ToUpper(language))
+			if t, ok := funcbody["text"].(string); ok {
+				s.WriteString(" AS \"")
+				s.WriteString(t)
+				s.WriteString("\"")
+			} else {
+				object := funcbody["object"].(string)
+				library := funcbody["library"].(string)
+				s.WriteString(" AS \"")
+				s.WriteString(object)
+				s.WriteString("\" AT \"")
+				s.WriteString(library)
+				s.WriteString("\"")
+			}
+		case "golang":
+			s.WriteString(" LANGUAGE ")
+			s.WriteString(strings.ToUpper(language))
+			object := funcbody["object"].(string)
+			library := funcbody["library"].(string)
+			s.WriteString(" AS \"")
+			s.WriteString(object)
+			s.WriteString("\" AT \"")
+			s.WriteString(library)
+			s.WriteString("\"")
+		default:
+			// should not happen
+			writeErrBody(UNEXPECTED_LANGUAGE, &s, language)
+		}
+	} else {
+		// should not happen
+		writeErrBody(MISSING_LANGUAGE, &s)
+	}
+
+	return s.String()
+}
+
+const (
+	MISSING_LANGUAGE    = "missing language field in function body"
+	UNEXPECTED_LANGUAGE = "unexpected language in function body, language: %s"
+)
+
+func writeErrBody(msg string, s *strings.Builder, args ...interface{}) {
+	s.WriteString("{ ")
+	errmap := map[string]string{
+		"error": fmt.Sprintf(msg, args...),
+	}
+	errMsg, err := json.Marshal(errmap)
+	if err != nil {
+		s.WriteString(" }")
+	} else {
+		s.Write(errMsg)
+		s.WriteString(" }")
+	}
 }

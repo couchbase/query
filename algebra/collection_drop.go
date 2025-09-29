@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -120,4 +121,16 @@ func (this *DropCollection) Type() string {
 
 func (this *DropCollection) FailIfNotExists() bool {
 	return this.failIfNotExists
+}
+
+func (this *DropCollection) String() string {
+	var s strings.Builder
+	s.WriteString("DROP COLLECTION ")
+
+	if !this.failIfNotExists {
+		s.WriteString("IF EXISTS ")
+	}
+
+	s.WriteString(this.keyspace.path.ProtectedString())
+	return s.String()
 }

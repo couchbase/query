@@ -31,7 +31,7 @@ type SemChecker struct {
 	stmtType string
 }
 
-func NewSemChecker(enterprise bool, stmtType string, txn bool) *SemChecker {
+func newSemChecker(enterprise bool, stmtType string, txn bool) *SemChecker {
 	rv := &SemChecker{}
 	rv.SetMapper(rv)
 	rv.stmtType = stmtType

@@ -9,6 +9,8 @@
 package expression
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/value"
 )
 
@@ -28,6 +30,7 @@ type With interface {
 	SetErrorContext(line int, column int)
 	GetErrorContext() (int, int)
 	String() string
+	WriteSyntaxString(sb *strings.Builder)
 }
 
 type Withs []With

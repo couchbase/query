@@ -169,3 +169,19 @@ func (this *ObjectConstruct) Copy() Expression {
 func (this *ObjectConstruct) Mapping() map[Expression]Expression {
 	return this.mapping
 }
+
+func (this *ObjectConstruct) MapValues(mapper Mapper) (err error) {
+	mapped := make(map[Expression]Expression, len(this.mapping))
+
+	for name, value := range this.mapping {
+		v, err := mapper.Map(value)
+		if err != nil {
+			return err
+		}
+
+		this.bindings[name.String()] = v
+		mapped[name] = v
+	}
+	this.mapping = mapped
+	return nil
+}

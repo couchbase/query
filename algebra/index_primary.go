@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -180,4 +181,37 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 
 func (this *CreatePrimaryIndex) Type() string {
 	return "CREATE_PRIMARY_INDEX"
+}
+
+func (this *CreatePrimaryIndex) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE PRIMARY INDEX")
+	if this.name != "#primary" {
+		s.WriteString(" `")
+		s.WriteString(this.name)
+		s.WriteRune('`')
+	}
+
+	if !this.failIfExists {
+		s.WriteString(" IF NOT EXISTS")
+	}
+
+	s.WriteString(" ON ")
+	s.WriteString(this.Keyspace().Path().ProtectedString())
+
+	if this.partition != nil {
+		this.partition.writeSyntaxString(&s)
+	}
+
+	if this.using != "" && this.using != datastore.DEFAULT {
+		s.WriteString(" USING ")
+		s.WriteString(strings.ToUpper(string(this.using)))
+	}
+
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+
+	return s.String()
 }

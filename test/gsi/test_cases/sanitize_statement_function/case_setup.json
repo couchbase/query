@@ -1,0 +1,16 @@
+[
+    {
+        "statements": "CREATE GROUP IF NOT EXISTS group1 ROLES cluster_admin",
+        "userArgs": {
+            "Administrator": "password"
+        },
+        "results": []
+    },
+    {
+        "statements": "CREATE GROUP IF NOT EXISTS group2 ROLES cluster_admin",
+        "userArgs": {
+            "Administrator": "password"
+        },
+        "results": []
+    }
+]

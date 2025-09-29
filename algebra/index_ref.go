@@ -35,23 +35,21 @@ func (this *IndexRef) Using() datastore.IndexType {
 
 func (this IndexRefs) String() string {
 	var buf strings.Builder
-	for _, i := range this {
-		if i.name != "" {
-			buf.WriteString(" ")
-			buf.WriteString(i.name)
+	this.writeSyntaxString(&buf)
+	return buf.String()
+}
+
+func (this IndexRefs) writeSyntaxString(s *strings.Builder) {
+	for i, idx := range this {
+		if idx.name != "" {
+			if i > 0 {
+				s.WriteString(", ")
+			}
+			s.WriteString(idx.name)
 		}
-		if i.using == datastore.GSI || i.using == datastore.FTS {
-			buf.WriteString(" using ")
-			buf.WriteString(string(i.using))
+		if idx.using == datastore.GSI || idx.using == datastore.FTS {
+			s.WriteString(" using ")
+			s.WriteString(string(idx.using))
 		}
-		buf.WriteString(",")
 	}
-	s := buf.String()
-	if len(s) > 0 {
-		s = s[1:]
-	}
-	if len(s) > 0 {
-		s = s[:len(s)-1]
-	}
-	return s
 }

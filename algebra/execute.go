@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -137,4 +139,17 @@ Returns the input placeholder values
 */
 func (this *Execute) Using() expression.Expression {
 	return this.using
+}
+
+func (this *Execute) String() string {
+	var s strings.Builder
+	s.WriteString("EXECUTE ")
+	s.WriteRune('`')
+	s.WriteString(this.preparedName)
+	s.WriteRune('`')
+	if this.using != nil {
+		s.WriteString(" USING ")
+		s.WriteString(this.using.String())
+	}
+	return s.String()
 }

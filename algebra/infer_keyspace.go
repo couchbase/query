@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -95,4 +96,17 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 
 func (this *InferKeyspace) Type() string {
 	return "INFER"
+}
+
+func (this *InferKeyspace) String() string {
+	var s strings.Builder
+	s.WriteString("INFER KEYSPACE ")
+	s.WriteString(this.Keyspace().Path().ProtectedString())
+
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+
+	return s.String()
 }

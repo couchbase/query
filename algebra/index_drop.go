@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -151,4 +152,34 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 
 func (this *DropIndex) Type() string {
 	return "DROP_INDEX"
+}
+
+func (this *DropIndex) String() string {
+	var s strings.Builder
+	s.WriteString("DROP ")
+	if this.vector {
+		s.WriteString("VECTOR ")
+	} else if this.primaryOnly {
+		s.WriteString("PRIMARY ")
+	}
+	s.WriteString("INDEX")
+
+	if !this.failIfNotExists {
+		s.WriteString(" IF EXISTS")
+	}
+
+	if !this.primaryOnly || (this.primaryOnly && this.name != "#primary") {
+		s.WriteString(" `")
+		s.WriteString(this.name)
+		s.WriteRune('`')
+	}
+	s.WriteString(" ON ")
+	s.WriteString(this.keyspace.Path().ProtectedString())
+
+	if this.using != "" && this.using != datastore.DEFAULT {
+		s.WriteString(" USING ")
+		s.WriteString(strings.ToUpper(string(this.using)))
+	}
+
+	return s.String()
 }

@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -113,11 +114,25 @@ func (this *With) GetErrorContext() (int, int) {
 Representation as a N1QL string
 */
 func (this *With) String() string {
-	s := "`" + this.alias + "`" + " AS ( "
-	s += this.expr.String()
-	s += " ) "
+	var buf strings.Builder
+	this.WriteSyntaxString(&buf)
+	return buf.String()
+}
 
-	return s
+func (this *With) WriteSyntaxString(s *strings.Builder) {
+	s.WriteString("`" + this.alias + "`" + " AS ( ")
+	s.WriteString(this.expr.String())
+	if this.rexpr != nil {
+		if rsubq, ok := this.rexpr.(*Subquery); ok {
+			if this.isUnion {
+				s.WriteString(" UNION ")
+			} else {
+				s.WriteString(" UNION ALL ")
+			}
+			s.WriteString(rsubq.query.String())
+		}
+	}
+	s.WriteString(" ) ")
 }
 
 func (this *With) MarshalJSON() ([]byte, error) {

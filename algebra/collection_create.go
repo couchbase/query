@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -127,4 +128,16 @@ func (this *CreateCollection) Type() string {
 
 func (this *CreateCollection) FailIfExists() bool {
 	return this.failIfExists
+}
+
+func (this *CreateCollection) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE COLLECTION ")
+
+	if !this.failIfExists {
+		s.WriteString("IF NOT EXISTS ")
+	}
+	s.WriteString(this.keyspace.Path().ProtectedString())
+
+	return s.String()
 }

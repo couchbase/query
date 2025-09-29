@@ -97,3 +97,7 @@ Returns the Savepoint name
 func (this *Savepoint) Savepoint() string {
 	return this.savepoint
 }
+
+func (this *Savepoint) String() string {
+	return "SAVEPOINT " + this.savepoint
+}

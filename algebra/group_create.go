@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -110,4 +111,36 @@ func (this *CreateGroup) MarshalJSON() ([]byte, error) {
 
 func (this *CreateGroup) Type() string {
 	return "CREATE_GROUP"
+}
+
+func (this *CreateGroup) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE GROUP ")
+	if !this.failIfExists {
+		s.WriteString("IF NOT EXISTS ")
+	}
+	s.WriteRune('`')
+	s.WriteString(this.group)
+	s.WriteRune('`')
+
+	if this.desc_set {
+		s.WriteString(" WITH \"")
+		s.WriteString(this.desc)
+		s.WriteString("\"")
+	}
+
+	if this.roles_set {
+		if len(this.roles) == 0 {
+			s.WriteString(" NO ROLES")
+		} else {
+			s.WriteString(" ROLES ")
+			for i, r := range this.roles {
+				if i > 0 {
+					s.WriteString(", ")
+				}
+				s.WriteString(DecodeParsedRole(r))
+			}
+		}
+	}
+	return s.String()
 }

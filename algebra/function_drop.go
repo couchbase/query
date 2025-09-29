@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -98,4 +100,14 @@ func (this *DropFunction) Privileges() (*auth.Privileges, errors.Error) {
 
 func (this *DropFunction) Type() string {
 	return "DROP_FUNCTION"
+}
+
+func (this *DropFunction) String() string {
+	var s strings.Builder
+	s.WriteString("DROP FUNCTION ")
+	if !this.failIfNotExists {
+		s.WriteString("IF EXISTS ")
+	}
+	s.WriteString(this.name.ProtectedKey())
+	return s.String()
 }

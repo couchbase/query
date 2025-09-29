@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -135,4 +136,52 @@ func (this *RevokeRole) MarshalJSON() ([]byte, error) {
 
 func (this *RevokeRole) Type() string {
 	return "REVOKE_ROLE"
+}
+
+func (this *RevokeRole) String() string {
+	var s strings.Builder
+	s.WriteString("REVOKE ")
+
+	for i, role := range this.roles {
+		if i > 0 {
+			s.WriteString(", ")
+		}
+		s.WriteRune('`')
+		s.WriteString(role)
+		s.WriteRune('`')
+	}
+
+	if len(this.keyspaces) > 0 {
+		s.WriteString(" ON ")
+		for i, keyspace := range this.keyspaces {
+			if i > 0 {
+				s.WriteString(", ")
+			}
+			s.WriteString(keyspace.Path().ProtectedString())
+		}
+	}
+
+	s.WriteString(" FROM ")
+
+	if this.groups {
+		s.WriteString("GROUPS ")
+	} else {
+		s.WriteString("USERS ")
+	}
+
+	for i, user := range this.users {
+		if i > 0 {
+			s.WriteString(", ")
+		}
+
+		if this.groups {
+			s.WriteRune('`')
+			s.WriteString(user)
+			s.WriteRune('`')
+		} else {
+			s.WriteString(DecodeUsername(user))
+		}
+	}
+
+	return s.String()
 }

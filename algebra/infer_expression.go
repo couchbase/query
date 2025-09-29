@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -91,4 +92,17 @@ func (this *InferExpression) MarshalJSON() ([]byte, error) {
 
 func (this *InferExpression) Type() string {
 	return "INFER"
+}
+
+func (this *InferExpression) String() string {
+	var s strings.Builder
+	s.WriteString("INFER ")
+	s.WriteString(this.expr.String())
+
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+
+	return s.String()
 }

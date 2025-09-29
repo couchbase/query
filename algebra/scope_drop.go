@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -120,4 +121,16 @@ func (this *DropScope) Type() string {
 
 func (this *DropScope) FailIfNotExists() bool {
 	return this.failIfNotExists
+}
+
+func (this *DropScope) String() string {
+	var s strings.Builder
+	s.WriteString("DROP SCOPE ")
+
+	if !this.failIfNotExists {
+		s.WriteString("IF EXISTS ")
+	}
+
+	s.WriteString(this.scope.Path().ProtectedString())
+	return s.String()
 }

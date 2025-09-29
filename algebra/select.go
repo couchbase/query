@@ -522,7 +522,7 @@ func withBindings(withs expression.Withs, recursive bool) string {
 		if i > 0 {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(with.String())
+		with.WriteSyntaxString(&sb)
 	}
 
 	return sb.String()

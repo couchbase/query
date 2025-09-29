@@ -332,11 +332,13 @@ func (this *Upsert) String() string {
 		buf.WriteString(alias)
 		buf.WriteString("`")
 	}
-	if this.key != nil && this.value != nil {
+	if this.key != nil {
 		buf.WriteString(" (key ")
 		buf.WriteString(this.key.String())
-		buf.WriteString(", value ")
-		buf.WriteString(this.value.String())
+		if this.value != nil {
+			buf.WriteString(", value ")
+			buf.WriteString(this.value.String())
+		}
 		if this.options != nil {
 			buf.WriteString(", options ")
 			buf.WriteString(this.options.String())
@@ -363,6 +365,7 @@ func (this *Upsert) String() string {
 			}
 		}
 	} else if this.query != nil {
+		buf.WriteString(" ")
 		buf.WriteString(this.query.String())
 	}
 	if this.returning != nil {

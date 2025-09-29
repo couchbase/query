@@ -101,3 +101,8 @@ func (this *Explain) Text() string {
 func (this *Explain) Type() string {
 	return "EXPLAIN"
 }
+
+func (this *Explain) String() string {
+	s := "EXPLAIN " + this.stmt.String()
+	return s
+}

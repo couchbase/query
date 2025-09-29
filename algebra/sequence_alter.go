@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -87,4 +88,15 @@ func (this *AlterSequence) MarshalJSON() ([]byte, error) {
 
 func (this *AlterSequence) Type() string {
 	return "ALTER_SEQUENCE"
+}
+
+func (this *AlterSequence) String() string {
+	var s strings.Builder
+	s.WriteString("ALTER SEQUENCE ")
+	s.WriteString(this.name.ProtectedString())
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+	return s.String()
 }

@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -87,4 +88,24 @@ func (this *CreateBucket) MarshalJSON() ([]byte, error) {
 
 func (this *CreateBucket) Type() string {
 	return "CREATE_BUCKET"
+}
+
+func (this *CreateBucket) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE BUCKET ")
+
+	if !this.failIfExists {
+		s.WriteString("IF NOT EXISTS ")
+	}
+
+	s.WriteRune('`')
+	s.WriteString(this.name)
+	s.WriteRune('`')
+
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+
+	return s.String()
 }

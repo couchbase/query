@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -130,4 +132,22 @@ It's whatever the statement is
 */
 func (this *Prepare) Type() string {
 	return this.stmt.Type()
+}
+
+func (this *Prepare) String() string {
+	var s strings.Builder
+	s.WriteString("PREPARE ")
+	if this.force {
+		s.WriteString("FORCE ")
+	}
+	if this.name != "" {
+		s.WriteRune('`')
+		s.WriteString(this.name)
+		s.WriteRune('`')
+		s.WriteString(" ")
+	}
+
+	s.WriteString("AS ")
+	s.WriteString(this.stmt.String())
+	return s.String()
 }

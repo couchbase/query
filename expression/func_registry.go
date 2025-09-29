@@ -472,11 +472,13 @@ var _FUNCTIONS = map[string]Function{
 	"advisor": &Advisor{},
 
 	// General
-	"evaluate":   &Evaluate{},
-	"extractddl": &ExtractDDL{},
-	"finderr":    &Finderr{},
-	"len":        &Len{},
-	"mb_len":     &MBLen{},
+	"evaluate":           &Evaluate{},
+	"extractddl":         &ExtractDDL{},
+	"finderr":            &Finderr{},
+	"len":                &Len{},
+	"mb_len":             &MBLen{},
+	"sanitize":           &SanitizeStatement{},
+	"sanitize_statement": &SanitizeStatement{},
 
 	// Infer
 	"infer_value": &InferValue{},

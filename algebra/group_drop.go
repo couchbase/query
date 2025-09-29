@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -78,4 +79,17 @@ func (this *DropGroup) MarshalJSON() ([]byte, error) {
 
 func (this *DropGroup) Type() string {
 	return "DROP_GROUP"
+}
+
+func (this *DropGroup) String() string {
+	var s strings.Builder
+	s.WriteString("DROP GROUP ")
+	if !this.failIfNotExists {
+		s.WriteString("IF EXISTS ")
+	}
+
+	s.WriteRune('`')
+	s.WriteString(this.group)
+	s.WriteRune('`')
+	return s.String()
 }

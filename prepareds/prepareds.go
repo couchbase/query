@@ -913,7 +913,7 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string,
 		return nil, errors.NewRewriteError(err, "")
 	}
 
-	semChecker := semantics.NewSemChecker(true, stmt.Type(), false)
+	semChecker := semantics.GetSemChecker(stmt.Type(), false)
 	_, err = stmt.Accept(semChecker)
 	if err != nil {
 		return nil, errors.NewSemanticsError(err, "")
