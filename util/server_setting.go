@@ -61,6 +61,7 @@ const (
 	N1QL_NATURAL_LANG_REQ                                       // 0x0001000000
 	N1QL_FULL_SPAN_FANOUT                                       // 0x0002000000
 	N1QL_NO_DEF_SELEC                                           // 0x0004000000
+	N1QL_HASH_TABLE_SIZE                                        // 0x0008000000
 )
 
 const _NOT_APPLICABLE = "N/A"
@@ -93,6 +94,7 @@ var _N1QL_Features = map[uint64]string{
 	N1QL_NATURAL_LANG_REQ:                    _NOT_APPLICABLE,
 	N1QL_FULL_SPAN_FANOUT:                    "Spans Fanout to 8192",
 	N1QL_NO_DEF_SELEC:                        "No use of default selectivity without histogram",
+	N1QL_HASH_TABLE_SIZE:                     "Default maximum hash table size",
 }
 
 const DEF_N1QL_FEAT_CTRL = (N1QL_ENCODED_PLAN | N1QL_GOLANG_UDF | N1QL_CBO_NEW)
