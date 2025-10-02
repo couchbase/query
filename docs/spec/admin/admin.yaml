@@ -666,7 +666,7 @@ components:
 
           [client_context_id]: ../n1ql-rest-query/index.html#client_context_id
         x-desc-refs: |-
-          [client_context_id]: #client_context_id
+          [client_context_id]: query-settings.html#client_context_id
       cpuTime:
         type: string
         format: duration
@@ -1386,6 +1386,8 @@ components:
           Refer to [Auto-Prepare][auto-prepare] for more information.
 
           [auto-prepare]: ../n1ql/n1ql-language-reference/prepare.html#auto-prepare
+        x-desc-refs: |-
+          [auto-prepare]: ../n1ql-language-reference/prepare.html#auto-prepare
       cleanupclientattempts:
         type: boolean
         default: true
@@ -1462,6 +1464,8 @@ components:
           Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+        x-desc-refs: |-
+          [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
         properties:
           aborted:
             type: boolean
@@ -1512,6 +1516,8 @@ components:
               Refer to [Configure Completed Requests][sys-completed-config] for more information.
 
               [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
+            x-desc-refs: |-
+              [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           threshold:
             type: integer
             format: int32
@@ -1576,6 +1582,7 @@ components:
 
           [queryCompletedLimit]: ../n1ql-rest-settings/index.html#queryCompletedLimit
         x-desc-refs: |-
+          [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           [queryCompletedLimit]: #queryCompletedLimit
       completed-max-plan-size:
         type: integer
@@ -1601,6 +1608,7 @@ components:
 
           [queryCompletedMaxPlanSize]: ../n1ql-rest-settings/index.html#queryCompletedMaxPlanSize
         x-desc-refs: |-
+          [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           [queryCompletedMaxPlanSize]: #queryCompletedMaxPlanSize
       completed-stream-size:
         type: integer
@@ -1618,6 +1626,8 @@ components:
           Refer to [Stream Completed Requests][sys-history] for more information and examples.
 
           [sys-history]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
+        x-desc-refs: |-
+          [sys-history]: monitoring-n1ql-query.html#sys-history
       completed-threshold:
         type: integer
         format: int32
@@ -1642,6 +1652,7 @@ components:
 
           [queryCompletedThreshold]: ../n1ql-rest-settings/index.html#queryCompletedThreshold
         x-desc-refs: |-
+          [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           [queryCompletedThreshold]: #queryCompletedThreshold
       controls:
         type: boolean
@@ -1794,6 +1805,7 @@ components:
           [queryMaxParallelism]: ../n1ql-rest-settings/index.html#queryMaxParallelism
           [max_parallelism_req]: ../n1ql-rest-query/index.html#max_parallelism_req
         x-desc-refs: |-
+          [max-parallelism]: ../n1ql-language-reference/index-partitioning.html#max-parallelism
           [queryMaxParallelism]: #queryMaxParallelism
           [max_parallelism_req]: #max_parallelism_req
       memory-quota:
@@ -2073,6 +2085,7 @@ components:
 
           [profile_req]: ../n1ql-rest-query/index.html#profile_req
         x-desc-refs: |-
+          [monitor-profile-details]: monitoring-n1ql-query.html#monitor-profile-details
           [profile_req]: #profile_req
       request-size-cap:
         type: integer
