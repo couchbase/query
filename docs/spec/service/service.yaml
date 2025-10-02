@@ -241,6 +241,8 @@ components:
           Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
 
           [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
+        x-desc-refs: |-
+          [section_srh_tlm_n1b]: #section_srh_tlm_n1b
         x-has-example: true
         example:
           - LAX
@@ -276,6 +278,8 @@ components:
           Refer to [Auto-Execute][auto-execute] for more information.
 
           [auto-execute]: ../n1ql/n1ql-language-reference/prepare.html#auto-execute
+        x-desc-refs: |-
+          [auto-execute]: ../n1ql-language-reference/prepare.html#auto-execute
         x-has-default: true
         x-has-example: true
         default: false
@@ -567,6 +571,8 @@ components:
           If both `prepared` and `statement` are present and non-empty, an error is returned.
 
           [execute]: ../n1ql/n1ql-language-reference/execute.html
+        x-desc-refs: |-
+          [execute]: ../n1ql-language-reference/execute.html
         x-has-example: true
         example: "[127.0.0.1:8091]pricy_hotel"
       preserve_expiry:
@@ -720,6 +726,8 @@ components:
           Refer to [Transactional Scan Consistency][transactional-scan-consistency] for details.
 
           [transactional-scan-consistency]: ../n1ql/n1ql-manage/query-settings.html#transactional-scan-consistency
+        x-desc-refs: |-
+          [transactional-scan-consistency]: #transactional-scan-consistency
         enum: ["not_bounded", "at_plus", "request_plus", "statement_plus"]
         x-has-default: true
         x-has-example: true
@@ -993,6 +1001,8 @@ components:
           Refer to [Flex Indexes][flex-indexes] for more information.
 
           [flex-indexes]: ../n1ql/n1ql-language-reference/flex-indexes.html
+        x-desc-refs: |-
+          [flex-indexes]: ../n1ql-language-reference/flex-indexes.html
         x-has-default: true
         x-has-example: true
         default: false
@@ -1054,6 +1064,8 @@ components:
         Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
 
         [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
+      x-desc-refs: |-
+        [section_srh_tlm_n1b]: #section_srh_tlm_n1b
       example: LAX
       x-has-example: true
   Credentials:
@@ -1084,7 +1096,7 @@ components:
         description: A unique identifier for the response.
       clientContextID:
         type: string
-        description: The client context ID of the request, if one was supplied &mdash; see `client_context_id` in [Request Parameters](#Request).
+        description: The client context ID of the request, if one was supplied &mdash; see `client_context_id` in the request parameters.
       signature:
         type: object
         description: |-
@@ -1231,7 +1243,7 @@ components:
     type: object
     description: |-
       An object containing runtime information provided along with the request.
-      Present only if `controls` was set to true in the [Request Parameters](#Request).
+      Present only if `controls` was set to true in the request parameters.
     properties:
       scan_consistency:
         type: string
@@ -1255,7 +1267,7 @@ components:
     type: object
     description: |-
       An object containing monitoring and profiling information about the request.
-      Present only if `profile` was set to `"phases"` or `"timings"` in the [Request Parameters](#Request).
+      Present only if `profile` was set to `"phases"` or `"timings"` in the request parameters.
     required:
       - requestTime
       - servicingHost
@@ -1316,7 +1328,7 @@ components:
         type: object
         title: Execution Timings
         description: |-
-          Present only if `profile` was set to `"timings"` in the [Request Parameters](#Request).
+          Present only if `profile` was set to `"timings"` in the request parameters.
 
           The execution details for various phases involved in the query execution, such as kernel and service execution times, number of documents processed at each query operator in each phase, and number of phase switches.
         required:
