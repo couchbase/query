@@ -239,6 +239,7 @@ components:
 
           [completed-limit]: ../n1ql-rest-admin/index.html#completed-limit
         x-desc-refs: |-
+          [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           [completed-limit]: #completed-limit
       queryCompletedMaxPlanSize:
         type: integer
@@ -264,6 +265,7 @@ components:
 
           [completed-max-plan-size]: ../n1ql-rest-admin/index.html#completed-max-plan-size
         x-desc-refs: |-
+          [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           [completed-max-plan-size]: #completed-max-plan-size
       queryCompletedThreshold:
         type: integer
@@ -289,6 +291,7 @@ components:
 
           [completed-threshold]: ../n1ql-rest-admin/index.html#completed-threshold
         x-desc-refs: |-
+          [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           [completed-threshold]: #completed-threshold
       queryLogLevel:
         type: string
@@ -362,6 +365,7 @@ components:
           [max-parallelism-srv]: ../n1ql-rest-admin/index.html#max-parallelism-srv
           [max_parallelism_req]: ../n1ql-rest-query/index.html#max_parallelism_req
         x-desc-refs: |-
+          [max-parallelism]:  ../n1ql-language-reference/index-partitioning.html#max-parallelism
           [max-parallelism-srv]: #max-parallelism-srv
           [max_parallelism_req]: #max_parallelism_req
       queryMemoryQuota:
