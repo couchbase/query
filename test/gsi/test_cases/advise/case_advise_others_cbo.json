@@ -13,7 +13,8 @@
               "covering_indexes": [
                 {
                   "index_statement": "CREATE INDEX adv_c22_c12_type ON `shellTest`(`c22`,`c12`,`type`)",
-                  "keyspace_alias": "shellTest"
+                  "keyspace_alias": "shellTest",
+                  "update_statistics": "UPDATE STATISTICS FOR `shellTest`(`c22`, `c12`, `type`)"
                 }
               ]
             }
