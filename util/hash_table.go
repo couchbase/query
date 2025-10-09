@@ -26,9 +26,9 @@ import (
 // use power of 2 as hash table sizes
 // the max size (2 ^ 24) is somewhat arbitrary
 const (
-	MIN_HASH_TABLE_SIZE_INLIST    = 32
-	MIN_HASH_TABLE_SIZE_HASH_JOIN = 1024
-	MAX_HASH_TABLE_SIZE           = 16777216
+	_MIN_HASH_TABLE_SIZE_INLIST    = 32
+	_MIN_HASH_TABLE_SIZE_HASH_JOIN = 1024
+	_DEF_MAX_HASH_TABLE_SIZE       = 16777216
 )
 
 // this is the load threadhold that triggers an enlargement of the hash table
@@ -92,6 +92,7 @@ type HashTable struct {
 	mode     int          // hash table mode
 	bucket   int          // when iterate or get, bucket position
 	vector   int          // when iterate or get, vector position
+	maxSlots int          // maximum number of slots in hash table
 	size     uint64       // size in byte of the hash table
 	array    bool         // using value array?
 }
@@ -103,21 +104,26 @@ func NewHashTable(purpose int, cardinality float64, arrLen int) *HashTable {
 		vector: -1,
 		array:  arrLen > 1,
 	}
-	defSize := MIN_HASH_TABLE_SIZE_HASH_JOIN
+	defSlots := _MIN_HASH_TABLE_SIZE_HASH_JOIN
 	if purpose == HASH_TABLE_FOR_INLIST {
-		defSize = MIN_HASH_TABLE_SIZE_INLIST
+		defSlots = _MIN_HASH_TABLE_SIZE_INLIST
 	}
-	size := int(math.Ceil(cardinality / HTLoadThreshold))
-	if size <= defSize {
+	rv.maxSlots = _DEF_MAX_HASH_TABLE_SIZE
+	// for now N1QL_HASH_TABLE_SIZE only works at cluster-level
+	if !IsFeatureEnabled(GetN1qlFeatureControl(), N1QL_HASH_TABLE_SIZE) {
+		rv.maxSlots *= 4
+	}
+	slots := int(math.Ceil(cardinality / HTLoadThreshold))
+	if slots <= defSlots {
 		// this includes the case where size is not valid (i.e. -1)
-		size = defSize
+		slots = defSlots
 	} else {
-		size = 1 << int(math.Ceil(math.Log2(float64(size))))
-		if size > MAX_HASH_TABLE_SIZE {
-			size = MAX_HASH_TABLE_SIZE
+		slots = 1 << int(math.Ceil(math.Log2(float64(slots))))
+		if slots > rv.maxSlots {
+			slots = rv.maxSlots
 		}
 	}
-	rv.entries = make([]*hashEntry, size)
+	rv.entries = make([]*hashEntry, slots)
 	return rv
 }
 
@@ -297,15 +303,15 @@ func (this *HashTable) Grow(equal func(val1, val2 interface{}) bool) error {
 	defer func() { this.mode = prevMode }()
 	this.mode = HASH_TABLE_GROW
 
-	newSize := len(this.entries) * 2
-	if newSize > MAX_HASH_TABLE_SIZE {
-		return fmt.Errorf(fmt.Sprintf("Maximum hash table size %d exceeded", MAX_HASH_TABLE_SIZE))
+	newSlots := len(this.entries) * 2
+	if newSlots > this.maxSlots {
+		return fmt.Errorf(fmt.Sprintf("Maximum hash table size %d exceeded", this.maxSlots))
 	}
 
 	this.count = 0
 	this.distinct = 0
 	oldEntries := this.entries
-	this.entries = make([]*hashEntry, newSize)
+	this.entries = make([]*hashEntry, newSlots)
 
 	for _, entry := range oldEntries {
 		if entry != nil {
