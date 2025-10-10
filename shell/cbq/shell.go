@@ -133,6 +133,26 @@ func init() {
 
 }
 
+// Header flags (-H / --header) - repeatable, like curl
+type headers []string
+
+var headerFlag headers
+
+func init() {
+	const usage = command.UHEADER
+	flag.Var(&headerFlag, "header", usage)
+	flag.Var(&headerFlag, "H", command.NewShorthandMsg("-header"))
+}
+
+func (h *headers) String() string {
+	return fmt.Sprintf("%s\n", *h)
+}
+
+func (h *headers) Set(val string) error {
+	*h = append(*h, val)
+	return nil
+}
+
 /*
    Option        : -passphrase or -pp
    Args          : passphrase for keyfile (Private Key Encryption)
@@ -605,6 +625,27 @@ func main() {
 	var err error
 	var password []byte
 
+	hasAuthHeaders := false
+	for _, hv := range headerFlag {
+		idx := strings.Index(hv, ":")
+		if idx <= 0 {
+			s_err := command.HandleError(errors.E_SHELL_CMD_LINE_ARGS, "Invalid -H/--header format. Use 'Key: Value'.")
+			command.PrintError(s_err)
+			os.Exit(1)
+		}
+		k := strings.TrimSpace(hv[:idx])
+		v := strings.TrimSpace(hv[idx+1:])
+		if k == "" {
+			s_err := command.HandleError(errors.E_SHELL_CMD_LINE_ARGS, "Invalid -H/--header: empty header name.")
+			command.PrintError(s_err)
+			os.Exit(1)
+		}
+		n1ql.AddExtraHeader(k, v)
+		if k == "Authorization" && len(v) > 0 {
+			hasAuthHeaders = true
+		}
+	}
+
 	if userFlag != "" {
 		//Check if there is a -password option.
 		if pwdFlag != "" {
@@ -657,7 +698,7 @@ func main() {
 	   It is important to apend these credentials to those given by
 	   -user.
 	*/
-	if userFlag == "" && credsFlag == "" {
+	if userFlag == "" && credsFlag == "" && !hasAuthHeaders {
 		// No credentials exist. This can still be used to connect to
 		// un-authenticated servers.
 		// Dont output the statement if we are running in single command

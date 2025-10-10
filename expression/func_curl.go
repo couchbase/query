@@ -395,6 +395,8 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 			}
 			dataOp = true
 		case "headers", "header", "H":
+			// CURL() also supports JWT authentication. User need to provide the JWT access token in this format:
+			// Authorization: Bearer <JWT_ACCESS_TOKEN>
 			break
 		case "silent", "s":
 			if inputVal.Type() != value.BOOLEAN {
@@ -443,7 +445,6 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 			}
 
 		case "basic":
-			// N1QL CURL() supports only Basic Authorization
 			if inputVal.Type() != value.BOOLEAN {
 				if show_error == true {
 					return nil, fmt.Errorf("Incorrect type for basic option in CURL ")
@@ -452,7 +453,6 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 				}
 			}
 		case "anyauth":
-			// N1QL CURL() supports only Basic Authorization
 			if inputVal.Type() != value.BOOLEAN {
 				if show_error == true {
 					return nil, fmt.Errorf("Incorrect type for anyauth option in CURL ")

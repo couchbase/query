@@ -32,6 +32,7 @@ const (
 	UPWD      = " Password \n\t For example : -p password"
 	UPP       = "Passphrase \n\t For example -pp HelloWorld"
 	UCREDS    = " A list of credentials, in the form user:password. \n\t For example : -c beer-sample:pass"
+	UHEADER   = " Add an HTTP header to every request (repeatable). Format: 'Key: Value'."
 	UVERSION  = " Shell Version \n\t Usage: -version"
 	UVIMODESL = " Single-line vi style input mode \n\t Usage: -vi"
 	UVIMODEML = " Multi-line vi style input mode \n\t Usage: -vim"
