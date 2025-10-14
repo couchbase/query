@@ -90,8 +90,8 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.22.0 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.7.0 // indirect
-	github.com/blevesearch/bleve/v2 v2.5.4-0.20250929191816-b62a36664026 // indirect
-	github.com/blevesearch/bleve_index_api v1.2.10-0.20250929190209-86a7041523f6 // indirect
+	github.com/blevesearch/bleve/v2 v2.5.4-0.20250929190945-0ffd850cd1ad // indirect
+	github.com/blevesearch/bleve_index_api v1.2.9-0.20250929185838-e1be6a8cc229 // indirect
 	github.com/blevesearch/geo v0.2.4 // indirect
 	github.com/blevesearch/go-faiss v1.0.25 // indirect
 	github.com/blevesearch/go-porterstemmer v1.0.3 // indirect
@@ -171,7 +171,7 @@ require (
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250227231956-55c901821b1e // indirect
-	google.golang.org/grpc v1.72.0 // indirect
+	google.golang.org/grpc v1.71.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

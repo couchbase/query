@@ -96,9 +96,6 @@ func TestAnsiJoin(t *testing.T) {
 	// test ANSI OUTER JOIN to ANSI INNER JOIN transformation
 	runMatch("case_ansijoin_oj2ij.json", false, true, qc, t)
 
-	// test ANSI JOIN with USE KEYS
-	runMatch("case_ansijoin_usekeys.json", false, true, qc, t)
-
 	runStmt(qc, "CREATE INDEX st_ix25 on shellTest(field1, field2) WHERE META().id LIKE \"OFFER:%\"")
 	runStmt(qc, "CREATE INDEX st_ix26 on shellTest(META().id) WHERE META().id LIKE \"PRODUCT:%\"")
 	runStmt(qc, "CREATE INDEX st_ix27 on shellTest(peroid.startDateTime, peroid.endDateTime)")

@@ -135,7 +135,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		useCBO = useCBO && this.keyspaceUseCBO(alias)
-		useKeys := right.Keys() != nil
 
 		err := this.processOnclause(alias, node.Onclause(), outer, node.Pushable())
 		if err != nil {
@@ -249,18 +248,6 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					}
 					return hjoin, nil
 				}
-			} else if useKeys && hjoin != nil && !preferNL {
-				// if USE KEYS is specified on right-hand side, since we have to do
-				// Fetch, try to use hash join if possible
-				this.restoreJoinPlannerState(hjps)
-				node.SetOnclause(hjOnclause)
-				if hjIndexHintError {
-					baseKeyspace.SetIndexHintError()
-				}
-				if !joinEnum && !buildRight {
-					this.resetOrder()
-				}
-				return hjoin, nil
 			}
 
 			if preferHash && !joinEnum {
@@ -509,7 +496,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 	switch right := right.(type) {
 	case *algebra.KeyspaceTerm:
 		useCBO = useCBO && this.keyspaceUseCBO(alias)
-		useKeys := right.Keys() != nil
 
 		err := this.processOnclause(alias, node.Onclause(), outer, node.Pushable())
 		if err != nil {
@@ -596,18 +582,6 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 
 		if len(scans) > 0 {
 			if useCBO && !preferNL && (hnCost > 0.0) && (cost > hnCost) {
-				this.restoreJoinPlannerState(hjps)
-				node.SetOnclause(hnOnclause)
-				if hjIndexHintError {
-					baseKeyspace.SetIndexHintError()
-				}
-				if !joinEnum && !buildRight {
-					this.resetOrder()
-				}
-				return hnest, nil
-			} else if useKeys && hnest != nil && !preferNL {
-				// if USE KEYS is specified on right-hand side, since we have to do
-				// Fetch, try to use hash nest if possible
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hnOnclause)
 				if hjIndexHintError {
