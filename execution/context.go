@@ -1435,6 +1435,9 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 				}
 				planFound = true
 				psubplans.Set(query, nil, subplan, subplanIsks, false)
+				if subqp, ok := subplan.(*plan.QueryPlan); ok {
+					subqp.Verify(this.prepared)
+				}
 			}
 			mutex.Unlock()
 		}
