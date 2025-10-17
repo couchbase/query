@@ -150,7 +150,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					return
 				}
 				itemMap := map[string]interface{}{
-					"name":            localKey,
+					"name":            entry.Prepared.Name(),
 					"uses":            entry.Uses,
 					"statement":       entry.Prepared.Text(),
 					"indexApiVersion": entry.Prepared.IndexApiVersion(),
@@ -158,6 +158,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				}
 				if entry.Prepared.Namespace() != "" {
 					itemMap["namespace"] = entry.Prepared.Namespace()
+				}
+				if entry.Prepared.QueryContext() != "" {
+					itemMap["queryContext"] = entry.Prepared.QueryContext()
 				}
 				if entry.Prepared.EncodedPlan() != "" {
 					itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
