@@ -62,6 +62,10 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *InitialGroup) SetAggregates(aggregates algebra.Aggregates) {
+	this.aggregates = aggregates
+}
+
 func (this *InitialGroup) CanSpill() bool {
 	return (this.flags & _CAN_SPILL) != 0
 }
@@ -194,6 +198,10 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
 }
 
+func (this *IntermediateGroup) SetAggregates(aggregates algebra.Aggregates) {
+	this.aggregates = aggregates
+}
+
 func (this *IntermediateGroup) CanSpill() bool {
 	return (this.flags & _CAN_SPILL) != 0
 }
@@ -313,6 +321,10 @@ func (this *FinalGroup) SetKeys(keys expression.Expressions) {
 
 func (this *FinalGroup) Aggregates() algebra.Aggregates {
 	return this.aggregates
+}
+
+func (this *FinalGroup) SetAggregates(aggregates algebra.Aggregates) {
+	this.aggregates = aggregates
 }
 
 func (this *FinalGroup) CanSpill() bool {
