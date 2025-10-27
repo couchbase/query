@@ -33,3 +33,7 @@ func (s *store) HasSystemCBOStats() (bool, errors.Error) {
 func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 	return nil, nil
 }
+
+func (s *store) CreateQueryMetadata(requestId string) errors.Error {
+	return nil
+}

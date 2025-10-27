@@ -99,6 +99,7 @@ type Datastore interface {
 	DropSystemCBOStats() errors.Error
 	GetSystemCBOStats() (Keyspace, errors.Error)
 	HasSystemCBOStats() (bool, errors.Error)
+	CreateQueryMetadata(requestId string) errors.Error
 	GetSystemCollection(bucketName string) (Keyspace, errors.Error)
 	CheckSystemCollection(bucketName, requestId string, forceIndex bool, randomDelay int) (bool, errors.Error)
 

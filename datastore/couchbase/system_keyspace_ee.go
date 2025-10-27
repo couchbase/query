@@ -27,9 +27,18 @@ const (
 	_N1QL_SYSTEM_SCOPE       = dictionary.N1QL_SYSTEM_SCOPE
 	_N1QL_CBO_STATS          = dictionary.N1QL_CBO_STATS
 	_CBO_STATS_PRIMARY_INDEX = dictionary.CBO_STATS_PRIMARY_INDEX
+	_QUERY_METADATA_BUCKET   = dictionary.QUERY_METADATA_BUCKET
 )
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
+	return s.createSysCollection(_N1QL_SYSTEM_BUCKET, _N1QL_SYSTEM_SCOPE, _N1QL_CBO_STATS, _CBO_STATS_PRIMARY_INDEX, requestId)
+}
+
+func (s *store) CreateQueryMetadata(requestId string) errors.Error {
+	return s.createSysCollection(_QUERY_METADATA_BUCKET, _BUCKET_SYSTEM_SCOPE, _BUCKET_SYSTEM_COLLECTION, "", requestId)
+}
+
+func (s *store) createSysCollection(bucketName, scopeName, collectionName, indexName, requestId string) errors.Error {
 	dPool, er := s.NamespaceByName("default") // so we're using the cached namespace always
 	if er != nil {
 		return er
@@ -37,7 +46,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 	defaultPool := dPool.(*namespace)
 
 	// create/get system bucket/scope/collection
-	sysBucket, er := defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+	sysBucket, er := defaultPool.keyspaceByName(bucketName)
 	if er != nil {
 		// only ignore bucket/keyspace not found error
 		if er.Code() != errors.E_CB_KEYSPACE_NOT_FOUND && er.Code() != errors.E_CB_BUCKET_NOT_FOUND {
@@ -45,21 +54,26 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 		}
 
 		// create bucket
-		_, err := cb.GetSystemBucket(&s.client, defaultPool.cbNamespace, _N1QL_SYSTEM_BUCKET)
+		_, err := cb.GetSystemBucket(&s.client, defaultPool.cbNamespace, bucketName)
 		if err != nil {
-			return errors.NewCbCreateSystemBucketError(_N1QL_SYSTEM_BUCKET, err)
+			return errors.NewCbCreateSystemBucketError(bucketName, err)
 		}
 
 		// no need for a retry loop, cb.GetSystemBucket() call above should
 		// have made sure that BucketMap is updated already
 		defaultPool.refresh()
-		sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+		sysBucket, er = defaultPool.keyspaceByName(bucketName)
 		if er != nil {
 			return er
 		}
 	}
 
-	sysScope, er := sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
+	// _system scope automatically created
+	if scopeName == _BUCKET_SYSTEM_SCOPE {
+		return nil
+	}
+
+	sysScope, er := sysBucket.ScopeByName(scopeName)
 	if er != nil {
 		if er.Code() != errors.E_CB_SCOPE_NOT_FOUND {
 			// only ignore scope not found error
@@ -67,7 +81,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 		}
 
 		// allow "already exists" error in case of duplicated Create call
-		er = sysBucket.CreateScope(_N1QL_SYSTEM_SCOPE)
+		er = sysBucket.CreateScope(scopeName)
 		if er != nil && !cb.AlreadyExistsError(er) {
 			return er
 		}
@@ -81,12 +95,12 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 
 			// reload sysBucket
 			sysBucket.setNeedsManifest()
-			sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+			sysBucket, er = defaultPool.keyspaceByName(bucketName)
 			if er != nil {
 				return er
 			}
 
-			sysScope, er = sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
+			sysScope, er = sysBucket.ScopeByName(scopeName)
 			if sysScope != nil {
 				break
 			} else if er != nil && er.Code() != errors.E_CB_SCOPE_NOT_FOUND {
@@ -94,11 +108,16 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 			}
 		}
 		if sysScope == nil {
-			return errors.NewCbBucketCreateScopeError(_N1QL_SYSTEM_BUCKET+"."+_N1QL_SYSTEM_SCOPE, nil)
+			return errors.NewCbBucketCreateScopeError(bucketName+"."+scopeName, nil)
 		}
 	}
 
-	cboStats, er := sysScope.KeyspaceByName(_N1QL_CBO_STATS)
+	// _query collection automatically created
+	if collectionName == _BUCKET_SYSTEM_COLLECTION {
+		return nil
+	}
+
+	sysCollection, er := sysScope.KeyspaceByName(collectionName)
 	if er != nil {
 		if er.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
 			// only ignore keyspace not found error
@@ -106,7 +125,7 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 		}
 
 		// allow "already exists" error in case of duplicated Create call
-		er = sysScope.CreateCollection(_N1QL_CBO_STATS, nil)
+		er = sysScope.CreateCollection(collectionName, nil)
 		if er != nil && !cb.AlreadyExistsError(er) {
 			return er
 		}
@@ -120,49 +139,54 @@ func (s *store) CreateSystemCBOStats(requestId string) errors.Error {
 
 			// reload sysBucket
 			sysBucket.setNeedsManifest()
-			sysBucket, er = defaultPool.keyspaceByName(_N1QL_SYSTEM_BUCKET)
+			sysBucket, er = defaultPool.keyspaceByName(bucketName)
 			if er != nil {
 				return er
 			}
 
-			sysScope, er = sysBucket.ScopeByName(_N1QL_SYSTEM_SCOPE)
+			sysScope, er = sysBucket.ScopeByName(scopeName)
 			if er != nil {
 				return er
 			}
 
-			cboStats, er = sysScope.KeyspaceByName(_N1QL_CBO_STATS)
-			if cboStats != nil {
+			sysCollection, er = sysScope.KeyspaceByName(collectionName)
+			if sysCollection != nil {
 				break
 			} else if er != nil && er.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
 				return er
 			}
 		}
-		if cboStats == nil {
-			return errors.NewCbBucketCreateCollectionError(_N1QL_SYSTEM_BUCKET+"."+_N1QL_SYSTEM_SCOPE+"."+_N1QL_CBO_STATS, nil)
+		if sysCollection == nil {
+			return errors.NewCbBucketCreateCollectionError(bucketName+"."+scopeName+"."+collectionName, nil)
 		}
+	}
+
+	// if no index requested
+	if indexName == "" {
+		return nil
 	}
 
 	// create primary index
 	// make sure we have indexer3 first
-	indexer, er := cboStats.Indexer(datastore.GSI)
+	indexer, er := sysCollection.Indexer(datastore.GSI)
 	if er != nil {
 		return er
 	}
 
 	indexer3, ok := indexer.(datastore.Indexer3)
 	if !ok {
-		cb.DropSystemBucket(&s.client, _N1QL_SYSTEM_BUCKET)
+		cb.DropSystemBucket(&s.client, bucketName)
 		return errors.NewInvalidGSIIndexerError("Cannot create system bucket/scope/collection")
 	}
 
-	_, er = indexer3.IndexByName(_CBO_STATS_PRIMARY_INDEX)
+	_, er = indexer3.IndexByName(indexName)
 	if er != nil {
 		if !errors.IsIndexNotFoundError(er) {
 			// only ignore index not found error
 			return er
 		}
 
-		er = s.CreateSysPrimaryIndex(_CBO_STATS_PRIMARY_INDEX, requestId, indexer3)
+		er = s.CreateSysPrimaryIndex(indexName, requestId, indexer3)
 		if er != nil {
 			return er
 		}
