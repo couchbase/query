@@ -12,7 +12,7 @@
                     "CREATE OR REPLACE FUNCTION `test_func`() LANGUAGE JAVASCRIPT AS \"function test_func() { return \"hello\"; }\";",
                     "CREATE OR REPLACE FUNCTION `test_inline_func`(`x`) LANGUAGE INLINE AS x * 2;",
                     "CREATE OR REPLACE FUNCTION `variadic_func`(...) LANGUAGE INLINE AS args[0] + args[1];",
-                    "CREATE BUCKET `customer` WITH {'numVBuckets':64,'ramQuota':250,'storageBackend':'magma'};",
+                    "CREATE BUCKET `customer` WITH {'evictionPolicy':'fullEviction','numVBuckets':128,'ramQuota':250,'storageBackend':'magma'};",
                     "CREATE INDEX `test_index` ON `customer`(`name`) ;",
                     "CREATE SEQUENCE `default`:`customer`.`_default`.`test_sequence` START WITH 100 CACHE 10 NO CYCLE INCREMENT BY 5 MINVALUE -9223372036854775808;",
                     "CREATE OR REPLACE FUNCTION `customer`.`_default`.`scoped_multiply`(`x`, `y`) LANGUAGE INLINE AS x * y;",
@@ -28,7 +28,7 @@
         "results": [
             {
                 "ddl_statements": [
-                    "CREATE BUCKET `customer` WITH {'numVBuckets':64,'ramQuota':250,'storageBackend':'magma'};"
+                    "CREATE BUCKET `customer` WITH {'evictionPolicy':'fullEviction','numVBuckets':128,'ramQuota':250,'storageBackend':'magma'};"
                 ]
             }
         ]

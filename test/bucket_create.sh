@@ -18,6 +18,9 @@ do
   if [ $i == 'orders' ]
    then
       curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d bucketType=couchbase -d replicaNumber=0 $Site > /dev/null
+  elif [ $i == 'customer' ]
+  then
+      curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d bucketType=couchbase -d storageBackend=magma -d numVBuckets=128 $Site > /dev/null
   else
       curl --silent -X POST -u $Auth -d name=$i -d ramQuotaMB=$q -d bucketType=couchbase $Site > /dev/null
   fi
