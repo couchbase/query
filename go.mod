@@ -133,6 +133,7 @@ require (
 	github.com/couchbase/tools-common/types v1.1.4 // indirect
 	github.com/couchbase/tools-common/utils/v3 v3.0.2 // indirect
 	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0-20240607131231-fb385523de28 // indirect
+	github.com/couchbaselabs/nex v0.0.0-20230419191105-421cb5932838 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect

@@ -212,7 +212,7 @@ func (this *preparedCache) IsPredefinedPrepareName(name string) bool {
 
 func (this *preparedCache) GetText(text string, offset int) string {
 
-	// in order to get the force option to not to mistake the
+	// in order to get the force/save option to not to mistake the
 	// statement as different and refuse to replace the plan
 	// we need to remove it from the statement
 	// this we do for backwards compatibility - ideally we should just
@@ -221,15 +221,34 @@ func (this *preparedCache) GetText(text string, offset int) string {
 	// one extra space, specifying the name of an already prepared anonymous
 	// statment, use of string vs identifier for the statement name...)s
 	// makes the text verification fails, while it should't
+	var i, length int
 	prepare := text[:offset]
-	i := strings.Index(strings.ToUpper(prepare), " FORCE")
-	if i < 0 {
+	uprepare := strings.ToUpper(prepare)
+	i1 := strings.Index(uprepare, " FORCE")
+	i2 := strings.Index(uprepare, " SAVE")
+	if i1 < 0 && i2 < 0 {
 		return text
+	} else if i1 < 0 {
+		// i2 >= 0
+		i = i2
+		length = 5
+	} else if i2 < 0 {
+		// i1 >= 0
+		i = i1
+		length = 6
+	} else {
+		// i1 >= 0 && i2 >= 0
+		if i1 < i2 {
+			i = i1
+		} else {
+			i = i2
+		}
+		length = 11
 	}
-	if i+6 >= offset {
+	if i+length >= offset {
 		return prepare[:i] + text[offset:]
 	} else {
-		return prepare[:i] + prepare[i+6:] + text[offset:]
+		return prepare[:i] + prepare[i+length:] + text[offset:]
 	}
 }
 

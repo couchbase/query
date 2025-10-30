@@ -345,6 +345,11 @@
 /[rR][oO][wW]/                 { lval.s = yylex.Text(); yylex.curOffset += 3; return ROW }
 /[rR][oO][wW][sS]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return ROWS }
 /[sS][aA][tT][iI][sS][fF][iI][eE][sS]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return SATISFIES }
+/[sS][aA][vV][eE]/ {
+    yylex.curOffset += 4
+    lval.tokOffset = yylex.curOffset
+    return SAVE
+}
 /[sS][aA][vV][eE][pP][oO][iI][nN][tT]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return SAVEPOINT }
 /[sS][cC][hH][eE][mM][aA]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return SCHEMA }
 /[sS][cC][oO][pP][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return SCOPE }

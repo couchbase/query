@@ -53,10 +53,11 @@ var statement_syntax = map[string][][]string{
 		[]string{"EXPLAIN", "FUNCTION", "func_name"},
 	},
 	"prepare": [][]string{
-		[]string{"PREPARE", "[force]", "[name]", "statement"},
-	},
-	"[force]": [][]string{
-		[]string{"FORCE"},
+		[]string{"PREPARE", "[name]", "statement"},
+		[]string{"PREPARE", "FORCE", "[name]", "statement"},
+		[]string{"PREPARE", "SAVE", "[name]", "statement"},
+		[]string{"PREPARE", "SAVE", "FORCE", "[name]", "statement"},
+		[]string{"PREPARE", "FORCE", "SAVE", "[name]", "statement"},
 	},
 	"[name]": [][]string{
 		[]string{"permitted_identifiers", "from_or_as"},

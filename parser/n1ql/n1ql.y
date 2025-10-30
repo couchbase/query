@@ -312,6 +312,7 @@ column int
 %token ROW
 %token ROWS
 %token SATISFIES
+%token SAVE
 %token SAVEPOINT
 %token SCHEMA
 %token SCOPE
@@ -513,7 +514,7 @@ column int
 %type <binding>          update_binding
 %type <bindings>         update_dimension
 %type <dimensions>       update_dimensions
-%type <b>                opt_key opt_force
+%type <b>                opt_key
 %type <mergeActions>     opt_merge_actions opt_merge_delete_insert
 %type <mergeUpdate>      merge_update
 %type <mergeDelete>      merge_delete
@@ -694,26 +695,34 @@ EXPLAIN FUNCTION func_name
 ;
 
 prepare:
-PREPARE
+PREPARE opt_name stmt
 {
     yylex.(*lexer).setOffset($<tokOffset>1)
-}
-opt_force opt_name stmt
-{
-    $$ = algebra.NewPrepare($4, $3, $5, yylex.(*lexer).getText(), yylex.(*lexer).getOffset())
-}
-;
-
-opt_force:
-/* empty */
-{
-    $$ = false
+    $$ = algebra.NewPrepare($2, false, false, $3, yylex.(*lexer).getText(), yylex.(*lexer).getOffset())
 }
 |
-FORCE
+PREPARE FORCE opt_name stmt
 {
-    yylex.(*lexer).setOffset($<tokOffset>1)
-    $$ = true
+    yylex.(*lexer).setOffset($<tokOffset>2)
+    $$ = algebra.NewPrepare($3, false, true, $4, yylex.(*lexer).getText(), yylex.(*lexer).getOffset())
+}
+|
+PREPARE SAVE opt_name stmt
+{
+    yylex.(*lexer).setOffset($<tokOffset>2)
+    $$ = algebra.NewPrepare($3, true, false, $4, yylex.(*lexer).getText(), yylex.(*lexer).getOffset())
+}
+|
+PREPARE SAVE FORCE opt_name stmt
+{
+    yylex.(*lexer).setOffset($<tokOffset>3)
+    $$ = algebra.NewPrepare($4, true, true, $5, yylex.(*lexer).getText(), yylex.(*lexer).getOffset())
+}
+|
+PREPARE FORCE SAVE opt_name stmt
+{
+    yylex.(*lexer).setOffset($<tokOffset>3)
+    $$ = algebra.NewPrepare($4, true, true, $5, yylex.(*lexer).getText(), yylex.(*lexer).getOffset())
 }
 ;
 
