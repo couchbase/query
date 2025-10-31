@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -e
 
 # Copyright 2014-Present Couchbase, Inc.
 #
@@ -9,16 +9,25 @@
 # licenses/APL2.txt.
 
 NEX=github.com/couchbaselabs/nex
+GOYACC=golang.org/x/tools/cmd/goyacc
+
+go_tool() {
+    toolurl=$1
+    shift
+
+    tool=$(basename "$toolurl")
+    toolexe="$(go env GOPATH)/bin/$tool"
+    if [ ! -x "$toolexe" ]; then
+        go install ${toolurl}@latest
+    fi
+    echo "${tool} $@"
+    "$toolexe" "$@"
+}
 
 if [ n1ql.nex -nt n1ql.nn.go ]
-then 
-    echo nex n1ql.nex
-    go get $NEX
-    BACK=`pwd`
-    cd $GOPATH/src/$NEX
-    go build
-    cd $BACK
-    $GOPATH/src/$NEX/nex n1ql.nex
+then
+    go_tool $NEX n1ql.nex
+
     cat << EOF > n1ql.nn.tmp
 //  Copyright 2014-Present Couchbase, Inc.
 //
@@ -34,7 +43,7 @@ EOF
     mv n1ql.nn.tmp n1ql.nn.go
     go fmt n1ql.nn.go
 fi
-echo goyacc n1ql.y
-goyacc n1ql.y
+go_tool $GOYACC n1ql.y
+
 echo go build $*
 go build $*
