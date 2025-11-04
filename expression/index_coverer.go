@@ -45,6 +45,17 @@ func NewCoverer(covers []*Cover, filterCovers map[*Cover]value.Value) *Coverer {
 	return rv
 }
 
+func NewSimpleCoverer(covers []*Cover, filterCovers map[*Cover]value.Value) *Coverer {
+	// skip covers for GROUPBY/AGGREGATES
+	for i := range covers {
+		if covers[i].HasExprFlag(EXPR_IS_GROUP_COVER | EXPR_IS_AGG_COVER) {
+			covers = covers[:i]
+			break
+		}
+	}
+	return NewCoverer(covers, filterCovers)
+}
+
 func (this *Coverer) CoverExpr(expr Expression) (Expression, error) {
 	if expr != nil {
 		return this.Map(expr)

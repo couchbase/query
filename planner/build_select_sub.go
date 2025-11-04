@@ -645,7 +645,7 @@ func prepIndexGroupAggs(op plan.CoveringOperator, aggs algebra.Aggregates) (
 			indexgroupKey.Expr = expr
 		}
 		if indexgroupKey.KeyPos < 0 && !expression.Equivalent(idCover, indexgroupKey.Expr) {
-			groupCovers = append(groupCovers, expression.NewCover(indexgroupKey.Expr.Copy()))
+			groupCovers = append(groupCovers, expression.NewGroupCover(indexgroupKey.Expr.Copy()))
 		}
 	}
 
@@ -670,7 +670,7 @@ func prepIndexGroupAggs(op plan.CoveringOperator, aggs algebra.Aggregates) (
 	// generate new covers for aggregates
 	aggCovers := make(expression.Covers, 0, len(indexGroupAgg.Aggregates))
 	for _, agg := range aggs {
-		aggCovers = append(aggCovers, expression.NewCover(agg.Copy()))
+		aggCovers = append(aggCovers, expression.NewAggCover(agg.Copy()))
 	}
 
 	// Add the new aggregate covers to the existing covers, and make aggPartialCoverer or

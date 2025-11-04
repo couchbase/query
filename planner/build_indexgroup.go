@@ -56,7 +56,7 @@ func NewPartialAggCoverer(covers []*expression.Cover, aggs algebra.Aggregates) *
 				}
 
 				if cagg, ok := c.Covered().(algebra.Aggregate); ok {
-					if agg.EquivalentTo(cagg) {
+					if agg.EquivalentTo(cagg) && !agg.HasFlags(algebra.AGGREGATE_REWRITE_INDEX_AGGS) {
 						agg1 := agg.Copy().(algebra.Aggregate)
 						rv.matchCover = c
 						err := agg1.MapChildren(rv)
@@ -69,7 +69,6 @@ func NewPartialAggCoverer(covers []*expression.Cover, aggs algebra.Aggregates) *
 				}
 			}
 			return expr, nil
-
 		}
 
 		return expr, expr.MapChildren(rv)
@@ -124,7 +123,6 @@ func NewFullAggCoverer(covers []*expression.Cover) *FullAggCoverer {
 				}
 			}
 			return expr, nil
-
 		}
 
 		return expr, expr.MapChildren(rv)

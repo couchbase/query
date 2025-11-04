@@ -561,7 +561,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 	case *plan.Unnest:
 		term := op.Term()
 		for _, cop := range covers {
-			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			coverer := expression.NewSimpleCoverer(cop.Covers(), cop.FilterCovers())
 			var anyRenamer *expression.AnyRenamer
 			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
 				anyRenamer = expression.NewAnyRenamer(arrayKey)
@@ -624,7 +624,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 	case *plan.Let:
 		bindings := op.Bindings()
 		for _, cop := range covers {
-			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			coverer := expression.NewSimpleCoverer(cop.Covers(), cop.FilterCovers())
 			var anyRenamer *expression.AnyRenamer
 			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
 				anyRenamer = expression.NewAnyRenamer(arrayKey)
@@ -660,7 +660,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 	case *plan.InitialProject:
 		terms := op.Terms()
 		for _, cop := range covers {
-			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			coverer := expression.NewSimpleCoverer(cop.Covers(), cop.FilterCovers())
 			var anyRenamer *expression.AnyRenamer
 			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
 				anyRenamer = expression.NewAnyRenamer(arrayKey)
@@ -704,7 +704,7 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 	case *plan.Order:
 		terms := op.Terms()
 		for _, cop := range covers {
-			coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+			coverer := expression.NewSimpleCoverer(cop.Covers(), cop.FilterCovers())
 			var anyRenamer *expression.AnyRenamer
 			if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
 				anyRenamer = expression.NewAnyRenamer(arrayKey)
@@ -738,29 +738,72 @@ func (this *builder) opCoveringTransformation(op plan.Operator, covers []plan.Co
 			}
 		}
 	case *plan.InitialGroup:
-		newKeys, err := doCoverExprs(op.Keys(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
+		newKeys, newAggs, err := doCoverGroupAggregates(op.Keys(), op.Aggregates(), covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
+		op.SetAggregates(newAggs)
 	case *plan.IntermediateGroup:
-		newKeys, err := doCoverExprs(op.Keys(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
+		newKeys, newAggs, err := doCoverGroupAggregates(op.Keys(), op.Aggregates(), covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
+		op.SetAggregates(newAggs)
 	case *plan.FinalGroup:
-		newKeys, err := doCoverExprs(op.Keys(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
+		newKeys, newAggs, err := doCoverGroupAggregates(op.Keys(), op.Aggregates(), covers,
+			groupCoverer, aggPartialCoverer, aggFullCoverer)
 		if err != nil {
 			return err
 		}
 		op.SetKeys(newKeys)
+		op.SetAggregates(newAggs)
 	case *plan.With:
 		return this.opCoveringTransformation(op.Child(), covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
 
 		// case *plan.Limit, *plan.Offset:
 	}
 	return nil
+}
+
+func doCoverGroupAggregates(keys expression.Expressions, aggregates algebra.Aggregates, covers []plan.CoveringOperator,
+	groupCoverer *expression.Coverer, aggPartialCoverer *PartialAggCoverer, aggFullCoverer *FullAggCoverer) (
+	newKeys expression.Expressions, newAggregates algebra.Aggregates, err error) {
+
+	newKeys, err = doCoverExprs(keys, covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newAggregates = aggregates
+	if len(aggregates) > 0 {
+		newAggregates = make(algebra.Aggregates, len(aggregates))
+		for i, agg := range aggregates {
+			newExprs, err := doCoverExprs(expression.Expressions{agg.Copy()}, covers, groupCoverer, aggPartialCoverer, aggFullCoverer)
+			if err != nil {
+				return nil, nil, err
+			}
+			hasErr := false
+			if len(newExprs) > 0 {
+				if newAgg, ok := newExprs[0].(algebra.Aggregate); ok {
+					newAggregates[i] = newAgg
+				} else {
+					hasErr = true
+				}
+			} else {
+				hasErr = true
+			}
+			if hasErr {
+				return nil, nil, errors.NewPlanInternalError("doCoverGroupAggregates: unexpected transformation for aggregate " +
+					agg.String())
+			}
+		}
+	}
+
+	return newKeys, newAggregates, nil
 }
 
 func doCoverExprs(exprs expression.Expressions, covers []plan.CoveringOperator,
@@ -773,8 +816,9 @@ func doCoverExprs(exprs expression.Expressions, covers []plan.CoveringOperator,
 
 	var err error
 	newExprs := exprs.Copy()
+
 	for _, cop := range covers {
-		coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+		coverer := expression.NewSimpleCoverer(cop.Covers(), cop.FilterCovers())
 		var anyRenamer *expression.AnyRenamer
 		if arrayKey := cop.ImplicitArrayKey(); arrayKey != nil {
 			anyRenamer = expression.NewAnyRenamer(arrayKey)
@@ -826,7 +870,7 @@ func doCoverExprs(exprs expression.Expressions, covers []plan.CoveringOperator,
 func coverIndexSpans(ops []plan.Operator, covers []plan.CoveringOperator) error {
 	var err error
 	for _, cop := range covers {
-		coverer := expression.NewCoverer(cop.Covers(), cop.FilterCovers())
+		coverer := expression.NewSimpleCoverer(cop.Covers(), cop.FilterCovers())
 
 		for _, op := range ops {
 			if secondary, ok := op.(plan.SecondaryScan); ok {
