@@ -48,6 +48,18 @@ func NewCover(covered Expression) *Cover {
 	return rv
 }
 
+func NewGroupCover(covered Expression) *Cover {
+	rv := NewCover(covered)
+	rv.SetExprFlag(EXPR_IS_GROUP_COVER)
+	return rv
+}
+
+func NewAggCover(covered Expression) *Cover {
+	rv := NewCover(covered)
+	rv.SetExprFlag(EXPR_IS_AGG_COVER)
+	return rv
+}
+
 func NewIndexKey(covered Expression) *Cover {
 	switch covered := covered.(type) {
 	case *Cover:
