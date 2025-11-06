@@ -179,7 +179,7 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 	map[string]interface{}, map[string]interface{}) {
 
 	itemMap := map[string]interface{}{
-		"name":            entry.Prepared.Name(),
+		"name":            key,
 		"uses":            entry.Uses,
 		"statement":       entry.Prepared.Text(),
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
@@ -187,9 +187,6 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 	}
 	if entry.Prepared.Namespace() != "" {
 		itemMap["namespace"] = entry.Prepared.Namespace()
-	}
-	if entry.Prepared.QueryContext() != "" {
-		itemMap["queryContext"] = entry.Prepared.QueryContext()
 	}
 	if entry.Prepared.EncodedPlan() != "" {
 		itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
