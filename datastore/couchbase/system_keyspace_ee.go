@@ -230,3 +230,31 @@ func (s *store) DropSystemCBOStats() errors.Error {
 func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 	return datastore.GetKeyspace("default", _N1QL_SYSTEM_BUCKET, _N1QL_SYSTEM_SCOPE, _N1QL_CBO_STATS)
 }
+
+func (s *store) HasQueryMetadata() (bool, errors.Error) {
+	defaultPool, er := s.NamespaceByName("default") // so we're using the cached namespace always
+	if er != nil {
+		return false, er
+	}
+
+	sysBucket, er := defaultPool.BucketByName(_QUERY_METADATA_BUCKET)
+	if er != nil {
+		return false, er
+	}
+
+	sysScope, er := sysBucket.ScopeByName(_BUCKET_SYSTEM_SCOPE)
+	if er != nil {
+		return false, er
+	}
+
+	queryMetadata, er := sysScope.KeyspaceByName(_BUCKET_SYSTEM_COLLECTION)
+	if er != nil {
+		return false, er
+	}
+
+	return (queryMetadata != nil), nil
+}
+
+func (s *store) GetQueryMetadata() (datastore.Keyspace, errors.Error) {
+	return datastore.GetKeyspace("default", _QUERY_METADATA_BUCKET, _BUCKET_SYSTEM_SCOPE, _BUCKET_SYSTEM_COLLECTION)
+}
