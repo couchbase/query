@@ -46,7 +46,7 @@ export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
 go clean -testcache
 
 ./bucket_delete.sh
-./bucket_create.sh 100
+./bucket_create.sh
 
 trap interrupt 2 15
 cd ../
