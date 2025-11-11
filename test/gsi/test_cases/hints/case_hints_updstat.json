@@ -1,0 +1,79 @@
+[
+    {
+        "statements":"SELECT count(*) FROM customer USE INDEX(cust_lastName_firstName_customerId) WHERE lastName IS NOT MISSING",
+        "results": [
+        {
+            "$1": 1000
+        }
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM customer USE INDEX(cust_customerId_lastName_firstName) WHERE customerId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 1000
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR customer(lastName, firstName, customerId, type)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM purchase USE INDEX(purch_customerId_purchaseId) WHERE customerId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 9997
+        }
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM purchase USE INDEX(purch_arrProduct_customerId) WHERE ANY v IN lineItems SATISFIES v.product IS NOT MISSING END",
+        "results": [
+        {
+            "$1": 9997
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR purchase(customerId, purchaseId, type, DISTINCT ARRAY pd.product FOR pd IN lineItems END)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM product USE INDEX(prod_productId) WHERE productId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 900
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR product INDEX(prod_productId)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM shellTest USE INDEX(st_source_idx) WHERE c11 IS NOT MISSING",
+        "results": [
+        {
+            "$1": 5
+        }
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM shellTest USE INDEX(st_target_idx) WHERE c21 IS NOT MISSING",
+        "results": [
+        {
+            "$1": 4
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR shellTest INDEX(st_source_idx, st_target_idx)",
+        "results": [
+    ]
+    }
+]
+

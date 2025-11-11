@@ -117,11 +117,12 @@ func TestAnsiJoin(t *testing.T) {
 	runMatch("case_ansijoin_lateral.json", false, false, qc, t)
 
 	// run UPDATE STATISTICS statements
-	runStmt(qc, "UPDATE STATISTICS FOR purchase INDEX(purch_customerId_purchaseId)")
-	runStmt(qc, "UPDATE STATISTICS FOR customer INDEX(cust_customerId_lastName_firstName)")
-	runStmt(qc, "UPDATE STATISTICS FOR orders INDEX(ord_customerId_ordersId)")
-	runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_ix11, st_ix21, st_ix23)")
-	runStmt(qc, "UPDATE STATISTICS FOR shellTest(c12)")
+	// runStmt(qc, "UPDATE STATISTICS FOR purchase INDEX(purch_customerId_purchaseId)")
+	// runStmt(qc, "UPDATE STATISTICS FOR customer INDEX(cust_customerId_lastName_firstName)")
+	// runStmt(qc, "UPDATE STATISTICS FOR orders INDEX(ord_customerId_ordersId)")
+	// runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_ix11, st_ix21, st_ix23)")
+	// runStmt(qc, "UPDATE STATISTICS FOR shellTest(c12)")
+	runMatch("case_ansijoin_updstat.json", false, false, qc, t)
 
 	// run with CBO
 	runMatch("case_ansijoin_cbo.json", false, true, qc, t)

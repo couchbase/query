@@ -1,0 +1,76 @@
+[
+    {
+        "statements":"SELECT count(*) FROM purchase USE INDEX(purch_customerId_purchaseId) WHERE customerId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 9997
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR purchase INDEX(purch_customerId_purchaseId)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM customer USE INDEX(cust_customerId_lastName_firstName) WHERE customerId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 1000
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR customer INDEX(cust_customerId_lastName_firstName)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM orders USE INDEX(ord_customerId_ordersId) WHERE customerId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 6
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR orders INDEX(ord_customerId_ordersId)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM shellTest USE INDEX(st_ix11) WHERE type = 'left' AND c11 IS NOT MISSING",
+        "results": [
+        {
+            "$1": 4
+        }
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM shellTest USE INDEX(st_ix21) WHERE type = 'right' AND c21 IS NOT MISSING",
+        "results": [
+        {
+            "$1": 10
+        }
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM shellTest USE INDEX(st_ix23) WHERE type = 'right' AND c22 IS NOT MISSING",
+        "results": [
+        {
+            "$1": 10
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR shellTest INDEX(st_ix11, st_ix21, st_ix23)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR shellTest(c12)",
+        "results": [
+    ]
+    }
+]
+
