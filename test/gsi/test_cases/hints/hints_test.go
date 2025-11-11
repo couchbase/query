@@ -59,10 +59,11 @@ func TestHints(t *testing.T) {
 	runMatch("case_hints_index_all.json", false, true, qc, t)
 
 	// run UPDATE STATISTICS statements
-	runStmt(qc, "UPDATE STATISTICS FOR customer (lastName, firstName, customerId, type)")
-	runStmt(qc, "UPDATE STATISTICS FOR purchase (customerId, purchaseId, type, DISTINCT ARRAY pd.product FOR pd IN lineItems END)")
-	runStmt(qc, "UPDATE STATISTICS FOR product INDEX(prod_productId)")
-	runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_source_idx, st_target_idx)")
+	// runStmt(qc, "UPDATE STATISTICS FOR customer (lastName, firstName, customerId, type)")
+	// runStmt(qc, "UPDATE STATISTICS FOR purchase (customerId, purchaseId, type, DISTINCT ARRAY pd.product FOR pd IN lineItems END)")
+	// runStmt(qc, "UPDATE STATISTICS FOR product INDEX(prod_productId)")
+	// runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_source_idx, st_target_idx)")
+	runMatch("case_hints_updstat.json", false, false, qc, t)
 
 	// run with CBO
 	runMatch("case_hints_cbo.json", false, true, qc, t)
