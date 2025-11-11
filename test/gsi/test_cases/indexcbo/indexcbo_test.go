@@ -35,8 +35,9 @@ func TestIndexCBO(t *testing.T) {
 	runStmt(qc, "CREATE INDEX p_productId_reviews ON product(productId, DISTINCT reviewList) WHERE test_id = \"indexCBO\"")
 
 	// run UPDATE STATISTICS statements
-	runStmt(qc, "UPDATE STATISTICS FOR orders INDEX(iorix1, iorix2)")
-	runStmt(qc, "UPDATE STATISTICS FOR product INDEX(p_productId_reviews)")
+	// runStmt(qc, "UPDATE STATISTICS FOR orders INDEX(iorix1, iorix2)")
+	// runStmt(qc, "UPDATE STATISTICS FOR product INDEX(p_productId_reviews)")
+	runMatch("case_indexcbo_updstat.json", false, false, qc, t)
 
 	runMatch("case_intersect_scan.json", false, true, qc, t)
 

@@ -85,10 +85,11 @@ func TestHashJoin(t *testing.T) {
 	runMatch("case_hashjoin_correlated.json", false, true, qc, t)
 
 	// run UPDATE STATISTICS statements
-	runStmt(qc, "UPDATE STATISTICS FOR customer INDEX(cust_lastName_firstName_customerId)")
-	runStmt(qc, "UPDATE STATISTICS FOR purchase INDEX(purch_customerId_purchaseId, purch_arrProduct_customerId)")
-	runStmt(qc, "UPDATE STATISTICS FOR product INDEX(prod_productId)")
-	runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_ix11, st_ix12)")
+	// runStmt(qc, "UPDATE STATISTICS FOR customer INDEX(cust_lastName_firstName_customerId)")
+	// runStmt(qc, "UPDATE STATISTICS FOR purchase INDEX(purch_customerId_purchaseId, purch_arrProduct_customerId)")
+	// runStmt(qc, "UPDATE STATISTICS FOR product INDEX(prod_productId)")
+	// runStmt(qc, "UPDATE STATISTICS FOR shellTest INDEX(st_ix11, st_ix12)")
+	runMatch("case_hashjoin_updstat.json", false, false, qc, t)
 
 	// run with CBO
 	runMatch("case_hashjoin_cbo.json", false, true, qc, t)

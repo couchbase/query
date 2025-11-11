@@ -1,0 +1,45 @@
+[
+    {
+        "statements":"SELECT count(*) FROM orders USE INDEX(iorix1) WHERE test_id = 'indexCBO' AND c1 IS NOT MISSING",
+        "results": [
+        {
+            "$1": 24
+        }
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM orders USE INDEX(iorix2) WHERE test_id = 'indexCBO' AND c1 IS NOT MISSING",
+        "results": [
+        {
+            "$1": 24
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR orders INDEX(iorix1, iorix2)",
+        "results": [
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM product USE INDEX(p_productId) WHERE test_id = 'indexCBO' AND productId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 900
+        }
+    ]
+    },
+    {
+        "statements":"SELECT count(*) FROM product USE INDEX(p_productId_reviews) WHERE test_id = 'indexCBO' AND productId IS NOT MISSING",
+        "results": [
+        {
+            "$1": 900
+        }
+    ]
+    },
+    {
+        "statements":"UPDATE STATISTICS FOR product INDEX(p_productId_reviews)",
+        "results": [
+    ]
+    }
+]
+
