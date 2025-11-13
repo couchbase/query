@@ -208,6 +208,12 @@ func NewPartitionIndexNotSupportedError() Error {
 		InternalMsg: fmt.Sprintf("PARTITION index is not supported by indexer."), InternalCaller: CallerN(1)}
 }
 
+func NewMissingQueryMetadataError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_MISSING_QUERY_METADATA, IKey: "plan.missing_query_metadata",
+		InternalMsg:    "'QUERY_METADATA' bucket is required for " + msg,
+		InternalCaller: CallerN(1)}
+}
+
 // errors for CBO (cost-based optimizer) starts at 4600
 
 func NewCBOError(ikey, what string) Error {

@@ -13,12 +13,13 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 )
 
-func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
-	namespace string, subquery, stream bool, context *PrepareContext) (*plan.Prepared, error, map[string]time.Duration) {
-	qp, ik, err, subTimes := Build(stmt, datastore, systemstore, namespace, subquery, stream, false, context)
+func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastore,
+	namespace string, subquery, stream, persist bool, context *PrepareContext) (*plan.Prepared, error, map[string]time.Duration) {
+	qp, ik, err, subTimes := Build(stmt, store, systemstore, namespace, subquery, stream, false, context)
 	if err != nil {
 		return nil, err, subTimes
 	}
@@ -28,5 +29,19 @@ func BuildPrepared(stmt algebra.Statement, datastore, systemstore datastore.Data
 	if stmt.OptimHints() != nil {
 		optimHints = stmt.OptimHints().Copy()
 	}
-	return plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints), nil, subTimes
+	prepared := plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints, persist, false)
+
+	if persist {
+		// check and create (if not exists) QUERY_METADATA bucket
+		hasMetadata, err := hasQueryMetadata(true, context.RequestId(), true)
+		if err == nil && !hasMetadata {
+			err = errors.NewMissingQueryMetadataError("SAVE option of PREPARE")
+		}
+		if err != nil {
+			return nil, err, subTimes
+		}
+		// TODO: save plan
+	}
+
+	return prepared, nil, subTimes
 }

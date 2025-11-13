@@ -721,3 +721,7 @@ func optBuildBitFilterSize(baseKeyspace *base.BaseKeyspace, exprs expression.Exp
 func adjustAvgDistSelec(ks *base.BaseKeyspace, advisorValidate bool, baseKeyspaces map[string]*base.BaseKeyspace) {
 	optutil.AdjustAvgDistSelec(ks, advisorValidate, false, baseKeyspaces)
 }
+
+func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
+	return dictionary.HasQueryMetadata(create, requestId, waitOnCreate)
+}

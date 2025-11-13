@@ -1318,7 +1318,7 @@ func (this *opContext) SetupSubqueryPlans(expr expression.Expression, subqPlans 
 		var hasSubquery bool
 		hasSubquery, err = this.SubqueryPlans(expr, subqPlans, nil, nil, nil, lock)
 		if err == nil && hasSubquery {
-			prepared := plan.NewPrepared(nil, nil, nil, nil)
+			prepared := plan.NewPrepared(nil, nil, nil, nil, false, false)
 			prepared.SetDummyPlanVersion()
 			subqPlans.SetPrepared(prepared, lock)
 		}

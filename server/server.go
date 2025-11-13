@@ -1879,8 +1879,10 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		}
 
 		isPrepare := false
-		if _, ok := stmt.(*algebra.Prepare); ok {
+		persist := false
+		if st, ok := stmt.(*algebra.Prepare); ok {
 			isPrepare = true
+			persist = st.Save()
 		} else {
 			autoExecute = false
 			request.SetAutoExecute(value.FALSE)
@@ -1933,7 +1935,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 		var subTimes map[string]time.Duration
 		prepared, err, subTimes = planner.BuildPrepared(stmt, this.datastore, this.systemstore, context.Namespace(),
-			autoExecute, !autoExecute, &prepContext)
+			autoExecute, !autoExecute, persist, &prepContext)
 		if subTimes != nil {
 			for k, v := range subTimes {
 				p := execution.PhaseByName("plan." + k)

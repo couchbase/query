@@ -3076,6 +3076,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_MISSING_QUERY_METADATA, // 4500
+		symbol:      "E_MISSING_QUERY_METADATA",
+		Description: "'QUERY_METADATA' bucket is required for <<msg>>",
+		Reason: []string{
+			"The bucket QUERY_METADATA does not exist and could not be created.",
+		},
+		Action: []string{
+			"Manually create the bucket and re-submit the request.",
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_CBO, // 4600
 		symbol:      "E_CBO",
 		Description: "Error occurred during cost-based optimization: «what»",

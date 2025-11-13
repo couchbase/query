@@ -13,6 +13,6 @@ package util
 var (
 	VERSION          = "unset: build issue" // is set by correct build process
 	MIN_VERSION      = "1.0.0"
-	PLAN_VERSION     = 800
+	PLAN_VERSION     = 810
 	MIN_PLAN_VERSION = 711 // first defined PLAN_VERSION
 )

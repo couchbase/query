@@ -263,6 +263,9 @@ func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 }
 
 func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
+	if stmt.Save() && !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature("SAVE option for PREPARE statement", "semantics_visit_prepare")
+	}
 	saveStmtType := stmt.Type()
 	defer func() { this.stmtType = saveStmtType }()
 	this.stmtType = stmt.Statement().Type()

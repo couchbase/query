@@ -377,19 +377,21 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	}
 
 	isPrepare := false // if the statement is a PREPARE statement
+	persist := false
 	switch st := stmt.(type) {
 	case *algebra.Prepare:
 		prepContext.SetNamedArgs(nil)
 		prepContext.SetPositionalArgs(nil)
 		prepContext.SetIsPrepare()
 		isPrepare = true
+		persist = st.Save()
 	case *algebra.Advise:
 		st.SetContext(NewOpContext(this))
 	}
 
 	//  monitoring code TBD
-	prepared, err, _ = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace, subquery, true,
-		&prepContext)
+	prepared, err, _ = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace,
+		subquery, true, persist, &prepContext)
 	if err != nil {
 		return nil, nil, false, err
 	}

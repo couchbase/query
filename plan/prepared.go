@@ -28,8 +28,9 @@ import (
 )
 
 const (
-	_PLAN_VERSION_DUMMY        = -1  // unused, e.g. for SubqueryPlans
-	_PLAN_VERSION_ORDER_OFFSET = 720 // Order with Offset behavioral change
+	_PLAN_VERSION_DUMMY          = -1  // unused, e.g. for SubqueryPlans
+	_PLAN_VERSION_ORDER_OFFSET   = 720 // Order with Offset behavioral change
+	_PLAN_VERSION_PLAN_STABILITY = 810 // Plan stability
 )
 
 type Prepared struct {
@@ -46,6 +47,8 @@ type Prepared struct {
 	tenant          string
 	useFts          bool
 	useCBO          bool
+	persist         bool
+	planLock        bool
 	preparedTime    time.Time // time the plan was generated
 	optimHints      *algebra.OptimHints
 
@@ -74,7 +77,7 @@ type ksVersion struct {
 }
 
 func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
-	optimHints *algebra.OptimHints) *Prepared {
+	optimHints *algebra.OptimHints, persist, planLock bool) *Prepared {
 
 	var planVersion int
 	if operator != nil {
@@ -84,6 +87,8 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 	return &Prepared{
 		Operator:           operator,
 		signature:          signature,
+		persist:            persist,
+		planLock:           planLock,
 		optimHints:         optimHints,
 		indexScanKeyspaces: indexScanKeyspaces,
 		planVersion:        planVersion,
@@ -91,7 +96,7 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 }
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
-	prepared := NewPrepared(nil, nil, nil, nil)
+	prepared := NewPrepared(nil, nil, nil, nil, false, false)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return prepared, nil, errors.NewPreparedDecodingError(err)
@@ -159,6 +164,12 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.useCBO {
 		r["useCBO"] = this.useCBO
 	}
+	if this.persist {
+		r["persist"] = this.persist
+	}
+	if this.planLock {
+		r["planLock"] = this.planLock
+	}
 	if len(this.indexScanKeyspaces) > 0 {
 		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
 	}
@@ -185,6 +196,8 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		QueryContext       string                 `json:"queryContext"`
 		UseFts             bool                   `json:"useFts"`
 		UseCBO             bool                   `json:"useCBO"`
+		Persist            bool                   `json:"persist"`
+		PlanLock           bool                   `json:"planLock"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
@@ -225,6 +238,8 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
+	this.persist = _unmarshalled.Persist
+	this.planLock = _unmarshalled.PlanLock
 	this.planVersion = _unmarshalled.Version
 
 	if _unmarshalled.PreparedTime != "" {
@@ -382,6 +397,22 @@ func (this *Prepared) UseCBO() bool {
 
 func (this *Prepared) SetUseCBO(useCBO bool) {
 	this.useCBO = useCBO
+}
+
+func (this *Prepared) Persist() bool {
+	return this.persist
+}
+
+func (this *Prepared) SetPersist(persist bool) {
+	this.persist = persist
+}
+
+func (this *Prepared) PlanLock() bool {
+	return this.planLock
+}
+
+func (this *Prepared) SetPlanLock(planLock bool) {
+	this.planLock = planLock
 }
 
 func (this *Prepared) EncodedPlan() string {
