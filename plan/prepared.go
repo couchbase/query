@@ -132,6 +132,7 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	r["namespace"] = this.namespace
 	r["queryContext"] = this.queryContext
 	r["reqType"] = this.reqType
+	r["planPreparedTime"] = this.preparedTime.Format(util.DEFAULT_FORMAT)
 	if this.useFts {
 		r["useFts"] = this.useFts
 	}
@@ -167,6 +168,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
+		PreparedTime       string                 `json:"planPreparedTime"`
 	}
 
 	var op_type struct {
@@ -200,6 +202,18 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
 	this.planVersion = _unmarshalled.Version
+
+	if _unmarshalled.PreparedTime != "" {
+		prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
+		if err != nil {
+			return err
+		}
+		this.preparedTime = prepTime
+	} else {
+		// MB-65207 empty planPreparedTime field causes unmarshal to fail
+		this.preparedTime = util.Now().ToTime()
+	}
+
 	if len(_unmarshalled.IndexScanKeyspaces) > 0 {
 		this.indexScanKeyspaces = make(map[string]bool, len(_unmarshalled.IndexScanKeyspaces))
 		for ks, v := range _unmarshalled.IndexScanKeyspaces {
@@ -352,18 +366,22 @@ func (this *Prepared) IndexScanKeyspaces() (rv map[string]interface{}) {
 }
 
 // Locking is handled by the top level caller!
-func (this *Prepared) addIndexer(indexer datastore.Indexer) {
+func (this *Prepared) addIndexer(indexer datastore.Indexer) bool {
 	indexer.Refresh()
 	version := indexer.MetadataVersion()
+	noChanges := util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META)
 	for i, idx := range this.indexers {
 		if idx.indexer.Name() == indexer.Name() &&
 			datastore.IndexerQualifiedKeyspacePath(idx.indexer) == datastore.IndexerQualifiedKeyspacePath(indexer) {
 			this.indexers[i].indexer = indexer
+			// any indexer metadata version change and we return false for force a re-prepare
+			rv := noChanges || this.indexers[i].version == version
 			this.indexers[i].version = version
-			return
+			return rv
 		}
 	}
 	this.indexers = append(this.indexers, idxVersion{indexer, version})
+	return true
 }
 
 // Locking is handled by the top level caller!

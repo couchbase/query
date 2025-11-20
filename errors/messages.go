@@ -3244,6 +3244,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_UPDATE_INVALID_FIELD, // 5130
+		symbol:      "E_UPDATE_INVALID_FIELD",
+		Description: "Invalid field update.",
+		Reason: []string{
+			"An attempt was made to update a field that doesn't support updating or to set an unsupported value for the field.",
+		},
+		Action: []string{
+			"Revise statement to not update the field.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_UNNEST_INVALID_POSITION, // 5180
 		symbol:      "E_UNNEST_INVALID_POSITION",
 		Description: "Invalid UNNEST position of type «type»",

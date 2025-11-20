@@ -90,7 +90,7 @@ var _N1QL_Features = map[uint64]string{
 	N1QL_NO_DATE_WARNINGS:                    _NOT_APPLICABLE,
 	N1QL_USE_SYS_FREE_MEM:                    _NOT_APPLICABLE,
 	N1QL_UNRESTRICTED_ADMISSION_AND_ACTIVITY: _NOT_APPLICABLE,
-	N1QL_IGNORE_IDXR_META:                    _NOT_APPLICABLE,
+	N1QL_IGNORE_IDXR_META:                    "Ignore indexer metadata changes for prepared statements",
 	N1QL_NATURAL_LANG_REQ:                    _NOT_APPLICABLE,
 	N1QL_FULL_SPAN_FANOUT:                    "Spans Fanout to 8192",
 	N1QL_NO_DEF_SELEC:                        "No use of default selectivity without histogram",

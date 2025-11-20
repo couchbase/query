@@ -197,11 +197,13 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		handler handlerFunc
 		methods []string
 	}{
-		accountingPrefix:                      {handler: statsHandler, methods: []string{"GET"}},
-		accountingPrefix + "/{stat}":          {handler: statHandler, methods: []string{"GET", "DELETE"}},
-		vitalsPrefix:                          {handler: vitalsHandler, methods: []string{"GET"}},
-		preparedsPrefix:                       {handler: preparedsHandler, methods: []string{"GET", "POST"}},
-		preparedsPrefix + "/{name}":           {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT"}},
+		accountingPrefix:             {handler: statsHandler, methods: []string{"GET"}},
+		accountingPrefix + "/{stat}": {handler: statHandler, methods: []string{"GET", "DELETE"}},
+		vitalsPrefix:                 {handler: vitalsHandler, methods: []string{"GET"}},
+
+		preparedsPrefix:             {handler: preparedsHandler, methods: []string{"GET", "POST"}},
+		preparedsPrefix + "/{name}": {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT", "PATCH"}},
+
 		requestsPrefix:                        {handler: requestsHandler, methods: []string{"GET", "POST"}},
 		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
 		completedsPrefix:                      {handler: completedsHandler, methods: []string{"GET", "POST"}},
@@ -603,6 +605,18 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			res = preparedWorkHorse(entry, profiling, doRedact(req), durStyle)
 		})
 		return res, nil
+	} else if req.Method == "PATCH" {
+		err, _ := endpoint.verifyCredentialsFromRequest("system:prepareds", auth.PRIV_SYSTEM_READ, req, af)
+		if err != nil {
+			return nil, err
+		}
+		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
+			userName, tenantName, err1 := endpoint.getImpersonateBucket(req)
+			if err1 == nil && (userName == "" || entry.Prepared.Tenant() == tenantName) {
+				entry.Prepared.SetPreparedTime(time.Time{})
+			}
+		})
+		return nil, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}

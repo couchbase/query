@@ -149,60 +149,11 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				if userName != "" && !checkCacheEntry(entry, tenantName) {
 					return
 				}
-				itemMap := map[string]interface{}{
-					"name":            entry.Prepared.Name(),
-					"uses":            entry.Uses,
-					"statement":       entry.Prepared.Text(),
-					"indexApiVersion": entry.Prepared.IndexApiVersion(),
-					"featuresControl": entry.Prepared.FeatureControls(),
-				}
-				if entry.Prepared.Namespace() != "" {
-					itemMap["namespace"] = entry.Prepared.Namespace()
-				}
-				if entry.Prepared.QueryContext() != "" {
-					itemMap["queryContext"] = entry.Prepared.QueryContext()
-				}
-				if entry.Prepared.EncodedPlan() != "" {
-					itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
-				}
-				if entry.Prepared.OptimHints() != nil {
-					itemMap["optimizer_hints"] = value.NewMarshalledValue(entry.Prepared.OptimHints())
-				}
-
-				isks := entry.Prepared.IndexScanKeyspaces()
-				if len(isks) > 0 {
-					itemMap["indexScanKeyspaces"] = isks
-				}
-
-				txPrepareds, txPlans := entry.Prepared.TxPrepared()
-				if len(txPrepareds) > 0 {
-					itemMap["txPrepareds"] = txPrepareds
-				}
-
-				if node != "" {
-					itemMap["node"] = node
-				}
-
-				if !entry.Prepared.PreparedTime().IsZero() {
-					itemMap["planPreparedTime"] = entry.Prepared.PreparedTime().Format(util.DEFAULT_FORMAT)
-				}
-
-				// only give times for entries that have completed at least one execution
-				if entry.Uses > 0 && entry.RequestTime > 0 {
-					itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
-					itemMap["avgElapsedTime"] = context.FormatDuration(time.Duration(entry.RequestTime) /
-						time.Duration(entry.Uses))
-					itemMap["avgServiceTime"] = context.FormatDuration(time.Duration(entry.ServiceTime) /
-						time.Duration(entry.Uses))
-					itemMap["minElapsedTime"] = context.FormatDuration(time.Duration(entry.MinRequestTime))
-					itemMap["minServiceTime"] = context.FormatDuration(time.Duration(entry.MinServiceTime))
-					itemMap["maxElapsedTime"] = context.FormatDuration(time.Duration(entry.MaxRequestTime))
-					itemMap["maxServiceTime"] = context.FormatDuration(time.Duration(entry.MaxServiceTime))
-				}
+				itemMap, txPlans := formatPrepared(entry, localKey, node, context)
 				item := value.NewAnnotatedValue(itemMap)
 				m := item.NewMeta()
 				m["keyspace"] = b.fullName
-				if len(txPrepareds) > 0 {
+				if _, ok := itemMap["txPrepareds"]; ok {
 					m["txPlans"] = txPlans
 				}
 				m["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
@@ -223,6 +174,62 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 		}
 	}
 	return
+}
+
+func formatPrepared(entry *prepareds.CacheEntry, key string, node string, context datastore.QueryContext) (
+	map[string]interface{}, map[string]interface{}) {
+
+	itemMap := map[string]interface{}{
+		"name":            entry.Prepared.Name(),
+		"uses":            entry.Uses,
+		"statement":       entry.Prepared.Text(),
+		"indexApiVersion": entry.Prepared.IndexApiVersion(),
+		"featuresControl": entry.Prepared.FeatureControls(),
+	}
+	if entry.Prepared.Namespace() != "" {
+		itemMap["namespace"] = entry.Prepared.Namespace()
+	}
+	if entry.Prepared.QueryContext() != "" {
+		itemMap["queryContext"] = entry.Prepared.QueryContext()
+	}
+	if entry.Prepared.EncodedPlan() != "" {
+		itemMap["encoded_plan"] = entry.Prepared.EncodedPlan()
+	}
+	if entry.Prepared.OptimHints() != nil {
+		itemMap["optimizer_hints"] = value.NewMarshalledValue(entry.Prepared.OptimHints())
+	}
+
+	isks := entry.Prepared.IndexScanKeyspaces()
+	if len(isks) > 0 {
+		itemMap["indexScanKeyspaces"] = isks
+	}
+
+	txPrepareds, txPlans := entry.Prepared.TxPrepared()
+	if len(txPrepareds) > 0 {
+		itemMap["txPrepareds"] = txPrepareds
+	}
+
+	if node != "" {
+		itemMap["node"] = node
+	}
+
+	if !entry.Prepared.PreparedTime().IsZero() {
+		itemMap["planPreparedTime"] = entry.Prepared.PreparedTime().Format(util.DEFAULT_FORMAT)
+	}
+
+	// only give times for entries that have completed at least one execution
+	if entry.Uses > 0 && entry.RequestTime > 0 {
+		itemMap["lastUse"] = entry.LastUse.Format(util.DEFAULT_FORMAT)
+		itemMap["avgElapsedTime"] = context.FormatDuration(time.Duration(entry.RequestTime) /
+			time.Duration(entry.Uses))
+		itemMap["avgServiceTime"] = context.FormatDuration(time.Duration(entry.ServiceTime) /
+			time.Duration(entry.Uses))
+		itemMap["minElapsedTime"] = context.FormatDuration(time.Duration(entry.MinRequestTime))
+		itemMap["minServiceTime"] = context.FormatDuration(time.Duration(entry.MinServiceTime))
+		itemMap["maxElapsedTime"] = context.FormatDuration(time.Duration(entry.MaxRequestTime))
+		itemMap["maxServiceTime"] = context.FormatDuration(time.Duration(entry.MaxServiceTime))
+	}
+	return itemMap, txPlans
 }
 
 func (b *preparedsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
@@ -543,4 +550,80 @@ func getTenant(context tenant.Context) string {
 
 func checkCacheEntry(entry *prepareds.CacheEntry, tenantName string) bool {
 	return entry.Prepared.Tenant() == tenantName
+}
+
+func (b *preparedsKeyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
+	var errs errors.Errors
+	var creds distributed.Creds
+	var tenantName string
+
+	userName := credsFromContext(context)
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		tenantName = getTenant(context.TenantCtx())
+		creds = distributed.Creds(userName)
+	}
+
+	// now that the node name can change in flight, use a consistent one across deletes
+	whoAmI := distributed.RemoteAccess().WhoAmI()
+	for i, pair := range updates {
+		name := pair.Name
+		node, localKey := distributed.RemoteAccess().SplitKey(name)
+		nodeName := decodeNodeName(node)
+
+		// remote entry
+		if len(nodeName) != 0 && nodeName != whoAmI {
+
+			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
+				"prepareds", "PUT", nil,
+				func(warn errors.Error) {
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+						context.Warning(warn)
+					}
+				},
+				creds, "", nil)
+
+			// local entry
+		} else {
+			prepareds.PreparedDo(localKey, func(ce *prepareds.CacheEntry) {
+				if userName == "" || checkCacheEntry(ce, tenantName) {
+					items, _ := formatPrepared(ce, localKey, node, context)
+					for k, v := range pair.Value.Fields() {
+						if cv, ok := items[k]; !ok || value.NewValue(v).Equals(value.NewValue(cv)) != value.TRUE_VALUE {
+							errs = append(errs, errors.NewUpdateInvalidField(name, k))
+						}
+						delete(items, k)
+					}
+					if _, ok := items["planPreparedTime"]; ok {
+						ce.Prepared.SetPreparedTime(time.Time{})
+						delete(items, "planPreparedTime")
+					}
+					for k, _ := range items {
+						errs = append(errs, errors.NewUpdateInvalidField(name, k))
+					}
+				}
+			})
+		}
+
+		if len(errs) > 0 {
+			if preserveMutations {
+				updated := make([]value.Pair, i)
+				if i > 0 {
+					copy(updated, updates[0:i-1])
+				}
+				return i, updated, errs
+			} else {
+				return i, nil, errs
+			}
+		}
+	}
+
+	if preserveMutations {
+		return len(updates), updates, nil
+	} else {
+		return len(updates), nil, nil
+	}
 }
