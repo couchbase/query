@@ -616,7 +616,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 				entry.Prepared.SetPreparedTime(time.Time{})
 			}
 		})
-		return nil, nil
+		return true, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}

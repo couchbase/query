@@ -578,7 +578,7 @@ func (b *preparedsKeyspace) Update(updates value.Pairs, context datastore.QueryC
 		if len(nodeName) != 0 && nodeName != whoAmI {
 
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey,
-				"prepareds", "PUT", nil,
+				"prepareds", "PATCH", nil,
 				func(warn errors.Error) {
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
