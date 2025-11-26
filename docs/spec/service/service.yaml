@@ -508,7 +508,7 @@ components:
           In this case, you must verify the statement and execute it in a separate request.
 
           Natural language requests use the Couchbase Capella iQ service as a backend.
-          You must have a Couchbase Capella account to make a natural language request.
+          To make a natural language request, you must have a Couchbase Capella user account.
 
           This parameter is available in clusters running Couchbase Server 8.0 and later.
 
@@ -522,11 +522,11 @@ components:
         x-desc-name: natural_cred
         x-desc-status: Couchbase Server 8.0
         description: |-
-          The Couchbase Capella credentials for a natural language request, in the form `username:password`.
+          The Couchbase Capella user account credentials for a natural language request, in the form `username:password`.
           Be careful not to expose the credentials in log files or other output.
 
           Natural language requests use the Couchbase Capella iQ service as a backend.
-          You must have a Couchbase Capella account to make a natural language request.
+          To make a natural language request, you must have a Couchbase Capella user account.
 
           This parameter is available in clusters running Couchbase Server 8.0 and later.
 
@@ -543,7 +543,7 @@ components:
           The Couchbase Capella organization ID for a natural language request.
 
           Natural language requests use the Couchbase Capella iQ service as a backend.
-          You must have a Couchbase Capella account to make a natural language request.
+          To make a natural language request, you must have a Couchbase Capella user account.
 
           This parameter is available in clusters running Couchbase Server 8.0 and later.
 
@@ -569,7 +569,7 @@ components:
             In this case, you must specify the `query_context` parameter to provide the bucket and scope.
 
           Natural language requests use the Couchbase Capella iQ service as a backend.
-          You must have a Couchbase Capella account to make a natural language request.
+          To make a natural language request, you must have a Couchbase Capella user account.
 
           This parameter is available in clusters running Couchbase Server 8.0 and later.
 
@@ -594,7 +594,7 @@ components:
             The output is a SQL++ statement which can use a Flex index, if available.
 
           Natural language requests use the Couchbase Capella iQ service as a backend.
-          You must have a Couchbase Capella account to make a natural language request.
+          To make a natural language request, you must have a Couchbase Capella user account.
 
           This parameter is available in clusters running Couchbase Server 8.0 and later.
         x-has-default: true
