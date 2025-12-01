@@ -19,6 +19,18 @@ import (
 
 func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastore,
 	namespace string, subquery, stream, persist bool, context *PrepareContext) (*plan.Prepared, error, map[string]time.Duration) {
+
+	if persist {
+		// check and create (if not exists) QUERY_METADATA bucket
+		hasMetadata, err := hasQueryMetadata(true, context.RequestId(), true)
+		if err == nil && !hasMetadata {
+			err = errors.NewMissingQueryMetadataError("SAVE option of PREPARE")
+		}
+		if err != nil {
+			return nil, err, nil
+		}
+	}
+
 	qp, ik, err, subTimes := Build(stmt, store, systemstore, namespace, subquery, stream, false, context)
 	if err != nil {
 		return nil, err, subTimes
@@ -29,19 +41,5 @@ func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastor
 	if stmt.OptimHints() != nil {
 		optimHints = stmt.OptimHints().Copy()
 	}
-	prepared := plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints, persist, false)
-
-	if persist {
-		// check and create (if not exists) QUERY_METADATA bucket
-		hasMetadata, err := hasQueryMetadata(true, context.RequestId(), true)
-		if err == nil && !hasMetadata {
-			err = errors.NewMissingQueryMetadataError("SAVE option of PREPARE")
-		}
-		if err != nil {
-			return nil, err, subTimes
-		}
-		// TODO: save plan
-	}
-
-	return prepared, nil, subTimes
+	return plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints, persist, false), nil, subTimes
 }

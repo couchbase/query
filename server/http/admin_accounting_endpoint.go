@@ -742,8 +742,10 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		redact := doRedact(req)
 		prepareds.PreparedsForeach(func(name string, d *prepareds.CacheEntry) bool {
-			p := preparedWorkHorse(d, profiling, redact, durStyle)
-			data = append(data, p)
+			if !d.Prepared.Persist() {
+				p := preparedWorkHorse(d, profiling, redact, durStyle)
+				data = append(data, p)
+			}
 			return true
 		}, nil)
 		return data, nil

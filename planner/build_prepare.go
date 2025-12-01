@@ -90,6 +90,15 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	}
 
 	prep.SetEncodedPlan(str)
+
+	if stmt.Save() {
+		// persist the query plan after prepared name and query context are set
+		err = persistPrepared(prep)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	val := value.NewValue(json_bytes)
 	err = val.SetField("encoded_plan", value.NewValue(str))
 	if err != nil {

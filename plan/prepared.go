@@ -124,7 +124,7 @@ func (this *Prepared) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 5)
+	r := make(map[string]interface{}, 20)
 	this.marshalInternal(r)
 	if f != nil {
 		f(r)

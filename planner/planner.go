@@ -24,6 +24,9 @@ type PlanCache interface {
 	// return the expected statement name generated from the text and options
 	GetName(text, namespace string, context *PrepareContext) (string, errors.Error)
 
+	// return the encoded name generated from name and query context
+	EncodeName(name, queryContext string) string
+
 	// check if plan already exists for name / text / options combo
 	GetPlan(name, text, namespace string, context *PrepareContext) (*plan.Prepared, errors.Error)
 

@@ -283,6 +283,10 @@ const (
 	ColonQueryContext   = ":"
 )
 
+func (this *preparedCache) EncodeName(name, queryContext string) string {
+	return encodeName(name, queryContext)
+}
+
 func encodeName(name string, queryContext string) string {
 	if queryContext == EmptyQueryContext || queryContext == ColonQueryContext || queryContext == DefaultQueryContext {
 		return name

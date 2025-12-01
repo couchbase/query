@@ -68,11 +68,6 @@ func (s *store) createSysCollection(bucketName, scopeName, collectionName, index
 		}
 	}
 
-	// _system scope automatically created
-	if scopeName == _BUCKET_SYSTEM_SCOPE {
-		return nil
-	}
-
 	sysScope, er := sysBucket.ScopeByName(scopeName)
 	if er != nil {
 		if er.Code() != errors.E_CB_SCOPE_NOT_FOUND {
@@ -80,10 +75,13 @@ func (s *store) createSysCollection(bucketName, scopeName, collectionName, index
 			return er
 		}
 
-		// allow "already exists" error in case of duplicated Create call
-		er = sysBucket.CreateScope(scopeName)
-		if er != nil && !cb.AlreadyExistsError(er) {
-			return er
+		// _system scope automatically created
+		if scopeName != _BUCKET_SYSTEM_SCOPE {
+			// allow "already exists" error in case of duplicated Create call
+			er = sysBucket.CreateScope(scopeName)
+			if er != nil && !cb.AlreadyExistsError(er) {
+				return er
+			}
 		}
 
 		// retry till we have the newly created scope available
@@ -112,11 +110,6 @@ func (s *store) createSysCollection(bucketName, scopeName, collectionName, index
 		}
 	}
 
-	// _query collection automatically created
-	if collectionName == _BUCKET_SYSTEM_COLLECTION {
-		return nil
-	}
-
 	sysCollection, er := sysScope.KeyspaceByName(collectionName)
 	if er != nil {
 		if er.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
@@ -124,10 +117,13 @@ func (s *store) createSysCollection(bucketName, scopeName, collectionName, index
 			return er
 		}
 
-		// allow "already exists" error in case of duplicated Create call
-		er = sysScope.CreateCollection(collectionName, nil)
-		if er != nil && !cb.AlreadyExistsError(er) {
-			return er
+		// _query collection automatically created
+		if collectionName != _BUCKET_SYSTEM_COLLECTION {
+			// allow "already exists" error in case of duplicated Create call
+			er = sysScope.CreateCollection(collectionName, nil)
+			if er != nil && !cb.AlreadyExistsError(er) {
+				return er
+			}
 		}
 
 		// retry till we have the newly created collection available

@@ -1700,7 +1700,13 @@ func (p *Pool) Close() {
 func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 	bucket, err := p.GetBucket(name)
 	if err != nil {
-		if _, ok := err.(*BucketNotFoundError); !ok {
+		ignore := false
+		if _, ok := err.(*BucketNotFoundError); ok {
+			ignore = true
+		} else if strings.Contains(err.Error(), HTTP_404) {
+			ignore = true
+		}
+		if !ignore {
 			return nil, err
 		}
 
@@ -1737,7 +1743,13 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 					break
 				}
 			} else if err != nil {
-				if _, ok := err.(*BucketNotFoundError); !ok {
+				ignore := false
+				if _, ok := err.(*BucketNotFoundError); ok {
+					ignore = true
+				} else if strings.Contains(err.Error(), HTTP_404) {
+					ignore = true
+				}
+				if !ignore {
 					break
 				}
 			}

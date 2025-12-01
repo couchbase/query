@@ -309,3 +309,7 @@ func adjustAvgDistSelec(ks *base.BaseKeyspace, advisorValidate bool, baseKeyspac
 func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
 	return false, errors.NewEnterpriseFeature("Query meta data bucket", "plan.has_query_metadata")
 }
+
+func persistPrepared(prepared *plan.Prepared) error {
+	return errors.NewEnterpriseFeature("Query meta data bucket", "plan.has_query_metadata")
+}

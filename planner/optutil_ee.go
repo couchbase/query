@@ -725,3 +725,16 @@ func adjustAvgDistSelec(ks *base.BaseKeyspace, advisorValidate bool, baseKeyspac
 func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
 	return dictionary.HasQueryMetadata(create, requestId, waitOnCreate)
 }
+
+func persistPrepared(prepared *plan.Prepared) error {
+	fullName := planCache.EncodeName(prepared.Name(), prepared.QueryContext())
+	encoded_plan := prepared.EncodedPlan()
+	if encoded_plan == "" {
+		var err error
+		encoded_plan, err = prepared.BuildEncodedPlan()
+		if err != nil {
+			return err
+		}
+	}
+	return dictionary.PersistPrepared(fullName, encoded_plan)
+}

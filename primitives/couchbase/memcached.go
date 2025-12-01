@@ -83,6 +83,15 @@ func IsRefreshRequired(err error) bool {
 	return false
 }
 
+// similar to IsRefreshRequired(), but handles nested errors
+func CanRetryWithRefresh(err qerrors.Error) bool {
+	if err != nil {
+		return err.ContainsText(gomemcached.StatusNames[gomemcached.NOT_MY_VBUCKET]) ||
+			err.ContainsText(gomemcached.StatusNames[gomemcached.NO_BUCKET])
+	}
+	return false
+}
+
 func IsBucketNotFound(err error) bool {
 	return strings.Contains(err.Error(), BUCKET_NOT_FOUND) ||
 		strings.Contains(err.Error(), BUCKET_UUID_MISMATCH)
