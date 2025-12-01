@@ -69,7 +69,7 @@ func (this *InferExpression) RunOnce(context *Context, parent value.Value) {
 			context.Error(errors.NewInferencerNotFoundError(err, string(using)))
 			return
 		}
-		go infer.InferExpression(context, this.plan.Node().Expression(), this.plan.Node().With(), conn)
+		go infer.InferExpression(&this.operatorCtx, this.plan.Node().Expression(), this.plan.Node().With(), conn)
 
 		var val value.Value
 

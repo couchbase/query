@@ -11,6 +11,7 @@ package inferencer
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"strconv"
 	"strings"
@@ -263,7 +264,16 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 	conn *datastore.ValueConnection) {
 
 	docCount, _ := ks.Count(context)
-
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			s := string(buf[0:n])
+			logging.Severef("panic in InferKeyspace: %v", r)
+			logging.Severef("stack: %v", s)
+			conn.Error(errors.NewInferKeyspaceError(ks.Name(), fmt.Errorf("panic: %v", r)))
+		}
+	}()
 	defer close(conn.ValueChannel())
 
 	options, err := processWith(context, with)
@@ -314,6 +324,16 @@ func (di *DefaultInferencer) InferExpression(context datastore.QueryContext, exp
 
 	defer close(conn.ValueChannel())
 
+	defer func() {
+		if r := recover(); r != nil {
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			s := string(buf[0:n])
+			logging.Severef("panic in InferExpression: %v", r)
+			logging.Severef("stack: %v", s)
+			conn.Error(errors.NewInferExpressionEvalFailed(fmt.Errorf("panic: %v", r)))
+		}
+	}()
 	options, err := processWith(context, with)
 	if err != nil {
 		conn.Error(err)
