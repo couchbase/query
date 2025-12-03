@@ -78,6 +78,18 @@ func (this *Slice) IsFromEmptyBrackets() bool {
 	return !this.start && !this.end
 }
 
+func (this *Slice) Copy() Expression {
+	rv := &Slice{
+		*NewFunctionBase(this.FunctionBase.Name(), CopyExpressions(this.operands)...),
+		this.start,
+		this.end,
+	}
+
+	rv.BaseCopy(this)
+	rv.expr = rv
+	return rv
+}
+
 /*
 This method Evaluates the slice using the input args depending on the
 number of args. The form source-expr [ start : end ] is called array
