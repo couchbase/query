@@ -821,16 +821,15 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 		ffdc.Reset(ffdc.RequestQueueFull)
 	}
 
+	defer queue.dequeue()
+
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
-		queue.dequeue()
 		return true
 	}
 
 	this.serviceRequest(request) // service
-
-	queue.dequeue()
 
 	return true
 }
@@ -845,14 +844,19 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 		ffdc.Reset(ffdc.PlusQueueFull)
 	}
 
+	dequeue := true
+	defer func() {
+		if dequeue {
+			queue.dequeue()
+		}
+	}()
+
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
-		queue.dequeue()
 		return true
 	}
 
-	dequeue := true
 	if request.TxId() != "" {
 		err := this.handlePreTxRequest(request, queue, transactionQueues)
 		if err != nil {
@@ -862,7 +866,6 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 			if !request.Alive() {
 				request.Fail(errors.NewServiceNoClientError())
 				request.Failed(this)
-				queue.dequeue()
 				return true
 			}
 			this.serviceRequest(request) // service
@@ -870,10 +873,6 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 		}
 	} else {
 		this.serviceRequest(request) // service
-	}
-
-	if dequeue {
-		queue.dequeue()
 	}
 
 	return true
