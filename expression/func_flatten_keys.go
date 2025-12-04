@@ -22,8 +22,12 @@ const (
 	IK_ASC = 1 << iota
 	IK_DESC
 	IK_MISSING
-	IK_VECTOR
-	IK_NONE = 0
+	IK_DENSE_VECTOR
+	IK_SPARSE_VECTOR
+	IK_MULTI_VECTOR
+	IK_VECTOR  = IK_DENSE_VECTOR
+	IK_VECTORS = (IK_DENSE_VECTOR | IK_SPARSE_VECTOR | IK_MULTI_VECTOR)
+	IK_NONE    = 0
 )
 
 type FlattenKeys struct {
@@ -118,7 +122,7 @@ func (this *FlattenKeys) HasMissing(pos int) bool {
 }
 
 func (this *FlattenKeys) HasVector(pos int) bool {
-	return (this.GetAttribute(pos) & IK_VECTOR) != 0
+	return (this.GetAttribute(pos) & IK_VECTORS) != 0
 }
 
 func (this *FlattenKeys) AttributeString(pos int) string {
@@ -129,8 +133,12 @@ func (this *FlattenKeys) AttributeString(pos int) string {
 	if this.HasDesc(pos) {
 		s += " DESC"
 	}
-	if this.HasVector(pos) {
-		s += " VECTOR"
+	if this.HasAttribute(pos, IK_DENSE_VECTOR) {
+		s += " DENSE VECTOR"
+	} else if this.HasAttribute(pos, IK_SPARSE_VECTOR) {
+		s += " SPARSE VECTOR"
+	} else if this.HasAttribute(pos, IK_MULTI_VECTOR) {
+		s += " MULTI VECTOR"
 	}
 	return s
 }

@@ -26,6 +26,7 @@ type sarg struct {
 	isArray         bool
 	isVector        bool
 	isInclude       bool
+	vectorType      string
 	index           datastore.Index
 	keyPos          int
 	aliases         map[string]bool
@@ -33,8 +34,8 @@ type sarg struct {
 }
 
 func newSarg(key expression.Expression, index datastore.Index, baseKeyspace *base.BaseKeyspace,
-	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray, isVector, isInclude bool,
-	keyPos int, aliases map[string]bool, context *PrepareContext) *sarg {
+	keyspaceNames map[string]string, isJoin, doSelec, advisorValidate, isMissing, isArray, isVector bool,
+	vectorType string, isInclude bool, keyPos int, aliases map[string]bool, context *PrepareContext) *sarg {
 	return &sarg{
 		key:             key,
 		baseKeyspace:    baseKeyspace,
@@ -46,6 +47,7 @@ func newSarg(key expression.Expression, index datastore.Index, baseKeyspace *bas
 		isArray:         isArray,
 		isVector:        isVector,
 		isInclude:       isInclude,
+		vectorType:      vectorType,
 		index:           index,
 		keyPos:          keyPos,
 		aliases:         aliases,
@@ -259,7 +261,7 @@ func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
 	case *expression.RegexpLike:
 		return this.visitLike(pred)
 	case *expression.ApproxVectorDistance:
-		if this.isVector {
+		if this.isVector && this.vectorType == datastore.IK_DENSE_VECTOR_NAME {
 			if index6, ok := this.index.(datastore.Index6); ok {
 				fld := pred.Field()
 				if fld.EquivalentTo(this.key) &&
@@ -269,6 +271,16 @@ func (this *sarg) VisitFunction(pred expression.Function) (interface{}, error) {
 					rv.vecPos = this.keyPos
 					return rv, nil
 				}
+			}
+		}
+		return nil, nil
+	case *expression.SparseVectorDistance:
+		if this.isVector && this.vectorType == datastore.IK_SPARSE_VECTOR_NAME {
+			if _, ok := this.index.(datastore.Index6); ok && pred.Field().EquivalentTo(this.key) {
+				rv := _WHOLE_SPANS.Copy().(*TermSpans)
+				rv.vecExpr = pred
+				rv.vecPos = this.keyPos
+				return rv, nil
 			}
 		}
 		return nil, nil

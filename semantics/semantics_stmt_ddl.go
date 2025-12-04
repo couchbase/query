@@ -47,12 +47,12 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 		}
 		all, ok := expr.(*expression.All)
 		if !gsi {
-			if term.HasAttribute(algebra.IK_MISSING | algebra.IK_ASC | algebra.IK_DESC | algebra.IK_VECTOR) {
+			if term.HasAttribute(algebra.IK_MISSING | algebra.IK_ASC | algebra.IK_DESC | algebra.IK_VECTORS) {
 				return nil, errors.NewIndexNotAllowed("Index attributes USING FTS", "")
 			} else if ok {
 				return nil, errors.NewIndexNotAllowed("Array Index USING FTS", "")
 			}
-		} else if term.HasAttribute(algebra.IK_VECTOR) {
+		} else if term.HasAttribute(algebra.IK_VECTORS) {
 			if !this.hasSemFlag(_SEM_ENTERPRISE) {
 				return nil, errors.NewEnterpriseFeature("Index with vector key", "semantics.visit_create_index")
 			}
@@ -94,7 +94,7 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 			}
 		} else {
 			nkeys++
-			if term.HasAttribute(algebra.IK_VECTOR) && ok {
+			if term.HasAttribute(algebra.IK_VECTORS) && ok {
 				return nil, errors.NewIndexNotAllowed("Array Index using Vector Index Key", expr.String())
 			}
 

@@ -23,7 +23,7 @@ type TermSpans struct {
 	spans   plan.Spans2
 	arrayId int
 	vecPos  int
-	vecExpr *expression.ApproxVectorDistance
+	vecExpr expression.Expression
 }
 
 func NewTermSpans(spans ...*plan.Span2) *TermSpans {
@@ -49,14 +49,27 @@ func (this *TermSpans) CreateScan(
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
 		var indexVector *plan.IndexVector
 		if index6, ok := index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.vecExpr != nil {
-			var reRank expression.Expression
-			if index6.AllowRerank() {
-				reRank = this.vecExpr.ReRank()
+			var reRank, topNScan, queryVector, nprobes expression.Expression
+			var squareRoot bool
+			var vectorType string
+			switch vecExpr := this.vecExpr.(type) {
+			case *expression.ApproxVectorDistance:
+				if index6.AllowRerank() {
+					reRank = vecExpr.ReRank()
+				}
+				topNScan = vecExpr.TopNScan()
+				squareRoot = vecExpr.NeedSquareRoot()
+				queryVector = vecExpr.QueryVector()
+				nprobes = vecExpr.Nprobes()
+				vectorType = datastore.IK_DENSE_VECTOR_NAME
+			case *expression.SparseVectorDistance:
+				topNScan = vecExpr.TopNScan()
+				queryVector = vecExpr.QueryVector()
+				nprobes = vecExpr.Nprobes()
+				vectorType = datastore.IK_SPARSE_VECTOR_NAME
 			}
-			topNScan := this.vecExpr.TopNScan()
-			squareRoot := this.vecExpr.NeedSquareRoot()
-			indexVector = plan.NewIndexVector(this.vecExpr.QueryVector(), this.vecPos,
-				this.vecExpr.Nprobes(), reRank, topNScan, squareRoot)
+			indexVector = plan.NewIndexVector(queryVector, this.vecPos, vectorType,
+				nprobes, reRank, topNScan, squareRoot)
 		} else {
 			indexKeyNames = nil
 			indexPartitionSets = nil
@@ -284,7 +297,7 @@ func (this *TermSpans) Copy() SargSpans {
 	}
 
 	if this.vecExpr != nil {
-		rv.vecExpr = this.vecExpr.Copy().(*expression.ApproxVectorDistance)
+		rv.vecExpr = this.vecExpr.Copy()
 		rv.vecPos = this.vecPos
 	}
 
@@ -334,7 +347,7 @@ func (this *TermSpans) inheritTermInfo(ts1, ts2 *TermSpans) *TermSpans {
 		newArrayId = ts2.arrayId
 	}
 
-	var vecExpr *expression.ApproxVectorDistance
+	var vecExpr expression.Expression
 	var vecPos int
 	if ts1.vecExpr != nil && ts2.vecExpr != nil {
 		if ts1.vecExpr.EquivalentTo(ts2.vecExpr) && ts1.vecPos == ts2.vecPos {

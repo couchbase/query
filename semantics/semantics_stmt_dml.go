@@ -29,7 +29,7 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 	if stmt.Order() != nil {
 		for _, term := range stmt.Order().Terms() {
 			switch term.Expression().(type) {
-			case *expression.VectorDistance, *expression.ApproxVectorDistance:
+			case *expression.VectorDistance, *expression.ApproxVectorDistance, *expression.SparseVectorDistance:
 				if !this.hasSemFlag(_SEM_ENTERPRISE) {
 					return nil, errors.NewEnterpriseFeature("Vector Search Function", "semantics.visit_select")
 				}
@@ -86,7 +86,7 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 		}
 		for _, term := range stmt.Order().Terms() {
 			switch term.Expression().(type) {
-			case *expression.ApproxVectorDistance, *expression.VectorDistance:
+			case *expression.ApproxVectorDistance, *expression.VectorDistance, *expression.SparseVectorDistance:
 				ce := term.DescendingExpr()
 				ne := term.NullsPosExpr()
 				if ce != nil && ce.Value() == nil {

@@ -69,8 +69,8 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 			q["desc"] = true
 		}
 
-		if term.HasAttribute(algebra.IK_VECTOR) {
-			q["vector"] = true
+		if vectorName := term.VectorName(); vectorName != "" {
+			q["vectorType"] = vectorName
 		}
 
 		k[i] = q
@@ -115,10 +115,11 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		Keyspace  string `json:"keyspace"`
 		Index     string `json:"index"`
 		Keys      []struct {
-			Expr    string `json:"expr"`
-			Desc    bool   `json:"desc"`
-			Missing bool   `json:"missing"`
-			Vector  bool   `json:"vector"`
+			Expr       string `json:"expr"`
+			Desc       bool   `json:"desc"`
+			Missing    bool   `json:"missing"`
+			Vector     bool   `json:"vector"`
+			VectorType string `json:"vectorType"`
 		} `json:"keys"`
 		Using     datastore.IndexType `json:"using"`
 		Include   []string            `json:"include"`
@@ -159,8 +160,10 @@ func (this *CreateIndex) UnmarshalJSON(body []byte) error {
 		if term.Missing {
 			attributes |= algebra.IK_MISSING
 		}
-		if term.Vector {
-			attributes |= algebra.IK_VECTOR
+		if term.VectorType != "" {
+			attributes |= algebra.VectorAttribute(term.VectorType)
+		} else if term.Vector {
+			attributes |= algebra.IK_DENSE_VECTOR
 		}
 
 		keys[i] = algebra.NewIndexKeyTerm(expr, attributes)

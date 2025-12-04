@@ -582,7 +582,7 @@ func extractInfo(index datastore.Index, keyspaceAlias string, keyspace datastore
 			similarity := string(virtualIdx.VectorDistanceType())
 			description := virtualIdx.VectorDescription()
 			vectorInfo := iaplan.NewVectorInfo(dimension, similarity, description)
-			info.SetVectorInfo(vectorInfo, vectorPos)
+			info.SetVectorInfo(vectorInfo, vectorPos, virtualIdx.VectorType())
 			if virtualIdx.IsBhive() {
 				info.SetBhive()
 			}
@@ -612,7 +612,7 @@ func getIndexKeyStringArray(index datastore.Index) (keys, includes []string, des
 			if i == 0 {
 				lkmissing = kp.HasAttribute(datastore.IK_MISSING)
 			}
-			if vectorPos < 0 && kp.HasAttribute(datastore.IK_VECTOR) {
+			if vectorPos < 0 && kp.HasAttribute(datastore.IK_VECTORS) {
 				vectorPos = i
 				if ok6 {
 					isBhive = index6.IsBhive()

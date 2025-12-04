@@ -104,7 +104,7 @@ outer:
 		idxKeys := entry.idxKeys
 		keys := entry.keys
 		vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
-		var vecExpr *expression.ApproxVectorDistance
+		var vecExpr expression.Expression
 		var err error
 
 		// Matches execution.spanScan.RunOnce()
@@ -166,11 +166,13 @@ outer:
 		entry.pushDownProperty = this.indexPushDownProperty(entry, keys, nil, pred, origPred,
 			alias, nil, false, true, (len(this.baseKeyspaces) == 1), implicitAny)
 
-		// in vector query, if rerank is requested but ORDER/LIMIT cannot be pushed down,
+		// in DENSE vector query, if rerank is requested but ORDER/LIMIT cannot be pushed down,
 		// then rerank cannot be done in the index, need to Fetch in this case (to rerank)
-		if vector && vecExpr != nil && vecExpr.HasReRank(true) &&
-			(!entry.IsPushDownProperty(_PUSHDOWN_ORDER) || !entry.IsPushDownProperty(_PUSHDOWN_LIMIT)) {
-			continue outer
+		if vector && vecExpr != nil {
+			if ann, annOk := vecExpr.(*expression.ApproxVectorDistance); annOk && ann.HasReRank(true) &&
+				(!entry.IsPushDownProperty(_PUSHDOWN_ORDER) || !entry.IsPushDownProperty(_PUSHDOWN_LIMIT)) {
+				continue outer
+			}
 		}
 
 		coveringEntries[index] = &coveringEntry{
@@ -927,7 +929,7 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 	flatten := entry.arrayKey != nil && entry.arrayKey.Flatten()
 	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
 
-	var vecExpr *expression.ApproxVectorDistance
+	var vecExpr expression.Expression
 	if vector {
 		if tspans, ok := entry.spans.(*TermSpans); ok {
 			vecExpr = tspans.vecExpr
@@ -936,7 +938,7 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 			return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search predicate not available")
 		}
 
-		if vecExpr.HasReRank(true) {
+		if ann, annOk := vecExpr.(*expression.ApproxVectorDistance); annOk && ann.HasReRank(true) {
 			index6, ok := entry.index.(datastore.Index6)
 			if !ok {
 				return nil, nil, errors.NewPlanInternalError("indexCoverExpressions: vector search index not index6")
@@ -955,7 +957,7 @@ func indexCoverExpressions(entry *indexEntry, keys datastore.IndexKeys, inclIncl
 	}
 	exprs := make(expression.Expressions, 0, size)
 	for _, key := range keys {
-		if key.HasAttribute(datastore.IK_VECTOR) {
+		if key.HasAttribute(datastore.IK_VECTORS) {
 			// only put any covered vector expression; do not put the index key here since
 			// that may cover other expressions involving the same field/expression
 			// incorrectly
@@ -1127,8 +1129,8 @@ outer:
 	return true
 }
 
-func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (datastore.IndexKeys, *expression.ApproxVectorDistance, error) {
-	var vecExpr *expression.ApproxVectorDistance
+func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (datastore.IndexKeys, expression.Expression, error) {
+	var vecExpr expression.Expression
 	if tspans, ok := entry.spans.(*TermSpans); ok {
 		vecExpr = tspans.vecExpr
 	}
@@ -1136,7 +1138,7 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (
 		return keys, nil, errors.NewPlanInternalError("replaceVectorKey: vector search predicate not available")
 	}
 
-	if vecExpr.HasReRank(true) && cover {
+	if ann, annOk := vecExpr.(*expression.ApproxVectorDistance); annOk && ann.HasReRank(true) && cover {
 		index6, ok := entry.index.(datastore.Index6)
 		if !ok {
 			return keys, nil, errors.NewPlanInternalError("replaceVectorKey: vector search index not index6")
@@ -1150,8 +1152,8 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (
 
 	newKeys := make(datastore.IndexKeys, len(keys))
 	for i := range keys {
-		if keys[i].HasAttribute(datastore.IK_VECTOR) {
-			newKeys[i] = &datastore.IndexKey{vecExpr, (keys[i].Attributes ^ datastore.IK_VECTOR)}
+		if keys[i].HasAttribute(datastore.IK_VECTORS) {
+			newKeys[i] = &datastore.IndexKey{vecExpr, (keys[i].Attributes ^ datastore.IK_VECTORS)}
 		} else {
 			newKeys[i] = keys[i]
 		}

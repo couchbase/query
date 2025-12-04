@@ -17,6 +17,9 @@ var statement_syntax = map[string][][]string{
 		[]string{"USER"},
 		[]string{"USERS"},
 		[]string{"SEQUENCE"},
+		[]string{"DENSE"},
+		[]string{"MULTI"},
+		[]string{"SPARSE"},
 		[]string{"VECTOR"},
 	},
 	"statements": [][]string{
@@ -808,8 +811,10 @@ var statement_syntax = map[string][][]string{
 	"ikattr": [][]string{
 		[]string{"ASC"},
 		[]string{"DESC"},
-		[]string{"VECTOR"},
 		[]string{"INCLUDE", "MISSING"},
+		[]string{"VECTOR"},
+		[]string{"DENSE", "VECTOR"},
+		[]string{"SPARSE", "VECTOR"},
 	},
 	"drop_index": [][]string{
 		[]string{"DROP", "PRIMARY", "INDEX", "[if_exists]", "ON", "named_keyspace_ref", "[index_using]"},

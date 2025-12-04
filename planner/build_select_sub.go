@@ -135,14 +135,15 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 					return nil, err
 				}
 			}
-			anns := make(expression.Expressions, 0, len(sortExprs))
+			vecExprs := make(expression.Expressions, 0, len(sortExprs))
 			for _, term := range sortExprs {
-				if _, ok := term.(*expression.ApproxVectorDistance); ok {
-					anns = append(anns, term)
+				switch term.(type) {
+				case *expression.ApproxVectorDistance, *expression.SparseVectorDistance:
+					vecExprs = append(vecExprs, term)
 				}
 			}
-			if len(anns) > 0 {
-				this.vectors = anns
+			if len(vecExprs) > 0 {
+				this.vectors = vecExprs
 			}
 		}
 	}

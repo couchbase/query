@@ -235,8 +235,12 @@ func (this *CreateIndex) getRangeKeys(terms algebra.IndexKeyTerms) datastore.Ind
 		if term.HasAttribute(algebra.IK_DESC) {
 			attrs |= datastore.IK_DESC
 		}
-		if term.HasAttribute(algebra.IK_VECTOR) {
-			attrs |= datastore.IK_VECTOR
+		if term.HasAttribute(algebra.IK_DENSE_VECTOR) {
+			attrs |= datastore.IK_DENSE_VECTOR
+		} else if term.HasAttribute(algebra.IK_SPARSE_VECTOR) {
+			attrs |= datastore.IK_SPARSE_VECTOR
+		} else if term.HasAttribute(algebra.IK_MULTI_VECTOR) {
+			attrs |= datastore.IK_MULTI_VECTOR
 		}
 
 		rk := &datastore.IndexKey{Expr: term.Expression(), Attributes: attrs}

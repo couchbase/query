@@ -30,6 +30,7 @@ type VirtualIndex struct {
 	lkMissing    bool
 	bhive        bool
 	vectorPos    int
+	vectorType   string
 	vectorDesc   map[string]interface{}
 	partnExpr    expression.Expressions //partition key expressions
 	storageMode  datastore.IndexStorageMode
@@ -38,7 +39,7 @@ type VirtualIndex struct {
 
 func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition expression.Expression,
 	indexKeys, includes expression.Expressions, desc []bool, partnExpr expression.Expressions,
-	isPrimary, lkMissing, bhive bool, vectorPos int, vectorDesc map[string]interface{},
+	isPrimary, lkMissing, bhive bool, vectorPos int, vectorType string, vectorDesc map[string]interface{},
 	sm datastore.IndexStorageMode, storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
 	rv := &VirtualIndex{
 		keyspace:   keyspace,
@@ -52,6 +53,7 @@ func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition express
 		bhive:      bhive,
 		partnExpr:  expression.CopyExpressions(partnExpr),
 		vectorPos:  vectorPos,
+		vectorType: vectorType,
 		vectorDesc: vectorDesc,
 	}
 
@@ -162,7 +164,13 @@ func (this *VirtualIndex) RangeKey2() datastore.IndexKeys {
 				rangeKey.SetAttribute(datastore.IK_MISSING, true)
 			}
 			if i == this.vectorPos {
-				rangeKey.SetAttribute(datastore.IK_VECTOR, true)
+				if this.vectorType == datastore.IK_DENSE_VECTOR_NAME {
+					rangeKey.SetAttribute(datastore.IK_DENSE_VECTOR, true)
+				} else if this.vectorType == datastore.IK_SPARSE_VECTOR_NAME {
+					rangeKey.SetAttribute(datastore.IK_SPARSE_VECTOR, true)
+				} else if this.vectorType == datastore.IK_MULTI_VECTOR_NAME {
+					rangeKey.SetAttribute(datastore.IK_MULTI_VECTOR, true)
+				}
 			}
 			rangeKeys = append(rangeKeys, rangeKey)
 		}
@@ -351,6 +359,10 @@ func (this *VirtualIndex) Scan6(requestId string, spans, inclSpans datastore.Spa
 
 func (this *VirtualIndex) VectorPos() int {
 	return this.vectorPos
+}
+
+func (this *VirtualIndex) VectorType() string {
+	return this.vectorType
 }
 
 func (this *VirtualIndex) isCBOEnabledMode() bool {

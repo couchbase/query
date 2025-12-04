@@ -14,7 +14,7 @@ import (
 )
 
 func (this *sargable) VisitIn(pred *expression.In) (interface{}, error) {
-	return !this.vector && (base.SubsetOf(pred.First(), this.key) ||
+	return this.vectorType == "" && (base.SubsetOf(pred.First(), this.key) ||
 			this.defaultSargable(pred)),
 		nil
 }

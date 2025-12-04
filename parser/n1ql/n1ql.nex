@@ -193,6 +193,7 @@
 /[dD][eE][cC][rR][eE][mM][eE][nN][tT]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return DECREMENT }
 /[dD][eE][fF][aA][uU][lL][tT]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return DEFAULT }
 /[dD][eE][lL][eE][tT][eE]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return DELETE }
+/[dD][eE][nN][sS][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return DENSE }
 /[dD][eE][rR][iI][vV][eE][dD]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return DERIVED }
 /[dD][eE][sS][cC]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return DESC }
 /[dD][eE][sS][cC][rR][iI][bB][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return DESCRIBE }
@@ -281,6 +282,7 @@
 /[mM][eE][rR][gG][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return MERGE }
 /[mM][iI][nN][vV][aA][lL][uU][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return MINVALUE }
 /[mM][iI][sS][sS][iI][nN][gG]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return MISSING }
+/[mM][uU][lL][tT][iI]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return MULTI }
 /[nN][aA][mM][eE][sS][pP][aA][cC][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return NAMESPACE }
 /[nN][eE][sS][tT]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return NEST }
 /[nN][eE][xX][tT]/             { lval.s = yylex.Text(); yylex.curOffset += 4;; return NEXT }
@@ -359,6 +361,7 @@
 /[sS][eE][tT]/                 { lval.s = yylex.Text(); yylex.curOffset += 3; return SET }
 /[sS][hH][oO][wW]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return SHOW }
 /[sS][oO][mM][eE]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return SOME }
+/[sS][pP][aA][rR][sS][eE]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return SPARSE }
 /[sS][tT][aA][rR][tT]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return START }
 /[sS][tT][aA][tT][iI][sS][tT][iI][cC][sS]/ { lval.s = yylex.Text(); yylex.curOffset += 10; return STATISTICS }
 /[sS][tT][rR][iI][nN][gG]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return STRING }

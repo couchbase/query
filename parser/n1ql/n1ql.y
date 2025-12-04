@@ -175,6 +175,7 @@ column int
 %token DECLARE
 %token DECREMENT
 %token DEFAULT
+%token DENSE
 %token DELETE
 %token DERIVED
 %token DESC
@@ -253,6 +254,7 @@ column int
 %token MINUS
 %token MISSING
 %token MINVALUE
+%token MULTI
 %token NAMESPACE
 %token NAMESPACE_ID
 %token NEST
@@ -323,6 +325,7 @@ column int
 %token SEQUENCE
 %token SHOW
 %token SOME
+%token SPARSE
 %token START
 %token STATISTICS
 %token STRING
@@ -402,7 +405,7 @@ column int
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER USERS permitted_identifiers SEQUENCE VECTOR
+%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER USERS permitted_identifiers SEQUENCE VECTOR DENSE SPARSE MULTI
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -614,6 +617,12 @@ USER
 USERS
 |
 SEQUENCE
+|
+DENSE
+|
+MULTI
+|
+SPARSE
 |
 VECTOR
 ;
@@ -3757,11 +3766,17 @@ ASC
 DESC
 { $$ = algebra.IK_DESC }
 |
-VECTOR
-{ $$ = algebra.IK_VECTOR }
-|
 INCLUDE MISSING
 { $$ = algebra.IK_MISSING }
+|
+VECTOR
+{ $$ = algebra.IK_DENSE_VECTOR }
+|
+DENSE VECTOR
+{ $$ = algebra.IK_DENSE_VECTOR }
+|
+SPARSE VECTOR
+{ $$ = algebra.IK_SPARSE_VECTOR }
 ;
 
 

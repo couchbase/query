@@ -141,11 +141,11 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 }
 
 func sargFor(pred expression.Expression, index datastore.Index, key expression.Expression, isJoin, doSelec bool,
-	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate, isMissing, isArray, isVector, isInclude bool,
-	keyPos int, aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
+	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, advisorValidate, isMissing, isArray, isVector bool,
+	vectorType string, isInclude bool, keyPos int, aliases map[string]bool, context *PrepareContext) (SargSpans, bool, error) {
 
 	s := newSarg(key, index, baseKeyspace, keyspaceNames, isJoin, doSelec, advisorValidate, isMissing, isArray,
-		isVector, isInclude, keyPos, aliases, context)
+		isVector, vectorType, isInclude, keyPos, aliases, context)
 
 	r, err := pred.Accept(s)
 	if err != nil {
@@ -212,7 +212,7 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 		for pos, rs := range flSargSpans {
 			if rs != nil && rs.Size() > 0 &&
 				// don't consider the index span for vector index key
-				(!hasVector || !(pos < len(sargKeys) && sargKeys[pos].HasAttribute(datastore.IK_VECTOR))) {
+				(!hasVector || !(pos < len(sargKeys) && sargKeys[pos].HasAttribute(datastore.IK_VECTORS))) {
 				valid = true
 				break
 			}
@@ -250,7 +250,7 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 
 		for pos, sargKey := range sargKeys {
 			isArray, _, _ := sargKey.Expr.IsArrayIndexKey()
-			isVector := sargKey.HasAttribute(datastore.IK_VECTOR)
+			isVector := sargKey.HasAttribute(datastore.IK_VECTORS)
 			if flSargSpans[pos] == nil || flSargSpans[pos].Size() == 0 {
 				if exactSpan && !isArray && !isVector && fltrExpr.DependsOn(sargKey.Expr) {
 					exactSpan = false
@@ -449,7 +449,8 @@ func getSargSpans(pred, vpred expression.Expression, entry *indexEntry, sargKeys
 
 	// Sarg composite indexes right to left
 	for i := n - 1; i >= 0; i-- {
-		isVector := sargKeys[i].HasAttribute(datastore.IK_VECTOR)
+		isVector := sargKeys[i].HasAttribute(datastore.IK_VECTORS)
+		vectorType := sargKeys[i].VectorType()
 
 		spred := pred
 		if isVector {
@@ -461,7 +462,7 @@ func getSargSpans(pred, vpred expression.Expression, entry *indexEntry, sargKeys
 
 		s := newSarg(sargKeys[i].Expr, entry.index, baseKeyspace, keyspaceNames, isJoin, doSelec,
 			advisorValidate, (isMissing || i > 0), (i < len(isArrays) && isArrays[i]),
-			isVector, isInclude, i, aliases, context)
+			isVector, vectorType, isInclude, i, aliases, context)
 		r, err := spred.Accept(s)
 		if err != nil {
 			return nil, false, err

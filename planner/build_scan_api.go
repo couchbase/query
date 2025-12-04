@@ -70,7 +70,7 @@ func indexHasVector(index datastore.Index) bool {
 						return true
 					}
 				}
-			} else if key.HasAttribute(datastore.IK_VECTOR) {
+			} else if key.HasAttribute(datastore.IK_VECTORS) {
 				return true
 			}
 		}
@@ -127,13 +127,15 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 				curKey := false
 				vector := false
 				hasRerank := false
-				var vecExpr *expression.ApproxVectorDistance
-				if indexKey.HasAttribute(datastore.IK_VECTOR) && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
+				var vecExpr expression.Expression
+				if indexKey.HasAttribute(datastore.IK_VECTORS) && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 					vector = true
 					if tspans, ok := entry.spans.(*TermSpans); ok {
 						vecExpr = tspans.vecExpr
-						if vecExpr != nil && vecExpr.HasReRank(true) {
-							hasRerank = true
+						if vecExpr != nil {
+							if annExpr, annOk := vecExpr.(*expression.ApproxVectorDistance); annOk {
+								hasRerank = annExpr.HasReRank(true)
+							}
 						}
 					} else {
 						// not expected, add to index projection to be safe
@@ -298,7 +300,7 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 		} // else all index keys are included (useKey remains true)
 
 		// vector index key is in the index projection but no need to include it
-		if useKey && i < len(keys) && keys[i].HasAttribute(datastore.IK_VECTOR) {
+		if useKey && i < len(keys) && keys[i].HasAttribute(datastore.IK_VECTORS) {
 			useKey = false
 		}
 
@@ -353,7 +355,7 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 	// has equality (EQ, IN) predicates for purpose of partition elimination
 
 	index := virtual.NewVirtualIndex(keyspace, "partitionVirtualIndex", nil, partitionKeys, nil,
-		nil, nil, false, false, false, -1, nil, datastore.INDEX_MODE_VIRTUAL, nil)
+		nil, nil, false, false, false, -1, "", nil, datastore.INDEX_MODE_VIRTUAL, nil)
 
 	nkeys := len(partitionKeys)
 	keys := make(datastore.IndexKeys, 0, nkeys)

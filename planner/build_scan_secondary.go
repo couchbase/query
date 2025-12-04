@@ -575,7 +575,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 				if key.Expr, _, err = formalizeExpr(formalizer, key.Expr, false); err != nil {
 					return
 				}
-				if key.HasAttribute(datastore.IK_VECTOR) {
+				if key.HasAttribute(datastore.IK_VECTORS) {
 					vpos = i
 				}
 			}
@@ -1574,7 +1574,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	}
 	coverExprs := make(expression.Expressions, 0, len(idxKeys)+len(includes)+1)
 	for _, key := range idxKeys {
-		if isArray, _, _ := key.Expr.IsArrayIndexKey(); !isArray && !key.HasAttribute(datastore.IK_VECTOR) {
+		if isArray, _, _ := key.Expr.IsArrayIndexKey(); !isArray && !key.HasAttribute(datastore.IK_VECTORS) {
 			if ann, ok := key.Expr.(*expression.ApproxVectorDistance); ok && ann.HasReRank(true) {
 				// assume we need to rerank if value is not known
 				// if rerank requested, do not use early order
@@ -1892,7 +1892,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 			covers = make(expression.Covers, 0, len(indexProjection.EntryKeys)+1)
 			for _, i := range indexProjection.EntryKeys {
 				if i < len(keys) {
-					if !keys[i].HasAttribute(datastore.IK_VECTOR) {
+					if !keys[i].HasAttribute(datastore.IK_VECTORS) {
 						covers = append(covers, expression.NewIndexKey(keys[i].Expr))
 					}
 				} else if i < len(keys)+len(includes) {
@@ -1906,7 +1906,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		} else {
 			covers = make(expression.Covers, 0, len(keys)+len(includes))
 			for _, key := range keys {
-				if !key.HasAttribute(datastore.IK_VECTOR) {
+				if !key.HasAttribute(datastore.IK_VECTORS) {
 					covers = append(covers, expression.NewIndexKey(key.Expr))
 				}
 			}
@@ -2111,7 +2111,7 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, index datastor
 				}
 				rs, exact, err := sargFor(op1, index, key, false, false, baseKeyspace,
 					this.keyspaceNames, this.advisorValidate(), (missing || i > 0),
-					false, false, false, i, this.aliases, this.context)
+					false, false, "", false, i, this.aliases, this.context)
 				if err == nil && rs != nil && exact {
 					add = false
 					break

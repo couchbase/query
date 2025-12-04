@@ -491,6 +491,8 @@ var _FUNCTIONS = map[string]Function{
 	"knn_distance":           &VectorDistance{},
 	"approx_vector_distance": &ApproxVectorDistance{},
 	"ann_distance":           &ApproxVectorDistance{},
+	"sparse_vector_distance": &SparseVectorDistance{},
+	"sparse_distance":        &SparseVectorDistance{},
 	"decode_vector":          &DecodeVector{},
 	"vector_decode":          &DecodeVector{},
 	"encode_vector":          &EncodeVector{},

@@ -11,6 +11,7 @@ package plan
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
@@ -20,17 +21,19 @@ const RERANK_FACTOR = 5
 type IndexVector struct {
 	QueryVector expression.Expression
 	IndexKeyPos int
+	VectorType  string
 	Probes      expression.Expression
 	ReRank      expression.Expression
 	TopNScan    expression.Expression
 	SquareRoot  bool
 }
 
-func NewIndexVector(queryVector expression.Expression, indexKeyPos int,
+func NewIndexVector(queryVector expression.Expression, indexKeyPos int, vectorType string,
 	probes, reRank, topNScan expression.Expression, squareRoot bool) *IndexVector {
 	return &IndexVector{
 		QueryVector: queryVector,
 		IndexKeyPos: indexKeyPos,
+		VectorType:  vectorType,
 		Probes:      probes,
 		ReRank:      reRank,
 		TopNScan:    topNScan,
@@ -42,6 +45,7 @@ func (this *IndexVector) Copy() *IndexVector {
 	return &IndexVector{
 		QueryVector: expression.Copy(this.QueryVector),
 		IndexKeyPos: this.IndexKeyPos,
+		VectorType:  this.VectorType,
 		Probes:      expression.Copy(this.Probes),
 		ReRank:      expression.Copy(this.ReRank),
 		TopNScan:    expression.Copy(this.TopNScan),
@@ -50,7 +54,8 @@ func (this *IndexVector) Copy() *IndexVector {
 
 func (this *IndexVector) EquivalentTo(other *IndexVector) bool {
 	if !this.QueryVector.EquivalentTo(other.QueryVector) ||
-		this.IndexKeyPos != other.IndexKeyPos {
+		this.IndexKeyPos != other.IndexKeyPos ||
+		this.VectorType != other.VectorType {
 		return false
 	}
 	if (this.Probes == nil && other.Probes != nil) ||
@@ -83,6 +88,9 @@ func (this *IndexVector) MarshalBase(f func(map[string]interface{})) map[string]
 		"query_vector":  this.QueryVector,
 		"index_key_pos": this.IndexKeyPos,
 	}
+	if this.VectorType != "" {
+		rv["vector_type"] = this.VectorType
+	}
 	if this.Probes != nil {
 		rv["probes"] = this.Probes
 	}
@@ -102,6 +110,7 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		QueryVector string `json:"query_vector"`
 		IndexKeyPos int    `json:"index_key_pos"`
+		VectorType  string `json:"vector_type"`
 		Probes      string `json:"probes"`
 		ReRank      string `json:"re_rank"`
 		TopNScan    string `json:"top_nscan"`
@@ -114,6 +123,10 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 	}
 
 	this.IndexKeyPos = _unmarshalled.IndexKeyPos
+	this.VectorType = _unmarshalled.VectorType
+	if this.VectorType == "" {
+		this.VectorType = datastore.IK_DENSE_VECTOR_NAME
+	}
 	this.SquareRoot = _unmarshalled.SquareRoot
 
 	if _unmarshalled.QueryVector != "" {

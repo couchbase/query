@@ -216,10 +216,21 @@ type IndexKey struct {
 }
 
 const (
+	IK_DESC IkAttributes = 1 << iota
+	IK_MISSING
+	IK_DENSE_VECTOR
+	IK_SPARSE_VECTOR
+	IK_MULTI_VECTOR
+	IK_VECTOR  IkAttributes = IK_DENSE_VECTOR
+	IK_VECTORS IkAttributes = (IK_DENSE_VECTOR | IK_SPARSE_VECTOR | IK_MULTI_VECTOR)
 	IK_NONE    IkAttributes = 0x00
-	IK_DESC                 = 0x01
-	IK_MISSING              = 0x01 << 1
-	IK_VECTOR               = 0x01 << 2
+)
+
+const (
+	IK_DENSE_VECTOR_NAME  = "dense"
+	IK_SPARSE_VECTOR_NAME = "sparse"
+	IK_MULTI_VECTOR_NAME  = "multi"
+	IK_NON_VECTOR_NAME    = ""
 )
 
 type Indexer2 interface {
@@ -515,12 +526,18 @@ const (
 	IX_DIST_DOT               IndexDistanceType = "dot"               // negate dot_product
 )
 
+type SparseVector struct {
+	Indices []int
+	Values  []float32
+}
+
 type IndexVector struct {
-	QueryVector []float32 // query vector
-	IndexKeyPos int       // vector key pos in index
-	Probes      int       // nprobes
-	TopNScan    int       // TopNScan for Bhive Index, Override default only when  > 0
-	ReRank      bool      // rerank
+	QueryVector       []float32     // dense query vector
+	QuerySparseVector *SparseVector // sparse vector
+	IndexKeyPos       int           // vector key pos in index
+	Probes            int           // nprobes
+	TopNScan          int           // TopNScan for Bhive Index, Override default only when  > 0
+	ReRank            bool          // rerank
 }
 
 type IndexPartitionSet struct {
@@ -926,6 +943,30 @@ func (this *IndexKey) UnsetAttribute(attr IkAttributes) {
 
 func (this *IndexKey) HasAttribute(attr IkAttributes) bool {
 	return (this.Attributes & attr) != 0
+}
+
+func (this *IndexKey) VectorType() string {
+	if (this.Attributes & IK_DENSE_VECTOR) != 0 {
+		return IK_DENSE_VECTOR_NAME
+	} else if (this.Attributes & IK_SPARSE_VECTOR) != 0 {
+		return IK_SPARSE_VECTOR_NAME
+	} else if (this.Attributes & IK_MULTI_VECTOR) != 0 {
+		return IK_MULTI_VECTOR_NAME
+	}
+	return ""
+}
+
+func VectorAttribute(name string) (attributes IkAttributes) {
+	attributes = IK_NONE
+	switch name {
+	case IK_DENSE_VECTOR_NAME:
+		attributes = IK_DENSE_VECTOR
+	case IK_SPARSE_VECTOR_NAME:
+		attributes = IK_SPARSE_VECTOR
+	case IK_MULTI_VECTOR_NAME:
+		attributes = IK_MULTI_VECTOR
+	}
+	return
 }
 
 func (this IndexKeys) Copy() IndexKeys {

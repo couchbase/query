@@ -101,21 +101,79 @@ func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, contex
 	return keyspace
 }
 
-func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.IndexVector, parent value.Value,
-	dimension int, context *opContext) errors.Error {
-
-	qvVal, err := planIndexVector.QueryVector.Evaluate(parent, context)
-	if err != nil {
-		return errors.NewEvaluationError(err, "index vector parameter: query vector")
+func getQueryVectorIndices(qiVal value.Value) ([]int, errors.Error) {
+	qiAct := qiVal.Actual()
+	qiArr, ok := qiAct.([]interface{})
+	if !ok {
+		return nil, errors.NewInvalidQueryVector("sparse indices not an array")
 	}
 
+	queryVectorIndices := make([]int, len(qiArr))
+	for i, v := range qiArr {
+		var vf int64
+		switch val := v.(type) {
+		case int:
+			vf = int64(val)
+		case int64:
+			vf = int64(val)
+		case int32:
+			vf = int64(val)
+		case int16:
+			vf = int64(val)
+		case int8:
+			vf = int64(val)
+		case uint:
+			vf = int64(val)
+		case uint64:
+			vf = int64(val)
+		case uint32:
+			vf = int64(val)
+		case uint16:
+			vf = int64(val)
+		case uint8:
+			vf = int64(val)
+		case uintptr:
+			vf = int64(val)
+		case float32:
+			vf = int64(val)
+		case float64:
+			vf = int64(val)
+		case value.Value:
+			if val.Type() != value.NUMBER {
+				return nil, errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a number", val))
+			}
+			n, nok := value.IsIntValue(val)
+			if !nok {
+				return nil, errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a integer number", val))
+			}
+			vf = int64(n)
+		default:
+			return nil, errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v of type %T) not a valid type", val, val))
+		}
+		if vf < 0 || vf >= math.MaxInt32 {
+			return nil, errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a positive int32", vf))
+		}
+
+		queryVectorIndices[i] = int(vf)
+	}
+	return queryVectorIndices, nil
+}
+
+func getQueryVectorValue(qvVal value.Value, size int, dense bool) ([]float32, errors.Error) {
 	qvAct := qvVal.Actual()
 	qvArr, ok := qvAct.([]interface{})
 	if !ok {
-		return errors.NewInvalidQueryVector("not an array")
-	} else if len(qvArr) != dimension {
-		return errors.NewInvalidQueryVector(fmt.Sprintf("number of dimension (%d) does not match index vector dimension (%d)",
-			len(qvArr), dimension))
+		return nil, errors.NewInvalidQueryVector("not an array")
+	}
+
+	if len(qvArr) != size {
+		var errstr string
+		if dense {
+			errstr = fmt.Sprintf("number of dimension (%d) does not match index vector dimension (%d)", len(qvArr), size)
+		} else {
+			errstr = fmt.Sprintf("number of positions (%d) does not match number of values (%d)", size, len(qvArr))
+		}
+		return nil, errors.NewInvalidQueryVector(errstr)
 	}
 
 	queryVector := make([]float32, len(qvArr))
@@ -150,19 +208,55 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 			vf = val
 		case value.Value:
 			if val.Type() != value.NUMBER {
-				return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a number", val))
+				return nil, errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a number", val))
 			}
 			vf = value.AsNumberValue(val).Float64()
 		default:
-			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v of type %T) not a valid type", val, val))
+			return nil, errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v of type %T) not a valid type", val, val))
 		}
 		if vf < -math.MaxFloat32 || vf > math.MaxFloat32 {
-			return errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a float32", vf))
+			return nil, errors.NewInvalidQueryVector(fmt.Sprintf("array element (%v) not a float32", vf))
 		}
 
 		queryVector[i] = float32(vf)
 	}
-	indexVector.QueryVector = queryVector
+	return queryVector, nil
+}
+
+func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.IndexVector, parent value.Value,
+	dimension int, context *opContext) errors.Error {
+
+	val, err := planIndexVector.QueryVector.Evaluate(parent, context)
+	if err != nil {
+		return errors.NewEvaluationError(err, "index vector parameter: query vector")
+	}
+
+	if planIndexVector.VectorType == datastore.IK_SPARSE_VECTOR_NAME {
+		if val.Type() != value.ARRAY {
+			return errors.NewInvalidQueryVector("not an array")
+		}
+		_, ok2 := val.Index(2)
+		qiVal, ok1 := val.Index(0)
+		qvVal, ok := val.Index(1)
+		if ok2 || !ok1 || qiVal.Type() != value.ARRAY || !ok || qvVal.Type() != value.ARRAY {
+			return errors.NewInvalidQueryVector("not a sparse vector")
+		}
+		queryIndices, err := getQueryVectorIndices(qiVal)
+		if err != nil {
+			return err
+		}
+		queryVector, err := getQueryVectorValue(qvVal, len(queryIndices), false)
+		if err != nil {
+			return err
+		}
+		indexVector.QuerySparseVector = &datastore.SparseVector{Indices: queryIndices, Values: queryVector}
+	} else if planIndexVector.VectorType == datastore.IK_DENSE_VECTOR_NAME {
+		queryVector, err := getQueryVectorValue(val, dimension, true)
+		if err != nil {
+			return err
+		}
+		indexVector.QueryVector = queryVector
+	}
 
 	if planIndexVector.Probes != nil {
 		probesVal, err := planIndexVector.Probes.Evaluate(parent, context)

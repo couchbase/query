@@ -32,7 +32,16 @@ const (
 	EMPTY_METRIC      VectorMetric = ""
 )
 
-const FLOAT32_SIZE = 4
+const (
+	_DENSE  = "dense"
+	_SPARSE = "sparse"
+	_MULTI  = "multi"
+)
+
+const (
+	BASE_SIZE        = 4
+	_DEF_SPARSE_SIZE = 128
+)
 
 func GetVectorMetric(arg string) (metric VectorMetric) {
 	switch strings.ToLower(arg) {
@@ -227,6 +236,53 @@ func vectorDistance(metric VectorMetric, operands Expressions, checkQVec bool,
 	return value.NULL_VALUE, nil
 }
 
+func vectorSparseDistance(operands Expressions, item value.Value, querySparseMap map[int32]float32,
+	context Context) (value.Value, error) {
+
+	vec, err := operands[0].Evaluate(item, context)
+	if err != nil {
+		return nil, err
+	}
+	if vec.Type() == value.MISSING {
+		return value.MISSING_VALUE, nil
+	} else if vec.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	var ok bool
+	_, ok2 := vec.Index(2)
+	ivec, ok1 := vec.Index(0)
+	vec, ok = vec.Index(1)
+	if ok2 || !ok1 || ivec.Type() != value.ARRAY || !ok || vec.Type() != value.ARRAY {
+		return value.NULL_VALUE, nil
+	}
+
+	var dist float64
+	for i := 0; ; i++ {
+		iv, iOk := ivec.Index(i)
+		dv, dOk := vec.Index(i)
+		if !iOk && !dOk {
+			break
+		} else if iOk && dOk {
+			if iv.Type() != value.NUMBER || dv.Type() != value.NUMBER {
+				return value.NULL_VALUE, nil
+			}
+			in, nok := value.IsIntValue(iv)
+			df := value.AsNumberValue(dv).Float64()
+			if !nok || in < 0 || in >= math.MaxInt32 ||
+				df < -math.MaxFloat32 || df > math.MaxFloat32 {
+				return value.NULL_VALUE, nil
+			}
+			if qf, qfOk := querySparseMap[int32(in)]; qfOk {
+				dist += df * float64(qf)
+			}
+		} else {
+			return value.NULL_VALUE, nil
+		}
+	}
+	return value.NewValue(-dist), nil
+}
+
 type ApproxVectorDistance struct {
 	FunctionBase
 	metric VectorMetric
@@ -367,6 +423,125 @@ func (this *ApproxVectorDistance) Evaluate(item value.Value, context Context) (v
 	return vectorDistance(this.metric, this.operands, false, item, context)
 }
 
+type SparseVectorDistance struct {
+	FunctionBase
+	querySparseMap map[int32]float32
+	flags          uint32
+}
+
+func NewSparseVectorDistance(operands Expressions) Function {
+	rv := &SparseVectorDistance{}
+	rv.Init("sparse_vector_distance", operands...)
+	rv.expr = rv
+	return rv
+}
+
+func (this *SparseVectorDistance) Copy() Expression {
+	rv := &SparseVectorDistance{
+		flags: this.flags,
+	}
+	rv.Init(this.name, this.operands.Copy()...)
+	rv.querySparseMap = make(map[int32]float32, len(this.querySparseMap))
+	for i, v := range this.querySparseMap {
+		rv.querySparseMap[i] = v
+	}
+	rv.expr = rv
+	rv.BaseCopy(this)
+	return rv
+}
+
+func (this *SparseVectorDistance) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *SparseVectorDistance) PropagatesNull() bool { return false }
+func (this *SparseVectorDistance) Indexable() bool      { return false }
+func (this *SparseVectorDistance) Type() value.Type     { return value.NUMBER }
+func (this *SparseVectorDistance) MinArgs() int {
+	return 2
+}
+
+func (this *SparseVectorDistance) MaxArgs() int {
+	return 4
+}
+
+func (this *SparseVectorDistance) Constructor() FunctionConstructor {
+	return func(operands ...Expression) Function {
+		return NewSparseVectorDistance(operands)
+	}
+}
+
+func (this *SparseVectorDistance) ValidOperands() error {
+	field := this.operands[0].Static()
+	if field != nil {
+		return errors.NewVectorFuncInvalidField(this.name, field.String())
+	}
+	qVec := this.operands[1].Value()
+	if qVec != nil {
+		valid, rvi, rv, errStr := validSparseVector(qVec)
+		if !valid {
+			return errors.NewInvalidQueryVector(errStr)
+		}
+		this.querySparseMap = make(map[int32]float32, len(rvi))
+		for i, v := range rvi {
+			this.querySparseMap[v] = float32(rv[i])
+		}
+		this.flags |= _VECTOR_QVEC_CHECKED
+	}
+	return nil
+}
+
+func (this *SparseVectorDistance) Field() Expression {
+	return this.operands[0]
+}
+
+func (this *SparseVectorDistance) QueryVector() Expression {
+	return this.operands[1]
+}
+
+func (this *SparseVectorDistance) Nprobes() Expression {
+	if len(this.operands) > 2 {
+		return this.operands[2]
+	}
+	return nil
+}
+
+func (this *SparseVectorDistance) TopNScan() Expression {
+	if len(this.operands) > 3 {
+		return this.operands[3]
+	}
+	return nil
+}
+
+func (this *SparseVectorDistance) QueryVectorValue(item value.Value, context Context) ([]int32, []float32, error) {
+	queryVec, err := this.operands[1].Evaluate(item, context)
+	if err != nil {
+		return nil, nil, err
+	}
+	valid, rvi, rv, errStr := validSparseVector(queryVec)
+	if !valid {
+		return nil, nil, errors.NewInvalidQueryVector(errStr)
+	}
+	return rvi, rv, nil
+}
+
+func (this *SparseVectorDistance) Evaluate(item value.Value, context Context) (value.Value, error) {
+	defer this.AddPhaseCount(context, 1)
+	if (this.flags & _VECTOR_QVEC_CHECKED) == 0 {
+		rvi, rv, err := this.QueryVectorValue(item, context)
+		if err != nil {
+			return nil, err
+		}
+		this.querySparseMap = make(map[int32]float32, len(rvi))
+		for i, v := range rvi {
+			this.querySparseMap[v] = rv[i]
+		}
+
+		this.flags |= _VECTOR_QVEC_CHECKED
+	}
+	return vectorSparseDistance(this.operands, item, this.querySparseMap, context)
+}
+
 type IsVector struct {
 	FunctionBase
 	dimension int
@@ -489,6 +664,60 @@ func validVector(vec value.Value, dimension int) (bool, string) {
 	return true, ""
 }
 
+func validSparseVector(vec value.Value) (bool, []int32, []float32, string) {
+	if vec == nil {
+		return false, nil, nil, "nil value used for vector"
+	} else if vec.Type() != value.ARRAY {
+		return false, nil, nil, "not an array"
+	}
+	var ok bool
+	_, ok2 := vec.Index(2)
+	ivec, ok1 := vec.Index(0)
+	vec, ok = vec.Index(1)
+	if ok2 || !ok1 || ivec.Type() != value.ARRAY || !ok || vec.Type() != value.ARRAY {
+		return false, nil, nil, "not a sparse vector"
+	}
+	var nIndices, nValues int
+	rvi := make([]int32, 0, _DEF_SPARSE_SIZE)
+	for i := 0; ; i++ {
+		v, ok := ivec.Index(i)
+		if !ok {
+			nIndices = i
+			break
+		} else {
+			if v.Type() != value.NUMBER {
+				return false, nil, nil, fmt.Sprintf("indices array contains non-integer(%s)", v.Type().String())
+			}
+			n, nok := value.IsIntValue(v)
+			if !nok || n < 0 || n >= math.MaxInt32 {
+				return false, nil, nil, "indices array integer out of range"
+			}
+			rvi = append(rvi, int32(n))
+		}
+	}
+	rv := make([]float32, 0, len(rvi))
+	for i := 0; ; i++ {
+		v, ok := vec.Index(i)
+		if !ok {
+			nValues = i
+			break
+		} else {
+			if v.Type() != value.NUMBER {
+				return false, nil, nil, fmt.Sprintf("vaule array element (%v) not a number", v)
+			}
+			vf := value.AsNumberValue(v).Float64()
+			if vf < -math.MaxFloat32 || vf > math.MaxFloat32 {
+				return false, nil, nil, fmt.Sprintf("array element (%v) not a float32", vf)
+			}
+			rv = append(rv, float32(vf))
+		}
+	}
+	if nIndices != nValues {
+		return false, nil, nil, "number of indices doesn't match with number of values"
+	}
+	return true, rvi, rv, ""
+}
+
 type DecodeVector struct {
 	FunctionBase
 }
@@ -507,7 +736,7 @@ func (this *DecodeVector) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *DecodeVector) Type() value.Type { return value.ARRAY }
 func (this *DecodeVector) MinArgs() int     { return 1 }
-func (this *DecodeVector) MaxArgs() int     { return 2 }
+func (this *DecodeVector) MaxArgs() int     { return 3 }
 
 func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var decodeStr string
@@ -515,6 +744,7 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 	byteOrder = binary.LittleEndian
 	null := false
 	missing := false
+	vType := _DENSE
 
 	for i, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
@@ -531,11 +761,22 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 				} else {
 					decodeStr = arg.ToString()
 				}
-			} else {
+			} else if i == 1 {
 				if arg.Type() != value.BOOLEAN {
 					null = true
 				} else if arg.Truth() {
 					byteOrder = binary.BigEndian
+				}
+			} else {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					s := strings.ToLower(arg.ToString())
+					if s == _DENSE || s == _SPARSE {
+						vType = s
+					} else {
+						null = true
+					}
 				}
 			}
 		}
@@ -548,24 +789,42 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	// We first decode the encoded string into a byte array.
-	// The array is expected to be divisible by FLOAT32_SIZE because each float32
+	// The array is expected to be divisible by BASE_SIZE because each int32/float32
 	// should occupy 4 bytes
 	decodedString, err := base64.StdEncoding.DecodeString(decodeStr)
-	if err != nil || len(decodedString)%FLOAT32_SIZE != 0 {
+	if err != nil || len(decodedString)%BASE_SIZE != 0 {
 		return value.NULL_VALUE, nil
 	}
 
-	dims := int(len(decodedString) / FLOAT32_SIZE)
-	decodedVector := make([]interface{}, dims)
+	var decodedVector []interface{}
+	dims := int(len(decodedString) / BASE_SIZE)
+	switch vType {
+	case _DENSE:
+		decodedVector = make([]interface{}, dims)
+		offset := 0
+		// We iterate through the array 4 bytes at a time and convert each of
+		// them to a float32 value by reading them in a little endian notation
+		for i := 0; i < dims; i++ {
+			decodedVector[i] = math.Float32frombits(byteOrder.Uint32(decodedString[offset : offset+BASE_SIZE]))
+			offset += BASE_SIZE
+		}
 
-	offset := 0
-	// We iterate through the array 4 bytes at a time and convert each of
-	// them to a float32 value by reading them in a little endian notation
-	for i := 0; i < dims; i++ {
-		decodedVector[i] = math.Float32frombits(byteOrder.Uint32(decodedString[offset : offset+FLOAT32_SIZE]))
-		offset += FLOAT32_SIZE
+	case _SPARSE:
+		dims = dims / 2
+		indicesVector := make([]interface{}, dims)
+		valueVector := make([]interface{}, dims)
+		offset := 0
+		for i := 0; i < dims; i++ {
+			indicesVector[i] = byteOrder.Uint32(decodedString[offset : offset+BASE_SIZE])
+			offset += BASE_SIZE
+		}
+		for i := 0; i < dims; i++ {
+			valueVector[i] = math.Float32frombits(byteOrder.Uint32(decodedString[offset : offset+BASE_SIZE]))
+			offset += BASE_SIZE
+		}
+		decodedVector = append(decodedVector, value.NewValue(indicesVector))
+		decodedVector = append(decodedVector, value.NewValue(valueVector))
 	}
-
 	return value.NewValue(decodedVector), nil
 }
 
@@ -593,7 +852,7 @@ func (this *EncodeVector) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *EncodeVector) Type() value.Type { return value.STRING }
 func (this *EncodeVector) MinArgs() int     { return 1 }
-func (this *EncodeVector) MaxArgs() int     { return 2 }
+func (this *EncodeVector) MaxArgs() int     { return 3 }
 
 func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var vec value.Value
@@ -601,6 +860,7 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 	byteOrder = binary.LittleEndian
 	null := false
 	missing := false
+	vType := _DENSE
 
 	for i, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
@@ -617,11 +877,22 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 				} else {
 					vec = arg
 				}
-			} else {
+			} else if i == 1 {
 				if arg.Type() != value.BOOLEAN {
 					null = true
 				} else if arg.Truth() {
 					byteOrder = binary.BigEndian
+				}
+			} else {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					s := strings.ToLower(arg.ToString())
+					if s == _DENSE || s == _SPARSE {
+						vType = s
+					} else {
+						null = true
+					}
 				}
 			}
 		}
@@ -634,6 +905,34 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	buf := new(bytes.Buffer)
+
+	if vType == _SPARSE {
+		var ok bool
+		_, ok2 := vec.Index(2)
+		ivec, ok1 := vec.Index(0)
+		vec, ok = vec.Index(1)
+		if ok2 || !ok1 || ivec.Type() != value.ARRAY || !ok || vec.Type() != value.ARRAY {
+			return value.NULL_VALUE, nil
+		}
+		for i := 0; ; i++ {
+			v, ok := ivec.Index(i)
+			if !ok {
+				break
+			} else {
+				if v.Type() != value.NUMBER {
+					return value.NULL_VALUE, nil
+				}
+				n, nok := value.IsIntValue(v)
+				if !nok || n < 0 || n >= math.MaxInt32 {
+					return value.NULL_VALUE, nil
+				}
+				if err := binary.Write(buf, byteOrder, int32(n)); err != nil {
+					return value.NULL_VALUE, nil
+				}
+			}
+		}
+	}
+
 	for i := 0; ; i++ {
 		v, ok := vec.Index(i)
 		if !ok {

@@ -14,7 +14,7 @@ import (
 )
 
 func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
-	if this.vector {
+	if this.vectorType != "" {
 		return false, nil
 	} else if this.defaultSargable(pred) {
 		return true, nil

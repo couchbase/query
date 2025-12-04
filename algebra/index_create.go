@@ -287,8 +287,18 @@ const (
 	IK_ASC = 1 << iota
 	IK_DESC
 	IK_MISSING
-	IK_VECTOR
-	IK_NONE = 0
+	IK_DENSE_VECTOR
+	IK_SPARSE_VECTOR
+	IK_MULTI_VECTOR
+	IK_VECTOR  = IK_DENSE_VECTOR
+	IK_VECTORS = (IK_DENSE_VECTOR | IK_SPARSE_VECTOR | IK_MULTI_VECTOR)
+	IK_NONE    = 0
+)
+
+const (
+	IK_DENSE_VECTOR_NAME  = "dense"
+	IK_SPARSE_VECTOR_NAME = "sparse"
+	IK_MULTI_VECTOR_NAME  = "multi"
 )
 
 func NewIndexKeyTermAttributes(attributes ...uint32) (v uint32, b bool) {
@@ -296,7 +306,8 @@ func NewIndexKeyTermAttributes(attributes ...uint32) (v uint32, b bool) {
 		for j := i + 1; j < len(attributes); j++ {
 			// Don't allow repeat of same attribute, ASC/DESC together.
 			if (attributes[i]&attributes[j]) != 0 ||
-				((attributes[i]&(IK_ASC|IK_DESC)) != 0 && (attributes[j]&(IK_ASC|IK_DESC)) != 0) {
+				((attributes[i]&(IK_ASC|IK_DESC)) != 0 && (attributes[j]&(IK_ASC|IK_DESC)) != 0) ||
+				((attributes[i]&(IK_VECTORS)) != 0 && (attributes[j]&(IK_VECTORS)) != 0) {
 				return uint32(0), false
 			}
 		}
@@ -330,8 +341,12 @@ func (this *IndexKeyTerm) String(pos int) string {
 		s += " DESC"
 	}
 
-	if this.HasAttribute(IK_VECTOR) {
-		s += " VECTOR"
+	if this.HasAttribute(IK_DENSE_VECTOR) {
+		s += " DENSE VECTOR"
+	} else if this.HasAttribute(IK_SPARSE_VECTOR) {
+		s += " SPARSE VECTOR"
+	} else if this.HasAttribute(IK_MULTI_VECTOR) {
+		s += " MULTI VECTOR"
 	}
 
 	return s
@@ -372,8 +387,42 @@ func (this *IndexKeyTerm) HasMissing() bool {
 	return (this.attributes & IK_MISSING) != 0
 }
 
+func (this *IndexKeyTerm) HasDenseVector() bool {
+	return (this.attributes & IK_DENSE_VECTOR) != 0
+}
+
+func (this *IndexKeyTerm) HasSparseVector() bool {
+	return (this.attributes & IK_SPARSE_VECTOR) != 0
+}
+func (this *IndexKeyTerm) HasMultiVector() bool {
+	return (this.attributes & IK_MULTI_VECTOR) != 0
+}
+
 func (this *IndexKeyTerm) HasVector() bool {
-	return (this.attributes & IK_VECTOR) != 0
+	return (this.attributes & (IK_VECTORS)) != 0
+}
+func (this *IndexKeyTerm) VectorName() string {
+	if this.HasAttribute(IK_DENSE_VECTOR) {
+		return IK_DENSE_VECTOR_NAME
+	} else if this.HasAttribute(IK_SPARSE_VECTOR) {
+		return IK_SPARSE_VECTOR_NAME
+	} else if this.HasAttribute(IK_MULTI_VECTOR) {
+		return IK_MULTI_VECTOR_NAME
+	}
+	return ""
+}
+
+func VectorAttribute(name string) (attributes uint32) {
+	attributes = IK_NONE
+	switch name {
+	case IK_DENSE_VECTOR_NAME:
+		attributes = IK_DENSE_VECTOR
+	case IK_SPARSE_VECTOR_NAME:
+		attributes = IK_SPARSE_VECTOR
+	case IK_MULTI_VECTOR_NAME:
+		attributes = IK_MULTI_VECTOR
+	}
+	return
 }
 
 /*
@@ -397,7 +446,7 @@ func (this IndexKeyTerms) HasDescending() bool {
 
 func (this IndexKeyTerms) HasVector() bool {
 	for _, term := range this {
-		if term.HasAttribute(IK_VECTOR) {
+		if term.HasVector() {
 			return true
 		}
 		all, ok := term.Expression().(*expression.All)

@@ -65,7 +65,7 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 		variable.SetBindingVariable(true)
 		return anySargFor(pred.Satisfies(), variable, nil, this.index, this.isJoin,
 			this.doSelec, this.baseKeyspace, this.keyspaceNames, variable.Alias(), selec,
-			true, this.advisorValidate, false, this.isMissing, this.isVector, this.isInclude,
+			true, this.advisorValidate, false, this.isMissing, this.isVector, this.vectorType, this.isInclude,
 			this.keyPos, this.aliases, arrayId, this.context)
 	}
 
@@ -86,16 +86,16 @@ func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
 	return anySargFor(satisfies, array.ValueMapping(), array.When(), this.index, this.isJoin,
 		this.doSelec, this.baseKeyspace, this.keyspaceNames, array.Bindings()[0].Variable(),
 		selec, true, this.advisorValidate, all.IsDerivedFromFlatten(), this.isMissing,
-		this.isVector, this.isInclude, this.keyPos, this.aliases, arrayId, this.context)
+		this.isVector, this.vectorType, this.isInclude, this.keyPos, this.aliases, arrayId, this.context)
 }
 
 func anySargFor(pred, key, cond expression.Expression, index datastore.Index, isJoin, doSelec bool,
 	baseKeyspace *base.BaseKeyspace, keyspaceNames map[string]string, alias string,
-	selec float64, any, advisorValidate, flatten, isMissing, isVector, isInclude bool, keyPos int,
+	selec float64, any, advisorValidate, flatten, isMissing, isVector bool, vectorType string, isInclude bool, keyPos int,
 	aliases map[string]bool, arrayId int, context *PrepareContext) (SargSpans, error) {
 
 	sp, _, err := sargFor(pred, index, key, isJoin, doSelec, baseKeyspace, keyspaceNames,
-		advisorValidate, isMissing, true, isVector, isInclude, keyPos, aliases, context)
+		advisorValidate, isMissing, true, isVector, vectorType, isInclude, keyPos, aliases, context)
 	if err != nil || sp == nil {
 		return sp, err
 	}

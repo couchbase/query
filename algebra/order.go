@@ -121,7 +121,7 @@ func NewSortTerm(expr, descending, nullsPos expression.Expression) *SortTerm {
 	}
 	expr.SetExprFlag(expression.EXPR_ORDER_BY)
 	switch expr.(type) {
-	case *expression.ApproxVectorDistance, *expression.VectorDistance:
+	case *expression.ApproxVectorDistance, *expression.VectorDistance, *expression.SparseVectorDistance:
 		// Add NULLS LAST for ASC collation of Distance functions
 		if nullsPos == nil {
 			var collation string
@@ -344,8 +344,11 @@ func (this *SortTerm) NullsPosExpr() expression.Expression {
 }
 
 func (this *SortTerm) IsVectorTerm() bool {
-	_, ok := this.expr.(*expression.ApproxVectorDistance)
-	return ok
+	switch this.expr.(type) {
+	case *expression.ApproxVectorDistance, *expression.SparseVectorDistance:
+		return true
+	}
+	return false
 }
 
 func (this *SortTerm) IsProjectionAlias() bool {

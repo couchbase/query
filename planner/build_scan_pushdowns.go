@@ -39,7 +39,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 
 	vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
 	idxKeys := entry.idxKeys
-	var ann *expression.ApproxVectorDistance
+	var vecExpr expression.Expression
 	rerank := false
 
 	// Check Query Order By matches with index key order.
@@ -47,14 +47,16 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 	if this.order != nil {
 		if this.group == nil || isPushDownProperty(pushDownProperty, _PUSHDOWN_FULLGROUPAGGS) {
 			if exact && vector {
-				idxKeys, ann, _ = replaceVectorKey(idxKeys, entry, false)
+				idxKeys, vecExpr, _ = replaceVectorKey(idxKeys, entry, false)
 				allowRerank := false
 				if index6, ok := entry.index.(datastore.Index6); ok && index6.AllowRerank() {
 					allowRerank = true
 				}
-				if !allowRerank && ann != nil && ann.HasReRank(true) {
-					// assume we need to rerank if value is not known
-					rerank = true
+				if !allowRerank && vecExpr != nil {
+					if ann, annOk := vecExpr.(*expression.ApproxVectorDistance); annOk && ann.HasReRank(true) {
+						// assume we need to rerank if value is not known
+						rerank = true
+					}
 				}
 			}
 			ok, _, partSortCount := this.useIndexOrder(entry, idxKeys, nil, pushDownProperty)
@@ -672,6 +674,9 @@ outer:
 				if vector {
 					// check whether vector index key can have order
 					if _, ok := keys[i].Expr.(*expression.ApproxVectorDistance); ok && !vectorOrder {
+						return false, indexOrder, partSortTermCount
+					}
+					if _, ok := keys[i].Expr.(*expression.SparseVectorDistance); ok && !vectorOrder {
 						return false, indexOrder, partSortTermCount
 					}
 				}

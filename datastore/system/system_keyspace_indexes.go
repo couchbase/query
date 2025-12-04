@@ -397,8 +397,12 @@ func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
 				stringer.WriteString(" DESC")
 			}
 
-			if kp.HasAttribute(datastore.IK_VECTOR) {
-				stringer.WriteString(" VECTOR")
+			if kp.HasAttribute(datastore.IK_DENSE_VECTOR) {
+				stringer.WriteString(" DENSE VECTOR")
+			} else if kp.HasAttribute(datastore.IK_SPARSE_VECTOR) {
+				stringer.WriteString(" SPARSE VECTOR")
+			} else if kp.HasAttribute(datastore.IK_MULTI_VECTOR) {
+				stringer.WriteString(" MULTI VECTOR")
 			}
 			rv[i] = stringer.String()
 		}

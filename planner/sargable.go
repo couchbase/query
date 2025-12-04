@@ -36,10 +36,10 @@ func SargableFor(pred, vpred expression.Expression, index datastore.Index, keys 
 			return
 		}
 
-		vector := keys[i].HasAttribute(datastore.IK_VECTOR)
+		vectorType := keys[i].VectorType()
 
 		spred := pred
-		if vector {
+		if vectorType != "" {
 			spred = vpred
 		}
 		if spred == nil {
@@ -51,7 +51,7 @@ func SargableFor(pred, vpred expression.Expression, index datastore.Index, keys 
 			continue
 		}
 
-		s := &sargable{keys[i].Expr, missing, (i < len(isArrays) && isArrays[i]), gsi, vector,
+		s := &sargable{keys[i].Expr, missing, (i < len(isArrays) && isArrays[i]), gsi, vectorType,
 			index, context, aliases}
 
 		r, err := spred.Accept(s)
@@ -82,7 +82,7 @@ func SargableFor(pred, vpred expression.Expression, index datastore.Index, keys 
 
 	if pred != nil {
 		for i := range includes {
-			s := &sargable{includes[i], true, false, gsi, false, index, context, aliases}
+			s := &sargable{includes[i], true, false, gsi, "", index, context, aliases}
 			r, err := pred.Accept(s)
 			if err != nil {
 				return
@@ -134,14 +134,14 @@ func sargableForOr(or *expression.Or, vpred expression.Expression, index datasto
 }
 
 type sargable struct {
-	key     expression.Expression
-	missing bool
-	array   bool
-	gsi     bool
-	vector  bool
-	index   datastore.Index
-	context *PrepareContext
-	aliases map[string]bool
+	key        expression.Expression
+	missing    bool
+	array      bool
+	gsi        bool
+	vectorType string
+	index      datastore.Index
+	context    *PrepareContext
+	aliases    map[string]bool
 }
 
 // Arithmetic
@@ -315,13 +315,20 @@ func (this *sargable) VisitFunction(pred expression.Function) (interface{}, erro
 	case *expression.RegexpLike:
 		return this.visitLike(pred)
 	case *expression.ApproxVectorDistance:
-		if this.vector {
+		if this.vectorType == datastore.IK_DENSE_VECTOR_NAME {
 			if index6, ok := this.index.(datastore.Index6); ok {
 				fld := pred.Field()
 				if fld.EquivalentTo(this.key) &&
 					datastore.CompatibleMetric(index6.VectorDistanceType(), pred.Metric()) {
 					return true, nil
 				}
+			}
+		}
+		return false, nil
+	case *expression.SparseVectorDistance:
+		if this.vectorType == datastore.IK_SPARSE_VECTOR_NAME {
+			if _, ok := this.index.(datastore.Index6); ok && pred.Field().EquivalentTo(this.key) {
+				return true, nil
 			}
 		}
 		return false, nil
@@ -365,6 +372,6 @@ func (this *sargable) visitDefault(pred expression.Expression) (bool, error) {
 }
 
 func (this *sargable) defaultSargable(pred expression.Expression) bool {
-	return !this.vector && (base.SubsetOf(pred, this.key) ||
+	return this.vectorType == "" && (base.SubsetOf(pred, this.key) ||
 		((pred.PropagatesMissing() || pred.PropagatesNull()) && pred.DependsOn(this.key)))
 }
