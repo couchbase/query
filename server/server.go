@@ -730,9 +730,9 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 		ffdc.Reset(ffdc.RequestQueueFull)
 	}
 
-	this.serviceRequest(request) // service
+	defer queue.dequeue()
 
-	queue.dequeue()
+	this.serviceRequest(request) // service
 
 	return true
 }
@@ -746,6 +746,12 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 	}
 
 	dequeue := true
+	defer func() {
+		if dequeue {
+			queue.dequeue()
+		}
+	}()
+
 	if request.TxId() != "" {
 		err := this.handlePreTxRequest(request, queue, transactionQueues)
 		if err != nil {
@@ -757,10 +763,6 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 		}
 	} else {
 		this.serviceRequest(request) // service
-	}
-
-	if dequeue {
-		queue.dequeue()
 	}
 
 	return true
