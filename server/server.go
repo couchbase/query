@@ -968,16 +968,15 @@ func (this *Server) handleRequest(request Request, queue *runQueue) bool {
 	}
 	request.Output().AddPhaseTime(execution.QUEUED, util.Since(mark))
 
+	defer queue.dequeue()
+
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
-		queue.dequeue()
 		return true
 	}
 
 	this.serviceRequest(request) // service
-
-	queue.dequeue()
 
 	return true
 }
@@ -994,14 +993,19 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 	}
 	request.Output().AddPhaseTime(execution.QUEUED, util.Since(mark))
 
+	dequeue := true
+	defer func() {
+		if dequeue {
+			queue.dequeue()
+		}
+	}()
+
 	if !request.Alive() {
 		request.Fail(errors.NewServiceNoClientError())
 		request.Failed(this)
-		queue.dequeue()
 		return true
 	}
 
-	dequeue := true
 	if request.TxId() != "" {
 		mark := util.Now()
 		err := this.handlePreTxRequest(request, queue, transactionQueues)
@@ -1013,7 +1017,6 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 			if !request.Alive() {
 				request.Fail(errors.NewServiceNoClientError())
 				request.Failed(this)
-				queue.dequeue()
 				return true
 			}
 			this.serviceRequest(request) // service
@@ -1021,10 +1024,6 @@ func (this *Server) handlePlusRequest(request Request, queue *runQueue, transact
 		}
 	} else {
 		this.serviceRequest(request) // service
-	}
-
-	if dequeue {
-		queue.dequeue()
 	}
 
 	return true
