@@ -1153,7 +1153,8 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (
 	newKeys := make(datastore.IndexKeys, len(keys))
 	for i := range keys {
 		if keys[i].HasAttribute(datastore.IK_VECTORS) {
-			newKeys[i] = &datastore.IndexKey{vecExpr, (keys[i].Attributes ^ datastore.IK_VECTORS)}
+			newKeys[i] = &datastore.IndexKey{vecExpr,
+				(keys[i].Attributes & (keys[i].Attributes ^ datastore.IK_VECTORS))}
 		} else {
 			newKeys[i] = keys[i]
 		}
