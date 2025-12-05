@@ -21,7 +21,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func SanitizeStatement(statement, namespace, queryContext string, txn bool, args ...logging.Log) (string, value.Value, error) {
+func SanitizeStatement(statement, namespace, queryContext string, txn, withParamMap bool, args ...logging.Log) (string, value.Value, error) {
 
 	stmt, err := n1ql.ParseStatement2(statement, namespace, queryContext, args...)
 	if err != nil {
@@ -47,13 +47,12 @@ func SanitizeStatement(statement, namespace, queryContext string, txn bool, args
 		// create_function- TODO: would require some thought to sanitize the body specifically for js udfs
 		return stmt.String(), nil, nil
 	default:
-		stmt, paramMap, err = ReplaceConstantsWithNamedParams(stmt)
+		stmt, paramMap, err = ReplaceConstantsWithNamedParams(stmt, true)
 		if err != nil {
 			return "", nil, err
 		}
 		if stringer, ok := stmt.(interface{ String() string }); ok {
-			if len(paramMap) == 0 {
-				paramMap = nil
+			if paramMap == nil || len(paramMap) == 0 {
 				return stringer.String(), nil, nil
 			}
 			return stringer.String(), value.NewValue(paramMap), nil
@@ -64,8 +63,8 @@ func SanitizeStatement(statement, namespace, queryContext string, txn bool, args
 
 }
 
-func ReplaceConstantsWithNamedParams(stmt algebra.Statement) (algebra.Statement, map[string]value.Value, error) {
-	mapper := NewConstantToNamedParam()
+func ReplaceConstantsWithNamedParams(stmt algebra.Statement, withParamMap bool) (algebra.Statement, map[string]value.Value, error) {
+	mapper := NewConstantToNamedParam(withParamMap)
 	err := stmt.MapExpressions(mapper)
 	if err != nil {
 		return nil, nil, err
@@ -80,10 +79,11 @@ type constantToNamedParam struct {
 	parametersMap map[string]value.Value
 }
 
-func NewConstantToNamedParam() *constantToNamedParam {
+func NewConstantToNamedParam(withParamMap bool) *constantToNamedParam {
 	rv := &constantToNamedParam{}
-	rv.parametersMap = make(map[string]value.Value, 8)
-
+	if withParamMap {
+		rv.parametersMap = make(map[string]value.Value, 8)
+	}
 	rv.SetMapper(rv)
 	return rv
 }
@@ -105,14 +105,18 @@ func (this *constantToNamedParam) constructnamedparam() (string, string) {
 
 func (this *constantToNamedParam) VisitConstant(expr *expression.Constant) (interface{}, error) {
 	key, param := this.constructnamedparam()
-	this.parametersMap[key] = expr.Value()
+	if this.parametersMap != nil {
+		this.parametersMap[key] = expr.Value()
+	}
 	return algebra.NewNamedParameter(param), nil
 }
 
 func (this *constantToNamedParam) VisitObjectConstruct(expr *expression.ObjectConstruct) (interface{}, error) {
 	if expr.Value() != nil {
 		key, param := this.constructnamedparam()
-		this.parametersMap[key] = expr.Value()
+		if this.parametersMap != nil {
+			this.parametersMap[key] = expr.Value()
+		}
 		return algebra.NewNamedParameter(param), nil
 	}
 
@@ -123,7 +127,9 @@ func (this *constantToNamedParam) VisitObjectConstruct(expr *expression.ObjectCo
 func (this *constantToNamedParam) VisitArrayConstruct(expr *expression.ArrayConstruct) (interface{}, error) {
 	if expr.Value() != nil {
 		key, param := this.constructnamedparam()
-		this.parametersMap[key] = expr.Value()
+		if this.parametersMap != nil {
+			this.parametersMap[key] = expr.Value()
+		}
 		return algebra.NewNamedParameter(param), nil
 	}
 

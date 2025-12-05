@@ -1180,5 +1180,5 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 }
 
 func (this *Context) SanitizeStatement(statement string) (string, value.Value, error) {
-	return sanitizer.SanitizeStatement(statement, this.namespace, this.queryContext, this.TxContext() != nil, this)
+	return sanitizer.SanitizeStatement(statement, this.namespace, this.queryContext, this.TxContext() != nil, true, this)
 }
