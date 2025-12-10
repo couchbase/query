@@ -11,8 +11,8 @@ package inferencer
 import (
 	"fmt"
 	"os"
-	"runtime/pprof"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -280,8 +280,6 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 	conn *datastore.ValueConnection) {
 
 	docCount, _ := ks.Count(context)
-
-	defer close(conn.ValueChannel())
 	defer func() {
 		if r := recover(); r != nil {
 			buf := make([]byte, 1<<16)
@@ -292,6 +290,7 @@ func (di *DefaultInferencer) InferKeyspace(context datastore.QueryContext, ks da
 			conn.Error(errors.NewInferKeyspaceError(ks.Name(), fmt.Errorf("panic: %v", r)))
 		}
 	}()
+	defer close(conn.ValueChannel())
 	options, err := processWith(context, with)
 	if err != nil {
 		conn.Error(err)
@@ -342,6 +341,7 @@ func (di *DefaultInferencer) InferExpression(context datastore.QueryContext, exp
 	conn *datastore.ValueConnection) {
 
 	defer close(conn.ValueChannel())
+
 	defer func() {
 		if r := recover(); r != nil {
 			buf := make([]byte, 1<<16)
