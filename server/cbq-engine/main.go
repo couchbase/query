@@ -456,6 +456,7 @@ func main() {
 	_ = control.NewManager(*UUID)
 
 	// Now that we are up and running, try to prime the prepareds cache
+	prepareds.PreparedsFromPersisted()
 	prepareds.PreparedsRemotePrime()
 
 	// migrations (functions storage and CBO stats) last
