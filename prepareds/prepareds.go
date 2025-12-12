@@ -85,6 +85,8 @@ func PreparedsInit(limit int) {
 	}
 }
 
+const _DEF_MAP_SIZE = 8
+
 // initialize the cache from a different node
 func PreparedsRemotePrime() {
 
@@ -130,8 +132,8 @@ func PreparedsRemotePrime() {
 		preparedPrimeReportEntry := &PrimeReport{
 			StartTime: time.Now(),
 		}
-		decodeFailedReason := map[string]errors.Error{}
-		decodeReprepReason := map[string]errors.Errors{}
+		decodeFailedReason := make(map[string]errors.Error, _DEF_MAP_SIZE)
+		decodeReprepReason := make(map[string]errors.Errors, _DEF_MAP_SIZE)
 
 		// get the keys
 		distributed.RemoteAccess().GetRemoteKeys([]string{host}, "prepareds",
@@ -188,13 +190,13 @@ func PreparedsRemotePrime() {
 
 	if len(preparedPrimeReport) > 0 {
 		if buf, err := json.Marshal(preparedPrimeReport); err == nil {
-			logging.Infof("Prepared statement cache prime completed: %v", string(buf))
+			logging.Infof("Prepared statement cache prime from remote nodes completed: %v", string(buf))
 		}
 	}
 }
 
 type PrimeReport struct {
-	Host             string      `json:"host"`
+	Host             string      `json:"host,omitempty"`
 	StartTime        time.Time   `json:"startTime"`
 	EndTime          time.Time   `json:"endTime"`
 	Reason           interface{} `json:"reason,omitempty"`

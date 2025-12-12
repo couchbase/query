@@ -11,6 +11,9 @@
 package prepareds
 
 import (
+	"time"
+
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -24,29 +27,60 @@ func PreparedsFromPersisted() {
 		return
 	}
 
-	var err errors.Error
-	var queryMetadata datastore.Keyspace
+	preparedPrimeReport := &PrimeReport{
+		StartTime: time.Now(),
+	}
 
 	store := datastore.GetDatastore()
 	if store == nil {
-		err = errors.NewNoDatastoreError()
+		err := errors.NewNoDatastoreError()
+		preparedPrimeReport.Reason = err.Error()
 	} else {
-		queryMetadata, err = store.GetQueryMetadata()
+		queryMetadata, err := store.GetQueryMetadata()
 		if queryMetadata == nil {
 			return
 		}
-		err = dictionary.ForeachPreparedPlan(true, processPreparedPlan)
+		decodeFailedReason := make(map[string]errors.Error, _DEF_MAP_SIZE)
+		decodeReprepReason := make(map[string]errors.Errors, _DEF_MAP_SIZE)
+		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(true, decodeFailedReason, decodeReprepReason, processPreparedPlan)
+
+		preparedPrimeReport.Success = success
+		preparedPrimeReport.Failed = fail
+		preparedPrimeReport.Reprepared = reprepare
+
+		if len(decodeFailedReason) > 0 {
+			preparedPrimeReport.Reason = decodeFailedReason
+		} else if err != nil {
+			preparedPrimeReport.Reason = err.Error()
+		}
+
+		if len(decodeReprepReason) > 0 {
+			preparedPrimeReport.RepreparedReason = decodeReprepReason
+		}
 	}
 
-	if err != nil {
-		// TODO: add failure report
-		logging.Errorf("Error: %v", err)
+	preparedPrimeReport.EndTime = time.Now()
+
+	if buf, err := json.Marshal(preparedPrimeReport); err == nil {
+		logging.Infof("Prepared statement cache prime from persisted completed: %v", string(buf))
 	}
 }
 
-func processPreparedPlan(name, encoded_plan string) errors.Error {
-	// TODO: add reporting
-	_, err, _ := DecodePrepared(name, encoded_plan, true, logging.NULL_LOG)
-
-	return err
+func processPreparedPlan(name, encoded_plan string, decodeFailedReason map[string]errors.Error,
+	decodeReprepReason map[string]errors.Errors) (success bool, reprep bool) {
+	_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, logging.NULL_LOG)
+	if err != nil {
+		if decodeFailedReason != nil {
+			decodeFailedReason[name] = err
+		}
+	} else {
+		success = true
+		if len(reprepareCause) > 0 {
+			reprep = true
+			if decodeReprepReason != nil {
+				decodeReprepReason[name] = reprepareCause
+			}
+		}
+	}
+	return
 }
