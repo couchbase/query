@@ -129,9 +129,17 @@ func NewSizeError(termType string, elemSize uint64, nelem int, size uint64, limi
 	c := make(map[string]interface{})
 	c["limit"] = limit
 	c["size"] = size
-	c["element_size"] = elemSize
-	c["element_count"] = nelem
+
+	if elemSize > 0 {
+		c["element_size"] = elemSize
+	}
+
+	if nelem > 0 {
+		c["element_count"] = nelem
+	}
+
 	c["term_type"] = termType
+
 	return &err{level: EXCEPTION, ICode: E_SIZE, IKey: "execution.size_error", cause: c,
 		InternalMsg: fmt.Sprintf("Size of %s result exceeds limit (%v > %v).", termType, size, limit), InternalCaller: CallerN(1)}
 }
