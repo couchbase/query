@@ -619,6 +619,9 @@ func MetaExpiration(exprs Expressions, alias string) (present bool, names []stri
 
 	mNames := make(map[string]bool, 5)
 	for _, expr := range exprs {
+		if Equivalent(base, expr) {
+			return true, []string{"$document.exptime"}
+		}
 		expr.FieldNames(base, mNames)
 	}
 
