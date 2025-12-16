@@ -228,7 +228,7 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options Covered
 	// a keyspace as a single term does not cover by definition
 	// a keyspace as part of a field or a path does cover to delay the decision in terms
 	// further down the path
-	for _, child := range children {
+	for i, child := range children {
 		switch child.CoveredBy(keyspace, exprs, options) {
 		case CoveredFalse:
 			return CoveredFalse
@@ -249,6 +249,13 @@ func (this *Field) CoveredBy(keyspace string, exprs Expressions, options Covered
 			// trickle down CoveredEquiv to outermost field
 			if trickle {
 				rv = CoveredEquiv
+			}
+		case CoveredTrue:
+			if i == 0 {
+				switch child.(type) {
+				case NamedParameter, PositionalParameter:
+					options.setCoverSkip()
+				}
 			}
 		}
 	}

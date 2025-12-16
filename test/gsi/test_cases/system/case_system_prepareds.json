@@ -6,6 +6,7 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime"
 			"queryContext",
 			"reqType"
 		],
@@ -96,6 +97,7 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime"
 			"queryContext",
 			"reqType"
 		],
@@ -227,6 +229,7 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime"
 			"queryContext",
 			"reqType"
 		],
@@ -316,6 +319,7 @@
 			"indexApiVersion",
 			"featureControls",
 			"namespace",
+			"planPreparedTime"
 			"queryContext",
 			"reqType"
 		],
