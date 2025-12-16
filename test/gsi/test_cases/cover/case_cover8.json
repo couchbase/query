@@ -122,5 +122,56 @@
         "statements":"SELECT field1 FROM shellTest s LET var = ( SELECT s.field1, * FROM s s1 ) WHERE field1 IS NOT MISSING",
         "results": [
     ]
+    },
+    {
+        "testcase": "MB-69816: part 1",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "namedArgs": {"arg": {"ra":1}},
+        "statements":"SELECT $arg.ra FROM shellTest s WHERE field1 = 10",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-69816: part 2",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.covers) > 0 END"
+        },
+        "namedArgs": {"arg": {"ra":1}},
+        "statements":"SELECT $arg.[s.field1].ra FROM shellTest s WHERE field1 = 10",
+        "results": [
+    ]
+    },
+    {
+        "testcase": "MB-69816: part 3",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.covers IS MISSING END"
+        },
+        "namedArgs": {"arg": {"ra":1}},
+        "statements":"SELECT $arg.[s.field2].ra FROM shellTest s WHERE field1 = 10",
+        "results": [
+    ]
     }
 ]
