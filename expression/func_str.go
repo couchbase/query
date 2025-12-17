@@ -13,6 +13,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"math"
 	"net/url"
@@ -479,14 +480,9 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 	}
 
 	sz := uint64(len(first.ToString())) * uint64(ni)
-	var max uint64
-	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() && qc.MemoryQuota() > 0 {
-		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
-	} else {
-		max = 20 * util.MiB
-	}
-	if max < sz {
-		return nil, errors.NewSizeError("REPEAT()", sz/uint64(ni), ni, sz, max)
+	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, sz/uint64(ni), ni, sz, 20*util.MiB)
+	if err != nil {
+		return nil, err
 	}
 
 	rv := strings.Repeat(first.ToString(), ni)

@@ -9,6 +9,7 @@
 package expression
 
 import (
+	"fmt"
 	"math"
 	"sort"
 
@@ -1633,14 +1634,9 @@ func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value
 		n = uint64(math.Abs((start - end) / step))
 	}
 	sz := value.AnySize(start) * n
-	var max uint64
-	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() && qc.MemoryQuota() > 0 {
-		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
-	} else {
-		max = 20 * util.MiB
-	}
-	if max < sz {
-		return nil, errors.NewSizeError("ARRAY_RANGE()", sz/n, int(n), sz, max)
+	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, sz/n, int(n), sz, 20*util.MiB)
+	if err != nil {
+		return nil, err
 	}
 
 	rv := make([]interface{}, 0, capacity)
@@ -1821,14 +1817,9 @@ func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	sz := value.AnySize(first) * uint64(n)
-	var max uint64
-	if qc, ok := context.(QuotaContext); ok && qc.UseRequestQuota() && qc.MemoryQuota() > 0 {
-		max = uint64(float64(qc.MemoryQuota()) * (1.0 - qc.CurrentQuotaUsage()))
-	} else {
-		max = 20 * util.MiB
-	}
-	if max < sz {
-		return nil, errors.NewSizeError("ARRAY_REPEAT()", sz/uint64(n), n, sz, max)
+	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, sz/uint64(n), n, sz, 20*util.MiB)
+	if err != nil {
+		return nil, err
 	}
 
 	ra := make([]interface{}, n)

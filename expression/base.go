@@ -442,8 +442,30 @@ func (this *ExpressionBase) FilterExpressionCovers(covers map[Expression]value.V
 }
 
 func (this *ExpressionBase) valueEquivalentTo(other Expression) bool {
-	thisValue := this.expr.Value()
-	otherValue := other.Value()
+	var otherValue value.Value
+	var thisValue value.Value
+
+	// Return if either expression is a Self as self's value is always nil
+	if o, ok := other.(*Self); ok {
+		// Self's value is always nil, but still check the value in case that ever changes
+		if otherValue = o.Value(); otherValue == nil {
+			return false
+		}
+	}
+
+	if e, ok := this.expr.(*Self); ok {
+		if thisValue = e.Value(); thisValue == nil {
+			return false
+		}
+	}
+
+	if thisValue == nil {
+		thisValue = this.expr.Value()
+	}
+
+	if otherValue == nil {
+		otherValue = other.Value()
+	}
 
 	return thisValue != nil && otherValue != nil &&
 		thisValue.EquivalentTo(otherValue)
