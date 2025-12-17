@@ -10,6 +10,7 @@ package expression
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/util"
@@ -134,6 +135,12 @@ func (this *JSONEncode) Evaluate(item value.Value, context Context) (value.Value
 	}
 	arg.Actual() // force unwrapping of parsed values
 	bytes, _ := arg.MarshalJSON()
+
+	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, 0, 0, uint64(len(bytes)), 20*util.MiB)
+	if err != nil {
+		return nil, err
+	}
+
 	return value.NewValue(string(bytes)), nil
 }
 
