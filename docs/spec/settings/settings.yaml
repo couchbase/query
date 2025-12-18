@@ -20,7 +20,7 @@ servers:
           - https
       host:
         default: localhost
-        description: The host name or IP address of a node running the Query Service.
+        description: The host name or IP address of any node in the Couchbase cluster.
       port:
         default: "8091"
         description: |-
@@ -47,6 +47,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Settings"
+              example:
+                $ref: 'examples/query-settings-get-settings.json'
     post:
       operationId: post_settings
       summary: Update Cluster-Level Query Settings
@@ -62,12 +64,10 @@ paths:
             examples:
               partial:
                 summary: Partial Settings
-                value:
-                  $ref: 'examples/query-settings-post-snippet.jsonc'
+                externalValue: 'examples/query-settings-post-snippet.json'
               full:
                 summary: All Settings
-                value:
-                  $ref: 'examples/query-settings-post-settings.jsonc'
+                externalValue: 'examples/query-settings-post-settings.json'
           application/x-www-form-urlencoded:
             schema:
               $ref: "#/components/schemas/Settings"
@@ -79,7 +79,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Settings"
               example:
-                $ref: 'examples/query-settings-post-settings.jsonc'
+                $ref: 'examples/query-settings-post-settings.json'
         400:
           description: Returns an error message if a parameter or value is incorrect.
           content:
@@ -101,6 +101,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Access"
+              example:
+                $ref: 'examples/query-settings-get-access.json'
     post:
       operationId: post_access
       summary: Update CURL Access List
@@ -114,7 +116,7 @@ paths:
             schema:
               $ref: "#/components/schemas/Access"
             example:
-              $ref: 'examples/query-settings-post-access.jsonc'
+              $ref: 'examples/query-settings-post-access.json'
           application/x-www-form-urlencoded:
             schema:
               $ref: "#/components/schemas/Access"
@@ -126,7 +128,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Access"
               example:
-                $ref: 'examples/query-settings-post-access.jsonc'
+                $ref: 'examples/query-settings-post-access.json'
 
         400:
           description: Returns an error message if a parameter or value is incorrect.
@@ -472,14 +474,9 @@ components:
           The [node-level][numatrs-srv] `numatrs` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
 
-          In addition, there is a [request-level][numatrs_req] `numatrs` parameter.
-          If a request includes this parameter, it will be capped by the node-level `numatrs` setting.
-
           [numatrs-srv]: ../n1ql-rest-admin/index.html#numatrs-srv
-          [numatrs_req]: ../n1ql-rest-query/index.html#numatrs_req
         x-desc-refs: |-
           [numatrs-srv]: #numatrs-srv
-          [numatrs_req]: #numatrs_req
       queryNumCpus:
         type: integer
         format: int32
