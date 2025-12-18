@@ -157,12 +157,10 @@ components:
         examples:
           n1qlerror:
             summary: SQL++ Error
-            value:
-              $ref: 'examples/exn1qlerror.json'
+            externalValue: 'examples/exn1qlerror.json'
           requesterror:
             summary: Request Error
-            value:
-              $ref: 'examples/exrequesterror.json'
+            externalValue: 'examples/exrequesterror.json'
 
   Unauthorized:
     description: |-
@@ -499,26 +497,8 @@ components:
         format: int32
         x-desc-name: numatrs_req
         description: |-
-          Specifies the total number of [active transaction records][additional-storage-use].
-          Must be a positive integer.
-
-          [additional-storage-use]: /server/7.6/learn/data/transactions.html#active-transaction-record-entries
-        x-desc-more: |-
-          The [node-level][numatrs-srv] `numatrs` setting specifies the default for this parameter for a single node.
-          The request-level parameter overrides the node-level setting.
-
-          In addition, the [cluster-level][queryNumAtrs] `queryNumAtrs` setting specifies the default for this parameter for the whole cluster.
-          When you change the cluster-level setting, the node-level setting is overwritten for all nodes in the cluster.
-
-          [numatrs-srv]: ../n1ql-rest-admin/index.html#numatrs-srv
-          [queryNumAtrs]: ../n1ql-rest-settings/index.html#queryNumAtrs
-        x-desc-refs: |-
-          [numatrs-srv]: #numatrs-srv
-          [queryNumAtrs]: #queryNumAtrs
-        x-has-default: true
-        x-has-example: true
-        default: 1024
-        example: 512
+          Reserved for future use.
+          This parameter is ignored and has no effect.
       pipeline_batch:
         type: integer
         format: int32
@@ -844,10 +824,11 @@ components:
         format: duration
         x-desc-name: timeout_req
         description: |-
-          Maximum time to spend on the request before timing out.
+          Maximum time to spend on the request before timing out (s).
 
           The value for this parameter is a string.
-          Its format includes an amount and a mandatory unit, e.g. `10ms` (10 milliseconds) or `0.5s` (half a second).
+          Its format includes an amount and an optional unit: for example, `10ms` (10 milliseconds) or `0.5s` (half a second).
+          If not specified, the default unit is `s` (seconds).
           Valid units are:
 
           * `ns` (nanoseconds)

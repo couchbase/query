@@ -424,7 +424,7 @@ paths:
               schema:
                 type: object
               example:
-                {}
+                $ref: 'examples/get_ping.json'
 
   /admin/gc:
     get:
@@ -563,6 +563,8 @@ paths:
               schema:
                 type: string
                 format: text/html
+              example:
+                $ref: 'examples/get_debug_vars.html'
 
   /admin/settings:
     get:
@@ -1418,6 +1420,7 @@ components:
         properties:
           aborted:
             type: boolean
+            nullable: true
             default: null
             example: true
             x-has-default: true
@@ -1446,6 +1449,7 @@ components:
           error:
             type: integer
             format: int32
+            nullable: true
             default: null
             example: 12003
             x-has-default: true
@@ -1900,14 +1904,9 @@ components:
           The [cluster-level][queryNumAtrs] `queryNumAtrs` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
 
-          In addition, the [request-level][numatrs_req] `numatrs` parameter specifies this property per request.
-          The minimum of that and the node-level `numatrs` setting is applied.
-
           [queryNumAtrs]: ../n1ql-rest-settings/index.html#queryNumAtrs
-          [numatrs_req]: ../n1ql-rest-query/index.html#numatrs_req
         x-desc-refs: |-
           [queryNumAtrs]: #queryNumAtrs
-          [numatrs_req]: #numatrs_req
       pipeline-batch:
         type: integer
         format: int32
