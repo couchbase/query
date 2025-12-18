@@ -293,6 +293,13 @@ func (this *opContext) AdminContext() (interface{}, error) {
 	return &opContext{this.base, rv.(*Context)}, nil
 }
 
+func (this *opContext) CopyOpContext() interface{} {
+	b := &base{}
+	ctx := this.Context.Copy()
+	newBase(b, ctx)
+	return &opContext{b, ctx}
+}
+
 // Per request context
 
 type Context struct {

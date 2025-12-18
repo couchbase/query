@@ -501,4 +501,5 @@ var _FUNCTIONS = map[string]Function{
 	"normalise_vector":       &NormalizeVector{},
 	"vector_normalize":       &NormalizeVector{},
 	"vector_normalise":       &NormalizeVector{},
+	"reciprocal_fusion":      &ReciprocalFusion{},
 }
