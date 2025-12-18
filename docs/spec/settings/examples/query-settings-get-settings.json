@@ -1,0 +1,29 @@
+{
+  "queryTmpSpaceDir": "/opt/couchbase/var/lib/couchbase/tmp",
+  "queryTmpSpaceSize": 5120,
+  "queryPipelineBatch": 16,
+  "queryPipelineCap": 512,
+  "queryScanCap": 512,
+  "queryTimeout": 0,
+  "queryPreparedLimit": 16384,
+  "queryCompletedLimit": 4000,
+  "queryCompletedThreshold": 1000,
+  "queryLogLevel": "info",
+  "queryMaxParallelism": 1,
+  "queryTxTimeout": "0ms",
+  "queryMemoryQuota": 0,
+  "queryUseCBO": true,
+  "queryCleanupClientAttempts": true,
+  "queryCleanupLostAttempts": true,
+  "queryCleanupWindow": "60s",
+  "queryNumAtrs": 1024,
+  "queryNodeQuota": 0,
+  "queryUseReplica": "unset",
+  "queryNodeQuotaValPercent": 67,
+  "queryNumCpus": 0,
+  "queryCompletedMaxPlanSize": 262144,
+  "queryN1QLFeatCtrl": 76,
+  "queryCurlWhitelist": {
+    "all_access": false
+  }
+}

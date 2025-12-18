@@ -73,12 +73,10 @@ paths:
               examples:
                 get_collection_all:
                   summary: All Libraries
-                  value:
-                    $ref: 'examples/get_collection_all.json'
+                  externalValue: 'examples/get_collection_all.json'
                 get_collection_scope:
                   summary: Scoped Libraries
-                  value:
-                    $ref: 'examples/get_collection_scope.json'
+                  externalValue: 'examples/get_collection_scope.json'
         "400":
           $ref: "#/components/responses/BadRequest"
 
@@ -109,12 +107,10 @@ paths:
               examples:
                 get_library_global:
                   summary: Global Library
-                  value:
-                    $ref: 'examples/get_library_global.json'
+                  externalValue: 'examples/get_library_global.json'
                 get_library_scope:
                   summary: Scoped Library
-                  value:
-                    $ref: 'examples/get_library_scope.json'
+                  externalValue: 'examples/get_library_scope.json'
         "400":
           $ref: "#/components/responses/BadRequest"
         "404":
