@@ -1652,8 +1652,10 @@ func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value
 	} else if start > end && step < 0.0 {
 		n = uint64(math.Abs((start - end) / step))
 	}
-	sz := value.AnySize(start) * n
-	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, sz/n, int(n), sz, 20*util.MiB)
+
+	elemSize := value.AnySize(start)
+	sz := elemSize * n
+	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, elemSize, int(n), sz, 20*util.MiB)
 	if err != nil {
 		return nil, err
 	}
@@ -1837,8 +1839,9 @@ func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Valu
 		return nil, errors.NewRangeError("ARRAY_REPEAT()")
 	}
 
-	sz := value.AnySize(first) * uint64(n)
-	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, sz/uint64(n), n, sz, 20*util.MiB)
+	elemSize := value.AnySize(first)
+	sz := elemSize * uint64(n)
+	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, elemSize, n, sz, 20*util.MiB)
 	if err != nil {
 		return nil, err
 	}
