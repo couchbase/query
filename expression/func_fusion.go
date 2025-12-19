@@ -547,9 +547,13 @@ func (this *ReciprocalFusion) Evaluate(item value.Value, context Context) (value
 	}
 	By(decreasingScoreFn).Sort(rfvs)
 
-	srv := make(value.Values, 0, this.limit)
+	limit := this.limit
+	if limit == 0 {
+		limit = len(rfvs)
+	}
+	srv := make(value.Values, 0, limit)
 	for i, rfv := range rfvs {
-		if i >= this.limit {
+		if i >= limit {
 			break
 		}
 		srv = append(srv, rfv.val)
