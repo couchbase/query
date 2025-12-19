@@ -147,37 +147,39 @@ Representation as a N1QL string.
 */
 func (this *Projection) String() string {
 	var buf strings.Builder
+	this.writeSyntaxString(&buf)
+	return buf.String()
+}
 
+func (this *Projection) writeSyntaxString(s *strings.Builder) {
 	if this.distinct {
-		buf.WriteString("distinct ")
+		s.WriteString("distinct ")
 	}
 
 	if this.raw {
-		buf.WriteString("raw ")
+		s.WriteString("raw ")
 	}
 
 	for i, term := range this.terms {
 		if i > 0 {
-			buf.WriteString(", ")
+			s.WriteString(", ")
 		}
 
-		buf.WriteString(term.String())
+		s.WriteString(term.String())
 	}
 
 	if this.exclude != nil {
-		buf.WriteString(" exclude ")
+		s.WriteString(" exclude ")
 		first := true
 		for _, c := range this.exclude {
 			if !first {
-				buf.WriteString(",")
+				s.WriteString(",")
 			} else {
 				first = false
 			}
-			buf.WriteString(c.String())
+			s.WriteString(c.String())
 		}
 	}
-
-	return buf.String()
 }
 
 /*

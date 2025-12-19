@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -284,34 +286,41 @@ func (this *Subselect) Privileges() (*auth.Privileges, errors.Error) {
 Representation as a N1QL string.
 */
 func (this *Subselect) String() string {
-	s := "select "
+	var s strings.Builder
+	s.WriteString("select ")
 
 	if this.optimHints != nil {
-		s += this.optimHints.String() + " "
+		s.WriteString(this.optimHints.String())
+		s.WriteString(" ")
 	}
 
-	s += this.projection.String()
+	this.projection.writeSyntaxString(&s)
 
 	if this.from != nil {
-		s += " from " + this.from.String()
+		s.WriteString(" from ")
+		s.WriteString(this.from.String())
 	}
 
 	if this.let != nil {
-		s += " let " + stringBindings(this.let)
+		s.WriteString(" let ")
+		stringBindingsForSyntaxString(this.let, &s)
 	}
 
 	if this.where != nil {
-		s += " where " + this.where.String()
+		s.WriteString(" where ")
+		s.WriteString(this.where.String())
 	}
 
 	if this.group != nil {
-		s += " " + this.group.String()
+		s.WriteString(" ")
+		s.WriteString(this.group.String())
 	}
 	if this.window != nil {
-		s += " " + this.window.String()
+		s.WriteString(" ")
+		s.WriteString(this.window.String())
 	}
 
-	return s
+	return s.String()
 }
 
 func (this *Subselect) IsCorrelated() bool {
@@ -403,18 +412,20 @@ func (this *Subselect) Subselects() []*Subselect {
 Representation as a N1QL string.
 */
 func stringBindings(bindings expression.Bindings) string {
-	s := ""
+	var s strings.Builder
+	stringBindingsForSyntaxString(bindings, &s)
+	return s.String()
+}
 
+func stringBindingsForSyntaxString(bindings expression.Bindings, s *strings.Builder) {
 	for i, b := range bindings {
 		if i > 0 {
-			s += ", "
+			s.WriteString(", ")
 		}
 
-		s += "`"
-		s += b.Variable()
-		s += "` = "
-		s += b.Expression().String()
+		s.WriteString("`")
+		s.WriteString(b.Variable())
+		s.WriteString("` = ")
+		s.WriteString(b.Expression().String())
 	}
-
-	return s
 }

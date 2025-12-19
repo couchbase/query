@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -1776,8 +1777,17 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 	if cId := this.ClientID().String(); cId != "" {
 		item["clientContextID"] = cId
 	}
-	if this.Statement() != "" {
-		item["statement"] = util.Redacted(this.RedactedStatement(), redact)
+	if stmt := this.Statement(); stmt != "" {
+		if !redact {
+			item["statement"] = this.RedactedStatement()
+		} else {
+			sanstmt, _, err := sanitizer.SanitizeStatement(stmt, this.Namespace(), this.QueryContext(), this.ExecutionContext().TxContext() != nil, false)
+			if err == nil {
+				item["sanitized_statement"] = sanstmt
+			} else {
+				item["statement"] = util.Redacted(this.RedactedStatement(), true)
+			}
+		}
 	}
 	if this.Type() != "" {
 		item["statementType"] = this.Type()

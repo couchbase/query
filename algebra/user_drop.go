@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -84,4 +85,14 @@ func (this *DropUser) MarshalJSON() ([]byte, error) {
 
 func (this *DropUser) Type() string {
 	return "DROP_USER"
+}
+
+func (this *DropUser) String() string {
+	var s strings.Builder
+	s.WriteString("DROP USER ")
+	if !this.failIfNotExists {
+		s.WriteString("IF EXISTS ")
+	}
+	s.WriteString(DecodeUsername(this.user))
+	return s.String()
 }

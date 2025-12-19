@@ -75,3 +75,10 @@ func (this *Advise) SetContext(context interface{}) {
 func (this *Advise) Context() interface{} {
 	return this.context
 }
+
+func (this *Advise) String() string {
+	if this.stmt != nil {
+		return "ADVISE " + this.stmt.String()
+	}
+	return ""
+}

@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -101,4 +103,21 @@ func (this *ExecuteFunction) Privileges() (*auth.Privileges, errors.Error) {
 
 func (this *ExecuteFunction) Type() string {
 	return "EXECUTE_FUNCTION"
+}
+
+func (this *ExecuteFunction) String() string {
+	var s strings.Builder
+	s.WriteString("EXECUTE FUNCTION ")
+	s.WriteString(this.name.ProtectedKey())
+	if len(this.exprs) > 0 {
+		s.WriteString(" (")
+		for i, expr := range this.exprs {
+			if i > 0 {
+				s.WriteString(", ")
+			}
+			s.WriteString(expr.String())
+		}
+		s.WriteString(")")
+	}
+	return s.String()
 }

@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -94,4 +95,18 @@ func (this *CreateSequence) MarshalJSON() ([]byte, error) {
 
 func (this *CreateSequence) Type() string {
 	return "CREATE_SEQUENCE"
+}
+
+func (this *CreateSequence) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE SEQUENCE ")
+	if !this.failIfExists {
+		s.WriteString("IF NOT EXISTS ")
+	}
+	s.WriteString(this.name.ProtectedString())
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+	return s.String()
 }

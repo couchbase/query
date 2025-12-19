@@ -167,7 +167,7 @@ func (this *Group) String() string {
 
 	if this.letting != nil {
 		buf.WriteString(" letting ")
-		buf.WriteString(stringBindings(this.letting))
+		stringBindingsForSyntaxString(this.letting, &buf)
 	}
 
 	if this.having != nil {

@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -108,4 +109,11 @@ func (this *FlushCollection) MarshalJSON() ([]byte, error) {
 
 func (this *FlushCollection) Type() string {
 	return "FLUSH_COLLECTION"
+}
+
+func (this *FlushCollection) String() string {
+	var s strings.Builder
+	s.WriteString("FLUSH COLLECTION ")
+	s.WriteString(this.keyspace.Path().ProtectedString())
+	return s.String()
 }

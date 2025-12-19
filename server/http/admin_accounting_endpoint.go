@@ -43,6 +43,7 @@ import (
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
@@ -658,6 +659,18 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		"statement":       util.Redacted(entry.Prepared.Text(), redact),
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
 		"featureControls": entry.Prepared.FeatureControls(),
+	}
+	if text := entry.Prepared.Text(); text != "" {
+		if !redact {
+			itemMap["statement"] = text
+		} else {
+			sanstmt, _, err := sanitizer.SanitizeStatement(text, entry.Prepared.Namespace(), entry.Prepared.QueryContext(), false, false)
+			if err == nil {
+				itemMap["sanitized_statement"] = sanstmt
+			} else {
+				itemMap["statement"] = util.Redacted(text, true)
+			}
+		}
 	}
 	if entry.Prepared.QueryContext() != "" {
 		itemMap["queryContext"] = entry.Prepared.QueryContext()

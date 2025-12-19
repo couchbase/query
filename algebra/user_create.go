@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -130,4 +131,40 @@ func (this *CreateUser) MarshalJSON() ([]byte, error) {
 
 func (this *CreateUser) Type() string {
 	return "CREATE_USER"
+}
+
+func (this *CreateUser) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE USER ")
+	if !this.failIfExists {
+		s.WriteString("IF NOT EXISTS ")
+	}
+	s.WriteString(DecodeUsername(this.user))
+
+	if this.password_set {
+		s.WriteString(" PASSWORD \"")
+		if p := this.password.Value(); p != nil {
+			s.WriteString(_REDACT_TOKEN)
+		} else {
+			s.WriteString(this.password.String())
+		}
+		s.WriteString("\"")
+	}
+	if this.name_set {
+		s.WriteString(" WITH \"")
+		s.WriteString(this.name)
+		s.WriteString("\"")
+	}
+	if this.groups_set {
+		s.WriteString(" GROUPS ")
+		for i, g := range this.groups {
+			if i > 0 {
+				s.WriteString(", ")
+			}
+			s.WriteRune('`')
+			s.WriteString(g)
+			s.WriteRune('`')
+		}
+	}
+	return s.String()
 }

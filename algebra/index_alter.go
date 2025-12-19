@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -98,4 +99,23 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 
 func (this *AlterIndex) Type() string {
 	return "ALTER_INDEX"
+}
+
+func (this *AlterIndex) String() string {
+	var s strings.Builder
+	s.WriteString("ALTER INDEX `")
+	s.WriteString(this.name)
+	s.WriteString("` ON ")
+	s.WriteString(this.keyspace.Path().ProtectedString())
+
+	if this.using != "" && this.using != datastore.DEFAULT {
+		s.WriteString(" USING ")
+		s.WriteString(strings.ToUpper(string(this.using)))
+	}
+
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+	return s.String()
 }

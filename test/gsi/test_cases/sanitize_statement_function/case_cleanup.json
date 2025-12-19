@@ -1,0 +1,16 @@
+[
+    {
+        "statements": "DROP GROUP IF EXISTS group1",
+        "userArgs": {
+            "Administrator": "password"
+        },
+        "results": []
+    },
+    {
+        "statements": "DROP GROUP IF EXISTS group2",
+        "userArgs": {
+            "Administrator": "password"
+        },
+        "results": []
+    }
+]

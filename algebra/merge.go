@@ -354,11 +354,11 @@ func (this *Merge) String() string {
 	}
 	if this.indexes != nil {
 		buf.WriteString(" use index(")
-		buf.WriteString(this.indexes.String())
+		this.indexes.writeSyntaxString(&buf)
 		buf.WriteString(")")
 	}
 	buf.WriteString(" using ")
-	buf.WriteString(this.source.String())
+	this.source.writeSyntaxString(&buf)
 	if this.on != nil {
 		if this.isOnKey {
 			buf.WriteString(" on key ")
@@ -370,7 +370,7 @@ func (this *Merge) String() string {
 	}
 	if this.let != nil {
 		buf.WriteString(" let ")
-		buf.WriteString(stringBindings(this.let))
+		stringBindingsForSyntaxString(this.let, &buf)
 	}
 	if this.actions != nil {
 		if this.actions.update != nil {
@@ -457,6 +457,7 @@ func (this *Merge) String() string {
 		if this.actions.insert != nil {
 			buf.WriteString(" when not matched then insert")
 			if this.isOnKey {
+				buf.WriteRune(' ')
 				buf.WriteString(this.actions.insert.value.String())
 			} else {
 				buf.WriteString("(key ")
@@ -515,7 +516,7 @@ func (this *MergeSource) ErrorContext() string {
 	if this.from != nil {
 		return this.from.ErrorContext()
 	} else if this.query != nil {
-		return this.from.ErrorContext()
+		return this.query.ErrorContext()
 	} else if this.expr != nil {
 		return this.expr.ErrorContext()
 	}
@@ -687,14 +688,24 @@ func (this *MergeSource) Alias() string {
 }
 
 func (this *MergeSource) String() string {
+	var buf strings.Builder
+	this.writeSyntaxString(&buf)
+	return buf.String()
+}
+
+func (this *MergeSource) writeSyntaxString(s *strings.Builder) {
 	if this.query != nil {
-		return this.query.String()
+		s.WriteString(this.query.String())
 	} else if this.from != nil {
-		return this.from.Path().ProtectedString()
+		s.WriteString(this.from.Path().ProtectedString())
+		if as := this.from.as; as != "" {
+			s.WriteString(" as `")
+			s.WriteString(as)
+			s.WriteString("`")
+		}
 	} else if this.expr != nil {
-		return this.expr.String()
+		s.WriteString(this.expr.String())
 	}
-	return ""
 }
 
 // MergeSource.Keyspace() no longer needed, as we use paths instead

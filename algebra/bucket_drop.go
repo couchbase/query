@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -77,4 +78,18 @@ func (this *DropBucket) MarshalJSON() ([]byte, error) {
 
 func (this *DropBucket) Type() string {
 	return "DROP_BUCKET"
+}
+
+func (this *DropBucket) String() string {
+	var s strings.Builder
+	s.WriteString("DROP BUCKET ")
+
+	if !this.failIfNotExists {
+		s.WriteString("IF EXISTS ")
+	}
+
+	s.WriteRune('`')
+	s.WriteString(this.name)
+	s.WriteRune('`')
+	return s.String()
 }

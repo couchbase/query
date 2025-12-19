@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -103,4 +104,52 @@ func (this *AlterGroup) MarshalJSON() ([]byte, error) {
 
 func (this *AlterGroup) Type() string {
 	return "ALTER_GROUP"
+}
+
+func (this *AlterGroup) String() string {
+	var s strings.Builder
+	s.WriteString("ALTER GROUP ")
+	s.WriteRune('`')
+	s.WriteString(this.group)
+	s.WriteRune('`')
+	if this.desc_set {
+		s.WriteString(" WITH \"")
+		s.WriteString(this.desc)
+		s.WriteString("\"")
+	}
+
+	if this.roles_set {
+		if len(this.roles) == 0 {
+			s.WriteString(" NO ROLES")
+		} else {
+			s.WriteString(" ROLES ")
+			for i, r := range this.roles {
+				if i > 0 {
+					s.WriteString(", ")
+				}
+				s.WriteString(DecodeParsedRole(r))
+			}
+		}
+	}
+	return s.String()
+}
+
+func DecodeParsedRole(role string) string {
+	if i := strings.Index(role, "["); i != -1 {
+		rolename := role[:i]
+		if keyspace := role[i+1 : len(role)-1]; len(keyspace) > 0 {
+			parts := strings.Split(keyspace, ":")
+			keyspacename := ""
+			l := len(parts) - 1
+			for j, part := range parts {
+				keyspacename += "`" + part + "`"
+				if j != l {
+					keyspacename += "."
+				}
+			}
+			return "`" + auth.RoleToAlias(rolename) + "` ON " + keyspacename
+		}
+		return "`" + rolename + "`"
+	}
+	return "`" + role + "`"
 }

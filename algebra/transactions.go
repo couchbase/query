@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -103,6 +105,18 @@ func (this *StartTransaction) HasIsolationLevel(isolation datastore.IsolationLev
 	return (this.isolation & isolation) != 0
 }
 
+func (this *StartTransaction) String() string {
+	var s strings.Builder
+	s.WriteString("START TRANSACTION")
+
+	if this.isolation != datastore.IL_NONE {
+		s.WriteString(" ISOLATION LEVEL ")
+		s.WriteString(datastore.IsolationLevelToName(this.isolation))
+	}
+
+	return s.String()
+}
+
 /*
 Represents the Commit transaction statement.
 */
@@ -173,6 +187,10 @@ in the commit transaction statement.
 */
 func (this *CommitTransaction) Formalize() (err error) {
 	return
+}
+
+func (this *CommitTransaction) String() string {
+	return "COMMIT TRANSACTION"
 }
 
 /*
@@ -260,6 +278,13 @@ func (this *RollbackTransaction) IsSavepointRollback() bool {
 	return this.savepoint != ""
 }
 
+func (this *RollbackTransaction) String() string {
+	if this.savepoint == "" {
+		return "ROLLBACK TRANSACTION"
+	}
+	return "ROLLBACK TRANSACTION TO SAVEPOINT " + this.savepoint
+}
+
 /*
 Represents the Set transaction isolation statement.
 */
@@ -345,4 +370,9 @@ func (this *TransactionIsolation) IsolationLevel() datastore.IsolationLevel {
 
 func (this *TransactionIsolation) HasIsolationLevel(isolation datastore.IsolationLevel) bool {
 	return (this.isolation & isolation) != 0
+}
+
+func (this *TransactionIsolation) String() string {
+	s := "SET TRANSACTION ISOLATION LEVEL " + datastore.IsolationLevelToName(this.isolation)
+	return s
 }

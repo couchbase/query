@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -121,4 +122,16 @@ func (this *CreateScope) Type() string {
 
 func (this *CreateScope) FailIfExists() bool {
 	return this.failIfExists
+}
+
+func (this *CreateScope) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE SCOPE ")
+
+	if !this.failIfExists {
+		s.WriteString("IF NOT EXISTS ")
+	}
+
+	s.WriteString(this.scope.path.ProtectedString())
+	return s.String()
 }

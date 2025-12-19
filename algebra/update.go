@@ -115,7 +115,7 @@ func (this *Update) String() string {
 	}
 	if this.let != nil {
 		buf.WriteString(" let ")
-		buf.WriteString(stringBindings(this.let))
+		stringBindingsForSyntaxString(this.let, &buf)
 	}
 	if this.set != nil {
 		buf.WriteString(" set")

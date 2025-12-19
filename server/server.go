@@ -1909,7 +1909,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			return nil, errors.NewRewriteError(err, "")
 		}
 
-		semChecker := semantics.NewSemChecker(this.Enterprise(), stmt.Type(), request.TxId() != "")
+		semChecker := semantics.GetSemChecker(stmt.Type(), request.TxId() != "")
 		_, err = stmt.Accept(semChecker)
 		if err != nil {
 			return nil, errors.NewSemanticsError(err, "")

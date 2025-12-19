@@ -96,6 +96,10 @@ func (this *IndexContext) InferKeyspace(ks interface{}, with value.Value) (value
 	return nil, nil
 }
 
+func (this *IndexContext) SanitizeStatement(stmt string) (string, value.Value, error) {
+	return "", nil, nil
+}
+
 func (this *IndexContext) Readonly() bool {
 	return true
 }

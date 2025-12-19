@@ -24,6 +24,7 @@ import (
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/rewrite"
+	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/semantics"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
@@ -370,7 +371,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		return nil, nil, false, errors.NewRewriteError(err, "")
 	}
 
-	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type(), this.TxContext() != nil)
+	semChecker := semantics.GetSemChecker(stmt.Type(), this.TxContext() != nil)
 	_, err = stmt.Accept(semChecker)
 	if err != nil {
 		return nil, nil, false, err
@@ -1160,7 +1161,7 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 	}
 
 	// Semantic Checks
-	semChecker := semantics.NewSemChecker(true /* FIXME */, stmt.Type(), this.TxContext() != nil)
+	semChecker := semantics.GetSemChecker(stmt.Type(), this.TxContext() != nil)
 	_, err = stmt.Accept(semChecker)
 	if err != nil {
 		return false, nil, nil, err
@@ -1178,4 +1179,8 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 	}
 
 	return canExplain, stmt, qp, nil
+}
+
+func (this *Context) SanitizeStatement(statement string) (string, value.Value, error) {
+	return sanitizer.SanitizeStatement(statement, this.namespace, this.queryContext, this.TxContext() != nil, true, this)
 }

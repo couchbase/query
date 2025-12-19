@@ -79,6 +79,11 @@ type Statement interface {
 		Returns the statement subqueries
 	*/
 	Subqueries() ([]*Subquery, errors.Error)
+
+	/*
+		Returns the string representation of the statement
+	*/
+	String() string
 }
 
 /*

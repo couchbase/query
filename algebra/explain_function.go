@@ -81,3 +81,8 @@ func (this *ExplainFunction) Type() string {
 func (this *ExplainFunction) FuncName() functions.FunctionName {
 	return this.funcName
 }
+
+func (this *ExplainFunction) String() string {
+	s := "EXPLAIN FUNCTION " + this.funcName.ProtectedKey()
+	return s
+}

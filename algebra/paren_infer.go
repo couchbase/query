@@ -9,6 +9,8 @@
 package algebra
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -98,22 +100,12 @@ func (this *ParenInfer) Privileges() *auth.Privileges {
 
 func (this *ParenInfer) String() string {
 
-	var s string
+	var s strings.Builder
+	s.WriteString("( ")
+	s.WriteString(this.infer.String())
+	s.WriteString(" )")
 
-	switch v := this.infer.(type) {
-	case *InferKeyspace:
-		s = "INFER KEYSPACE " + v.keyspace.FullName()
-		if v.with != nil {
-			s = s + " WITH " + v.with.String()
-		}
-	case *InferExpression:
-		s = "INFER " + v.expr.String()
-		if v.with != nil {
-			s = s + " WITH " + v.with.String()
-		}
-	}
-
-	return s
+	return s.String()
 }
 
 // Unused-> only to make the interface more specific

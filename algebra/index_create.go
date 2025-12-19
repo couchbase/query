@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -266,6 +267,58 @@ func (this *CreateIndex) Type() string {
 	return "CREATE_INDEX"
 }
 
+func (this *CreateIndex) String() string {
+	var s strings.Builder
+	s.WriteString("CREATE ")
+	if this.vector {
+		s.WriteString("VECTOR ")
+	}
+	s.WriteString("INDEX `")
+	s.WriteString(this.name)
+	s.WriteRune('`')
+
+	if !this.failIfExists {
+		s.WriteString(" IF NOT EXISTS")
+	}
+
+	s.WriteString(" ON ")
+	s.WriteString(this.keyspace.Path().ProtectedString())
+	s.WriteString("(")
+
+	for i, key := range this.keys {
+		if i > 0 {
+			s.WriteString(", ")
+		}
+		key.writeSyntaxString(&s, i)
+	}
+	s.WriteString(")")
+
+	if this.include != nil {
+		this.include.writeSyntaxString(&s)
+	}
+
+	if this.partition != nil {
+		this.partition.writeSyntaxString(&s)
+	}
+
+	if this.where != nil {
+		s.WriteString(" WHERE ")
+		s.WriteString(this.where.String())
+	}
+
+	if this.using != "" && this.using != datastore.DEFAULT {
+		s.WriteString(" USING ")
+		s.WriteString(strings.ToUpper(string(this.using)))
+	}
+
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
+
+	return s.String()
+}
+
 /*
 It represents multiple IndexKey terms.
 Type IndexKeyTerms is a slice of IndexKeyTerm.
@@ -331,25 +384,27 @@ func NewIndexKeyTerm(expr expression.Expression, attributes uint32) *IndexKeyTer
 Representation as a N1QL string.
 */
 func (this *IndexKeyTerm) String(pos int) string {
-	s := this.expr.String()
+	var b strings.Builder
+	this.writeSyntaxString(&b, pos)
+	return b.String()
+}
 
+func (this *IndexKeyTerm) writeSyntaxString(s *strings.Builder, pos int) {
+	s.WriteString(this.expr.String())
 	if pos == 0 && this.HasAttribute(IK_MISSING) {
-		s += " INCLUDE MISSING"
+		s.WriteString(" INCLUDE MISSING")
 	}
-
 	if this.HasAttribute(IK_DESC) {
-		s += " DESC"
+		s.WriteString(" DESC")
 	}
 
 	if this.HasAttribute(IK_DENSE_VECTOR) {
-		s += " DENSE VECTOR"
+		s.WriteString(" DENSE VECTOR")
 	} else if this.HasAttribute(IK_SPARSE_VECTOR) {
-		s += " SPARSE VECTOR"
+		s.WriteString(" SPARSE VECTOR")
 	} else if this.HasAttribute(IK_MULTI_VECTOR) {
-		s += " MULTI VECTOR"
+		s.WriteString(" MULTI VECTOR")
 	}
-
-	return s
 }
 
 /*
@@ -541,17 +596,22 @@ func (this *IndexIncludeTerm) MapExpressions(mapper expression.Mapper) (err erro
 }
 
 func (this *IndexIncludeTerm) String() (s string) {
+	var b strings.Builder
+	this.writeSyntaxString(&b)
+	return b.String()
+}
+
+func (this *IndexIncludeTerm) writeSyntaxString(s *strings.Builder) {
 	if this != nil {
-		s += " INCLUDE("
+		s.WriteString(" INCLUDE(")
 		for i, expr := range this.exprs {
 			if i > 0 {
-				s += ", "
+				s.WriteString(", ")
 			}
-			s += expr.String()
+			s.WriteString(expr.String())
 		}
-		s += ") "
+		s.WriteString(")")
 	}
-	return
 }
 
 /*
@@ -601,15 +661,20 @@ func (this *IndexPartitionTerm) MapExpressions(mapper expression.Mapper) (err er
 }
 
 func (this *IndexPartitionTerm) String() (s string) {
+	var b strings.Builder
+	this.writeSyntaxString(&b)
+	return b.String()
+}
+
+func (this *IndexPartitionTerm) writeSyntaxString(s *strings.Builder) {
 	if this.strategy == datastore.HASH_PARTITION {
-		s += " PARTITION BY HASH("
+		s.WriteString(" PARTITION BY HASH(")
 		for i, expr := range this.exprs {
 			if i > 0 {
-				s += ", "
+				s.WriteString(", ")
 			}
-			s += expr.String()
+			s.WriteString(expr.String())
 		}
-		s += ") "
+		s.WriteString(")")
 	}
-	return
 }

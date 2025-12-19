@@ -10,6 +10,7 @@ package algebra
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -123,4 +124,45 @@ func (this *AlterUser) MarshalJSON() ([]byte, error) {
 
 func (this *AlterUser) Type() string {
 	return "ALTER_USER"
+}
+
+const _REDACT_TOKEN = "****"
+
+func (this *AlterUser) String() string {
+	var s strings.Builder
+	s.WriteString("ALTER USER ")
+	s.WriteString(DecodeUsername(this.user))
+	if this.password_set {
+		s.WriteString(" PASSWORD \"")
+		if p := this.password.Value(); p != nil {
+			s.WriteString(_REDACT_TOKEN)
+		} else {
+			s.WriteString(this.password.String())
+		}
+		s.WriteString("\"")
+	}
+	if this.name_set {
+		s.WriteString(" WITH \"")
+		s.WriteString(this.name)
+		s.WriteString("\"")
+	}
+	if this.groups_set {
+		s.WriteString(" GROUPS ")
+		for i, g := range this.groups {
+			if i > 0 {
+				s.WriteString(", ")
+			}
+			s.WriteRune('`')
+			s.WriteString(g)
+			s.WriteRune('`')
+		}
+	}
+	return s.String()
+}
+
+func DecodeUsername(user string) string {
+	if i := strings.Index(user, ":"); i != -1 {
+		return "`" + user[:i] + "`:`" + user[i+1:] + "`"
+	}
+	return "`" + user + "`"
 }

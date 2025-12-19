@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -755,7 +756,16 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 		reqMap["naturalLanguagePrompt"] = util.Redacted(request.NaturalLanguage, redact)
 	}
 	if request.Statement != "" {
-		reqMap["statement"] = util.Redacted(request.Statement, redact)
+		if !redact {
+			reqMap["statement"] = request.Statement
+		} else {
+			sanstmt, _, err := sanitizer.SanitizeStatement(request.Statement, "", request.QueryContext, request.TxId != "", false)
+			if err == nil {
+				reqMap["sanitized_statement"] = sanstmt
+			} else {
+				reqMap["statement"] = util.Redacted(request.Statement, true)
+			}
+		}
 	}
 	if request.StatementType != "" {
 		reqMap["statementType"] = request.StatementType

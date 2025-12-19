@@ -1,0 +1,1251 @@
+[
+    {
+        "testcase": "alter bucket",
+        "statements": "SELECT sanitize(\"ALTER BUCKET orders WITH {\\\"ramQuota\\\": 512}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "ALTER BUCKET `orders` WITH {\"ramQuota\":512}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create bucket",
+        "statements": "SELECT sanitize(\"CREATE BUCKET IF NOT EXISTS test_bucket WITH {\\\"ramQuota\\\": 256, \\\"replicaNumber\\\": 1}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE BUCKET IF NOT EXISTS `test_bucket` WITH {\"ramQuota\":256,\"replicaNumber\":1}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop bucket",
+        "statements": "SELECT sanitize(\"DROP BUCKET IF EXISTS test_bucket\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP BUCKET IF EXISTS `test_bucket`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create collection",
+        "statements": "SELECT sanitize(\"CREATE COLLECTION IF NOT EXISTS orders._default.col1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE COLLECTION IF NOT EXISTS `default`:`orders`.`_default`.`col1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop collection",
+        "statements": "SELECT sanitize(\"DROP COLLECTION IF EXISTS orders._default.col1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP COLLECTION IF EXISTS `default`:`orders`.`_default`.`col1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "flush collection",
+        "statements": "SELECT sanitize(\"FLUSH COLLECTION orders._default.col1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "FLUSH COLLECTION `default`:`orders`.`_default`.`col1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "delete",
+        "statements": "SELECT sanitize(\"DELETE FROM orders._default.col1 WHERE type = \\\"user\\\" LIMIT 10\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "user",
+                        "$_n2": 10
+                    },
+                    "statement": "delete from `default`:`orders`.`_default`.`col1` as col1 where ((`col1`.`type`) = $_n1) limit $_n2"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "delete - use keys",
+        "statements": "SELECT sanitize(\"DELETE FROM orders USE KEYS [\\\"1\\\",\\\"2\\\"]\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": [
+                            "1",
+                            "2"
+                        ]
+                    },
+                    "statement": "delete from `default`:`orders` as orders use keys $_n1"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "delete - limit and offset",
+        "statements": "SELECT sanitize(\"DELETE FROM orders USE INDEX (ix1) LIMIT 10 OFFSET 2\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 10,
+                        "$_n2": 2
+                    },
+                    "statement": "delete from `default`:`orders` as orders use index(ix1) offset $_n2 limit $_n1"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "delete - returning",
+        "statements": "SELECT sanitize(\"DELETE FROM orders USE INDEX (ix1) RETURNING {\\\"doc-t\\\":\\\"delete\\\", \\\"doc\\\":orders}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "delete"
+                    },
+                    "statement": "delete from `default`:`orders` as orders use index(ix1) returning {\"doc\": `orders`, \"doc-t\": $_n1}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "execute",
+        "statements": "SELECT sanitize(\"EXECUTE p1 USING {\\\"param1\\\": \\\"value1\\\", \\\"param2\\\": 100}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "EXECUTE `p1` USING {\"param1\": \"value1\", \"param2\": 100}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "explain function",
+        "statements": "SELECT sanitize(\"EXPLAIN FUNCTION dummyfunc\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "EXPLAIN FUNCTION `default`:`dummyfunc`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "explain",
+        "statements": "SELECT sanitize(\"EXPLAIN SELECT x, p,{\\\"a\\\":t, \\\"b\\\":1} FROM orders WHERE x=1 AND p={\\\"b\\\":1}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1,
+                        "$_n2": {
+                            "b": 1
+                        },
+                        "$_n3": 1
+                    },
+                    "statement": "EXPLAIN select (`orders`.`x`), (`orders`.`p`), {\"a\": (`orders`.`t`), \"b\": $_n3} from `default`:`orders` where (((`orders`.`x`) = $_n1) and ((`orders`.`p`) = $_n2))"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create function - inline",
+        "statements": "SELECT sanitize(\"CREATE FUNCTION testfunc(p1,p2) { p1+p2 }\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE FUNCTION `default`:`testfunc`(p1, p2) LANGUAGE INLINE AS (`p1` + `p2`)"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create function - internal js udf",
+        "statements": "SELECT sanitize(\"CREATE FUNCTION jsfunc(param1) LANGUAGE JAVASCRIPT AS \\\"function jsfunc(param1) { return param1 }\\\"\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE FUNCTION `default`:`jsfunc`(param1) LANGUAGE JAVASCRIPT AS \"function jsfunc(param1) { return param1 }\""
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create function - extrernal js udf",
+        "statements": "SELECT sanitize(\"CREATE FUNCTION jsfunc2(param1) LANGUAGE JAVASCRIPT AS  \\\"myfunc\\\" AT \\\"mylib\\\"\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE FUNCTION `default`:`jsfunc2`(param1) LANGUAGE JAVASCRIPT AS \"myfunc\" AT \"mylib\""
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create function - no parameters",
+        "statements": "SELECT sanitize(\"CREATE FUNCTION noparamfunc() { 46 }\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE FUNCTION `default`:`noparamfunc`() LANGUAGE INLINE AS 46"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create function - variadic function",
+        "statements": "SELECT sanitize(\"CREATE FUNCTION variadicfunc(...) { args[0] }\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE FUNCTION `default`:`variadicfunc`(...) LANGUAGE INLINE AS (`args`[0])"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop function",
+        "statements": "SELECT sanitize(\"DROP FUNCTION IF EXISTS testfunc\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP FUNCTION IF EXISTS `default`:`testfunc`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "execute function",
+        "statements": "SELECT sanitize(\"EXECUTE FUNCTION orders._default.func(1,\\\"string\\\",{\\\"a\\\":1},{\\\"b\\\":1, \\\"c\\\":$x})\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1,
+                        "$_n2": "string",
+                        "$_n3": {
+                            "a": 1
+                        },
+                        "$_n4": 1
+                    },
+                    "statement": "EXECUTE FUNCTION `default`:`orders`.`_default`.`func` ($_n1, $_n2, $_n3, {\"b\": $_n4, \"c\": $x})"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "alter group",
+        "statements": "SELECT sanitize(\"ALTER GROUP groupone WITH \\\"added by admin\\\" ROLES select on orders._default._default, cluster_admin\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "ALTER GROUP `groupone` WITH \"added by admin\" ROLES `select` ON `orders`.`_default`.`_default`, `cluster_admin`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create group - no roles",
+        "statements": "SELECT sanitize(\"CREATE GROUP IF NOT EXISTS groupone WITH \\\"added by admin\\\" NO ROLES\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE GROUP IF NOT EXISTS `groupone` WITH \"added by admin\" NO ROLES"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop group",
+        "statements": "SELECT sanitize(\"DROP GROUP IF EXISTS groupone\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP GROUP IF EXISTS `groupone`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "alter index",
+        "statements": "SELECT sanitize(\"Alter INDEX ix1 ON orders WITH {\\\"action\\\": \\\"move\\\", \\\"nodes\\\": [\\\"192.168.10.11:8091\\\"]}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "ALTER INDEX `ix1` ON `default`:`orders` WITH {\"action\":\"move\",\"nodes\":[\"192.168.10.11:8091\"]}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "build index",
+        "statements": "SELECT sanitize(\"BUILD INDEX ON orders(\\\"ix1\\\", [\\\"x2\\\",\\\"x3\\\"], [\\\"x4\\\",$x] , tx2)\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "ix1",
+                        "$_n2": [
+                            "x2",
+                            "x3"
+                        ],
+                        "$_n3": "x4",
+                        "$_n4": "tx2"
+                    },
+                    "statement": "BUILD INDEX ON `default`:`orders`($_n1, $_n2, [$_n3, $x], $_n4)"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create a bhive vector index",
+        "statements": "SELECT sanitize(\"CREATE VECTOR INDEX `ivector` ON orders(vecfld VECTOR) INCLUDE (`brightness`) WITH { \\\"dimension\\\":1536, \\\"similarity\\\":\\\"L2\\\", \\\"description\\\":\\\"IVF8,SQ4\\\"}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE VECTOR INDEX `ivector` ON `default`:`orders`(`vecfld` DENSE VECTOR) INCLUDE(`brightness`) WITH {\"description\":\"IVF8,SQ4\",\"dimension\":1536,\"similarity\":\"L2\"}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create a composite vector index with  a sparse vector field",
+        "statements": " SELECT sanitize(\"CREATE INDEX `ivector` ON orders(sparseVecfld SPARSE VECTOR) INCLUDE (`brightness`) USING GSI WITH { \\\"dimension\\\":1536, \\\"similarity\\\":\\\"COSINE\\\"}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE INDEX `ivector` ON `default`:`orders`(`sparseVecfld` SPARSE VECTOR) INCLUDE(`brightness`) USING GSI WITH {\"dimension\":1536,\"similarity\":\"COSINE\"}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create index",
+        "statements": "SELECT sanitize(\"CREATE INDEX `ix1` ON orders(x1, x2, x3) PARTITION BY hash(x1, x2) WHERE x1={\\\"b\\\":1}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE INDEX `ix1` ON `default`:`orders`(`x1`, `x2`, `x3`) PARTITION BY HASH(`x1`, `x2`) WHERE (`x1` = {\"b\": 1})"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create index - if not exists",
+        "statements": "SELECT sanitize(\"CREATE INDEX ix1 IF NOT EXISTS ON orders(a,b)\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE INDEX `ix1` IF NOT EXISTS ON `default`:`orders`(`a`, `b`)"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop vector index",
+        "statements": "SELECT sanitize(\"DROP VECTOR INDEX `ivector` IF EXISTS ON orders\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP VECTOR INDEX IF EXISTS `ivector` ON `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop index",
+        "statements": "SELECT sanitize(\"DROP INDEX orders.ix1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP INDEX `ix1` ON `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop primary index",
+        "statements": "SELECT sanitize(\"DROP PRIMARY INDEX p1 ON `orders`\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP PRIMARY INDEX `p1` ON `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop an unnamed primary index",
+        "statements": "SELECT sanitize(\"DROP PRIMARY INDEX IF EXISTS ON orders\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP PRIMARY INDEX IF EXISTS ON `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create primary index",
+        "statements": "SELECT sanitize(\"CREATE PRIMARY INDEX ix1 ON orders\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE PRIMARY INDEX `ix1` ON `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create an unnamed primary index",
+        "statements": "SELECT sanitize(\"CREATE PRIMARY INDEX ON orders\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE PRIMARY INDEX ON `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create primary index if not exists",
+        "statements": "SELECT sanitize(\"CREATE PRIMARY INDEX IF NOT EXISTS ix1 ON orders\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE PRIMARY INDEX `ix1` IF NOT EXISTS ON `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create primary index - test optional subclauses",
+        "statements": "SELECT sanitize(\"CREATE PRIMARY INDEX IF NOT EXISTS ix1 ON orders PARTITION BY HASH(a) WITH {\\\"defer_build\\\":true}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE PRIMARY INDEX `ix1` IF NOT EXISTS ON `default`:`orders` PARTITION BY HASH(`a`) WITH {\"defer_build\":true}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "infer expression",
+        "statements": "SELECT sanitize(\"infer {\\\"a\\\":1}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": {
+                            "a": 1
+                        }
+                    },
+                    "statement": "INFER $_n1"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "infer keyspace",
+        "statements": "SELECT sanitize(\"infer keyspace `default`:`orders` WITH {\\\"sample_size\\\":2}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "INFER KEYSPACE `default`:`orders` WITH {\"sample_size\":2}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "insert values",
+        "statements": "SELECT sanitize(\"INSERT INTO orders as d (KEY,VALUE,OPTIONS) VALUES (\\\"k1\\\",{\\\"a_key\\\":1}, { \\\"expiration\\\": 5*24*60*60 }),(\\\"k2\\\", {\\\"b_key\\\":2}) RETURNING d.*\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "k1",
+                        "$_n2": {
+                            "a_key": 1
+                        },
+                        "$_n3": {
+                            "expiration": 432000
+                        },
+                        "$_n4": "k2",
+                        "$_n5": {
+                            "b_key": 2
+                        }
+                    },
+                    "statement": "insert into `default`:`orders` as `d` values($_n1,$_n2,$_n3),($_n4,$_n5) returning `d`.*"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "insert select",
+        "statements": "SELECT sanitize(\"INSERT INTO orders as d (KEY meta().id||\\\"dup\\\", VALUE v, OPTIONS {\\\"expiration\\\":100000}) SELECT v FROM orders as v RETURNING d.*\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "dup",
+                        "$_n2": {
+                            "expiration": 100000
+                        }
+                    },
+                    "statement": "insert into `default`:`orders` as `d` (key ((meta().`id`) || $_n1), value `v`, options $_n2) select `v` from `default`:`orders` as `v` returning `d`.*"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "insert -  only key specified",
+        "statements": "SELECT sanitize(\"INSERT INTO default as d (KEY meta().id||\\\"dup\\\") SELECT v FROM default as v RETURNING d.*\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "dup"
+                    },
+                    "statement": "insert into `default`:`default` as `d` (key ((meta().`id`) || $_n1)) select `v` from `default`:`default` as `v` returning `d`.*"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "ansi merge",
+        "statements": "SELECT sanitize(\"MERGE /*+ USE_HASH(d2) */ INTO orders d1 USE INDEX (ix1, ix2 USING GSI, ix3) USING orders d2 ON d1.a=d2.a WHEN MATCHED THEN UPDATE SET d1.i=1 ,  x=1 FOR x IN d1.j END WHEN MATCHED THEN DELETE WHERE d2.x=1 AND d1.y=1 WHEN NOT MATCHED THEN INSERT (KEY uuid(), VALUE {\\\"doc_key\\\":1})  RETURNING d1.*, d2.b\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1,
+                        "$_n2": 1,
+                        "$_n3": 1,
+                        "$_n4": 1,
+                        "$_n5": {
+                            "doc_key": 1
+                        }
+                    },
+                    "statement": "merge /*+ USE_HASH(`d2`) */ into `default`:`orders` as `d1` use index(ix1, ix2 using gsi, ix3) using `default`:`orders` as `d2` on ((`d1`.`a`) = (`d2`.`a`)) when matched then update set `d1`.`i` = $_n1, `x` = $_n2 for x in (`d1`.`j`) end when matched then delete where (((`d2`.`x`) = $_n3) and ((`d1`.`y`) = $_n4)) when not matched then insert(key uuid(), value $_n5) returning `d1`.*, (`d2`.`b`)"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "lookup merge",
+        "statements": "SELECT sanitize(\"MERGE INTO orders USING (SELECT fld1,fld2 FROM orders) b ON KEY b.fld2 WHEN MATCHED THEN UPDATE SET orders.i=b.fld1 WHEN NOT MATCHED THEN INSERT b WHERE orders.fld3=2 LIMIT 10\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 2,
+                        "$_n2": 10
+                    },
+                    "statement": "merge into `default`:`orders` as `orders` using (select (`orders`.`fld1`), (`orders`.`fld2`) from `default`:`orders`) as b on key (`b`.`fld2`) when matched then update set `orders`.`i` = (`b`.`fld1`) when not matched then insert `b` where (((`b`.`orders`).`fld3`) = $_n1) limit $_n2"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "a pareninfer expression",
+        "statements": "SELECT sanitize(\"SELECT (INFER orders)\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "select ( INFER KEYSPACE `default`:`orders` )"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "prepare",
+        "statements": "SELECT sanitize(\"PREPARE FORCE p1 FROM SELECT fld1, COUNT(fld2) as cnt FROM orders  WHERE fld3=3 GROUP BY fld1 LETTING x=1 HAVING COUNT(fld2)>x\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 3,
+                        "$_n2": 1
+                    },
+                    "statement": "PREPARE FORCE `p1` AS select (`orders`.`fld1`), count((`orders`.`fld2`)) as `cnt` from `default`:`orders` where ((`orders`.`fld3`) = $_n1)  group by (`orders`.`fld1`) letting `x` = $_n2 having (`x` \u003c count((`orders`.`fld2`)))"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "prepare - save option",
+        "statements": "SELECT sanitize(\"PREPARE SAVE p1 FROM SELECT fld1 FROM orders\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "PREPARE SAVE `p1` AS select (`orders`.`fld1`) from `default`:`orders`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "grant roles to users",
+        "statements": "SELECT sanitize(\"GRANT admin,cluster_admin TO user1, local:user2\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "GRANT `admin`, `cluster_admin` TO USERS `user1`, `local`:`user2`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "grant roles to groups",
+        "statements": "SELECT sanitize(\"GRANT select, query_delete ON orders TO GROUPS g1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "GRANT `select`, `query_delete` ON `default`:`orders` TO GROUPS `g1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "revoke roles from users",
+        "statements": "SELECT sanitize(\"REVOKE select, update ON orders FROM u1,u2\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "REVOKE `select`, `update` ON `default`:`orders` FROM USERS `u1`, `u2`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "revoke roles from groups",
+        "statements": "SELECT sanitize(\"REVOKE cluster_admin FROM GROUPS g1,g2\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "REVOKE `cluster_admin` FROM GROUPS `g1`, `g2`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create scope",
+        "statements": "SELECT sanitize(\"CREATE SCOPE orders.sc1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE SCOPE `default`:`orders`.`sc1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create scope with if not exists clause",
+        "statements": "SELECT sanitize(\"CREATE SCOPE orders.sc1 IF NOT EXISTS\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE SCOPE IF NOT EXISTS `default`:`orders`.`sc1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop scope",
+        "statements": "SELECT sanitize(\"DROP SCOPE orders.sc1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP SCOPE `default`:`orders`.`sc1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop scope if exists",
+        "statements": "SELECT sanitize(\"DROP SCOPE IF EXISTS orders.sc1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP SCOPE IF EXISTS `default`:`orders`.`sc1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - with clause",
+        "statements": "SELECT sanitize(\"WITH x AS (SELECT t FROM orders), x2 AS (SELECT x)  SELECT x, x2\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "WITH `x` AS ( (select (`orders`.`t`) from `default`:`orders`) ) , `x2` AS ( (select `x`) ) select `x`, `x2`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - with recursive clause",
+        "statements": "SELECT sanitize(\"WITH RECURSIVE x1 AS (SELECT t FROM orders UNION SELECT x1.t+1 as t FROM x1) SELECT x1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1
+                    },
+                    "statement": "WITH RECURSIVE `x1` AS ( (select (`orders`.`t`) from `default`:`orders`) UNION select ((`x1`.`t`) + $_n1) as `t` from (`x1`) ) select `x1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - from clause: expression term",
+        "statements": "SELECT sanitize(\"SELECT * FROM {\\\"a\\\":1} d1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": {
+                            "a": 1
+                        }
+                    },
+                    "statement": "select self.* from $_n1 as `d1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - from clause: ansi unnest",
+        "statements": "SELECT sanitize(\"SELECT * FROM orders d1 LEFT NEST LATERAL orders d2 ON d1.a=d2.b AND d1.b=1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1
+                    },
+                    "statement": "select self.* from `default`:`orders` as `d1` left outer nest `default`:`orders` as `d2` on (((`d1`.`a`) = (`d2`.`b`)) and ((`d1`.`b`) = $_n1))"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - from clause: lookup nest",
+        "statements": "SELECT sanitize(\"SELECT * FROM orders d1 INNER NEST orders d2 ON KEYS [\\\"k1\\\",\\\"k2\\\"]\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": [
+                            "k1",
+                            "k2"
+                        ]
+                    },
+                    "statement": "select self.* from `default`:`orders` as `d1` nest `default`:`orders` as `d2` on keys $_n1"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - from clause: unnest",
+        "statements": "SELECT sanitize(\"SELECT d1 as x,d2.* FROM orders d1 UNNEST [{\\\"d\\\":1},{\\\"d\\\":2}] d2\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": [
+                            {
+                                "d": 1
+                            },
+                            {
+                                "d": 2
+                            }
+                        ]
+                    },
+                    "statement": "select `d1` as `x`, `d2`.* from `default`:`orders` as `d1` unnest $_n1 as `d2`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - let clause",
+        "statements": "SELECT sanitize(\"SELECT d1,x,x2 FROM orders d1 LET x=1, x1=\\\"c\\\", x2={\\\"d\\\":d1.d}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1,
+                        "$_n2": "c"
+                    },
+                    "statement": "select `d1`, `x`, `x2` from `default`:`orders` as `d1` let `x` = $_n1, `x1` = $_n2, `x2` = {\"d\": (`d1`.`d`)}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - group by clause and sub-clauses",
+        "statements": "SELECT sanitize(\"SELECT d1.x, COUNT(1) FROM orders d1 GROUP BY d1.x LETTING x=1 HAVING COUNT(1)>x\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1,
+                        "$_n2": 1,
+                        "$_n3": 1
+                    },
+                    "statement": "select (`d1`.`x`), count($_n3) from `default`:`orders` as `d1`  group by (`d1`.`x`) letting `x` = $_n1 having (`x` < count($_n2))"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - window clause",
+        "statements": "SELECT sanitize(\"SELECT d.fld1, d.fld2, SUM(d.fld3) OVER win as winproj1, ROW_NUMBER() OVER win2 as winproj2, LAST_VALUE(d.fld3) OVER win3 as winproj3 FROM orders d WINDOW win AS ( PARTITION BY d.fld4), win2 AS (win), win3 AS (win ORDER BY d.fld3 NULLS LAST ROWS BETWEEN 5 PRECEDING AND 2 PRECEDING)\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "last",
+                        "$_n2": 5,
+                        "$_n3": 2
+                    },
+                    "statement": "select (`d`.`fld1`), (`d`.`fld2`), sum((`d`.`fld3`)) OVER (PARTITION BY (`d`.`fld4`)) as `winproj1`, row_number() OVER (PARTITION BY (`d`.`fld4`)) as `winproj2`, last_value((`d`.`fld3`)) OVER (PARTITION BY (`d`.`fld4`) ORDER BY (`d`.`fld3`) NULLS $_n1 ROWS BETWEEN $_n2 PRECEDING AND $_n3 PRECEDING) as `winproj3` from `default`:`orders` as `d`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "select - limit and offset",
+        "statements": "SELECT sanitize(\"SELECT t1,t2 FROM orders LIMIT 100 OFFSET 10\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 100,
+                        "$_n2": 10
+                    },
+                    "statement": "select (`orders`.`t1`), (`orders`.`t2`) from `default`:`orders` limit $_n1 offset $_n2"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "alter sequence",
+        "statements": "SELECT sanitize(\"ALTER SEQUENCE orders._default.seq1 RESTART WITH 1 INCREMENT BY 5 MAXVALUE 100 CYCLE\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "ALTER SEQUENCE `default`:`orders`.`_default`.`seq1` WITH {\"cycle\":true,\"increment\":5,\"max\":100,\"restart\":1}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create sequence",
+        "statements": "SELECT sanitize(\"CREATE SEQUENCE IF NOT EXISTS orders._default.seq1 MINVALUE 10 MAXVALUE 100\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE SEQUENCE IF NOT EXISTS `default`:`orders`.`_default`.`seq1` WITH {\"max\":100,\"min\":10}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop sequence",
+        "statements": "SELECT sanitize(\"DROP SEQUENCE IF EXISTS orders._default.seq1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP SEQUENCE IF EXISTS `default`:`orders`.`_default`.`seq1`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update statistics - index key expressions",
+        "statements": "SELECT sanitize(\"UPDATE STATISTICS FOR orders(somefld, anotherfldwedontabout, {\\\"a\\\":1}, {\\\"b\\\":afldjustpopedup})\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": {
+                            "a": 1
+                        }
+                    },
+                    "statement": "UPDATE STATISTICS FOR `default`:`orders` (`somefld`, `anotherfldwedontabout`, $_n1, {\"b\": `afldjustpopedup`})"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update statistics - single index",
+        "statements": "SELECT sanitize(\"UPDATE STATISTICS FOR INDEX idx1 ON orders WITH {\\\"sample_size\\\":100}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "idx1"
+                    },
+                    "statement": "UPDATE STATISTICS FOR `default`:`orders` INDEX ($_n1) WITH {\"sample_size\":100}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update statistics - multiple indexes",
+        "statements": "SELECT sanitize(\"UPDATE STATISTICS FOR orders INDEX(idx1, idx2) USING GSI WITH {\\\"sample_size\\\":100}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "idx1",
+                        "$_n2": "idx2"
+                    },
+                    "statement": "UPDATE STATISTICS FOR `default`:`orders` INDEX ($_n1, $_n2) USING GSI WITH {\"sample_size\":100}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update statistics - index all",
+        "statements": "SELECT sanitize(\"UPDATE STATISTICS FOR orders._default._default INDEX ALL USING GSI WITH {\\\"sample_size\\\":100}\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "UPDATE STATISTICS FOR `default`:`orders`.`_default`.`_default` INDEX ALL USING GSI WITH {\"sample_size\":100}"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update statistics - delete index key expressions",
+        "statements": "SELECT sanitize(\"UPDATE STATISTICS FOR orders DELETE  (somefld, anotherfldwedontabout, {\\\"a\\\":1}, {\\\"b\\\":afldjustpopedup})\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": {
+                            "a": 1
+                        }
+                    },
+                    "statement": "UPDATE STATISTICS FOR `default`:`orders` DELETE (`somefld`, `anotherfldwedontabout`, $_n1, {\"b\": `afldjustpopedup`})"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update statistics - delete all",
+        "statements": "SELECT sanitize(\"ANALYZE KEYSPACE orders DELETE STATISTICS\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "UPDATE STATISTICS FOR `default`:`orders` DELETE ALL"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update - set",
+        "statements": "SELECT sanitize(\"UPDATE orders SET meta().xattrs.a = \\\"Love yourself\\\", x = 2 FOR x IN t when x=1 END LIMIT 10\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "Love yourself",
+                        "$_n2": 2,
+                        "$_n3": 1,
+                        "$_n4": 10
+                    },
+                    "statement": "update `default`:`orders` as `orders` set meta(`orders`).`xattrs`.`a` = $_n1, `x` = $_n2 for x in (`orders`.`t`) when (`x` = $_n3) end limit $_n4"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update - unset",
+        "statements": "SELECT sanitize(\"UPDATE orders UNSET meta().xattrs.a, x FOR x IN t when x=1 END LIMIT 10\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1,
+                        "$_n2": 10
+                    },
+                    "statement": "update `default`:`orders` as `orders` unset meta(`orders`).`xattrs`.`a`, `x` for x in (`orders`.`t`) when (`x` = $_n1) end limit $_n2"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update - use keys",
+        "statements": "SELECT sanitize(\"UPDATE orders USE KEYS [\\\"1\\\"] SET meta().xattrs.a=1, x=2 FOR x IN t when x=1 END LIMIT 10\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": [
+                            "1"
+                        ],
+                        "$_n2": 1,
+                        "$_n3": 2,
+                        "$_n4": 1,
+                        "$_n5": 10
+                    },
+                    "statement": "update `default`:`orders` as `orders` use keys $_n1 set meta(`orders`).`xattrs`.`a` = $_n2, `x` = $_n3 for x in (`orders`.`t`) when (`x` = $_n4) end limit $_n5"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "update - use index",
+        "statements": "SELECT sanitize(\"UPDATE orders USE INDEX(ix1) SET meta().xattrs.a=1, x=2 FOR x IN t when x=1 END LIMIT 10\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1,
+                        "$_n2": 2,
+                        "$_n3": 1,
+                        "$_n4": 10
+                    },
+                    "statement": "update `default`:`orders` as `orders` use index(ix1) set meta(`orders`).`xattrs`.`a` = $_n1, `x` = $_n2 for x in (`orders`.`t`) when (`x` = $_n3) end limit $_n4"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "upsert - insert values",
+        "statements": "SELECT sanitize(\"UPSERT INTO orders (KEY,VALUE,OPTIONS) VALUES (\\\"1\\\", {\\\"t\\\":1}, {\\\"expiration\\\":11101010}) , (\\\"2\\\",{\\\"t\\\":2},{\\\"expiration\\\":12212111}) RETURNING orders.*, \\\"del\\\"||meta().id\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "1",
+                        "$_n2": {
+                            "t": 1
+                        },
+                        "$_n3": {
+                            "expiration": 11101010
+                        },
+                        "$_n4": "2",
+                        "$_n5": {
+                            "t": 2
+                        },
+                        "$_n6": {
+                            "expiration": 12212111
+                        },
+                        "$_n7": "del"
+                    },
+                    "statement": "upsert into `default`:`orders` as `orders` values($_n1,$_n2,$_n3),($_n4,$_n5,$_n6) returning `orders`.*, ($_n7 || (meta(`orders`).`id`))"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "upsert - insert select - key, value, options",
+        "statements": "SELECT sanitize(\"UPSERT INTO orders (KEY \\\"copy\\\"||meta().id, VALUE {\\\"doc\\\":orders, \\\"cc\\\":1}, OPTIONS {\\\"expiration\\\":12000000}) SELECT * FROM orders RETURNING orders.*\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": "copy",
+                        "$_n2": 1,
+                        "$_n3": {
+                            "expiration": 12000000
+                        }
+                    },
+                    "statement": "upsert into `default`:`orders` as `orders` (key ($_n1 || (meta().`id`)), value {\"cc\": $_n2, \"doc\": `orders`}, options $_n3) select self.* from `default`:`orders` returning `orders`.*"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "upsert - insert select - key, options",
+        "statements": "SELECT sanitize(\"UPSERT INTO orders (KEY meta().id, OPTIONS {\\\"expiration\\\":12000000}) SELECT * FROM orders RETURNING orders.*\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": {
+                            "expiration": 12000000
+                        }
+                    },
+                    "statement": "upsert into `default`:`orders` as `orders` (key (meta().`id`), options $_n1) select self.* from `default`:`orders` returning `orders`.*"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "alter user",
+        "statements": "SELECT sanitize(\"ALTER USER joe PASSWORD \\\"joethinksthispasswordissafe\\\" WITH \\\"Joe Frazer\\\" GROUPS group1, group2\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "ALTER USER `joe` PASSWORD \"****\" WITH \"Joe Frazer\" GROUPS `group1`, `group2`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "create user",
+        "statements": "SELECT sanitize(\"CREATE USER joe PASSWORD \\\"joethinkshispasswordissafe\\\" WITH \\\"Joe Frazer\\\"\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "CREATE USER `joe` PASSWORD \"****\" WITH \"Joe Frazer\""
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "drop user",
+        "statements": "SELECT sanitize(\"DROP USER IF EXISTS local:joe\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "DROP USER IF EXISTS `local`:`joe`"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "transaction - start transaction",
+        "statements": "SELECT sanitize(\"BEGIN WORK\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "START TRANSACTION ISOLATION LEVEL READ COMMITTED"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "transaction - savepoint p",
+        "statements": "SELECT sanitize(\"SAVEPOINT p\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "SAVEPOINT p"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "transaction - rollback to savepoint",
+        "statements": "SELECT sanitize(\"ROLLBACK TRANSACTION TO SAVEPOINT p1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "ROLLBACK TRANSACTION TO SAVEPOINT p1"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "transaction - rollback",
+        "statements": "SELECT sanitize(\"ROLLBACK TRANSACTION\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "ROLLBACK TRANSACTION"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "transaction - commit",
+        "statements": "SELECT sanitize(\"COMMIT TRANSACTION\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": null,
+                    "statement": "COMMIT TRANSACTION"
+                }
+            }
+        ]
+    },
+    {
+        "testcase": "advise",
+        "statements": "SELECT sanitize(\"ADVISE INDEX SELECT * FROM orders WHERE fld=1\")",
+        "results": [
+            {
+                "$1": {
+                    "parametersMap": {
+                        "$_n1": 1
+                    },
+                    "statement": "ADVISE select self.* from `default`:`orders` where ((`orders`.`fld`) = $_n1)"
+                }
+            }
+        ]
+    }
+]
