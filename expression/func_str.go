@@ -479,8 +479,9 @@ func (this *Repeat) Evaluate(item value.Value, context Context) (value.Value, er
 		return nil, errors.NewRangeError("REPEAT()")
 	}
 
-	sz := uint64(len(first.ToString())) * uint64(ni)
-	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, sz/uint64(ni), ni, sz, 20*util.MiB)
+	elemSize := uint64(len(first.ToString()))
+	sz := elemSize * uint64(ni)
+	err = checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, elemSize, ni, sz, 20*util.MiB)
 	if err != nil {
 		return nil, err
 	}
