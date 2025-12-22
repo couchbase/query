@@ -9,7 +9,9 @@
 package datastore
 
 import (
+	"encoding/json"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -736,13 +738,44 @@ type Statistics interface {
 	Bins() ([]Statistics, errors.Error)
 }
 
+type IndexScanReport struct {
+	sync.RWMutex
+	ScanReport map[string]interface{}
+}
+
+const (
+	_INDEX_SCAN_REPORT_SZ  = 10
+	_INDEX_SCAN_WAIT_LOOPS = 25
+)
+
+func NewIndexScanReport() *IndexScanReport {
+	return &IndexScanReport{ScanReport: make(map[string]interface{}, _INDEX_SCAN_REPORT_SZ)}
+}
+
+type IndexAggregateScanReportFn func(v1, v2 map[string]interface{})
+
+func (this *IndexScanReport) GetScanReport() (rv map[string]interface{}) {
+	if this != nil {
+		this.RLock()
+		defer this.RUnlock()
+		if len(this.ScanReport) > 0 {
+			b, err := json.Marshal(this.ScanReport)
+			if err == nil {
+				err = json.Unmarshal(b, &rv)
+			}
+		}
+	}
+	return
+}
+
 type IndexConnection struct {
-	sender       EntryExchange
-	context      Context
-	timeout      bool
-	primary      bool
-	skipNewKeys  bool
-	skipMetering bool
+	sender          EntryExchange
+	context         Context
+	timeout         bool
+	primary         bool
+	skipNewKeys     bool
+	skipMetering    bool
+	indexScanReport *IndexScanReport
 }
 
 type Sender interface {
@@ -844,6 +877,32 @@ func (this *IndexConnection) Fatal(err errors.Error) {
 
 func (this *IndexConnection) MaxParallelism() int {
 	return this.context.MaxParallelism()
+}
+
+func (this *IndexConnection) IsDetailedIndexScanReport() bool {
+	return this.context.ScanReportWait() > time.Duration(0)
+}
+
+func (this *IndexConnection) SetIndexScanReport(sr *IndexScanReport) {
+	this.indexScanReport = sr
+}
+
+func (this *IndexConnection) WaitScanReport(w time.Duration) {
+	if w > time.Duration(0) && this.indexScanReport != nil {
+		st := w / _INDEX_SCAN_WAIT_LOOPS
+		for i := 0; !this.sender.IsClosed() && i < _INDEX_SCAN_WAIT_LOOPS; i++ {
+			time.Sleep(st)
+		}
+	}
+}
+
+func (this *IndexConnection) AggregateScanReport(aggFn IndexAggregateScanReportFn, sr map[string]interface{}) {
+	if this.indexScanReport != nil && aggFn != nil && len(sr) > 0 {
+		this.indexScanReport.Lock()
+		defer this.indexScanReport.Unlock()
+		aggFn(this.indexScanReport.ScanReport, sr)
+
+	}
 }
 
 func (this *IndexConnection) Error(err errors.Error) {

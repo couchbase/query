@@ -9,7 +9,6 @@
 package execution
 
 import (
-	"encoding/json"
 	"math"
 
 	"github.com/couchbase/query/datastore"
@@ -26,11 +25,12 @@ type IndexScan3 struct {
 	base
 	buildBitFilterBase
 	probeBitFilterBase
-	conn    *datastore.IndexConnection
-	plan    *plan.IndexScan3
-	keys    map[string]bool
-	pool    bool
-	results []*datastore.IndexEntry
+	conn       *datastore.IndexConnection
+	plan       *plan.IndexScan3
+	keys       map[string]bool
+	pool       bool
+	results    []*datastore.IndexEntry
+	scanReport *datastore.IndexScanReport
 }
 
 func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
@@ -48,6 +48,7 @@ func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
 	} else if p, ok := indexerPhase[plan.Index().Indexer().Name()]; ok {
 		rv.phase = p.index
 	}
+	rv.scanReport = datastore.NewIndexScanReport()
 	rv.output = rv
 	return rv
 }
@@ -60,6 +61,7 @@ func (this *IndexScan3) Copy() Operator {
 	rv := &IndexScan3{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
+	rv.scanReport = this.scanReport
 	return rv
 }
 
@@ -106,13 +108,15 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
 			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
-				this.Phase(), context, this.plan.AllCovers())
+				this.Phase(), context, this.plan.AllCovers(), this.scanReport)
 		}
 
 		if !hasCache {
 			this.conn = datastore.NewIndexConnection(context)
+			this.conn.SetIndexScanReport(this.scanReport)
 			this.conn.SetSkipNewKeys(this.plan.SkipNewKeys())
-			defer this.conn.Dispose()  // Dispose of the connection
+			defer this.conn.Dispose() // Dispose of the connection
+			defer this.conn.WaitScanReport(context.ScanReportWait())
 			defer this.conn.SendStop() // Notify index that I have stopped
 		}
 
@@ -540,7 +544,7 @@ func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
-	return json.Marshal(r)
+	return this.marshalIndexScanReport(r, this.scanReport)
 }
 
 // send a stop/pause

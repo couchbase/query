@@ -648,7 +648,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 			} else {
 				v, err := json.Marshal(timings)
 				if len(v) > 0 && err == nil && len(v) <= maxPlanSize {
-					re.timings = v
+					re.timings = request.RemoveIndexDetails(v)
 				} else if len(v) > maxPlanSize {
 					re.timings = []byte(fmt.Sprintf("{\"WARNING\":\"Plan (%v) exceeds maximum permitted (%v) size.\"}",
 						logging.HumanReadableSize(int64(len(v)), false), logging.HumanReadableSize(int64(maxPlanSize), false)))
@@ -1638,7 +1638,7 @@ func (this *plan_element) evaluate(request *BaseRequest, req *http.Request) bool
 		if err != nil {
 			return false
 		}
-		request.SetFmtTimings(b)
+		request.SetFmtTimings(request.RemoveIndexDetails(b))
 	}
 	// plan may or may not be in indented format, match key then value ignoring whitespace
 	plan := string(b)

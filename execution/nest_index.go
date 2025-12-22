@@ -9,7 +9,6 @@
 package execution
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"sync"
@@ -23,8 +22,9 @@ import (
 type IndexNest struct {
 	joinBase
 	sync.Mutex
-	conn *datastore.IndexConnection
-	plan *plan.IndexNest
+	conn       *datastore.IndexConnection
+	scanReport *datastore.IndexScanReport
+	plan       *plan.IndexNest
 }
 
 func NewIndexNest(plan *plan.IndexNest, context *Context) *IndexNest {
@@ -35,6 +35,7 @@ func NewIndexNest(plan *plan.IndexNest, context *Context) *IndexNest {
 	newJoinBase(&rv.joinBase, context)
 	rv.execPhase = INDEX_NEST
 	rv.output = rv
+	rv.scanReport = datastore.NewIndexScanReport()
 	rv.mk.validate = plan.Term().ValidateKeys()
 	return rv
 }
@@ -48,6 +49,7 @@ func (this *IndexNest) Copy() Operator {
 		plan: this.plan,
 	}
 	this.joinBase.copy(&rv.joinBase)
+	rv.scanReport = this.scanReport
 	rv.mk.validate = this.mk.validate
 	return rv
 }
@@ -78,12 +80,14 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 		id := idv.Actual().(string)
 		this.Lock()
 		this.conn = datastore.NewIndexConnection(context)
+		this.conn.SetIndexScanReport(this.scanReport)
 		defer func() {
 			this.Lock()
 			this.conn = nil
 			this.Unlock()
 		}()
-		defer this.conn.Dispose()  // Dispose of the connection
+		defer this.conn.Dispose() // Dispose of the connection
+		defer this.conn.WaitScanReport(context.ScanReportWait())
 		defer this.conn.SendStop() // Notify index that I have stopped
 		this.Unlock()
 
@@ -170,7 +174,7 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
-	return json.Marshal(r)
+	return this.marshalIndexScanReport(r, this.scanReport)
 }
 
 // send a stop

@@ -9,7 +9,6 @@
 package execution
 
 import (
-	"encoding/json"
 	"math"
 
 	"github.com/couchbase/query/datastore"
@@ -23,10 +22,11 @@ var _EMPTY_SPAN2 *datastore.Span2 = &datastore.Span2{nil, datastore.Ranges2{&dat
 
 type IndexScan2 struct {
 	base
-	conn *datastore.IndexConnection
-	plan *plan.IndexScan2
-	keys map[string]bool
-	pool bool
+	conn       *datastore.IndexConnection
+	scanReport *datastore.IndexScanReport
+	plan       *plan.IndexScan2
+	keys       map[string]bool
+	pool       bool
 }
 
 func NewIndexScan2(plan *plan.IndexScan2, context *Context) *IndexScan2 {
@@ -37,6 +37,7 @@ func NewIndexScan2(plan *plan.IndexScan2, context *Context) *IndexScan2 {
 		rv.phase = p.index
 	}
 	rv.output = rv
+	rv.scanReport = datastore.NewIndexScanReport()
 	return rv
 }
 
@@ -49,6 +50,7 @@ func (this *IndexScan2) Copy() Operator {
 		plan: this.plan,
 	}
 	this.base.copy(&rv.base)
+	rv.scanReport = this.scanReport
 	return rv
 }
 
@@ -71,11 +73,14 @@ func (this *IndexScan2) RunOnce(context *Context, parent value.Value) {
 			defer func() {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
-			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, this.Phase(), context, this.plan.Covers())
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, this.Phase(),
+				context, this.plan.Covers(), this.scanReport)
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
-		defer this.conn.Dispose()  // Dispose of the connection
+		this.conn.SetIndexScanReport(this.scanReport)
+		defer this.conn.Dispose() // Dispose of the connection
+		defer this.conn.WaitScanReport(context.ScanReportWait())
 		defer this.conn.SendStop() // Notify index that I have stopped
 
 		go this.scan(context, this.conn, parent)
@@ -258,7 +263,7 @@ func (this *IndexScan2) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
-	return json.Marshal(r)
+	return this.marshalIndexScanReport(r, this.scanReport)
 }
 
 // send a stop/pause

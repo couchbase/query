@@ -925,6 +925,7 @@ func (this *Server) setupRequestContext(request Request) bool {
 	context.SetUserAgent(request.UserAgent())
 	context.SetUsers(datastore.CredsString(request.Credentials()))
 	context.SetRemoteAddr(request.RemoteAddr())
+	context.SetScanReportWait(request.ScanReportWait())
 
 	if request.TxId() != "" {
 		err := context.SetTransactionInfo(request.TxId(), request.TxStmtNum())

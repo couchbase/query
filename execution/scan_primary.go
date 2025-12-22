@@ -9,7 +9,6 @@
 package execution
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 
@@ -22,10 +21,11 @@ import (
 
 type PrimaryScan struct {
 	base
-	conn *datastore.IndexConnection
-	plan *plan.PrimaryScan
-	keys map[string]bool
-	pool bool
+	conn       *datastore.IndexConnection
+	scanReport *datastore.IndexScanReport
+	plan       *plan.PrimaryScan
+	keys       map[string]bool
+	pool       bool
 }
 
 func NewPrimaryScan(plan *plan.PrimaryScan, context *Context) *PrimaryScan {
@@ -36,6 +36,7 @@ func NewPrimaryScan(plan *plan.PrimaryScan, context *Context) *PrimaryScan {
 		rv.phase = p.primary
 	}
 	rv.output = rv
+	rv.scanReport = datastore.NewIndexScanReport()
 	return rv
 }
 
@@ -46,6 +47,7 @@ func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
 func (this *PrimaryScan) Copy() Operator {
 	rv := &PrimaryScan{plan: this.plan}
 	this.base.copy(&rv.base)
+	rv.scanReport = this.scanReport
 	return rv
 }
 
@@ -68,7 +70,8 @@ func (this *PrimaryScan) RunOnce(context *Context, parent value.Value) {
 			defer func() {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
-			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, this.Phase(), context, nil)
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, this.Phase(),
+				context, nil, this.scanReport)
 		}
 
 		this.scanPrimary(context, parent)
@@ -83,8 +86,10 @@ func stringifyIndexEntry(lastEntry *datastore.IndexEntry) string {
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 	this.conn = datastore.NewIndexConnection(context)
+	this.conn.SetIndexScanReport(this.scanReport)
 	this.conn.SetPrimary()
-	defer this.conn.Dispose()  // Dispose of the connection
+	defer this.conn.Dispose() // Dispose of the connection
+	defer this.conn.WaitScanReport(context.ScanReportWait())
 	defer this.conn.SendStop() // Notify index that I have stopped
 
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, false, &this.operatorCtx)
@@ -141,6 +146,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		// do chunked scans; lastEntry the starting point
 		// previous connection disposed of by the defer above
 		this.conn = datastore.NewIndexConnection(context)
+		this.conn.SetIndexScanReport(this.scanReport)
 		this.conn.SetPrimary()
 		lastEntry, nitems = this.scanPrimaryChunk(context, parent, this.conn, lastEntry, limit)
 		emsg = "Primary index chunked scan"
@@ -152,7 +158,8 @@ func (this *PrimaryScan) scanPrimaryChunk(context *Context, parent value.Value, 
 
 	this.switchPhase(_EXECTIME)
 	defer this.switchPhase(_NOTIME)
-	defer conn.Dispose()  // Dispose of the connection
+	defer conn.Dispose() // Dispose of the connection
+	defer conn.WaitScanReport(context.ScanReportWait())
 	defer conn.SendStop() // Notify index that I have stopped
 
 	go this.scanChunk(context, conn, limit, indexEntry)
@@ -221,7 +228,7 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
-	return json.Marshal(r)
+	return this.marshalIndexScanReport(r, this.scanReport)
 }
 
 // send a stop/pause

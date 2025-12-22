@@ -723,6 +723,20 @@ func handleKvTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 	return err
 }
 
+func handleScanReportWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	var timeout time.Duration
+
+	t, err := httpArgs.getStringVal(parm, val)
+	if err == nil && t != "" {
+		timeout, err = newDuration(t)
+		if err == nil {
+			rv.SetScanReportWait(timeout)
+		}
+	}
+
+	return err
+}
+
 func handleAtrCollection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	s, err := httpArgs.getStringVal(parm, val)
 	if err == nil && s != "" {
@@ -987,6 +1001,7 @@ const ( // Request argument names
 	DURABILITY_LEVEL   = "durability_level"
 	DURABILITY_TIMEOUT = "durability_timeout"
 	KVTIMEOUT          = "kvtimeout"
+	SCANREPORTWAIT     = "scanreport_wait"
 	ATRCOLLECTION      = "atrcollection"
 	NUMATRS            = "numatrs"
 	PRESERVE_EXPIRY    = "preserve_expiry"
@@ -1051,6 +1066,7 @@ var _PARAMETERS = map[string]*argHandler{
 	DURABILITY_LEVEL:  {handleDurabilityLevel, false},
 	//	DURABILITY_TIMEOUT: {handleDurabilityTimeout, false},
 	KVTIMEOUT:       {handleKvTimeout, false},
+	SCANREPORTWAIT:  {handleScanReportWait, false},
 	ATRCOLLECTION:   {handleAtrCollection, false},
 	NUMATRS:         {handleNumAtrs, false},
 	PRESERVE_EXPIRY: {handlePreserveExpiry, false},

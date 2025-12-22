@@ -21,11 +21,12 @@ import (
 
 type IndexScan struct {
 	base
-	conn     *datastore.IndexConnection
-	plan     *plan.IndexScan
-	children []Operator
-	keys     map[string]bool
-	pool     bool
+	conn       *datastore.IndexConnection
+	scanReport *datastore.IndexScanReport
+	plan       *plan.IndexScan
+	children   []Operator
+	keys       map[string]bool
+	pool       bool
 }
 
 func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
@@ -37,6 +38,7 @@ func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
 	}
 	rv.base.setInline()
 	rv.output = rv
+	rv.scanReport = datastore.NewIndexScanReport()
 	return rv
 }
 
@@ -49,6 +51,7 @@ func (this *IndexScan) Copy() Operator {
 		plan: this.plan,
 	}
 	this.base.copy(&rv.base)
+	rv.scanReport = this.scanReport
 	return rv
 }
 
@@ -81,7 +84,8 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 			defer func() {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
-			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, this.Phase(), context, this.plan.Covers())
+			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent, this.Phase(),
+				context, this.plan.Covers(), this.scanReport)
 		}
 
 		this.children = _INDEX_SCAN_POOL.Get()
@@ -176,8 +180,9 @@ func (this *spanScan) Accept(visitor Visitor) (interface{}, error) {
 
 func (this *spanScan) Copy() Operator {
 	rv := &spanScan{
-		plan: this.plan,
-		span: this.span,
+		plan:      this.plan,
+		span:      this.span,
+		indexScan: this.indexScan,
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -201,7 +206,9 @@ func (this *spanScan) RunOnce(context *Context, parent value.Value) {
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
-		defer this.conn.Dispose()  // Dispose of the connection
+		this.conn.SetIndexScanReport(this.indexScan.scanReport)
+		defer this.conn.Dispose() // Dispose of the connection
+		defer this.conn.WaitScanReport(context.ScanReportWait())
 		defer this.conn.SendStop() // Notify index that I have stopped
 
 		go this.scan(context, this.conn, parent)
@@ -327,7 +334,7 @@ func (this *spanScan) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]interface{}) {
 		this.marshalTimes(r)
 	})
-	return json.Marshal(r)
+	return this.marshalIndexScanReport(r, this.indexScan.scanReport)
 }
 
 // send a stop/pause

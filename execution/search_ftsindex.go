@@ -78,11 +78,12 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 				this.keys, this.pool = this.deltaKeyspaceDone(this.keys, this.pool)
 			}()
 			this.keys, this.pool = this.scanDeltaKeyspace(this.plan.Keyspace(), parent,
-				this.Phase(), context, this.plan.Covers())
+				this.Phase(), context, this.plan.Covers(), nil)
 		}
 
 		this.conn = datastore.NewIndexConnection(context)
-		defer this.conn.Dispose()  // Dispose of the connection
+		defer this.conn.Dispose() // Dispose of the connection
+		defer this.conn.WaitScanReport(context.ScanReportWait())
 		defer this.conn.SendStop() // Notify index that I have stopped
 
 		util.Fork(func(interface{}) {

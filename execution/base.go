@@ -14,6 +14,7 @@ package execution
 // and avoid hangs destruction and contain memory consumption
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sync"
@@ -1169,7 +1170,8 @@ func (this *base) notifyStop1(stop OpSendAction) {
 }
 
 func (this *base) scanDeltaKeyspace(keyspace datastore.Keyspace, parent value.Value,
-	phase Phases, context *Context, covers expression.Covers) (keys map[string]bool, pool bool) {
+	phase Phases, context *Context, covers expression.Covers,
+	isr *datastore.IndexScanReport) (keys map[string]bool, pool bool) {
 
 	pipelineCap := int(context.GetPipelineCap())
 	if pipelineCap <= _STRING_BOOL_POOL.Size() {
@@ -1180,7 +1182,9 @@ func (this *base) scanDeltaKeyspace(keyspace datastore.Keyspace, parent value.Va
 	}
 
 	conn := datastore.NewIndexConnection(context)
+	conn.SetIndexScanReport(isr)
 	defer conn.Dispose()
+	defer conn.WaitScanReport(context.ScanReportWait())
 	defer conn.SendStop()
 
 	go context.datastore.TransactionDeltaKeyScan(keyspace.QualifiedName(), conn)
@@ -1719,6 +1723,15 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 		versions = append(versions, datastore.GetDatastore().Info().Version())
 		r["~versions"] = versions
 	}
+}
+
+func (this *base) marshalIndexScanReport(r map[string]interface{}, scanReport *datastore.IndexScanReport) ([]byte, error) {
+	if scanReport != nil {
+		if rv := scanReport.GetScanReport(); len(rv) > 0 {
+			r["#indexStats"] = rv
+		}
+	}
+	return json.Marshal(r)
 }
 
 // the following functions are used to sum execution

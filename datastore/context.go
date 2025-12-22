@@ -39,6 +39,7 @@ type Context interface {
 	RecordKvRU(ru tenant.Unit)
 	RecordKvWU(wu tenant.Unit)
 	Credentials() *auth.Credentials
+	ScanReportWait() time.Duration
 	SkipKey(key string) bool
 }
 
@@ -89,6 +90,10 @@ func (ci *contextImpl) RecordFtsRU(ru tenant.Unit) {
 }
 
 func (ci *contextImpl) RecordGsiRU(ru tenant.Unit) {
+}
+
+func (ci *contextImpl) ScanReportWait() time.Duration {
+	return time.Duration(0)
 }
 
 func (ci *contextImpl) RecordKvRU(ru tenant.Unit) {
@@ -233,6 +238,10 @@ func (ci *queryContextImpl) RecordFtsRU(ru tenant.Unit) {
 }
 
 func (ci *queryContextImpl) RecordGsiRU(ru tenant.Unit) {
+}
+
+func (ci *queryContextImpl) ScanReportWait() time.Duration {
+	return time.Duration(0)
 }
 
 func (ci *queryContextImpl) RecordKvRU(ru tenant.Unit) {

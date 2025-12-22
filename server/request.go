@@ -9,6 +9,7 @@
 package server
 
 import (
+	"encoding/json"
 	sys_json "encoding/json"
 	"fmt"
 	"net/http"
@@ -168,6 +169,8 @@ type Request interface {
 	SetDurabilityTimeout(d time.Duration)
 	KvTimeout() time.Duration
 	SetKvTimeout(d time.Duration)
+	ScanReportWait() time.Duration
+	SetScanReportWait(w time.Duration)
 	AtrCollection() string
 	SetAtrCollection(s string)
 	NumAtrs() int
@@ -421,6 +424,7 @@ type BaseRequest struct {
 	durabilityTimeout    time.Duration
 	durabilityLevel      datastore.DurabilityLevel
 	kvTimeout            time.Duration
+	scanReportWait       time.Duration
 	atrCollection        string
 	numAtrs              int
 	preserveExpiry       bool
@@ -500,6 +504,7 @@ func NewBaseRequest(rv *BaseRequest) {
 	rv.useReplica = value.NONE
 	rv.durabilityTimeout = datastore.DEF_DURABILITY_TIMEOUT
 	rv.kvTimeout = datastore.DEF_KVTIMEOUT
+	rv.scanReportWait = time.Duration(0)
 	rv.durabilityLevel = datastore.DL_UNSET
 	rv.errorLimit = -1
 	rv.durationStyle = util.DEFAULT
@@ -1351,6 +1356,14 @@ func (this *BaseRequest) KvTimeout() time.Duration {
 	return this.kvTimeout
 }
 
+func (this *BaseRequest) SetScanReportWait(w time.Duration) {
+	this.scanReportWait = w
+}
+
+func (this *BaseRequest) ScanReportWait() time.Duration {
+	return this.scanReportWait
+}
+
 func (this *BaseRequest) SetAtrCollection(s string) {
 	this.atrCollection = s
 }
@@ -2055,4 +2068,37 @@ func (this *BaseRequest) AddLogContent(text string) {
 		copy(this.logContent[10:], this.logContent[11:])
 		this.logContent[19] = text
 	}
+}
+
+func (this *BaseRequest) RemoveIndexDetails(b []byte) []byte {
+	if this.ScanReportWait() > time.Duration(0) {
+		var target interface{}
+		if err := json.Unmarshal(b, &target); err == nil {
+			removeFields(target, "#indexStats", "detailed")
+			if b1, err := json.Marshal(target); err == nil {
+				return b1
+			}
+		}
+	}
+	return b
+}
+
+func removeFields(s interface{}, p, f string) {
+	switch av := s.(type) {
+	case map[string]interface{}:
+		for k, v := range av {
+			if k == p {
+				if v1, ok := v.(map[string]interface{}); ok {
+					delete(v1, f)
+				}
+			} else {
+				removeFields(v, p, f)
+			}
+		}
+	case []interface{}:
+		for _, v := range av {
+			removeFields(v, p, f)
+		}
+	}
+
 }

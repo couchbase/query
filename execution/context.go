@@ -354,6 +354,7 @@ type Context struct {
 	atrCollection             string
 	numAtrs                   int
 	kvTimeout                 time.Duration
+	scanReportWait            time.Duration
 	preserveExpiry            bool
 	flags                     uint32
 	recursionCount            int32
@@ -513,11 +514,12 @@ func (this *Context) Copy() *Context {
 		udfStmtExecTrees: this.udfStmtExecTrees,
 		inlineUdfEntries: this.inlineUdfEntries,
 
-		userAgent:     this.userAgent,
-		users:         this.users,
-		remoteAddr:    this.remoteAddr,
-		subqueryPlans: this.subqueryPlans,
-		queryMutex:    this.queryMutex,
+		userAgent:      this.userAgent,
+		users:          this.users,
+		remoteAddr:     this.remoteAddr,
+		subqueryPlans:  this.subqueryPlans,
+		queryMutex:     this.queryMutex,
+		scanReportWait: this.scanReportWait,
 	}
 
 	if this.optimizer != nil {
@@ -566,6 +568,14 @@ func (this *Context) QueryContextParts() []string {
 
 func (this *Context) RequestId() string {
 	return this.requestId
+}
+
+func (this *Context) ScanReportWait() time.Duration {
+	return this.scanReportWait
+}
+
+func (this *Context) SetScanReportWait(w time.Duration) {
+	this.scanReportWait = w
 }
 
 func (this *Context) Type() string {
