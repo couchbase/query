@@ -21,8 +21,34 @@ type Mult struct {
 }
 
 func NewMult(operands ...Expression) Function {
-	rv := &Mult{
-		*NewCommutativeFunctionBase("mult", operands...),
+	rv := &Mult{}
+
+	/*
+		If the first input operand is an Mult expression, "flatten" the structure by extracting its operands.
+		And use these extracted operands directly in the new Mult expression. This reduces nesting due to left-associativity in the
+		constructed Mult expression. Flattening is applied conservatively to preserve the intentional grouping (eg. via parantheses)
+		and evaluation order, established by the parser.  As changing it can affect precision and other semantics.
+		This is why flattening is applied only to the first input operand and the operands extracted from it are not recursively
+		flattened further. And why later input operands are not flattened, even if they are Mult expressions.
+		For example a * (b * c) must not be flattened to a * b * c.
+	*/
+	var flatten bool
+	if len(operands) > 0 {
+		if mult, ok := operands[0].(*Mult); ok {
+			flattenedOps := make(Expressions, 0, len(mult.Operands())+len(operands)-1)
+			flattenedOps = append(flattenedOps, mult.Operands()...)
+
+			if len(operands) > 1 {
+				flattenedOps = append(flattenedOps, operands[1:]...)
+			}
+
+			flatten = true
+			rv.Init("mult", flattenedOps...)
+		}
+	}
+
+	if !flatten {
+		rv.Init("mult", operands...)
 	}
 
 	rv.expr = rv
