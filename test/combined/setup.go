@@ -458,7 +458,8 @@ func installServer(c map[string]interface{}, force bool) error {
 // creates the couchbase server instance and specified keyspaces
 func configureInstance(c map[string]interface{}) error {
 	//logging.Debugf("%v", c)
-	var initArgs string
+	var clusterInitArgs string
+	var nodeInitArgs string
 	var ok bool
 	var err error
 
@@ -468,13 +469,20 @@ func configureInstance(c map[string]interface{}) error {
 		return os.ErrNotExist
 	}
 
-	if initArgs, ok = cs["cluster-init"].(string); !ok {
-		initArgs = "-c localhost --cluster-username Administrator --cluster-password password --services query,data,index " +
+	if nodeInitArgs, ok = cs["node-init"].(string); !ok {
+		nodeInitArgs = "-c localhost --username Administrator --password password"
+	}
+	nodeinitbase := []string{"node-init"}
+	inargs := append(nodeinitbase, strings.Split(nodeInitArgs, " ")...)
+	logging.Debugf("node-init args: %v", inargs)
+
+	if clusterInitArgs, ok = cs["cluster-init"].(string); !ok {
+		clusterInitArgs = "-c localhost --cluster-username Administrator --cluster-password password --services query,data,index " +
 			"--cluster-ramsize 8192 --cluster-index-ramsize 512"
 	}
-	base := []string{"cluster-init"}
-	args := append(base, strings.Split(initArgs, " ")...)
-	logging.Debugf("cluster-init args: %v", args)
+	clusterinitbase := []string{"cluster-init"}
+	icargs := append(clusterinitbase, strings.Split(clusterInitArgs, " ")...)
+	logging.Debugf("cluster-init args: %v", icargs)
 
 	if !checkWait(_NODE_URL, "Waiting for cluster manager prior to creating cluster...") {
 		return fmt.Errorf("Unable to configure instance.")
@@ -483,13 +491,28 @@ func configureInstance(c map[string]interface{}) error {
 	for retry := 1; retry <= _INSTANCE_RETRY_COUNT; retry++ {
 		logging.Infof("Attempting to create cluster (%d/%d).", retry, _INSTANCE_RETRY_COUNT)
 
-		ic := exec.Command("/opt/couchbase/bin/couchbase-cli", args...)
+		in := exec.Command("/opt/couchbase/bin/couchbase-cli", inargs...)
 		sb := &strings.Builder{}
+		in.Stdout = sb
+		err = in.Run()
+		logging.Debugf("Server initialisation response: %v", strings.TrimSuffix(sb.String(), "\n"))
+		if err != nil {
+			err = fmt.Errorf("server init failed - %v: %s", err, strings.TrimSuffix(sb.String(), "\n"))
+			if !isHttpConnError(err) {
+				break
+			}
+			time.Sleep(_RETRY_WAIT)
+			continue
+		} else {
+			sb.Reset()
+		}
+
+		ic := exec.Command("/opt/couchbase/bin/couchbase-cli", icargs...)
 		ic.Stdout = sb
 		err = ic.Run()
 		logging.Debugf("Server creation response: %v", strings.TrimSuffix(sb.String(), "\n"))
 		if err != nil {
-			err = fmt.Errorf("%v: %s", err, strings.TrimSuffix(sb.String(), "\n"))
+			err = fmt.Errorf("server creation failed - %v: %s", err, strings.TrimSuffix(sb.String(), "\n"))
 			if !isHttpConnError(err) {
 				break
 			}
