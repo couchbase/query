@@ -59,6 +59,7 @@ const KEYSPACE_NAME_ALL_SEQUENCES = "all_sequences"
 const KEYSPACE_NAME_AUS = "aus"
 const KEYSPACE_NAME_AUS_SETTINGS = "aus_settings"
 const KEYSPACE_NAME_AWR = "awr"
+const KEYSPACE_NAME_SETTINGS = "settings"
 
 const PRIMARY_INDEX_NAME = "#primary"
 
@@ -137,6 +138,8 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 
 	case auth.PRIV_QUERY_UPDATE:
 		switch keyspace {
+		case KEYSPACE_NAME_SETTINGS:
+			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
 		case KEYSPACE_NAME_AUS, KEYSPACE_NAME_AUS_SETTINGS:
 			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
 		case KEYSPACE_NAME_AWR:

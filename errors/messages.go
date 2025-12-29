@@ -1660,6 +1660,64 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SETTINGS, // 2600
+		symbol:      "E_SETTINGS",
+		Description: "Error processing global settings.",
+		Reason: []string{
+			"An error occurred while processing global settings.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_SETTINGS_METAKV, // 2601
+		symbol:      "E_SETTINGS_METAKV",
+		Description: "Error accessing metakv while processing global settings.",
+		Reason: []string{
+			"An error occurred during accessing metakv while processing global settings.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_SETTINGS_INVALID_TYPE, // 2602
+		symbol:      "E_SETTINGS_INVALID_TYPE",
+		Description: "Invalid type <<type>> specified for <<settings>>.",
+		Reason: []string{
+			"An invalid type <<type>> is specified for <<settings>>.",
+		},
+		Action: []string{
+			"Use proper type when specifying <<settings>>.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_SETTINGS_INVALID_VALUE, // 2603
+		symbol:      "E_SETTINGS_INVALID_VALUE",
+		Description: "Invalid value <<value>> of type <<type>> specified for setting <<setting>>.",
+		Reason: []string{
+			"An invalid value <<value>> of type <<type>> is specified for setting <<setting>>.",
+		},
+		Action: []string{
+			"Use a value of proper type when specifying <<setting>>.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PARSE_SYNTAX, // 3000
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",

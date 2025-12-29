@@ -49,6 +49,7 @@ import (
 	control "github.com/couchbase/query/server/control/couchbase"
 	"github.com/couchbase/query/server/http"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
+	"github.com/couchbase/query/settings"
 	stats "github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
@@ -412,6 +413,7 @@ func main() {
 		)
 	})
 
+	settings.InitSettings()
 	server_package.InitAWR() // start before endpoints but after server init
 
 	// Create http endpoint (but don't start it yet)

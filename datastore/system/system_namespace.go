@@ -309,6 +309,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	registerKeyspace(p, awr)
 
+	settings, e := newSettingsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, settings)
+
 	return nil
 }
 
