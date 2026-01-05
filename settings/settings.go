@@ -24,8 +24,12 @@ const (
 	_SETTINGS_SETTINGS = _SETTINGS_PATH + "global_settings"
 )
 
+const (
+	PLAN_STABILITY = "plan_stability"
+)
+
 var _accepted_settings map[string]bool = map[string]bool{
-	"plan_stability": true,
+	PLAN_STABILITY: true,
 }
 
 func InitSettings() {
@@ -112,9 +116,7 @@ func processSettings(val []byte, thisNode string) {
 
 func defaultSettings() map[string]interface{} {
 	rv := map[string]interface{}{
-		"plan_stability": map[string]interface{}{
-			"enabled": false,
-		},
+		PLAN_STABILITY: defaultPlanStabilitySettings(),
 	}
 	globalSettings.Lock()
 	globalSettings.settings = rv
@@ -144,7 +146,7 @@ func UpdateSettings(settings interface{}) (errors.Error, errors.Errors) {
 	}
 	settingsMap, ok := settings.(map[string]interface{})
 	if !ok {
-		return errors.NewSettingsInvalidType("settings", settings), nil
+		return errors.NewSettingsInvalidType("settings", "", settings), nil
 	}
 
 	for k, v := range settingsMap {
@@ -158,27 +160,11 @@ func UpdateSettings(settings interface{}) (errors.Error, errors.Errors) {
 		}
 
 		switch k {
-		case "plan_stability":
-			psMap, ok := v.(map[string]interface{})
-			if !ok {
-				return errors.NewSettingsInvalidValue("plan_stability", "map[string]interface{}", v), nil
+		case PLAN_STABILITY:
+			err := updatePlanStabilitySetting(v)
+			if err != nil {
+				return err, nil
 			}
-			// getSettings() returns a copy of the settings
-			psSetting := globalSettings.getSetting(k)
-			planStability, ok := psSetting.(map[string]interface{})
-			if !ok {
-				return errors.NewSettingsInvalidValue("plan_stability", "map[string]interface{}", psSetting), nil
-			}
-			for kk, vv := range psMap {
-				switch kk {
-				case "enabled":
-					planStability[kk] = vv
-				default:
-					return errors.NewSettingsInvalidValue("plan_stability."+kk, "", nil), nil
-				}
-			}
-			// update settings once all processed for plan stability
-			globalSettings.setSetting(k, planStability)
 		}
 	}
 
