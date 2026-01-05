@@ -449,11 +449,11 @@ func setAusHelper(settings interface{}, distribute bool, restore bool) (obj ausG
 				}
 			case "schedule":
 				sched, err, warn := validateSchedule(v)
-				if warnings != nil {
+				if len(warn) > 0 {
 					warnings = append(warnings, warn...)
 				}
 				if err != nil {
-					return obj, err, nil
+					return obj, err, warnings
 				}
 				obj.schedule = sched
 			case "create_missing_statistics":
