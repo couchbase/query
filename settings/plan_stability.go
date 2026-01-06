@@ -12,8 +12,20 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
+/*
+ * Plan Stability mode:
+ *
+ * By default plan stability is OFF. When it is turned on, one of two modes can be used:
+ *   - prepared_only: query plan will be saved for prepared statements only
+ *   - ad_hoc: query plan will be saved for all statements
+ *
+ * The mode can be set/changed via:
+ *
+ *   UPDATE system:settings SET plan_stability.mode = "off"/"prepared_only"/"ad_hoc"
+ */
 type PLAN_STABILITY_MODE int
 
 const (
@@ -28,9 +40,39 @@ var _PS_MODE_MAP map[string]PLAN_STABILITY_MODE = map[string]PLAN_STABILITY_MODE
 	"ad_hoc":        _PS_MODE_AD_HOC,
 }
 
+/*
+ * Plan Stability error policy:
+ *
+ * When plan verification fails for a saved prepared plan (for whatever reason), the error policy
+ * determines the actions that follows:
+ *   - strict: an error will be returned to the user, the saved plan remains unchanged
+ *   - moderate: the query will be reprepared and executed, but the reprepared plan is only used
+ *               for the current execution, the saved plan remains unchanged
+ *   - flexible: the query will be reprepared and executed, and the reprepared plan will be saved
+ *               (and replace the currently saved plan)
+ *
+ * The error policy can be set/changed via:
+ *
+ *   UPDATE system:settings SET plan_stability.error_policy = "strict"/"moderate"/"flexible"
+ */
+type PLAN_STABILITY_ERROR_POLICY int
+
+const (
+	_PS_ERROR_FLEXIBLE = PLAN_STABILITY_ERROR_POLICY(iota)
+	_PS_ERROR_MODERATE
+	_PS_ERROR_STRICT
+)
+
+var _PS_ERROR_POLICY_MAP map[string]PLAN_STABILITY_ERROR_POLICY = map[string]PLAN_STABILITY_ERROR_POLICY{
+	"flexible": _PS_ERROR_FLEXIBLE,
+	"moderate": _PS_ERROR_MODERATE,
+	"strict":   _PS_ERROR_STRICT,
+}
+
 func defaultPlanStabilitySettings() map[string]interface{} {
 	return map[string]interface{}{
-		"mode": _PS_MODE_OFF,
+		"mode":         _PS_MODE_OFF,
+		"error_policy": _PS_ERROR_MODERATE,
 	}
 }
 
@@ -46,6 +88,15 @@ func updatePlanStabilitySetting(val interface{}) errors.Error {
 		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", psSetting)
 	}
 	for kk, vv := range psMap {
+		if actual, ok := vv.(value.Value); ok {
+			vv = actual.Actual()
+		}
+
+		// When JSON is unmarshalled into an interface, numbers are unmarshalled into float.
+		if f, ok := vv.(float64); ok && value.IsInt(f) {
+			vv = int64(f)
+		}
+
 		switch kk {
 		case "mode":
 			switch vv := vv.(type) {
@@ -66,6 +117,26 @@ func updatePlanStabilitySetting(val interface{}) errors.Error {
 				}
 			default:
 				return errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
+			}
+		case "error_policy":
+			switch vv := vv.(type) {
+			case string:
+				// when user sets the setting
+				if error_policy, ok := _PS_ERROR_POLICY_MAP[strings.ToLower(vv)]; ok {
+					planStability[kk] = error_policy
+				} else {
+					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "'strict'/'moderate'/'flexible'", vv)
+				}
+			case int64:
+				// when setting comes from metakv
+				error_policy := PLAN_STABILITY_ERROR_POLICY(vv)
+				if error_policy >= _PS_ERROR_FLEXIBLE && error_policy <= _PS_ERROR_STRICT {
+					planStability[kk] = error_policy
+				} else {
+					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
+				}
+			default:
+				return errors.NewSettingsInvalidType(PLAN_STABILITY+".error_policy", "string", vv)
 			}
 		default:
 			return errors.NewSettingsInvalidValue(PLAN_STABILITY+"."+kk, "", nil)
@@ -108,4 +179,32 @@ func IsPlanStabilityPreparedOnly() bool {
 func IsPlanStabilityAdHoc() bool {
 	mode := getPlanStabilityMode()
 	return mode == _PS_MODE_AD_HOC
+}
+
+func getPlanStabilityErrorPolicy() PLAN_STABILITY_ERROR_POLICY {
+	error_policy := _PS_ERROR_MODERATE
+	globalSettings.RLock()
+	setting_val := globalSettings.settings[PLAN_STABILITY]
+	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
+		if ps_error_policy, ok := ps_setting["error_policy"].(PLAN_STABILITY_ERROR_POLICY); ok {
+			error_policy = ps_error_policy
+		}
+	}
+	globalSettings.RUnlock()
+	return error_policy
+}
+
+func IsPlanStabilityErrorFlexible() bool {
+	error_policy := getPlanStabilityErrorPolicy()
+	return error_policy == _PS_ERROR_FLEXIBLE
+}
+
+func IsPlanStabilityErrorModerate() bool {
+	error_policy := getPlanStabilityErrorPolicy()
+	return error_policy == _PS_ERROR_MODERATE
+}
+
+func IsPlanStabilityErrorStrict() bool {
+	error_policy := getPlanStabilityErrorPolicy()
+	return error_policy == _PS_ERROR_STRICT
 }
