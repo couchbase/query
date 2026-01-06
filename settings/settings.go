@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	_SETTINGS_PATH     = "/query/settings/"
+	_SETTINGS_PATH     = "/query/query_managed_settings/"
 	_SETTINGS_SETTINGS = _SETTINGS_PATH + "global_settings"
 )
 
@@ -64,7 +64,9 @@ func InitSettings() {
 }
 
 func callback(kve metakv.KVEntry) error {
-	processSettings(kve.Value, distributed.RemoteAccess().WhoAmI())
+	if kve.Path == _SETTINGS_SETTINGS {
+		processSettings(kve.Value, distributed.RemoteAccess().WhoAmI())
+	}
 	return nil
 }
 
