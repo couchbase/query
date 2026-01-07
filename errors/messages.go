@@ -1718,6 +1718,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SETTINGS_ENTERPRISE_ONLY, // 2604
+		symbol:      "E_SETTINGS_ENTERPRISE_ONLY",
+		Description: "<<feature>> is an enterprise-only feature.",
+		Reason: []string{
+			"A <<feature>> related operation was attempted on a Community Edition Couchbase cluster.",
+		},
+		Action: []string{
+			"Consult the documentation for the feature you are trying to use.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Community Edition",
+		},
+	},
+	{
 		Code:        E_PARSE_SYNTAX, // 3000
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",

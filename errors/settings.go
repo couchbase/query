@@ -46,3 +46,9 @@ func NewSettingsInvalidValue(setting, expected string, value interface{}) Error 
 	return &err{level: EXCEPTION, ICode: E_SETTINGS_INVALID_VALUE, IKey: "settings_invalid_value",
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
+
+func NewSettingsEnterpriseOnly(feature string) Error {
+	return &err{level: EXCEPTION, ICode: E_SETTINGS_ENTERPRISE_ONLY, IKey: "settings_enterprise_only",
+		InternalMsg:    fmt.Sprintf("%s is an enterprise-only feature", feature),
+		InternalCaller: CallerN(1)}
+}

@@ -44,12 +44,12 @@ var _PS_MODE_MAP map[string]PLAN_STABILITY_MODE = map[string]PLAN_STABILITY_MODE
  * Plan Stability error policy:
  *
  * When plan verification fails for a saved prepared plan (for whatever reason), the error policy
- * determines the actions that follows:
+ * determines the actions that will follow:
  *   - strict: an error will be returned to the user, the saved plan remains unchanged
  *   - moderate: the query will be reprepared and executed, but the reprepared plan is only used
  *               for the current execution, the saved plan remains unchanged
  *   - flexible: the query will be reprepared and executed, and the reprepared plan will be saved
- *               (and replace the currently saved plan)
+ *               (replacing the currently saved plan)
  *
  * The error policy can be set/changed via:
  *
@@ -76,7 +76,10 @@ func defaultPlanStabilitySettings() map[string]interface{} {
 	}
 }
 
-func updatePlanStabilitySetting(val interface{}) errors.Error {
+func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
+	if !enterprise {
+		return errors.NewSettingsEnterpriseOnly("Plan Stability")
+	}
 	psMap, ok := val.(map[string]interface{})
 	if !ok {
 		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)

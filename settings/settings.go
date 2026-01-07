@@ -142,7 +142,7 @@ func FetchSettings() (map[string]interface{}, errors.Error) {
 	return vmap, nil
 }
 
-func UpdateSettings(settings interface{}) (errors.Error, errors.Errors) {
+func UpdateSettings(enterprise bool, settings interface{}) (errors.Error, errors.Errors) {
 	if actual, ok := settings.(value.Value); ok {
 		settings = actual.Actual()
 	}
@@ -163,7 +163,7 @@ func UpdateSettings(settings interface{}) (errors.Error, errors.Errors) {
 
 		switch k {
 		case PLAN_STABILITY:
-			err := updatePlanStabilitySetting(v)
+			err := updatePlanStabilitySetting(enterprise, v)
 			if err != nil {
 				return err, nil
 			}

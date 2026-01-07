@@ -129,6 +129,7 @@ const (
 	E_SETTINGS_METAKV                            ErrorCode = 2601
 	E_SETTINGS_INVALID_TYPE                      ErrorCode = 2602
 	E_SETTINGS_INVALID_VALUE                     ErrorCode = 2603
+	E_SETTINGS_ENTERPRISE_ONLY                   ErrorCode = 2604
 	E_PARSE_SYNTAX                               ErrorCode = 3000
 	E_ERROR_CONTEXT                              ErrorCode = 3005
 	E_PARSE_INVALID_ESCAPE_SEQUENCE              ErrorCode = 3006
