@@ -898,7 +898,7 @@ func doOutputAPI(
 								}
 								s += fmt.Sprintf("(%s) %v", k, v)
 							}
-							return fmt.Errorf(s)
+							return fmt.Errorf("%s", s)
 						}
 						return fmt.Errorf("%s", strings.TrimPrefix(fmt.Sprintf("%v", errField), "map"))
 					}
@@ -965,10 +965,10 @@ func queryRestAPI(
 			if err == nil && outBuf != nil {
 				errText, ok := outBuf.(string)
 				if ok {
-					return fmt.Errorf(errText)
+					return fmt.Errorf("%s", errText)
 				}
 			}
-			return fmt.Errorf(string(bod))
+			return fmt.Errorf("%s", string(bod))
 		}
 		return fmt.Errorf("HTTP error %v getting %q: %s",
 			res.Status, requestUrl, bod)

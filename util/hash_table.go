@@ -305,7 +305,7 @@ func (this *HashTable) Grow(equal func(val1, val2 interface{}) bool) error {
 
 	newSlots := len(this.entries) * 2
 	if newSlots > this.maxSlots {
-		return fmt.Errorf(fmt.Sprintf("Maximum hash table size %d exceeded", this.maxSlots))
+		return fmt.Errorf("Maximum hash table size %d exceeded", this.maxSlots)
 	}
 
 	this.count = 0
