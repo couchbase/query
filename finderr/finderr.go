@@ -30,7 +30,7 @@ func fitWidth(s string, width int) string {
 	p := 0
 	for i, r := range s {
 		if r == '\n' {
-			fmt.Printf(s[:i])
+			fmt.Printf("%s", s[:i])
 			if i+1 < len(s) {
 				return s[i+1:]
 			}
