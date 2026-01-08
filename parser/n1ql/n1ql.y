@@ -397,7 +397,7 @@ column int
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER permitted_identifiers SEQUENCE VECTOR
+%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER permitted_identifiers SEQUENCE VECTOR CYCLE
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -561,8 +561,6 @@ column int
 %type <cyclecheck>         opt_cycle_clause
 %type <statement>          sequence_stmt create_sequence drop_sequence alter_sequence
 %type <keyspacePath>       sequence_full_name
-%type <vpairs>             sequence_name_options
-%type <vpair>              sequence_name_option
 %type <s>                  opt_namespace_name sequence_object_name
 %type <ss>                 sequence_next sequence_prev
 %type <expr>               sequence_expr
@@ -601,6 +599,8 @@ USER
 SEQUENCE
 |
 VECTOR
+|
+CYCLE
 ;
 
 opt_trailer:
@@ -5531,61 +5531,16 @@ alter_sequence
 ;
 
 create_sequence:
-CREATE SEQUENCE sequence_name_options opt_seq_create_options
+CREATE SEQUENCE sequence_full_name opt_if_not_exists opt_seq_create_options
 {
-    failOnExists := true
-    var name *algebra.Path
-    for _, v := range $3 {
-        if v.name == "" {
-            if !failOnExists {
-                return yylex.(*lexer).FatalError("syntax error - IF NOT EXISTS already specified", v.line, v.column)
-            }
-            failOnExists =false
-        } else {
-            if name != nil {
-                return yylex.(*lexer).FatalError("syntax error - name already provided", v.line, v.column)
-            }
-            name = algebra.NewPathFromElements(algebra.ParsePath(v.name))
-        }
-    }
-    if name == nil {
-        return yylex.(*lexer).FatalError("syntax error - sequence name is required", $<line>3, $<column>3)
-    }
+    failOnExists := $4
+    name := $3
     var with value.Value
-    validate := func(m map[string]interface{}, v *nameValueContext) string {
-        if v.name == "with" {
-            if len(m) != 0 {
-                return "WITH may not be used with other options"
-            } else if v.value.Type() == value.OBJECT {
-                m["with"] = v.value
-                return ""
-            }
-        } else {
-            if _, ok := m["with"]; ok {
-              return "options may not be used with WITH clause"
-            }
-        }
-        if _, ok := m[v.name]; ok {
-            return "duplicate option"
-        }
-		if v.value == nil {
-			return "invalid option value"
-		}
-        if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
-            m[v.name] = v.value.Truth()
-            return ""
-        } else if v.value.Type() == value.NUMBER {
-            if i, ok := value.IsIntValue(v.value); ok {
-                  m[v.name] = i
-                  return ""
-            }
-        }
-        return "invalid option value"
-    }
-    if len($4) > 0 {
-        m := make(map[string]interface{},len($4))
-        for _, vp := range $4 {
-            if err := validate(m, vp); err != "" {
+
+    if len($5) > 0 {
+        m := make(map[string]interface{},len($5))
+        for _, vp := range $5 {
+            if err := sequences.ValidateCreateSequenceOption(m, vp.name, vp.value); err != "" {
                 return yylex.(*lexer).FatalError("syntax error - " + err, vp.line, vp.column)
             }
         }
@@ -5599,29 +5554,29 @@ CREATE SEQUENCE sequence_name_options opt_seq_create_options
     }
     $$ = algebra.NewCreateSequence(name, failOnExists, with)
 }
-;
-
-sequence_name_options:
-sequence_name_option
-{
-    $$ = append([]*nameValueContext(nil), $1)
-}
 |
-sequence_name_options sequence_name_option
+CREATE SEQUENCE IF NOT EXISTS sequence_full_name opt_seq_create_options
 {
-    $$ = append($1, $2)
-}
-;
+    failOnExists := false
+    name := $6
+    var with value.Value
 
-sequence_name_option:
-IF NOT EXISTS
-{
-    $$ = &nameValueContext{"", nil, $<line>1, $<column>1}
-}
-|
-sequence_full_name
-{
-    $$ = &nameValueContext{$1.SimpleString(), nil, $<line>1, $<column>1}
+    if len($7) > 0 {
+        m := make(map[string]interface{},len($7))
+        for _, vp := range $7 {
+            if err := sequences.ValidateCreateSequenceOption(m, vp.name, vp.value); err != "" {
+                return yylex.(*lexer).FatalError("syntax error - " + err, vp.line, vp.column)
+            }
+        }
+        if len(m) > 0 {
+            if w, ok := m["with"]; ok {
+                with = value.NewValue(w)
+            } else {
+                with = value.NewValue(m)
+            }
+        }
+    }
+    $$ = algebra.NewCreateSequence(name, failOnExists, with)
 }
 ;
 
@@ -5666,30 +5621,10 @@ ALTER SEQUENCE sequence_full_name seq_alter_options
         return yylex.(*lexer).FatalError("syntax error - missing options", $<line>4, $<column>4)
     }
     var with value.Value
-    validate := func(m map[string]interface{}, v *nameValueContext) string {
-        if _, ok := m[v.name]; ok {
-            return "duplicate option"
-        }
-		if v.value == nil {
-			return "invalid option value"
-		}
-        if v.name == sequences.OPT_CYCLE && v.value.Type() == value.BOOLEAN {
-            m[v.name] = v.value.Truth()
-            return ""
-        } else if v.name == sequences.OPT_RESTART && v.value.Type() == value.NULL {
-            m[v.name] = true
-            return ""
-        } else if v.value.Type() == value.NUMBER {
-            if i, ok := value.IsIntValue(v.value); ok {
-                  m[v.name] = i
-                  return ""
-            }
-        }
-        return "invalid option value"
-    }
+
     m := make(map[string]interface{},len($4))
     for _, vp := range $4 {
-        if err := validate(m, vp); err != "" {
+        if err := sequences.ValidateAlterSequenceOption(m, vp.name, vp.value); err != "" {
             return yylex.(*lexer).FatalError("syntax error - " + err, vp.line, vp.column)
         }
     }

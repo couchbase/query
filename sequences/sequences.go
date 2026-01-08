@@ -1325,3 +1325,70 @@ func BackupSequences(namespace string, bucket string, filter func(string) bool) 
 func CleanupCacheEntry(namespace string, bucket string, key string) {
 	sequences.Delete(getCacheKey(namespace, bucket, key), nil)
 }
+
+func ValidateCreateSequenceOption(m map[string]interface{}, optionName string, optionValue value.Value) string {
+
+	if optionValue == nil {
+		return "invalid option value"
+	}
+
+	if optionName == "with" {
+		if len(m) != 0 {
+			return "WITH may not be used with other options"
+		} else if optionValue.Type() == value.OBJECT {
+			m["with"] = optionValue
+			return ""
+		} else {
+			return "invalid option value"
+		}
+	} else {
+		if _, ok := m["with"]; ok {
+			return "options may not be used with WITH clause"
+		}
+	}
+	if _, ok := m[optionName]; ok {
+		return "duplicate option"
+	}
+
+	if optionName == OPT_CYCLE {
+		if optionValue.Type() == value.BOOLEAN {
+			m[optionName] = optionValue.Truth()
+			return ""
+		} else {
+			return "invalid option value"
+		}
+	} else if optionValue.Type() == value.NUMBER {
+		if i, ok := value.IsIntValue(optionValue); ok {
+			m[optionName] = i
+			return ""
+		}
+	}
+	return "invalid option value"
+}
+
+func ValidateAlterSequenceOption(m map[string]interface{}, optionName string, optionValue value.Value) string {
+
+	if optionValue == nil {
+		return "invalid option value"
+	}
+	if _, ok := m[optionName]; ok {
+		return "duplicate option"
+	}
+	if optionName == OPT_CYCLE {
+		if optionValue.Type() == value.BOOLEAN {
+			m[optionName] = optionValue.Truth()
+			return ""
+		} else {
+			return "invalid option value"
+		}
+	} else if optionName == OPT_RESTART && optionValue.Type() == value.NULL {
+		m[optionName] = true
+		return ""
+	} else if optionValue.Type() == value.NUMBER {
+		if i, ok := value.IsIntValue(optionValue); ok {
+			m[optionName] = i
+			return ""
+		}
+	}
+	return "invalid option value"
+}
