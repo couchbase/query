@@ -26,18 +26,18 @@ import (
  *
  *   UPDATE system:settings SET plan_stability.mode = "off"/"prepared_only"/"ad_hoc"
  */
-type PLAN_STABILITY_MODE int
+type PlanStabilityMode int
 
 const (
-	_PS_MODE_OFF = PLAN_STABILITY_MODE(iota)
-	_PS_MODE_PREPARED_ONLY
-	_PS_MODE_AD_HOC
+	PS_MODE_OFF = PlanStabilityMode(iota)
+	PS_MODE_PREPARED_ONLY
+	PS_MODE_AD_HOC
 )
 
-var _PS_MODE_MAP map[string]PLAN_STABILITY_MODE = map[string]PLAN_STABILITY_MODE{
-	"off":           _PS_MODE_OFF,
-	"prepared_only": _PS_MODE_PREPARED_ONLY,
-	"ad_hoc":        _PS_MODE_AD_HOC,
+var _PS_MODE_MAP map[string]PlanStabilityMode = map[string]PlanStabilityMode{
+	"off":           PS_MODE_OFF,
+	"prepared_only": PS_MODE_PREPARED_ONLY,
+	"ad_hoc":        PS_MODE_AD_HOC,
 }
 
 /*
@@ -55,24 +55,24 @@ var _PS_MODE_MAP map[string]PLAN_STABILITY_MODE = map[string]PLAN_STABILITY_MODE
  *
  *   UPDATE system:settings SET plan_stability.error_policy = "strict"/"moderate"/"flexible"
  */
-type PLAN_STABILITY_ERROR_POLICY int
+type PlanStabilityErrorPolicy int
 
 const (
-	_PS_ERROR_FLEXIBLE = PLAN_STABILITY_ERROR_POLICY(iota)
-	_PS_ERROR_MODERATE
-	_PS_ERROR_STRICT
+	PS_ERROR_FLEXIBLE = PlanStabilityErrorPolicy(iota)
+	PS_ERROR_MODERATE
+	PS_ERROR_STRICT
 )
 
-var _PS_ERROR_POLICY_MAP map[string]PLAN_STABILITY_ERROR_POLICY = map[string]PLAN_STABILITY_ERROR_POLICY{
-	"flexible": _PS_ERROR_FLEXIBLE,
-	"moderate": _PS_ERROR_MODERATE,
-	"strict":   _PS_ERROR_STRICT,
+var _PS_ERROR_POLICY_MAP map[string]PlanStabilityErrorPolicy = map[string]PlanStabilityErrorPolicy{
+	"flexible": PS_ERROR_FLEXIBLE,
+	"moderate": PS_ERROR_MODERATE,
+	"strict":   PS_ERROR_STRICT,
 }
 
 func defaultPlanStabilitySettings() map[string]interface{} {
 	return map[string]interface{}{
-		"mode":         _PS_MODE_OFF,
-		"error_policy": _PS_ERROR_MODERATE,
+		"mode":         PS_MODE_OFF,
+		"error_policy": PS_ERROR_MODERATE,
 	}
 }
 
@@ -112,8 +112,8 @@ func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
 				}
 			case int64:
 				// when setting comes from metakv
-				mode := PLAN_STABILITY_MODE(vv)
-				if mode >= _PS_MODE_OFF && mode <= _PS_MODE_AD_HOC {
+				mode := PlanStabilityMode(vv)
+				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC {
 					planStability[kk] = mode
 				} else {
 					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
@@ -132,8 +132,8 @@ func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
 				}
 			case int64:
 				// when setting comes from metakv
-				error_policy := PLAN_STABILITY_ERROR_POLICY(vv)
-				if error_policy >= _PS_ERROR_FLEXIBLE && error_policy <= _PS_ERROR_STRICT {
+				error_policy := PlanStabilityErrorPolicy(vv)
+				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
 					planStability[kk] = error_policy
 				} else {
 					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
@@ -151,12 +151,12 @@ func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
 	return nil
 }
 
-func getPlanStabilityMode() PLAN_STABILITY_MODE {
-	mode := _PS_MODE_OFF
+func GetPlanStabilityMode() PlanStabilityMode {
+	mode := PS_MODE_OFF
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
-		if ps_mode, ok := ps_setting["mode"].(PLAN_STABILITY_MODE); ok {
+		if ps_mode, ok := ps_setting["mode"].(PlanStabilityMode); ok {
 			mode = ps_mode
 		}
 	}
@@ -165,31 +165,31 @@ func getPlanStabilityMode() PLAN_STABILITY_MODE {
 }
 
 func IsPlanStabilityEnabled() bool {
-	mode := getPlanStabilityMode()
-	return mode == _PS_MODE_PREPARED_ONLY || mode == _PS_MODE_AD_HOC
+	mode := GetPlanStabilityMode()
+	return mode == PS_MODE_PREPARED_ONLY || mode == PS_MODE_AD_HOC
 }
 
 func IsPlanStabilityDisabled() bool {
-	mode := getPlanStabilityMode()
-	return mode == _PS_MODE_OFF
+	mode := GetPlanStabilityMode()
+	return mode == PS_MODE_OFF
 }
 
 func IsPlanStabilityPreparedOnly() bool {
-	mode := getPlanStabilityMode()
-	return mode == _PS_MODE_PREPARED_ONLY
+	mode := GetPlanStabilityMode()
+	return mode == PS_MODE_PREPARED_ONLY
 }
 
 func IsPlanStabilityAdHoc() bool {
-	mode := getPlanStabilityMode()
-	return mode == _PS_MODE_AD_HOC
+	mode := GetPlanStabilityMode()
+	return mode == PS_MODE_AD_HOC
 }
 
-func getPlanStabilityErrorPolicy() PLAN_STABILITY_ERROR_POLICY {
-	error_policy := _PS_ERROR_MODERATE
+func getPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
+	error_policy := PS_ERROR_MODERATE
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
-		if ps_error_policy, ok := ps_setting["error_policy"].(PLAN_STABILITY_ERROR_POLICY); ok {
+		if ps_error_policy, ok := ps_setting["error_policy"].(PlanStabilityErrorPolicy); ok {
 			error_policy = ps_error_policy
 		}
 	}
@@ -199,15 +199,15 @@ func getPlanStabilityErrorPolicy() PLAN_STABILITY_ERROR_POLICY {
 
 func IsPlanStabilityErrorFlexible() bool {
 	error_policy := getPlanStabilityErrorPolicy()
-	return error_policy == _PS_ERROR_FLEXIBLE
+	return error_policy == PS_ERROR_FLEXIBLE
 }
 
 func IsPlanStabilityErrorModerate() bool {
 	error_policy := getPlanStabilityErrorPolicy()
-	return error_policy == _PS_ERROR_MODERATE
+	return error_policy == PS_ERROR_MODERATE
 }
 
 func IsPlanStabilityErrorStrict() bool {
 	error_policy := getPlanStabilityErrorPolicy()
-	return error_policy == _PS_ERROR_STRICT
+	return error_policy == PS_ERROR_STRICT
 }

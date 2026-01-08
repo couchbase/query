@@ -23,6 +23,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -58,6 +59,7 @@ type Prepared struct {
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
 	planVersion        int
+	planStabilityMode  settings.PlanStabilityMode
 
 	userAgent  string
 	users      string
@@ -77,7 +79,7 @@ type ksVersion struct {
 }
 
 func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
-	optimHints *algebra.OptimHints, persist, planLock bool) *Prepared {
+	optimHints *algebra.OptimHints, persist, planLock bool, psMode settings.PlanStabilityMode) *Prepared {
 
 	var planVersion int
 	if operator != nil {
@@ -92,11 +94,12 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 		optimHints:         optimHints,
 		indexScanKeyspaces: indexScanKeyspaces,
 		planVersion:        planVersion,
+		planStabilityMode:  psMode,
 	}
 }
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
-	prepared := NewPrepared(nil, nil, nil, nil, false, false)
+	prepared := NewPrepared(nil, nil, nil, nil, false, false, settings.PS_MODE_OFF)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return prepared, nil, errors.NewPreparedDecodingError(err)
@@ -176,6 +179,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.optimHints != nil {
 		r["optimizer_hints"] = this.optimHints
 	}
+	if this.planStabilityMode > settings.PS_MODE_OFF {
+		r["plan_stability_mode"] = this.planStabilityMode
+	}
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
@@ -206,6 +212,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		CreatingUserAgent  string                 `json:"creatingUserAgent"`
 		Users              string                 `json:"users"`
 		RemoteAddr         string                 `json:"remoteAddr"`
+		PlanStabilityMode  int                    `json:"plan_stability_mode"`
 	}
 
 	var op_type struct {
@@ -273,6 +280,10 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		if err != nil {
 			return err
 		}
+	}
+	planStabilityMode := settings.PlanStabilityMode(_unmarshalled.PlanStabilityMode)
+	if planStabilityMode >= settings.PS_MODE_OFF && planStabilityMode <= settings.PS_MODE_AD_HOC {
+		this.planStabilityMode = planStabilityMode
 	}
 
 	planContext := newPlanContext(nil)
@@ -413,6 +424,10 @@ func (this *Prepared) PlanLock() bool {
 
 func (this *Prepared) SetPlanLock(planLock bool) {
 	this.planLock = planLock
+}
+
+func (this *Prepared) PlanStabilityMode() settings.PlanStabilityMode {
+	return this.planStabilityMode
 }
 
 func (this *Prepared) EncodedPlan() string {

@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/settings"
 )
 
 func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastore,
@@ -41,5 +42,5 @@ func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastor
 	if stmt.OptimHints() != nil {
 		optimHints = stmt.OptimHints().Copy()
 	}
-	return plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints, persist, false), nil, subTimes
+	return plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints, persist, false, settings.GetPlanStabilityMode()), nil, subTimes
 }

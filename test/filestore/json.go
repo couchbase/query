@@ -37,6 +37,7 @@ import (
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -286,6 +287,8 @@ func Start(site, pool, namespace string) *MockServer {
 
 	srv.SetKeepAlive(1 << 10)
 	srv.SetMaxIndexAPI(datastore.INDEX_API_MAX)
+
+	settings.InitSettings()
 
 	mockServer.server = srv
 	mockServer.acctstore = acctstore

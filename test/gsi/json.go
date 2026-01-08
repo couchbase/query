@@ -43,6 +43,7 @@ import (
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
 	"github.com/couchbase/query/server/http/router"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -550,6 +551,8 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 	}
 
 	srv.SetKeepAlive(1 << 10)
+
+	settings.InitSettings()
 
 	storage.Migrate()
 	server.MigrateDictionary()
