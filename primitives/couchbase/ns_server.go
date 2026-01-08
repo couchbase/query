@@ -914,10 +914,10 @@ func queryRestAPI(
 			if err == nil && outBuf != nil {
 				errText, ok := outBuf.(string)
 				if ok {
-					return fmt.Errorf(errText)
+					return fmt.Errorf("%s", errText)
 				}
 			}
-			return fmt.Errorf(string(bod))
+			return fmt.Errorf("%s", string(bod))
 		}
 		return fmt.Errorf("HTTP error %v getting %q: %s",
 			res.Status, requestUrl, bod)

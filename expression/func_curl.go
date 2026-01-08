@@ -1061,8 +1061,9 @@ func headerOptionProcessing(options map[string]interface{}) (http.Header, error)
 		case string:
 			headerVal = []interface{}{headerVal}
 		default:
-			return nil, fmt.Errorf("Incorrect type for header option " + value.NewValue(val).String() +
-				" in CURL. Header option should be a string value or an array of strings.  ")
+			return nil, fmt.Errorf("Incorrect type for header option %s"+
+				" in CURL. Header option should be a string value or an array of strings.  ",
+				value.NewValue(val).String())
 		}
 
 		// We have an array of interfaces that represent different fields in the Header.
@@ -1070,8 +1071,9 @@ func headerOptionProcessing(options map[string]interface{}) (http.Header, error)
 		for _, hval := range headerVal.([]interface{}) {
 			newHval := value.NewValue(hval)
 			if newHval.Type() != value.STRING {
-				return nil, fmt.Errorf("Incorrect type for header option " + newHval.String() +
-					" in CURL. Header option should be a string value or an array of strings.  ")
+				return nil, fmt.Errorf("Incorrect type for header option %s"+
+					" in CURL. Header option should be a string value or an array of strings.  ",
+					newHval.String())
 			}
 
 			h := newHval.ToString()
@@ -1153,7 +1155,7 @@ func getFileName(val value.Value) (string, error) {
 		}
 
 		hostname = strings.Join(addrs, ",")
-		return "", fmt.Errorf(subdir + " does not exist on node " + hostname)
+		return "", fmt.Errorf("%s does not exist on node %s", subdir, hostname)
 	}
 
 	// nsserver uses the inbox folder within var/lib/couchbase to read certificates from.

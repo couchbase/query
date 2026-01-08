@@ -111,7 +111,7 @@ func (this *UserDefinedFunction) EvaluateForIndex(item value.Value, context Cont
 	if err == nil {
 		return val, nil, nil
 	} else {
-		return val, nil, fmt.Errorf(err.Error())
+		return val, nil, fmt.Errorf("%s", err.Error())
 	}
 }
 

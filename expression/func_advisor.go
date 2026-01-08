@@ -968,7 +968,7 @@ func (this *report) UnmarshalJSON(body []byte) error {
 		this.errors = make([]*adviseError, 0, len(_unmarshalled.Errors))
 		for _, e := range _unmarshalled.Errors {
 			q := NewQueryObject(e.Stmt, e.Context, e.Cnt)
-			ae := NewAdviseError(fmt.Errorf(e.Error), q)
+			ae := NewAdviseError(fmt.Errorf("%s", e.Error), q)
 			this.errors = append(this.errors, ae)
 		}
 	}
