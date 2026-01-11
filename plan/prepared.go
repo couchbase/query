@@ -179,9 +179,6 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.optimHints != nil {
 		r["optimizer_hints"] = this.optimHints
 	}
-	if this.planStabilityMode > settings.PS_MODE_OFF {
-		r["plan_stability_mode"] = this.planStabilityMode
-	}
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
@@ -430,6 +427,10 @@ func (this *Prepared) PlanStabilityMode() settings.PlanStabilityMode {
 	return this.planStabilityMode
 }
 
+func (this *Prepared) SetPlanStabilityMode(planStabilityMode settings.PlanStabilityMode) {
+	this.planStabilityMode = planStabilityMode
+}
+
 func (this *Prepared) EncodedPlan() string {
 	return this.encoded_plan
 }
@@ -443,6 +444,7 @@ func (this *Prepared) BuildEncodedPlan() (string, error) {
 
 	r := make(map[string]interface{}, 5)
 	r["planVersion"] = this.planVersion
+	r["plan_stability_mode"] = this.planStabilityMode
 	this.marshalInternal(r)
 	json_bytes, err := json.Marshal(r)
 	if err != nil {

@@ -48,6 +48,7 @@ import (
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http/router"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
@@ -680,6 +681,12 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 	}
 	if entry.Prepared.OptimHints() != nil {
 		itemMap["optimizer_hints"] = value.NewMarshalledValue(entry.Prepared.OptimHints())
+	}
+	if entry.Prepared.Persist() {
+		itemMap["persist"] = entry.Prepared.Persist()
+	}
+	if entry.Prepared.PlanStabilityMode() != settings.PS_MODE_OFF {
+		itemMap["plan_stability_mode"] = entry.Prepared.PlanStabilityMode().String()
 	}
 	isks := entry.Prepared.IndexScanKeyspaces()
 	if len(isks) > 0 {

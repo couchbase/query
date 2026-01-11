@@ -9,6 +9,7 @@
 package settings
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/errors"
@@ -40,6 +41,18 @@ var _PS_MODE_MAP map[string]PlanStabilityMode = map[string]PlanStabilityMode{
 	"ad_hoc":        PS_MODE_AD_HOC,
 }
 
+func (this PlanStabilityMode) String() string {
+	switch this {
+	case PS_MODE_OFF:
+		return "off"
+	case PS_MODE_PREPARED_ONLY:
+		return "prepared_only"
+	case PS_MODE_AD_HOC:
+		return "ad_hoc"
+	}
+	return fmt.Sprintf("invalid plan stability mode (%d)", this)
+}
+
 /*
  * Plan Stability error policy:
  *
@@ -67,6 +80,18 @@ var _PS_ERROR_POLICY_MAP map[string]PlanStabilityErrorPolicy = map[string]PlanSt
 	"flexible": PS_ERROR_FLEXIBLE,
 	"moderate": PS_ERROR_MODERATE,
 	"strict":   PS_ERROR_STRICT,
+}
+
+func (this PlanStabilityErrorPolicy) String() string {
+	switch this {
+	case PS_ERROR_FLEXIBLE:
+		return "flexible"
+	case PS_ERROR_MODERATE:
+		return "moderate"
+	case PS_ERROR_STRICT:
+		return "strict"
+	}
+	return fmt.Sprintf("invalid plan stability error policy (%d)", this)
 }
 
 func defaultPlanStabilitySettings() map[string]interface{} {
