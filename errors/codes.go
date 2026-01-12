@@ -231,6 +231,9 @@ const (
 	E_GSI_TEMP_FILE_SIZE                         ErrorCode = 4370
 	E_NO_KNN_SEARCH_INDEX                        ErrorCode = 4380
 	E_ENCODED_PLAN_NOT_ALLOWED                   ErrorCode = 4400
+	E_PREPARED_ENCODED_PLAN                      ErrorCode = 4410
+	E_PREPARED_SAVE_PLAN                         ErrorCode = 4411
+	E_PREPARED_DELETE_PLAN                       ErrorCode = 4412
 	E_MISSING_QUERY_METADATA                     ErrorCode = 4500
 	E_CBO                                        ErrorCode = 4600
 	E_INDEX_STAT                                 ErrorCode = 4610

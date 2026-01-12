@@ -257,3 +257,18 @@ func SetSetting(name string, value interface{}) {
 func GetSetting(name string) interface{} {
 	return globalSettings.getSetting(name)
 }
+
+func getIntValue(val interface{}, defVal int) (intVal int) {
+	intVal = defVal
+	switch val := val.(type) {
+	case int:
+		intVal = val
+	case int64:
+		intVal = int(val)
+	case float64:
+		if value.IsInt(val) {
+			intVal = int(val)
+		}
+	}
+	return intVal
+}

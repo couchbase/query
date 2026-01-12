@@ -115,6 +115,11 @@ func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
 	if !ok {
 		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", psSetting)
 	}
+	var oldMode PlanStabilityMode
+	if oldModeVal, ok := planStability["mode"]; ok {
+		oldMode = PlanStabilityMode(getIntValue(oldModeVal, int(PS_MODE_OFF)))
+	}
+
 	for kk, vv := range psMap {
 		if actual, ok := vv.(value.Value); ok {
 			vv = actual.Actual()
@@ -127,11 +132,13 @@ func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
 
 		switch kk {
 		case "mode":
+			var newMode PlanStabilityMode
 			switch vv := vv.(type) {
 			case string:
 				// when user sets the setting
 				if mode, ok := _PS_MODE_MAP[strings.ToLower(vv)]; ok {
 					planStability[kk] = mode
+					newMode = mode
 				} else {
 					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "'off'/'prepared_only'/'ad_hoc'", vv)
 				}
@@ -140,11 +147,16 @@ func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
 				mode := PlanStabilityMode(vv)
 				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC {
 					planStability[kk] = mode
+					newMode = mode
 				} else {
 					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
 				}
 			default:
 				return errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
+			}
+			err := planCache.UpdatePlanStabilityMode(oldMode, newMode)
+			if err != nil {
+				return err
 			}
 		case "error_policy":
 			switch vv := vv.(type) {
@@ -181,8 +193,8 @@ func GetPlanStabilityMode() PlanStabilityMode {
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
-		if ps_mode, ok := ps_setting["mode"].(PlanStabilityMode); ok {
-			mode = ps_mode
+		if ps_mode_val, ok := ps_setting["mode"]; ok {
+			mode = PlanStabilityMode(getIntValue(ps_mode_val, int(mode)))
 		}
 	}
 	globalSettings.RUnlock()
@@ -214,8 +226,8 @@ func getPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
-		if ps_error_policy, ok := ps_setting["error_policy"].(PlanStabilityErrorPolicy); ok {
-			error_policy = ps_error_policy
+		if ps_error_policy_val, ok := ps_setting["error_policy"]; ok {
+			error_policy = PlanStabilityErrorPolicy(getIntValue(ps_error_policy_val, int(error_policy)))
 		}
 	}
 	globalSettings.RUnlock()
@@ -235,4 +247,16 @@ func IsPlanStabilityErrorModerate() bool {
 func IsPlanStabilityErrorStrict() bool {
 	error_policy := getPlanStabilityErrorPolicy()
 	return error_policy == PS_ERROR_STRICT
+}
+
+// represents prepareds
+
+type PlanCache interface {
+	UpdatePlanStabilityMode(oldMode, newMode PlanStabilityMode) errors.Error
+}
+
+var planCache PlanCache
+
+func SetPlanCache(pc PlanCache) {
+	planCache = pc
 }

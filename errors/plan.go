@@ -198,6 +198,11 @@ func NewAlterIndexError() Error {
 		InternalMsg: fmt.Sprintf("ALTER INDEX not supported"), InternalCaller: CallerN(1)}
 }
 
+func NewPlanNoPlaceholderError() Error {
+	return &err{level: EXCEPTION, ICode: E_PLAN_NO_PLACEHOLDER, IKey: "plan.no_placeholder",
+		InternalMsg: "Placeholder is not allowed in keyspace", InternalCaller: CallerN(1)}
+}
+
 func NewNoAnsiJoinError(alias, op string) Error {
 	return &err{level: EXCEPTION, ICode: E_NO_ANSI_JOIN, IKey: fmt.Sprintf("plan.ansi_%s.no_index", op),
 		InternalMsg: fmt.Sprintf("No index available for ANSI %s term %s", op, alias), InternalCaller: CallerN(1)}
@@ -205,7 +210,31 @@ func NewNoAnsiJoinError(alias, op string) Error {
 
 func NewPartitionIndexNotSupportedError() Error {
 	return &err{level: EXCEPTION, ICode: E_PARTITION_INDEX_NOT_SUPPORTED, IKey: "plan.partition_index_not_supported",
-		InternalMsg: fmt.Sprintf("PARTITION index is not supported by indexer."), InternalCaller: CallerN(1)}
+		InternalMsg: "PARTITION index is not supported by indexer.", InternalCaller: CallerN(1)}
+}
+
+func NewKnnNoSearchIndex() Error {
+	return &err{level: EXCEPTION, ICode: E_NO_KNN_SEARCH_INDEX, IKey: "plan.search.knn",
+		InternalMsg:    "Search() function using KNN and no search index",
+		InternalCaller: CallerN(1)}
+}
+
+func NewPreparedEncodedPlanError(name string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_PREPARED_ENCODED_PLAN, IKey: "plan.prepared.encoded_plan",
+		InternalMsg: fmt.Sprintf("Error building encoded plan for prepared statement %s", name),
+		ICause:      e, InternalCaller: CallerN(1)}
+}
+
+func NewPreparedSavePlanError(name string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_PREPARED_SAVE_PLAN, IKey: "plan.prepared.save_plan",
+		InternalMsg: fmt.Sprintf("Error saving query plan for prepared statement %s", name),
+		ICause:      e, InternalCaller: CallerN(1)}
+}
+
+func NewPreparedDeletePlanError(name string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_PREPARED_DELETE_PLAN, IKey: "plan.prepared.delete_plan",
+		InternalMsg: fmt.Sprintf("Error deleting saved query plan for prepared statement %s", name),
+		ICause:      e, InternalCaller: CallerN(1)}
 }
 
 func NewMissingQueryMetadataError(msg string) Error {
@@ -224,17 +253,6 @@ func NewCBOError(ikey, what string) Error {
 func NewIndexStatError(name, what string) Error {
 	return &err{level: EXCEPTION, ICode: E_INDEX_STAT, IKey: "optimizer.index_stat_error",
 		InternalMsg: fmt.Sprintf("Invalid index statistics for index %s: %s", name, what), InternalCaller: CallerN(1)}
-}
-
-func NewPlanNoPlaceholderError() Error {
-	return &err{level: EXCEPTION, ICode: E_PLAN_NO_PLACEHOLDER, IKey: "plan.no_placeholder",
-		InternalMsg: "Placeholder is not allowed in keyspace", InternalCaller: CallerN(1)}
-}
-
-func NewKnnNoSearchIndex() Error {
-	return &err{level: EXCEPTION, ICode: E_NO_KNN_SEARCH_INDEX, IKey: "plan.search.knn",
-		InternalMsg:    fmt.Sprintf("Search() function using KNN and no search index"),
-		InternalCaller: CallerN(1)}
 }
 
 // error numbers 4901, 4902, 4903, 4904 and 4905 are retired, and cannot be reused

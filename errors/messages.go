@@ -3149,6 +3149,48 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_PREPARED_ENCODED_PLAN, // 4410
+		symbol:      "E_PREPARED_ENCODED_PLAN",
+		Description: "Error building encoded plan for prepared statement <<name>>",
+		Reason: []string{
+			"An error occurred while trying to build a encoded plan for a prepared statement.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_PREPARED_SAVE_PLAN, // 4411
+		symbol:      "E_PREPARED_SAVE_PLAN",
+		Description: "Error saving query plan for prepared statement <<name>>",
+		Reason: []string{
+			"An error occurred while trying to save a query plan for a prepared statement.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_PREPARED_DELETE_PLAN, // 4412
+		symbol:      "E_PREPARED_DELETE_PLAN",
+		Description: "Error deleting saved query plan for prepared statement <<name>>",
+		Reason: []string{
+			"An error occurred while trying to delete a saved query plan for a prepared statement.",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MISSING_QUERY_METADATA, // 4500
 		symbol:      "E_MISSING_QUERY_METADATA",
 		Description: "'QUERY_METADATA' bucket is required for <<msg>>",

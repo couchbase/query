@@ -28,6 +28,7 @@ import (
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
 )
@@ -74,6 +75,7 @@ var predefinedPrepareStatements map[string]string
 func PreparedsInit(limit int) {
 	prepareds.cache = util.NewGenCache(limit)
 	planner.SetPlanCache(prepareds)
+	settings.SetPlanCache(prepareds)
 	predefinedPrepareStatements = map[string]string{
 		"__get": "PREPARE __get FROM SELECT META(d).id, META(d).cas, TO_STR(META(d).cas) AS scas, META(d).txnMeta, d AS doc " +
 			"FROM $1 AS d USE KEYS $2;",

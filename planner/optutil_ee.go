@@ -21,6 +21,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/util"
 )
 
@@ -736,5 +737,5 @@ func persistPrepared(prepared *plan.Prepared) error {
 			return err
 		}
 	}
-	return dictionary.PersistPrepared(fullName, encoded_plan)
+	return dictionary.PersistPrepared(fullName, encoded_plan, true, settings.PS_MODE_OFF)
 }
