@@ -26,7 +26,10 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	} else if newMode == settings.PS_MODE_OFF &&
 		(oldMode == settings.PS_MODE_PREPARED_ONLY || oldMode == settings.PS_MODE_AD_HOC) {
 		// just turned off
-		return deletePreparedPlans(newMode)
+		return updatePreparedStmts(newMode)
+	} else {
+		// switch between PREPARED_ONLY and AD_HOC
+		return updatePreparedStmts(newMode)
 	}
 
 	return nil
@@ -37,6 +40,12 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
  * prepared cache and persist any prepared statement that's not already saved on disk.
  */
 func persistPreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
+	// if newMode is AD_HOC, "downgrade" the mode to PREPARED_ONLY for prepared statements,
+	// since the statements currently in the prepared cache are already explicitly prepared
+	// (AD_HOC is used when an ad_hoc statement is implicitly prepared)
+	if newMode == settings.PS_MODE_AD_HOC {
+		newMode = settings.PS_MODE_PREPARED_ONLY
+	}
 	var err errors.Error
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
@@ -62,33 +71,43 @@ func persistPreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
 
 /*
  * When plan stability mode changes from either PREPARED_ONLY or AD_HOC to OFF, need to go through
- * saved prepared plans and remove all that's not corresponding to a explicitly saved prepared plan
+ * saved prepared plans and remove all that's not corresponding to a explicitly saved prepared plan.
+ * When plan stability mode changes between PREPARED_ONLY and AD_HOC, need to go through prepared
+ * cache and remove saved prepared plan as necessary, and modify the prepared statement
  */
-func deletePreparedPlans(newMode settings.PlanStabilityMode) errors.Error {
+func updatePreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
 	var err errors.Error
 	names := make([]string, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
 		if !prepared.Persist() {
+			var err1 error
 			fullName := encodeName(prepared.Name(), prepared.QueryContext())
-			err1 := dictionary.DeletePrepared(fullName)
-			if err1 != nil {
-				err = errors.NewPreparedDeletePlanError(fullName, err1)
-				return false
-			}
 			curMode := prepared.PlanStabilityMode()
-			if newMode == settings.PS_MODE_OFF {
-				if curMode == settings.PS_MODE_AD_HOC {
-					// need to remove entry
-					names = append(names, fullName)
-				} else if curMode == settings.PS_MODE_PREPARED_ONLY {
-					prepared.SetPlanStabilityMode(newMode)
-					// need to rebuild encoded plan since planStabilityMode changed
-					_, err2 := prepared.BuildEncodedPlan()
-					if err2 != nil {
-						err = errors.NewPreparedEncodedPlanError(fullName, err2)
-						return false
-					}
+			if newMode == settings.PS_MODE_OFF ||
+				(curMode == settings.PS_MODE_AD_HOC && newMode == settings.PS_MODE_PREPARED_ONLY) {
+				// delete the saved query plan
+				err1 = dictionary.DeletePrepared(fullName)
+				if err1 != nil {
+					err = errors.NewPreparedDeletePlanError(fullName, err1)
+					return false
+				}
+			}
+			if curMode == settings.PS_MODE_AD_HOC {
+				// newMode is OFF or PREPARED_ONLY, need to remove entry from cache
+				// (saved query plan should be deleted above already)
+				names = append(names, fullName)
+			} else if curMode == settings.PS_MODE_PREPARED_ONLY && newMode == settings.PS_MODE_OFF {
+				// newMode is OFF
+				// (if newMode is AD_HOC, we do not change the plan stability mode,
+				// since we implicitly downgrade AD_HOC to PREPARED_ONLY for
+				// explicitly prepared statements)
+				prepared.SetPlanStabilityMode(newMode)
+				// need to rebuild encoded plan since planStabilityMode changed
+				_, err1 = prepared.BuildEncodedPlan()
+				if err1 != nil {
+					err = errors.NewPreparedEncodedPlanError(fullName, err1)
+					return false
 				}
 			}
 		}
