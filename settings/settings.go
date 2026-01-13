@@ -10,6 +10,8 @@ package settings
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/couchbase/cbauth/metakv"
@@ -151,6 +153,18 @@ func UpdateSettings(enterprise bool, settings interface{}) (errors.Error, errors
 		return errors.NewSettingsInvalidType("settings", "", settings), nil
 	}
 
+	var invalid []string
+	for k, v := range settingsMap {
+		if _, ok := _accepted_settings[k]; !ok {
+			invalid = append(invalid, fmt.Sprintf("'%s':'%v'", k, v))
+		}
+	}
+	if len(invalid) > 0 {
+		errMsg := fmt.Sprintf("{ %s }", strings.Join(invalid, ","))
+		logging.Errorf("SETTINGS: Invalid settings specified in UPDATE statement: %v", errMsg)
+		return errors.NewSettingsError(nil, fmt.Sprintf("Invalid settings specified: %v", errMsg)), nil
+	}
+
 	for k, v := range settingsMap {
 		if actual, ok := v.(value.Value); ok {
 			v = actual.Actual()
@@ -165,6 +179,7 @@ func UpdateSettings(enterprise bool, settings interface{}) (errors.Error, errors
 		case PLAN_STABILITY:
 			err := updatePlanStabilitySetting(enterprise, v)
 			if err != nil {
+				logging.Errorf("SETTINGS: Error updating Plan Stability setting: %v", err)
 				return err, nil
 			}
 		}
