@@ -17,7 +17,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/prepareds"
-	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -201,8 +200,8 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 	if entry.Prepared.Persist() {
 		itemMap["persist"] = entry.Prepared.Persist()
 	}
-	if entry.Prepared.PlanStabilityMode() != settings.PS_MODE_OFF {
-		itemMap["plan_stability_mode"] = entry.Prepared.PlanStabilityMode().String()
+	if entry.Prepared.AdHoc() {
+		itemMap["adHocStatement"] = entry.Prepared.AdHoc()
 	}
 
 	isks := entry.Prepared.IndexScanKeyspaces()

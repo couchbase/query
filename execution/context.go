@@ -34,7 +34,6 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/sequences"
-	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
@@ -1326,7 +1325,7 @@ func (this *opContext) SetupSubqueryPlans(expr expression.Expression, subqPlans 
 		var hasSubquery bool
 		hasSubquery, err = this.SubqueryPlans(expr, subqPlans, nil, nil, nil, lock)
 		if err == nil && hasSubquery {
-			prepared := plan.NewPrepared(nil, nil, nil, nil, false, false, settings.PS_MODE_OFF)
+			prepared := plan.NewPrepared(nil, nil, nil, nil, false, false, false)
 			prepared.SetDummyPlanVersion()
 			subqPlans.SetPrepared(prepared, lock)
 		}

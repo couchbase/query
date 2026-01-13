@@ -23,7 +23,6 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -49,6 +48,7 @@ type Prepared struct {
 	useFts          bool
 	useCBO          bool
 	persist         bool
+	adHoc           bool
 	planLock        bool
 	preparedTime    time.Time // time the plan was generated
 	optimHints      *algebra.OptimHints
@@ -59,7 +59,6 @@ type Prepared struct {
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
 	planVersion        int
-	planStabilityMode  settings.PlanStabilityMode
 
 	userAgent  string
 	users      string
@@ -79,7 +78,7 @@ type ksVersion struct {
 }
 
 func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
-	optimHints *algebra.OptimHints, persist, planLock bool, psMode settings.PlanStabilityMode) *Prepared {
+	optimHints *algebra.OptimHints, persist, adHoc, planLock bool) *Prepared {
 
 	var planVersion int
 	if operator != nil {
@@ -90,16 +89,16 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 		Operator:           operator,
 		signature:          signature,
 		persist:            persist,
+		adHoc:              adHoc,
 		planLock:           planLock,
 		optimHints:         optimHints,
 		indexScanKeyspaces: indexScanKeyspaces,
 		planVersion:        planVersion,
-		planStabilityMode:  psMode,
 	}
 }
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
-	prepared := NewPrepared(nil, nil, nil, nil, false, false, settings.PS_MODE_OFF)
+	prepared := NewPrepared(nil, nil, nil, nil, false, false, false)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return prepared, nil, errors.NewPreparedDecodingError(err)
@@ -170,6 +169,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.persist {
 		r["persist"] = this.persist
 	}
+	if this.adHoc {
+		r["adHocStatement"] = this.adHoc
+	}
 	if this.planLock {
 		r["planLock"] = this.planLock
 	}
@@ -200,6 +202,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		UseFts             bool                   `json:"useFts"`
 		UseCBO             bool                   `json:"useCBO"`
 		Persist            bool                   `json:"persist"`
+		AdHoc              bool                   `json:"adHocStatement"`
 		PlanLock           bool                   `json:"planLock"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
@@ -209,7 +212,6 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		CreatingUserAgent  string                 `json:"creatingUserAgent"`
 		Users              string                 `json:"users"`
 		RemoteAddr         string                 `json:"remoteAddr"`
-		PlanStabilityMode  int                    `json:"plan_stability_mode"`
 	}
 
 	var op_type struct {
@@ -243,6 +245,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
 	this.persist = _unmarshalled.Persist
+	this.adHoc = _unmarshalled.AdHoc
 	this.planLock = _unmarshalled.PlanLock
 	this.planVersion = _unmarshalled.Version
 
@@ -277,10 +280,6 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		if err != nil {
 			return err
 		}
-	}
-	planStabilityMode := settings.PlanStabilityMode(_unmarshalled.PlanStabilityMode)
-	if planStabilityMode >= settings.PS_MODE_OFF && planStabilityMode <= settings.PS_MODE_AD_HOC {
-		this.planStabilityMode = planStabilityMode
 	}
 
 	planContext := newPlanContext(nil)
@@ -415,20 +414,20 @@ func (this *Prepared) SetPersist(persist bool) {
 	this.persist = persist
 }
 
+func (this *Prepared) AdHoc() bool {
+	return this.adHoc
+}
+
+func (this *Prepared) SetAdHoc(adHoc bool) {
+	this.adHoc = adHoc
+}
+
 func (this *Prepared) PlanLock() bool {
 	return this.planLock
 }
 
 func (this *Prepared) SetPlanLock(planLock bool) {
 	this.planLock = planLock
-}
-
-func (this *Prepared) PlanStabilityMode() settings.PlanStabilityMode {
-	return this.planStabilityMode
-}
-
-func (this *Prepared) SetPlanStabilityMode(planStabilityMode settings.PlanStabilityMode) {
-	this.planStabilityMode = planStabilityMode
 }
 
 func (this *Prepared) EncodedPlan() string {
@@ -444,7 +443,6 @@ func (this *Prepared) BuildEncodedPlan() (string, error) {
 
 	r := make(map[string]interface{}, 5)
 	r["planVersion"] = this.planVersion
-	r["plan_stability_mode"] = this.planStabilityMode
 	this.marshalInternal(r)
 	json_bytes, err := json.Marshal(r)
 	if err != nil {

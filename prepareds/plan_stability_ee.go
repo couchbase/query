@@ -50,13 +50,15 @@ func persistPreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
 		if !prepared.Persist() {
+			var err1 error
 			fullName := encodeName(prepared.Name(), prepared.QueryContext())
-			prepared.SetPlanStabilityMode(newMode)
-			// need to rebuild encoded plan since planStabilityMode changed
-			encoded_plan, err1 := prepared.BuildEncodedPlan()
-			if err1 != nil {
-				err = errors.NewPreparedEncodedPlanError(fullName, err1)
-				return false
+			encoded_plan := prepared.EncodedPlan()
+			if encoded_plan == "" {
+				encoded_plan, err1 = prepared.BuildEncodedPlan()
+				if err1 != nil {
+					err = errors.NewPreparedEncodedPlanError(fullName, err1)
+					return false
+				}
 			}
 			err1 = dictionary.PersistPrepared(fullName, encoded_plan, false, newMode)
 			if err1 != nil {
@@ -83,9 +85,8 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
 		if !prepared.Persist() {
 			var err1 error
 			fullName := encodeName(prepared.Name(), prepared.QueryContext())
-			curMode := prepared.PlanStabilityMode()
 			if newMode == settings.PS_MODE_OFF ||
-				(curMode == settings.PS_MODE_AD_HOC && newMode == settings.PS_MODE_PREPARED_ONLY) {
+				(prepared.AdHoc() && newMode == settings.PS_MODE_PREPARED_ONLY) {
 				// delete the saved query plan
 				err1 = dictionary.DeletePrepared(fullName)
 				if err1 != nil {
@@ -93,22 +94,10 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
 					return false
 				}
 			}
-			if curMode == settings.PS_MODE_AD_HOC {
+			if prepared.AdHoc() {
 				// newMode is OFF or PREPARED_ONLY, need to remove entry from cache
 				// (saved query plan should be deleted above already)
 				names = append(names, fullName)
-			} else if curMode == settings.PS_MODE_PREPARED_ONLY && newMode == settings.PS_MODE_OFF {
-				// newMode is OFF
-				// (if newMode is AD_HOC, we do not change the plan stability mode,
-				// since we implicitly downgrade AD_HOC to PREPARED_ONLY for
-				// explicitly prepared statements)
-				prepared.SetPlanStabilityMode(newMode)
-				// need to rebuild encoded plan since planStabilityMode changed
-				_, err1 = prepared.BuildEncodedPlan()
-				if err1 != nil {
-					err = errors.NewPreparedEncodedPlanError(fullName, err1)
-					return false
-				}
 			}
 		}
 		return true

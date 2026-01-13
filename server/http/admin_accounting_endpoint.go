@@ -713,8 +713,8 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 	if entry.Prepared.Persist() {
 		itemMap["persist"] = entry.Prepared.Persist()
 	}
-	if entry.Prepared.PlanStabilityMode() != settings.PS_MODE_OFF {
-		itemMap["plan_stability_mode"] = entry.Prepared.PlanStabilityMode().String()
+	if entry.Prepared.AdHoc() {
+		itemMap["adHocStatement"] = entry.Prepared.AdHoc()
 	}
 	isks := entry.Prepared.IndexScanKeyspaces()
 	if len(isks) > 0 {
@@ -790,7 +790,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		redact := doRedact(req)
 		prepareds.PreparedsForeach(func(name string, d *prepareds.CacheEntry) bool {
-			if !d.Prepared.Persist() && d.Prepared.PlanStabilityMode() == settings.PS_MODE_OFF {
+			if !d.Prepared.Persist() && settings.IsPlanStabilityDisabled() {
 				p := preparedWorkHorse(d, profiling, redact, durStyle)
 				data = append(data, p)
 			}
