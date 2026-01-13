@@ -382,8 +382,8 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 
 	bName := "bucket"
 	if tenant.IsServerless() {
+		w.Write([]byte("# TYPE n1ql_tenant_memory gauge\n"))
 		tenant.Foreach(func(n string, m memory.MemoryManager) {
-			w.Write([]byte("# TYPE n1ql_tenant_memory gauge\n"))
 			w.Write([]byte("n1ql_tenant_memory{bucket=\"" + n + "\"} "))
 			w.Write([]byte(fmt.Sprintf("%v\n", m.AllocatedMemory())))
 		})
@@ -391,15 +391,43 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	}
 	store, ok := datastore.GetDatastore().(datastore.Datastore2)
 	if ok {
+		nBuckets := 0
 		store.ForeachBucket(func(b datastore.ExtendedBucket) {
-			stats := b.GetIOStats(false, true, true, tenant.IsServerless(), false)
-			for n, s := range stats {
-				statName := "n1ql_" + bName + "_" + n
-				w.Write([]byte("# TYPE " + statName + " gauge\n"))
-				w.Write([]byte(statName + "{bucket=\"" + b.Name() + "\"} "))
-				w.Write([]byte(fmt.Sprintf("%v\n", s)))
-			}
+			nBuckets++
 		})
+
+		if nBuckets > 0 {
+			bucketStats := make(map[string]map[string]interface{}, nBuckets)
+			var referenceBucketStats map[string]interface{}
+
+			store.ForeachBucket(func(b datastore.ExtendedBucket) {
+				stats := b.GetIOStats(false, true, true, tenant.IsServerless(), false)
+				bucketStats[b.Name()] = stats
+
+				/*
+					Since the map of a bucket's stats is obtained by calling GetIOStats() with the 'all' parameter set to true,
+					all bucket stat names are returned regardless of their value.  We later use the first bucket stat's map as
+					reference to obtain the bucket stat names by iterating over the keys of this map
+				*/
+				if referenceBucketStats == nil {
+					referenceBucketStats = stats
+				}
+			})
+
+			// Group the bucket stats by the name of the metric
+			prefix := "n1ql_" + bName + "_"
+			for stat := range referenceBucketStats {
+				metricName := prefix + stat
+				w.Write([]byte("# TYPE " + metricName + " gauge\n"))
+
+				for bucket, stats := range bucketStats {
+					if val, ok := stats[stat]; ok {
+						w.Write([]byte(metricName + "{bucket=\"" + bucket + "\"} "))
+						w.Write([]byte(fmt.Sprintf("%v\n", val)))
+					}
+				}
+			}
+		}
 	}
 
 	return textPlain(""), nil
