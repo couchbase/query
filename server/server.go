@@ -1641,6 +1641,12 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			}
 		}
 
+		if autoExecute {
+			// already have the plan from the cache entry. There's no need for autoexecute functionality.
+			autoExecute = false
+			request.SetAutoExecute(value.FALSE)
+		}
+
 		// ditto
 		request.SetType(prepared.Type())
 		if ok, msg := transactions.IsValidStatement(request.TxId(), request.Type(), request.TxImplicit(), true); !ok {
