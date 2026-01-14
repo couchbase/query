@@ -115,6 +115,10 @@ func (ci *queryContextImpl) RecordKvRU(ru tenant.Unit) {
 func (ci *queryContextImpl) RecordKvWU(wu tenant.Unit) {
 }
 
+func (ci *queryContextImpl) ScanReportWait() time.Duration {
+	return time.Duration(0)
+}
+
 func (ci *queryContextImpl) SkipKey(key string) bool {
 	return false
 }

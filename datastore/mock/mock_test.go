@@ -259,6 +259,10 @@ func (this *testingContext) Credentials() *auth.Credentials {
 	return nil
 }
 
+func (this *testingContext) ScanReportWait() time.Duration {
+	return time.Duration(0)
+}
+
 func (this *testingContext) SkipKey(key string) bool {
 	return false
 }
