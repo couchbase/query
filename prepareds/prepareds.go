@@ -525,10 +525,17 @@ func AddPrepared(prepared *plan.Prepared) errors.Error {
 	if !added {
 		return errors.NewPreparedNameError(
 			fmt.Sprintf("duplicate name: %s", fullName))
-	} else {
-		distributePrepared(fullName, prepared.EncodedPlan())
-		return nil
 	}
+
+	if prepared.Persist() || settings.IsPlanStabilityEnabled() {
+		err := persistPrepared(prepared)
+		if err != nil {
+			return err
+		}
+	}
+
+	distributePrepared(fullName, prepared.EncodedPlan())
+	return nil
 }
 
 func DeletePrepared(name string) errors.Error {
@@ -878,7 +885,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 
 	prepStmt := stmt.(*algebra.Prepare)
 	pl, err, _ := planner.BuildPrepared(prepStmt.Statement(), store, systemstore, prepared.Namespace(),
-		false, true, prepStmt.Save(), &prepContext)
+		false, true, &prepContext)
 	if phaseTime != nil {
 		*phaseTime += util.Now().Sub(prep)
 	}
@@ -900,6 +907,8 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl.SetUserAgent(prepared.UserAgent())
 	pl.SetRemoteAddr(prepared.RemoteAddr())
 	pl.SetUsers(prepared.Users())
+	pl.SetPersist(prepared.Persist())
+	pl.SetAdHoc(prepared.AdHoc())
 
 	_, err = pl.BuildEncodedPlan()
 	if err != nil {
@@ -949,7 +958,7 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string,
 
 	prepStmt := stmt.(*algebra.Prepare)
 	prepared, err, _ := planner.BuildPrepared(prepStmt.Statement(), store, systemstore, namespace,
-		false, true, prepStmt.Save(), &prepContext)
+		false, true, &prepContext)
 	if err != nil {
 		return nil, errors.NewPlanError(err, "BuildPrepared")
 	}

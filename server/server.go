@@ -44,6 +44,7 @@ import (
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/semantics"
 	queryMetakv "github.com/couchbase/query/server/settings/couchbase"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
@@ -1935,7 +1936,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 		var subTimes map[string]time.Duration
 		prepared, err, subTimes = planner.BuildPrepared(stmt, this.datastore, this.systemstore, context.Namespace(),
-			autoExecute, !autoExecute, persist, &prepContext)
+			autoExecute, !autoExecute, &prepContext)
 		if subTimes != nil {
 			for k, v := range subTimes {
 				p := execution.PhaseByName("plan." + k)
@@ -2003,6 +2004,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 						prepared.SetUsers(datastore.CredsString(request.Credentials()))
 						prepared.SetUserAgent(request.UserAgent())
 						prepared.SetRemoteAddr(request.RemoteAddr())
+						prepared.SetPersist(persist)
+						prepared.SetAdHoc(!persist && settings.IsPlanStabilityAdHoc())
 
 						// trigger prepare metrics recording
 						if prepareds.AddAutoPreparePlan(stmt, prepared) {

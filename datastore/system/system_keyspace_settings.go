@@ -113,7 +113,7 @@ func (b *settingsKeyspace) Update(updates value.Pairs, context datastore.QueryCo
 			continue
 		}
 
-		err, warnings := settings.UpdateSettings(b.namespace.store.enterprise, pair.Value)
+		err, warnings := settings.UpdateSettings(b.namespace.store.enterprise, context.RequestId(), pair.Value)
 		if warnings != nil {
 			for _, w := range warnings {
 				context.Warning(w)

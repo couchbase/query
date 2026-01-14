@@ -78,7 +78,7 @@ type ksVersion struct {
 }
 
 func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
-	optimHints *algebra.OptimHints, persist, adHoc, planLock bool) *Prepared {
+	optimHints *algebra.OptimHints) *Prepared {
 
 	var planVersion int
 	if operator != nil {
@@ -88,9 +88,6 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 	return &Prepared{
 		Operator:           operator,
 		signature:          signature,
-		persist:            persist,
-		adHoc:              adHoc,
-		planLock:           planLock,
 		optimHints:         optimHints,
 		indexScanKeyspaces: indexScanKeyspaces,
 		planVersion:        planVersion,
@@ -98,7 +95,7 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 }
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
-	prepared := NewPrepared(nil, nil, nil, nil, false, false, false)
+	prepared := NewPrepared(nil, nil, nil, nil)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return prepared, nil, errors.NewPreparedDecodingError(err)

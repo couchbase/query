@@ -12,6 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -59,12 +60,15 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	dks := this.context.DeltaKeyspaces()
 	this.context.SetDeltaKeyspaces(nil)
 	prep, err, _ = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace,
-		false, true, stmt.Save(), this.context)
+		false, true, this.context)
 	this.context.SetDeltaKeyspaces(dks)
 
 	if err != nil {
 		return nil, err
 	}
+
+	persist := stmt.Save()
+	planStabilityMode := settings.GetPlanStabilityMode()
 
 	prep.SetName(name)
 	prep.SetText(text)
@@ -79,6 +83,8 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetUsers(this.context.dsContext.Users())
 	prep.SetRemoteAddr(this.context.dsContext.RemoteAddr())
 	prep.SetPreparedTime(util.Now().ToTime())
+	prep.SetPersist(persist)
+	prep.SetAdHoc(!persist && planStabilityMode == settings.PS_MODE_AD_HOC)
 
 	json_bytes, err := prep.MarshalJSON()
 	if err != nil {
@@ -91,11 +97,14 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 
 	prep.SetEncodedPlan(str)
 
-	if stmt.Save() {
-		// persist the query plan after prepared name and query context are set
-		err = persistPrepared(prep)
-		if err != nil {
-			return nil, err
+	if persist || (planStabilityMode == settings.PS_MODE_PREPARED_ONLY || planStabilityMode == settings.PS_MODE_AD_HOC) {
+		// check and create (if not exists) QUERY_METADATA bucket
+		hasMetadata, err1 := hasQueryMetadata(true, this.context.RequestId(), true)
+		if err1 == nil && !hasMetadata {
+			err1 = errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
+		}
+		if err1 != nil {
+			return nil, err1
 		}
 	}
 

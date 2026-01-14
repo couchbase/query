@@ -12,9 +12,18 @@ package prepareds
 
 import (
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/settings"
 )
 
-func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode) errors.Error {
+func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
+	return false, errors.NewEnterpriseFeature("Query meta data bucket", "plan.has_query_metadata")
+}
+
+func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
+	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.update_plan_stability_mode")
+}
+
+func persistPrepared(prepared *plan.Prepared) errors.Error {
 	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.update_plan_stability_mode")
 }

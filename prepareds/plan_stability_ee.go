@@ -13,16 +13,21 @@ package prepareds
 import (
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/settings"
 )
 
-func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode) errors.Error {
+func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
+	return dictionary.HasQueryMetadata(create, requestId, waitOnCreate)
+}
+
+func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	if oldMode == newMode {
 		return nil
 	} else if oldMode == settings.PS_MODE_OFF &&
 		(newMode == settings.PS_MODE_PREPARED_ONLY || newMode == settings.PS_MODE_AD_HOC) {
 		// just turned on
-		return persistPreparedStmts(newMode)
+		return persistPreparedStmts(newMode, requestId)
 	} else if newMode == settings.PS_MODE_OFF &&
 		(oldMode == settings.PS_MODE_PREPARED_ONLY || oldMode == settings.PS_MODE_AD_HOC) {
 		// just turned off
@@ -39,30 +44,22 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
  * When plan stability mode changes from OFF to either PREPARED_ONLY or AD_HOC, need to go through
  * prepared cache and persist any prepared statement that's not already saved on disk.
  */
-func persistPreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
-	// if newMode is AD_HOC, "downgrade" the mode to PREPARED_ONLY for prepared statements,
-	// since the statements currently in the prepared cache are already explicitly prepared
-	// (AD_HOC is used when an ad_hoc statement is implicitly prepared)
-	if newMode == settings.PS_MODE_AD_HOC {
-		newMode = settings.PS_MODE_PREPARED_ONLY
+func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) errors.Error {
+	// check and create (if not exists) QUERY_METADATA bucket
+	hasMetadata, err := hasQueryMetadata(true, requestId, true)
+	if err == nil && !hasMetadata {
+		err = errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
 	}
-	var err errors.Error
+	if err != nil {
+		return err
+	}
+
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
 		if !prepared.Persist() {
-			var err1 error
-			fullName := encodeName(prepared.Name(), prepared.QueryContext())
-			encoded_plan := prepared.EncodedPlan()
-			if encoded_plan == "" {
-				encoded_plan, err1 = prepared.BuildEncodedPlan()
-				if err1 != nil {
-					err = errors.NewPreparedEncodedPlanError(fullName, err1)
-					return false
-				}
-			}
-			err1 = dictionary.PersistPrepared(fullName, encoded_plan, false, newMode)
+			err1 := persistPrepared(prepared)
 			if err1 != nil {
-				err = errors.NewPreparedSavePlanError(fullName, err1)
+				err = err1
 				return false
 			}
 		}
@@ -113,5 +110,22 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
 		}
 	}
 
+	return nil
+}
+
+func persistPrepared(prepared *plan.Prepared) errors.Error {
+	var err1 error
+	fullName := encodeName(prepared.Name(), prepared.QueryContext())
+	encoded_plan := prepared.EncodedPlan()
+	if encoded_plan == "" {
+		encoded_plan, err1 = prepared.BuildEncodedPlan()
+		if err1 != nil {
+			return errors.NewPreparedEncodedPlanError(fullName, err1)
+		}
+	}
+	err1 = dictionary.PersistPrepared(fullName, encoded_plan, prepared.Persist(), prepared.AdHoc())
+	if err1 != nil {
+		return errors.NewPreparedSavePlanError(fullName, err1)
+	}
 	return nil
 }

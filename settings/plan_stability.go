@@ -101,7 +101,7 @@ func defaultPlanStabilitySettings() map[string]interface{} {
 	}
 }
 
-func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
+func updatePlanStabilitySetting(enterprise bool, requestId string, val interface{}) errors.Error {
 	if !enterprise {
 		return errors.NewSettingsEnterpriseOnly("Plan Stability")
 	}
@@ -154,7 +154,7 @@ func updatePlanStabilitySetting(enterprise bool, val interface{}) errors.Error {
 			default:
 				return errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
 			}
-			err := planCache.UpdatePlanStabilityMode(oldMode, newMode)
+			err := planCache.UpdatePlanStabilityMode(oldMode, newMode, requestId)
 			if err != nil {
 				return err
 			}
@@ -252,7 +252,7 @@ func IsPlanStabilityErrorStrict() bool {
 // represents prepareds
 
 type PlanCache interface {
-	UpdatePlanStabilityMode(oldMode, newMode PlanStabilityMode) errors.Error
+	UpdatePlanStabilityMode(oldMode, newMode PlanStabilityMode, requestId string) errors.Error
 }
 
 var planCache PlanCache

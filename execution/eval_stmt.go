@@ -26,6 +26,7 @@ import (
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/semantics"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
@@ -392,7 +393,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 
 	//  monitoring code TBD
 	prepared, err, _ = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace,
-		subquery, true, persist, &prepContext)
+		subquery, true, &prepContext)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -446,6 +447,8 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 			prepared.SetQueryContext(this.queryContext)
 			prepared.SetUseFts(this.useFts)
 			prepared.SetPreparedTime(prep) // set the time the plan was generated
+			prepared.SetPersist(persist)
+			prepared.SetAdHoc(!persist && settings.IsPlanStabilityAdHoc())
 			prepareds.AddAutoPreparePlan(stmt, prepared)
 		}
 
