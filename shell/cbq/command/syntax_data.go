@@ -21,6 +21,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"MULTI"},
 		[]string{"SPARSE"},
 		[]string{"VECTOR"},
+		[]string{"CYCLE"},
 	},
 	"statements": [][]string{
 		[]string{"advise"},
@@ -1237,15 +1238,8 @@ var statement_syntax = map[string][][]string{
 		[]string{"alter_sequence"},
 	},
 	"create_sequence": [][]string{
-		[]string{"CREATE", "SEQUENCE", "sequence_name_options", "[seq_create_options]"},
-	},
-	"sequence_name_options": [][]string{
-		[]string{"sequence_name_option"},
-		[]string{"sequence_name_options", "sequence_name_option"},
-	},
-	"sequence_name_option": [][]string{
-		[]string{"IF", "NOT", "EXISTS"},
-		[]string{"sequence_full_name"},
+		[]string{"CREATE", "SEQUENCE", "sequence_full_name", "[if_not_exists]", "[seq_create_options]"},
+		[]string{"CREATE", "SEQUENCE", "IF", "NOT", "EXISTS", "sequence_full_name", "[seq_create_options]"},
 	},
 	"[seq_create_options]": [][]string{
 		[]string{"[seq_create_options]", "seq_create_option"},
