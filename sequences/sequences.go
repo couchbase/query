@@ -1332,11 +1332,7 @@ func ValidateCreateSequenceOption(m map[string]interface{}, optionName string, o
 		return "invalid option value"
 	}
 
-	var optionValue value.Value
-	var ok bool
-	if optionValue, ok = optionValue.(value.Value); !ok {
-		return "invalid option value"
-	}
+	optionValue := value.NewValue(optionVal)
 
 	if optionName == "with" {
 		if len(m) != 0 {
@@ -1377,11 +1373,9 @@ func ValidateAlterSequenceOption(m map[string]interface{}, optionName string, op
 	if optionVal == nil {
 		return "invalid option value"
 	}
-	var optionValue value.Value
-	var ok bool
-	if optionValue, ok = optionVal.(value.Value); !ok {
-		return "invalid option value"
-	}
+
+	optionValue := value.NewValue(optionVal)
+
 	if _, ok := m[optionName]; ok {
 		return "duplicate option"
 	}
