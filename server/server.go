@@ -1838,6 +1838,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		autoPrepare = request.AutoPrepare() == value.TRUE
 	}
 
+	planStabilityAdHoc := settings.IsPlanStabilityAdHoc()
+
 	namedArgs := request.NamedArgs()
 	positionalArgs := request.PositionalArgs()
 	dsContext := context
@@ -1846,7 +1848,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		autoPrepare = false
 	}
 
-	if prepared == nil && autoPrepare {
+	if prepared == nil && (autoPrepare || planStabilityAdHoc) {
 
 		// no datastore context for autoprepare
 		var prepContext planner.PrepareContext
@@ -1857,7 +1859,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
 			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(),
-				request.Namespace(), &prepContext)
+				request.Namespace(), planStabilityAdHoc, &prepContext)
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false
@@ -1993,7 +1995,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 					// if autoPrepare is on and this statement is eligible
 					// save it for the benefit of others
-					if autoPrepare {
+					if autoPrepare || planStabilityAdHoc {
 						prepared.SetName(name)
 						prepared.SetIndexApiVersion(request.IndexApiVersion())
 						prepared.SetFeatureControls(request.FeatureControls())
@@ -2005,7 +2007,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 						prepared.SetUserAgent(request.UserAgent())
 						prepared.SetRemoteAddr(request.RemoteAddr())
 						prepared.SetPersist(persist)
-						prepared.SetAdHoc(!persist && settings.IsPlanStabilityAdHoc())
+						prepared.SetAdHoc(!persist && planStabilityAdHoc)
 
 						// trigger prepare metrics recording
 						if prepareds.AddAutoPreparePlan(stmt, prepared) {

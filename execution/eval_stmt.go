@@ -322,7 +322,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	if autoPrepare {
 		name = prepareds.GetAutoPrepareName(statement, &prepContext)
 		if name != "" {
-			prepared = prepareds.GetAutoPreparePlan(name, statement, this.namespace, &prepContext)
+			prepared = prepareds.GetAutoPreparePlan(name, statement, this.namespace, false, &prepContext)
 			if prepared != nil {
 				if readonly && !prepared.Readonly() {
 					return nil, nil, false, fmt.Errorf("not a readonly request")

@@ -420,7 +420,7 @@ func GetAutoPrepareName(text string, context *planner.PrepareContext) string {
 	return name
 }
 
-func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareContext) *plan.Prepared {
+func GetAutoPreparePlan(name, text, namespace string, planStabilityAdHoc bool, context *planner.PrepareContext) *plan.Prepared {
 
 	// for auto prepare, we don't verify or reprepare because that would mean
 	// accepting valid but possibly suboptimal statements
@@ -431,7 +431,13 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	// we'll let the caller handle the planning.
 	// The new statement will have the latest change counters, so until we
 	// have a new index no other planning will be necessary
-	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), OPT_TRACK|OPT_METACHECK, nil, context.Context())
+	options := uint32(OPT_TRACK)
+	if planStabilityAdHoc {
+		options |= OPT_VERIFY
+	} else {
+		options |= OPT_METACHECK
+	}
+	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), options, nil, context.Context())
 	if err != nil {
 		if err.Code() != errors.E_NO_SUCH_PREPARED {
 			logging.Infof("Auto Prepare plan fetching failed with %v", err)
@@ -471,16 +477,35 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
 		return false
 	}
 
+	planStabilityAdHoc := prepared.AdHoc() && settings.IsPlanStabilityAdHoc()
+	featureName := "Auto Prepare"
+	if planStabilityAdHoc {
+		featureName = "Plan Stability (AD_HOC)"
+	}
+
 	added := true
 	prepareds.add(prepared, false, true, func(ce *CacheEntry) bool {
 		added = ce.Prepared.Text() == prepared.Text()
 		if !added {
-			logging.Infof("Auto Prepare found mismatching name and statement %v %v %v", prepared.Name(), prepared.Text(),
-				ce.Prepared.Text())
+			logging.Infof("%s found mismatching name and statement %v %v %v", featureName,
+				prepared.Name(), prepared.Text(), ce.Prepared.Text())
 		}
 		return added
 	})
-	return added
+	if !added {
+		return false
+	}
+
+	if planStabilityAdHoc {
+		err := persistPrepared(prepared)
+		if err != nil {
+			logging.Errorf("Plan Stability (AD_HOC) encounters error while trying to persist plan for statement %v %v, error %v",
+				prepared.Name(), prepared.Text(), err)
+			return false
+		}
+	}
+
+	return true
 }
 
 // Prepareds and system keyspaces
