@@ -147,7 +147,7 @@ func PreparedsRemotePrime() {
 					func(doc map[string]interface{}) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
-							_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, logging.NULL_LOG)
+							_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, false, logging.NULL_LOG)
 							if err == nil {
 								count++
 								if reprepareCause != nil {
@@ -651,12 +651,15 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		}
 	}
 
+	planStability := settings.GetPlanStabilityMode() != settings.PS_MODE_OFF
+
 	if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
 		distributed.RemoteAccess().GetRemoteDoc(host, encodedName, "prepareds", "GET",
 			func(doc map[string]interface{}) {
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
-					prepared, err, _ = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime, true, log)
+					prepared, err, _ = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime,
+						true, planStability, log)
 				}
 			},
 			func(warn errors.Error) {
@@ -705,8 +708,9 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		// locking will occur at adding time: both requests will insert,
 		// the last wins
 		if (!good || prepared.PreparedTime().IsZero()) && !metaCheck {
-			prepared, err = reprepare(prepared, nil, phaseTime, log)
-			if err == nil {
+			var replace bool
+			prepared, replace, err = reprepare(prepared, nil, phaseTime, planStability, log)
+			if err == nil && replace {
 				err = AddPrepared(prepared)
 			}
 		}
@@ -746,16 +750,17 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 	})
 }
 
-func DecodePrepared(prepared_name string, prepared_stmt string, reprep bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
-	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, log)
+func DecodePrepared(prepared_name string, prepared_stmt string, reprep, planStability bool,
+	log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
+	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, planStability, log)
 }
 
 func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool,
-	phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
+	phaseTime *time.Duration, reprep, planStability bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
 
 	added := true
 
-	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, log)
+	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, planStability, log)
 	if err != nil {
 		return nil, err, nil
 	}
@@ -783,34 +788,39 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// we don't trust anything strangers give us.
 	// check the plan and populate metadata counters
 	// reprepare if no good
+	add := true
 	verifyErr := prepared.Verify()
 	if verifyErr != nil {
-		newPrepared, prepErr := reprepare(prepared, nil, phaseTime, log)
+		newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability, log)
 		if prepErr == nil {
 			prepared = newPrepared
+			add = replace
 		} else {
 			return nil, prepErr, nil
 		}
 	}
 
-	prepareds.add(prepared, verifyErr == nil, track,
-		func(oldEntry *CacheEntry) bool {
+	if add {
+		prepareds.add(prepared, verifyErr == nil, track,
+			func(oldEntry *CacheEntry) bool {
 
-			// MB-19509: if the entry exists already, the new plan must
-			// also be for the same statement as we have in the cache
-			if oldEntry.Prepared != prepared &&
-				oldEntry.Prepared.Text() != prepared.Text() {
-				added = false
+				// MB-19509: if the entry exists already, the new plan must
+				// also be for the same statement as we have in the cache
+				if oldEntry.Prepared != prepared &&
+					oldEntry.Prepared.Text() != prepared.Text() {
+					added = false
+					return added
+				}
+
+				// MB-19659: this is where we decide plan conflict.
+				// the current behaviour is to always use the new plan
+				// and amend the cache
+				// This is still to be finalized
 				return added
-			}
+			})
+	}
 
-			// MB-19659: this is where we decide plan conflict.
-			// the current behaviour is to always use the new plan
-			// and amend the cache
-			// This is still to be finalized
-			return added
-		})
-
+	// if add == false, added remains true even though it is not added to the cache
 	if added {
 		var reprepReason errors.Errors
 		if unmarshallErr != nil {
@@ -825,7 +835,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	}
 }
 
-func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Error) {
+func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planStability bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Error) {
 	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded)
 	if err != nil {
 		if reprep && len(bytes) > 0 {
@@ -839,7 +849,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, lo
 				err1 = json.Unmarshal(text, &stmt)
 				if err1 == nil {
 					prepared.SetText(stmt)
-					pl, _ := reprepare(prepared, nil, phaseTime, log)
+					pl, _, _ := reprepare(prepared, nil, phaseTime, planStability, log)
 					if pl != nil {
 						return pl, nil, err
 					}
@@ -852,7 +862,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, lo
 	} else if reprep && (prepared.PlanVersion() > util.PLAN_VERSION) {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
-		pl, err := reprepare(prepared, nil, phaseTime, log)
+		pl, _, err := reprepare(prepared, nil, phaseTime, false, log)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -872,8 +882,18 @@ func distributePrepared(name, plan string) {
 		}, distributed.NO_CREDS, "")
 }
 
-func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration, log logging.Log) (
-	*plan.Prepared, errors.Error) {
+func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
+	planStability bool, log logging.Log) (*plan.Prepared, bool, errors.Error) {
+
+	replace := true
+	if planStability {
+		error_policy := settings.GetPlanStabilityErrorPolicy()
+		if error_policy == settings.PS_ERROR_STRICT {
+			return nil, false, errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
+		} else if error_policy == settings.PS_ERROR_MODERATE {
+			replace = false
+		}
+	}
 
 	parse := util.Now()
 
@@ -884,18 +904,18 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 
 	if err != nil {
 		// this should never happen: the statement parsed to start with
-		return nil, errors.NewReprepareError(err)
+		return nil, false, errors.NewReprepareError(err)
 	}
 
 	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
-		return nil, errors.NewRewriteError(err, "")
+		return nil, false, errors.NewRewriteError(err, "")
 	}
 
 	// since this is a reprepare, no need to check semantics again after parsing.
 	prep := util.Now()
 	requestId, err := util.UUIDV4()
 	if err != nil {
-		return nil, errors.NewReprepareError(fmt.Errorf("Context is nil"))
+		return nil, false, errors.NewReprepareError(fmt.Errorf("Context is nil"))
 	}
 
 	var optimizer planner.Optimizer
@@ -915,7 +935,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 		*phaseTime += util.Now().Sub(prep)
 	}
 	if err != nil {
-		return nil, errors.NewReprepareError(err)
+		return nil, false, errors.NewReprepareError(err)
 	}
 
 	pl.SetName(prepared.Name())
@@ -937,13 +957,13 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 
 	_, err = pl.BuildEncodedPlan()
 	if err != nil {
-		return nil, errors.NewReprepareError(err)
+		return nil, false, errors.NewReprepareError(err)
 	}
 
 	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
 		pl.Verify() // this adds the indexers so we can immediately detect future changes
 	}
-	return pl, nil
+	return pl, replace, nil
 }
 
 func predefinedPrepareStatement(name, statement, queryContext, namespace string, log logging.Log) (
@@ -1021,7 +1041,7 @@ func getTxPrepared(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phas
 	if txPrepared != nil {
 		return
 	}
-	txPrepared, err = reprepare(prepared, deltaKeyspaces, phaseTime, log)
+	txPrepared, _, err = reprepare(prepared, deltaKeyspaces, phaseTime, settings.GetPlanStabilityMode() != settings.PS_MODE_OFF, log)
 	if err == nil {
 		prepared.SetTxPrepared(txPrepared, hashCode)
 	}

@@ -345,7 +345,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
 			decoded_plan, plan_err, _ = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan,
-				(prepared == nil), &phaseTime, true, log)
+				(prepared == nil), &phaseTime, true, false, log)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {

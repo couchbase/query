@@ -1116,7 +1116,7 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
 	rv, err, _ := prepareds.DecodePreparedWithContext(ra["name"].(string), queryContext, ra["encoded_plan"].(string),
-		false, nil, false, logging.NULL_LOG)
+		false, nil, false, false, logging.NULL_LOG)
 	if err != nil {
 		return rv, err
 	}

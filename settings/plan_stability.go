@@ -221,7 +221,7 @@ func IsPlanStabilityAdHoc() bool {
 	return mode == PS_MODE_AD_HOC
 }
 
-func getPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
+func GetPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
 	error_policy := PS_ERROR_MODERATE
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
@@ -235,17 +235,17 @@ func getPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
 }
 
 func IsPlanStabilityErrorFlexible() bool {
-	error_policy := getPlanStabilityErrorPolicy()
+	error_policy := GetPlanStabilityErrorPolicy()
 	return error_policy == PS_ERROR_FLEXIBLE
 }
 
 func IsPlanStabilityErrorModerate() bool {
-	error_policy := getPlanStabilityErrorPolicy()
+	error_policy := GetPlanStabilityErrorPolicy()
 	return error_policy == PS_ERROR_MODERATE
 }
 
 func IsPlanStabilityErrorStrict() bool {
-	error_policy := getPlanStabilityErrorPolicy()
+	error_policy := GetPlanStabilityErrorPolicy()
 	return error_policy == PS_ERROR_STRICT
 }
 
