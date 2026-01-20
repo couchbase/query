@@ -6377,6 +6377,48 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_BUCKET_UUID_CHANGE, // 12048
+		symbol:      "E_BUCKET_UUID_CHANGE",
+		Description: "The UUID for bucket <<bucket>> has changed.",
+		Reason: []string{
+			"Bucket <<bucket>> has been dropped and recreated.",
+		},
+		Action: []string{
+			"Retry the operation.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_SCOPE_UUID_CHANGE, // 12049
+		symbol:      "E_SCOPE_UUID_CHANGE",
+		Description: "The UUID for scope <<scope>> has changed.",
+		Reason: []string{
+			"Scope <<scope>> has been dropped and recreated.",
+		},
+		Action: []string{
+			"Retry the operation.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_COLLECTION_UUID_CHANGE, // 12050
+		symbol:      "E_COLLECTION_UUID_CHANGE",
+		Description: "The UUID for collection <<collection>> has changed.",
+		Reason: []string{
+			"Collection <<collection>> has been dropped and recreated.",
+		},
+		Action: []string{
+			"Retry the operation.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_DATASTORE_CLUSTER, // 13012
 		symbol:      "E_DATASTORE_CLUSTER",
 		Description: "Error retrieving cluster «what»",
