@@ -58,7 +58,7 @@ func NewPlanVersionChange() Error {
 }
 
 func NewPlanVerificationError(msg string, e error) Error {
-	return &err{level: WARNING, ICode: W_PLAN_VERIFY, IKey: "plan_verify_error", cause: e,
+	return &err{level: WARNING, ICode: W_PLAN_VERIFY, IKey: "plan_verify_error", cause: e, ICause: e,
 		InternalMsg: fmt.Sprintf("Failed to verify plan: %s", msg), InternalCaller: CallerN(1)}
 }
 

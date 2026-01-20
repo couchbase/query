@@ -495,6 +495,9 @@ const (
 	E_CB_BUCKET_EXISTS                           ErrorCode = 12045
 	E_INDEXER_VERSION                            ErrorCode = 12046
 	E_CB_SYS_COLLECTION_PRIMARY_INDEX            ErrorCode = 12047
+	E_BUCKET_UUID_CHANGE                         ErrorCode = 12048
+	E_SCOPE_UUID_CHANGE                          ErrorCode = 12049
+	E_COLLECTION_UUID_CHANGE                     ErrorCode = 12050
 	_RETIRED_13010                                         = 13010
 	_RETIRED_13011                                         = 13011
 	E_DATASTORE_CLUSTER                          ErrorCode = 13012

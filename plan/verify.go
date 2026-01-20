@@ -45,6 +45,9 @@ func verifyIndex(index datastore.Index, indexer datastore.Indexer, keyspace data
 	// stale reference...
 	idx, err := indexer.IndexById(index.Id())
 	if idx == nil || err != nil {
+		if err == nil {
+			err = errors.NewCbIndexNotFoundError(index.Id())
+		}
 		return errors.NewPlanVerificationError(fmt.Sprintf("Index: %s does not exist", index.Id()), err)
 	}
 
@@ -64,7 +67,7 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 		return keyspace, nil
 	}
 	var ks datastore.Keyspace
-	var err errors.Error
+	var err, err1 errors.Error
 	var meta datastore.KeyspaceMetadata
 
 	scope := keyspace.Scope()
@@ -78,11 +81,13 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 
 		b, err := namespace.BucketById(bucket.Id())
 		if err != nil {
-			return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s not found", bucket.Id()), nil)
+			err1 = errors.NewCbBucketNotFoundError(err, bucket.Id())
+			return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s not found", bucket.Id()), err1)
 		}
 
 		if b != nil && b.Uid() != bucket.Uid() {
-			return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s uuid has changed from %s to %s", bucket.Id(), b.Uid(), bucket.Uid()), nil)
+			err1 = errors.NewBucketUuidChangeError(bucket.Id(), bucket.Uid(), b.Uid())
+			return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s uuid has changed from %s to %s", bucket.Id(), b.Uid(), bucket.Uid()), err1)
 		}
 		// if this is the default collection for a bucket, we're done
 		if d != nil && d.Name() == keyspace.Name() && d.Id() == keyspace.Id() {
@@ -106,11 +111,19 @@ func verifyKeyspace(keyspace datastore.Keyspace, prepared *Prepared) (datastore.
 	}
 
 	if ks == nil || err != nil {
+		if err == nil {
+			err = errors.NewCbKeyspaceNotFoundError(nil, keyspace.QualifiedName())
+		}
 		return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Keyspace: %s not found", keyspace.Id()), err)
 	}
 
 	if ks.Uid() != keyspace.Uid() {
-		return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Keyspace: %s uuid has changed from %s to %s", keyspace.Id(), keyspace.Uid(), ks.Uid()), nil)
+		if scope != nil {
+			err1 = errors.NewCollectionUuidChangeError(keyspace.QualifiedName(), keyspace.Uid(), ks.Uid())
+		} else {
+			err1 = errors.NewBucketUuidChangeError(keyspace.Id(), keyspace.Uid(), ks.Uid())
+		}
+		return keyspace, errors.NewPlanVerificationError(fmt.Sprintf("Keyspace: %s uuid has changed from %s to %s", keyspace.Id(), keyspace.Uid(), ks.Uid()), err1)
 	}
 
 	// amend prepared statement version so that next time we avoid checks
@@ -135,6 +148,9 @@ func verifyScope(scope datastore.Scope, prepared *Prepared) (datastore.Scope, er
 		meta = b.(datastore.KeyspaceMetadata)
 	}
 	if scp == nil || err != nil {
+		if err == nil {
+			err = errors.NewCbScopeNotFoundError(nil, scope.Id())
+		}
 		return scope, errors.NewPlanVerificationError(fmt.Sprintf("Scope: %s not found", scope.Id()), err)
 	}
 
@@ -157,11 +173,15 @@ func verifyBucket(bucket datastore.Bucket, prepared *Prepared) (datastore.Bucket
 	meta = namespace.(datastore.KeyspaceMetadata)
 
 	if bkt == nil || err != nil {
+		if err == nil {
+			err = errors.NewCbBucketNotFoundError(nil, bucket.Id())
+		}
 		return bucket, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s not found", bucket.Name()), err)
 	}
 
 	if bkt.Uid() != bucket.Uid() {
-		return bucket, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s uuid has changed from %s to %s", bucket.Name(), bucket.Uid(), bkt.Uid()), nil)
+		err = errors.NewBucketUuidChangeError(bucket.Id(), bucket.Uid(), bkt.Uid())
+		return bucket, errors.NewPlanVerificationError(fmt.Sprintf("Bucket: %s uuid has changed from %s to %s", bucket.Name(), bucket.Uid(), bkt.Uid()), err)
 	}
 
 	// amend prepared statement version so that next time we avoid checks

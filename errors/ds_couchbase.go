@@ -407,3 +407,18 @@ func NewSysCollectionPrimaryIndexError(bucketName string) Error {
 		InternalMsg:    "Primary index on system collection not available for bucket " + bucketName,
 		InternalCaller: CallerN(1)}
 }
+
+func NewBucketUuidChangeError(name, old, new string) Error {
+	return &err{level: EXCEPTION, ICode: E_BUCKET_UUID_CHANGE, IKey: "datastore.bucket.uuid_change",
+		InternalMsg: fmt.Sprintf("Bucket %s UUID changed from %s to %s", name, old, new), InternalCaller: CallerN(1)}
+}
+
+func NewScopeUuidChangeError(name, old, new string) Error {
+	return &err{level: EXCEPTION, ICode: E_SCOPE_UUID_CHANGE, IKey: "datastore.scope.uuid_change",
+		InternalMsg: fmt.Sprintf("Scope %s UUID changed from %s to %s", name, old, new), InternalCaller: CallerN(1)}
+}
+
+func NewCollectionUuidChangeError(name, old, new string) Error {
+	return &err{level: EXCEPTION, ICode: E_COLLECTION_UUID_CHANGE, IKey: "datastore.collection.uuid_change",
+		InternalMsg: fmt.Sprintf("Collection %s UUID changed from %s to %s", name, old, new), InternalCaller: CallerN(1)}
+}
