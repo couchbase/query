@@ -293,6 +293,10 @@ func (this *IndexFtsSearch) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
 
+func (this *IndexFtsSearch) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+}
+
 func (this *IndexFtsSearch) Equals(i interface{}) bool {
 	if fs, ok := i.(*IndexFtsSearch); ok {
 		return this.String() == fs.String()

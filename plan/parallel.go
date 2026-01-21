@@ -97,6 +97,10 @@ func (this *Parallel) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
 
+func (this *Parallel) keyspaceReferences(prepared *Prepared) {
+	this.child.keyspaceReferences(prepared)
+}
+
 func (this *Parallel) Cost() float64 {
 	return this.child.Cost()
 }

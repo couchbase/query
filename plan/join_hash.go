@@ -247,3 +247,7 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 func (this *HashJoin) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
+
+func (this *HashJoin) keyspaceReferences(prepared *Prepared) {
+	this.child.keyspaceReferences(prepared)
+}

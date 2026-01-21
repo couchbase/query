@@ -91,6 +91,7 @@ type Operator interface {
 	New() Operator                               // Dynamic constructor; used for unmarshaling
 
 	verify(prepared *Prepared) errors.Error // Check that the operator can reference keyspaces and indexes
+	keyspaceReferences(prepared *Prepared)  // Gather keyspace references
 
 	Cost() float64
 	Cardinality() float64

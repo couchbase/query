@@ -207,3 +207,7 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 func (this *IndexNest) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }
+
+func (this *IndexNest) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+}

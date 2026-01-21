@@ -245,3 +245,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 func (this *HashNest) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
+
+func (this *HashNest) keyspaceReferences(prepared *Prepared) {
+	this.child.keyspaceReferences(prepared)
+}

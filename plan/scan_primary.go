@@ -168,3 +168,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 func (this *PrimaryScan) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(nil, this.keyspace, this.indexer), prepared)
 }
+
+func (this *PrimaryScan) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+}

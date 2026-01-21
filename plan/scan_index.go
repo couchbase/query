@@ -324,6 +324,10 @@ func (this *IndexScan) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
 
+func (this *IndexScan) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+}
+
 func (this *IndexScan) Equals(i interface{}) bool {
 	if is, ok := i.(*IndexScan); ok {
 		return this.String() == is.String()

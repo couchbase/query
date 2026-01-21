@@ -215,6 +215,10 @@ func (this *DistinctScan) verify(prepared *Prepared) errors.Error {
 	return this.scan.verify(prepared)
 }
 
+func (this *DistinctScan) keyspaceReferences(prepared *Prepared) {
+	this.scan.keyspaceReferences(prepared)
+}
+
 func (this *DistinctScan) Equals(i interface{}) bool {
 	if ds, ok := i.(*DistinctScan); ok {
 		return this.String() == ds.String()

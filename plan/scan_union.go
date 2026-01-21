@@ -294,6 +294,12 @@ func (this *UnionScan) verify(prepared *Prepared) errors.Error {
 	return nil
 }
 
+func (this *UnionScan) keyspaceReferences(prepared *Prepared) {
+	for _, scan := range this.scans {
+		scan.keyspaceReferences(prepared)
+	}
+}
+
 func (this *UnionScan) Equals(i interface{}) bool {
 	if us, ok := i.(*UnionScan); ok {
 		if len(this.scans) != len(us.scans) {

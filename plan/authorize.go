@@ -132,3 +132,7 @@ func (this *Authorize) UnmarshalJSON(body []byte) error {
 func (this *Authorize) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
+
+func (this *Authorize) keyspaceReferences(prepared *Prepared) {
+	this.child.keyspaceReferences(prepared)
+}

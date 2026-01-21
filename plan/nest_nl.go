@@ -182,3 +182,7 @@ func (this *NLNest) UnmarshalJSON(body []byte) error {
 func (this *NLNest) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
+
+func (this *NLNest) keyspaceReferences(prepared *Prepared) {
+	this.child.keyspaceReferences(prepared)
+}

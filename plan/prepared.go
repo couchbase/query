@@ -50,12 +50,13 @@ type Prepared struct {
 	persist         bool
 	adHoc           bool
 	planLock        bool
+	keyspaceRefs    []string
 	preparedTime    time.Time // time the plan was generated
 	optimHints      *algebra.OptimHints
 
 	indexScanKeyspaces map[string]bool
 	indexers           []idxVersion // for reprepare checking
-	keyspaces          []ksVersion
+	keyspaceMetas      []ksVersion
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
 	planVersion        int
@@ -512,14 +513,14 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) errors.Error {
 // Locking is handled by the top level caller!
 func (this *Prepared) addKeyspaceMetadata(ksMeta datastore.KeyspaceMetadata) {
 	version := ksMeta.MetadataVersion()
-	for i, ks := range this.keyspaces {
+	for i, ks := range this.keyspaceMetas {
 		if ks.ksMeta.MetadataId() == ksMeta.MetadataId() {
-			this.keyspaces[i].ksMeta = ksMeta
-			this.keyspaces[i].version = version
+			this.keyspaceMetas[i].ksMeta = ksMeta
+			this.keyspaceMetas[i].version = version
 			return
 		}
 	}
-	this.keyspaces = append(this.keyspaces, ksVersion{ksMeta, version})
+	this.keyspaceMetas = append(this.keyspaceMetas, ksVersion{ksMeta, version})
 }
 
 func (this *Prepared) MetadataCheck() bool {
@@ -534,7 +535,7 @@ func (this *Prepared) MetadataCheck() bool {
 
 	// now check that metadata is good for the namespaces involved
 	// if the bucket has been deleted, the version is expected to be different
-	for _, ks := range this.keyspaces {
+	for _, ks := range this.keyspaceMetas {
 		if ks.ksMeta.MetadataVersion() != ks.version {
 			return false
 		}
@@ -585,6 +586,29 @@ func isFatalVerificationError(err errors.Error) bool {
 		return true
 	}
 	return false
+}
+
+func (this *Prepared) addKeyspaceReference(ksRef string) {
+	for _, ks := range this.keyspaceRefs {
+		if ks == ksRef {
+			return
+		}
+	}
+	this.keyspaceRefs = append(this.keyspaceRefs, ksRef)
+}
+
+func (this *Prepared) KeyspaceReferences() {
+	this.Operator.keyspaceReferences(this)
+	subqueryPlans := this.GetSubqueryPlans(false)
+	if subqueryPlans != nil {
+		keyspaceRefsF := func(key *algebra.Select, options uint32, plan, isk interface{}) (bool, bool) {
+			if qp, ok := plan.(*QueryPlan); ok {
+				qp.PlanOp().keyspaceReferences(this)
+			}
+			return true, true
+		}
+		subqueryPlans.ForEach(nil, uint32(0), true, keyspaceRefsF)
+	}
 }
 
 func (this *Prepared) ErrorCount() int {

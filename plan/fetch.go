@@ -178,6 +178,10 @@ func (this *Fetch) verify(prepared *Prepared) errors.Error {
 	return err
 }
 
+func (this *Fetch) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+}
+
 type DummyFetch struct {
 	readonly
 	optEstimate

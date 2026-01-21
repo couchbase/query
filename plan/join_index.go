@@ -279,3 +279,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 func (this *IndexJoin) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
+
+func (this *IndexJoin) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+}

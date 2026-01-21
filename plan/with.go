@@ -211,3 +211,7 @@ func unmarshalCycle(body []byte) (*algebra.CycleCheck, error) {
 func (this *With) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
+
+func (this *With) keyspaceReferences(prepared *Prepared) {
+	this.child.keyspaceReferences(prepared)
+}

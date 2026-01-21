@@ -338,3 +338,16 @@ func (this *Merge) verify(prepared *Prepared) errors.Error {
 	}
 	return err
 }
+
+func (this *Merge) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	if this.insert != nil {
+		this.insert.keyspaceReferences(prepared)
+	}
+	if this.delete != nil {
+		this.delete.keyspaceReferences(prepared)
+	}
+	if this.update != nil {
+		this.update.keyspaceReferences(prepared)
+	}
+}

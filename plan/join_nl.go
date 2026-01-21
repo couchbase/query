@@ -184,3 +184,7 @@ func (this *NLJoin) UnmarshalJSON(body []byte) error {
 func (this *NLJoin) verify(prepared *Prepared) errors.Error {
 	return this.child.verify(prepared)
 }
+
+func (this *NLJoin) keyspaceReferences(prepared *Prepared) {
+	this.child.keyspaceReferences(prepared)
+}

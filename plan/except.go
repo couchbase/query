@@ -129,3 +129,8 @@ func (this *ExceptAll) verify(prepared *Prepared) errors.Error {
 	err = this.second.verify(prepared)
 	return err
 }
+
+func (this *ExceptAll) keyspaceReferences(prepared *Prepared) {
+	this.first.keyspaceReferences(prepared)
+	this.second.keyspaceReferences(prepared)
+}

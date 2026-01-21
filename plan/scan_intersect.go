@@ -277,6 +277,12 @@ func (this *IntersectScan) verify(prepared *Prepared) errors.Error {
 	return nil
 }
 
+func (this *IntersectScan) keyspaceReferences(prepared *Prepared) {
+	for _, scan := range this.scans {
+		scan.keyspaceReferences(prepared)
+	}
+}
+
 func (this *IntersectScan) Equals(i interface{}) bool {
 	if is, ok := i.(*IntersectScan); ok {
 		if len(this.scans) != len(is.scans) {

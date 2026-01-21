@@ -102,6 +102,12 @@ func (this *Sequence) verify(prepared *Prepared) errors.Error {
 	return nil
 }
 
+func (this *Sequence) keyspaceReferences(prepared *Prepared) {
+	for _, child := range this.children {
+		child.keyspaceReferences(prepared)
+	}
+}
+
 func (this *Sequence) Cost() float64 {
 	last_child := len(this.children) - 1
 	return this.children[last_child].Cost()

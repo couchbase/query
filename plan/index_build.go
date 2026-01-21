@@ -106,3 +106,7 @@ func (this *BuildIndexes) verify(prepared *Prepared) errors.Error {
 	this.keyspace, err = verifyKeyspace(this.keyspace, prepared)
 	return err
 }
+
+func (this *BuildIndexes) keyspaceReferences(prepared *Prepared) {
+	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+}

@@ -25,6 +25,9 @@ func (this *readonly) verify(prepared *Prepared) errors.Error {
 	return nil
 }
 
+func (this *readonly) keyspaceReferences(prepared *Prepared) {
+}
+
 func (this *readonly) SetImplicitArrayKey(arrayKey *expression.All) {
 }
 
@@ -50,6 +53,9 @@ func (this *readwrite) Readonly() bool {
 
 func (this *readwrite) verify(prepared *Prepared) errors.Error {
 	return nil
+}
+
+func (this *readwrite) keyspaceReferences(prepared *Prepared) {
 }
 
 func (this *readwrite) PlanContext() *planContext {

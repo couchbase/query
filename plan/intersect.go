@@ -127,3 +127,8 @@ func (this *IntersectAll) verify(prepared *Prepared) errors.Error {
 	}
 	return this.second.verify(prepared)
 }
+
+func (this *IntersectAll) keyspaceReferences(prepared *Prepared) {
+	this.first.keyspaceReferences(prepared)
+	this.second.keyspaceReferences(prepared)
+}

@@ -105,3 +105,9 @@ func (this *UnionAll) verify(prepared *Prepared) errors.Error {
 
 	return nil
 }
+
+func (this *UnionAll) keyspaceReferences(prepared *Prepared) {
+	for _, child := range this.children {
+		child.keyspaceReferences(prepared)
+	}
+}
