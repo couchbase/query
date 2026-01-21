@@ -345,7 +345,7 @@ func (this *preparedCache) get(fullName string, track bool) *CacheEntry {
 	}
 	rv, ok := cv.(*CacheEntry)
 	if ok {
-		if track {
+		if track && !rv.Prepared.HasVerificationError() {
 			atomic.AddInt64(&rv.Uses, 1)
 
 			// this is not exactly accurate, but since the MRU queue is
@@ -384,7 +384,7 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 		if cont {
 			oldEntry.Prepared = prepared
 			oldEntry.populated = false
-			if track {
+			if track && !prepared.HasVerificationError() {
 				atomic.AddInt64(&oldEntry.Uses, 1)
 
 				// as before

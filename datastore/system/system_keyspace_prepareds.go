@@ -203,6 +203,11 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 	if entry.Prepared.AdHoc() {
 		itemMap["adHocStatement"] = entry.Prepared.AdHoc()
 	}
+	if entry.Prepared.HasFatalError() {
+		itemMap["verificationFatalError"] = entry.Prepared.HasFatalError()
+	} else if entry.Prepared.ErrorCount() != 0 {
+		itemMap["verificationErrorCount"] = entry.Prepared.ErrorCount()
+	}
 
 	isks := entry.Prepared.IndexScanKeyspaces()
 	if len(isks) > 0 {

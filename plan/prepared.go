@@ -59,6 +59,8 @@ type Prepared struct {
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
 	planVersion        int
+	errCount           int
+	fatalError         bool
 
 	userAgent  string
 	users      string
@@ -178,6 +180,12 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.optimHints != nil {
 		r["optimizer_hints"] = this.optimHints
 	}
+	if this.fatalError {
+		r["verificationFatalError"] = this.fatalError
+	}
+	if this.errCount != 0 {
+		r["verificationErrorCount"] = this.errCount
+	}
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
@@ -209,6 +217,8 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		CreatingUserAgent  string                 `json:"creatingUserAgent"`
 		Users              string                 `json:"users"`
 		RemoteAddr         string                 `json:"remoteAddr"`
+		FatalError         bool                   `json:"verificationFatalError"`
+		ErrCount           int                    `json:"verificationErrorCount"`
 	}
 
 	var op_type struct {
@@ -245,6 +255,8 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.adHoc = _unmarshalled.AdHoc
 	this.planLock = _unmarshalled.PlanLock
 	this.planVersion = _unmarshalled.Version
+	this.fatalError = _unmarshalled.FatalError
+	this.errCount = _unmarshalled.ErrCount
 
 	if _unmarshalled.PreparedTime != "" {
 		prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
@@ -543,13 +555,56 @@ func (this *Prepared) Verify() errors.Error {
 				if qp, ok := plan.(*QueryPlan); ok {
 					subqerr = qp.PlanOp().verify(this)
 				}
-				err = subqerr
+				if err == nil {
+					err = subqerr
+				}
 				return subqerr == nil, local
 			}
 			subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
 		}
 	}
+	if err != nil && !this.fatalError {
+		if isFatalVerificationError(err) {
+			this.fatalError = true
+		} else {
+			this.errCount++
+		}
+	}
 	return err
+}
+
+func isFatalVerificationError(err errors.Error) bool {
+	if err.Code() == errors.W_PLAN_VERIFY {
+		if err1, ok := err.GetICause().(errors.Error); ok {
+			err = err1
+		}
+	}
+	switch err.Code() {
+	case errors.E_CB_BUCKET_NOT_FOUND, errors.E_CB_SCOPE_NOT_FOUND, errors.E_CB_KEYSPACE_NOT_FOUND,
+		errors.E_BUCKET_UUID_CHANGE, errors.E_SCOPE_UUID_CHANGE, errors.E_COLLECTION_UUID_CHANGE:
+		return true
+	}
+	return false
+}
+
+func (this *Prepared) ErrorCount() int {
+	return this.errCount
+}
+
+func (this *Prepared) SetErrorCount(errCount int) {
+	this.errCount = errCount
+}
+
+func (this *Prepared) HasFatalError() bool {
+	return this.fatalError
+}
+
+func (this *Prepared) SetFatalError(fatalError bool) {
+	this.fatalError = fatalError
+}
+
+func (this *Prepared) HasVerificationError() bool {
+	return this.fatalError || this.errCount > 0
 }
 
 func (this *Prepared) PlanVersion() int {
