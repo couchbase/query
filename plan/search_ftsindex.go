@@ -294,7 +294,7 @@ func (this *IndexFtsSearch) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *IndexFtsSearch) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }
 
 func (this *IndexFtsSearch) Equals(i interface{}) bool {

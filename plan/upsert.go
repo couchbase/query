@@ -206,5 +206,5 @@ func (this *SendUpsert) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *SendUpsert) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

@@ -325,7 +325,7 @@ func (this *IndexScan) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *IndexScan) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }
 
 func (this *IndexScan) Equals(i interface{}) bool {

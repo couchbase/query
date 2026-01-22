@@ -340,7 +340,7 @@ func (this *Merge) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *Merge) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 	if this.insert != nil {
 		this.insert.keyspaceReferences(prepared)
 	}

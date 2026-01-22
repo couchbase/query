@@ -268,5 +268,5 @@ func (this *PrimaryScan3) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *PrimaryScan3) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

@@ -205,5 +205,5 @@ func (this *Nest) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *Nest) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

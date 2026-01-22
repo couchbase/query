@@ -106,5 +106,5 @@ func (this *InferKeyspace) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *InferKeyspace) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

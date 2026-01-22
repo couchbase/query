@@ -179,7 +179,7 @@ func (this *Fetch) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *Fetch) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }
 
 type DummyFetch struct {

@@ -802,7 +802,7 @@ func (this *IndexScan3) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *IndexScan3) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }
 
 func (this *IndexScan3) Equals(i interface{}) bool {

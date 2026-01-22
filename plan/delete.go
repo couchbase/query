@@ -178,5 +178,5 @@ func (this *SendDelete) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *SendDelete) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

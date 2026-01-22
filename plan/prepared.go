@@ -588,7 +588,11 @@ func isFatalVerificationError(err errors.Error) bool {
 	return false
 }
 
-func (this *Prepared) addKeyspaceReference(ksRef string) {
+func (this *Prepared) addKeyspaceReference(keyspace datastore.Keyspace) {
+	if keyspace == nil {
+		return
+	}
+	ksRef := keyspace.QualifiedName()
 	for _, ks := range this.keyspaceRefs {
 		if ks == ksRef {
 			return

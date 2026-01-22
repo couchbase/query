@@ -241,5 +241,5 @@ func (this *CreateIndex) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *CreateIndex) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

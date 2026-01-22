@@ -372,5 +372,5 @@ func (this *SendUpdate) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *SendUpdate) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

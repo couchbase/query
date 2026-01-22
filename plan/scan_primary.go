@@ -170,5 +170,5 @@ func (this *PrimaryScan) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *PrimaryScan) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

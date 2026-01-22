@@ -281,5 +281,5 @@ func (this *IndexJoin) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *IndexJoin) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }

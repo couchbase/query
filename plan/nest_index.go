@@ -209,5 +209,5 @@ func (this *IndexNest) verify(prepared *Prepared) errors.Error {
 }
 
 func (this *IndexNest) keyspaceReferences(prepared *Prepared) {
-	prepared.addKeyspaceReference(this.keyspace.QualifiedName())
+	prepared.addKeyspaceReference(this.keyspace)
 }
