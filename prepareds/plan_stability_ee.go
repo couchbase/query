@@ -123,7 +123,8 @@ func persistPrepared(prepared *plan.Prepared) errors.Error {
 			return errors.NewPreparedEncodedPlanError(fullName, err1)
 		}
 	}
-	err1 = dictionary.PersistPrepared(fullName, encoded_plan, prepared.Persist(), prepared.AdHoc())
+	err1 = dictionary.PersistPrepared(fullName, encoded_plan,
+		prepared.Persist(), prepared.AdHoc(), prepared.GetKeyspaceReferences())
 	if err1 != nil {
 		return errors.NewPreparedSavePlanError(fullName, err1)
 	}

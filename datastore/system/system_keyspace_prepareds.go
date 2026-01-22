@@ -208,6 +208,13 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 	} else if entry.Prepared.ErrorCount() != 0 {
 		itemMap["verificationErrorCount"] = entry.Prepared.ErrorCount()
 	}
+	if ksRefs := entry.Prepared.GetKeyspaceReferences(); len(ksRefs) > 0 {
+		keyspaceRefs := make([]interface{}, len(ksRefs))
+		for i := range ksRefs {
+			keyspaceRefs[i] = ksRefs[i]
+		}
+		itemMap["keyspaceReferences"] = keyspaceRefs
+	}
 
 	isks := entry.Prepared.IndexScanKeyspaces()
 	if len(isks) > 0 {

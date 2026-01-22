@@ -85,6 +85,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetPreparedTime(util.Now().ToTime())
 	prep.SetPersist(persist)
 	prep.SetAdHoc(!persist && planStabilityMode == settings.PS_MODE_AD_HOC)
+	prep.KeyspaceReferences()
 
 	json_bytes, err := prep.MarshalJSON()
 	if err != nil {

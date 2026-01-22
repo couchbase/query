@@ -4,6 +4,9 @@
 	"ignore": [ "encoded_plan", "indexApiVersion", "featureControls", "namespace", "queryContext", "reqType", "planPreparedTime" ],
 	"results": [
         {
+            "keyspaceReferences": [
+              "system:prepareds"
+            ],
             "name": "test",
             "operator": {
                 "#operator": "Authorize",

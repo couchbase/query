@@ -2008,6 +2008,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 						prepared.SetRemoteAddr(request.RemoteAddr())
 						prepared.SetPersist(persist)
 						prepared.SetAdHoc(!persist && planStabilityAdHoc)
+						prepared.KeyspaceReferences()
 
 						// trigger prepare metrics recording
 						if prepareds.AddAutoPreparePlan(stmt, prepared) {

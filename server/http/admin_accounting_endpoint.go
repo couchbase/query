@@ -721,6 +721,14 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 	} else if entry.Prepared.ErrorCount() != 0 {
 		itemMap["verificationErrorCount"] = entry.Prepared.ErrorCount()
 	}
+	if ksRefs := entry.Prepared.GetKeyspaceReferences(); len(ksRefs) > 0 {
+		keyspaceRefs := make([]interface{}, len(ksRefs))
+		for i := range ksRefs {
+			keyspaceRefs[i] = ksRefs[i]
+		}
+		itemMap["keyspaceReferences"] = keyspaceRefs
+	}
+
 	isks := entry.Prepared.IndexScanKeyspaces()
 	if len(isks) > 0 {
 		itemMap["indexScanKeyspaces"] = isks

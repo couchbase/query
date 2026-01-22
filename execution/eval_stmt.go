@@ -449,6 +449,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 			prepared.SetPreparedTime(prep) // set the time the plan was generated
 			prepared.SetPersist(persist)
 			prepared.SetAdHoc(!persist && settings.IsPlanStabilityAdHoc())
+			prepared.KeyspaceReferences()
 			prepareds.AddAutoPreparePlan(stmt, prepared)
 		}
 

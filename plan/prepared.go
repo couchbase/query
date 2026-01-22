@@ -187,6 +187,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.errCount != 0 {
 		r["verificationErrorCount"] = this.errCount
 	}
+	if len(this.keyspaceRefs) > 0 {
+		r["keyspaceReferences"] = this.keyspaceRefs
+	}
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
@@ -220,6 +223,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		RemoteAddr         string                 `json:"remoteAddr"`
 		FatalError         bool                   `json:"verificationFatalError"`
 		ErrCount           int                    `json:"verificationErrorCount"`
+		KeyspaceRefs       []string               `json:"keyspaceReferences"`
 	}
 
 	var op_type struct {
@@ -258,6 +262,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.planVersion = _unmarshalled.Version
 	this.fatalError = _unmarshalled.FatalError
 	this.errCount = _unmarshalled.ErrCount
+	this.keyspaceRefs = _unmarshalled.KeyspaceRefs
 
 	if _unmarshalled.PreparedTime != "" {
 		prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
@@ -613,6 +618,10 @@ func (this *Prepared) KeyspaceReferences() {
 		}
 		subqueryPlans.ForEach(nil, uint32(0), true, keyspaceRefsF)
 	}
+}
+
+func (this *Prepared) GetKeyspaceReferences() []string {
+	return this.keyspaceRefs
 }
 
 func (this *Prepared) ErrorCount() int {

@@ -954,6 +954,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl.SetUsers(prepared.Users())
 	pl.SetPersist(prepared.Persist())
 	pl.SetAdHoc(prepared.AdHoc())
+	pl.KeyspaceReferences()
 
 	_, err = pl.BuildEncodedPlan()
 	if err != nil {

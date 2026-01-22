@@ -70,7 +70,7 @@ func PreparedsFromPersisted() {
 func processPreparedPlan(name, encoded_plan string, persist bool, decodeFailedReason map[string]errors.Error,
 	decodeReprepReason map[string]errors.Errors) (success bool, reprep bool) {
 	_, err, reprepareCause := DecodePrepared(name, encoded_plan, true,
-		!persist && (settings.GetPlanStabilityMode() != settings.PS_MODE_OFF), logging.NULL_LOG)
+		(settings.GetPlanStabilityMode() != settings.PS_MODE_OFF), logging.NULL_LOG)
 	if err != nil {
 		if decodeFailedReason != nil {
 			decodeFailedReason[name] = err
