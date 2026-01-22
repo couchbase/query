@@ -1188,7 +1188,7 @@ func offsetPlusLimit(offset, limit expression.Expression) expression.Expression 
 			limit = expression.NewGreatest(expression.ZERO_EXPR, limit)
 		}
 
-		return expression.NewAdd(limit.Copy(), offset.Copy())
+		return expression.NewAdd(limit, offset)
 	} else {
 		return limit
 	}
