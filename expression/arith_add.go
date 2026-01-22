@@ -22,34 +22,7 @@ type Add struct {
 
 func NewAdd(operands ...Expression) Function {
 	rv := &Add{}
-
-	/*
-		If the first input operand is an Add expression, "flatten" the structure by extracting its operands.
-		And use these extracted operands directly in the new Add expression. This reduces nesting due to left-associativity in the
-		constructed Add expression. Flattening is applied conservatively to preserve the intentional grouping (eg. via parantheses)
-		and evaluation order, established by the parser.  As changing it can affect precision and other semantics.
-		This is why flattening is applied only to the first input operand and the operands extracted from it are not recursively
-		flattened further. And why later input operands are not flattened, even if they are Add expressions.
-		For example a + (b + c) must not be flattened to a + b + c.
-	*/
-	var flatten bool
-	if len(operands) > 0 {
-		if add, ok := operands[0].(*Add); ok {
-			flattenedOps := make(Expressions, 0, len(add.Operands())+len(operands)-1)
-			flattenedOps = append(flattenedOps, add.Operands()...)
-
-			if len(operands) > 1 {
-				flattenedOps = append(flattenedOps, operands[1:]...)
-			}
-
-			flatten = true
-			rv.Init("add", flattenedOps...)
-		}
-	}
-
-	if !flatten {
-		rv.Init("add", operands...)
-	}
+	rv.Init("add", operands...)
 
 	rv.expr = rv
 	return rv
