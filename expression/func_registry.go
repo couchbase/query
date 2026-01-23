@@ -87,8 +87,9 @@ var _FUNCTIONS = map[string]Function{
 	"regexp_suffix":        &RegexpSuffix{},
 
 	// Concat
-	"concat":  &Concat{},
-	"concat2": &Concat2{},
+	"array_to_string": &Concat2{},
+	"concat":          &Concat{},
+	"concat2":         &Concat2{},
 
 	// Costruction
 	"array": &ArrayConstruct{},
