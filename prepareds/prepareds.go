@@ -571,18 +571,24 @@ func DeletePrepared(name string) errors.Error {
 }
 
 func DeletePreparedFunc(name string, f func(*CacheEntry) bool) errors.Error {
-	var process func(interface{}) bool = nil
-
-	if f != nil {
-		process = func(entry interface{}) bool {
-			ce := entry.(*CacheEntry)
+	persist := false
+	process := func(entry interface{}) bool {
+		ce := entry.(*CacheEntry)
+		persist = ce.Prepared.Persist()
+		if f != nil {
 			return f(ce)
 		}
+		return true
 	}
-	if prepareds.cache.DeleteWithCheck(name, process) {
-		return nil
+	if !prepareds.cache.DeleteWithCheck(name, process) {
+		return errors.NewNoSuchPreparedError(name)
 	}
-	return errors.NewNoSuchPreparedError(name)
+
+	if persist || settings.IsPlanStabilityEnabled() {
+		return deletePrepared(name)
+	}
+
+	return nil
 }
 
 func GetPrepared(fullName string, deltaKeyspaces map[string]bool, args ...logging.Log) (

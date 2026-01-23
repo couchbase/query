@@ -130,3 +130,11 @@ func persistPrepared(prepared *plan.Prepared) errors.Error {
 	}
 	return nil
 }
+
+func deletePrepared(name string) errors.Error {
+	err := dictionary.DeletePrepared(name)
+	if err != nil {
+		return errors.NewPreparedDeletePlanError(name, err)
+	}
+	return nil
+}

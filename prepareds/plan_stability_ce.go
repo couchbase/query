@@ -25,5 +25,9 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 }
 
 func persistPrepared(prepared *plan.Prepared) errors.Error {
-	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.update_plan_stability_mode")
+	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.persist_prepared")
+}
+
+func deletePrepared(name string) errors.Error {
+	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.delete_prepared")
 }
