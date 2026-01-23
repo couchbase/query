@@ -1921,6 +1921,9 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 			// system collection
 			dropDictCacheEntries(cbKeyspace)
 		}
+		if isQueryMetadata(cbKeyspace.name) {
+			resetQueryMetadata()
+		}
 	}
 }
 

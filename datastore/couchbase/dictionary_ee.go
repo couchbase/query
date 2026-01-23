@@ -124,6 +124,14 @@ func chkSysBucket() {
 	}
 }
 
+func isQueryMetadata(name string) bool {
+	return name == _QUERY_METADATA_BUCKET
+}
+
+func resetQueryMetadata() {
+	dictionary.ResetQueryMetadata()
+}
+
 func GetCBOKeyspaceFromKey(key string) (keyspace string, keyspaceMayContainUUID bool, isKeyspaceDoc bool, err errors.Error) {
 	return dictionary.GetKeyspaceFromKey(key)
 }

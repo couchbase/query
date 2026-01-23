@@ -85,6 +85,14 @@ func chkSysBucket() {
 	// no-op
 }
 
+func isQueryMetadata(name string) bool {
+	return false
+}
+
+func resetQueryMetadata() {
+	// no-op
+}
+
 func GetCBOKeyspaceFromKey(key string) (keyspace string, keyspaceMayContainUUID bool, isKeyspaceDoc bool, err errors.Error) {
 	return "", false, false, nil
 }
