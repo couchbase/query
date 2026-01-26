@@ -26,6 +26,10 @@ import (
  * The mode can be set/changed via:
  *
  *   UPDATE system:settings SET plan_stability.mode = "off"/"prepared_only"/"ad_hoc"
+ *
+ * synonyms accepted:
+ *   "prepared-only", "prepared only" in addition to "prepared_only"
+ *   "ad-hoc", "ad hoc" in addition to "ad_hoc"
  */
 type PlanStabilityMode int
 
@@ -38,7 +42,11 @@ const (
 var _PS_MODE_MAP map[string]PlanStabilityMode = map[string]PlanStabilityMode{
 	"off":           PS_MODE_OFF,
 	"prepared_only": PS_MODE_PREPARED_ONLY,
+	"prepared-only": PS_MODE_PREPARED_ONLY,
+	"prepared only": PS_MODE_PREPARED_ONLY,
 	"ad_hoc":        PS_MODE_AD_HOC,
+	"ad-hoc":        PS_MODE_AD_HOC,
+	"ad hoc":        PS_MODE_AD_HOC,
 }
 
 func (this PlanStabilityMode) String() string {
