@@ -49,3 +49,8 @@ func NewDictMissingFieldError(entry, name, field string) Error {
 		InternalMsg:    fmt.Sprintf("Dictionary entry '%s' for '%s' is missing field '%s'", entry, name, field),
 		InternalCaller: CallerN(1)}
 }
+
+func NewQueryMetadataError(s string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_QUERY_METADATA, IKey: "dictionary.query_metadata", ICause: e,
+		InternalMsg: "Error accessing QUERY_METADATA bucket - " + s, InternalCaller: CallerN(1)}
+}

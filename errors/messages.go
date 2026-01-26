@@ -7492,6 +7492,17 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_QUERY_METADATA, // 18080
+		symbol:      "E_QUERY_METADATA",
+		Description: "Error accessing QUERY_METADATA bucket - «details»",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_VIRTUAL_KS_NOT_SUPPORTED, // 19000
 		symbol:      "E_VIRTUAL_KS_NOT_SUPPORTED",
 		Description: "Virtual Keyspace : Not supported «details»",
