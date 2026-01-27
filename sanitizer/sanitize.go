@@ -28,14 +28,14 @@ func SanitizeStatement(statement, namespace, queryContext string, txn, withParam
 		return "", nil, err
 	}
 
-	semChecker := semantics.GetSemChecker(stmt.Type(), txn)
-	_, err = stmt.Accept(semChecker)
+	rewriter := rewrite.NewRewrite(rewrite.REWRITE_PHASE1)
+	_, err = stmt.Accept(rewriter)
 	if err != nil {
 		return "", nil, err
 	}
 
-	rewriter := rewrite.NewRewrite(rewrite.REWRITE_PHASE1)
-	_, err = stmt.Accept(rewriter)
+	semChecker := semantics.GetSemChecker(stmt.Type(), txn)
+	_, err = stmt.Accept(semChecker)
 	if err != nil {
 		return "", nil, err
 	}
@@ -104,6 +104,9 @@ func (this *constantToNamedParam) constructnamedparam() (string, string) {
 }
 
 func (this *constantToNamedParam) VisitConstant(expr *expression.Constant) (interface{}, error) {
+	if expr.HasExprFlag(expression.EXPR_NULLS_POSITION) {
+		return expr, nil
+	}
 	key, param := this.constructnamedparam()
 	if this.parametersMap != nil {
 		this.parametersMap[key] = expr.Value()
