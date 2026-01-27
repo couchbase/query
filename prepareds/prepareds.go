@@ -725,7 +725,16 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		return nil, err
 	}
 	if prepared == nil {
-		return nil, errors.NewNoSuchPreparedWithContextError(name, queryContext)
+		// if the prepared cache is full, also try to load from disk
+		if prepareds.cache.Size() >= prepareds.cache.Limit() {
+			prepared, err = loadPrepared(encodedName)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if prepared == nil {
+			return nil, errors.NewNoSuchPreparedWithContextError(name, queryContext)
+		}
 	}
 	return prepared, nil
 }

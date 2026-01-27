@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/settings"
 )
 
@@ -85,4 +86,18 @@ func processPreparedPlan(name, encoded_plan string, persist bool, decodeFailedRe
 		}
 	}
 	return
+}
+
+func loadPrepared(name string) (*plan.Prepared, errors.Error) {
+	encoded_plan, err := dictionary.LoadPreparedPlan(name)
+	if err != nil {
+		return nil, err
+	} else if encoded_plan == "" {
+		return nil, nil
+	}
+
+	prepared, err, _ := DecodePrepared(name, encoded_plan, true,
+		(settings.GetPlanStabilityMode() != settings.PS_MODE_OFF), logging.NULL_LOG)
+
+	return prepared, err
 }

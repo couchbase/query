@@ -10,6 +10,15 @@
 
 package prepareds
 
+import (
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/plan"
+)
+
 func PreparedsFromPersisted() {
 	// no-op
+}
+
+func loadPrepared(name string) (*plan.Prepared, errors.Error) {
+	return nil, errors.NewEnterpriseFeature("Plan Stability", "prepareds.load_prepared")
 }
