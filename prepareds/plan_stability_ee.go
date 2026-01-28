@@ -17,11 +17,8 @@ import (
 	"github.com/couchbase/query/settings"
 )
 
-func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
-	return dictionary.HasQueryMetadata(create, requestId, waitOnCreate)
-}
-
 func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
+	cacheFull := this.cache.Size() >= this.cache.Limit()
 	if oldMode == newMode {
 		return nil
 	} else if oldMode == settings.PS_MODE_OFF &&
@@ -31,10 +28,10 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	} else if newMode == settings.PS_MODE_OFF &&
 		(oldMode == settings.PS_MODE_PREPARED_ONLY || oldMode == settings.PS_MODE_AD_HOC) {
 		// just turned off
-		return updatePreparedStmts(newMode)
+		return updatePreparedStmts(newMode, cacheFull)
 	} else {
 		// switch between PREPARED_ONLY and AD_HOC
-		return updatePreparedStmts(newMode)
+		return updatePreparedStmts(newMode, cacheFull)
 	}
 
 	return nil
@@ -74,7 +71,7 @@ func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) 
  * When plan stability mode changes between PREPARED_ONLY and AD_HOC, need to go through prepared
  * cache and remove saved prepared plan as necessary, and modify the prepared statement
  */
-func updatePreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
+func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) errors.Error {
 	var err errors.Error
 	names := make([]string, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
@@ -105,6 +102,14 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode) errors.Error {
 
 	for i := range names {
 		err = DeletePrepared(names[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	if cacheFull {
+		// there may be entries on disk that's not currently in the prepareds cache
+		err = deletePreparedPlans(newMode == settings.PS_MODE_PREPARED_ONLY)
 		if err != nil {
 			return err
 		}

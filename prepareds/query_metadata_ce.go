@@ -15,10 +15,18 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
+func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
+	return false, errors.NewEnterpriseFeature("Query meta data bucket", "plan.has_query_metadata")
+}
+
 func PreparedsFromPersisted() {
 	// no-op
 }
 
 func loadPrepared(name string) (*plan.Prepared, errors.Error) {
 	return nil, errors.NewEnterpriseFeature("Plan Stability", "prepareds.load_prepared")
+}
+
+func deletePreparedPlans(adHocOnly bool) errors.Error {
+	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.delete_prepared_plans")
 }

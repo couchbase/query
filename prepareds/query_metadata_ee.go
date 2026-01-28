@@ -22,6 +22,10 @@ import (
 	"github.com/couchbase/query/settings"
 )
 
+func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
+	return dictionary.HasQueryMetadata(create, requestId, waitOnCreate)
+}
+
 // initialize cache from persisted entries
 func PreparedsFromPersisted() {
 	hasQueryMetadata, _ := dictionary.HasQueryMetadata(false, "", false)
@@ -100,4 +104,13 @@ func loadPrepared(name string) (*plan.Prepared, errors.Error) {
 		(settings.GetPlanStabilityMode() != settings.PS_MODE_OFF), logging.NULL_LOG)
 
 	return prepared, err
+}
+
+func deletePreparedPlans(adHocOnly bool) errors.Error {
+	hasQueryMetadata, _ := dictionary.HasQueryMetadata(false, "", false)
+	if !hasQueryMetadata {
+		return nil
+	}
+
+	return dictionary.DeletePreparedPlans(true, adHocOnly)
 }

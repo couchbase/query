@@ -16,10 +16,6 @@ import (
 	"github.com/couchbase/query/settings"
 )
 
-func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
-	return false, errors.NewEnterpriseFeature("Query meta data bucket", "plan.has_query_metadata")
-}
-
 func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.update_plan_stability_mode")
 }
