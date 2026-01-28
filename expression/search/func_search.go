@@ -161,6 +161,24 @@ func (this *Search) Options() expression.Expression {
 	return nil
 }
 
+func (this *Search) HasKnn() bool {
+	if q := this.Operands()[1]; q != nil {
+		if oc, ok := q.(*expression.ObjectConstruct); ok {
+			for name, _ := range oc.Mapping() {
+				n := name.Value()
+				if n == nil || n.Type() != value.STRING {
+					continue
+				}
+
+				if n.ToString() == "knn" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func (this *Search) IndexName() (name string) {
 	name, _, _ = this.getIndexNameAndOutName(this.Options())
 	return
