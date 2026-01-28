@@ -262,16 +262,20 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 
 	searchSargables = make([]*indexEntry, 0, len(searchFns))
 	for _, s := range searchFns {
+		hasKnn := s.HasKnn()
 		siname := s.IndexName()
 		keys := datastore.IndexKeys{&datastore.IndexKey{s.Copy(), datastore.IK_NONE}}
 		if !base.SubsetOf(pred, keys[0].Expr) {
+			if !this.hintIndexes && hasKnn {
+				return nil, errors.NewKnnNoSearchIndex()
+			}
 			continue
 		}
 
 		var mappings interface{}
 		var n, en int
 		var size, esize int64
-		var exact, hasKnn, knn bool
+		var exact, knn bool
 		var entry *indexEntry
 
 		//qprams := s.Query().Value() == nil || (s.Options() != nil && s.Options().Value() == nil)
