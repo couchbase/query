@@ -44,6 +44,8 @@ replace github.com/couchbase/query-ee => ../query-ee
 
 replace github.com/couchbase/regulator => ../regulator
 
+replace github.com/couchbase/gocbcrypto => ../gocbcrypto
+
 require (
 	github.com/couchbase/cbauth v0.1.13
 	github.com/couchbase/clog v0.1.0

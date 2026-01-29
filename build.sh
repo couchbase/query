@@ -60,6 +60,26 @@ rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
   awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
 defbranch="master"
 
+OPENSSL_VERSION=""
+
+function get_openssl_version {
+    local openssl_bin=""
+    if [[ "Linux" = `uname` ]]; then
+        openssl_bin="/opt/couchbase/bin/openssl"
+    elif [[ "Darwin" = `uname` ]]; then
+        openssl_bin="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/openssl"
+    fi
+
+    if [[ -f "$openssl_bin" ]]; then
+        local version=$("$openssl_bin" version | awk '{print $2}')
+        echo "openssl-${version}"
+    else
+        echo "Error: OpenSSL binary not found at $openssl_bin" >&2
+        exit 1
+    fi
+}
+
+
 function checkout_if_necessary {
   local current=`$GIT rev-parse --abbrev-ref HEAD 2>/dev/null`
   local commit=`$GIT log -n 1 --pretty=format:"%h" 2>/dev/null`
@@ -277,6 +297,34 @@ function DevStandaloneSetup {
       ln -s -f $dir/hebrew hebrew;
       cd $cwd1)
 
+    # OpenSSL setup
+    OPENSSL_VERSION=$(get_openssl_version)
+    OPENSSL_BUILD_DIR="$GOPATH/src/couchbasedeps/openssl"
+    if [[ -d ~/devbld ]]; then
+        OPENSSL_BUILD_DIR=~/devbld
+    fi
+
+    if [[ -d ~/devbld/$OPENSSL_VERSION ]]; then
+        if [[ ! -L $GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION ]]; then
+            mkdir -p "$GOPATH/src/couchbasedeps/openssl"
+            ln -s ~/devbld/$OPENSSL_VERSION "$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION"
+        fi
+    elif [[ ! -d "$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION" ]]; then
+        echo -e "OpenSSL $OPENSSL_VERSION not found, downloading and building to $OPENSSL_BUILD_DIR..."
+        mkdir -p "$OPENSSL_BUILD_DIR"
+        cd "$OPENSSL_BUILD_DIR"
+        curl -L https://github.com/openssl/openssl/releases/download/$OPENSSL_VERSION/$OPENSSL_VERSION.tar.gz | tar -xz
+        cd $OPENSSL_VERSION
+        ./Config --prefix=$PWD/openssl-local --openssldir=$PWD/openssl-local/ssl no-shared
+        make build_libs
+        cd $cwd1
+
+        if [[ $OPENSSL_BUILD_DIR == ~/devbld ]]; then
+            mkdir -p "$GOPATH/src/couchbasedeps/openssl"
+            ln -s $OPENSSL_BUILD_DIR/$OPENSSL_VERSION "$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION"
+        fi
+    fi
+
     # indexer generated files
     if [[ -f ~/devbld/protoc-gen-go ]]
     then
@@ -332,7 +380,7 @@ if [[ ( ( ! -d ../../../../../cbft || -h ../../../../../cbft ) && "$GOPATH" != "
     if [[ $sflag == 1 ]]; then
         DevStandaloneSetup
     fi
-    export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
+    export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_FLAGS"
     export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
     export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
 fi
