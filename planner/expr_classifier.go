@@ -510,13 +510,18 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		}
 
 		if len(keyspaces) == 1 {
-			if _, ok := dnfExpr.(*expression.ApproxVectorDistance); ok {
+			switch dnfExpr.(type) {
+			case *expression.ApproxVectorDistance:
 				filter.SetVectorFunc()
 				baseKspace.AddVectorFilter(filter)
-			} else {
+			default:
 				baseKspace.AddFilter(filter)
 			}
 		} else {
+			switch dnfExpr.(type) {
+			case *expression.ApproxVectorDistance:
+				return nil, errors.NewVectorJoinFilter()
+			}
 			baseKspace.AddJoinFilter(filter)
 			// if this is an OR join predicate, attempt to extract a new OR-predicate
 			// for a single keyspace (to enable union scan)

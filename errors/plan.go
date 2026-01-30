@@ -219,6 +219,12 @@ func NewKnnNoSearchIndex() Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewVectorJoinFilter() Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_JOIN_FILTER, IKey: "plan.vector.join_filter",
+		InternalMsg:    "Vector similarity function (e.g. ApproxVectorDistance) cannot reference more than one keyspace",
+		InternalCaller: CallerN(1)}
+}
+
 // errors for CBO (cost-based optimizer) starts at 4600
 
 func NewCBOError(ikey, what string) Error {
