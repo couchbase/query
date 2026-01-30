@@ -1909,11 +1909,22 @@ var with = regexp.MustCompile("[Ww][Ii][Tt][Hh][[:space:]]*{")
 var forfts = regexp.MustCompile("^[Ff][Oo][Rr][[:space:]]+[Ff][Tt][Ss][[:space:]]+|" +
 	"^[Ff][Oo][Rr][[:space:]]+[Ff][Ll][Ee][Xx][Ii][Nn][Dd][eE][xX][[:space:]]+")
 
+var lineComment = regexp.MustCompile(`--(?:[^\+][^\n\r]*)?\n`)
+var blockComment = regexp.MustCompile(`/\*(?:[^\+](?:[^\*]|\*+[^\*/])*)?\*+/`)
+
+func stripComments(s string) string {
+	s = blockComment.ReplaceAllString(s, "")
+	s = lineComment.ReplaceAllString(s, "")
+	return strings.TrimSpace(s)
+}
+
 func (this *BaseRequest) ProcessNatural() errors.Error {
 	s := this.Statement()
 	if s == "" {
 		return nil
 	}
+
+	s = stripComments(s)
 
 	m := uai.FindStringIndex(s)
 
@@ -1940,8 +1951,9 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 
 	m = with.FindStringIndex(s)
 	if m == nil || len(m) < 2 {
-		if forfts.MatchString(s) {
+		if m = forfts.FindStringIndex(s); m != nil && len(m) == 2 {
 			this.SetNaturalOutput("ftssql")
+			s = s[m[1]-1:]
 		}
 		this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
 		return nil
