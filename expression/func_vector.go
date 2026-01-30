@@ -133,12 +133,15 @@ func (this *VectorDistance) ValidOperands() error {
 	default:
 		return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
 	}
-	qVec := this.operands[1].Value()
-	if qVec != nil {
-		if valid, errStr := validVector(qVec, 0); !valid {
+	qVecExpr := this.operands[1]
+	qVecVal := qVecExpr.Value()
+	if qVecVal != nil {
+		if valid, errStr := validVector(qVecVal, 0); !valid {
 			return errors.NewInvalidQueryVector(errStr)
 		}
 		this.flags |= _VECTOR_QVEC_CHECKED
+	} else if qVecExpr.Static() == nil {
+		return errors.NewInvalidQueryVector("query vector must be static (e.g. constant, positional/named parameter or WITH alias)")
 	}
 	return nil
 }
@@ -350,12 +353,15 @@ func (this *ApproxVectorDistance) ValidOperands() error {
 	default:
 		return errors.NewVectorFuncInvalidMetric(this.name, string(this.metric))
 	}
-	qVec := this.operands[1].Value()
-	if qVec != nil {
-		if valid, errStr := validVector(qVec, 0); !valid {
+	qVecExpr := this.operands[1]
+	qVecVal := qVecExpr.Value()
+	if qVecVal != nil {
+		if valid, errStr := validVector(qVecVal, 0); !valid {
 			return errors.NewInvalidQueryVector(errStr)
 		}
 		this.flags |= _VECTOR_QVEC_CHECKED
+	} else if qVecExpr.Static() == nil {
+		return errors.NewInvalidQueryVector("query vector must be static (e.g. constant, positional/named parameter or WITH alias)")
 	}
 	return nil
 }

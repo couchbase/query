@@ -219,6 +219,12 @@ func NewKnnNoSearchIndex() Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewVectorJoinFilter() Error {
+	return &err{level: EXCEPTION, ICode: E_VECTOR_JOIN_FILTER, IKey: "plan.vector.join_filter",
+		InternalMsg:    "Vector similarity function (e.g. ApproxVectorDistance) cannot reference more than one keyspace",
+		InternalCaller: CallerN(1)}
+}
+
 func NewPreparedEncodedPlanError(name string, e error) Error {
 	return &err{level: EXCEPTION, ICode: E_PREPARED_ENCODED_PLAN, IKey: "plan.prepared.encoded_plan",
 		InternalMsg: fmt.Sprintf("Error building encoded plan for prepared statement %s", name),

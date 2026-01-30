@@ -3134,6 +3134,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_VECTOR_JOIN_FILTER, // 4390
+		symbol:      "E_VECTOR_JOIN_FILTER",
+		Description: "A vector similarity function (e.g. ApproxVectorDistance) references more than one keyspace",
+		Reason: []string{
+			"Query uses a vector similarity function (e.g. ApproxVectorDistance) that references multiple keyspaces",
+		},
+		Action: []string{
+			"Modify the query to only reference a single keyspace in a vector similarity function",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCODED_PLAN_NOT_ALLOWED, // 4400
 		symbol:      "E_ENCODED_PLAN_NOT_ALLOWED",
 		Description: "Encoded plan use is not allowed in serverless mode.",

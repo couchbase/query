@@ -230,6 +230,7 @@ const (
 	W_GSI_TRANSIENT                              ErrorCode = 4360
 	E_GSI_TEMP_FILE_SIZE                         ErrorCode = 4370
 	E_NO_KNN_SEARCH_INDEX                        ErrorCode = 4380
+	E_VECTOR_JOIN_FILTER                         ErrorCode = 4390
 	E_ENCODED_PLAN_NOT_ALLOWED                   ErrorCode = 4400
 	E_PREPARED_ENCODED_PLAN                      ErrorCode = 4410
 	E_PREPARED_SAVE_PLAN                         ErrorCode = 4411
