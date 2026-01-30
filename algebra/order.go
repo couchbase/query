@@ -138,6 +138,9 @@ func NewSortTerm(expr, descending, nullsPos expression.Expression) *SortTerm {
 			}
 		}
 	}
+	if nullsPos != nil {
+		nullsPos.SetExprFlag(expression.EXPR_NULLS_POSITION)
+	}
 	return rv
 }
 

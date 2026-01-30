@@ -862,11 +862,10 @@
             {
                 "$1": {
                     "parametersMap": {
-                        "$_n1": "last",
-                        "$_n2": 5,
-                        "$_n3": 2
+                        "$_n1": 5,
+                        "$_n2": 2
                     },
-                    "statement": "select (`d`.`fld1`), (`d`.`fld2`), sum((`d`.`fld3`)) OVER (PARTITION BY (`d`.`fld4`)) as `winproj1`, row_number() OVER (PARTITION BY (`d`.`fld4`)) as `winproj2`, last_value((`d`.`fld3`)) OVER (PARTITION BY (`d`.`fld4`) ORDER BY (`d`.`fld3`) NULLS $_n1 ROWS BETWEEN $_n2 PRECEDING AND $_n3 PRECEDING) as `winproj3` from `default`:`orders` as `d`"
+                    "statement": "select (`d`.`fld1`), (`d`.`fld2`), sum((`d`.`fld3`)) OVER (PARTITION BY (`d`.`fld4`)) as `winproj1`, row_number() OVER (PARTITION BY (`d`.`fld4`)) as `winproj2`, last_value((`d`.`fld3`)) OVER (PARTITION BY (`d`.`fld4`) ORDER BY (`d`.`fld3`) NULLS LAST ROWS BETWEEN $_n1 PRECEDING AND $_n2 PRECEDING) as `winproj3` from `default`:`orders` as `d`"
                 }
             }
         ]
