@@ -14,8 +14,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/couchbase/query/util"
 )
 
 type YesNoMaybe int
@@ -2618,7 +2616,7 @@ var errData = []ErrData{
 		symbol:      "W_PLAN_VERSION_MISMATCH",
 		Description: "plan was prepared by a newer engine",
 		Reason: []string{
-			fmt.Sprintf("The planVersion in the encoded plan exceeds the plan version supported by the current server: %d", util.PLAN_VERSION),
+			fmt.Sprintf("The planVersion in the encoded plan exceeds the plan version supported by the current server."),
 		},
 		Action: []string{
 			"Upgrade the server to a version that supports the planVersion specified in the encoded plan.",
@@ -8163,6 +8161,28 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Revise the \"natural_context\" parameter or \"keyspaces\" option.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_ENCRYPTION_READER_CREATE, // 19300
+		symbol:      "E_ENCRYPTION_READER_CREATE",
+		Description: "Failed to create encryption reader",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_ENCRYPTION_WRITER_CREATE, // 19301
+		symbol:      "E_ENCRYPTION_WRITER_CREATE",
+		Description: "Failed to create encryption writer",
+		Action: []string{
+			"Contact support.",
 		},
 		AppliesTo: []string{
 			"Server",

@@ -641,6 +641,8 @@ const (
 	E_NL_TIMEOUT                                 ErrorCode = 19221
 	E_NL_REQ_FEAT_DISABLED                       ErrorCode = 19222
 	E_NL_TOO_MANY_KEYSPACES                      ErrorCode = 19223
+	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
+	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
 	E_AUS_NOT_SUPPORTED                          ErrorCode = 20000
 	E_AUS_NOT_INITIALIZED                        ErrorCode = 20001
 	E_AUS_STORAGE                                ErrorCode = 20002
