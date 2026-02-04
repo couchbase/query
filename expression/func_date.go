@@ -5206,7 +5206,8 @@ Convert input time to milliseconds from nanoseconds returned
 by UnixNano().
 */
 func timeToMillis(t time.Time) float64 {
-	return float64(t.Unix()*1000) + float64(t.Round(time.Millisecond).Nanosecond())/1000000
+	rounded := t.Round(time.Millisecond)
+	return float64(rounded.Unix()*1000) + float64(rounded.Nanosecond())/1000000
 }
 
 /*
