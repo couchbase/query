@@ -54,7 +54,6 @@ require (
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
 	github.com/couchbase/gocb/v2 v2.9.4
 	github.com/couchbase/gocbcore/v10 v10.7.0
-	github.com/couchbase/gocbcrypto v0.0.0-00010101000000-000000000000
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.3.3
 	github.com/couchbase/goutils v0.1.2
