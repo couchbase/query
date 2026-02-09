@@ -164,22 +164,29 @@ func Resolve(param string) (val value.Value, err_code errors.ErrorCode, err_str 
 		}
 
 	} else if strings.HasPrefix(param, "-") {
-		/* Then it is a query parameter. Retrieve its value and
-		return.
+		/* Check if this is a negative number (constant) rather than a parameter reference.
+		   If number conversion succeeds, treat it as a literal value.
 		*/
-
-		key := param[1:]
-
-		key = strings.ToLower(key)
-
-		v, ok := QueryParam[key]
-
-		if !ok {
-			err_code = errors.E_SHELL_NO_SUCH_PARAM
-			err_str = " " + param + " "
+		if _, err := strconv.ParseFloat(param, 64); err == nil {
+			val = StrToVal(param)
 		} else {
-			val, err_code, err_str = v.Top()
+			/* Then it is a query parameter. Retrieve its value and
+			return.
+			*/
 
+			key := param[1:]
+
+			key = strings.ToLower(key)
+
+			v, ok := QueryParam[key]
+
+			if !ok {
+				err_code = errors.E_SHELL_NO_SUCH_PARAM
+				err_str = " " + param + " "
+			} else {
+				val, err_code, err_str = v.Top()
+
+			}
 		}
 
 	} else if strings.HasPrefix(param, "$") {
