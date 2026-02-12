@@ -12,24 +12,27 @@ package expression
 Replacer is used to replace one expr with another
 */
 
-func ReplaceExpr(origExpr, oldExpr, newExpr Expression) (Expression, error) {
+func ReplaceExpr(origExpr, oldExpr, newExpr Expression) (Expression, bool, error) {
 	replacer := newReplacer(oldExpr, newExpr)
 	replaceExpr, err := replacer.Map(origExpr)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	// reset the value field since expr might have changed
-	replaceExpr.ResetValue()
+	// reset the value field if expr changed
+	if replacer.replaced {
+		replaceExpr.ResetValue()
+	}
 
-	return replaceExpr, nil
+	return replaceExpr, replacer.replaced, nil
 }
 
 type Replacer struct {
 	MapperBase
 
-	oldExpr Expression
-	newExpr Expression
+	oldExpr  Expression
+	newExpr  Expression
+	replaced bool
 }
 
 func newReplacer(oldExpr, newExpr Expression) *Replacer {
@@ -40,6 +43,7 @@ func newReplacer(oldExpr, newExpr Expression) *Replacer {
 
 	rv.mapFunc = func(expr Expression) (Expression, error) {
 		if expr.EquivalentTo(rv.oldExpr) {
+			rv.replaced = true
 			return rv.newExpr, nil
 		}
 
