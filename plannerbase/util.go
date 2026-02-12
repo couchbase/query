@@ -36,25 +36,32 @@ func ReplaceParameters(pred expression.Expression, namedArgs map[string]value.Va
 	}
 
 	var err error
+	var replaced, repl bool
 
 	pred = pred.Copy()
 
 	for name, value := range namedArgs {
 		nameExpr := algebra.NewNamedParameter(name)
 		valueExpr := expression.NewConstant(value)
-		pred, err = expression.ReplaceExpr(pred, nameExpr, valueExpr)
+		pred, repl, err = expression.ReplaceExpr(pred, nameExpr, valueExpr)
 		if err != nil {
 			return nil, err
 		}
+		replaced = replaced || repl
 	}
 
 	for pos, value := range positionalArgs {
 		posExpr := algebra.NewPositionalParameter(pos + 1)
 		valueExpr := expression.NewConstant(value)
-		pred, err = expression.ReplaceExpr(pred, posExpr, valueExpr)
+		pred, repl, err = expression.ReplaceExpr(pred, posExpr, valueExpr)
 		if err != nil {
 			return nil, err
 		}
+		replaced = replaced || repl
+	}
+
+	if likeFunc, ok := pred.(expression.LikeFunction); ok && replaced {
+		pred = likeFunc.Constructor()(likeFunc.Operands()...)
 	}
 
 	return pred, nil
