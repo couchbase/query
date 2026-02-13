@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -250,6 +251,10 @@ func (this *builder) markOptimHints(alias string) (err error) {
 	}
 
 	indexHintError := baseKeyspace.HasIndexHintError()
+	if indexHintError {
+		accounting.UpdateCounter(accounting.INDEX_HINT_NOT_FOLLOWED)
+	}
+
 	for _, hint := range baseKeyspace.IndexHints() {
 		switch hint.State() {
 		case algebra.HINT_STATE_ERROR, algebra.HINT_STATE_INVALID, algebra.HINT_STATE_FOLLOWED, algebra.HINT_STATE_NOT_FOLLOWED:
