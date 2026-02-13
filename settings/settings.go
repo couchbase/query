@@ -177,7 +177,7 @@ func UpdateSettings(enterprise bool, requestId string, settings interface{}) (er
 
 		switch k {
 		case PLAN_STABILITY:
-			err := updatePlanStabilitySetting(enterprise, requestId, v)
+			err := updatePlanStabilitySetting(requestId, v)
 			if err != nil {
 				logging.Errorf("SETTINGS: Error updating Plan Stability setting: %v", err)
 				return err, nil

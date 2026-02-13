@@ -10,10 +10,8 @@ package settings
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/value"
 )
 
 /*
@@ -109,91 +107,18 @@ func defaultPlanStabilitySettings() map[string]interface{} {
 	}
 }
 
-func updatePlanStabilitySetting(enterprise bool, requestId string, val interface{}) errors.Error {
-	if !enterprise {
-		return errors.NewSettingsEnterpriseOnly("Plan Stability")
-	}
-	psMap, ok := val.(map[string]interface{})
-	if !ok {
-		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
-	}
+func GetPlanStabilitySetting() (map[string]interface{}, errors.Error) {
 	// getSettings() returns a copy of the settings
 	psSetting := globalSettings.getSetting(PLAN_STABILITY)
 	planStability, ok := psSetting.(map[string]interface{})
 	if !ok {
-		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", psSetting)
+		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", psSetting)
 	}
-	var oldMode PlanStabilityMode
-	if oldModeVal, ok := planStability["mode"]; ok {
-		oldMode = PlanStabilityMode(getIntValue(oldModeVal, int(PS_MODE_OFF)))
-	}
+	return planStability, nil
+}
 
-	for kk, vv := range psMap {
-		if actual, ok := vv.(value.Value); ok {
-			vv = actual.Actual()
-		}
-
-		// When JSON is unmarshalled into an interface, numbers are unmarshalled into float.
-		if f, ok := vv.(float64); ok && value.IsInt(f) {
-			vv = int64(f)
-		}
-
-		switch kk {
-		case "mode":
-			var newMode PlanStabilityMode
-			switch vv := vv.(type) {
-			case string:
-				// when user sets the setting
-				if mode, ok := _PS_MODE_MAP[strings.ToLower(vv)]; ok {
-					planStability[kk] = mode
-					newMode = mode
-				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "'off'/'prepared_only'/'ad_hoc'", vv)
-				}
-			case int64:
-				// when setting comes from metakv
-				mode := PlanStabilityMode(vv)
-				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC {
-					planStability[kk] = mode
-					newMode = mode
-				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
-				}
-			default:
-				return errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
-			}
-			err := planCache.UpdatePlanStabilityMode(oldMode, newMode, requestId)
-			if err != nil {
-				return err
-			}
-		case "error_policy":
-			switch vv := vv.(type) {
-			case string:
-				// when user sets the setting
-				if error_policy, ok := _PS_ERROR_POLICY_MAP[strings.ToLower(vv)]; ok {
-					planStability[kk] = error_policy
-				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "'strict'/'moderate'/'flexible'", vv)
-				}
-			case int64:
-				// when setting comes from metakv
-				error_policy := PlanStabilityErrorPolicy(vv)
-				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
-					planStability[kk] = error_policy
-				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
-				}
-			default:
-				return errors.NewSettingsInvalidType(PLAN_STABILITY+".error_policy", "string", vv)
-			}
-		default:
-			return errors.NewSettingsInvalidValue(PLAN_STABILITY+"."+kk, "", nil)
-		}
-	}
-	// update settings once all processed for plan stability
-	globalSettings.setSetting(PLAN_STABILITY, planStability)
-
-	return nil
+func SetPlanStabilitySetting(psSetting map[string]interface{}) {
+	globalSettings.setSetting(PLAN_STABILITY, psSetting)
 }
 
 func GetPlanStabilityMode() PlanStabilityMode {
