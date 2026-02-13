@@ -220,6 +220,8 @@ const (
 	FFDC_MAN
 	FFDC_TOTAL
 
+	INDEX_HINT_NOT_FOLLOWED
+
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
 )
@@ -296,6 +298,8 @@ const (
 	FFDC_MRE_COUNT   = "ffdc_memory_rate"
 	FFDC_MAN_COUNT   = "ffdc_manual"
 	FFDC_TOTAL_COUNT = "ffdc_total"
+
+	_INDEX_HINT_NOT_FOLLOWED = "index_hint_not_followed"
 )
 
 // please keep in sync with the mnemonics
@@ -366,6 +370,8 @@ var metricNames = []string{
 	FFDC_MRE_COUNT,
 	FFDC_MAN_COUNT,
 	FFDC_TOTAL_COUNT,
+
+	_INDEX_HINT_NOT_FOLLOWED,
 }
 
 const (
