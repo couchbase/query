@@ -412,6 +412,11 @@ func main() {
 		)
 	})
 
+	// check for migration complete (functions storage and CBO stats), such that
+	// if no migration is needed, we mark migration as complete before we accept connections
+	storage.MigrationCheck()
+	server_package.MigrationCheck()
+
 	// Create http endpoint (but don't start it yet)
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
 		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE)
