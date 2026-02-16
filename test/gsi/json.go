@@ -554,6 +554,9 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 
 	settings.InitSettings()
 
+	storage.MigrationCheck()
+	server.MigrationCheck()
+
 	storage.Migrate()
 	server.MigrateDictionary()
 
