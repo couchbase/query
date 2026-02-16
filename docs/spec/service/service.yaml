@@ -523,6 +523,8 @@ components:
           The Couchbase Capella user account credentials for a natural language request, in the form `username:password`.
           Be careful not to expose the credentials in log files or other output.
 
+          This parameter does not support single sign-on (SSO), multi-factor authentication (MFA), or social login credentials such as Google or GitHub.
+
           Natural language requests use the Couchbase Capella iQ service as a backend.
           To make a natural language request, you must have a Couchbase Capella user account.
 
