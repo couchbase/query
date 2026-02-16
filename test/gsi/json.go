@@ -551,6 +551,9 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 
 	srv.SetKeepAlive(1 << 10)
 
+	storage.MigrationCheck()
+	server.MigrationCheck()
+
 	storage.Migrate()
 	server.MigrateDictionary()
 
