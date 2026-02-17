@@ -415,7 +415,7 @@ func preLoad(name FunctionName) *FunctionEntry {
 		entry := ce.(*FunctionEntry)
 		if entry.Lang() != _MISSING {
 			return entry
-		} else {
+		} else if !entry.FunctionName.CheckStorage() {
 			return nil
 		}
 	}
