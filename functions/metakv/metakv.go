@@ -370,7 +370,7 @@ func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
 
 	// determine language and create body from definition
 	body, er := resolver.MakeBody(name.Name(), _unmarshalled.Definition)
-	if err != nil {
+	if er != nil {
 		return nil, er
 	}
 	name.ResetStorage()
