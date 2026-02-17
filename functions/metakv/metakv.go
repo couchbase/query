@@ -361,6 +361,7 @@ func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
 	} else if err != nil {
 		return nil, errors.NewMetaKVError(name.Name(), err)
 	}
+	name.ResetStorage()
 
 	// unmarshal signature and body
 	err = json.Unmarshal(val, &_unmarshalled)
@@ -369,12 +370,7 @@ func (name *metaEntry) Load() (functions.FunctionBody, errors.Error) {
 	}
 
 	// determine language and create body from definition
-	body, er := resolver.MakeBody(name.Name(), _unmarshalled.Definition)
-	if er != nil {
-		return nil, er
-	}
-	name.ResetStorage()
-	return body, nil
+	return resolver.MakeBody(name.Name(), _unmarshalled.Definition)
 }
 
 func (name *metaEntry) Save(body functions.FunctionBody, replace bool) errors.Error {
