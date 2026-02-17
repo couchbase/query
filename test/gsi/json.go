@@ -510,11 +510,15 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 
 	srv.SetKeepAlive(1 << 10)
 
-	storage.MigrationCheck()
-	server.MigrationCheck()
+	udfComplete := storage.MigrationCheck()
+	cbostatsComplete := server.MigrationCheck()
 
-	storage.Migrate()
-	server.MigrateDictionary()
+	if !udfComplete {
+		storage.Migrate()
+	}
+	if !cbostatsComplete {
+		server.MigrateDictionary()
+	}
 
 	mockServer.server = srv
 	mockServer.acctstore = acctstore

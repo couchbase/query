@@ -414,8 +414,8 @@ func main() {
 
 	// check for migration complete (functions storage and CBO stats), such that
 	// if no migration is needed, we mark migration as complete before we accept connections
-	storage.MigrationCheck()
-	server_package.MigrationCheck()
+	udfComplete := storage.MigrationCheck()
+	cbostatsComplete := server_package.MigrationCheck()
 
 	// Create http endpoint (but don't start it yet)
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
@@ -462,8 +462,12 @@ func main() {
 	prepareds.PreparedsRemotePrime()
 
 	// migrations (functions storage and CBO stats) last
-	storage.Migrate()
-	server_package.MigrateDictionary()
+	if !udfComplete {
+		storage.Migrate()
+	}
+	if !cbostatsComplete {
+		server_package.MigrateDictionary()
+	}
 
 	signalCatcher(server, endpoint)
 }

@@ -76,8 +76,8 @@ var migrationStartLock sync.Mutex
 var migrationStartCond *sync.Cond
 var migrationStartWait bool
 
-func MigrationCheck() {
-	checkSetComplete()
+func MigrationCheck() bool {
+	return checkSetComplete()
 }
 
 func Migrate() {

@@ -14,8 +14,8 @@ func InitDictionaryCache(dictCacheLimit int) {
 	// no-op for CE
 }
 
-func MigrationCheck() {
-	// no-op for CE
+func MigrationCheck() bool {
+	return false
 }
 
 func MigrateDictionary() {
