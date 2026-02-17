@@ -554,11 +554,15 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 
 	settings.InitSettings()
 
-	storage.MigrationCheck()
-	server.MigrationCheck()
+	udfComplete := storage.MigrationCheck()
+	cbostatsComplete := server.MigrationCheck()
 
-	storage.Migrate()
-	server.MigrateDictionary()
+	if !udfComplete {
+		storage.Migrate()
+	}
+	if !cbostatsComplete {
+		server.MigrateDictionary()
+	}
 
 	// Initialize configurations for AUS
 	aus.InitAus(srv)

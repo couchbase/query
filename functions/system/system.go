@@ -245,7 +245,6 @@ func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
 	if val == nil {
 		return nil, nil
 	}
-	name.changeCounter = metaStorage.ChangeCounter()
 
 	// unmarshal body
 	body := value.ToJSON(val.GetValue())
@@ -255,8 +254,12 @@ func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
 
 	// determine language and create body from definition
 	b, e := resolver.MakeBody(name.Name(), body)
+	if e != nil {
+		return nil, e
+	}
+	name.changeCounter = metaStorage.ChangeCounter()
 	val.Recycle()
-	return b, e
+	return b, nil
 }
 
 func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.Error {
