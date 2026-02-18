@@ -77,7 +77,11 @@ var migrationStartCond *sync.Cond
 var migrationStartWait bool
 
 func MigrationCheck() bool {
-	return checkSetComplete()
+	if checkSetComplete() {
+		logging.Infof("UDF migration: Already done")
+		return true
+	}
+	return false
 }
 
 func Migrate() {
