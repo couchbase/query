@@ -556,7 +556,7 @@
 	"n1ql_ffdc_plus_queue_full": {
 		"type": "counter",
 		"added": "7.6.6",
-		"help":"The total number of ffdc captures triggered due to the plus-request queue being full"
+		"help": "The total number of ffdc captures triggered due to the plus-request queue being full"
 	},
 	"n1ql_ffdc_memory_limit": {
 		"type": "counter",
@@ -927,5 +927,10 @@
 		"type": "counter",
 		"added": "8.0.0",
 		"help": "Total number of SQL++ Natural Language FTSSQL requests."
+	},
+	"n1ql_index_hint_not_followed": {
+		"type": "counter",
+		"added": "7.6.11",
+		"help": "The total number of index hints not followed"
 	}
 }
