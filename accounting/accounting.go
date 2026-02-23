@@ -226,6 +226,7 @@ const (
 	REQUESTS_NATURAL_SQL
 	REQUESTS_NATURAL_JSUDF
 	REQUESTS_NATURAL_FTSSQL
+	INDEX_HINT_NOT_FOLLOWED
 
 	// unknown is always the last and does not have a corresponding name or metric
 	UNKNOWN
@@ -336,6 +337,7 @@ const (
 	_REQUESTS_NATURAL_SQL    = "requests_natural_sql"
 	_REQUESTS_NATURAL_JSUDF  = "requests_natural_jsudf"
 	_REQUESTS_NATURAL_FTSSQL = "requests_natural_ftssql"
+	_INDEX_HINT_NOT_FOLLOWED = "index_hint_not_followed"
 )
 
 // please keep in sync with the mnemonics
@@ -434,6 +436,7 @@ var metricNames = []string{
 
 var gaugeNames = []string{
 	USED_MEMORY_HWM,
+	_INDEX_HINT_NOT_FOLLOWED,
 }
 
 const (
