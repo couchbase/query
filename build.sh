@@ -60,8 +60,6 @@ rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
   awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
 defbranch="master"
 
-OPENSSL_VERSION=""
-
 function get_openssl_version {
     local openssl_bin=""
     if [[ "Linux" = `uname` ]]; then
@@ -269,6 +267,7 @@ function repo_setup {
     repo_by_gomod go.mod indexing "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod bhive "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod go-couchbase "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod gocbcrypto "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod gomemcached "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbauth "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod godbc "" $cbranch $rbranch $defbranch
@@ -298,7 +297,6 @@ function DevStandaloneSetup {
       cd $cwd1)
 
     # OpenSSL setup
-    OPENSSL_VERSION=$(get_openssl_version)
     OPENSSL_BUILD_DIR="$GOPATH/src/couchbasedeps/openssl"
     if [[ -d ~/devbld ]]; then
         OPENSSL_BUILD_DIR=~/devbld
@@ -375,6 +373,8 @@ function DevStandaloneSetup {
 	    (cd ../eventing-ee/evaluator/impl/v8wrapper/process_manager/gen; flatc -c -o flatbuf ../flatbuf/payload.fbs; flatc -g -o . ../flatbuf/payload.fbs)
     fi
 }
+
+OPENSSL_VERSION=$(get_openssl_version)
 
 if [[ ( ( ! -d ../../../../../cbft || -h ../../../../../cbft ) && "$GOPATH" != "") || ( $sflag != 0) ]]; then
     if [[ $sflag == 1 ]]; then
