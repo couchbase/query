@@ -121,6 +121,7 @@ require (
 	github.com/couchbase/ghistogram v0.1.0 // indirect
 	github.com/couchbase/gocbcore/v9 v9.1.8 // indirect
 	github.com/couchbase/gocbcoreps v0.1.3 // indirect
+	github.com/couchbase/gocbcrypto v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/gometa v0.0.0-20220803182802-05cb6b2e299f // indirect
 	github.com/couchbase/goprotostellar v1.0.2 // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
