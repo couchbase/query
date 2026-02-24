@@ -169,6 +169,12 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CONFIG
+
+	err := endpoint.hasAdminAuth(req, clustering.PRIV_READ)
+	if err != nil {
+		return nil, err
+	}
+
 	var self clustering.QueryNode
 
 	cfgStore, cfgErr := endpoint.doConfigStore()
@@ -214,6 +220,16 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
+
+	privilege := clustering.PRIV_SYS_ADMIN
+	if req.Method == "GET" {
+		privilege = clustering.PRIV_READ
+	}
+	err := endpoint.hasAdminAuth(req, privilege)
+	if err != nil {
+		return nil, err
+	}
+
 	cfgStore, cfgErr := endpoint.doConfigStore()
 	if cfgErr != nil {
 		return nil, cfgErr
@@ -238,6 +254,16 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
+
+	privilege := clustering.PRIV_SYS_ADMIN
+	if req.Method == "GET" {
+		privilege = clustering.PRIV_READ
+	}
+	err := endpoint.hasAdminAuth(req, privilege)
+	if err != nil {
+		return nil, err
+	}
+
 	_, name := router.RequestValue(req, "cluster")
 	af.Cluster = name
 	cfgStore, cfgErr := endpoint.doConfigStore()
@@ -263,6 +289,16 @@ func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	interface{}, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
+
+	privilege := clustering.PRIV_SYS_ADMIN
+	if req.Method == "GET" {
+		privilege = clustering.PRIV_READ
+	}
+	err := endpoint.hasAdminAuth(req, privilege)
+	if err != nil {
+		return nil, err
+	}
+
 	_, name := router.RequestValue(req, "cluster")
 	af.Cluster = name
 	cfgStore, cfgErr := endpoint.doConfigStore()
@@ -295,6 +331,16 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	_, node := router.RequestValue(req, "node")
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
+
+	privilege := clustering.PRIV_SYS_ADMIN
+	if req.Method == "GET" {
+		privilege = clustering.PRIV_READ
+	}
+	err := endpoint.hasAdminAuth(req, privilege)
+	if err != nil {
+		return nil, err
+	}
+
 	af.Node = node
 	af.Cluster = name
 
