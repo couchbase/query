@@ -276,12 +276,26 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 		}
 	}
 
+	planContext := this.PlanContext()
+
 	this.index, err = this.indexer.IndexById(_unmarshalled.IndexId)
+	if err != nil {
+		if planContext != nil && planContext.remap {
+			var err1 errors.Error
+			this.index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer)
+			if err1 != nil || this.index == nil {
+				// return the original err
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
 	if _, ok := this.index.(datastore.FTSIndex); !ok {
 		return fmt.Errorf("Unable to find Index for %v", this.index.Name())
 	}
 
-	planContext := this.PlanContext()
 	if planContext != nil {
 		planContext.addKeyspaceAlias(this.term.Alias())
 	}
@@ -290,6 +304,12 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 }
 
 func (this *IndexFtsSearch) verify(prepared *Prepared) errors.Error {
+	if prepared != nil && prepared.restored {
+		index, replace := replaceRestoredIndex(this.indexer, this.index)
+		if replace {
+			this.index = index
+		}
+	}
 	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
 

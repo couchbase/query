@@ -72,6 +72,14 @@ func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, erro
 	return planStability, nil
 }
 
+func UpdatePersistPlanStabilitySetting(requestId string, val interface{}) errors.Error {
+	err := updatePlanStabilitySetting(requestId, val)
+	if err != nil {
+		return err
+	}
+	return PersistSettings()
+}
+
 func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error {
 	psMap, ok := val.(map[string]interface{})
 	if !ok {

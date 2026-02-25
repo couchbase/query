@@ -177,6 +177,8 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
+	planContext := this.PlanContext()
+
 	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Scan.Using)
 	if err != nil {
 		return err
@@ -184,12 +186,20 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 
 	this.index, err = this.indexer.IndexById(_unmarshalled.Scan.IndexId)
 	if err != nil {
-		return err
+		if planContext != nil && planContext.remap {
+			var err1 errors.Error
+			this.index, err1 = getRemapIndex(_unmarshalled.Scan.Index, this.indexer)
+			if err1 != nil || this.index == nil {
+				// return the original err
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
-	planContext := this.PlanContext()
 	if planContext != nil {
 		if this.term.JoinKeys() != nil {
 			_, err = planContext.Map(this.term.JoinKeys())
@@ -204,6 +214,12 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 }
 
 func (this *IndexNest) verify(prepared *Prepared) errors.Error {
+	if prepared != nil && prepared.restored {
+		index, replace := replaceRestoredIndex(this.indexer, this.index)
+		if replace {
+			this.index = index
+		}
+	}
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }
 

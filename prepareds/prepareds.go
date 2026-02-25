@@ -148,7 +148,7 @@ func PreparedsRemotePrime() {
 					func(doc map[string]interface{}) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
-							_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, false,
+							_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, false, false,
 								settings.GetPlanStabilityMode(), settings.GetPlanStabilityErrorPolicy(),
 								logging.NULL_LOG)
 							if err == nil {
@@ -735,7 +735,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
 					prepared, err, _ = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime,
-						true, planStability, planStabilityMode, planStabilityErrorPolicy, log)
+						true, false, planStability, planStabilityMode, planStabilityErrorPolicy, log)
 				}
 			},
 			func(warn errors.Error) {
@@ -767,6 +767,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 					good = prepared.Verify() == nil
 				}
 			} else {
+				var persist bool
 
 				// we have to proceed under a lock to avoid multiple
 				// requests populating metadata counters at the same time
@@ -781,9 +782,19 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 					good = prepared.Verify() == nil
 					if good {
 						ce.populated = true
+						if prepared.IsRestored() {
+							err1 := prepared.RebuildRestoredPlan()
+							if err1 == nil && (prepared.Persist() || planStability) {
+								persist = true
+							}
+						}
 					}
 				}
 				ce.Unlock()
+
+				if persist {
+					err = persistPrepared(prepared)
+				}
 			}
 
 			// after all this, it did not work out!
@@ -850,21 +861,21 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 	})
 }
 
-func DecodePrepared(prepared_name string, prepared_stmt string, reprep, planStability bool,
+func DecodePrepared(prepared_name string, prepared_stmt string, reprep, remap, planStability bool,
 	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
 	log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
-	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, planStability,
-		planStabilityMode, planStabilityErrorPolicy, log)
+	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, remap,
+		planStability, planStabilityMode, planStabilityErrorPolicy, log)
 }
 
 func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool,
-	phaseTime *time.Duration, reprep, planStability bool, planStabilityMode settings.PlanStabilityMode,
+	phaseTime *time.Duration, reprep, remap, planStability bool, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
 
 	added := true
 
-	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, planStability,
-		planStabilityMode, planStabilityErrorPolicy, log)
+	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, remap,
+		planStability, planStabilityMode, planStabilityErrorPolicy, log)
 	if err != nil {
 		return nil, err, nil
 	}
@@ -945,11 +956,11 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	}
 }
 
-func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planStability bool,
+func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, planStability bool,
 	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
 	log logging.Log) (*plan.Prepared, errors.Error, errors.Error) {
 
-	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded)
+	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded, remap)
 	if err != nil {
 		if reprep && len(bytes) > 0 {
 

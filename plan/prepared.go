@@ -52,6 +52,7 @@ type Prepared struct {
 	persist         bool
 	adHoc           bool
 	inlineUdf       bool
+	restored        bool
 	keyspaceRefs    []string
 	preparedTime    time.Time // time the plan was generated
 	optimHints      *algebra.OptimHints
@@ -105,7 +106,7 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 	return p
 }
 
-func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
+func NewPreparedFromEncodedPlan(prepared_stmt string, remap bool) (*Prepared, []byte, errors.Error) {
 	prepared := NewPrepared(nil, nil, nil, nil, nil)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
@@ -121,7 +122,7 @@ func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors
 	if err != nil {
 		return prepared, nil, errors.NewPreparedDecodingError(err)
 	}
-	err = prepared.unmarshalInternal(prepared_bytes)
+	err = prepared.unmarshalInternal(prepared_bytes, remap)
 	if err != nil {
 		return prepared, prepared_bytes, errors.NewUnrecognizedPreparedError(err)
 	}
@@ -188,6 +189,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 			r["udfSubqPlans"] = this.udfSubqPlans
 		}
 	}
+	if this.restored {
+		r["restored"] = this.restored
+	}
 	if len(this.indexScanKeyspaces) > 0 {
 		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
 	}
@@ -209,10 +213,10 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
-	return this.unmarshalInternal(body)
+	return this.unmarshalInternal(body, false)
 }
 
-func (this *Prepared) unmarshalInternal(body []byte) error {
+func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 	var _unmarshalled struct {
 		Operator           json.RawMessage        `json:"operator"`
 		Signature          json.RawMessage        `json:"signature"`
@@ -229,6 +233,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		Persist            bool                   `json:"persist"`
 		AdHoc              bool                   `json:"adHocStatement"`
 		InlineUdf          bool                   `json:"inlineUdf"`
+		Restored           bool                   `json:"restored"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
@@ -281,6 +286,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.persist = _unmarshalled.Persist
 	this.adHoc = _unmarshalled.AdHoc
 	this.inlineUdf = _unmarshalled.InlineUdf
+	this.restored = _unmarshalled.Restored
 	this.planVersion = _unmarshalled.Version
 	this.fatalError = _unmarshalled.FatalError
 	this.errCount = _unmarshalled.ErrCount
@@ -341,7 +347,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 			}
 		}
 
-		planContext := newPlanContext(subqMap, subqPlans)
+		planContext := newPlanContext(subqMap, subqPlans, remap)
 		this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
 		if err != nil {
 			return err
@@ -349,6 +355,11 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 
 		if hasSubq {
 			this.subqueryPlans = subqPlans
+		}
+
+		if remap {
+			// query plan from restored QUERY_METADATA bucket
+			this.restored = true
 		}
 	}
 
@@ -498,6 +509,10 @@ func (this *Prepared) SetInlineUdf() {
 	this.inlineUdf = true
 }
 
+func (this *Prepared) IsRestored() bool {
+	return this.restored
+}
+
 func (this *Prepared) EncodedPlan() string {
 	return this.encoded_plan
 }
@@ -524,6 +539,15 @@ func (this *Prepared) BuildEncodedPlan() (string, error) {
 	str := base64.StdEncoding.EncodeToString(b.Bytes())
 	this.encoded_plan = str
 	return str, nil
+}
+
+func (this *Prepared) RebuildRestoredPlan() error {
+	if !this.restored {
+		return nil
+	}
+	this.restored = false
+	_, err := this.BuildEncodedPlan()
+	return err
 }
 
 func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
@@ -1016,7 +1040,7 @@ func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlan
 			return err
 		}
 
-		planContext := newPlanContext(nil, nil)
+		planContext := newPlanContext(nil, nil, false)
 		op, err := MakeOperator(op_type.Operator, subqPlanInfo.PlanOp, planContext)
 		if err != nil {
 			return err

@@ -19,6 +19,7 @@ import (
 type planContext struct {
 	expression.MapperBase
 
+	// for formalization purpose
 	withs     *value.ScopeValue
 	vars      *value.ScopeValue
 	keyspaces *value.ScopeValue
@@ -26,15 +27,19 @@ type planContext struct {
 	// for subquery plans in prepared
 	subqMap   map[string]*subqPlanInfo
 	subqPlans *algebra.SubqueryPlans
+
+	// for remapping (backup/restore)
+	remap bool
 }
 
-func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.SubqueryPlans) *planContext {
+func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.SubqueryPlans, remap bool) *planContext {
 	rv := &planContext{
 		withs:     value.NewScopeValue(make(map[string]interface{}), nil),
 		vars:      value.NewScopeValue(make(map[string]interface{}), nil),
 		keyspaces: value.NewScopeValue(make(map[string]interface{}), nil),
 		subqMap:   subqMap,
 		subqPlans: subqPlans,
+		remap:     remap,
 	}
 
 	rv.SetMapper(rv)
@@ -56,6 +61,7 @@ func subqPlanContext(parent *planContext) *planContext {
 		keyspaces: value.NewScopeValue(make(map[string]interface{}), parent.keyspaces),
 		subqMap:   parent.subqMap,
 		subqPlans: parent.subqPlans,
+		remap:     parent.remap,
 	}
 
 	rv.SetMapper(rv)

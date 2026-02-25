@@ -43,6 +43,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/natural"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/sanitizer"
@@ -663,7 +664,8 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
 			return "", nil
 		}
-		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false, false,
+			planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 		if err != nil {
 			return nil, err
 		}
@@ -1210,7 +1212,21 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				ausSettings = nil
 			}
 		}
-		return makeBackupHeader(data, nil, nil, awr, ausSettings, nil), nil
+
+		if version == datastore.BACKUP_VERSION_3 {
+			return makeBackupHeaderV3(data, nil, nil, awr, ausSettings, nil), nil
+		}
+
+		// Backup plan stability settings
+		var planStabilitySetting map[string]interface{}
+		if settings.PlanStabilityAvailable() {
+			planStabilitySetting, err = settings.GetPlanStabilitySetting()
+			if err != nil {
+				planStabilitySetting = nil
+			}
+		}
+
+		return makeBackupHeader(data, nil, nil, awr, ausSettings, nil, planStabilitySetting, nil), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1227,7 +1243,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, err
 		}
 
-		fns, _, _, awr, ausGlobal, _, e := checkBackupHeader(bytes)
+		fns, _, _, awr, ausGlobal, _, planStabilitySetting, _, e := checkBackupHeader(bytes)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1288,6 +1304,26 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				err2, _ = aus.SetAus(mAus, true, true)
 				if err2 != nil {
 					return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
+				}
+			}
+		}
+
+		// Restore plan stability setting
+		if planStabilitySetting != nil {
+			if !settings.PlanStabilityAvailable() {
+				logging.Errorf("Plan Stability: Cannot restore global settings as the feature is not supported." +
+					" The feature is only available on Enterprise Edition clusters on a supported version.")
+			} else {
+				var psSetting map[string]interface{}
+				err2 := json.Unmarshal(planStabilitySetting, &psSetting)
+				if err2 != nil {
+					return nil, errors.NewServiceErrorBadValue(err2, "restore Plan Stability Settings")
+				}
+				// requestId is only needed if we need to create QUERY_METADATA
+				err1 := settings.UpdatePersistPlanStabilitySetting("", psSetting)
+				if err1 != nil {
+					logging.Errorf("Error updating Plan Stability Setting: %v", err1)
+					return nil, errors.NewServiceErrorBadValue(err1, "restore Plan Stability")
 				}
 			}
 		}
@@ -1408,7 +1444,88 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			}
 		}
 
-		return makeBackupHeader(fns, seqs, cbo, nil, nil, ausSettings), nil
+		if version == datastore.BACKUP_VERSION_3 {
+			return makeBackupHeaderV3(fns, seqs, cbo, nil, nil, ausSettings), nil
+		}
+
+		// Backup Plan Stability entries
+		var planStability []interface{}
+		if settings.PlanStabilityAvailable() && bucket != "" && bucket == dictionary.QUERY_METADATA_BUCKET {
+			planStability = make([]interface{}, 0)
+			err = datastore.ScanSystemCollection(bucket, "ppn::", nil,
+				func(key string, systemCollection datastore.Keyspace) errors.Error {
+					keys[0] = key
+					errs := systemCollection.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+					if errs != nil && len(errs) > 0 {
+						return errs[0]
+					}
+					av, ok := res[key]
+					if ok {
+						val, ok := av.Field("keyspaceReferences")
+						if !ok {
+							logging.Errorf("Plan Stability Backup: missing keyspaceReferences for key %s", key)
+							return nil
+						}
+						ksrefs, ok := val.Actual().([]interface{})
+						if !ok {
+							logging.Errorf("Plan Stability Backup: keyspaceReferences for key %s is not an array", key)
+							return nil
+						}
+						// if any of the keyspace referenced does not pass
+						// filter evaluation, skip
+						for _, ksref := range ksrefs {
+							if keyspace, ok := ksref.(string); ok {
+								p := algebra.ParsePath(keyspace)
+								if !filterEval(p, include, exclude, false) {
+									return nil
+								}
+							} else {
+								logging.Errorf("Plan Stability Backup: keyspace %v is not a string", ksref)
+								return nil
+							}
+						}
+						// verify the plan
+						val, ok = av.Field("encoded_plan")
+						if !ok {
+							logging.Errorf("Plan Stability Backup: missing encoded_plan for key %s", key)
+							return nil
+						}
+						encoded_plan, ok := val.Actual().(string)
+						if !ok {
+							logging.Errorf("Plan Stability Backup: encoded_plan for key %s is not a string", key)
+							return nil
+						}
+						prepared, _, err1 := plan.NewPreparedFromEncodedPlan(encoded_plan, true)
+						if err1 == nil {
+							err1 = prepared.Verify()
+							if err1 == nil {
+								av.SetField("verified", true)
+							} else {
+								av.SetField("verification_error", err1.Error())
+							}
+						} else {
+							av.SetField("encoded_plan_error", err1.Error())
+						}
+						b, err := av.MarshalJSON()
+						if err == nil {
+							d := make(map[string]interface{})
+							d["key"] = key
+							sn := snappy.Encode(nil, b)
+							b64 := base64.StdEncoding.EncodeToString(sn)
+							d["value"] = b64
+							planStability = append(planStability, d)
+						} else {
+							logging.Errorf("Plan Stability Backup: error from MarshalJSON: %v", err)
+						}
+					}
+					return nil
+				}, nil)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		return makeBackupHeader(fns, seqs, cbo, nil, nil, ausSettings, nil, planStability), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1424,7 +1541,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if err != nil {
 			return nil, err
 		}
-		fns, seqs, cbo, _, _, ausSettings, e := checkBackupHeader(body)
+		fns, seqs, cbo, _, _, ausSettings, _, planStability, e := checkBackupHeader(body)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1594,6 +1711,55 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			}
 		}
 
+		// Restore Plan Stability entries
+		if planStability != nil {
+			if !settings.PlanStabilityAvailable() {
+				logging.Errorf("Plan Stability: Cannot restore entries as the feature is not supported." +
+					" The feature is only available on Enterprise Edition clusters on a supported version.")
+			} else {
+				remap, err = newRemapper(req.FormValue("remap"), "plan stability")
+				if err != nil {
+					return nil, err
+				}
+				store := datastore.GetDatastore()
+				if store == nil {
+					return nil, errors.NewServiceErrorBadValue(errors.NewNoDatastoreError(), "restore plan stability")
+				}
+				systemCollection, err := store.GetSystemCollection(bucket)
+				if err != nil {
+					return nil, errors.NewServiceErrorBadValue(err, "restore plan stability")
+				}
+
+				// TODO: clear existing entries if any
+
+				// restore plan stability entries
+				index = 0
+				json.SetIndexState(&iState, planStability)
+				for {
+					v, err := iState.FindIndex(index)
+					if err != nil {
+						iState.Release()
+						return nil, errors.NewServiceErrorBadValue(err, "restore plan stability")
+					}
+					if string(v) == "" {
+						break
+					}
+					index++
+					err1 := doPlanStabilityRestore(v, bucket, include, exclude, remap, systemCollection)
+					if err1 != nil {
+						iState.Release()
+						return nil, err1
+					}
+				}
+				if index > 0 {
+					if bucket == "" || bucket != dictionary.QUERY_METADATA_BUCKET {
+						logging.Errorf("Plan Stablity Restore: unexpected entries (%d) in bucket %s", index, bucket)
+					}
+				}
+				iState.Release()
+			}
+		}
+
 		// after restoring cleanup any stale entries in the system collection
 		go dictionary.CleanupSystemCollection("default", bucket)
 
@@ -1606,23 +1772,42 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 const _MAGIC_KEY = "udfMagic"
 const _MAGIC = "4D6172636F2072756C6573"
 const _VERSION_KEY = "version"
-const _VERSION = "0x03"
+const _VERSION = "0x04"
 const _VERSION_1 = "0x01"
 const _VERSION_2 = "0x02"
+const _VERSION_3 = "0x03"
 const _VERSION_MIN = 1
-const _VERSION_MAX = 3
+const _VERSION_MAX = 4
 const _UDF_KEY = "udfs"
 const _SEQ_KEY = "seqs"
 const _CBO_KEY = "cbo"
 const _AWR_KEY = "awr"
 const _AUS_KEY = "aus"                   // Global AUS settings in system:aus
 const _AUS_SETTINGS_KEY = "aus_settings" // Keyspace level AUS settings in system:aus_settings
+const _PLAN_STABILITY_KEY = "plan_stability"
+const _PLAN_STABILITY_SETTINGS_KEY = "plan_stability_settings"
 
 func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}, aus interface{},
-	ausSettings interface{}) interface{} {
+	ausSettings interface{}, planStabilitySetting interface{}, planStability interface{}) interface{} {
 	data := make(map[string]interface{}, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION
+	data[_UDF_KEY] = v
+	data[_SEQ_KEY] = s
+	data[_CBO_KEY] = c
+	data[_AWR_KEY] = a
+	data[_AUS_KEY] = aus
+	data[_AUS_SETTINGS_KEY] = ausSettings
+	data[_PLAN_STABILITY_KEY] = planStability
+	data[_PLAN_STABILITY_SETTINGS_KEY] = planStabilitySetting
+	return data
+}
+
+func makeBackupHeaderV3(v interface{}, s interface{}, c interface{}, a interface{}, aus interface{},
+	ausSettings interface{}) interface{} {
+	data := make(map[string]interface{}, 4)
+	data[_MAGIC_KEY] = _MAGIC
+	data[_VERSION_KEY] = _VERSION_3
 	data[_UDF_KEY] = v
 	data[_SEQ_KEY] = s
 	data[_CBO_KEY] = c
@@ -1650,31 +1835,31 @@ func makeBackupHeaderV1(v interface{}) interface{} {
 	return data
 }
 
-func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte, errors.Error) {
+func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte, []byte, []byte, errors.Error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, d)
 	magic, err := oState.FindKey(_MAGIC_KEY)
 	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
 		oState.Release()
-		return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
+		return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
 	}
 	version, err := oState.FindKey(_VERSION_KEY)
 	var ver uint64
 	if err == nil {
 		trimmed := strings.Trim(string(version), "\"")
 		if !strings.HasPrefix(trimmed, "0x") || len(trimmed) <= 2 {
-			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
 		}
 		ver, err = strconv.ParseUint(trimmed[2:], 16, 64)
 	}
 	if err != nil || ver < _VERSION_MIN || ver > _VERSION_MAX {
 		oState.Release()
-		return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
+		return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
 	}
 	udfs, err := oState.FindKey(_UDF_KEY)
 	if err != nil {
 		oState.Release()
-		return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
+		return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
 	}
 	// only expect sequences & cbo for version 2+ backup images
 	var seqs []byte
@@ -1683,12 +1868,12 @@ func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte
 		seqs, err = oState.FindKey(_SEQ_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
 		}
 		cbo, err = oState.FindKey(_CBO_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
 		}
 	}
 	var awr []byte
@@ -1698,24 +1883,40 @@ func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte
 		awr, err = oState.FindKey(_AWR_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing awr field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing awr field")
 		}
 
 		aus, err = oState.FindKey(_AUS_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus field")
 		}
 
 		ausSettings, err = oState.FindKey(_AUS_SETTINGS_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus_settings field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus_settings field")
+		}
+
+	}
+	var planStabilitySettings []byte
+	var planStability []byte
+	if ver >= 4 {
+		planStabilitySettings, err = oState.FindKey(_PLAN_STABILITY_SETTINGS_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing plan_stability_settings field")
+		}
+
+		planStability, err = oState.FindKey(_PLAN_STABILITY_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing plan_stability field")
 		}
 
 	}
 	oState.Release()
-	return udfs, seqs, cbo, awr, aus, ausSettings, nil
+	return udfs, seqs, cbo, awr, aus, ausSettings, planStabilitySettings, planStability, nil
 }
 
 type matcher map[string]map[string]bool
@@ -2979,7 +3180,7 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 
 var escQuote = regexp.MustCompile(`(\\\\)*(\\\")`)
 
-func getCBORestoreKeyValue(v []byte, doValue bool) (string, []byte, error) {
+func getRestoreKeyValue(v []byte, doValue bool) (string, []byte, error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, v)
 	bkey, err := oState.FindKey("key")
@@ -3014,7 +3215,7 @@ func getCBORestoreKeyValue(v []byte, doValue bool) (string, []byte, error) {
 }
 
 func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap remapper) (string, bool) {
-	key, _, err := getCBORestoreKeyValue(v, false)
+	key, _, err := getRestoreKeyValue(v, false)
 	if err != nil || key == "" {
 		return "", false
 	}
@@ -3030,7 +3231,7 @@ func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap r
 }
 
 func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace) errors.Error {
-	key, bvalue, err := getCBORestoreKeyValue(v, true)
+	key, bvalue, err := getRestoreKeyValue(v, true)
 	if err != nil {
 		if key == "" {
 			return errors.NewServiceErrorBadValue(err, "cbo restore: missing key")
@@ -3075,6 +3276,9 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 
 	data := make([]byte, base64.StdEncoding.DecodedLen(len(bvalue)-2))
 	n, err := base64.StdEncoding.Decode(data, []byte(bvalue[1:len(bvalue)-1]))
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "cbo restore: error decoding value"+":"+key)
+	}
 	raw, cerr := snappy.Decode(nil, data[:n])
 	if cerr != nil {
 		return errors.NewServiceErrorBadValue(cerr, "cbo restore: error decoding value"+":"+key)
@@ -3170,6 +3374,116 @@ func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, rem
 		return errs[0]
 	}
 
+	return nil
+}
+
+func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace) errors.Error {
+	key, bvalue, err := getRestoreKeyValue(v, true)
+	if err != nil {
+		if key == "" {
+			return errors.NewServiceErrorBadValue(err, "plan stability restore: missing key")
+		} else if bvalue == nil {
+			return errors.NewServiceErrorBadValue(err, fmt.Sprintf("plan stability restore: missing value for key %v", key))
+		}
+		return errors.NewServiceErrorBadValue(err, "plan stability restore: invalid key or value")
+	}
+
+	if key == "" {
+		return errors.NewServiceErrorBadValue(err, "plan stability restore: invalid key")
+	}
+	if len(bvalue) < 3 || bvalue[0] != '"' || bvalue[len(bvalue)-1] != '"' {
+		return errors.NewServiceErrorBadValue(err, "plan stability restore: invalid value")
+	}
+
+	data := make([]byte, base64.StdEncoding.DecodedLen(len(bvalue)-2))
+	n, err := base64.StdEncoding.Decode(data, []byte(bvalue[1:len(bvalue)-1]))
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "plan stability restore: error decoding value"+":"+key)
+	}
+	raw, cerr := snappy.Decode(nil, data[:n])
+	if cerr != nil {
+		return errors.NewServiceErrorBadValue(cerr, "plan stability restore: error decoding value"+":"+key)
+	}
+
+	pValue := value.NewValue(raw)
+
+	ksVal, ok := pValue.Field("keyspaceReferences")
+	if !ok || ksVal == nil {
+		logging.Errorf("Plan Stability Restore: missing keyspaceReferences for key %s", key)
+		return errors.NewServiceErrorBadValue(nil, "plan stability restore: missing keyspaceReferences")
+	}
+	ksrefs, ok := ksVal.Actual().([]interface{})
+	if !ok {
+		logging.Errorf("Plan Stability Restore: keyspacesReferences for key %s is not an array (%T)", key, ksVal)
+		return errors.NewServiceErrorBadValue(nil, "plan stability restore: invalid keyspaceReferences")
+	}
+	// if any of the keyspace references does not pass filter evaluation, skip
+	for _, ksref := range ksrefs {
+		if keyspace, ok := ksref.(string); ok {
+			p := algebra.ParsePath(keyspace)
+			if !filterEval(p, include, exclude, false) {
+				logging.Infof("Plan Stability Restore: entry for key %v is missing keyspace reference %s in the backup. Skipping entry %v",
+					key, keyspace, key)
+				return nil
+			}
+		} else {
+			logging.Errorf("Plan Stability restore: keyspace %v is not a string (%T), skipping plan stability restore for key %v", ksref, ksref, key)
+			return errors.NewServiceErrorBadValue(nil,
+				fmt.Sprintf("plan stability restore: keyspace reference %v is not a string (%T) for key %v", ksref, ksref, key))
+		}
+	}
+	verifyVal, ok := pValue.Field("verified")
+	if ok {
+		verified, ok := verifyVal.Actual().(bool)
+		if ok && verified {
+			// get the original plan
+			val, ok := pValue.Field("encoded_plan")
+			if !ok {
+				logging.Errorf("Plan Stability restore: missing encoded_plan for key %s", key)
+				return errors.NewServiceErrorBadValue(nil,
+					fmt.Sprintf("plan stability restore: missing encoded_plan for key %v", key))
+			}
+			encoded_plan, ok := val.Actual().(string)
+			if !ok {
+				logging.Errorf("Plan Stability restore: encoded_plan for key %s is not a string (%T)", key, val)
+				return errors.NewServiceErrorBadValue(nil,
+					fmt.Sprintf("plan stability restore: encoded_plan is not a string for key %v", key))
+			}
+			prepared, _, err1 := plan.NewPreparedFromEncodedPlan(encoded_plan, true)
+			if err1 != nil {
+				logging.Errorf("Plan Stability restore: error from NewPreparedFromEncodedPlan: %v", err1)
+				return errors.NewServiceErrorBadValue(err1,
+					fmt.Sprintf("plan stability restore: error getting prepared from encoded_plan for key %v", key))
+			}
+			encoded_plan, err = prepared.BuildEncodedPlan()
+			if err == nil {
+				pValue.UnsetField("verified")
+				pValue.SetField("encoded_plan", encoded_plan)
+				// Add to prepared cache
+				// (false for planStability since we don't need the call to persist to disk)
+				err1 = prepareds.AddPrepared(prepared, false)
+				if err1 != nil {
+					logging.Errorf("Plan Stability restore: error adding prepared statement %v to prepared cache", key)
+				}
+			} else {
+				logging.Errorf("Plan Stability restore: error building encoded_plan from prepared for key %v", key)
+			}
+		}
+	} else if verification_error, ok := pValue.Field("verification_error"); ok {
+		logging.Infof("Plan Stability Restore: entry for key %v had verification error: %v", key, verification_error)
+		pValue.UnsetField("verification_error")
+	} else if encoded_plan_error, ok := pValue.Field("encoded_plan_error"); ok {
+		logging.Infof("Plan Stability Restore: entry for key %v had encoded_plan error: %v", key, encoded_plan_error)
+		pValue.UnsetField("encoded_plan_error")
+	}
+
+	pairs := make([]value.Pair, 1)
+	pairs[0].Name = key
+	pairs[0].Value = pValue
+	_, _, errs := systemCollection.Upsert(pairs, datastore.NULL_QUERY_CONTEXT, true)
+	if errs != nil && len(errs) > 0 {
+		return errs[0]
+	}
 	return nil
 }
 

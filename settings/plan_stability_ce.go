@@ -26,6 +26,10 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 	return errors.NewSettingsEnterpriseOnly("Plan Stability")
 }
 
+func UpdatePersistPlanStabilitySetting(requestId string, val interface{}) errors.Error {
+	return errors.NewSettingsEnterpriseOnly("Plan Stability")
+}
+
 func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, errors.Error) {
 	return nil, errors.NewSettingsEnterpriseOnly("Plan Stability")
 }

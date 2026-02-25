@@ -11,6 +11,7 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
@@ -755,6 +756,8 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
+	planContext := this.PlanContext()
+
 	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
@@ -762,7 +765,16 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 
 	index, err := this.indexer.IndexById(_unmarshalled.IndexId)
 	if err != nil {
-		return err
+		if planContext != nil && planContext.remap {
+			var err1 errors.Error
+			index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer)
+			if err1 != nil || index == nil {
+				// return the original err
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
 	index3, ok := index.(datastore.Index3)
@@ -771,7 +783,6 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	}
 	this.index = index3
 
-	planContext := this.PlanContext()
 	if planContext != nil {
 		if this.limit != nil {
 			_, err = planContext.Map(this.limit)
@@ -797,7 +808,55 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
+// for restored query plan, get the index via IndexByName() instead of IndexById(); a retry loop is
+// included in case the new index is not yet created in the restore process
+func getRemapIndex(indexName string, indexer datastore.Indexer) (index datastore.Index, err errors.Error) {
+	maxRetry := 6
+	interval := 100 * time.Millisecond
+	for i := 0; i < maxRetry; i++ {
+		index, err = indexer.IndexByName(indexName)
+		if err != nil {
+			if errors.IsIndexNotFoundError(err) {
+				time.Sleep(interval)
+				interval *= 2
+				indexer.Refresh()
+			} else {
+				break
+			}
+		} else {
+			return
+		}
+	}
+	return
+}
+
+// index references in "restored" prepared statement may have an index state of CREATED; replace if
+// we can get a ONLINE index state (assuming the index has since been rebuilt after the restore)
+func replaceRestoredIndex(indexer datastore.Indexer, index datastore.Index) (datastore.Index, bool) {
+	state, _, _ := index.State()
+	if state == datastore.ONLINE {
+		return index, false
+	}
+	indexer.Refresh()
+	newIndex, err := indexer.IndexById(index.Id())
+	if err == nil {
+		state, _, _ = newIndex.State()
+		if state == datastore.ONLINE {
+			return newIndex, true
+		}
+	}
+	return index, false
+}
+
 func (this *IndexScan3) verify(prepared *Prepared) errors.Error {
+	if prepared != nil && prepared.restored {
+		index, replace := replaceRestoredIndex(this.indexer, this.index)
+		if replace {
+			if index3, ok := index.(datastore.Index3); ok {
+				this.index = index3
+			}
+		}
+	}
 	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
 

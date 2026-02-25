@@ -25,6 +25,10 @@ import (
 	"github.com/couchbase/query/util"
 )
 
+const (
+	QUERY_METADATA_BUCKET = dictionary.QUERY_METADATA_BUCKET
+)
+
 type DictCacheEntry interface {
 	Target(map[string]interface{})
 	Dictionary(map[string]interface{})

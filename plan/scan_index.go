@@ -296,6 +296,8 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 		}
 	}
 
+	planContext := this.PlanContext()
+
 	this.indexer, err = this.keyspace.Indexer(_unmarshalled.Using)
 	if err != nil {
 		return err
@@ -303,10 +305,18 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 
 	this.index, err = this.indexer.IndexById(_unmarshalled.IndexId)
 	if err != nil {
-		return err
+		if planContext != nil && planContext.remap {
+			var err1 errors.Error
+			this.index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer)
+			if err1 != nil || this.index == nil {
+				// return the original err
+				return err
+			}
+		} else {
+			return err
+		}
 	}
 
-	planContext := this.PlanContext()
 	if planContext != nil {
 		if this.limit != nil {
 			_, err = planContext.Map(this.limit)
@@ -321,6 +331,12 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 }
 
 func (this *IndexScan) verify(prepared *Prepared) errors.Error {
+	if prepared != nil && prepared.restored {
+		index, replace := replaceRestoredIndex(this.indexer, this.index)
+		if replace {
+			this.index = index
+		}
+	}
 	return verifyIndex(this.index, this.indexer, verifyCoversAndSeqScan(this.covers, this.keyspace, this.indexer), prepared)
 }
 

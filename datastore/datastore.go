@@ -50,6 +50,7 @@ const (
 	CURRENT_BACKUP_VERSION = 0
 	BACKUP_VERSION_1       = 1
 	BACKUP_VERSION_2       = 2
+	BACKUP_VERSION_3       = 3
 )
 
 // CatalogInfoFlags controls which metadata sections are loaded from an external catalog.

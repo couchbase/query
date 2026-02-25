@@ -19,6 +19,10 @@ import (
 	functionsStorage "github.com/couchbase/query/functions/storage"
 )
 
+const (
+	QUERY_METADATA_BUCKET = "" // dummy constant, should not need it
+)
+
 // dictionary cache entries
 
 // dummy
