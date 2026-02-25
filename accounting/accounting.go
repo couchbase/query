@@ -432,11 +432,12 @@ var metricNames = []string{
 	_REQUESTS_NATURAL_SQL,
 	_REQUESTS_NATURAL_JSUDF,
 	_REQUESTS_NATURAL_FTSSQL,
+
+	_INDEX_HINT_NOT_FOLLOWED,
 }
 
 var gaugeNames = []string{
 	USED_MEMORY_HWM,
-	_INDEX_HINT_NOT_FOLLOWED,
 }
 
 const (
