@@ -25,7 +25,11 @@ verbose=$1
 Site=http://127.0.0.1:8091/pools/nodes/
 Auth=Administrator:password
 
-export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include $CGO_FLAGS"
+# Source shared functions
+source "$(dirname "$0")/../../build_util.sh"
+OPENSSL_VERSION=$(get_openssl_version)
+
+export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_FLAGS"
 export CGO_LDFLAGS="-L$GOPATH/lib ${CGO_LDFLAGS}"
 export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
 

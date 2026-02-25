@@ -60,23 +60,8 @@ rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
   awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
 defbranch="master"
 
-function get_openssl_version {
-    local openssl_bin=""
-    if [[ "Linux" = `uname` ]]; then
-        openssl_bin="/opt/couchbase/bin/openssl"
-    elif [[ "Darwin" = `uname` ]]; then
-        openssl_bin="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin/openssl"
-    fi
-
-    if [[ -f "$openssl_bin" ]]; then
-        local version=$("$openssl_bin" version | awk '{print $2}')
-        echo "openssl-${version}"
-    else
-        echo "Error: OpenSSL binary not found at $openssl_bin" >&2
-        exit 1
-    fi
-}
-
+# Source shared functions
+source "$(dirname "$0")/build_util.sh"
 
 function checkout_if_necessary {
   local current=`$GIT rev-parse --abbrev-ref HEAD 2>/dev/null`
