@@ -1738,7 +1738,7 @@ func (cqueue *rswCancelQueue) runWorker() {
 						vbucket = cr[i].vbucket
 						desc := &doDescriptor{useReplicas: true, version: b.Version, maxTries: b.backOffRetries(), retry: true}
 						for desc.attempts = 0; desc.attempts < desc.maxTries; {
-							conn, pool, err = b.getVbConnection(uint32(vbucket), desc)
+							conn, pool, err = b.getVbConnection(uint32(vbucket), desc, false)
 							if err != nil {
 								if desc.retry {
 									desc.attempts++
@@ -1914,7 +1914,7 @@ func (queue *rswQueue) runWorker() {
 					desc := &doDescriptor{useReplicas: vbscan.scan.useReplica, version: b.Version, maxTries: b.backOffRetries(),
 						retry: true}
 					for desc.attempts = 0; desc.attempts < desc.maxTries; {
-						conn, pool, err = b.getVbConnection(uint32(vb), desc)
+						conn, pool, err = b.getVbConnection(uint32(vb), desc, false)
 						if err != nil {
 							if desc.retry {
 								desc.attempts++

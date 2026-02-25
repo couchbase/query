@@ -150,12 +150,17 @@ func (b *Bucket) getConnectionToVBucket(vb uint32, desc *doDescriptor) (*memcach
 }
 
 // first part of the retry loop: get a connection and handle errors
-func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor) (conn *memcached.Client, pool *connectionPool, err error) {
+// The collections manifest is a bucket-level resource available from any KV node, so we use getVbConnection
+// with random=true to pick an arbitrary node while still benefiting from its built-in retry and error-handling logic.
+func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor, random bool) (conn *memcached.Client, pool *connectionPool, err error) {
 	desc.errorString = ""
 
-	// if we had a NMVB and have successfully identified the pool for the correct node, use it
-	// if it doesn't work out, fall back to the old method
-	if desc.pool != nil {
+	if random {
+		desc.pool = nil
+		conn, pool, err = b.getRandomConnection()
+	} else if desc.pool != nil {
+		// if we had a NMVB and have successfully identified the pool for the correct node, use it
+		// if it doesn't work out, fall back to the old method
 		pool = desc.pool
 		desc.pool = nil
 		conn, err = pool.Get()
@@ -360,6 +365,17 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.discard = true
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+		} else if isAddrNotAvailable(lastError) {
+			desc.discard = true
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+			if desc.retry {
+				b.Refresh()
+			}
+		} else if isSeveredConnectionError(lastError) {
+			desc.discard = true
+			desc.backOffAttempts++
+			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
 		} else if IsReadTimeOutError(lastError) {
 			desc.discard = true
 			desc.retry = true
@@ -460,25 +476,26 @@ func (b *Bucket) backOffRetries() int {
 // Note that this automatically handles transient errors by replaying
 // your function on a (for example) "not-my-vbucket" error, so don't assume your command will only be executed once.
 func (b *Bucket) do(k string, f func(mc *memcached.Client, vb uint16) error) (err error) {
-	return b.do2(k, f, true, false, b.backOffRetries())
+	return b.do2(k, f, true, false, false, b.backOffRetries())
 }
 
-func (b *Bucket) do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool,
+func (b *Bucket) do2(k string, f func(mc *memcached.Client, vb uint16) error, deadline, useReplicas, random bool,
 	backOffRetries int) (err error) {
 
 	vb := b.VBHash(k)
 
-	return b.do3(uint16(vb), f, deadline, useReplicas, backOffRetries)
+	err = b.do3(uint16(vb), f, deadline, useReplicas, random, backOffRetries)
+	return err
 }
 
-func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, deadline bool, useReplicas bool,
+func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, deadline, useReplicas, random bool,
 	backOffRetries int) (err error) {
 
 	var lastError error
 
 	desc := &doDescriptor{useReplicas: useReplicas, version: b.Version, maxTries: backOffRetries}
 	for desc.attempts = 0; desc.attempts < desc.maxTries; desc.attempts++ {
-		conn, pool, err := b.getVbConnection(uint32(vb), desc)
+		conn, pool, err := b.getVbConnection(uint32(vb), desc, random)
 		if err != nil {
 			if desc.retry {
 				continue
@@ -751,6 +768,20 @@ func isAddrNotAvailable(err error) bool {
 	return strings.Contains(estr, "cannot assign requested address")
 }
 
+func isSeveredConnectionError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if err == io.EOF {
+		return true
+	}
+	estr := err.Error()
+	return strings.Contains(estr, "use of closed network connection") ||
+		strings.Contains(estr, "connection closed") ||
+		strings.Contains(estr, "broken pipe") ||
+		strings.Contains(estr, "connection reset")
+}
+
 // Get the deadline for your connection
 func getDeadline(reqDeadline time.Time, kvTimeout time.Duration, duration time.Duration) (time.Time, error) {
 
@@ -833,7 +864,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 		// This stack frame exists to ensure we can clean up
 		// connection at a reasonable time.
 		err := func() error {
-			conn, pool, err := b.getVbConnection(uint32(vb), desc)
+			conn, pool, err := b.getVbConnection(uint32(vb), desc, false)
 			if err != nil {
 				if !desc.retry {
 					if desc.errorString != "" {
@@ -1405,7 +1436,7 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 		collUid = binary.BigEndian.Uint32(response.Extras[8:12])
 
 		return nil
-	}, false, false, b.backOffRetries())
+	}, false, false, true, b.backOffRetries())
 
 	return collUid, manifestUid, err
 }
@@ -1440,7 +1471,7 @@ func (b *Bucket) GetsMC(key string, active func() bool, reqDeadline time.Time, k
 			return err1
 		}
 		return nil
-	}, false, useReplica, b.backOffRetries())
+	}, false, useReplica, false, b.backOffRetries())
 	atomic.AddUint64(&b.readCount, 1)
 	return response, err
 }
@@ -1467,7 +1498,7 @@ func (b *Bucket) GetsSubDoc(key string, reqDeadline time.Time, kvTimeout time.Du
 		mc.SetDeadline(dl)
 		response, err1 = mc.GetSubdoc(vb, key, paths, context...)
 		return err1
-	}, false, false, b.backOffRetries())
+	}, false, false, false, b.backOffRetries())
 	return response, err
 }
 
@@ -1487,7 +1518,7 @@ func (b *Bucket) SetsSubDoc(key string, ops []memcached.SubDocOp, context ...*me
 		mc.SetDeadline(noDeadline)
 		response, err = mc.SetSubdoc(vb, key, ops, context...)
 		return err
-	}, false, false, b.backOffRetries())
+	}, false, false, false, b.backOffRetries())
 	if err == nil && err1 != nil {
 		err = err1
 	}
@@ -1500,7 +1531,7 @@ func (b *Bucket) getRandomConnection() (*memcached.Client, *connectionPool, erro
 		var currentPool = 0
 		pools := b.getConnPools(false /* not already locked */)
 		if len(pools) == 0 {
-			return nil, nil, fmt.Errorf("No connection pool found")
+			return nil, nil, errNoPool
 		} else if len(pools) > 1 { // choose a random connection
 			currentPool = rand.Intn(len(pools))
 		} // if only one pool, currentPool defaults to 0, i.e., the only pool

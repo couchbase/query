@@ -1108,47 +1108,81 @@ func (b *Bucket) GetCollectionsManifest() (*Manifest, error) {
 		return nil, fmt.Errorf("Collections not enabled.")
 	}
 
-	b.RLock()
-	pools := b.getConnPools(true /* already locked */)
-	if len(pools) == 0 {
-		b.RUnlock()
-		return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest: no connection pool. No collections "+
-			"access to bucket %s.", b.Name)
-	}
-	pool := pools[0] // Any pool will do, so use the first one.
-	b.RUnlock()
-	client, err := pool.Get()
-	if err != nil {
-		return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest: %v. No collections access to "+
-			"bucket %s.", err, b.Name)
-	}
-	dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
-	client.SetDeadline(dl)
+	vb := uint32(b.VBHash("DUMMY")) // any key
+	desc := &doDescriptor{version: b.Version, maxTries: b.backOffRetries()}
+	var res *gomemcached.MCResponse
+	var lastError error
+	selectFailed := false
+	for desc.attempts = 0; desc.attempts < desc.maxTries; desc.attempts++ {
+		// The collections manifest is a bucket-level resource available from any KV node,
+		// so we use getVbConnection with random=true to pick an arbitrary node while still
+		// benefiting from its built-in retry and error-handling logic.
+		conn, pool, err := b.getVbConnection(vb, desc, true)
+		if err != nil {
+			lastError = err
+			if desc.retry {
+				continue
+			}
+			if desc.errorString != "" {
+				return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest for bucket %s: %v",
+					b.Name, fmt.Errorf(desc.errorString, b.Name, err))
+			}
+			return nil, fmt.Errorf("Unable to get connection to retrieve collections manifest for bucket %s: %v",
+				b.Name, err)
+		}
 
-	// We need to select the bucket before GetCollectionsManifest()
-	// will work. This is sometimes done at startup (see defaultMkConn())
-	// but not always, depending on the auth type.
-	// Doing this is safe because we collect the the connections
-	// by bucket, so the bucket being selected will never change.
-	_, err = client.SelectBucket(b.Name)
-	if err != nil {
-		pool.Return(client)
-		return nil, fmt.Errorf("Unable to select bucket %s: %v. No collections access to bucket %s.", err, b.Name, b.Name)
-	}
+		dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
+		conn.SetDeadline(dl)
+		// We need to select the bucket before GetCollectionsManifest()
+		// will work. This is sometimes done at startup (see defaultMkConn())
+		// but not always, depending on the auth type.
+		// Doing this is safe because we collect the the connections
+		// by bucket, so the bucket being selected will never change.
+		selectFailed = false
+		_, lastError = conn.SelectBucket(b.Name)
+		if lastError == nil {
+			res, lastError = conn.GetCollectionsManifest()
+		} else {
+			selectFailed = true
+		}
+		b.processOpError(vb, lastError, pool.Node(), desc)
+		if desc.discard {
+			pool.Discard(conn)
+		} else {
+			conn.SetReplica(false)
+			pool.Return(conn)
+		}
+		if lastError == nil {
+			mani, err := parseCollectionsManifest(res)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to parse collections manifest: %v. No collections access to bucket %s.",
+					err, b.Name)
+			}
+			return mani, nil
+		} else if !desc.retry {
+			if selectFailed {
+				return nil, fmt.Errorf("Unable to select bucket %s: %v. No collections access to bucket %s.",
+					b.Name, lastError, b.Name)
+			}
 
-	res, err := client.GetCollectionsManifest()
-	if err != nil {
-		pool.Return(client)
-		return nil, fmt.Errorf("Unable to retrieve collections manifest: %v. No collections access to bucket %s.", err, b.Name)
+			break
+		}
 	}
-	mani, err := parseCollectionsManifest(res)
-	if err != nil {
-		pool.Return(client)
-		return nil, fmt.Errorf("Unable to parse collections manifest: %v. No collections access to bucket %s.", err, b.Name)
+	if lastError != nil {
+		if selectFailed {
+			return nil, fmt.Errorf("Unable to select bucket %s: %v. No collections access to bucket %s.",
+				b.Name, lastError, b.Name)
+		}
+		if desc.errorString != "" {
+			return nil, fmt.Errorf("Unable to retrieve collections manifest: %v. No collections access to bucket %s.",
+				fmt.Errorf(desc.errorString, b.Name, lastError), b.Name)
+		}
+		return nil, fmt.Errorf("Unable to retrieve collections manifest: %v after %d attempts. No collections access to bucket %s.", lastError, desc.attempts, b.Name)
 	}
-
-	pool.Return(client)
-	return mani, nil
+	// The final return here is only reachable when lastError == nil after the loop exits. That can only happen if desc.maxTries is 0 — the loop condition
+	// desc.attempts < desc.maxTries is immediately false, the body never executes, and lastError stays at its zero value (nil). This is just a defensive
+	// guard for the maxTries == 0 edge case and also satisfies Go's requirement that all code paths return a value.
+	return nil, fmt.Errorf("Unable to retrieve collections manifest after %d attempts. No collections access to bucket %s.", desc.attempts, b.Name)
 }
 
 func (b *Bucket) RefreshFully() error {
