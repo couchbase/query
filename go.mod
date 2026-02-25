@@ -54,6 +54,7 @@ require (
 	github.com/couchbase/go_json v0.0.0-20220330123059-4473a21887c8
 	github.com/couchbase/gocb/v2 v2.9.4
 	github.com/couchbase/gocbcore/v10 v10.7.0
+	github.com/couchbase/gocbcrypto v0.0.0-00010101000000-000000000000
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.3.3
 	github.com/couchbase/goutils v0.1.2
@@ -121,7 +122,6 @@ require (
 	github.com/couchbase/ghistogram v0.1.0 // indirect
 	github.com/couchbase/gocbcore/v9 v9.1.8 // indirect
 	github.com/couchbase/gocbcoreps v0.1.3 // indirect
-	github.com/couchbase/gocbcrypto v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/gometa v0.0.0-20220803182802-05cb6b2e299f // indirect
 	github.com/couchbase/goprotostellar v1.0.2 // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect

@@ -8169,6 +8169,28 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_ENCRYPTION_READER_CREATE, // 19300
+		symbol:      "E_ENCRYPTION_READER_CREATE",
+		Description: "Failed to create encryption reader",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_ENCRYPTION_WRITER_CREATE, // 19301
+		symbol:      "E_ENCRYPTION_WRITER_CREATE",
+		Description: "Failed to create encryption writer",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
 		symbol:      "E_AUS_NOT_SUPPORTED",
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",
