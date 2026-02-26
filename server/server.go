@@ -1838,7 +1838,9 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		autoPrepare = request.AutoPrepare() == value.TRUE
 	}
 
-	planStabilityAdHoc := settings.IsPlanStabilityAdHoc()
+	planStabilityMode := settings.GetPlanStabilityMode()
+	planStabilityAdHoc := planStabilityMode == settings.PS_MODE_AD_HOC
+	planStabilityAdHocRead := planStabilityAdHoc || (planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY)
 
 	namedArgs := request.NamedArgs()
 	positionalArgs := request.PositionalArgs()
@@ -1848,7 +1850,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		autoPrepare = false
 	}
 
-	if prepared == nil && (autoPrepare || planStabilityAdHoc) {
+	if prepared == nil && (autoPrepare || planStabilityAdHocRead) {
 
 		// no datastore context for autoprepare
 		var prepContext planner.PrepareContext
@@ -1859,7 +1861,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
 			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(),
-				request.Namespace(), planStabilityAdHoc, &prepContext)
+				request.Namespace(), planStabilityAdHocRead, &prepContext)
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false
@@ -1995,6 +1997,9 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 					// if autoPrepare is on and this statement is eligible
 					// save it for the benefit of others
+					// for plan stability, only save the newly prepared statement
+					// if mode is AD_HOC (AD_HOC_READ_ONLY allows using of
+					// existing prepared statement but not adding new ones)
 					if autoPrepare || planStabilityAdHoc {
 						prepared.SetName(name)
 						prepared.SetIndexApiVersion(request.IndexApiVersion())

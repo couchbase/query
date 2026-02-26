@@ -20,14 +20,17 @@ import (
  * By default plan stability is OFF. When it is turned on, one of two modes can be used:
  *   - prepared_only: query plan will be saved for prepared statements only
  *   - ad_hoc: query plan will be saved for all statements
+ *   - ad_hoc_read_only: no new query plan saved, allow usage of previously saved query plans
+ *                       for ad hoc statements
  *
  * The mode can be set/changed via:
  *
- *   UPDATE system:settings SET plan_stability.mode = "off"/"prepared_only"/"ad_hoc"
+ *   UPDATE system:settings SET plan_stability.mode = "off"/"prepared_only"/"ad_hoc"/"ad_hoc_read_only"
  *
  * synonyms accepted:
  *   "prepared-only", "prepared only" in addition to "prepared_only"
  *   "ad-hoc", "ad hoc" in addition to "ad_hoc"
+ *   "ad-hoc-read-only", "ad hoc read only" in addition to "ad_hoc_read_only"
  */
 type PlanStabilityMode int
 
@@ -35,16 +38,20 @@ const (
 	PS_MODE_OFF = PlanStabilityMode(iota)
 	PS_MODE_PREPARED_ONLY
 	PS_MODE_AD_HOC
+	PS_MODE_AD_HOC_READ_ONLY
 )
 
 var _PS_MODE_MAP map[string]PlanStabilityMode = map[string]PlanStabilityMode{
-	"off":           PS_MODE_OFF,
-	"prepared_only": PS_MODE_PREPARED_ONLY,
-	"prepared-only": PS_MODE_PREPARED_ONLY,
-	"prepared only": PS_MODE_PREPARED_ONLY,
-	"ad_hoc":        PS_MODE_AD_HOC,
-	"ad-hoc":        PS_MODE_AD_HOC,
-	"ad hoc":        PS_MODE_AD_HOC,
+	"off":              PS_MODE_OFF,
+	"prepared_only":    PS_MODE_PREPARED_ONLY,
+	"prepared-only":    PS_MODE_PREPARED_ONLY,
+	"prepared only":    PS_MODE_PREPARED_ONLY,
+	"ad_hoc":           PS_MODE_AD_HOC,
+	"ad-hoc":           PS_MODE_AD_HOC,
+	"ad hoc":           PS_MODE_AD_HOC,
+	"ad_hoc_read_only": PS_MODE_AD_HOC_READ_ONLY,
+	"ad-hoc-read-only": PS_MODE_AD_HOC_READ_ONLY,
+	"ad hoc read only": PS_MODE_AD_HOC_READ_ONLY,
 }
 
 func (this PlanStabilityMode) String() string {
@@ -55,6 +62,8 @@ func (this PlanStabilityMode) String() string {
 		return "prepared_only"
 	case PS_MODE_AD_HOC:
 		return "ad_hoc"
+	case PS_MODE_AD_HOC_READ_ONLY:
+		return "ad_hoc_read_only"
 	}
 	return fmt.Sprintf("invalid plan stability mode (%d)", this)
 }
@@ -136,7 +145,7 @@ func GetPlanStabilityMode() PlanStabilityMode {
 
 func IsPlanStabilityEnabled() bool {
 	mode := GetPlanStabilityMode()
-	return mode == PS_MODE_PREPARED_ONLY || mode == PS_MODE_AD_HOC
+	return mode == PS_MODE_PREPARED_ONLY || mode == PS_MODE_AD_HOC || mode == PS_MODE_AD_HOC_READ_ONLY
 }
 
 func IsPlanStabilityDisabled() bool {
@@ -152,6 +161,11 @@ func IsPlanStabilityPreparedOnly() bool {
 func IsPlanStabilityAdHoc() bool {
 	mode := GetPlanStabilityMode()
 	return mode == PS_MODE_AD_HOC
+}
+
+func IsPlanStabilityAdHocReadOnly() bool {
+	mode := GetPlanStabilityMode()
+	return mode == PS_MODE_AD_HOC_READ_ONLY
 }
 
 func GetPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {

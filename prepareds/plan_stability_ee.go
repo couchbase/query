@@ -22,24 +22,29 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	if oldMode == newMode {
 		return nil
 	} else if oldMode == settings.PS_MODE_OFF &&
-		(newMode == settings.PS_MODE_PREPARED_ONLY || newMode == settings.PS_MODE_AD_HOC) {
+		(newMode == settings.PS_MODE_PREPARED_ONLY || newMode == settings.PS_MODE_AD_HOC || newMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
 		// just turned on
 		return persistPreparedStmts(newMode, requestId)
 	} else if newMode == settings.PS_MODE_OFF &&
-		(oldMode == settings.PS_MODE_PREPARED_ONLY || oldMode == settings.PS_MODE_AD_HOC) {
+		(oldMode == settings.PS_MODE_PREPARED_ONLY || oldMode == settings.PS_MODE_AD_HOC || oldMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
 		// just turned off
 		return updatePreparedStmts(newMode, cacheFull)
-	} else {
-		// switch between PREPARED_ONLY and AD_HOC
+	} else if newMode == settings.PS_MODE_PREPARED_ONLY &&
+		(oldMode == settings.PS_MODE_AD_HOC || oldMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
+		// switch to PREPARED_ONLY from AD_HOC or AD_HOC_READ_ONLY
 		return updatePreparedStmts(newMode, cacheFull)
 	}
+	// else, the following changes do not require changes to either prepared statements in
+	// prepared cache, or saved prepared statements on disk:
+	//  - changing from either PREPARED_ONLY or AD_HOC_READ_ONLY to AD_HOC
+	//  - changing from either PREPARED_ONLY or AD_HOC to AD_HOC_READ_ONLY
 
 	return nil
 }
 
 /*
- * When plan stability mode changes from OFF to either PREPARED_ONLY or AD_HOC, need to go through
- * prepared cache and persist any prepared statement that's not already saved on disk.
+ * When plan stability mode changes from OFF to PREPARED_ONLY or AD_HOC or AD_HOC_READ_ONLY, need to
+ * go through prepared cache and persist any prepared statement that's not already saved on disk.
  */
 func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	// check and create (if not exists) QUERY_METADATA bucket
@@ -66,10 +71,11 @@ func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) 
 }
 
 /*
- * When plan stability mode changes from either PREPARED_ONLY or AD_HOC to OFF, need to go through
- * saved prepared plans and remove all that's not corresponding to a explicitly saved prepared plan.
- * When plan stability mode changes between PREPARED_ONLY and AD_HOC, need to go through prepared
- * cache and remove saved prepared plan as necessary, and modify the prepared statement
+ * When plan stability mode changes from PREPARED_ONLY or AD_HOC or AD_HOC_READ_ONLY to OFF, need to
+ * go through saved prepared plans and remove all that's not corresponding to a explicitly saved
+ * prepared plan. When plan stability mode changes from AD_HOC or AD_HOC_READ_ONLY to PREPARED_ONLY,
+ * need to go through prepared cache and remove saved prepared plan as necessary, and modify the
+ * prepared statement.
  */
 func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) errors.Error {
 	var err errors.Error
@@ -88,7 +94,7 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) err
 					return false
 				}
 			}
-			if prepared.AdHoc() {
+			if prepared.AdHoc() && (newMode == settings.PS_MODE_OFF || newMode == settings.PS_MODE_PREPARED_ONLY) {
 				// newMode is OFF or PREPARED_ONLY, need to remove entry from cache
 				// (saved query plan should be deleted above already)
 				names = append(names, fullName)

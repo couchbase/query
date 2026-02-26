@@ -56,12 +56,12 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 					planStability[kk] = mode
 					newMode = mode
 				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "'off'/'prepared_only'/'ad_hoc'", vv)
+					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "'off'/'prepared_only'/'ad_hoc'/'ad_hoc_read_only'", vv)
 				}
 			case int64:
 				// when setting comes from metakv
 				mode := PlanStabilityMode(vv)
-				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC {
+				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC_READ_ONLY {
 					planStability[kk] = mode
 					newMode = mode
 				} else {

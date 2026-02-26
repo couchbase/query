@@ -98,7 +98,8 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 
 	prep.SetEncodedPlan(str)
 
-	if persist || (planStabilityMode == settings.PS_MODE_PREPARED_ONLY || planStabilityMode == settings.PS_MODE_AD_HOC) {
+	if persist || planStabilityMode == settings.PS_MODE_PREPARED_ONLY ||
+		planStabilityMode == settings.PS_MODE_AD_HOC || planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY {
 		// check and create (if not exists) QUERY_METADATA bucket
 		hasMetadata, err1 := hasQueryMetadata(true, this.context.RequestId(), true)
 		if err1 == nil && !hasMetadata {
