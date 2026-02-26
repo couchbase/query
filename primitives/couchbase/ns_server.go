@@ -1241,6 +1241,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	uri := b.URI
 	client := pool.client
 	refreshes := b.refreshes
+	tlsConfig := client.tlsConfig
 	b.RUnlock()
 
 	var poolServices PoolServices
@@ -1289,8 +1290,9 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	// of NMVb errors received during bulkGet do not end up over-writing
 	// pool.inUse.
 	b.Lock()
-	if refreshes < b.refreshes {
+	if refreshes < b.refreshes && preserveConnections && tlsConfig == client.tlsConfig {
 		// MB-66085 Another routine has already refreshed the bucket.
+		// Don't optimize away the refresh if TLS has changed or if PreserveConnections is false.
 		b.Unlock()
 		return nil
 	}
