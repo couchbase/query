@@ -722,6 +722,6 @@ func adjustAvgDistSelec(ks *base.BaseKeyspace, advisorValidate bool, baseKeyspac
 	optutil.AdjustAvgDistSelec(ks, advisorValidate, false, baseKeyspaces)
 }
 
-func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
-	return dictionary.HasQueryMetadata(create, requestId, waitOnCreate)
+func hasQueryMetadata(create bool, requestId, createReason string, waitOnCreate bool) (bool, errors.Error) {
+	return dictionary.HasQueryMetadata(create, requestId, createReason, waitOnCreate)
 }

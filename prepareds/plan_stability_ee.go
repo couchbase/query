@@ -48,9 +48,9 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
  */
 func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	// check and create (if not exists) QUERY_METADATA bucket
-	hasMetadata, err := hasQueryMetadata(true, requestId, true)
+	hasMetadata, err := hasQueryMetadata(true, requestId, "SAVE option of PREPARE or Plan Stability", true)
 	if err != nil {
-		return errors.NewCreateQueryMetadataError("SAVE option of PREPARE or Plan Stability", err)
+		return err
 	} else if !hasMetadata {
 		return errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
 	}

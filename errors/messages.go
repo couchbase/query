@@ -3221,21 +3221,6 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_CREATE_QUERY_METADATA, // 4501
-		symbol:      "E_CREATE_QUERY_METADATA",
-		Description: "'QUERY_METADATA' bucket is being created for <<msg>>. Error occurred during creation of 'QUERY_METADATA' bucket",
-		Reason: []string{
-			"The creation of 'QUERY_METADATA' bucket failed.",
-		},
-		Action: []string{
-			"Fix the error condition or manually create the bucket, then re-submit the request.",
-			"Contact support.",
-		},
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
 		Code:        E_CBO, // 4600
 		symbol:      "E_CBO",
 		Description: "Error occurred during cost-based optimization: «what»",
@@ -7526,6 +7511,21 @@ var errData = []ErrData{
 		symbol:      "E_QUERY_METADATA",
 		Description: "Error accessing QUERY_METADATA bucket - «details»",
 		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CREATE_QUERY_METADATA, // 18081
+		symbol:      "E_CREATE_QUERY_METADATA",
+		Description: "'QUERY_METADATA' bucket is being created for <<msg>>. Error occurred during creation of 'QUERY_METADATA' bucket",
+		Reason: []string{
+			"The creation of 'QUERY_METADATA' bucket failed.",
+		},
+		Action: []string{
+			"Fix the error condition or manually create the bucket, then re-submit the request.",
 			"Contact support.",
 		},
 		AppliesTo: []string{

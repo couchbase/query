@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func hasQueryMetadata(create bool, requestId string, waitOnCreate bool) (bool, errors.Error) {
+func hasQueryMetadata(create bool, requestId, createReason string, waitOnCreate bool) (bool, errors.Error) {
 	return false, errors.NewEnterpriseFeature("Query meta data bucket", "plan.has_query_metadata")
 }
 

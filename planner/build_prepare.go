@@ -101,9 +101,9 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	if persist || planStabilityMode == settings.PS_MODE_PREPARED_ONLY ||
 		planStabilityMode == settings.PS_MODE_AD_HOC || planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY {
 		// check and create (if not exists) QUERY_METADATA bucket
-		hasMetadata, err1 := hasQueryMetadata(true, this.context.RequestId(), true)
+		hasMetadata, err1 := hasQueryMetadata(true, this.context.RequestId(), "SAVE option of PREPARE or Plan Stability", true)
 		if err1 != nil {
-			return nil, errors.NewCreateQueryMetadataError("SAVE option of PREPARE or Plan Stability", err1)
+			return nil, err1
 		} else if !hasMetadata {
 			return nil, errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
 		}

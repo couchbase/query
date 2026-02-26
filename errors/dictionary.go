@@ -52,5 +52,11 @@ func NewDictMissingFieldError(entry, name, field string) Error {
 
 func NewQueryMetadataError(s string, e error) Error {
 	return &err{level: EXCEPTION, ICode: E_QUERY_METADATA, IKey: "dictionary.query_metadata", ICause: e,
-		InternalMsg: "Error accessing QUERY_METADATA bucket - " + s, InternalCaller: CallerN(1)}
+		InternalMsg: fmt.Sprintf("Error accessing 'QUERY_METADATA' bucket - %s", s), InternalCaller: CallerN(1)}
+}
+
+func NewCreateQueryMetadataError(msg string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_CREATE_QUERY_METADATA, IKey: "dictionary.create_query_metadata",
+		InternalMsg: fmt.Sprintf("'QUERY_METADATA' bucket is being created for %s. Error occured while creating the 'QUERY_METADATA' bucket", msg),
+		ICause:      e, InternalCaller: CallerN(1)}
 }
