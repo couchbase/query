@@ -249,6 +249,12 @@ func NewMissingQueryMetadataError(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewCreateQueryMetadataError(msg string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_CREATE_QUERY_METADATA, IKey: "plan.create_query_metadata",
+		InternalMsg: fmt.Sprintf("'QUERY_METADATA' bucket is being created for %s. Error occured while creating the 'QUERY_METADATA' bucket", msg),
+		ICause:      e, InternalCaller: CallerN(1)}
+}
+
 // errors for CBO (cost-based optimizer) starts at 4600
 
 func NewCBOError(ikey, what string) Error {

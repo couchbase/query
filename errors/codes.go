@@ -236,6 +236,7 @@ const (
 	E_PREPARED_SAVE_PLAN                         ErrorCode = 4411
 	E_PREPARED_DELETE_PLAN                       ErrorCode = 4412
 	E_MISSING_QUERY_METADATA                     ErrorCode = 4500
+	E_CREATE_QUERY_METADATA                      ErrorCode = 4501
 	E_CBO                                        ErrorCode = 4600
 	E_INDEX_STAT                                 ErrorCode = 4610
 	_RETIRED_4901                                          = 4901
