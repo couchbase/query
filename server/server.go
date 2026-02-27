@@ -1846,7 +1846,11 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	positionalArgs := request.PositionalArgs()
 	dsContext := context
 	autoExecute := request.AutoExecute() == value.TRUE
-	if len(namedArgs) > 0 || len(positionalArgs) > 0 || autoExecute {
+	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
+		autoPrepare = false
+		planStabilityAdHoc = false
+		planStabilityAdHocRead = false
+	} else if autoExecute {
 		autoPrepare = false
 	}
 
@@ -1865,6 +1869,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false
+			planStabilityAdHoc = false
+			planStabilityAdHocRead = false
 		}
 	}
 
@@ -1874,6 +1880,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		var err error
 		if nlstmt := request.NaturalStatement(); nlstmt != nil {
 			stmt = nlstmt
+			planStabilityAdHoc = false
+			planStabilityAdHocRead = false
 		} else {
 			parse := util.Now()
 			stmt, err = n1ql.ParseStatement2(request.Statement(), context.Namespace(), request.QueryContext(), context)
@@ -1881,6 +1889,11 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			if err != nil {
 				return nil, errors.NewParseSyntaxError(err, "")
 			}
+		}
+
+		if (planStabilityAdHoc || planStabilityAdHocRead) && algebra.CanSkipPlanStabilityPrepare(stmt) {
+			planStabilityAdHoc = false
+			planStabilityAdHocRead = false
 		}
 
 		isPrepare := false
