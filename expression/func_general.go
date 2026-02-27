@@ -792,8 +792,9 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 
 	if flags&_PREPARED_INFO != 0 {
 		// Extract PREPARE statements used to prepare queries
-		// The statement field already contains the full PREPARE statement with semicolon
-		stmt = "SELECT RAW statement " +
+		// Use DISTINCT on name to avoid duplicates from multiple cluster nodes
+		// Include queryContext so that the prepared statement can be correctly recreated
+		stmt = "SELECT DISTINCT RAW {name, statement, queryContext} " +
 			"FROM system:prepareds " +
 			"ORDER BY name"
 		v, _, err := context.EvaluateStatement(stmt, nil, nil, false, true, false, "")
@@ -801,7 +802,18 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			return value.MISSING_VALUE, err
 		}
 		prepareds := v.Actual().([]interface{})
-		res = append(res, prepareds...)
+		for _, p := range prepareds {
+			pv := value.NewValue(p)
+			stmtVal, ok := pv.Field("statement")
+			if !ok {
+				continue
+			}
+			stmtStr := stmtVal.ToString()
+			if qc, ok := pv.Field("queryContext"); ok && qc.Type() == value.STRING && qc.ToString() != "" {
+				stmtStr = stmtStr + " /* query_context: " + qc.ToString() + " */"
+			}
+			res = append(res, stmtStr)
+		}
 	}
 
 	return value.NewValue(res), nil
