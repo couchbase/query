@@ -2740,21 +2740,26 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key or value")
 	}
 	if key == "" {
-		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
+		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key (empty string)")
 	}
 	if len(bvalue) < 3 || bvalue[0] != '"' || bvalue[len(bvalue)-1] != '"' {
 		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid value")
 	}
 
 	parts := strings.Split(key, "::")
-	if len(parts) != 3 {
-		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
+	if len(parts) < 3 {
+		return errors.NewServiceErrorBadValue(err, fmt.Sprintf("cbo restore: invalid key (parts length %d)", len(parts)))
+	} else if len(parts) > 3 {
+		// it's possible to have a histogram key that includes '::' in it
+		logging.Debugf("doCBORestore: parts %v", parts)
+		parts = []string{parts[0], parts[1], strings.Join(parts[2:], "::")}
 	}
+
 	path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
 	fullPath := "default:" + b + "." + path
 	p := algebra.ParsePath(fullPath)
 	if len(p) != 4 {
-		return errors.NewServiceErrorBadValue(err, "cbo restore: invalid key")
+		return errors.NewServiceErrorBadValue(err, fmt.Sprintf("cbo restore: invalid key (path length %d)", len(p)))
 	}
 	if !filterEval(p, include, exclude) {
 		return nil
