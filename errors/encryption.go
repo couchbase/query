@@ -21,7 +21,7 @@ func NewEncryptionError(code ErrorCode, e error, msgArgs ...interface{}) Error {
 		panic(fmt.Sprintf("No encryption error message defined for error code: %d", code))
 	}
 
-	rv := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1), IKey: ee[0], InternalMsg: ee[1], cause: e}
+	rv := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1), IKey: ee[0], InternalMsg: ee[1], ICause: e}
 
 	if len(msgArgs) > 0 {
 		rv.InternalMsg = fmt.Sprintf(rv.InternalMsg, msgArgs...)

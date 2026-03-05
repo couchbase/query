@@ -19,7 +19,6 @@ import (
 	"io"
 	"math"
 
-	"github.com/couchbase/gocbcrypto"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
 )
@@ -574,7 +573,7 @@ func cbefDeriveKey(key []byte, salt []byte, derivedKeyLen int) ([]byte, error) {
 	copy(kdfCtx[:len(_CBEF_KBKDF_CONTEXT_PREFIX)], _CBEF_KBKDF_CONTEXT_PREFIX)
 	copy(kdfCtx[len(_CBEF_KBKDF_CONTEXT_PREFIX):], salt)
 
-	derivedKey, err := gocbcrypto.OpenSSLKBKDFDeriveKey(key, _CBEF_KBKDF_LABEL, kdfCtx, derivedKey, _CBEF_HASH_FUNCTION, "")
+	derivedKey, err := KBKDFDeriveKey(key, _CBEF_KBKDF_LABEL, kdfCtx, derivedKey, _CBEF_HASH_FUNCTION)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to derive key using KBKDF: %v", err)
 	}

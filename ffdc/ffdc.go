@@ -27,7 +27,9 @@ import (
 	"time"
 
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 )
 
 // First Failure Data Capture (FFDC)
@@ -56,102 +58,115 @@ var _path string
 var pidString string
 var cbLogDir string
 
-// some actions require external dependencies and are therefore set via the Set() function
-var operations = map[string]func(io.Writer) error{
-	Heap: func(w io.Writer) error {
-		p := pprof.Lookup("heap")
-		if p != nil {
-			return p.WriteTo(w, 0)
-		}
-		return nil
-	},
-	MemStats: func(w io.Writer) error {
-		bufWriter := bufio.NewWriter(w)
-		var s runtime.MemStats
-		runtime.ReadMemStats(&s)
-		fmt.Fprintf(bufWriter, "Alloc........... %v\n", Human(s.Alloc))
-		fmt.Fprintf(bufWriter, "TotalAlloc...... %v\n", Human(s.TotalAlloc))
-		fmt.Fprintf(bufWriter, "Sys............. %v\n", Human(s.Sys))
-		fmt.Fprintf(bufWriter, "Lookups......... %v\n", s.Lookups)
-		fmt.Fprintf(bufWriter, "Mallocs......... %v\n", s.Mallocs)
-		fmt.Fprintf(bufWriter, "Frees........... %v\n", s.Frees)
-		fmt.Fprintf(bufWriter, "HeapAlloc....... %v\n", Human(s.HeapAlloc))
-		fmt.Fprintf(bufWriter, "HeapSys......... %v\n", Human(s.HeapSys))
-		fmt.Fprintf(bufWriter, "HeapIdle........ %v\n", Human(s.HeapIdle))
-		fmt.Fprintf(bufWriter, "HeapInuse....... %v\n", Human(s.HeapInuse))
-		fmt.Fprintf(bufWriter, "HeapReleased.... %v\n", Human(s.HeapReleased))
-		fmt.Fprintf(bufWriter, "HeapObjects..... %v\n", s.HeapObjects)
-		fmt.Fprintf(bufWriter, "Stack in use.... %v\n", Human(s.StackInuse))
-		fmt.Fprintf(bufWriter, "Stack sys....... %v\n", Human(s.StackSys))
-		fmt.Fprintf(bufWriter, "MSpan in use.... %v\n", Human(s.MSpanInuse))
-		fmt.Fprintf(bufWriter, "MSpan sys....... %v\n", Human(s.MSpanSys))
-		fmt.Fprintf(bufWriter, "MCache in use... %v\n", Human(s.MCacheInuse))
-		fmt.Fprintf(bufWriter, "MCache sys...... %v\n", Human(s.MCacheSys))
-		fmt.Fprintf(bufWriter, "BuckHashSys..... %v\n", Human(s.BuckHashSys))
-		fmt.Fprintf(bufWriter, "GCSys........... %v\n", Human(s.GCSys))
-		fmt.Fprintf(bufWriter, "OtherSys........ %v\n", Human(s.OtherSys))
-		fmt.Fprintf(bufWriter, "NextGC.......... %v\n", s.NextGC)
-		fmt.Fprintf(bufWriter, "LastGC.......... %v %v\n", s.LastGC, time.Unix(0, int64(s.LastGC)))
-		fmt.Fprintf(bufWriter, "GCPauses........ [PauseEnd         PauseNs]\n                 ")
-		start := int((s.NumGC + 255) % 256)
-		if start < 0 {
-			start = 255
-		}
-		c := 0
-		for i := start; ; {
-			if c > 0 {
-				if c == 4 {
-					fmt.Fprintf(bufWriter, "\n                 ")
-					c = 0
-				} else {
-					fmt.Fprintf(bufWriter, " ")
-				}
-			}
-			fmt.Fprintf(bufWriter, "[%s %7d]", time.Unix(0, int64(s.PauseEnd[i])).Format("150405.000000000"), s.PauseNs[i])
-			c++
-			i--
-			if i < 0 {
-				i = 255
-			}
-			if i == start {
-				break
-			}
-		}
-		fmt.Fprintf(bufWriter, "\n")
-		fmt.Fprintf(bufWriter, "NumGC........... %v\n", s.NumGC)
-		fmt.Fprintf(bufWriter, "NumForcedGC..... %v\n", s.NumForcedGC)
-		fmt.Fprintf(bufWriter, "GCCPUFraction... %v\n", s.GCCPUFraction)
-		fmt.Fprintf(bufWriter, "DebugGC......... %v\n", s.DebugGC)
-		return bufWriter.Flush()
-	},
-	Stacks: func(w io.Writer) error {
-		p := pprof.Lookup("goroutine")
-		if p != nil {
-			return p.WriteTo(w, 2)
-		}
-		return nil
-	},
-	Netstat: func(w io.Writer) error {
-		switch runtime.GOOS {
-		case "linux":
-			if runCommand(w, "netstat", "-atnp") == nil {
-				return nil
-			}
-		case "windows":
-			return runCommand(w, "netstat.exe", "-atno")
-		}
-		return runCommand(w, "netstat", "-an")
-	},
+type operationConfig struct {
+	op      func(io.Writer) error
+	encrypt bool
+	async   bool
 }
 
-var asyncOperations = map[string]func(io.Writer) error{
-	CPU: func(w io.Writer) error {
-		if err := pprof.StartCPUProfile(w); err != nil {
-			return err
-		}
-		time.Sleep(_CPU_PROFILE_TIME)
-		pprof.StopCPUProfile()
-		return nil
+// some actions require external dependencies and are therefore set via the Set() function
+var operations = map[string]operationConfig{
+	Heap: {
+		op: func(w io.Writer) error {
+			p := pprof.Lookup("heap")
+			if p != nil {
+				return p.WriteTo(w, 0)
+			}
+			return nil
+		},
+	},
+	MemStats: {
+		op: func(w io.Writer) error {
+			var s runtime.MemStats
+			runtime.ReadMemStats(&s)
+			fmt.Fprintf(w, "Alloc........... %v\n", Human(s.Alloc))
+			fmt.Fprintf(w, "TotalAlloc...... %v\n", Human(s.TotalAlloc))
+			fmt.Fprintf(w, "Sys............. %v\n", Human(s.Sys))
+			fmt.Fprintf(w, "Lookups......... %v\n", s.Lookups)
+			fmt.Fprintf(w, "Mallocs......... %v\n", s.Mallocs)
+			fmt.Fprintf(w, "Frees........... %v\n", s.Frees)
+			fmt.Fprintf(w, "HeapAlloc....... %v\n", Human(s.HeapAlloc))
+			fmt.Fprintf(w, "HeapSys......... %v\n", Human(s.HeapSys))
+			fmt.Fprintf(w, "HeapIdle........ %v\n", Human(s.HeapIdle))
+			fmt.Fprintf(w, "HeapInuse....... %v\n", Human(s.HeapInuse))
+			fmt.Fprintf(w, "HeapReleased.... %v\n", Human(s.HeapReleased))
+			fmt.Fprintf(w, "HeapObjects..... %v\n", s.HeapObjects)
+			fmt.Fprintf(w, "Stack in use.... %v\n", Human(s.StackInuse))
+			fmt.Fprintf(w, "Stack sys....... %v\n", Human(s.StackSys))
+			fmt.Fprintf(w, "MSpan in use.... %v\n", Human(s.MSpanInuse))
+			fmt.Fprintf(w, "MSpan sys....... %v\n", Human(s.MSpanSys))
+			fmt.Fprintf(w, "MCache in use... %v\n", Human(s.MCacheInuse))
+			fmt.Fprintf(w, "MCache sys...... %v\n", Human(s.MCacheSys))
+			fmt.Fprintf(w, "BuckHashSys..... %v\n", Human(s.BuckHashSys))
+			fmt.Fprintf(w, "GCSys........... %v\n", Human(s.GCSys))
+			fmt.Fprintf(w, "OtherSys........ %v\n", Human(s.OtherSys))
+			fmt.Fprintf(w, "NextGC.......... %v\n", s.NextGC)
+			fmt.Fprintf(w, "LastGC.......... %v %v\n", s.LastGC, time.Unix(0, int64(s.LastGC)))
+			fmt.Fprintf(w, "GCPauses........ [PauseEnd         PauseNs]\n                 ")
+			start := int((s.NumGC + 255) % 256)
+			if start < 0 {
+				start = 255
+			}
+			c := 0
+			for i := start; ; {
+				if c > 0 {
+					if c == 4 {
+						fmt.Fprintf(w, "\n                 ")
+						c = 0
+					} else {
+						fmt.Fprintf(w, " ")
+					}
+				}
+				fmt.Fprintf(w, "[%s %7d]", time.Unix(0, int64(s.PauseEnd[i])).Format("150405.000000000"), s.PauseNs[i])
+				c++
+				i--
+				if i < 0 {
+					i = 255
+				}
+				if i == start {
+					break
+				}
+			}
+			fmt.Fprintf(w, "\n")
+			fmt.Fprintf(w, "NumGC........... %v\n", s.NumGC)
+			fmt.Fprintf(w, "NumForcedGC..... %v\n", s.NumForcedGC)
+			fmt.Fprintf(w, "GCCPUFraction... %v\n", s.GCCPUFraction)
+			fmt.Fprintf(w, "DebugGC......... %v\n", s.DebugGC)
+			return nil
+		},
+	},
+	Stacks: {
+		op: func(w io.Writer) error {
+			p := pprof.Lookup("goroutine")
+			if p != nil {
+				return p.WriteTo(w, 2)
+			}
+			return nil
+		},
+	},
+	Netstat: {
+		op: func(w io.Writer) error {
+			switch runtime.GOOS {
+			case "linux":
+				if runCommand(w, "netstat", "-atnp") == nil {
+					return nil
+				}
+			case "windows":
+				return runCommand(w, "netstat.exe", "-atno")
+			}
+			return runCommand(w, "netstat", "-an")
+		},
+	},
+	CPU: {
+		op: func(w io.Writer) error {
+			if err := pprof.StartCPUProfile(w); err != nil {
+				return err
+			}
+			time.Sleep(_CPU_PROFILE_TIME)
+			pprof.StopCPUProfile()
+			return nil
+		},
+		async: true,
 	},
 }
 
@@ -199,13 +214,25 @@ func Human(v uint64) string {
 }
 
 type occurrence struct {
-	when  time.Time
-	ts    string
-	id    int64
-	files []string
+	when          time.Time
+	ts            string
+	id            int64
+	files         []string
+	encryptionSet bool
 }
 
 func (this *occurrence) capture(event string, what string) {
+
+	var opConfig operationConfig
+	if op, ok := operations[what]; ok {
+		opConfig = op
+	} else {
+		// If this is the case, something is wrong with the event definition
+		logging.Errorf("FFDC: [%#x] Unknown operation: %v", this.id, what)
+		return
+	}
+
+	encrypt := this.encryptionSet && opConfig.encrypt
 	var nameBuilder strings.Builder
 	nameBuilder.WriteString(fileNamePrefix)
 	nameBuilder.WriteByte('_')
@@ -216,21 +243,27 @@ func (this *occurrence) capture(event string, what string) {
 	nameBuilder.WriteString(pidString)
 	nameBuilder.WriteByte('_')
 	nameBuilder.WriteString(this.ts)
-	nameBuilder.WriteString(".gz")
+
+	if !encrypt {
+		nameBuilder.WriteString(".gz")
+	}
+
 	name := nameBuilder.String()
 
 	f, err := os.Create(path.Join(GetPath(), name))
 	if err == nil {
 		this.files = append(this.files, name)
-		zip := gzip.NewWriter(f)
-		// Add buffered writer wrapper
-		bufWriter := bufio.NewWriter(zip)
-		if op, ok := asyncOperations[what]; ok {
+
+		if opConfig.async {
 			go func() {
-				err = op(bufWriter)
-				// Flush buffer before closing writers
-				bufWriter.Flush()
-				zip.Close()
+				var err error
+				if encrypt {
+					// TODO - pass key material when key management is introduced
+					err = this.writeEncryptedFFDCFile(f, opConfig, nil)
+				} else {
+					err = this.writeUnencryptedFFDCFile(f, opConfig)
+				}
+
 				f.Sync()
 				f.Close()
 				if err != nil {
@@ -241,9 +274,13 @@ func (this *occurrence) capture(event string, what string) {
 			}()
 			logging.Infof("FFDC: [%#x] Started capture of: %v", this.id, path.Base(name))
 		} else {
-			err = operations[what](bufWriter) // if it panics it is because there is a problem with the event definition
-			bufWriter.Flush()                 // Flush buffer before closing
-			zip.Close()
+			if encrypt {
+				// TODO - pass key material when key management is introduced
+				err = this.writeEncryptedFFDCFile(f, opConfig, nil)
+			} else {
+				err = this.writeUnencryptedFFDCFile(f, opConfig)
+			}
+
 			f.Sync()
 			f.Close()
 			if err != nil {
@@ -501,7 +538,19 @@ func Set(what string, action func(io.Writer) error) {
 	if !fs.ValidPath(what) {
 		panic(fmt.Sprintf("Invalid 'what' (%v)(%v) for FFDC.", what, []byte(what)))
 	}
-	operations[what] = action
+
+	opConfig := operationConfig{
+		op: action,
+	}
+
+	switch what {
+	case Completed, Active, Vitals:
+		opConfig.encrypt = true
+	case CPU:
+		opConfig.async = true
+	}
+
+	operations[what] = opConfig
 }
 
 const (
@@ -600,4 +649,34 @@ func Stats(prefix string, res map[string]interface{}, details bool) {
 		}
 	}
 	res[prefix+"total"] = tot
+}
+
+func (this *occurrence) writeEncryptedFFDCFile(f *os.File, opConfig operationConfig, key []byte) error {
+	ew, err := encryption.NewCBEFWriterSize(f, "ffdc", key, encryption.CBEF_GZIP, 4*util.KiB)
+	if err != nil {
+		logging.Errorf("FFDC: [%#x] Error creating encryption writer: %v", this.id, err)
+		return err
+	}
+
+	err1 := opConfig.op(ew)
+
+	fErr := ew.Flush()
+	if fErr != nil {
+		logging.Errorf("FFDC: [%#x] Error flushing encryption writer: %v", this.id, fErr)
+	}
+
+	cErr := ew.Close()
+	if cErr != nil {
+		logging.Errorf("FFDC: [%#x] Error closing encryption writer: %v", this.id, cErr)
+	}
+	return err1
+}
+
+func (this *occurrence) writeUnencryptedFFDCFile(f *os.File, opConfig operationConfig) error {
+	zip := gzip.NewWriter(f)
+	bufWriter := bufio.NewWriter(zip)
+	err := opConfig.op(bufWriter)
+	bufWriter.Flush()
+	zip.Close()
+	return err
 }

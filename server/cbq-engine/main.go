@@ -34,6 +34,7 @@ import (
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/encryption/openssl"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
@@ -180,6 +181,8 @@ func main() {
 	flag.Parse()
 
 	initialCfg, num_cpus := waitForInitialSettings()
+
+	openssl.Init()
 
 	// many Init() depend on this
 
