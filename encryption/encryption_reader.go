@@ -343,3 +343,61 @@ func validateCBEFHeader(header []byte) error {
 
 	return nil
 }
+
+/*
+This function expects that the reader's position is at the start of the CBEF file header. Returns true if the file header
+contains the CBEF magic. This function will advance the reader's position. Callers should rewind the reader to the start of the
+reader after calling this function
+*/
+func IsCBEFReader(r io.Reader) bool {
+	if r == nil {
+		return false
+	}
+
+	magic := make([]byte, _CBEF_VERSION_OFFSET)
+	if _, err := io.ReadFull(r, magic); err != nil {
+		return false
+	}
+	return bytes.Equal(magic, _CBEF_MAGIC)
+}
+
+/*
+CBEFCursor allows reading and seeking within encrypted CBEF files where the file header indicates no compression.
+It relies on callers supplying valid start offsets for the encrypted chunks when seeking. This is because
+seeking to an offset that is not the start of a chunk will cause subsequent reads/decryption to fail
+*/
+type CBEFCursor struct {
+	r io.ReadSeeker
+	*CBEFReader
+}
+
+func NewCBEFCursor(r io.ReadSeeker, getKey func(keyId string) []byte) (*CBEFCursor, error) {
+	cbefReader, err := NewCBEFReader(r, getKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if cbefReader.compression != CBEF_NONE {
+		return nil, fmt.Errorf("CBEFCursor does not support compression type: %s", cbefReader.compression.String())
+	}
+
+	return &CBEFCursor{
+		r:          r,
+		CBEFReader: cbefReader,
+	}, nil
+
+}
+
+func (this *CBEFCursor) Seek(offset int64, whence int) (int64, error) {
+	newOffset, err := this.r.Seek(offset, whence)
+	if err != nil {
+		return newOffset, err
+	}
+
+	// Update the file offset in the decryptor to reflect the new offset in the underlying reader
+	this.decryptor.fileOffset = uint64(newOffset)
+	this.decryptor.readPos = 0
+	this.decryptor.plaintextLen = 0
+
+	return newOffset, nil
+}

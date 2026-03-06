@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	dictionary "github.com/couchbase/query/datastore/couchbase"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/functions"
@@ -2704,26 +2705,66 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 		return nil, errors.NewAdminLogError(e)
 	}
 
+	var reader io.ReadSeekCloser
+	if encryption.IsCBEFReader(file) {
+		file.Seek(0, io.SeekStart)
+		cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) []byte {
+			// TODO - add key retrieval when key management is introduced
+			return nil
+		})
+		if err1 != nil {
+			file.Close()
+			return nil, errors.NewAdminLogError(err1)
+		}
+		reader = cbefr
+	} else {
+		reader = file
+	}
+
 	for {
-		n, e = io.Copy(w, file)
+
+		n, e = io.Copy(w, reader)
 		if e != nil && e != io.EOF {
+			reader.Close()
+			file.Close()
 			return nil, errors.NewAdminLogError(e)
 		}
 		if !stream {
 			return textPlain(""), nil
 		}
 		if n == 0 && req.Context().Err() != nil {
+			reader.Close()
+			file.Close()
 			return textPlain(""), nil
 		}
-		pos, _ := file.Seek(0, os.SEEK_CUR)
+
+		pos, _ := file.Seek(0, io.SeekCurrent)
+		reader.Close()
 		file.Close()
 		file = nil
+		reader = nil
+
 		time.Sleep(time.Second)
 		if file, e = os.Open(fileName); e != nil {
 			return nil, errors.NewAdminLogError(e)
 		}
 		if info, e := file.Stat(); e == nil && info.Size() >= pos {
-			file.Seek(pos, os.SEEK_SET)
+			if encryption.IsCBEFReader(file) {
+				file.Seek(0, io.SeekStart)
+				cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) []byte {
+					// TODO - add key retrieval when key management is introduced
+					return nil
+				})
+				if err1 != nil {
+					file.Close()
+					return nil, errors.NewAdminLogError(e)
+				}
+				reader = cbefr
+				reader.Seek(pos, io.SeekStart)
+			} else {
+				reader = file
+				file.Seek(pos, io.SeekStart)
+			}
 		}
 	}
 }
