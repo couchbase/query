@@ -185,6 +185,8 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ishix4 ON shellTest(c5, c8, c10) WHERE c6 != 1 AND c7 NOT IN [1,2] AND c11 != 0")
 	runStmt(qc, "CREATE INDEX ishix5 ON shellTest(id) WHERE type = \"type1\"")
 	runStmt(qc, "CREATE INDEX ishix6 ON shellTest(id, type) WHERE type NOT IN [\"type2\",\"type3\"]")
+	runStmt(qc, "CREATE INDEX ishix7 ON shellTest(city) WHERE country = \"US\"")
+	runStmt(qc, "CREATE INDEX ishix8 ON shellTest(city) WHERE country = \"UK\"")
 	runMatch("case_index_scan_bugs.json", false, true, qc, t)
 	runStmt(qc, "DROP INDEX orders.ioaix1")
 	runStmt(qc, "DROP INDEX orders.iorix1")
@@ -200,6 +202,8 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ishix4")
 	runStmt(qc, "DROP INDEX shellTest.ishix5")
 	runStmt(qc, "DROP INDEX shellTest.ishix6")
+	runStmt(qc, "DROP INDEX shellTest.ishix7")
+	runStmt(qc, "DROP INDEX shellTest.ishix8")
 
 	runStmt(qc, "create primary index on product ")
 	runStmt(qc, "create primary index on purchase")
