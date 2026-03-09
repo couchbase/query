@@ -28,6 +28,7 @@ import (
 
 	"github.com/couchbase/gomemcached"
 	memcached "github.com/couchbase/gomemcached/client"
+	"github.com/couchbase/query/encryption"
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/sort"
@@ -60,6 +61,8 @@ const _SS_WORKER_IDLE_SLEEP = 10 * time.Millisecond / _SS_WORKER_IDLE_SPIN
 const _SS_MAX_DOCS_PER_REQUEST = uint32(512)
 const _SS_DOC_BUFFER = 2 * util.MiB        // times 1024 v-buckets is 2 GiB per complete scan
 const _SS_MAX_CACHED_SIZE = 100 * util.MiB // 100 GiB total temp space per scan
+const _MAX_DOC_ID_LENGTH = 250
+const _SS_SPILL_DOC_WRITER_BUFFER_SIZE = 16 * util.KiB // Buffer size for the writer that encrypts spilled documents
 
 func init() {
 	util.RegisterTempPattern(_SS_SPILL_FILE_PATTERN)
@@ -334,29 +337,30 @@ func (this *rQueue) pop() *vbRangeScan {
  */
 
 type seqScan struct {
-	log          logging.Log
-	ch           chan interface{}
-	abortch      chan bool
-	requestId    string
-	scanNum      uint64
-	ranges       []*SeqScanRange
-	limit        int64
-	offset       int64
-	runits       uint64
-	pipelineSize int
-	sampleSize   int
-	deadline     time.Time
-	readyQueue   rQueue
-	skipKey      func(string) bool
-	collId       uint32
-	fetchLimit   uint32
-	ordered      bool
-	serverless   bool
-	useReplica   bool
-	xattrs       bool
-	inactive     bool
-	timedout     bool
-	withDocs     bool
+	log           logging.Log
+	ch            chan interface{}
+	abortch       chan bool
+	requestId     string
+	scanNum       uint64
+	ranges        []*SeqScanRange
+	limit         int64
+	offset        int64
+	runits        uint64
+	pipelineSize  int
+	sampleSize    int
+	deadline      time.Time
+	readyQueue    rQueue
+	skipKey       func(string) bool
+	collId        uint32
+	fetchLimit    uint32
+	ordered       bool
+	serverless    bool
+	useReplica    bool
+	xattrs        bool
+	inactive      bool
+	timedout      bool
+	withDocs      bool
+	encryptionKey []byte
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
@@ -1163,6 +1167,15 @@ type vbRangeScan struct {
 
 	retries    int
 	delayUntil util.Time
+
+	// If encryption is enabled, write each spilled entry as its own encrypted chunk i.e do not combine multiple entries in a
+	// single encrypted chunk. This allows the start offset of each entry's encrypted data to be tracked, enabling seeking
+	// and reading of individual entries from the encrypted spill file
+	encWriter *encryption.CBEFWriter
+	encReader *encryption.CBEFCursor
+
+	// When encryption is enabled, stores the offsets in the encrypted spill file where each encrypted entry begins
+	encryptedEntryOffsets []int64
 }
 
 func (this *vbRangeScan) String() string {
@@ -1220,6 +1233,21 @@ func (this *vbRangeScan) truncate() error {
 		this.keys = this.keys[:0]
 	}
 	this.currentKey = 0
+
+	if this.encryptedEntryOffsets != nil {
+		this.encryptedEntryOffsets = this.encryptedEntryOffsets[:0]
+	}
+
+	if this.encReader != nil {
+		this.encReader.Close()
+		this.encReader = nil
+	}
+
+	if this.encWriter != nil {
+		this.encWriter.Close()
+		this.encWriter = nil
+	}
+
 	if this.spill != nil {
 		var size int64
 		size, err = this.spill.Seek(0, os.SEEK_END)
@@ -1253,18 +1281,43 @@ func (this *vbRangeScan) seek(n int) bool {
 		return false
 	}
 	if this.offset >= uint32(cap(this.buffer)) {
-		off := int64(0)
-		if n > 0 {
-			off = int64(this.keys[n-1])
-		}
-		_, err := this.spill.Seek(off, os.SEEK_SET)
-		if err != nil {
-			return false
-		}
-		if this.reader == nil {
-			this.reader = bufio.NewReaderSize(this.spill, _SS_SPILL_BUFFER)
+
+		if this.scan.encryptionKey != nil {
+			off := int64(this.encryptedEntryOffsets[n])
+
+			if this.encReader == nil {
+				_, err := this.spill.Seek(0, io.SeekStart)
+				if err != nil {
+					return false
+				}
+
+				this.encReader, err = encryption.NewCBEFCursor(this.spill, func(keyId string) []byte {
+					return this.scan.encryptionKey
+				})
+				if err != nil {
+
+					return false
+				}
+			}
+
+			_, err := this.encReader.Seek(off, io.SeekStart)
+			if err != nil {
+				return false
+			}
 		} else {
-			this.reader.Reset(this.spill)
+			off := int64(0)
+			if n > 0 {
+				off = int64(this.keys[n-1])
+			}
+			_, err := this.spill.Seek(off, os.SEEK_SET)
+			if err != nil {
+				return false
+			}
+			if this.reader == nil {
+				this.reader = bufio.NewReaderSize(this.spill, _SS_SPILL_BUFFER)
+			} else {
+				this.reader.Reset(this.spill)
+			}
 		}
 	}
 	this.currentKey = n
@@ -1282,7 +1335,11 @@ func (this *vbRangeScan) readCurrent() bool {
 	this.head = this.head[:l]
 	var err error
 	if this.offset >= uint32(cap(this.buffer)) {
-		_, err = io.ReadFull(this.reader, this.head)
+		if this.encReader != nil {
+			_, err = io.ReadFull(this.encReader, this.head)
+		} else {
+			_, err = io.ReadFull(this.reader, this.head)
+		}
 	} else {
 		copy(this.head, this.buffer[this.keyStart(this.currentKey):])
 	}
@@ -1354,23 +1411,73 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 	if this.buffer == nil {
 		this.buffer = make([]byte, 0, _SS_KEY_BUFFER)
 	}
-	if this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) && this.spill == nil {
-		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN)
-		if err != nil {
-			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
-			return false
+
+	if this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) {
+
+		if this.spill == nil {
+			this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN)
+			if err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				return false
+			}
+		}
+
+		if this.scan.encryptionKey != nil {
+			if this.encWriter == nil {
+				this.encWriter, err = encryption.NewCBEFWriterSize(this.spill, "seq-scan-key", this.scan.encryptionKey,
+					encryption.CBEF_NONE, _MAX_DOC_ID_LENGTH)
+				if err != nil {
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+					return false
+				}
+			}
+
+			if this.encryptedEntryOffsets == nil {
+				// Pre-size for one offset per buffered entry, plus one for the current entry that is about to be spilled
+				this.encryptedEntryOffsets = make([]int64, 0, len(this.keys)+1)
+			}
 		}
 	}
 	if this.keys == nil {
 		this.keys = make([]uint32, 0, _SS_INIT_KEYS)
 	}
+
+	// Spill the entire buffer to the spill file
 	if this.offset < uint32(cap(this.buffer)) && this.offset+uint32(len(key)) >= uint32(cap(this.buffer)) {
 		if !util.UseTemp(this.spill.Name(), int64(len(this.buffer))) {
 			this.reportError(qerrors.NewTempFileQuotaExceededError())
 			return false
 		}
-		// flush the buffer to spill file
-		_, err = this.spill.Write(this.buffer)
+
+		if this.encWriter != nil {
+			// Write each spilled entry as its own encrypted chunk
+			for i := 0; i < len(this.keys); i++ {
+				start := this.keyStart(i)
+				end := start + this.keyLen(i)
+
+				// Record the file offset before writing this entry. This becomes the start offset for this entry's encrypted chunk
+				chunkStartOffset, err := this.spill.Seek(0, io.SeekCurrent)
+				if err != nil {
+					break
+				}
+
+				_, err = this.encWriter.Write(this.buffer[start:end])
+				if err != nil {
+					break
+				}
+
+				err = this.encWriter.Flush()
+
+				if err != nil {
+					break
+				}
+
+				this.encryptedEntryOffsets = append(this.encryptedEntryOffsets, chunkStartOffset)
+			}
+		} else {
+			_, err = this.spill.Write(this.buffer)
+		}
+
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false
@@ -1383,7 +1490,40 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 			this.reportError(qerrors.NewTempFileQuotaExceededError())
 			return false
 		}
-		_, err = this.spill.Write(key)
+
+		if this.encWriter != nil {
+			// Record the file offset before writing this entry. This becomes the start offset for this entry's encrypted chunk
+			chunkStartOffset, err := this.spill.Seek(0, io.SeekCurrent)
+			if err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				return false
+			}
+
+			// Write the spilled entry as its own encrypted chunk
+			_, err = this.encWriter.Write(key)
+			if err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				return false
+			}
+
+			err = this.encWriter.Flush()
+
+			if err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				return false
+			}
+
+			if len(this.encryptedEntryOffsets) == cap(this.encryptedEntryOffsets) {
+				nw := make([]int64, len(this.encryptedEntryOffsets), cap(this.encryptedEntryOffsets)*2)
+				copy(nw, this.encryptedEntryOffsets)
+				this.encryptedEntryOffsets = nw
+			}
+
+			this.encryptedEntryOffsets = append(this.encryptedEntryOffsets, chunkStartOffset)
+		} else {
+			_, err = this.spill.Write(key)
+		}
+
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false
@@ -1410,23 +1550,73 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 		this.buffer = make([]byte, 0, _SS_DOC_BUFFER)
 	}
 	length := uint32(len(key) + 2 + len(doc) + len(meta))
-	if this.offset+length >= uint32(cap(this.buffer)) && this.spill == nil {
-		this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN)
-		if err != nil {
-			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
-			return false
+
+	if this.offset+length >= uint32(cap(this.buffer)) {
+
+		if this.spill == nil {
+			this.spill, err = util.CreateTemp(_SS_SPILL_FILE_PATTERN)
+			if err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				return false
+			}
+		}
+
+		if this.scan.encryptionKey != nil {
+			if this.encWriter == nil {
+				this.encWriter, err = encryption.NewCBEFWriterSize(this.spill, "seq-scan-key", this.scan.encryptionKey,
+					encryption.CBEF_NONE, _SS_SPILL_DOC_WRITER_BUFFER_SIZE)
+				if err != nil {
+					this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+					return false
+				}
+			}
+
+			if this.encryptedEntryOffsets == nil {
+				// Pre-size for one offset per buffered entry, plus one for the current entry that is about to be spilled
+				this.encryptedEntryOffsets = make([]int64, 0, len(this.keys)+1)
+			}
 		}
 	}
 	if this.keys == nil {
 		this.keys = make([]uint32, 0, _SS_INIT_KEYS)
 	}
+
+	// Spill the entire buffer to the spill file
 	if this.offset < uint32(cap(this.buffer)) && this.offset+length >= uint32(cap(this.buffer)) {
 		if !util.UseTemp(this.spill.Name(), int64(len(this.buffer))) {
 			this.reportError(qerrors.NewTempFileQuotaExceededError())
 			return false
 		}
-		// flush the buffer to spill file
-		_, err = this.spill.Write(this.buffer)
+
+		if this.encWriter != nil {
+			// Write each spilled entry as its own encrypted chunk.
+			for i := 0; i < len(this.keys); i++ {
+				start := this.keyStart(i)
+				end := start + this.keyLen(i)
+
+				// Record the file offset before writing this entry. This becomes the start offset for this entry's encrypted chunk
+				chunkStartOffset, err := this.spill.Seek(0, io.SeekCurrent)
+				if err != nil {
+					break
+				}
+
+				_, err = this.encWriter.Write(this.buffer[start:end])
+				if err != nil {
+					break
+				}
+
+				err = this.encWriter.Flush()
+
+				if err != nil {
+					break
+				}
+
+				this.encryptedEntryOffsets = append(this.encryptedEntryOffsets, chunkStartOffset)
+			}
+		} else {
+			_, err = this.spill.Write(this.buffer)
+		}
+
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false
@@ -1434,21 +1624,54 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 		this.buffer = this.buffer[:0]
 	}
 	this.offset += length
+
+	// Spill the entry to the spill file
 	if this.offset >= uint32(cap(this.buffer)) {
 		if !util.UseTemp(this.spill.Name(), int64(length)) {
 			this.reportError(qerrors.NewTempFileQuotaExceededError())
 			return false
 		}
-		err = binary.Write(this.spill, binary.BigEndian, uint16(len(key)))
+
+		var w io.Writer
+		var encChunkOffset int64
+
+		if this.encWriter != nil {
+			w = this.encWriter
+
+			// Record the file offset before writing this entry. This becomes the start offset for this entry's encrypted chunk
+			encChunkOffset, err = this.spill.Seek(0, io.SeekCurrent)
+			if err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				return false
+			}
+		} else {
+			w = this.spill
+		}
+		err = binary.Write(w, binary.BigEndian, uint16(len(key)))
 		if err == nil {
-			_, err = this.spill.Write(key)
+			_, err = w.Write(key)
 		}
 		if err == nil {
-			_, err = this.spill.Write(meta)
+			_, err = w.Write(meta)
 		}
 		if err == nil {
-			_, err = this.spill.Write(doc)
+			_, err = w.Write(doc)
 		}
+
+		if err == nil && this.encWriter != nil {
+			// Write the spilled entry as its own encrypted chunk
+			err = this.encWriter.Flush()
+
+			if err == nil {
+				if len(this.encryptedEntryOffsets) == cap(this.encryptedEntryOffsets) {
+					nw := make([]int64, len(this.encryptedEntryOffsets), cap(this.encryptedEntryOffsets)*2)
+					copy(nw, this.encryptedEntryOffsets)
+					this.encryptedEntryOffsets = nw
+				}
+				this.encryptedEntryOffsets = append(this.encryptedEntryOffsets, encChunkOffset)
+			}
+		}
+
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false
