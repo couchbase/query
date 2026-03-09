@@ -298,14 +298,11 @@ func copyBaseKeyspaces(src map[string]*BaseKeyspace, copyFilter bool) map[string
 		if len(kspace.vectorfilters) > 0 {
 			baseKeyspaceCopy.vectorfilters = kspace.vectorfilters.Copy()
 		}
-		baseKeyspaceCopy.subsetIndexes = make(map[string]bool, len(kspace.subsetIndexes))
-		for k, v := range kspace.subsetIndexes {
-			baseKeyspaceCopy.subsetIndexes[k] = v
-		}
-		baseKeyspaceCopy.nonSubsetIdxs = make(map[string]bool, len(kspace.nonSubsetIdxs))
-		for k, v := range kspace.nonSubsetIdxs {
-			baseKeyspaceCopy.nonSubsetIdxs[k] = v
-		}
+		// do not copy subsetIndexes and nonSubsetIdxs, since when baseKeyspaces are copied
+		// we are (likely) doing new rounds of index selections (e.g. during join enumeration,
+		// or in an OR-clause consideration with multiple rounds)
+		baseKeyspaceCopy.subsetIndexes = make(map[string]bool)
+		baseKeyspaceCopy.nonSubsetIdxs = make(map[string]bool)
 	}
 
 	return dest
