@@ -812,7 +812,16 @@ func getSystemCollection(bucketName string) (Keyspace, errors.Error) {
 	return store.GetSystemCollection(bucketName)
 }
 
-func getSystemCollectonIndexConnection(systemCollection Keyspace) (*IndexConnection, Index3, errors.Error) {
+func getSystemCollectionIndexConnection(systemCollection Keyspace, bucketName string) (*IndexConnection, Index3, errors.Error) {
+	cnt, err := systemCollection.Count(NULL_QUERY_CONTEXT)
+	if err != nil {
+		return nil, nil, errors.NewSystemCollectionError(bucketName, err)
+	} else if cnt == 0 {
+		// empty system collection, no need to look for primary index or sequential scan
+		logging.Debugf("Empty system collection for bucket %s, no need to scan system collection", bucketName)
+		return nil, nil, nil
+	}
+
 	indexerGSI, err := systemCollection.Indexer(GSI)
 	if err == nil {
 		index3, err := getPrimaryIndexFromIndexer(indexerGSI)
@@ -914,7 +923,7 @@ func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspac
 		return errors.NewSystemCollectionError(bucketName, nil)
 	}
 
-	conn, index3, err := getSystemCollectonIndexConnection(systemCollection)
+	conn, index3, err := getSystemCollectionIndexConnection(systemCollection, bucketName)
 	if err != nil || conn == nil || index3 == nil {
 		// if system collection is empty and no primary index created, there is nothing
 		// to be scanned, we also return here
