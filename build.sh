@@ -59,6 +59,7 @@ cbranch=`$GIT rev-parse --abbrev-ref HEAD`
 rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
   awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
 defbranch="master"
+defbranch2="main"
 
 function checkout_if_necessary {
   local current=`$GIT rev-parse --abbrev-ref HEAD 2>/dev/null`
@@ -247,7 +248,7 @@ function repo_setup {
     repo_by_gomod go.mod query "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod query-ee "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod indexing "" $cbranch $rbranch $defbranch
-    repo_by_gomod go.mod bhive "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod bhive "" $cbranch $rbranch $defbranch2
     repo_by_gomod go.mod go-couchbase "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod gomemcached "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbauth "" $cbranch $rbranch $defbranch
