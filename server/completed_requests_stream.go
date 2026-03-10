@@ -18,7 +18,7 @@ The files are GZIP streams of the JSON completed_requests output, rather than th
 they can be examined outside the engine.  GZIP was picked over ZLIB as the gzip command line utility is commonly available.  A table
 of contents to aid reading the files is added to the end after the GZIP stream; the GZIP protocol dictates this must be ignored by
 processors so doesn't pose a problem for the gzip command however the '-q' option should be used to suppress the warning it will
-emit on encountering the TOC.
+emit on encountering the metadata/table of contents (TOC).
 
 Individual files are limited in size based on the size of the raw (uncompressed) data being written to them.  This is to control
 the space needed when reading the files.
@@ -26,6 +26,21 @@ the space needed when reading the files.
 The active files for streaming to are not part of the managed size nor are they read since for maximum performance they are a single
 ZIP stream and cannot therefore be read until the stream is closed.  When closed, they're renamed and included in the managed files
 list.
+
+Encryption at rest:
+
+If encryption at rest is enabled, the same request JSON stream is written, but the stream file (`rlstream.<id>`) is stored in CBEF
+format with GZIP compression enabled, ensuring the payload on disk is encrypted. When encryption is enabled, the TOC is not appended
+to the encrypted stream file. Instead, the TOC is written to a separate metadata file (`metadata.rlstream.<id>`). During archival,
+the stream and metadata files are renamed to `local_request_log.<num>` and `metadata.local_request_log.<num>` respectively.
+
+The TOC is written to a separate file so it can remain unencrypted. The TOC must be accessible in plaintext/non-encrypted form
+because it is required for certain processing when an archive file is read through system:completed_requests_history.
+
+Users can directly choose to read the archive files from command line utilities. Couchbase's cbcat tool will be the preferred tool
+to read encrypted archive files, as cbcat decrypts encrypte files in CBEF format. If the TOC were kept unencrypted within the same
+archive file as the encrypted payload, decryption using cbcat tool would fail with errors. Storing the TOC in a separate
+metadata file avoids this issue while keeping the archive payload fully encrypted.
 */
 
 package server
@@ -47,36 +62,41 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
 
 const (
-	_MSG_PREFIX                     = "CRS: "
-	_REQUEST_LOG_STREAM_FILE        = "local_request_log."
-	_REQUEST_LOG_STREAM_ACTIVE_FILE = "rlstream."
-	_STREAM_BUF_SIZE                = util.KiB * 64
-	_ACTIVE_FILES                   = uint64(16)
-	_SWEEP_INTERVAL                 = time.Second * 30
-	_MAX_RAW_SIZE                   = util.MiB * 100   // maximum raw size before closing (size when cached for reading)
-	_MIN_RAW_SIZE                   = util.KiB * 256   // minimum raw size before being considered for initial idle flushing
-	_MAX_IDLE_1                     = time.Minute * 10 // idle stream files with at least _MIN_RAW_SIZE closed after this interval
-	_MAX_IDLE_2                     = time.Minute * 60 // idle stream files closed after this interval
-	_STREAM_MAGIC                   = 0x4352534D       // "CRSM"
-	_MAX_CACHE                      = 5                // maximum number of cached files (materialised) for reading
-	_RLS_TIMEOUT                    = time.Second * 10 // maximum time to wait writing to the stop channel
+	_MSG_PREFIX                              = "CRS: "
+	_REQUEST_LOG_STREAM_FILE                 = "local_request_log."
+	_REQUEST_LOG_STREAM_ACTIVE_FILE          = "rlstream."
+	_REQUEST_LOG_STREAM_METADATA_FILE        = "metadata." + _REQUEST_LOG_STREAM_FILE
+	_REQUEST_LOG_STREAM_ACTIVE_METADATA_FILE = "metadata." + _REQUEST_LOG_STREAM_ACTIVE_FILE
+	_STREAM_BUF_SIZE                         = util.KiB * 64
+	_ACTIVE_FILES                            = uint64(16)
+	_SWEEP_INTERVAL                          = time.Second * 30
+	_MAX_RAW_SIZE                            = util.MiB * 100   // maximum raw size before closing (size when cached for reading)
+	_MIN_RAW_SIZE                            = util.KiB * 256   // minimum raw size before being considered for initial idle flushing
+	_MAX_IDLE_1                              = time.Minute * 10 // idle stream files with at least _MIN_RAW_SIZE closed after this interval
+	_MAX_IDLE_2                              = time.Minute * 60 // idle stream files closed after this interval
+	_STREAM_MAGIC                            = 0x4352534D       // "CRSM"
+	_MAX_CACHE                               = 5                // maximum number of cached files (materialised) for reading
+	_RLS_TIMEOUT                             = time.Second * 10 // maximum time to wait writing to the stop channel
 )
 
 type requestStreamFile struct {
 	sync.Mutex
+	encrypt bool
 	f       *os.File
 	w       *bufio.Writer
 	z       *gzip.Writer
+	ew      *encryption.CBEFWriter
 	encoder *json.Encoder
 	index   uint64    // for quick reference
 	written uint64    // bytes written before compression etc.
-	size    int64     // file size set when closing
+	size    int64     // file size set when closing. This will include the size of the metadata file if stream file is encrypted
 	mtime   time.Time // time of last write
 	offsets []uint64  // entry offsets in uncompressed data stream
 }
@@ -91,7 +111,16 @@ func (this *requestStreamFile) isClosed() bool {
 
 // this intercepts the JSON encoder output on its way to the ZIP stream so we have access to the number of bytes produced
 func (this *requestStreamFile) Write(p []byte) (int, error) {
-	n, err := this.z.Write(p)
+
+	var n int
+	var err error
+
+	if this.ew != nil {
+		n, err = this.ew.Write(p)
+	} else {
+		n, err = this.z.Write(p)
+	}
+
 	if err == nil {
 		this.written += uint64(n)
 	}
@@ -126,8 +155,19 @@ func (this *requestStreamFile) create() error {
 	if err != nil {
 		return err
 	}
-	this.w = bufio.NewWriterSize(this.f, _STREAM_BUF_SIZE)
-	this.z = gzip.NewWriter(this.w)
+
+	this.encrypt = requestLog.stream.encrypt
+	if this.encrypt {
+		this.ew, err = encryption.NewCBEFWriterSize(this.f, "completed_reqests_stream", requestLog.stream.key,
+			encryption.CBEF_GZIP, _STREAM_BUF_SIZE)
+		if err != nil {
+			return err
+		}
+	} else {
+		this.w = bufio.NewWriterSize(this.f, _STREAM_BUF_SIZE)
+		this.z = gzip.NewWriter(this.w)
+	}
+
 	this.encoder = json.NewEncoder(this)
 	this.written = 0
 	this.offsets = nil
@@ -146,9 +186,14 @@ func (this *requestStreamFile) close() {
 		this.w.Flush()
 		this.w = nil
 	}
+	if this.ew != nil {
+		this.ew.Flush()
+		this.ew.Close()
+		this.ew = nil
+	}
+
+	// Create the TOC
 	if this.f != nil {
-		// write trailer after ZIP stream
-		// non-ZIP bytes are ignored by command-line utilities accessing the file directly
 		buf := make([]byte, 0, 16+len(this.offsets)*8)
 		for i := range this.offsets {
 			buf = binary.BigEndian.AppendUint64(buf, this.offsets[i])
@@ -156,8 +201,23 @@ func (this *requestStreamFile) close() {
 		buf = binary.BigEndian.AppendUint32(buf, _STREAM_MAGIC)
 		buf = binary.BigEndian.AppendUint32(buf, uint32(len(this.offsets)))
 		buf = binary.BigEndian.AppendUint64(buf, this.written)
-		this.f.Write(buf)
-		this.size, _ = this.f.Seek(0, os.SEEK_END)
+
+		if !this.encrypt {
+			// write trailer after ZIP stream
+			// non-ZIP bytes are ignored by command-line utilities accessing the file directly
+			this.f.Write(buf)
+		} else {
+			// Write TOC to a separate metadata file
+			meta, _ := os.Create(requestMetadataActiveFileName(this.index))
+			meta.Write(buf)
+			msz, _ := meta.Seek(0, io.SeekEnd)
+			this.size += int64(msz)
+			meta.Close()
+		}
+
+		// Calculate the stream file size
+		fSz, _ := this.f.Seek(0, os.SEEK_END)
+		this.size += int64(fSz)
 		this.f.Close()
 		this.f = nil
 	}
@@ -171,11 +231,30 @@ func requestLogStreamFileName(num uint64) string {
 	return fmt.Sprintf("%s/%s%d", ffdc.GetPath(), _REQUEST_LOG_STREAM_FILE, num)
 }
 
+func requestMetadataActiveFileName(num uint64) string {
+	return fmt.Sprintf("%s/%s%d", ffdc.GetPath(), _REQUEST_LOG_STREAM_ACTIVE_METADATA_FILE, num)
+}
+
+func requestMetadataFileName(num uint64) string {
+	return fmt.Sprintf("%s/%s%d", ffdc.GetPath(), _REQUEST_LOG_STREAM_METADATA_FILE, num)
+}
+
+func removeArchiveFiles(num uint64) {
+	os.Remove(requestLogStreamFileName(num))
+	os.Remove(requestMetadataFileName(num))
+}
+
+func removeActiveFiles(num uint64) {
+	os.Remove(requestLogStreamActiveFileName(num))
+	os.Remove(requestMetadataActiveFileName(num))
+}
+
 // info about a managed file (not an active stream file)
 type fileInfo struct {
-	num   uint64
-	size  uint64
-	count int // may be -1 if unknown
+	num       uint64
+	size      uint64
+	count     int // may be -1 if unknown
+	encrypted bool
 }
 
 type requestLogStream struct {
@@ -196,6 +275,9 @@ type requestLogStream struct {
 	streamCount  uint64 // stats
 	streamErrors uint64 // stats
 	fileNum      uint64 // last known/generated file number
+
+	encrypt bool
+	key     []byte
 }
 
 func (this *requestLogStream) String() string {
@@ -282,7 +364,9 @@ func (this *requestLogStream) loadFiles() {
 				for i := range ents {
 					if ents[i].IsDir() {
 						continue
-					} else if strings.HasPrefix(ents[i].Name(), _REQUEST_LOG_STREAM_FILE) {
+					}
+
+					if strings.HasPrefix(ents[i].Name(), _REQUEST_LOG_STREAM_FILE) {
 						numStr := ents[i].Name()[len(_REQUEST_LOG_STREAM_FILE):]
 						num, err := strconv.ParseUint(numStr, 10, 64)
 						if err != nil {
@@ -292,8 +376,32 @@ func (this *requestLogStream) loadFiles() {
 						if info, err := ents[i].Info(); err == nil {
 							fsz = uint64(info.Size())
 						}
+
+						f, err := os.Open(requestLogStreamFileName(num))
+						if err != nil {
+							logging.Warnf(_MSG_PREFIX+"Failed to open file during loading %v (%v). Skipping file.",
+								ents[i].Name(), err)
+							removeArchiveFiles(num)
+							continue
+						}
+						encrypted := isEncrypted(f)
+						f.Close()
+
+						if encrypted {
+							// Include size of metadata file
+							metadataFile := requestMetadataFileName(num)
+							if stat, err := os.Stat(metadataFile); err == nil {
+								fsz += uint64(stat.Size())
+							} else {
+								logging.Warnf(_MSG_PREFIX+"Failed to open metadata file during loading %v (%v). Skipping file.",
+									metadataFile, err)
+								removeArchiveFiles(num)
+								continue
+							}
+						}
+
 						sz += fsz
-						fi = append(fi, fileInfo{num: num, size: fsz, count: -1})
+						fi = append(fi, fileInfo{num: num, size: fsz, count: -1, encrypted: encrypted})
 					} else if !active && strings.HasPrefix(ents[i].Name(), _REQUEST_LOG_STREAM_ACTIVE_FILE) {
 						numStr := ents[i].Name()[len(_REQUEST_LOG_STREAM_ACTIVE_FILE):]
 						num, err := strconv.ParseUint(numStr, 10, 64)
@@ -317,12 +425,81 @@ func (this *requestLogStream) loadFiles() {
 		// rename old active files (if any) and include them in the file info list
 		for i := range acts {
 			num := atomic.AddUint64(&this.fileNum, 1)
-			if e := os.Rename(requestLogStreamActiveFileName(acts[i]), requestLogStreamFileName(num)); e != nil {
-				logging.Warnf(_MSG_PREFIX+"Failed to rename past active file %v to archive file %v", acts[i], num)
-			} else {
-				sz += actsz[i]
-				fi = append(fi, fileInfo{num: num, size: actsz[i], count: -1})
+
+			activeFile := requestLogStreamActiveFileName(acts[i])
+			f, err := os.Open(activeFile)
+			if err != nil {
+				logging.Warnf(_MSG_PREFIX+"Failed to find/open past active file %v file during loading: %v. Skipping file.",
+					acts[i], err)
+				removeActiveFiles(acts[i])
+				continue
 			}
+
+			encrypted := isEncrypted(f)
+
+			// Check if there is valid TOC/metadata for the stream file
+			var metadataFile *os.File // The file that contains the TOC/metadata
+			if encrypted {
+				m, err := os.Open(requestMetadataActiveFileName(acts[i]))
+				if err != nil {
+					f.Close()
+					logging.Warnf(_MSG_PREFIX+"Failed to find/open past active metadata file %v during loading. Skipping file.",
+						acts[i])
+					removeActiveFiles(acts[i])
+					continue
+				}
+				metadataFile = m
+			} else {
+				metadataFile = f
+			}
+
+			// Check the validity of the TOC
+			_, err = metadataFile.Seek(-16, io.SeekEnd)
+			var validMagic bool
+			if err == nil {
+				buf := make([]byte, 4)
+				_, err = io.ReadFull(metadataFile, buf)
+				if err == nil {
+					if binary.BigEndian.Uint32(buf) == _STREAM_MAGIC {
+						validMagic = true
+					}
+				}
+			}
+
+			var metadataSize uint64
+			if encrypted {
+				if stat, err := metadataFile.Stat(); err == nil {
+					metadataSize = uint64(stat.Size())
+				}
+				metadataFile.Close()
+			}
+			f.Close()
+
+			if !validMagic {
+				logging.Warnf(_MSG_PREFIX+"No valid metadata found for past active file %v during loading. Skipping file.", acts[i])
+				removeActiveFiles(acts[i])
+				continue
+			}
+
+			if e := os.Rename(activeFile, requestLogStreamFileName(num)); e != nil {
+				logging.Warnf(_MSG_PREFIX+"Failed to rename past active file %v to archive file %v. Skipping file.", acts[i], num)
+				removeActiveFiles(acts[i])
+				continue
+			}
+
+			if encrypted {
+				if e := os.Rename(requestMetadataActiveFileName(acts[i]), requestMetadataFileName(num)); e != nil {
+					logging.Warnf(_MSG_PREFIX+
+						"Failed to rename past metadata active file %v to metadata archive file %v (%v). Skipping file.",
+						acts[i], num, e)
+					removeActiveFiles(acts[i])
+					continue
+				}
+			}
+
+			sz += actsz[i]
+			fi = append(fi, fileInfo{num: num, size: actsz[i] + metadataSize, count: -1, encrypted: encrypted})
+
 		}
 		if len(fi) > 0 {
 			sort.Slice(fi, func(i int, j int) bool {
@@ -378,6 +555,14 @@ func (this *requestLogStream) archive(file *requestStreamFile, lockFilesList boo
 	if e := os.Rename(requestLogStreamActiveFileName(file.index), requestLogStreamFileName(fi.num)); e != nil {
 		logging.Warnf(_MSG_PREFIX+"Failed to rename active file %v to archive file %v (%v)", file.index, fi.num, e)
 	}
+
+	if this.encrypt {
+		if e := os.Rename(requestMetadataActiveFileName(file.index), requestMetadataFileName(fi.num)); e != nil {
+			logging.Warnf(_MSG_PREFIX+"Failed to rename metadata active file %v to metadata archive file %v (%v)", file.index,
+				fi.num, e)
+		}
+	}
+
 	file.Unlock()
 
 	if lockFilesList {
@@ -499,6 +684,8 @@ func (this *requestLogStream) spaceManagementProc(stop chan bool) {
 							}
 							this.files.Remove(it)
 							os.Remove(requestLogStreamFileName(itfi.num))
+							// If the stream file is not enrypted, the metadata file is not present. so this would be a no-op
+							os.Remove(requestMetadataFileName(itfi.num))
 						}
 					}
 				}
@@ -526,8 +713,17 @@ func (this *requestLogStream) entryCounts() []uint64 {
 	for it := this.files.Front(); it != nil; it = it.Next() {
 		itfi := it.Value.(fileInfo)
 		if itfi.count == -1 {
+
+			var f *os.File
+			var e error
+
 			// attempt to update the file information
-			f, e := os.Open(requestLogStreamFileName(itfi.num))
+			if !itfi.encrypted {
+				f, e = os.Open(requestLogStreamFileName(itfi.num))
+			} else {
+				f, e = os.Open(requestMetadataFileName(itfi.num))
+			}
+
 			if e == nil {
 				if _, e = f.Seek(-16, os.SEEK_END); e == nil {
 					buf := make([]byte, 8)
@@ -631,41 +827,73 @@ func (this *readCache) add(num uint64) *readCacheEntry {
 func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
 	ce := this.cache.get(num)
 	if ce == nil {
-		f, err := os.Open(requestLogStreamFileName(num))
+		streamFile, err := os.Open(requestLogStreamFileName(num))
 		if err != nil {
 			return nil, err
 		}
-		if _, err := f.Seek(-16, os.SEEK_END); err != nil {
-			f.Close()
+
+		defer streamFile.Close()
+		encrypted := isEncrypted(streamFile)
+
+		// Read and validate the metadata/ TOC
+		var metadataFile io.ReadSeekCloser
+		if encrypted {
+			metadataFile, err = os.Open(requestMetadataFileName(num))
+			if err != nil {
+				return nil, err
+			}
+			defer metadataFile.Close()
+		} else {
+			metadataFile = streamFile
+		}
+
+		if _, err := metadataFile.Seek(-16, io.SeekEnd); err != nil {
 			return nil, err
 		}
+
 		buf := make([]byte, 16)
-		if _, err := f.Read(buf); err != nil || binary.BigEndian.Uint32(buf) != _STREAM_MAGIC {
-			f.Close()
+		if _, err := metadataFile.Read(buf); err != nil || binary.BigEndian.Uint32(buf) != _STREAM_MAGIC {
 			if err == nil {
 				err = io.EOF
 			}
 			return nil, err
 		}
-		if _, err := f.Seek(0, os.SEEK_SET); err != nil {
-			f.Close()
-			return nil, err
+
+		if !encrypted {
+			if _, err := metadataFile.Seek(0, io.SeekStart); err != nil {
+				return nil, err
+			}
 		}
-		r := bufio.NewReaderSize(f, _STREAM_BUF_SIZE)
-		z, err := gzip.NewReader(r)
-		if err != nil {
-			f.Close()
-			return nil, err
+
+		// Setup reader to read the stream file
+		var r io.Reader
+		if encrypted {
+			er, err := encryption.NewCBEFReader(streamFile, func(keyId string) []byte {
+				return requestLog.stream.key
+			})
+			if err != nil {
+				return nil, err
+			}
+			r = er
+			defer er.Close()
+		} else {
+			b := bufio.NewReaderSize(streamFile, _STREAM_BUF_SIZE)
+			z, err := gzip.NewReader(b)
+			if err != nil {
+				return nil, err
+			}
+			z.Multistream(false) // we have trailing data that gzip should not attempt to interpret
+			r = z
+			defer z.Close()
 		}
-		z.Multistream(false) // we have trailing data that gzip should not attempt to interpret
+
 		raw := make([]byte, binary.BigEndian.Uint64(buf[8:]))
 		start := 0
 		for start < len(raw) {
-			n, err := z.Read(raw[start:])
+			n, err := r.Read(raw[start:])
 			if n > 0 {
 				start += n
 			} else if err != nil && err != io.EOF {
-				f.Close()
 				raw = nil
 				if err == nil {
 					err = io.EOF
@@ -684,13 +912,12 @@ func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
 		// always leave the reader correctly positioned.  Hopefully most of the time this is a no-op as the seek position is the
 		// current position
 		pos := int64(len(ce.offsets)+2) * 8
-		if _, err := f.Seek(-pos, os.SEEK_END); err != nil {
-			f.Close()
+		if _, err := metadataFile.Seek(-pos, os.SEEK_END); err != nil {
 			return nil, err
 		}
-		// since it is a buffered reader (so in memory already), we'll read one at a time rather than copying again in memory
+
 		for i := range ce.offsets {
-			_, err := r.Read(off)
+			_, err := metadataFile.Read(off)
 			if err != nil {
 				return nil, err
 			}
@@ -824,4 +1051,14 @@ func streamToFile(e *RequestLogEntry) {
 		// (and they'd contend for CPU time etc.)
 		requestLog.stream.encode(e.Format(true, false, util.GetDurationStyle()))
 	}
+}
+
+func isEncrypted(file *os.File) bool {
+	var encrypted bool
+	if encryption.IsCBEFReader(file) {
+		encrypted = true
+	}
+
+	file.Seek(0, io.SeekStart)
+	return encrypted
 }
