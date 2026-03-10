@@ -1841,6 +1841,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	planStabilityMode := settings.GetPlanStabilityMode()
 	planStabilityAdHoc := planStabilityMode == settings.PS_MODE_AD_HOC
 	planStabilityAdHocRead := planStabilityAdHoc || (planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY)
+	planStability := planStabilityAdHocRead || (planStabilityMode == settings.PS_MODE_PREPARED_ONLY)
 
 	namedArgs := request.NamedArgs()
 	positionalArgs := request.PositionalArgs()
@@ -1953,7 +1954,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 		var subTimes map[string]time.Duration
 		prepared, err, subTimes = planner.BuildPrepared(stmt, this.datastore, this.systemstore, context.Namespace(),
-			autoExecute, !autoExecute, &prepContext)
+			autoExecute, !autoExecute, persist || planStability, &prepContext)
 		if subTimes != nil {
 			for k, v := range subTimes {
 				p := execution.PhaseByName("plan." + k)

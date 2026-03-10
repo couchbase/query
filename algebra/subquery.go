@@ -349,7 +349,7 @@ func (this *SubqueryPlans) ForEach(expr expression.Expression, options uint32, l
 	}
 	if expr == this.expr {
 		good = true
-		for key, _ := range this.plans {
+		for key := range this.plans {
 			good1, trans1 := verify(key, options, this.plans[key], this.isks[key])
 			if !good1 {
 				return good1, false
@@ -358,4 +358,21 @@ func (this *SubqueryPlans) ForEach(expr expression.Expression, options uint32, l
 		}
 	}
 	return good, trans
+}
+
+func (this *SubqueryPlans) MarshalPlans(lock bool, prepName string,
+	marshal func(map[string]interface{}, *Select, interface{}, interface{}, string) string) map[string]interface{} {
+	if lock {
+		this.mutex.RLock()
+	}
+	subqueries := make(map[string]interface{}, len(this.plans))
+	for key := range this.plans {
+		r := make(map[string]interface{}, 4)
+		str := marshal(r, key, this.plans[key], this.isks[key], prepName)
+		subqueries[str] = r
+	}
+	if lock {
+		this.mutex.RUnlock()
+	}
+	return subqueries
 }

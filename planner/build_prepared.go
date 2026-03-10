@@ -16,12 +16,19 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastore,
-	namespace string, subquery, stream bool, context *PrepareContext) (*plan.Prepared, error, map[string]time.Duration) {
+func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastore, namespace string,
+	subquery, stream, forceSQBuild bool, context *PrepareContext) (*plan.Prepared, error, map[string]time.Duration) {
 
-	qp, ik, err, subTimes := Build(stmt, store, systemstore, namespace, subquery, stream, false, context)
+	qp, ik, err, subTimes := Build(stmt, store, systemstore, namespace, subquery, stream, forceSQBuild, context)
 	if err != nil {
 		return nil, err, subTimes
+	}
+	var subqueryPlans *algebra.SubqueryPlans
+	if len(qp.Subqueries()) > 0 {
+		subqueryPlans = algebra.NewSubqueryPlans()
+		for sq, op := range qp.Subqueries() {
+			subqueryPlans.Set(sq, nil, plan.NewQueryPlan(op), nil, false)
+		}
 	}
 
 	signature := stmt.Signature()
@@ -29,5 +36,5 @@ func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastor
 	if stmt.OptimHints() != nil {
 		optimHints = stmt.OptimHints().Copy()
 	}
-	return plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints), nil, subTimes
+	return plan.NewPrepared(qp.PlanOp(), signature, ik, optimHints, subqueryPlans), nil, subTimes
 }

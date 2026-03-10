@@ -23,6 +23,7 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -81,7 +82,7 @@ type ksVersion struct {
 }
 
 func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
-	optimHints *algebra.OptimHints) *Prepared {
+	optimHints *algebra.OptimHints, subqueryPlans *algebra.SubqueryPlans) *Prepared {
 
 	var planVersion int
 	if operator != nil {
@@ -94,11 +95,12 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 		optimHints:         optimHints,
 		indexScanKeyspaces: indexScanKeyspaces,
 		planVersion:        planVersion,
+		subqueryPlans:      subqueryPlans,
 	}
 }
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
-	prepared := NewPrepared(nil, nil, nil, nil)
+	prepared := NewPrepared(nil, nil, nil, nil, nil)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
 		return prepared, nil, errors.NewPreparedDecodingError(err)
@@ -190,6 +192,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if len(this.keyspaceRefs) > 0 {
 		r["keyspaceReferences"] = this.keyspaceRefs
 	}
+	if this.subqueryPlans != nil {
+		r["subqueryPlans"] = this.subqueryPlans.MarshalPlans(true, this.name, marshalSubqueryPlan)
+	}
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
@@ -224,6 +229,11 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		FatalError         bool                   `json:"verificationFatalError"`
 		ErrCount           int                    `json:"verificationErrorCount"`
 		KeyspaceRefs       []string               `json:"keyspaceReferences"`
+		SubqPlans          map[string]struct {
+			PlanOp             json.RawMessage `json:"plan"`
+			IndexScanKeyspaces map[string]bool `json:"indexSccanKeyspaces"`
+			SubqText           string          `json:"subquery"`
+		} `json:"subqueryPlans"`
 	}
 
 	var op_type struct {
@@ -299,8 +309,46 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 
 	planContext := newPlanContext(nil)
 	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if len(_unmarshalled.SubqPlans) > 0 {
+		this.subqueryPlans = algebra.NewSubqueryPlans()
+		for _, planP := range _unmarshalled.SubqPlans {
+			subqText := planP.SubqText
+			if subqText == "" {
+				return errors.NewPlanInternalError("prepared.unmarshalInternal: missing subquery text")
+			}
+			subqExpr, err := parser.Parse(subqText)
+			if err != nil {
+				return err
+			}
+			subquery, ok := subqExpr.(*algebra.Subquery)
+			if !ok {
+				return errors.NewPlanInternalError("prepared.unmarshalInternal: subquery expression is not a Subquery.")
+			}
+
+			var op_type1 struct {
+				Operator string `json:"#operator"`
+			}
+
+			err = json.Unmarshal(planP.PlanOp, &op_type1)
+			if err != nil {
+				return err
+			}
+
+			subPlanContext := newPlanContext(planContext)
+			subqPlan, err := MakeOperator(op_type1.Operator, planP.PlanOp, subPlanContext)
+			if err != nil {
+				return err
+			}
+
+			this.subqueryPlans.Set(subquery.Select(), nil, NewQueryPlan(subqPlan), planP.IndexScanKeyspaces, false)
+		}
+	}
+
+	return nil
 }
 
 func (this *Prepared) Signature() value.Value {
@@ -833,4 +881,23 @@ func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
 	}
 
 	return nil
+}
+
+func marshalSubqueryPlan(r map[string]interface{}, subselect *algebra.Select, planP, isksP interface{},
+	prepName string) string {
+
+	qp, _ := planP.(*QueryPlan)
+	indexScanKeyspaces, _ := isksP.(map[string]bool)
+	r["plan"] = qp.PlanOp()
+	if len(indexScanKeyspaces) > 0 {
+		r["indexScanKeyspaces"] = indexScanKeyspaces
+	}
+	text := subselect.String()
+	if subselect.IsCorrelated() {
+		// needed for parsing to work properly
+		text = "correlated (" + text + ")"
+	}
+	r["subquery"] = text
+	str, _ := util.UUIDV5(prepName, text)
+	return str
 }

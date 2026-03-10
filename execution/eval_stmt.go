@@ -393,7 +393,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 
 	//  monitoring code TBD
 	prepared, err, _ = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace,
-		subquery, true, &prepContext)
+		subquery, true, persist || settings.IsPlanStabilityEnabled(), &prepContext)
 	if err != nil {
 		return nil, nil, false, err
 	}
