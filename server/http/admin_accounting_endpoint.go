@@ -739,19 +739,22 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		itemMap["txPrepareds"] = txPrepareds
 	}
 	if profiling {
-		itemMap["plan"] = entry.Prepared.Operator
+		// meta().plan now contains a "plan" object and a "~subqueries" object
+		metaPlan := make(map[string]interface{}, 2)
+		metaPlan["plan"] = entry.Prepared.Operator
+		sqPlans := entry.Prepared.GetSubqueryPlansEntry()
+		if len(sqPlans) > 0 {
+			// meta().subqueryPlans is left as is
+			itemMap["subqueryPlans"] = sqPlans
+			metaPlan["~subqueries"] = sqPlans
+		}
+		itemMap["plan"] = metaPlan
 		if len(txPlans) > 0 {
 			itemMap["txPlans"] = txPlans
 		}
 		planVersion := entry.Prepared.PlanVersion()
 		if planVersion >= util.MIN_PLAN_VERSION {
 			itemMap["planVersion"] = planVersion
-		}
-
-		// Subquery plans
-		sqPlans := entry.Prepared.GetSubqueryPlansEntry()
-		if len(sqPlans) > 0 {
-			itemMap["subqueryPlans"] = sqPlans
 		}
 	}
 

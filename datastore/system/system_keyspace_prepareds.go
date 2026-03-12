@@ -117,14 +117,34 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					remoteValue.SetField("node", node)
 
 					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
-					remoteValue.SetMetaField(value.META_PLAN, doc["plan"])
 					remoteValue.SetMetaField(value.META_TXPLANS, doc["txPlans"])
+					planVersion := int(-1)
 					if planVer, ok := doc["planVersion"]; ok {
-						if planVersion, ok := planVer.(int); ok {
+						switch planVer := planVer.(type) {
+						case int:
+							planVersion = planVer
+						case int64:
+							planVersion = int(planVer)
+						case float64:
+							if value.IsInt(planVer) {
+								planVersion = int(planVer)
+							}
+						}
+						if planVersion >= util.MIN_PLAN_VERSION {
 							remoteValue.SetMetaField(value.META_PLAN_VERSION, int32(planVersion))
 						}
 						remoteValue.UnsetField("planVersion")
 					}
+					metaPlan := doc["plan"]
+					if planVersion < util.PLAN_VERSION_81 {
+						newMetaPlan := make(map[string]interface{}, 2)
+						newMetaPlan["plan"] = metaPlan
+						if _, ok := doc["subqueryPlans"]; ok {
+							newMetaPlan["~subqueries"] = doc["subqueryPlans"]
+						}
+						metaPlan = newMetaPlan
+					}
+					remoteValue.SetMetaField(value.META_PLAN, metaPlan)
 
 					// Subquery plans
 					if _, ok := doc["subqueryPlans"]; ok {
@@ -155,17 +175,22 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				if _, ok := itemMap["txPrepareds"]; ok {
 					item.SetMetaField(value.META_TXPLANS, txPlans)
 				}
-				item.SetMetaField(value.META_PLAN, value.NewMarshalledValue(entry.Prepared.Operator))
 				planVersion := entry.Prepared.PlanVersion()
 				if planVersion >= util.MIN_PLAN_VERSION {
 					item.SetMetaField(value.META_PLAN_VERSION, int32(planVersion))
+				} else {
+					planVersion = -1
 				}
-
-				// Subquery plans
+				// meta().plan now contains a "plan" object and a "~subqueries" object
+				metaPlan := make(map[string]interface{}, 2)
+				metaPlan["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
 				sqPlans := entry.Prepared.GetSubqueryPlansEntry()
 				if len(sqPlans) > 0 {
+					// meta().subqueryPlans is left as is
 					item.SetMetaField(value.META_SUBQUERY_PLANS, sqPlans)
+					metaPlan["~subqueries"] = sqPlans
 				}
+				item.SetMetaField(value.META_PLAN, metaPlan)
 
 				item.SetId(key)
 				keysMap[key] = item

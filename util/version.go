@@ -11,8 +11,14 @@ package util
 // Define the current server version and minimum supported version
 
 var (
-	VERSION          = "unset: build issue" // is set by correct build process
-	MIN_VERSION      = "1.0.0"
-	PLAN_VERSION     = 810
+	VERSION     = "unset: build issue" // is set by correct build process
+	MIN_VERSION = "1.0.0"
+)
+
+const (
+	PLAN_VERSION_72  = 720
+	PLAN_VERSION_80  = 800
+	PLAN_VERSION_81  = 810
+	PLAN_VERSION     = PLAN_VERSION_81
 	MIN_PLAN_VERSION = 711 // first defined PLAN_VERSION
 )
