@@ -460,5 +460,24 @@
         "statements":"SELECT * FROM shellTest WHERE c5 = 10 AND c6 != 1 AND c7 NOT IN [1,2] AND c10 > 0 AND c11 != 0",
         "results": [
     ]
+    },
+    {
+	"testcase": "MB-70928",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`as` = 'l' AND v.covers IS NOT MISSING AND CONTAINS(v.`filter`, 'now_str') END"
+        },
+        "statements":"SELECT COUNT(1) FROM shellTest l LEFT JOIN shellTest r ON l.c9 = r.c1 WHERE l.c5 = 10 AND ANY v IN l.c6 SATISFIES v.date = NOW_STR('1111-11-11') END",
+        "results": [
+            {
+                "$1": 0
+            }
+    ]
     }
 ]

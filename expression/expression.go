@@ -262,6 +262,11 @@ type Expression interface {
 	   Contains volatile expression
 	*/
 	HasVolatileExpr() bool
+
+	/*
+	   Contains volatile expression that's not one of the date functions starting with Now
+	*/
+	HasNonNowVolatileExpr() bool
 }
 
 func (this Expressions) MapExpressions(mapper Mapper) (err error) {

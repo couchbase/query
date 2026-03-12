@@ -39,9 +39,11 @@ const (
 	EXPR_VALIDATE_KEYS
 	EXPR_JOIN_NOT_NULL
 	EXPR_DERIVED_FROM_ISOBJECT
-	EXPR_ORDER_BY // used in high version
+	EXPR_ORDER_BY // used in higher version
 	EXPR_IS_GROUP_COVER
 	EXPR_IS_AGG_COVER
+	EXPR_NULLS_POSITION // used in higher version
+	EXPR_NOW_VOLATILE   // for DATE functions that starts with NOW
 )
 
 /*
@@ -163,6 +165,14 @@ func (this *ExpressionBase) conditional() bool {
 
 func (this *ExpressionBase) setConditional() {
 	this.exprFlags |= EXPR_IS_CONDITIONAL
+}
+
+func (this *ExpressionBase) nowVolatile() bool {
+	return (this.exprFlags & EXPR_NOW_VOLATILE) != 0
+}
+
+func (this *ExpressionBase) setNowVolatile() {
+	this.exprFlags |= EXPR_NOW_VOLATILE
 }
 
 /*
@@ -672,6 +682,22 @@ func (this *ExpressionBase) HasVolatileExpr() bool {
 	}
 	for _, child := range this.expr.Children() {
 		if child.HasVolatileExpr() {
+			return true
+		}
+	}
+	return false
+}
+
+// for the volatile functions that start with Now (NowMillis, NowStr, NowTZ, NowUTC), these are
+// volatile however the evaluation of these are somewhat "fixed" since the value is cached in the
+// execution context, and thus it is ok to evaluate these functions multiple times; and in some
+// cases we can treat these functions differently than other volatile functions.
+func (this *ExpressionBase) HasNonNowVolatileExpr() bool {
+	if this.volatile() && !this.nowVolatile() {
+		return true
+	}
+	for _, child := range this.expr.Children() {
+		if child.HasNonNowVolatileExpr() {
 			return true
 		}
 	}

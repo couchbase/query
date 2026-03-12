@@ -1947,6 +1947,7 @@ func NewNowMillis() Function {
 	}
 
 	rv.setVolatile()
+	rv.setNowVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -2003,6 +2004,7 @@ func NewNowStr(operands ...Expression) Function {
 	}
 
 	rv.setVolatile()
+	rv.setNowVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -2084,6 +2086,7 @@ func NewNowTZ(operands ...Expression) Function {
 	}
 
 	rv.setVolatile()
+	rv.setNowVolatile()
 	rv.expr = rv
 	return rv
 }
@@ -2191,6 +2194,7 @@ func NewNowUTC(operands ...Expression) Function {
 	}
 
 	rv.setVolatile()
+	rv.setNowVolatile()
 	rv.expr = rv
 	return rv
 }
