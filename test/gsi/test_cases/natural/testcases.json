@@ -5,11 +5,6 @@
         "errorCode": 19215
     },
     {
-        "testcase":"incorrect Natural context: too many keyspaces",
-        "statements": "USING AI WITH {\"keyspaces\":[\"k1\", \"k2\", \"k3\", \"k4\", \"k5\"]} Show few documents",
-        "errorCode":19215
-    },
-    {
         "testcase":"prompt requesting for a sql statement",
         "statements":"USING AI WITH {\"keyspaces\":\"orders\"} documents with mana more than 200",
         "results": [

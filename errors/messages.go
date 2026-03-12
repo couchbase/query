@@ -8012,22 +8012,6 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_TOO_MANY_KEYSPACES, // 19223
-		symbol:      "E_NL_TOO_MANY_KEYSPACES",
-		Description: "Too many keyspaces specified.",
-		IsUser:      YES,
-		Reason: []string{
-			"The \"natural_context\" parameter specifies more than the maximum permitted number of keyspaces.",
-			"The \"keyspaces\" option specifies more than the maximum permitted number of keyspaces.",
-		},
-		Action: []string{
-			"Revise the \"natural_context\" parameter or \"keyspaces\" option.",
-		},
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
 		symbol:      "E_AUS_NOT_SUPPORTED",
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",
