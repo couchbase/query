@@ -470,7 +470,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		// should not be affected by the Filter operator after the Fetch operator.
 		if len(this.baseKeyspaces) > 1 {
 
-			filter, _, err := this.getFilter(node.Alias(), false, nil)
+			filter, _, err := this.getFilter(node.Alias(), false, true, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -575,7 +575,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 		}
 
 		if len(this.baseKeyspaces) > 1 {
-			filter, _, err := this.getFilter(alias, false, nil)
+			filter, _, err := this.getFilter(alias, false, true, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -640,7 +640,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 		var filter expression.Expression
 		var selec float64
 		if len(this.baseKeyspaces) > 1 {
-			filter, selec, err = this.getFilter(alias, false, nil)
+			filter, selec, err = this.getFilter(alias, false, true, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -985,7 +985,7 @@ func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
 }
 
 func (this *builder) buildUnnest(node *algebra.Unnest) error {
-	filter, selec, err := this.getFilter(node.Alias(), false, nil)
+	filter, selec, err := this.getFilter(node.Alias(), false, true, nil)
 	if err != nil {
 		return err
 	}
@@ -1231,17 +1231,26 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		}
 	}
 
+	// allowNow means whether the volatile date functions that start with Now
+	// can be used as index filters (they can if the filter is evaluated at the qurery service)
+	// for Bhive indexes since the index filters (on include columns) are pushed to the indexer
+	// for evaluation, we do not want to allow Now functions
+	allowNow := true
+	if index6, ok := index.(datastore.Index6); ok && index6.IsBhive() {
+		allowNow = false
+	}
+
 	if this.useCBO && (len(spans)+len(includeSpans)) > 0 {
 		// mark index filters for seletivity calculation
 		markIndexFlags(index, spans, includeSpans, nil, baseKeyspace)
 	}
 
-	filter, selec, err = this.getFilter(alias, false, nil)
+	filter, selec, err = this.getFilter(alias, false, allowNow, nil)
 	if err != nil {
 		return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
 	for _, u := range unnestAliases {
-		unFltr, unSelec, unErr := this.getFilter(u, false, nil)
+		unFltr, unSelec, unErr := this.getFilter(u, false, allowNow, nil)
 		if unErr != nil {
 			return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, unErr
 		}
@@ -1285,7 +1294,7 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 	return filter, cost, cardinality, size, frCost, nil
 }
 
-func (this *builder) getFilter(alias string, join bool, onclause expression.Expression) (
+func (this *builder) getFilter(alias string, join, allowNow bool, onclause expression.Expression) (
 	expression.Expression, float64, error) {
 
 	var err error
@@ -1310,8 +1319,10 @@ func (this *builder) getFilter(alias string, join bool, onclause expression.Expr
 		// unnest filters can only be evaluated after the UNNEST operation
 		// subquery filters are not pushed down
 		// volatile expressions returns FALSE for EquivalentTo (see FunctionBase.EquivalentTo)
+		// (if allowNow is true, then allow the volatile date functions starting with Now)
 		// derived IS NOT NULL filter for outer keyspace
-		if fl.IsUnnest() || fl.HasSubq() || fl.FltrExpr().HasVolatileExpr() || (outer && fl.IsDerived()) {
+		if fl.IsUnnest() || fl.HasSubq() || (outer && fl.IsDerived()) ||
+			(!allowNow && fl.HasVolatileExpr()) || (allowNow && fl.HasNonNowVolatileExpr()) {
 			continue
 		}
 
