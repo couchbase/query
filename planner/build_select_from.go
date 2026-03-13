@@ -1233,7 +1233,12 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 
 	// allowNow means whether the volatile date functions that start with Now
 	// can be used as index filters (they can if the filter is evaluated at the qurery service)
+	// for Bhive indexes since the index filters (on include columns) are pushed to the indexer
+	// for evaluation, we do not want to allow Now functions
 	allowNow := true
+	if index6, ok := index.(datastore.Index6); ok && index6.IsBhive() {
+		allowNow = false
+	}
 
 	if this.useCBO && (len(spans)+len(includeSpans)) > 0 {
 		// mark index filters for seletivity calculation
