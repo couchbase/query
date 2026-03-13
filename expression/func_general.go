@@ -474,13 +474,24 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		with = value.NewValue(map[string]interface{}{})
 	}
 
+	// Strip surrounding backticks from filter if present (e.g., '`travel-sample`' -> 'travel-sample')
+	filterSpecified := filter != nil && filter.ToString() != ""
+	if filterSpecified {
+		filterStr := strings.Trim(filter.ToString(), "`")
+		if filterStr != "" {
+			filter = value.NewValue(filterStr)
+		} else {
+			filterSpecified = false
+		}
+	}
+
 	res := make([]interface{}, 0, 32)
 	args := make(value.Values, 0, 1)
 
 	var buf strings.Builder
 	buf.Grow(128) // Pre-allocate buffer for the initial query
 	buf.WriteString("SELECT DISTINCT RAW name FROM system:keyspaces WHERE `namespace` = 'default' AND `bucket` IS NOT VALUED ")
-	if filter != nil && filter.ToString() != "" {
+	if filterSpecified {
 		buf.WriteString(" AND name LIKE ?")
 		args = append(args, filter)
 	}
@@ -544,8 +555,8 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		}
 	}
 
-	// Extract global functions first (independent of buckets)
-	if flags&_FUNCTION_INFO != 0 {
+	// Extract global functions first (independent of buckets), but only when no specific bucket filter is specified
+	if flags&_FUNCTION_INFO != 0 && !filterSpecified {
 		stmt := "SELECT functions FROM system:functions " +
 			"WHERE functions.identity.type = 'global' " +
 			"ORDER BY functions.identity.name"
