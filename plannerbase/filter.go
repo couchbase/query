@@ -16,25 +16,27 @@ import (
 )
 
 const (
-	FLTR_IS_JOIN            = 1 << iota // is this originally a join filter
-	FLTR_IS_ONCLAUSE                    // is this an ON-clause filter for ANSI JOIN
-	FLTR_IS_DERIVED                     // is this a derived filter
-	FLTR_IS_UNNEST                      // is this ann unnest filter (inherited)
-	FLTR_SELEC_DONE                     // calculation of selectivity is done
-	FLTR_HAS_DEF_SELEC                  // has default selectivity
-	FLTR_IN_INDEX_SPAN                  // used in index span
-	FLTR_IN_HASH_JOIN                   // used as join filter for hash join
-	FLTR_HAS_SUBQ                       // has subquery
-	FLTR_HAS_ADJ_ARR_SELEC              // has adjusted selectivity
-	FLTR_PRIMARY_JOIN                   // join on meta id
-	FLTR_DERIVED_EQJOIN                 // derived equi-join filter
-	FLTR_ADJUST_JOIN_SELEC              // join selectivity adjusted
-	FLTR_SAV_INDEX_SPAN                 // saved IN_INDEX_SPAN flag
-	FLTR_HAS_ADJ_BIT_SELEC              // has adjusted bit-filter selectivity
-	FLTR_NOT_PUSHABLE                   // ON-clause filter that is not pushable
-	FLTR_HAS_AVG_DIST_SELEC             // has selectivity of (1/distinct)
-	FLTR_HAS_ADJ_DIST_SELEC             // has adjusted selectivity of (1/distinct)
-	FLTR_IS_VECTOR_FUNC                 // vector search function (ANN)
+	FLTR_IS_JOIN              = 1 << iota // is this originally a join filter
+	FLTR_IS_ONCLAUSE                      // is this an ON-clause filter for ANSI JOIN
+	FLTR_IS_DERIVED                       // is this a derived filter
+	FLTR_IS_UNNEST                        // is this ann unnest filter (inherited)
+	FLTR_SELEC_DONE                       // calculation of selectivity is done
+	FLTR_HAS_DEF_SELEC                    // has default selectivity
+	FLTR_IN_INDEX_SPAN                    // used in index span
+	FLTR_IN_HASH_JOIN                     // used as join filter for hash join
+	FLTR_HAS_SUBQ                         // has subquery
+	FLTR_HAS_ADJ_ARR_SELEC                // has adjusted selectivity
+	FLTR_PRIMARY_JOIN                     // join on meta id
+	FLTR_DERIVED_EQJOIN                   // derived equi-join filter
+	FLTR_ADJUST_JOIN_SELEC                // join selectivity adjusted
+	FLTR_SAV_INDEX_SPAN                   // saved IN_INDEX_SPAN flag
+	FLTR_HAS_ADJ_BIT_SELEC                // has adjusted bit-filter selectivity
+	FLTR_NOT_PUSHABLE                     // ON-clause filter that is not pushable
+	FLTR_HAS_AVG_DIST_SELEC               // has selectivity of (1/distinct)
+	FLTR_HAS_ADJ_DIST_SELEC               // has adjusted selectivity of (1/distinct)
+	FLTR_IS_VECTOR_FUNC                   // vector search function (ANN)
+	FLTR_HAS_VOLATILE                     // has reference to volatile expression
+	FLTR_HAS_NON_NOW_VOLATILE             // has reference to volatile expression not starting with NOW
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -76,6 +78,12 @@ func NewFilter(fltrExpr, origExpr expression.Expression, keyspaces, origKeyspace
 	}
 	if isJoin {
 		rv.fltrFlags |= FLTR_IS_JOIN
+	}
+	if fltrExpr.HasVolatileExpr() {
+		rv.fltrFlags |= FLTR_HAS_VOLATILE
+		if fltrExpr.HasNonNowVolatileExpr() {
+			rv.fltrFlags |= FLTR_HAS_NON_NOW_VOLATILE
+		}
 	}
 
 	return rv
@@ -267,6 +275,14 @@ func (this *Filter) SetVectorFunc() {
 
 func (this *Filter) IsVectorFunc() bool {
 	return (this.fltrFlags & FLTR_IS_VECTOR_FUNC) != 0
+}
+
+func (this *Filter) HasVolatileExpr() bool {
+	return (this.fltrFlags & FLTR_HAS_VOLATILE) != 0
+}
+
+func (this *Filter) HasNonNowVolatileExpr() bool {
+	return (this.fltrFlags & FLTR_HAS_NON_NOW_VOLATILE) != 0
 }
 
 func (this *Filter) FltrExpr() expression.Expression {
