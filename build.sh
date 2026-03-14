@@ -262,7 +262,7 @@ function repo_setup {
     repo_by_gomod go.mod gometa "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod eventing-ee "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod n1fty "" $cbranch $rbranch $defbranch
-    repo_by_gomod go.mod regulator "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod regulator "" $cbranch $rbranch $defbranch2
     repo_by_gomod go.mod sigar "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
