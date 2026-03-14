@@ -119,8 +119,19 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					m["keyspace"] = b.fullName
 					m["plan"] = doc["plan"]
 					m["txPlans"] = doc["txPlans"]
+					planVersion := int(-1)
 					if planVer, ok := doc["planVersion"]; ok {
-						if planVersion, ok := planVer.(int); ok {
+						switch planVer := planVer.(type) {
+						case int:
+							planVersion = planVer
+						case int64:
+							planVersion = int(planVer)
+						case float64:
+							if value.IsInt(planVer) {
+								planVersion = int(planVer)
+							}
+						}
+						if planVersion >= util.MIN_PLAN_VERSION {
 							m["planVersion"] = int32(planVersion)
 						}
 						remoteValue.UnsetField("planVersion")
@@ -160,6 +171,8 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				planVersion := entry.Prepared.PlanVersion()
 				if planVersion >= util.MIN_PLAN_VERSION {
 					m["planVersion"] = int32(planVersion)
+				} else {
+					planVersion = -1
 				}
 
 				// Subquery plans
