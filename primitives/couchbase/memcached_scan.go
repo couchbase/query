@@ -2025,7 +2025,7 @@ func (cqueue *rswCancelQueue) runWorker() {
 							retry:       true,
 						}
 						for desc.attempts = 0; desc.attempts < desc.maxTries; {
-							conn, pool, err = b.getVbConnection(uint32(vbucket), desc)
+							conn, pool, err = b.getVbConnection(uint32(vbucket), desc, false)
 							if err != nil {
 								if desc.retry {
 									desc.attempts++
@@ -2204,7 +2204,7 @@ func (queue *rswQueue) runWorker() {
 						retry:       true,
 					}
 					for desc.attempts = 0; desc.attempts < desc.maxTries; {
-						conn, pool, err = b.getVbConnection(uint32(vb), desc)
+						conn, pool, err = b.getVbConnection(uint32(vb), desc, false)
 						if err != nil {
 							if desc.retry {
 								desc.attempts++
