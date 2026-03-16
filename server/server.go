@@ -808,9 +808,6 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	elems, err = algebra.ParseAndValidatePathList(request.NaturalContext(), "default", request.QueryContext())
-	if err == nil && len(elems) > natural.MAX_KEYSPACES {
-		err = errors.NewNaturalLanguageRequestError(errors.E_NL_TOO_MANY_KEYSPACES)
-	}
 	if err != nil {
 		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
 		request.Failed(this)

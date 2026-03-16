@@ -47,7 +47,6 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_TOO_MANY_WAITERS:           {RATE_LIMIT, "Too many waiters, dropping the request"},
 	E_NL_TIMEOUT:                    {RATE_LIMIT, "Timed out waiting to be processed."},
 	E_NL_REQ_FEAT_DISABLED:          {SERVE_NATURAL, "Natural language request processing is disabled."},
-	E_NL_TOO_MANY_KEYSPACES:         {NLCONTEXT_IKEY, "Too many keyspaces specified."},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {
