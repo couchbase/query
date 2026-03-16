@@ -797,7 +797,6 @@ func isOutOfBoundsError(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "Out of Bounds error")
 }
 
-
 func isAddrNotAvailable(err error) bool {
 	if err == nil {
 		return false
