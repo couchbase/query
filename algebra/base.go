@@ -76,7 +76,7 @@ func (this *statementBase) SetParamsCount(params int) {
 /*
 does it have parameters?
 */
-func (this *statementBase) Params() int {
+func (this *statementBase) ParamsCount() int {
 	return this.paramCount
 }
 

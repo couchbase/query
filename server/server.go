@@ -1474,7 +1474,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	positionalArgs := request.PositionalArgs()
 	dsContext := context
 	autoExecute := request.AutoExecute() == value.TRUE
-	if len(namedArgs) > 0 || len(positionalArgs) > 0 || autoExecute {
+	if autoExecute {
 		autoPrepare = false
 	}
 
@@ -1502,6 +1502,14 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		request.Output().AddPhaseTime(execution.PARSE, util.Now().Sub(parse))
 		if err != nil {
 			return nil, errors.NewParseSyntaxError(err, "")
+		}
+
+		if autoPrepare {
+			if stmt.ParamsCount() > 0 {
+				autoPrepare = false
+			} else if algebra.CanSkipAutoPrepare(stmt) {
+				autoPrepare = false
+			}
 		}
 
 		isPrepare := false
