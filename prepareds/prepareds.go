@@ -440,7 +440,7 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
 
 	// we also don't cache anything that might depend on placeholders
 	// (you should be using prepared statements for that anyway!)
-	if stmt.Params() > 0 {
+	if stmt.ParamsCount() > 0 {
 		return false
 	}
 
@@ -645,7 +645,11 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		// without blocking the whole prepared cacheline
 		// locking will occur at adding time: both requests will insert,
 		// the last wins
-		if (!good || prepared.PreparedTime().IsZero()) && !metaCheck {
+		if metaCheck {
+			if !good {
+				prepared = nil
+			}
+		} else if !good || prepared.PreparedTime().IsZero() {
 			prepared, err = reprepare(prepared, nil, phaseTime, log)
 			if err == nil {
 				err = AddPrepared(prepared)
