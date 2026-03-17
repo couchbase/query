@@ -947,8 +947,11 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), prepared.UseCBO(),
 		optimizer, deltaKeyspaces, nil, true)
 
-	prepStmt := stmt.(*algebra.Prepare)
-	pl, err, _ := planner.BuildPrepared(prepStmt.Statement(), store, systemstore, prepared.Namespace(),
+	statement := stmt
+	if prepStmt, ok := stmt.(*algebra.Prepare); ok {
+		statement = prepStmt.Statement()
+	}
+	pl, err, _ := planner.BuildPrepared(statement, store, systemstore, prepared.Namespace(),
 		false, true, prepared.Persist() || planStability, &prepContext)
 	if phaseTime != nil {
 		*phaseTime += util.Now().Sub(prep)
