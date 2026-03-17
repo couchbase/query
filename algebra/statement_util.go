@@ -9,9 +9,9 @@
 package algebra
 
 /*
- * With plan stability ad_hoc mode, determine whether a statement can skip being prepared
+ * With auto prepare and plan stability (ad hoc mode), determine whether a statement can skip being prepared
  */
-func CanSkipPlanStabilityPrepare(stmt Statement) bool {
+func CanSkipAutoPrepare(stmt Statement) bool {
 	switch stmt.(type) {
 	case *InferKeyspace, *InferExpression, *Explain, *ExplainFunction, *Prepare, *Execute,
 		*UpdateStatistics,

@@ -1844,11 +1844,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	positionalArgs := request.PositionalArgs()
 	dsContext := context
 	autoExecute := request.AutoExecute() == value.TRUE
-	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-		autoPrepare = false
-		planStabilityAdHoc = false
-		planStabilityAdHocRead = false
-	} else if autoExecute {
+	if autoExecute {
 		autoPrepare = false
 	}
 
@@ -1889,9 +1885,16 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			}
 		}
 
-		if (planStabilityAdHoc || planStabilityAdHocRead) && algebra.CanSkipPlanStabilityPrepare(stmt) {
-			planStabilityAdHoc = false
-			planStabilityAdHocRead = false
+		if autoPrepare || planStabilityAdHoc || planStabilityAdHocRead {
+			if stmt.ParamsCount() > 0 {
+				autoPrepare = false
+				planStabilityAdHoc = false
+				planStabilityAdHocRead = false
+			} else if algebra.CanSkipAutoPrepare(stmt) {
+				autoPrepare = false
+				planStabilityAdHoc = false
+				planStabilityAdHocRead = false
+			}
 		}
 
 		isPrepare := false
