@@ -9,6 +9,8 @@
 package system
 
 import (
+	"strings"
+
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -30,6 +32,26 @@ func (b *naturalchatsKeyspace) Count(context datastore.QueryContext) (int64, err
 		count++
 		return true
 	}, nil)
+
+	store := context.Datastore()
+	if store == nil {
+		context.Warning(errors.NewNoDatastoreError())
+	} else {
+		err := natural.ScanQueryMetadataForNLChat(nil,
+			func(key string, keyspace datastore.Keyspace) errors.Error {
+				if strings.HasPrefix(key, natural.CHAT_DOC_PREFIX) {
+					count++
+				}
+				return nil
+			},
+			nil)
+		if err != nil {
+			if err.Code() == errors.E_ENTERPRISE_FEATURE {
+				return count, nil
+			}
+			context.Warning(err)
+		}
+	}
 	return count, nil
 }
 
@@ -46,7 +68,15 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 	}
 
 	whoamI := distributed.RemoteAccess().WhoAmI()
+	diskkeys := []string{}
 	for _, key := range keys {
+
+		prefixlen := len(natural.CHAT_DOC_PREFIX)
+		if len(key) > prefixlen && key[:prefixlen] == natural.CHAT_DOC_PREFIX {
+			diskkeys = append(diskkeys, key)
+			continue
+		}
+
 		node, localkey := distributed.RemoteAccess().SplitKey(key)
 		if node == whoamI {
 			rv := natural.GetConversation(localkey)
@@ -78,9 +108,42 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 					}
 				}, creds, "", nil)
 		}
-
 	}
-	return nil
+
+	var errs errors.Errors
+	if len(diskkeys) > 0 {
+		store := context.Datastore()
+		if store == nil {
+			return []errors.Error{errors.NewNoDatastoreError()}
+		} else {
+			queryMetadata, err := store.GetQueryMetadata()
+			if err != nil {
+				if !(err.Code() == errors.E_CB_KEYSPACE_NOT_FOUND &&
+					strings.Contains(err.Error(), "No bucket named QUERY_METADATA")) {
+					return []errors.Error{err}
+				}
+				return nil
+			}
+			fetchMap := make(map[string]value.AnnotatedValue, len(diskkeys))
+			errs = queryMetadata.Fetch(diskkeys, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+			for _, key := range diskkeys {
+				if val, ok := fetchMap[key]; ok {
+					b, err := natural.GetChatDataFromObjectValue(val)
+					if err != nil {
+						context.Warning(errors.NewQueryMetadataError("unexpected document for key "+key, err))
+						continue
+					}
+					item := value.NewAnnotatedValue(b)
+					chatId := strings.TrimPrefix(key, natural.CHAT_DOC_PREFIX)
+					item.SetId(key)
+					item.SetField("paused", true)
+					item.SetField("chatId", chatId)
+					keysMap[key] = item
+				}
+			}
+		}
+	}
+	return errs
 }
 
 func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
@@ -97,8 +160,16 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	var err errors.Error
-	for i, pair := range deletes {
+	diskPairs := []value.Pair{}
+	deletedCount := 0
+	deleted := []value.Pair{}
+	for _, pair := range deletes {
 		name := pair.Name
+		prefixlen := len(natural.CHAT_DOC_PREFIX)
+		if len(name) > prefixlen && name[:prefixlen] == natural.CHAT_DOC_PREFIX {
+			diskPairs = append(diskPairs, pair)
+			continue
+		}
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 		if node == whoAmI {
 			c := natural.GetConversation(localKey)
@@ -108,7 +179,7 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 						continue
 					}
 					ce.Lock()
-					if ce.Removed {
+					if ce.Removed || ce.Paused {
 						// already removed, possibly by another routine.
 						ce.Unlock()
 						continue
@@ -116,6 +187,7 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 					natural.DeleteConversation(localKey)
 					ce.Removed = true
 					ce.Unlock()
+					deletedCount++
 				}
 			} else {
 				err = errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, localKey)
@@ -129,26 +201,57 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 					}
 				},
 				creds, "", nil)
+			deletedCount++
 		}
 
 		if err != nil {
 			errs := errors.Errors{err}
 			if preserveMutations {
-				deleted := make([]value.Pair, i)
-				if i > 0 {
-					copy(deleted, deletes[0:i])
-				}
-				return i, deleted, errs
+				return deletedCount, deleted, errs
 			} else {
-				return i, nil, errs
+				return deletedCount, nil, errs
+			}
+		} else {
+			if preserveMutations {
+				deleted = append(deleted, pair)
+			}
+		}
+	}
+
+	var errs errors.Errors
+	var diskdeletes []value.Pair
+	var dCount int
+	if len(diskPairs) > 0 {
+		store := context.Datastore()
+		if store == nil {
+			errs = []errors.Error{errors.NewNoDatastoreError()}
+			if preserveMutations {
+				return deletedCount, deleted, errs
+			} else {
+				return deletedCount, nil, errs
+			}
+		} else {
+			queryMetadata, err := store.GetQueryMetadata()
+			if err != nil {
+				errs = []errors.Error{err}
+				if preserveMutations {
+					return deletedCount, deleted, errs
+				} else {
+					return deletedCount, nil, errs
+				}
+			}
+			dCount, diskdeletes, errs = queryMetadata.Delete(diskPairs, datastore.NULL_QUERY_CONTEXT, preserveMutations)
+			deletedCount += dCount
+			if preserveMutations {
+				deleted = append(deleted, diskdeletes...)
 			}
 		}
 	}
 
 	if preserveMutations {
-		return len(deletes), deletes, nil
+		return deletedCount, deleted, errs
 	} else {
-		return len(deletes), nil, nil
+		return deletedCount, nil, errs
 	}
 }
 
@@ -350,6 +453,23 @@ func (pi *naturalChatIndex) ScanEntries(requestId string, limit int64, cons data
 			conn.Warning(warn)
 		}
 	}, distributed.NO_CREDS, "")
+
+	err := natural.ScanQueryMetadataForNLChat(nil,
+		func(key string, keyspace datastore.Keyspace) errors.Error {
+			if strings.HasPrefix(key, natural.CHAT_DOC_PREFIX) {
+				indexEntry := datastore.IndexEntry{PrimaryKey: key}
+				sendSystemKey(conn, &indexEntry)
+			}
+			return nil
+		},
+		nil)
+	if err != nil {
+		if err.Code() == errors.E_ENTERPRISE_FEATURE {
+			return
+		}
+		conn.Error(err)
+		return
+	}
 }
 
 func (pi *naturalChatIndex) SeekKey() expression.Expressions {

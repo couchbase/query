@@ -8294,6 +8294,66 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_CHAT_PAUSE_FAILED, // 19232
+		symbol:      "E_NL_CHAT_PAUSE_FAILED",
+		Description: "Pause failed: «failure»",
+		IsUser:      MAYBE,
+		Reason: []string{
+			"pause did not succeed due to an unexpected issue",
+		},
+		Action: []string{
+			"Assess the failure details and make suitable adjustments and try pausing again.",
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHAT_RESUME_FAILED, // 19233
+		symbol:      "E_NL_CHAT_RESUME_FAILED",
+		Description: "Resume failed: «failure»",
+		Reason: []string{
+			"resume did not succeed due to an unexpected issue",
+		},
+		IsUser: MAYBE,
+		Action: []string{
+			"Assess the failure details and make suitable adjustments and try resuming again.",
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CHAT_SUMMARIZE_FAILED, // 19234
+		symbol:      "E_NL_CHAT_SUMMARIZE_FAILED",
+		Description: "Summarize failed: «failure»",
+		IsUser:      MAYBE,
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_UNEXPECTED_CHAT_DOC, // 19235
+		symbol:      "E_NL_UNEXPECTED_CHAT_DOC",
+		Description: "unexpected chat document received: «failure»",
+		IsUser:      MAYBE,
+		Reason: []string{
+			"the chat document may be corrupted, improperly serialized, or missing required attributes.",
+		},
+		Action: []string{
+			"Assess the failure details and make suitable adjustments and try resuming again.",
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCRYPTION_READER_CREATE, // 19300
 		symbol:      "E_ENCRYPTION_READER_CREATE",
 		Description: "Failed to create encryption reader",

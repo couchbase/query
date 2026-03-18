@@ -125,6 +125,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_FUNCTIONS:
 		case KEYSPACE_NAME_SEQUENCES:
 		case KEYSPACE_NAME_ALL_SEQUENCES:
+		case KEYSPACE_NAME_NATURAL_CHAT:
 
 		// currently these keyspaces require system read for select if on prem and open (but limited to the user) for elixir
 		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:

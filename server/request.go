@@ -97,6 +97,12 @@ type Request interface {
 	NaturalBeginChat() bool
 	SetNaturalEndChat(end bool)
 	NaturalEndChat() bool
+	SetNaturalPauseChat(pause bool)
+	NaturalPauseChat() bool
+	SetNaturalResumeChat(bool)
+	NaturalResumeChat() bool
+	SetNaturalSummarize(value.Tristate)
+	NaturalSummarize() value.Tristate
 	SetNaturalChatId(chatId string)
 	NaturalChatId() string
 	Prepared() *plan.Prepared
@@ -458,6 +464,9 @@ type BaseRequest struct {
 	nlchatid             string
 	nlbeginchat          bool
 	nlendchat            bool
+	nlpausechat          bool
+	nlresumechat         bool
+	nlsummarize          value.Tristate
 
 	// effectively temporary storage for the TRACE level request logging ahead of being included in completed_requests
 	logContent []interface{}
@@ -1796,6 +1805,30 @@ func (this *BaseRequest) NaturalEndChat() bool {
 	return this.nlendchat
 }
 
+func (this *BaseRequest) SetNaturalPauseChat(pause bool) {
+	this.nlpausechat = pause
+}
+
+func (this *BaseRequest) NaturalPauseChat() bool {
+	return this.nlpausechat
+}
+
+func (this *BaseRequest) SetNaturalResumeChat(resume bool) {
+	this.nlresumechat = resume
+}
+
+func (this *BaseRequest) NaturalResumeChat() bool {
+	return this.nlresumechat
+}
+
+func (this *BaseRequest) SetNaturalSummarize(summ value.Tristate) {
+	this.nlsummarize = summ
+}
+
+func (this *BaseRequest) NaturalSummarize() value.Tristate {
+	return this.nlsummarize
+}
+
 func (this *BaseRequest) SetNaturalChatId(chatId string) {
 	this.nlchatid = chatId
 }
@@ -1968,7 +2001,11 @@ var beginchatpattern = "[bB][eE][gG][iI][nN][[:space:]]+[cC][hH][aA][tT][[:space
 
 var endchatpattern = "[eE][nN][dD][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
 
-var combinednaturalstatement = regexp.MustCompile((fmt.Sprintf("%s|%s|%s", uaipattern, beginchatpattern, endchatpattern)))
+var pausechatpattern = "[pP][aA][uU][sS][eE][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
+
+var resumechatpattern = "[rR][eE][sS][uU][mM][eE][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
+
+var combinednaturalstatement = regexp.MustCompile((fmt.Sprintf("%s|%s|%s|%s|%s", uaipattern, beginchatpattern, endchatpattern, pausechatpattern, resumechatpattern)))
 
 func (this *BaseRequest) ProcessNatural() errors.Error {
 	s := this.Statement()
@@ -2002,6 +2039,17 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 		this.SetStatement("")
 		return this.processNaturalEndChat(s[m[1]:])
 
+	case strings.HasPrefix(matchString, "pause"):
+		this.SetNaturalPauseChat(true)
+		this.SetNatural("")
+		this.SetStatement("")
+		return this.processNaturalPauseChat(s[m[1]:])
+
+	case strings.HasPrefix(matchString, "resume"):
+		this.SetNaturalResumeChat(true)
+		this.SetNatural("")
+		this.SetStatement("")
+		return this.processNaturalResumeChat(s[m[1]:])
 	default:
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_UNRECOGNIZED_STATEMENT)
 	}
@@ -2183,6 +2231,70 @@ func (this *BaseRequest) processNaturalBeginChat(s string) errors.Error {
 }
 
 func (this *BaseRequest) processNaturalEndChat(s string) errors.Error {
+
+	m1 := with.FindString(s)
+	if m1 == "" {
+		return nil
+	}
+	s = s[len(m1)-1:]
+	d := sys_json.NewDecoder(strings.NewReader(s))
+	var opts map[string]interface{}
+	e := d.Decode(&opts)
+	if e != nil {
+		return errors.NewAdminEncodingError(e)
+	}
+
+	for k, v := range opts {
+		switch k {
+		case "chatId":
+			if s, ok := v.(string); ok {
+				this.SetNaturalChatId(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		default:
+			return errors.NewAdminUnknownSettingError(k)
+		}
+	}
+	return nil
+}
+
+func (this *BaseRequest) processNaturalPauseChat(s string) errors.Error {
+
+	m1 := with.FindString(s)
+	if m1 == "" {
+		return nil
+	}
+	s = s[len(m1)-1:]
+	d := sys_json.NewDecoder(strings.NewReader(s))
+	var opts map[string]interface{}
+	e := d.Decode(&opts)
+	if e != nil {
+		return errors.NewAdminEncodingError(e)
+	}
+
+	for k, v := range opts {
+		switch k {
+		case "chatId":
+			if s, ok := v.(string); ok {
+				this.SetNaturalChatId(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		case "summarize":
+			if s, ok := v.(bool); ok {
+				this.SetNaturalSummarize(value.ToTristate(s))
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		default:
+			return errors.NewAdminUnknownSettingError(k)
+		}
+	}
+	return nil
+}
+
+func (this *BaseRequest) processNaturalResumeChat(s string) errors.Error {
 
 	m1 := with.FindString(s)
 	if m1 == "" {

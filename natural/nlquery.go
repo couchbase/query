@@ -22,10 +22,12 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -149,6 +151,8 @@ type ChatEntry struct {
 	Keyspaces []*algebra.Path
 	Removed   bool
 	User      string
+	Paused    bool
+	Summary   string
 	sync.Mutex
 }
 
@@ -181,16 +185,27 @@ func CountCoversations() int {
 }
 
 func FormatChatEntry(ce *ChatEntry) map[string]interface{} {
-	item := map[string]interface{}{
-		"chatId": ce.Id,
-	}
+	item := map[string]interface{}{}
 
-	keyspaces := make([]interface{}, len(ce.Keyspaces))
-	for i, p := range ce.Keyspaces {
-		keyspaces[i] = p.ProtectedString()
+	if ceId := ce.Id; ceId != "" {
+		item["chatId"] = ceId
 	}
-	item["keyspaces"] = keyspaces
-	item["prompt"] = value.NewMarshalledValue(ce.prompt)
+	if cekeyspaces := ce.Keyspaces; len(cekeyspaces) > 0 {
+		keyspaces := make([]interface{}, len(ce.Keyspaces))
+		for i, p := range ce.Keyspaces {
+			keyspaces[i] = p.ProtectedString()
+		}
+		item["keyspaces"] = keyspaces
+	}
+	if pmpt := ce.prompt; pmpt != nil {
+		item["prompt"] = value.NewMarshalledValue(pmpt)
+	}
+	if user := ce.User; user != "" {
+		item["user"] = user
+	}
+	if summary := ce.Summary; summary != "" {
+		item["summary"] = summary
+	}
 	return item
 }
 
@@ -339,13 +354,13 @@ type prompt struct {
 	InitMessages       []message          `json:"initMessages"`
 	CompletionSettings completionSettings `json:"completionSettings"`
 	Messages           []message          `json:"messages"`
-	Size               int
+	Size               int                `json:"size"`
 }
 
 const _INIT_SIZE = 250
 const _MAX_PROMPT_SIZE = util.MiB
 
-func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, forfts bool) (*prompt, errors.Error) {
+func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary string, forfts bool) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -371,6 +386,9 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, for
 	if err != nil {
 		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
 	}
+	if summary != "" {
+		userMessageBuf.WriteString("Summary of the conversation so far: " + summary + "\n\n")
+	}
 	userMessageBuf.WriteString("Information about keyspaces:\n\n")
 	userMessageBuf.WriteString(string(binKeyspacesInfo))
 	userMessageBuf.WriteString("\n\nPrompt: \"")
@@ -379,7 +397,8 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, for
 		"\n\nNote query context is unset." +
 		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
 		"\n\nAlias is for ease of use." +
-		"\n\nQuote aliases with grave accent characters.")
+		"\n\nQuote aliases with grave accent characters." +
+		"\nMake use of RAW keyword when you require a non-object result, for example when comparing a field with a subquery's result set.")
 	if forfts {
 		userMessageBuf.WriteString("\n\nAlways add the USE Clause in the query to use the FTS index." +
 			"\n\nFor example, SELECT a.*, ap.* FROM `travel-sample`.`inventory`.`airline` AS a USE INDEX " +
@@ -402,7 +421,7 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string, for
 	return rv, nil
 }
 
-func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (*prompt, errors.Error) {
+func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -426,6 +445,9 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt string) (
 	binKeyspacesInfo, err := json.Marshal(keyspaceInfo)
 	if err != nil {
 		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
+	}
+	if summary != "" {
+		userMessageBuf.WriteString("Summary of the conversation so far: " + summary + "\n\n")
 	}
 	userMessageBuf.WriteString("Information about keyspaces:\n\n")
 	userMessageBuf.WriteString(string(binKeyspacesInfo))
@@ -644,14 +666,14 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL, perr)
 	}
 
-	content := chatComplRes.Choices[0].Message.Content
+	return chatComplRes.Choices[0].Message.Content, nil
+}
 
+func isErrorResponse(content string) bool {
 	if n := strings.Index(content, "#ERR"); n != -1 {
-		return content, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP,
-			fmt.Errorf("%s", strings.TrimRight(content[n+6:], "\n `")))
+		return true
 	}
-
-	return content, nil
+	return false
 }
 
 func collectSchemaForPromptFromInfer(schema map[string]string, inferSchema value.Value) map[string]string {
@@ -785,11 +807,11 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 	var prompt *prompt
 	switch nloutputOpt {
 	case SQL:
-		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, false)
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", false)
 	case JSUDF:
-		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery)
+		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, "")
 	case FTSSQL:
-		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, true)
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", true)
 	default:
 		err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 	}
@@ -802,6 +824,9 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
 	if err != nil {
 		return "", nil, err
+	}
+	if isErrorResponse(content) {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, content)
 	}
 
 	parse := util.Now()
@@ -886,6 +911,9 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 	if err != nil {
 		return "", "", nil, err
 	}
+	if isErrorResponse(content) {
+		return "", "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, content)
+	}
 
 	parse := util.Now()
 	stmt, err := getStatement(content, nloutputOpt)
@@ -939,7 +967,12 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string
 	ce.Lock()
 	defer ce.Unlock()
 	if ce.Removed {
-		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL, fmt.Sprintf("conversation with \"natural_chatid\":%s was deleted", chatId))
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL,
+			fmt.Sprintf("conversation with \"natural_chatid\":%s was deleted", chatId))
+	}
+	if ce.Paused {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL,
+			fmt.Sprintf("conversation with \"natural_chatid\":%s was paused", chatId))
 	}
 
 	if ce.User != user {
@@ -957,14 +990,15 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string
 
 		switch nloutputOpt {
 		case SQL:
-			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, false)
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, false)
 		case JSUDF:
-			prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery)
+			prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, ce.Summary)
 		case FTSSQL:
-			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, true)
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, true)
 		default:
 			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 		}
+		ce.Summary = ""
 		if err != nil {
 			return "", nil, err
 		}
@@ -995,6 +1029,9 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string
 	completeConversationPrompt(content, ce, prompt)
 	if err != nil {
 		return "", nil, err
+	}
+	if isErrorResponse(content) {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, content)
 	}
 
 	parse := util.Now()
@@ -1091,6 +1128,360 @@ func ProcessEndChat(chatId, datastorecreds string) errors.Error {
 	return nil
 }
 
+const CHAT_DOC_TTL_DURATION = 7 * 24 * time.Hour
+const summarizeThreshold = 1024 * 10
+const summarizeMessageLen = 8
+
+const (
+	maxRetry = 6
+	interval = 100 * time.Millisecond
+)
+
+func ProcessPauseChat(chatId, requestId, datastorecreds string,
+	nlOrgId, nlCred string,
+	summarize value.Tristate,
+	record func(execution.Phases, time.Duration)) errors.Error {
+	if chatId == "" {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID)
+	}
+
+	rv := GetConversation(chatId)
+	if rv == nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
+	}
+	ce, ok := rv.(*ChatEntry)
+	if !ok {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL, "failed to cast cache entry")
+	}
+	ce.Lock()
+	defer ce.Unlock()
+	if ce.User != datastorecreds {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+	}
+
+	shouldSummarize := ce.prompt != nil &&
+		(summarize == value.TRUE ||
+			(summarize == value.NONE &&
+				(ce.prompt.Size >= summarizeThreshold || len(ce.prompt.Messages) >= summarizeMessageLen)))
+	if shouldSummarize {
+		missingnlparams := []string{}
+		if nlOrgId == "" {
+			missingnlparams = append(missingnlparams, "\"natural_orgid\"")
+		}
+		if nlCred == "" {
+			missingnlparams = append(missingnlparams, "\"natural_cred\"")
+		}
+		if len(missingnlparams) > 0 {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, strings.Join(missingnlparams, ","))
+		}
+		err := summarizePrompt(ce, nlOrgId, nlCred, record)
+		if err != nil {
+			return err
+		}
+	}
+
+	hasquerymetadata, err := hasQueryMetadataForNLChat(true, requestId, "Natural Language chat PAUSE", true)
+	if err != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
+			fmt.Sprintf("failed to get query metadata: %v", err))
+	} else if !hasquerymetadata {
+		return errors.NewMissingQueryMetadataError("PAUSE CHAT")
+	}
+
+	store := datastore.GetDatastore()
+	if store == nil {
+		err := errors.NewNoDatastoreError()
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED, "failed to get datastore", err)
+	}
+
+	queryMetadata, err := store.GetQueryMetadata()
+	if err != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED, "failed to get query metadata: %v", err)
+	}
+
+	dpairs := make([]value.Pair, 1)
+	queryContext := datastore.GetDurableQueryContextFor(queryMetadata)
+
+	marshalledchat, merr := ce.MarshalJSON()
+	if merr != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED, "failed to marshal chat entry", merr)
+	}
+	key := fmt.Sprintf("%s%s", CHAT_DOC_PREFIX, chatId)
+	dpairs[0].Name = key
+	dpairs[0].Value = value.NewValue(map[string]interface{}{"chat": base64.StdEncoding.EncodeToString(marshalledchat)})
+	ttltime := time.Now().Add(CHAT_DOC_TTL_DURATION)
+	opt := value.NewValue(map[string]interface{}{})
+	opt.SetField("expiration", ttltime.Unix())
+	dpairs[0].Options = opt
+	insertInterval := interval
+	for i := 0; i < maxRetry; i++ {
+		_, _, errs := queryMetadata.Insert(dpairs, queryContext, false)
+		if len(errs) > 0 {
+			if couchbase.CanRetryWithRefresh(errs[0]) {
+				time.Sleep(insertInterval)
+				insertInterval *= 2
+			} else {
+				logging.Errorf("Error inserting into QUERY_METADATA bucket: %v (key %s)", errs, key)
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
+					fmt.Sprintf("err inserting the chat document: %v", errs))
+			}
+		} else {
+			break
+		}
+	}
+	DeleteConversation(chatId)
+	return nil
+}
+
+func summarizePrompt(ce *ChatEntry, nlorgid, nlcred string, record func(execution.Phases, time.Duration)) errors.Error {
+	if ce.prompt == nil || len(ce.prompt.Messages) <= 1 {
+		return nil
+	}
+
+	var promptBuf strings.Builder
+	promptBuf.WriteString("The following is a conversation history between a user and an assistant. " +
+		"The conversation history is being summarized to save space but important information might be lost in the process. " +
+		"Summarize the conversation while keeping important details that can be useful for the continuation of the conversation. " +
+		"Preserve all important details related to the assistant's sql++ suggestions :" +
+		"Fields used in SELECT, WHERE, JOIN, GROUP BY, and ORDER BY clauses\n" +
+		"Any predicates, filters, conditions, and their values\n" +
+		"Join relationships, including keys and join types\n" +
+		"Aggregations, functions, and computed expressions\n" +
+		"Relevant bucket, scope, and collection names\n" +
+		"Capture the user's intent and any constraints or preferences expressed\n" +
+		"Retain important assumptions or clarifications made by the assistant\n" +
+		"Trim redundant information\n\n")
+	for _, msg := range ce.prompt.Messages {
+		promptBuf.WriteString(fmt.Sprintf("%s: %s\n", msg.Role, msg.Content))
+	}
+	promptBuf.WriteString("Summarize the above conversation history as precisely as possible.\n\n")
+
+	pmt := &prompt{
+		InitMessages: []message{
+			message{
+				Role:    "system",
+				Content: "You are a helpful assistant for summarizing conversation history.",
+			},
+		},
+		Messages: []message{
+			message{
+				Role:    "user",
+				Content: promptBuf.String(),
+			},
+		},
+		CompletionSettings: completionSettings{
+			Model:       GPT4o_2024_05_13,
+			Temperature: 0,
+			Seed:        1,
+			Stream:      false,
+		},
+		Size: len(promptBuf.String()),
+	}
+
+	getJwt := util.Now()
+	jwt, err := getJWTFromSessionsApi(nlcred, false)
+	record(execution.GETJWT, util.Since(getJwt))
+	if err != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, err)
+	}
+
+	chatcompletions := util.Now()
+	content, err := doChatCompletionsReq(pmt, nlorgid, jwt, nlcred)
+	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletions))
+	if err != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, err)
+	}
+	ce.Summary = content
+	ce.prompt = nil
+	return nil
+}
+
+const _BATCH_SIZE = 64
+
+var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)
+
+func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
+	if chatId == "" {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID)
+	}
+
+	if IsChatCacheFull() {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+			errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_CACHE_FULL))
+	}
+
+	hasquerymetadata, err := hasQueryMetadataForNLChat(false, requestId, "", false)
+	if err != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+			fmt.Sprintf("failed to get query metadata: %v", err))
+	} else if !hasquerymetadata {
+		return errors.NewMissingQueryMetadataError("RESUME CHAT")
+	}
+
+	store := datastore.GetDatastore()
+	if store == nil {
+		err := errors.NewNoDatastoreError()
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED, "failed to get datastore", err)
+	}
+
+	queryMetadata, err := store.GetQueryMetadata()
+	if err != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED, "failed to get query metadata", err)
+	}
+
+	fetchMap := _STRING_ANNOTATED_POOL.Get()
+	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
+	key := fmt.Sprintf("%s%s", CHAT_DOC_PREFIX, chatId)
+
+	queryContext := datastore.GetDurableQueryContextFor(queryMetadata)
+	ce := &ChatEntry{}
+	var chatdoc value.AnnotatedValue
+	var ok bool
+	claimed := false
+
+	claimInterval := interval
+	for claimFetch := 0; claimFetch < maxRetry; claimFetch++ {
+
+		errs := queryMetadata.Fetch([]string{key}, fetchMap, queryContext, nil, nil, false)
+		if errs != nil {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+				fmt.Sprintf("errs in fetching the chat document: %v", errs))
+		}
+
+		if chatdoc, ok = fetchMap[key]; !ok || chatdoc == nil {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+				fmt.Sprintf("chat with id:%s is not found in QUERY_METADATA", chatId))
+		}
+
+		val := chatdoc.GetValue()
+		if vt := val.Type(); vt != value.OBJECT {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_UNEXPECTED_CHAT_DOC,
+				fmt.Sprintf("value type for chat document: %s expected object type", val, vt))
+		}
+
+		claimer, ok := val.Field("claimer")
+		if ok && claimer.ToString() != distributed.RemoteAccess().WhoAmI() {
+			claimtime, ok := val.Field("claim_time")
+			if !ok {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_UNEXPECTED_CHAT_DOC,
+					"\"claim_time\" field is not found in the chat document")
+			}
+			if ct := claimtime.Type(); ct != value.STRING {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_UNEXPECTED_CHAT_DOC,
+					fmt.Sprintf("unexpected value type for \"claim_time\" field in the chat document: %s expected string", ct), err)
+			}
+			ct, perr := time.Parse(util.DEFAULT_FORMAT, claimtime.ToString())
+			if perr != nil {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+					"failed to parse claim_time field in the chat document", perr)
+			}
+			if time.Since(ct) < 2*time.Minute {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+					fmt.Sprintf("chat is currently claimed by %s", claimer.ToString()))
+			}
+			// orphaned claim, can be claimed
+		}
+
+		b, err := GetChatDataFromObjectValue(val)
+		if err != nil {
+			return err
+		}
+
+		uerr := ce.UnmarshalJSON(b)
+		if uerr != nil {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED, "unmarshalling decoded chat failed", uerr)
+		}
+
+		if ce.User != datastorecreds {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+		}
+
+		udpairs := make([]value.Pair, 1)
+		udpairs[0].Name = key
+		chatdoc.SetField("claimer", value.NewValue(distributed.RemoteAccess().WhoAmI()))
+		chatdoc.SetField("claim_time", value.NewValue(time.Now().Format(util.DEFAULT_FORMAT)))
+		udpairs[0].Value = chatdoc
+
+		retryClaim := false
+		claimUpdateInterval := interval
+		for claimUpdate := 0; claimUpdate < maxRetry; claimUpdate++ {
+			_, _, errs = queryMetadata.Update(udpairs, queryContext, false)
+			if len(errs) > 0 {
+				if couchbase.CanRetryWithRefresh(errs[0]) {
+					time.Sleep(claimUpdateInterval)
+					claimUpdateInterval *= 2
+				} else if errs[0].HasCause(errors.E_CAS_MISMATCH) || errs[0].ContainsText("SYNC_WRITE_IN_PROGRESS") {
+					// some else tried to resume concurrently
+					chatdoc.Recycle()
+					chatdoc = nil
+					fetchMap[key] = nil
+					ce.Reset()
+					retryClaim = true
+					break
+				} else {
+					logging.Errorf("Chat claim failed: error updating QUERY_METADATA bucket (key %s): %v", key, errs)
+					return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+						fmt.Sprintf("err updating the chat document: %v", errs))
+				}
+			} else {
+				claimed = true
+				break
+			}
+		}
+
+		if retryClaim {
+			claimInterval *= 2
+			time.Sleep(claimInterval)
+			continue
+		}
+
+		if claimed {
+			logging.Infof("Chat claimed successfully for chat id: %s", chatId)
+			break
+		}
+	}
+
+	if !claimed {
+		logging.Errorf("Chat claim failed after %v retries: failed to update the chat document for chat id: %s", maxRetry, chatId)
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+			fmt.Sprintf("failed to claim chat document for chat id: %s after retries: %s", maxRetry, chatId))
+	}
+
+	dpairs := make([]value.Pair, 1)
+	dpairs[0].Name = key
+	completeClaimInterval := interval
+	claimcompleted := true
+	for claimComplete := 0; claimComplete < maxRetry; claimComplete++ {
+		claimcompleted = false
+		_, _, errs := queryMetadata.Delete(dpairs, queryContext, false)
+		if len(errs) > 0 {
+			if couchbase.CanRetryWithRefresh(errs[0]) {
+				time.Sleep(completeClaimInterval)
+				completeClaimInterval *= 2
+			} else {
+				logging.Errorf("Chat claim completion failed: error deleting from QUERY_METADATA bucket (key %s): %v", key, errs)
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+					fmt.Sprintf("err deleting the chat document: %v", errs))
+			}
+		} else {
+			logging.Infof("Chat claim completed for chat id: %s", chatId)
+			claimcompleted = true
+			break
+		}
+	}
+
+	if !claimcompleted {
+		logging.Errorf("Chat claim completion failed after %v retries:"+
+			" error in deleting the chat document for chat id: %s", maxRetry, chatId)
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+			fmt.Sprintf("failed to complete the claim for chat document for chat id: %s after retries: %s", maxRetry, chatId))
+	}
+
+	ce.Id = chatId
+	AddConversation(ce, ce.Id)
+	return nil
+}
+
 func getStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {
 	if content == "" {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, "empty response")
@@ -1119,4 +1510,87 @@ func getJsContent(content string) string {
 	return strings.TrimSpace(
 		strings.TrimSuffix(
 			strings.TrimPrefix(content, "```javascript"), "\n```"))
+}
+
+const CHAT_DOC_PREFIX = "aichat::"
+
+func (ce *ChatEntry) MarshalJSON() ([]byte, error) {
+	rv := map[string]interface{}{}
+	if user := ce.User; user != "" {
+		rv["user"] = user
+	}
+	keyspaces := make([]string, len(ce.Keyspaces))
+	for i, k := range ce.Keyspaces {
+		keyspaces[i] = k.ProtectedString()
+	}
+	rv["keyspaces"] = keyspaces
+	if pmt := ce.prompt; pmt != nil {
+		rv["prompt"] = pmt
+	}
+	if summ := ce.Summary; summ != "" {
+		rv["summary"] = summ
+	}
+	return json.Marshal(rv)
+}
+
+func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
+	var unmarshalledStruct struct {
+		Keyspaces []string `json:"keyspaces"`
+		Prompt    *prompt  `json:"prompt"`
+		User      string   `json:"user"`
+		Summary   string   `json:"summary"`
+	}
+
+	err := json.Unmarshal(body, &unmarshalledStruct)
+	if err != nil {
+		return err
+	}
+
+	if user := unmarshalledStruct.User; user != "" {
+		ce.User = user
+	}
+	if keyspaces := unmarshalledStruct.Keyspaces; keyspaces != nil {
+		keyspacelist := strings.Join(keyspaces, ",")
+		elems, err := algebra.ParseAndValidatePathList(keyspacelist, "default", "")
+		if err != nil {
+			return fmt.Errorf("error validating keyspaces: %s", err)
+		}
+		ce.Keyspaces = elems
+	}
+	if prompt := unmarshalledStruct.Prompt; prompt != nil {
+		ce.prompt = prompt
+	}
+	if summary := unmarshalledStruct.Summary; summary != "" {
+		ce.Summary = summary
+	}
+	return nil
+}
+
+func (ce *ChatEntry) Reset() {
+	ce.User = ""
+	ce.Keyspaces = nil
+	ce.prompt = nil
+	ce.Id = ""
+	ce.Summary = ""
+	ce.Removed = false
+	ce.Paused = false
+}
+
+func GetChatDataFromObjectValue(val value.Value) ([]byte, errors.Error) {
+	encodedchat, ok := val.Field("chat")
+	if !ok {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_UNEXPECTED_CHAT_DOC,
+			"\"chat\" field is not found in the chat document")
+	}
+
+	if et := encodedchat.Type(); et != value.STRING {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_UNEXPECTED_CHAT_DOC,
+			fmt.Sprintf("value type for \"chat\" field in the chat document: %s expected string", et))
+	}
+
+	b, derr := base64.StdEncoding.DecodeString(encodedchat.ToString())
+	if derr != nil {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED, "chat decoding failed", derr)
+	}
+	return b, nil
 }

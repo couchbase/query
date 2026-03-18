@@ -817,7 +817,6 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			request.Failed(this)
 			return true, false
 		}
-
 		request.SetNaturalChatId(chatId)
 		request.CompletedNaturalRequest(this)
 		return true, false
@@ -845,8 +844,32 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			request.Failed(this)
 			return true, false
 		}
-
 		request.SetNaturalChatId(newchatid)
+		request.CompletedNaturalRequest(this)
+		return true, false
+	}
+
+	if request.NaturalPauseChat() {
+		err := natural.ProcessPauseChat(chatId, request.Id().String(), datastore.CredsString(request.Credentials()),
+			request.NaturalOrganizationId(), request.NaturalCred(), request.NaturalSummarize(), request.Output().AddPhaseTime)
+		if err != nil {
+			request.Fail(err)
+			request.Failed(this)
+			return true, false
+		}
+		request.SetNaturalChatId(chatId)
+		request.CompletedNaturalRequest(this)
+		return true, false
+	}
+
+	if request.NaturalResumeChat() {
+		err := natural.ProcessResumeChat(chatId, request.Id().String(), datastore.CredsString(request.Credentials()))
+		if err != nil {
+			request.Fail(err)
+			request.Failed(this)
+			return true, false
+		}
+		request.SetNaturalChatId(chatId)
 		request.CompletedNaturalRequest(this)
 		return true, false
 	}

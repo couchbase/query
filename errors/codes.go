@@ -652,6 +652,10 @@ const (
 	E_NL_CHAT_PROMPT_TOO_LARGE                   ErrorCode = 19229
 	E_NL_CHAT_CACHE_FULL                         ErrorCode = 19230
 	E_NL_CHAT_WRONG_USER                         ErrorCode = 19231
+	E_NL_CHAT_PAUSE_FAILED                       ErrorCode = 19232
+	E_NL_CHAT_RESUME_FAILED                      ErrorCode = 19233
+	E_NL_CHAT_SUMMARIZE_FAILED                   ErrorCode = 19234
+	E_NL_UNEXPECTED_CHAT_DOC                     ErrorCode = 19235
 	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
 	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
 	E_NO_ENCRYPTION_MANAGER                      ErrorCode = 19302

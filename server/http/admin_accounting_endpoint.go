@@ -3257,6 +3257,10 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 					return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
 				}
 				ce.Lock()
+				if ce.Removed || ce.Paused {
+					ce.Unlock()
+					return true, nil
+				}
 				natural.DeleteConversation(chatId)
 				ce.Removed = true
 				ce.Unlock()
