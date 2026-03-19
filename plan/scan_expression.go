@@ -135,7 +135,7 @@ func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.FromExpr != "" {
-		this.fromExpr, err = parser.Parse(_unmarshalled.FromExpr)
+		this.fromExpr, err = this.parseExpression(_unmarshalled.FromExpr)
 	}
 	this.alias = _unmarshalled.Alias
 	// we use uncorrelated in marshall such that in mixed node cluster

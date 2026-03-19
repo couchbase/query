@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type Merge struct {
@@ -213,7 +212,7 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.Key != "" {
-		this.key, err = parser.Parse(_unmarshalled.Key)
+		this.key, err = this.parseExpression(_unmarshalled.Key)
 		if err != nil {
 			return err
 		}
@@ -223,7 +222,7 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	this.fastDiscard = _unmarshalled.FastDiscard
 
 	if _unmarshalled.Limit != "" {
-		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		this.limit, err = this.parseExpression(_unmarshalled.Limit)
 		if err != nil {
 			return err
 		}
@@ -268,19 +267,19 @@ func (this *Merge) UnmarshalJSON(body []byte) error {
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	if _unmarshalled.UpdateFilter != "" {
-		if this.updateFilter, err = parser.Parse(_unmarshalled.UpdateFilter); err != nil {
+		if this.updateFilter, err = this.parseExpression(_unmarshalled.UpdateFilter); err != nil {
 			return err
 		}
 	}
 
 	if _unmarshalled.DeleteFilter != "" {
-		if this.deleteFilter, err = parser.Parse(_unmarshalled.DeleteFilter); err != nil {
+		if this.deleteFilter, err = this.parseExpression(_unmarshalled.DeleteFilter); err != nil {
 			return err
 		}
 	}
 
 	if _unmarshalled.InsertFilter != "" {
-		if this.insertFilter, err = parser.Parse(_unmarshalled.InsertFilter); err != nil {
+		if this.insertFilter, err = this.parseExpression(_unmarshalled.InsertFilter); err != nil {
 			return err
 		}
 	}

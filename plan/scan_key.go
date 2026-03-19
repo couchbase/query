@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 // KeyScan is used for USE KEYS clauses.
@@ -83,7 +82,7 @@ func (this *KeyScan) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.Keys != "" {
-		this.keys, err = parser.Parse(_unmarshalled.Keys)
+		this.keys, err = this.parseExpression(_unmarshalled.Keys)
 		if this.keys != nil {
 			this.keys.SetExprFlag(expression.EXPR_CAN_FLATTEN)
 		}

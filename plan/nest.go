@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type Nest struct {
@@ -151,7 +150,7 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 
 	var keys_expr expression.Expression
 	if _unmarshalled.On != "" {
-		keys_expr, err = parser.Parse(_unmarshalled.On)
+		keys_expr, err = this.parseExpression(_unmarshalled.On)
 		if err != nil {
 			return err
 		}
@@ -169,7 +168,7 @@ func (this *Nest) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.OnFilter != "" {
-		this.onFilter, err = parser.Parse(_unmarshalled.OnFilter)
+		this.onFilter, err = this.parseExpression(_unmarshalled.OnFilter)
 		if err != nil {
 			return err
 		}

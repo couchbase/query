@@ -327,7 +327,7 @@ func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	this.fastDiscard = _unmarshalled.FastDiscard
 
 	if _unmarshalled.Limit != "" {
-		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		this.limit, err = this.parseExpression(_unmarshalled.Limit)
 		if err != nil {
 			return err
 		}

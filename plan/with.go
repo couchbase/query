@@ -92,7 +92,7 @@ func (this *With) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	withs, err := unmarshalWiths(_unmarshalled.Bindings)
+	withs, err := this.unmarshalWiths(_unmarshalled.Bindings)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (this *With) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-func unmarshalWiths(body []byte) (expression.Withs, error) {
+func (this *With) unmarshalWiths(body []byte) (expression.Withs, error) {
 	var _unmarshalled []struct {
 		Alias   string          `json:"alias"`
 		Expr    string          `json:"expr"`
@@ -144,13 +144,13 @@ func unmarshalWiths(body []byte) (expression.Withs, error) {
 		var cycle *algebra.CycleCheck
 		var err error
 
-		expr, err = parser.Parse(with.Expr)
+		expr, err = this.parseExpression(with.Expr)
 		if err != nil {
 			return nil, err
 		}
 
 		if with.Rexpr != "" {
-			rexpr, err = parser.Parse(with.Rexpr)
+			rexpr, err = this.parseExpression(with.Rexpr)
 			if err != nil {
 				return nil, err
 			}

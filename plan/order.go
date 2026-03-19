@@ -144,7 +144,7 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 
 	this.terms = make(algebra.SortTerms, len(_unmarshalled.Terms))
 	for i, term := range _unmarshalled.Terms {
-		expr, err := parser.Parse(term.Expr)
+		expr, err := this.parseExpression(term.Expr)
 		if err != nil {
 			return err
 		}
@@ -205,14 +205,14 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 	}
 	this.flags = _unmarshalled.Flags
 	if offsetExprStr := _unmarshalled.OffsetExpr; offsetExprStr != "" {
-		offsetExpr, err := parser.Parse(offsetExprStr)
+		offsetExpr, err := this.parseExpression(offsetExprStr)
 		if err != nil {
 			return err
 		}
 		this.offset = NewOffset(offsetExpr, PLAN_COST_NOT_AVAIL, PLAN_CARD_NOT_AVAIL, PLAN_SIZE_NOT_AVAIL, PLAN_COST_NOT_AVAIL)
 	}
 	if limitExprStr := _unmarshalled.LimitExpr; limitExprStr != "" {
-		limitExpr, err := parser.Parse(limitExprStr)
+		limitExpr, err := this.parseExpression(limitExprStr)
 		if err != nil {
 			return err
 		}

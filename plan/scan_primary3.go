@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type PrimaryScan3 struct {
@@ -205,14 +204,14 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	this.skipNewKeys = _unmarshalled.SkipNewKeys
 
 	if _unmarshalled.Offset != "" {
-		this.offset, err = parser.Parse(_unmarshalled.Offset)
+		this.offset, err = this.parseExpression(_unmarshalled.Offset)
 		if err != nil {
 			return err
 		}
 	}
 
 	if _unmarshalled.Limit != "" {
-		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		this.limit, err = this.parseExpression(_unmarshalled.Limit)
 		if err != nil {
 			return err
 		}

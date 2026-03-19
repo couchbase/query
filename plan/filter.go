@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type Filter struct {
@@ -92,7 +91,7 @@ func (this *Filter) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.Condition != "" {
-		this.cond, err = parser.Parse(_unmarshalled.Condition)
+		this.cond, err = this.parseExpression(_unmarshalled.Condition)
 		if err != nil {
 			return err
 		}

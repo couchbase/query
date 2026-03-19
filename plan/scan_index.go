@@ -265,7 +265,7 @@ func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	this.distinct = _unmarshalled.Distinct
 
 	if _unmarshalled.Limit != "" {
-		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		this.limit, err = this.parseExpression(_unmarshalled.Limit)
 		if err != nil {
 			return err
 		}

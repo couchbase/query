@@ -43,6 +43,10 @@ func (this *readonly) SetPlanContext(planContext *planContext) {
 	this.planContext = planContext
 }
 
+func (this *readonly) parseExpression(s string) (expression.Expression, error) {
+	return parseWithContext(s, this.planContext)
+}
+
 type readwrite struct {
 	planContext *planContext
 }
@@ -64,6 +68,10 @@ func (this *readwrite) PlanContext() *planContext {
 
 func (this *readwrite) SetPlanContext(planContext *planContext) {
 	this.planContext = planContext
+}
+
+func (this *readwrite) parseExpression(s string) (expression.Expression, error) {
+	return parseWithContext(s, this.planContext)
 }
 
 // optimizer estimates

@@ -164,7 +164,7 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.Onclause != "" {
-		this.onclause, err = parser.Parse(_unmarshalled.Onclause)
+		this.onclause, err = this.parseExpression(_unmarshalled.Onclause)
 		if err != nil {
 			return err
 		}

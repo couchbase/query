@@ -203,7 +203,7 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 
 	var keys_expr expression.Expression
 	if _unmarshalled.On != "" {
-		keys_expr, err = parser.Parse(_unmarshalled.On)
+		keys_expr, err = this.parseExpression(_unmarshalled.On)
 		if err != nil {
 			return err
 		}

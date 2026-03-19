@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/value"
 )
 
@@ -222,7 +221,7 @@ func (this *OrderedIntersectScan) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.Limit != "" {
-		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		this.limit, err = this.parseExpression(_unmarshalled.Limit)
 		if err != nil {
 			return err
 		}

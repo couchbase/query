@@ -112,7 +112,7 @@ func (this *Unnest) UnmarshalJSON(body []byte) error {
 	}
 
 	if _unmarshalled.Expr != "" {
-		expr, err = parser.Parse(_unmarshalled.Expr)
+		expr, err = this.parseExpression(_unmarshalled.Expr)
 		if err != nil {
 			return err
 		}

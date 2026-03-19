@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type Limit struct {
@@ -69,7 +68,7 @@ func (this *Limit) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.expr, err = parser.Parse(_unmarshalled.Expr)
+	this.expr, err = this.parseExpression(_unmarshalled.Expr)
 	if err != nil {
 		return err
 	}

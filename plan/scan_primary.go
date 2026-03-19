@@ -16,7 +16,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type PrimaryScan struct {
@@ -122,7 +121,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	this.hasDeltaKeyspace = _unmarshalled.HasDeltaKeyspace
 
 	if _unmarshalled.Limit != "" {
-		this.limit, err = parser.Parse(_unmarshalled.Limit)
+		this.limit, err = this.parseExpression(_unmarshalled.Limit)
 		if err != nil {
 			return err
 		}

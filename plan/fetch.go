@@ -15,7 +15,6 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type Fetch struct {
@@ -147,7 +146,7 @@ func (this *Fetch) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.FromExpr != "" {
 		var expr expression.Expression
-		expr, err = parser.Parse(_unmarshalled.FromExpr)
+		expr, err = this.parseExpression(_unmarshalled.FromExpr)
 		if err == nil {
 			this.term = algebra.NewKeyspaceTermFromExpression(expr, _unmarshalled.As, nil, nil, 0)
 		}
@@ -266,7 +265,7 @@ func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	unmarshalOptEstimate(&this.optEstimate, _unmarshalled.OptEstimate)
 
 	if _unmarshalled.FromExpr != "" {
-		expr, err1 := parser.Parse(_unmarshalled.FromExpr)
+		expr, err1 := this.parseExpression(_unmarshalled.FromExpr)
 		if err1 != nil {
 			return err1
 		}

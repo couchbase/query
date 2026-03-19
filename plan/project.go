@@ -13,7 +13,6 @@ import (
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/expression"
-	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/value"
 )
@@ -182,7 +181,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 	for i, term_data := range _unmarshalled.Terms {
 		var expr expression.Expression
 		if term_data.Expr != "" {
-			expr, err = parser.Parse(term_data.Expr)
+			expr, err = this.parseExpression(term_data.Expr)
 			if err != nil {
 				return err
 			}
@@ -322,7 +321,7 @@ func (this *IndexCountProject) UnmarshalJSON(body []byte) error {
 	for i, term_data := range _unmarshalled.Terms {
 		var expr expression.Expression
 		if term_data.Expr != "" {
-			expr, err = parser.Parse(term_data.Expr)
+			expr, err = this.parseExpression(term_data.Expr)
 			if err != nil {
 				return err
 			}
