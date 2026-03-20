@@ -113,7 +113,7 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 	totCount := request_timer.Count()
 	var prepPercent float64
 	if totCount > 0 {
-		prepPercent = float64(prepared.Count()) / float64(totCount)
+		prepPercent = float64(prepared.Count()) / float64(totCount) * 100
 	} else {
 		prepPercent = 0.0
 	}
@@ -141,7 +141,7 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 		"request_time.80percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.8)), style),
 		"request_time.95percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.95)), style),
 		"request_time.99percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.99)), style),
-		"request.prepared.percent":  prepPercent,
+		"request.prepared.percent":  util.RoundPlaces(prepPercent, 4),
 	}
 	g.Lock()
 	_, rss, total, free, _, err := system.GetSystemStats(g.stats, false, true)
