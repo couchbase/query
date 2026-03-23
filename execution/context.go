@@ -34,6 +34,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
 	"github.com/couchbase/query/sequences"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
@@ -1465,6 +1466,10 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 					break
 				}
 			}
+		}
+		if !planFound && (this.prepared.Persist() || settings.IsPlanStabilityEnabled()) {
+			logging.Debugf("Plan Stability (mode %d): subquery plan not found. Prepared name(%s) persist(%t) subquery (%s)",
+				settings.GetPlanStabilityMode(), this.prepared.Name(), this.prepared.Persist(), query.String())
 		}
 	}
 

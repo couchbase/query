@@ -23,7 +23,6 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
-	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -307,45 +306,33 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		}
 	}
 
-	planContext := newPlanContext(nil)
-	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
-	if err != nil {
-		return err
-	}
-
+	var subqMap map[string]*subqPlanInfo
+	var subqPlans *algebra.SubqueryPlans
+	hasSubq := false
 	if len(_unmarshalled.SubqPlans) > 0 {
-		this.subqueryPlans = algebra.NewSubqueryPlans()
+		hasSubq = true
+		subqPlans = algebra.NewSubqueryPlans()
+		subqMap = make(map[string]*subqPlanInfo, len(_unmarshalled.SubqPlans))
 		for _, planP := range _unmarshalled.SubqPlans {
 			subqText := planP.SubqText
 			if subqText == "" {
 				return errors.NewPlanInternalError("prepared.unmarshalInternal: missing subquery text")
 			}
-			subqExpr, err := parser.Parse(subqText)
-			if err != nil {
-				return err
+			subqMap[subqText] = &subqPlanInfo{
+				op:   planP.PlanOp,
+				isks: planP.IndexScanKeyspaces,
 			}
-			subquery, ok := subqExpr.(*algebra.Subquery)
-			if !ok {
-				return errors.NewPlanInternalError("prepared.unmarshalInternal: subquery expression is not a Subquery.")
-			}
-
-			var op_type1 struct {
-				Operator string `json:"#operator"`
-			}
-
-			err = json.Unmarshal(planP.PlanOp, &op_type1)
-			if err != nil {
-				return err
-			}
-
-			subPlanContext := newPlanContext(planContext)
-			subqPlan, err := MakeOperator(op_type1.Operator, planP.PlanOp, subPlanContext)
-			if err != nil {
-				return err
-			}
-
-			this.subqueryPlans.Set(subquery.Select(), nil, NewQueryPlan(subqPlan), planP.IndexScanKeyspaces, false)
 		}
+	}
+
+	planContext := newPlanContext(subqMap, subqPlans)
+	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
+	if err != nil {
+		return err
+	}
+
+	if hasSubq {
+		this.subqueryPlans = subqPlans
 	}
 
 	return nil
@@ -894,7 +881,7 @@ func marshalSubqueryPlan(r map[string]interface{}, subselect *algebra.Select, pl
 	}
 	text := subselect.String()
 	if subselect.IsCorrelated() {
-		// needed for parsing to work properly
+		// this text needs to match what gets generated from Subquery.String()
 		text = "correlated (" + text + ")"
 	}
 	r["subquery"] = text

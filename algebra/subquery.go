@@ -369,6 +369,8 @@ func (this *SubqueryPlans) MarshalPlans(lock bool, prepName string,
 	for key := range this.plans {
 		r := make(map[string]interface{}, 4)
 		str := marshal(r, key, this.plans[key], this.isks[key], prepName)
+		// duplicates are removed, i.e. if the exact same subquery appears multiple times in
+		// the query, the subquery plan is only saved once
 		subqueries[str] = r
 	}
 	if lock {

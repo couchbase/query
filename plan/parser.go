@@ -13,6 +13,16 @@ import (
 	"github.com/couchbase/query/expression/parser"
 )
 
+// This function is used to parse expressions, and if there are subquery plans available when
+// unmarshalling prepared statements, it handles the matching of parsed subquery expression and
+// unmarshalled subquery plan
 func parseWithContext(s string, plContext *planContext) (expression.Expression, error) {
-	return parser.Parse(s)
+	expr, err := parser.Parse(s)
+	if expr == nil || err != nil {
+		return expr, err
+	}
+	if plContext != nil && plContext.hasSubqueryMap() {
+		expr, err = plContext.checkSubqueryMap(expr)
+	}
+	return expr, err
 }
