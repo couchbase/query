@@ -162,15 +162,16 @@ func SetDeploymentModel(deploymentModel string) {
 
 // store is the root for the couchbase datastore
 type store struct {
-	client         cb.Client // instance of primitives/couchbase client
-	gcClient       *gcagent.Client
-	namespaceCache map[string]*namespace // map of pool-names and IDs
-	CbAuthInit     bool                  // whether cbAuth is initialized
-	inferencer     datastore.Inferencer  // what we use to infer schemas
-	statUpdater    datastore.StatUpdater // what we use to update statistics
-	connectionUrl  string                // where to contact ns_server
-	connSecConfig  *datastore.ConnectionSecurityConfig
-	nslock         sync.RWMutex
+	client             cb.Client // instance of primitives/couchbase client
+	gcClient           *gcagent.Client
+	namespaceCache     map[string]*namespace // map of pool-names and IDs
+	CbAuthInit         bool                  // whether cbAuth is initialized
+	inferencer         datastore.Inferencer  // what we use to infer schemas
+	statUpdater        datastore.StatUpdater // what we use to update statistics
+	connectionUrl      string                // where to contact ns_server
+	connSecConfig      *datastore.ConnectionSecurityConfig
+	nslock             sync.RWMutex
+	encryptionProvider datastore.EncryptionProvider
 }
 
 func (s *store) Id() string {
@@ -1071,6 +1072,8 @@ func NewDatastore(u string) (s datastore.Datastore, e errors.Error) {
 	if er != nil {
 		return nil, er
 	}
+
+	store.encryptionProvider = datastore.NoopEncryptionProviderInstance
 
 	// initialize the default pool.
 	// TODO can couchbase server contain more than one pool ?
@@ -3907,4 +3910,12 @@ func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex b
 	}
 
 	return empty, nil
+}
+
+func (s *store) EncryptionProvider() (datastore.EncryptionProvider, errors.Error) {
+	return s.encryptionProvider, nil
+}
+
+func (s *store) SetEncryptionProvider(encProvider datastore.EncryptionProvider) {
+	s.encryptionProvider = encProvider
 }

@@ -25,6 +25,7 @@ import (
 	//	go_http "net/http"
 	//	_ "net/http/pprof"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	"github.com/couchbase/query/audit"
@@ -34,6 +35,8 @@ import (
 	datastore_package "github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/resolver"
 	"github.com/couchbase/query/datastore/system"
+	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/encryption/keymgmt"
 	"github.com/couchbase/query/encryption/openssl"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/ffdc"
@@ -337,6 +340,7 @@ func main() {
 			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD
 		}
 	}
+
 	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT, _DEF_SEQSCAN_KEYS)
 
 	// Initialized the prepared statement cache
@@ -440,6 +444,24 @@ func main() {
 
 	constructor.Init(endpoint.Router(), server.Servicers(), "")
 	tenant.Start(endpoint, *UUID, *REGULATOR_SETTINGS_FILE)
+
+	// EAR TODO - un-comment the following block once ns-server begins to push the required datatypes of keys to Query
+	/*
+		encryptionMgr := keymgmt.NewEncryptionManager()
+		datastore.SetEncryptionProvider(encryptionMgr)
+		encryptionMgr.RegisterCbauthEncryptionCallbacks()
+
+		// Retrieve the necessary encryption-at-rest keys from cbauth before starting listeners
+		// Priming loads key information from cbauth for known datatypes in the encryption manager
+		// cbauth invokes RefreshKeysCallback soon after encryption callback registration.
+		// But, if the callback is delayed, Query requests for a key type that has not been loaded yet can cause repeated key
+		// configuration fetch requests to cbauth.
+		// Priming helps avoid the potential flood of fetches by populating known key type entries upfront
+		primeEncryptionManager(encryptionMgr, datastore)
+	*/
+
+	// EAR TODO - remove the below line once above block is un-commented
+	registerDummyCbauthEncryptionCallbacks()
 
 	// Since TLS listener has already been started by NewServiceEndpoint
 	// So not starting here
@@ -613,4 +635,49 @@ func waitForInitialSettings() (queryMetakv.Config, int) {
 	}
 
 	return cfg, num_cpus
+}
+
+func primeEncryptionManager(encryptionMgr keymgmt.EncryptionManager, ds datastore_package.Datastore) {
+	var keyTypes []encryption.KeyDataType
+
+	// EAR TODO - once "other" key data type is supported by cbauth, must add here
+	dt := encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
+	keyTypes = append(keyTypes, dt)
+
+	ds2, ok := ds.(datastore_package.Datastore2)
+	if ok && ds2 != nil {
+		dt.TypeName = encryption.BUCKET_KEY_DATATYPE
+		ds2.LoadAllBuckets(func(b datastore.ExtendedBucket) {
+			dt.BucketUUID = b.Uid()
+			keyTypes = append(keyTypes, dt)
+		})
+	} else {
+		// This should ideally not happen in a production environment. Couchbase datastore should implement Datastore2 interface.
+		logging.Errorf("Error priming encryption keys. Datastore does not implement Datastore2 interface.")
+	}
+
+	encryptionMgr.PrimeKeys(keyTypes)
+}
+
+// EAR TODO - remove this function once ns-server begins to push the required datatypes of keys to Query and the actual
+// callbacks can be registered
+func registerDummyCbauthEncryptionCallbacks() {
+	var dummyRefreshKeysCallback cbauth.RefreshKeysCallback = func(dt cbauth.KeyDataType) error {
+		return nil
+	}
+
+	var dummyGetInUseKeysCallback cbauth.GetInUseKeysCallback = func(dt cbauth.KeyDataType) ([]string, error) {
+		return nil, nil
+	}
+
+	var dummyDropKeysCallback cbauth.DropKeysCallback = func(dt cbauth.KeyDataType, KeyIdsToDrop []string) {
+	}
+
+	var dummySynchronizeKeyFilesCallback cbauth.SynchronizeKeyFilesCallback = func(dt cbauth.KeyDataType) error {
+		return nil
+	}
+
+	cbauth.RegisterEncryptionKeysCallbacks(dummyRefreshKeysCallback, dummyGetInUseKeysCallback, dummyDropKeysCallback,
+		dummySynchronizeKeyFilesCallback)
+
 }

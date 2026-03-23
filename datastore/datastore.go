@@ -110,6 +110,9 @@ type Datastore interface {
 	RollbackTransaction(stmtAtomicity bool, context QueryContext, sname string) errors.Error
 	SetSavepoint(stmtAtomicity bool, context QueryContext, sname string) errors.Error
 	TransactionDeltaKeyScan(keyspace string, conn *IndexConnection) // Keys of Delta keyspace
+
+	EncryptionProvider() (EncryptionProvider, errors.Error)
+	SetEncryptionProvider(encryptionProvider EncryptionProvider)
 }
 
 type Systemstore interface {

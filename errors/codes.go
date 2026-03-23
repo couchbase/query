@@ -644,6 +644,10 @@ const (
 	_RETIRED_19223                               ErrorCode = 19223
 	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
 	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
+	E_NO_ENCRYPTION_MANAGER                      ErrorCode = 19302
+	E_INVALID_ENCRYPTION_KEY_DATATYPE            ErrorCode = 19303
+	E_ENCRYPTION_KEY_INFO_NOT_FOUND              ErrorCode = 19304
+	E_ENCRYPTION_PRIME                           ErrorCode = 19305
 	E_AUS_NOT_SUPPORTED                          ErrorCode = 20000
 	E_AUS_NOT_INITIALIZED                        ErrorCode = 20001
 	E_AUS_STORAGE                                ErrorCode = 20002

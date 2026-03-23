@@ -8190,6 +8190,50 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NO_ENCRYPTION_MANAGER, // 19302
+		symbol:      "E_NO_ENCRYPTION_MANAGER",
+		Description: "No encryption manager available",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_INVALID_ENCRYPTION_KEY_DATATYPE, // 19303
+		symbol:      "E_INVALID_ENCRYPTION_KEY_DATATYPE",
+		Description: "Invalid encryption key datatype '«datatype»'",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_ENCRYPTION_KEY_INFO_NOT_FOUND, // 19304
+		symbol:      "E_ENCRYPTION_KEY_INFO_NOT_FOUND",
+		Description: "Encryption key information not found for key id «keyId» for data type «datatype»",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_ENCRYPTION_PRIME, // 19305
+		symbol:      "E_ENCRYPTION_PRIME",
+		Description: "Failed to prime encryption-at-rest configuration for key data type «datatype»",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
 		symbol:      "E_AUS_NOT_SUPPORTED",
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",

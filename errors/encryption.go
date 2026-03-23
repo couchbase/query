@@ -11,8 +11,13 @@ package errors
 import "fmt"
 
 var _encryptionErrs = map[ErrorCode][2]string{
-	E_ENCRYPTION_READER_CREATE: {"encryption.reader.create", "Failed to create encryption reader"},
-	E_ENCRYPTION_WRITER_CREATE: {"encryption.writer.create", "Failed to create encryption writer"},
+	E_ENCRYPTION_READER_CREATE:        {"encryption.reader.create", "Failed to create encryption reader"},
+	E_ENCRYPTION_WRITER_CREATE:        {"encryption.writer.create", "Failed to create encryption writer"},
+	E_NO_ENCRYPTION_MANAGER:           {"encryption.no_manager", "No encryption-at-rest manager available"},
+	E_INVALID_ENCRYPTION_KEY_DATATYPE: {"encryption.invalid_key_datatype", "Invalid encryption-at-rest key data type '%s'"},
+	E_ENCRYPTION_KEY_INFO_NOT_FOUND: {"encryption.key.info_not_found",
+		"Encryption-at-rest key information not found for key id %s of key data type %s"},
+	E_ENCRYPTION_PRIME: {"encryption.prime", "Failed to prime encryption-at-rest configuration for key data type %s"},
 }
 
 func NewEncryptionError(code ErrorCode, e error, msgArgs ...interface{}) Error {
