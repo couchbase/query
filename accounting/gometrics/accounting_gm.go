@@ -110,7 +110,7 @@ func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyl
 	totCount := request_timer.Count()
 	var prepPercent float64
 	if totCount > 0 {
-		prepPercent = float64(prepared.Count()) / float64(totCount)
+		prepPercent = float64(prepared.Count()) / float64(totCount) * 100
 	} else {
 		prepPercent = 0.0
 	}
@@ -130,7 +130,7 @@ func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyl
 		"cpu.sys.percent":          util.RoundPlaces(sPerc, 4),
 		"request.active.count":     int64(actCount),
 		"request.quota.used.hwm":   used_memory_hwm.Value(),
-		"request.prepared.percent": prepPercent,
+		"request.prepared.percent": util.RoundPlaces(prepPercent, 4),
 		"spills.order":             spillsOrder.Count(),
 	}
 	if backward {
