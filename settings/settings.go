@@ -128,7 +128,7 @@ func defaultSettings() map[string]interface{} {
 	return rv
 }
 
-func FetchSettings() (map[string]interface{}, errors.Error) {
+func FetchSettings(remap bool) (map[string]interface{}, errors.Error) {
 	val, _, err := metakv.Get(_SETTINGS_SETTINGS)
 	if err != nil {
 		return nil, errors.NewSettingsMetaKVError(err, "Error getting global settings from metakv")
@@ -140,6 +140,16 @@ func FetchSettings() (map[string]interface{}, errors.Error) {
 		return nil, errors.NewSettingsMetaKVError(err, "Error unmarshalling global settings")
 	}
 	delete(vmap, "node")
+
+	if remap {
+		if planStability, ok := vmap[PLAN_STABILITY]; ok {
+			remapPlanStability, err := remapPlanStabilitySetting(planStability)
+			if err != nil {
+				return nil, err
+			}
+			vmap[PLAN_STABILITY] = remapPlanStability
+		}
+	}
 
 	return vmap, nil
 }

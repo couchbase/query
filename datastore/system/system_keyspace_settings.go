@@ -78,7 +78,7 @@ func (b *settingsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 			continue
 		}
 
-		val, err := settings.FetchSettings()
+		val, err := settings.FetchSettings(true)
 		if err != nil {
 			return errors.Errors{err}
 		}
