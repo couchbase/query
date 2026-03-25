@@ -16,6 +16,7 @@ import (
 
 	"github.com/couchbase/cbauth"
 	atomic "github.com/couchbase/go-couchbase/platform"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
@@ -47,6 +48,10 @@ const (
 )
 const (
 	INDEXER6_VERSION = "7.7.0"
+)
+
+const (
+	_CB_INDEX_NAMESPACE = "default"
 )
 
 type Indexer interface {
@@ -776,6 +781,7 @@ type IndexConnection struct {
 	skipNewKeys     bool
 	skipMetering    bool
 	indexScanReport *IndexScanReport
+	encryptionKey   *encryption.EaRKey
 }
 
 type Sender interface {
@@ -982,6 +988,14 @@ func (this *IndexConnection) SkipKey(key string) bool {
 
 func (this *IndexConnection) Context() Context {
 	return this.context
+}
+
+func (this *IndexConnection) SetEncryptionKey(key *encryption.EaRKey) {
+	this.encryptionKey = key
+}
+
+func (this *IndexConnection) EncryptionKey() *encryption.EaRKey {
+	return this.encryptionKey
 }
 
 func (this *IndexKey) Expression() expression.Expression {

@@ -8341,6 +8341,17 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_ENCRYPTION, // 19306
+		symbol:      "E_ENCRYPTION",
+		Description: "Error performing encryption-at-rest operation",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
 		symbol:      "E_AUS_NOT_SUPPORTED",
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",

@@ -829,7 +829,15 @@ func (udr *UnifiedDocumentRetriever) getNextRandomScanDoc(context datastore.Quer
 func (udr *UnifiedDocumentRetriever) getNextFullScan(context datastore.QueryContext) (string, value.Value, errors.Error, bool) {
 	if len(udr.keys) == 0 {
 		if udr.iconn == nil {
+			// Get the encryption key from the richer QueryContext and not from the SystemContext used to create the index connection
+			encryptionKey, err := datastore.BackfillEncryptionKey(udr.ss, context)
+			if err != nil {
+				udr.ss = nil
+				return _EMPTY_KEY, nil, errors.NewEncryptionError(errors.E_ENCRYPTION, err), false
+			}
+
 			udr.iconn = datastore.NewIndexConnection(datastore.NewSystemContext())
+			udr.iconn.SetEncryptionKey(encryptionKey)
 			udr.iconn.SetSkipMetering(true)
 			proj := &datastore.IndexProjection{PrimaryKey: true}
 			go udr.ss.Scan3(udr.Name(), nil, false, false, proj, 0, int64(math.MaxInt64), nil, nil,
@@ -993,7 +1001,10 @@ next_index:
 				}
 			}
 			start += udr.offset
-			udr.restartScan(start, context)
+			err := udr.restartScan(start, context)
+			if err != nil {
+				return _EMPTY_KEY, nil, err, false
+			}
 		}
 
 		if len(udr.keys) == 0 {
@@ -1010,10 +1021,16 @@ next_index:
 						if len(udr.keys) > 0 && udr.indexes[udr.currentIndex].IsPrimary() {
 							udr.spans[0].Ranges[0].Low = value.NewValue(udr.keys[len(udr.keys)-1])
 							udr.spans[0].Ranges[0].Inclusion = datastore.HIGH
-							udr.restartScan(0, context)
+							err := udr.restartScan(0, context)
+							if err != nil {
+								return _EMPTY_KEY, nil, err, false
+							}
 							continue
 						} else if !udr.indexes[udr.currentIndex].IsPrimary() && udr.lastKeys != nil {
-							udr.restartAfterLastKey(context)
+							err := udr.restartAfterLastKey(context)
+							if err != nil {
+								return _EMPTY_KEY, nil, err, false
+							}
 							continue
 						}
 					}
@@ -1084,7 +1101,10 @@ next_index:
 							udr.iconn.Dispose()
 							udr.iconn = nil
 							if timeout && udr.lastKeys != nil {
-								udr.restartAfterLastKey(context)
+								err := udr.restartAfterLastKey(context)
+								if err != nil {
+									return _EMPTY_KEY, nil, err, false
+								}
 							}
 							break
 						}
@@ -1116,8 +1136,16 @@ next_index:
 	return _EMPTY_KEY, nil, nil, true
 }
 
-func (udr *UnifiedDocumentRetriever) restartScan(offset int64, context datastore.QueryContext) {
+func (udr *UnifiedDocumentRetriever) restartScan(offset int64, context datastore.QueryContext) errors.Error {
+	// Get the encryption key from the richer QueryContext and not from the SystemContext used to create the index connection
+	encryptionKey, err := datastore.BackfillEncryptionKey(udr.ss, context)
+	if err != nil {
+		udr.ss = nil
+		return errors.NewEncryptionError(errors.E_ENCRYPTION, err)
+	}
+
 	udr.iconn = datastore.NewIndexConnection(datastore.NewSystemContext())
+	udr.iconn.SetEncryptionKey(encryptionKey)
 	udr.iconn.SetSkipMetering(true)
 	index := udr.indexes[udr.currentIndex].(datastore.Index3)
 	proj := &datastore.IndexProjection{PrimaryKey: true}
@@ -1135,9 +1163,11 @@ func (udr *UnifiedDocumentRetriever) restartScan(offset int64, context datastore
 
 	logging.Debugf("scanning index %v (scan: %v, offset: %v, low: %v (first of %d))", udr.indexes[udr.currentIndex].Name(),
 		udr.scanNum, offset, udr.spans[0].Ranges[0].Low, len(udr.spans[0].Ranges), context)
+
+	return nil
 }
 
-func (udr *UnifiedDocumentRetriever) restartAfterLastKey(context datastore.QueryContext) {
+func (udr *UnifiedDocumentRetriever) restartAfterLastKey(context datastore.QueryContext) errors.Error {
 	// reset the block calculation
 	udr.offset = 0
 
@@ -1148,7 +1178,7 @@ func (udr *UnifiedDocumentRetriever) restartAfterLastKey(context datastore.Query
 		udr.spans[0].Ranges[i] = &datastore.Range2{Low: udr.lastKeys[i], Inclusion: datastore.HIGH}
 	}
 	udr.lastKeys = nil
-	udr.restartScan(0, context)
+	return udr.restartScan(0, context)
 }
 
 func (udr *UnifiedDocumentRetriever) cacheKey(key string) {

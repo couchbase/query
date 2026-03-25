@@ -18,6 +18,7 @@ var _encryptionErrs = map[ErrorCode][2]string{
 	E_ENCRYPTION_KEY_INFO_NOT_FOUND: {"encryption.key.info_not_found",
 		"Encryption-at-rest key information not found for key id %s of key data type %s"},
 	E_ENCRYPTION_PRIME: {"encryption.prime", "Failed to prime encryption-at-rest configuration for key data type %s"},
+	E_ENCRYPTION:       {"encryption.operation", "Error performing encryption-at-rest operation"},
 }
 
 func NewEncryptionError(code ErrorCode, e error, msgArgs ...interface{}) Error {

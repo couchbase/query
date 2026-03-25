@@ -26,6 +26,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
@@ -394,6 +395,13 @@ type Context struct {
 
 	pauseWg    sync.WaitGroup
 	pauseStart int64
+
+	// Encryption related structures and the mutex that protects them must be shared across all context copies.
+	// Hence, the mutex that protects them is a pointer.
+	// Key material cache stores active key material. It maintains a snapshot of key material used by the query to prevent the query
+	// from being affected by key drops/rotations in the node's encryption manager.
+	activeKeyInfo map[encryption.KeyDataType]*encryption.EaRKey
+	keysMutex     *sync.RWMutex
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -445,6 +453,12 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		inlineUdfEntries: make(map[string]*inlineUdfEntry),
 		durationStyle:    util.LEGACY,
 		queryMutex:       &sync.RWMutex{},
+
+		// The key cache must be initialized upfront so all context copies share the same cache.
+		// If the original context does not initialize it before a copy is made, the copy may initialize it. This leads to
+		// inconsistent key caches.
+		activeKeyInfo: make(map[encryption.KeyDataType]*encryption.EaRKey),
+		keysMutex:     &sync.RWMutex{},
 	}
 	rv.logLevel = reqLog
 	rv.SetupMemTrackingLogging(logging.LogLevel())
@@ -521,6 +535,10 @@ func (this *Context) Copy() *Context {
 		subqueryPlans:  this.subqueryPlans,
 		queryMutex:     this.queryMutex,
 		scanReportWait: this.scanReportWait,
+
+		// Encryption material should be the shared across contexts
+		activeKeyInfo: this.activeKeyInfo,
+		keysMutex:     this.keysMutex,
 	}
 
 	if this.optimizer != nil {
@@ -2395,4 +2413,33 @@ func (this *Context) checkPause(op *base) {
 
 func (this *Context) LoadX509KeyPair(certFile, keyFile string, passPhrase []byte) (interface{}, error) {
 	return ntls.LoadX509KeyPair(certFile, keyFile, passPhrase)
+}
+
+func (this *Context) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	if dt.TypeName == "" {
+		return nil, nil
+	}
+
+	this.keysMutex.RLock()
+	key, ok := this.activeKeyInfo[dt]
+	this.keysMutex.RUnlock()
+	if ok {
+		return key, nil
+	}
+
+	em, err := this.datastore.EncryptionProvider()
+	if err != nil || em == nil {
+		return nil, err
+	}
+
+	key, err = em.GetActiveKey(dt)
+	if err != nil {
+		return nil, err
+	}
+
+	this.keysMutex.Lock()
+	// The map will not be nil as it initialized with capacity on Context creation
+	this.activeKeyInfo[dt] = key
+	this.keysMutex.Unlock()
+	return key, nil
 }

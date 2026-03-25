@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/mock"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/tenant"
@@ -174,6 +175,10 @@ func (ci *queryContextImpl) DurationStyle() util.DurationStyle {
 
 func (ci *queryContextImpl) FormatDuration(time.Duration) string {
 	return ""
+}
+
+func (this *queryContextImpl) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	return nil, nil
 }
 
 func TestSystem(t *testing.T) {

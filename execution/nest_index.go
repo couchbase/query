@@ -74,6 +74,12 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 	defer _INDEX_ENTRY_POOL.Put(entries)
 
 	if idv.Type() == value.STRING {
+		encryptionKey, err := datastore.BackfillEncryptionKey(this.plan.Index(), context)
+		if err != nil {
+			context.Error(errors.NewEncryptionError(errors.E_ENCRYPTION, err))
+			return false
+		}
+
 		var wg sync.WaitGroup
 		defer wg.Wait()
 
@@ -81,6 +87,7 @@ func (this *IndexNest) processItem(item value.AnnotatedValue, context *Context) 
 		this.Lock()
 		this.conn = datastore.NewIndexConnection(context)
 		this.conn.SetIndexScanReport(this.scanReport)
+		this.conn.SetEncryptionKey(encryptionKey)
 		defer func() {
 			this.Lock()
 			this.conn = nil

@@ -85,9 +85,16 @@ func stringifyIndexEntry(lastEntry *datastore.IndexEntry) string {
 }
 
 func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
+	encryptionKey, err := datastore.BackfillEncryptionKey(this.plan.Index(), context)
+	if err != nil {
+		context.Error(errors.NewEncryptionError(errors.E_ENCRYPTION, err))
+		return
+	}
+
 	this.conn = datastore.NewIndexConnection(context)
 	this.conn.SetIndexScanReport(this.scanReport)
 	this.conn.SetPrimary()
+	this.conn.SetEncryptionKey(encryptionKey)
 	defer this.conn.Dispose() // Dispose of the connection
 	defer this.conn.WaitScanReport(context.ScanReportWait())
 	defer this.conn.SendStop() // Notify index that I have stopped
@@ -148,6 +155,7 @@ func (this *PrimaryScan) scanPrimary(context *Context, parent value.Value) {
 		this.conn = datastore.NewIndexConnection(context)
 		this.conn.SetIndexScanReport(this.scanReport)
 		this.conn.SetPrimary()
+		this.conn.SetEncryptionKey(encryptionKey)
 		lastEntry, nitems = this.scanPrimaryChunk(context, parent, this.conn, lastEntry, limit)
 		emsg = "Primary index chunked scan"
 	}

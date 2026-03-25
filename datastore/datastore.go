@@ -28,6 +28,7 @@ import (
 	"unicode"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
@@ -768,6 +769,30 @@ func IndexerQualifiedKeyspacePath(indexer Indexer) string {
 	return keyspace.QualifiedName()
 }
 
+func BackfillEncryptionKey(index Index, context EncryptionContext) (*encryption.EaRKey, errors.Error) {
+	indexer := index.Indexer()
+	// Indexers do not support namespace
+	// The only indexers that need encryption key access is GSI, FTS, SEQ_SCAN which are always under the default namespace.
+	// Hence hardcoding the namespace to "default"
+	if indexer.Name() == GSI || indexer.Name() == FTS || indexer.Name() == SEQ_SCAN {
+		bucketName := indexer.BucketId()
+		if bucketName != "" {
+			bucket, err := GetBucket(_CB_INDEX_NAMESPACE, bucketName)
+			if err != nil {
+				return nil, err
+			}
+
+			keyType := encryption.KeyDataType{
+				TypeName:   encryption.BUCKET_KEY_DATATYPE,
+				BucketUUID: bucket.Uid(),
+			}
+
+			return context.GetActiveEncryptionKey(keyType)
+		}
+	}
+	return nil, nil
+}
+
 // These structures are generic representations of users and their roles.
 // Very similar structures exist in primitives/couchbase, but to keep open the
 // possibility of connecting to other back ends, the query engine
@@ -964,6 +989,12 @@ func ScanSystemCollection(bucketName string, prefix string, preScan func(Keyspac
 		conn.Dispose()
 		conn.SendStop()
 	}()
+
+	encryptionKey, err := BackfillEncryptionKey(index3, NewSystemContext())
+	if err != nil {
+		return errors.NewSystemCollectionError("Error getting encryption key for scan backfill files", err)
+	}
+	conn.SetEncryptionKey(encryptionKey)
 
 	requestId, err1 := util.UUIDV4()
 	if err1 != nil {

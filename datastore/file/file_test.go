@@ -16,6 +16,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/value"
@@ -255,4 +256,8 @@ func (this *testingContext) ScanReportWait() time.Duration {
 
 func (this *testingContext) SkipKey(key string) bool {
 	return false
+}
+
+func (this *testingContext) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	return nil, nil
 }

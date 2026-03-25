@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/tenant"
@@ -24,6 +25,7 @@ var NULL_QUERY_CONTEXT QueryContext = &queryContextImpl{}
 var MAJORITY_QUERY_CONTEXT QueryContext = &majorityQueryContextImpl{}
 
 type Context interface {
+	EncryptionContext
 	GetScanCap() int64
 	MaxParallelism() int
 	Fatal(errors.Error)
@@ -110,6 +112,10 @@ func (ci *contextImpl) SkipKey(key string) bool {
 	return false
 }
 
+func (sci *contextImpl) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	return getActiveKeyFromDatastore(dt)
+}
+
 // used for situations where errors need to be tracked
 type systemContextImpl struct {
 	contextImpl
@@ -144,6 +150,7 @@ func (sci *systemContextImpl) GetErrors() []errors.Error {
 
 // A subset of execution.Context that is useful at the datastore level.
 type QueryContext interface {
+	EncryptionContext
 	logging.Log
 	GetReqDeadline() time.Time
 	UseReplica() bool
@@ -303,6 +310,10 @@ func (ci *queryContextImpl) FormatDuration(time.Duration) string {
 	return ""
 }
 
+func (ci *queryContextImpl) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	return getActiveKeyFromDatastore(dt)
+}
+
 type majorityQueryContextImpl struct {
 	queryContextImpl
 }
@@ -318,4 +329,26 @@ func GetDurableQueryContextFor(b Keyspace) QueryContext {
 		}
 	}
 	return MAJORITY_QUERY_CONTEXT
+}
+
+type EncryptionContext interface {
+	GetActiveEncryptionKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error)
+}
+
+func getActiveKeyFromDatastore(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	if dt.TypeName == "" {
+		return nil, nil
+	}
+
+	ds := GetDatastore()
+	if ds == nil {
+		return nil, errors.NewNoDatastoreError()
+	}
+
+	encryptionProvider, err := ds.EncryptionProvider()
+	if err != nil || encryptionProvider == nil {
+		return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, err)
+	}
+
+	return encryptionProvider.GetActiveKey(dt)
 }

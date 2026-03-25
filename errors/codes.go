@@ -656,6 +656,7 @@ const (
 	E_INVALID_ENCRYPTION_KEY_DATATYPE            ErrorCode = 19303
 	E_ENCRYPTION_KEY_INFO_NOT_FOUND              ErrorCode = 19304
 	E_ENCRYPTION_PRIME                           ErrorCode = 19305
+	E_ENCRYPTION                                 ErrorCode = 19306
 	E_AUS_NOT_SUPPORTED                          ErrorCode = 20000
 	E_AUS_NOT_INITIALIZED                        ErrorCode = 20001
 	E_AUS_STORAGE                                ErrorCode = 20002

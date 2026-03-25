@@ -181,6 +181,14 @@ func (this *IndexFtsSearch) search(context *Context, conn *datastore.IndexConnec
 		return
 	}
 
+	encryptionKey, err := datastore.BackfillEncryptionKey(index, context)
+	if err != nil {
+		context.Error(errors.NewEncryptionError(errors.E_ENCRYPTION, err))
+		conn.Sender().Close()
+		return
+	}
+	conn.SetEncryptionKey(encryptionKey)
+
 	consistency := context.ScanConsistency()
 	if consistency == datastore.SCAN_PLUS && context.txContext != nil {
 		consistency = datastore.UNBOUNDED
