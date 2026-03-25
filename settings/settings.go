@@ -294,6 +294,10 @@ func getIntValue(val interface{}, defVal int) (intVal int) {
 		if value.IsInt(val) {
 			intVal = int(val)
 		}
+	case PlanStabilityMode:
+		intVal = int(val)
+	case PlanStabilityErrorPolicy:
+		intVal = int(val)
 	}
 	return intVal
 }
