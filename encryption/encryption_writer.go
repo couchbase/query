@@ -96,8 +96,8 @@ import (
 		KBKDF(master key, label, context)
 
 		master key = key material associated with the key ID in the file header
-		label = "Couchbase Encrypted File"
-		context = "Couchbase Encrypted File/<salt in the file header>"
+		label = "Couchbase File Encryption"
+		context = "Couchbase Encrypted File/<salt in the file header encoded as the canonical text representation of a UUID>"
 
 	Encryption Algorithm: AES-256-GCM
 */
@@ -132,20 +132,21 @@ const (
 	// max 32 bit integer minus the nonce and authentication tag overhead
 	_CBEF_MAX_PLAINTEXT_LIMIT = math.MaxUint32 - _CBEF_AUTHENTICATION_TAG_LENGTH - _CBEF_NONCE_LENGTH
 
-	_CBEF_NONCE_LENGTH              = 12
-	_CBEF_NONCE_FIXED_FIELD_LENGTH  = 4
-	_CBEF_AUTHENTICATION_TAG_LENGTH = 16
-	_CBEF_AD_LENGTH                 = _CBEF_HEADER_LENGTH + 8 // 8 bytes for the file offset
-	_CBEF_CHUNK_HEADER_LENGTH       = 4
-	_CBEF_DEFAULT_PLAINTEXT_LIMIT   = 64 * util.KiB
-	_CBEF_VERSION                   = 1
-	_CBEF_KEY_DERIVATION            = 1
-	_CBEF_HASH_FUNCTION             = "SHA2-256"
+	_CBEF_NONCE_LENGTH                = 12
+	_CBEF_NONCE_FIXED_FIELD_LENGTH    = 4
+	_CBEF_AUTHENTICATION_TAG_LENGTH   = 16
+	_CBEF_AD_LENGTH                   = _CBEF_HEADER_LENGTH + 8 // 8 bytes for the file offset
+	_CBEF_CHUNK_HEADER_LENGTH         = 4
+	_CBEF_DEFAULT_PLAINTEXT_LIMIT     = 64 * util.KiB
+	_CBEF_VERSION                     = 1
+	_CBEF_KEY_DERIVATION              = 1
+	_CBEF_HASH_FUNCTION               = "SHA2-256"
+	_CBEF_KBKDF_CONTEXT_PREFIX_STRING = "Couchbase Encrypted File/"
 )
 
 var _CBEF_MAGIC = []byte("\x00Couchbase Encrypted\x00")
-var _CBEF_KBKDF_CONTEXT_PREFIX = []byte("Couchbase Encrypted File/")
-var _CBEF_KBKDF_LABEL = []byte("Couchbase Encrypted File")
+var _CBEF_KBKDF_CONTEXT_PREFIX = []byte(_CBEF_KBKDF_CONTEXT_PREFIX_STRING)
+var _CBEF_KBKDF_LABEL = []byte("Couchbase File Encryption")
 
 type CompressionType int
 
@@ -567,12 +568,12 @@ func (this *cbefEncryptor) encryptAndWrite() error {
 
 // Derives a new key using KBKDF in accordance with the CBEF specification for key derivation
 func cbefDeriveKey(key []byte, salt []byte, derivedKeyLen int) ([]byte, error) {
-	derivedKey := make([]byte, derivedKeyLen)
-
-	kdfCtx := make([]byte, len(_CBEF_KBKDF_CONTEXT_PREFIX)+len(salt))
+	uuid := util.CanonicalizeUUID(salt)
+	kdfCtx := make([]byte, len(_CBEF_KBKDF_CONTEXT_PREFIX)+len(uuid))
 	copy(kdfCtx[:len(_CBEF_KBKDF_CONTEXT_PREFIX)], _CBEF_KBKDF_CONTEXT_PREFIX)
-	copy(kdfCtx[len(_CBEF_KBKDF_CONTEXT_PREFIX):], salt)
+	copy(kdfCtx[len(_CBEF_KBKDF_CONTEXT_PREFIX):], uuid)
 
+	derivedKey := make([]byte, derivedKeyLen)
 	derivedKey, err := KBKDFDeriveKey(key, _CBEF_KBKDF_LABEL, kdfCtx, derivedKey, _CBEF_HASH_FUNCTION)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to derive key using KBKDF: %v", err)

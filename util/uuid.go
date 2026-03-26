@@ -20,6 +20,7 @@ import (
 
 const _UUID_SIZE = 16
 const UUID_STRING_SIZE = 50
+const _CANONICAL_UUID_STRING_LENGTH = 36
 
 type randomBytesBuffer struct {
 	switchHandler sync.WaitGroup
@@ -193,4 +194,10 @@ func doUUID(buf, uuid []byte) []byte {
 	buf = append(buf, '-')
 	buf = AppendBytesAsHex(buf, uuid[10:])
 	return buf
+}
+
+// Returns the canonical 36-character string representation of a 16-byte UUID as a byte slice
+func CanonicalizeUUID(uuid []byte) []byte {
+	buf := make([]byte, 0, _CANONICAL_UUID_STRING_LENGTH)
+	return doUUID(buf, uuid)
 }
