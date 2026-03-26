@@ -3850,7 +3850,21 @@ func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex b
 		return false, errors.NewInvalidGSIIndexerError("Cannot get primary index on system collection")
 	}
 
-	sysIndex, er := indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
+	sysIndexName := _BUCKET_SYSTEM_PRIM_INDEX
+
+	primaryIndexes, err := indexer3.PrimaryIndexes()
+	if err != nil {
+		return false, err
+	}
+
+	for _, index := range primaryIndexes {
+		if index != nil && index.IsPrimary() {
+			sysIndexName = index.Name()
+			break
+		}
+	}
+
+	sysIndex, er := indexer3.IndexByName(sysIndexName)
 	if er != nil {
 		if !errors.IsIndexNotFoundError(er) {
 			// only ignore index not found error
@@ -3893,7 +3907,7 @@ func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex b
 				return false, er
 			}
 
-			sysIndex, er = indexer3.IndexByName(_BUCKET_SYSTEM_PRIM_INDEX)
+			sysIndex, er = indexer3.IndexByName(sysIndexName)
 			if er != nil {
 				return false, er
 			}
