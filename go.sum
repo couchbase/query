@@ -53,8 +53,8 @@ github.com/bits-and-blooms/bitset v1.22.0 h1:Tquv9S8+SGaS3EhyA+up3FXzmkhxPGjQQCk
 github.com/bits-and-blooms/bitset v1.22.0/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blevesearch/bleve-mapping-ui v0.5.2 h1:L6Irz3B14+L2WxIEVtkTi25Aps+uydKNAyt7IAlZOeE=
 github.com/blevesearch/bleve-mapping-ui v0.5.2/go.mod h1:D/HnjXhQdlSi0GU/xOWrh0LL/0XfmTSVuJZNQCy/Mqs=
-github.com/blevesearch/bleve/v2 v2.4.5-0.20260129164850-80a94ed16500 h1:8KCQTXzOJXBFnWR2g5V3Hg7WH9odj8WbNurRxixjPho=
-github.com/blevesearch/bleve/v2 v2.4.5-0.20260129164850-80a94ed16500/go.mod h1:C87WnwidAtw5FZvL3m34Wj3YNVPuw8g2qfSM8/uVGB8=
+github.com/blevesearch/bleve/v2 v2.4.5-0.20260326152444-ea571f92e3f3 h1:OEVzNLZLKm2u8flpzM0dFEpa8t0MZy+Snr6O5sP8LtA=
+github.com/blevesearch/bleve/v2 v2.4.5-0.20260326152444-ea571f92e3f3/go.mod h1:0AdkNOKu5cpMOJb4anIzq6EMWXz27nOVxHo24xuUxfA=
 github.com/blevesearch/bleve_index_api v1.1.13-0.20250408143424-7650bf7414fb h1:nXRaYG2FoHGWxc6wTq6e6zlo7UNQRtQggpvjjzffj7c=
 github.com/blevesearch/bleve_index_api v1.1.13-0.20250408143424-7650bf7414fb/go.mod h1:PbcwjIcRmjhGbkS/lJCpfgVSMROV6TRubGGAODaK1W8=
 github.com/blevesearch/geo v0.1.20 h1:paaSpu2Ewh/tn5DKn/FB5SzvH0EWupxHEIwbCk/QPqM=
@@ -94,8 +94,8 @@ github.com/blevesearch/zapx/v14 v14.3.10 h1:SG6xlsL+W6YjhX5N3aEiL/2tcWh3DO75Bnz7
 github.com/blevesearch/zapx/v14 v14.3.10/go.mod h1:qqyuR0u230jN1yMmE4FIAuCxmahRQEOehF78m6oTgns=
 github.com/blevesearch/zapx/v15 v15.3.16 h1:Ct3rv7FUJPfPk99TI/OofdC+Kpb4IdyfdMH48sb+FmE=
 github.com/blevesearch/zapx/v15 v15.3.16/go.mod h1:Turk/TNRKj9es7ZpKK95PS7f6D44Y7fAFy8F4LXQtGg=
-github.com/blevesearch/zapx/v16 v16.1.9-0.20251215174229-a406f70c703b h1:54hcYhp/zf5YFMYll7t4WsL5wHcyC3O6+V3aN1Aydc8=
-github.com/blevesearch/zapx/v16 v16.1.9-0.20251215174229-a406f70c703b/go.mod h1:F3s3AHNfAVUgl/7/aLAruyr650BGS3BliPRn/bDn+F4=
+github.com/blevesearch/zapx/v16 v16.1.9-0.20260325143815-36fc676c3ece h1:RSCqXo4knaWNTZZaBXdTqz+6/7srDZ768SRJJaF6k0Y=
+github.com/blevesearch/zapx/v16 v16.1.9-0.20260325143815-36fc676c3ece/go.mod h1:F3s3AHNfAVUgl/7/aLAruyr650BGS3BliPRn/bDn+F4=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
 github.com/buger/jsonparser v1.1.1/go.mod h1:6RYKKt7H4d4+iWqouImQ9R2FZql3VbhNgx27UK13J/0=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
