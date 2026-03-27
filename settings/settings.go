@@ -165,11 +165,13 @@ func UpdateSettings(enterprise bool, requestId string, settings interface{}) (er
 		return errors.NewSettingsInvalidType("settings", "", settings), nil
 	}
 
+	hasPlanStability := false
 	var invalid []string
 	for k, v := range settingsMap {
 		switch k {
 		case PLAN_STABILITY:
-			// valid setting, no-op
+			// valid setting
+			hasPlanStability = true
 		default:
 			invalid = append(invalid, fmt.Sprintf("'%s':'%v'", k, v))
 		}
@@ -178,6 +180,11 @@ func UpdateSettings(enterprise bool, requestId string, settings interface{}) (er
 		errMsg := fmt.Sprintf("{ %s }", strings.Join(invalid, ","))
 		logging.Errorf("SETTINGS: Invalid settings specified in UPDATE statement: %v", errMsg)
 		return errors.NewSettingsError(nil, fmt.Sprintf("Invalid settings specified: %v", errMsg)), nil
+	}
+
+	// if the new document does not contain plan stability settings (e.g. UNSET used), use default
+	if !hasPlanStability {
+		settingsMap[PLAN_STABILITY] = defaultPlanStabilitySettings()
 	}
 
 	for k, v := range settingsMap {
