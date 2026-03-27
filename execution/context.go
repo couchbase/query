@@ -1374,23 +1374,24 @@ Inline UDFs.
 Verify Metadata check (if any addition/drop index, scope/collections may trigger auto regenrate plan before first execution.
 Also decides paln is part of transaction and delta tabe involved.
 */
-func (this *opContext) VerifySubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock bool) (bool, bool) {
+func (this *opContext) VerifySubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock bool) (errors.Error, bool) {
 	var prepared *plan.Prepared
 	prep := subqPlans.GetPrepared(lock)
 	if prep != nil {
 		prepared, _ = prep.(*plan.Prepared)
 		if prepared != nil && !prepared.MetadataCheck() {
-			return false, false
+			return errors.NewPlanVerificationError("Subquery meta data check failed", nil), false
 		}
 	}
 
-	verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
-		var good, local bool
+	verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (errors.Error, bool) {
+		var local bool
+		var err errors.Error
 		if qp, ok := splan.(*plan.QueryPlan); ok {
-			good = qp.Verify(prepared) == nil
+			err = qp.Verify(prepared)
 		}
 
-		if good && isk != nil {
+		if err == nil && isk != nil {
 			for ks, _ := range isk.(map[string]bool) {
 				if _, ok := this.deltaKeyspaces[ks]; ok {
 					local = true
@@ -1398,7 +1399,7 @@ func (this *opContext) VerifySubqueryPlans(expr expression.Expression, subqPlans
 				}
 			}
 		}
-		return good, local
+		return err, local
 	}
 
 	return subqPlans.ForEach(expr, uint32(0), lock, verifyF)

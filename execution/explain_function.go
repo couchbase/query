@@ -78,11 +78,11 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 			// Inline function subquery plans already part the Context use them
 			subqPlans := context.GetSubqueryPlans(false)
 			if subqPlans != nil {
-				verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
+				verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (errors.Error, bool) {
 					if qp, ok := splan.(*plan.QueryPlan); ok {
 						this.plans = append(this.plans, planEntry{statement: key.String(), qPlan: qp, optimHints: key.OptimHints()})
 					}
-					return true, false
+					return nil, false
 				}
 				subqPlans.ForEach(nil, uint32(0), true, verifyF)
 			}

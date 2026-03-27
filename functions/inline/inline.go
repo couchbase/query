@@ -248,7 +248,8 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 		return nil, nil, errors.NewInternalFunctionError(goerrors.New("Inlineudf Context"), udfName)
 	}
 
-	var good, trans bool
+	var trans bool
+	var err1 errors.Error
 	var err error
 	var expr expression.Expression
 
@@ -257,9 +258,9 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 	if subqueryPlans != nil {
 		expr = subqueryPlans.GetExpression(true)
 		// If already present verify it
-		good, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)
+		err1, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)
 	}
-	if subqueryPlans == nil || !good {
+	if subqueryPlans == nil || err1 != nil {
 		// If no plans or not valid
 		this.mutex.Lock()
 		if this.subqueryPlans == nil || subqueryPlans == this.subqueryPlans {

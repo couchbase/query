@@ -590,18 +590,14 @@ func (this *Prepared) Verify() errors.Error {
 		subqueryPlans := this.GetSubqueryPlans(false)
 		if subqueryPlans != nil {
 			// Verify subquery plans
-			verifyF := func(key *algebra.Select, options uint32, plan, isk interface{}) (bool, bool) {
-				var local bool
+			verifyF := func(key *algebra.Select, options uint32, plan, isk interface{}) (errors.Error, bool) {
 				var subqerr errors.Error
 				if qp, ok := plan.(*QueryPlan); ok {
 					subqerr = qp.PlanOp().verify(this)
 				}
-				if err == nil {
-					err = subqerr
-				}
-				return subqerr == nil, local
+				return subqerr, false
 			}
-			subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
+			err, _ = subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
 		}
 	}
 	if err != nil && !this.fatalError {
@@ -645,11 +641,11 @@ func (this *Prepared) KeyspaceReferences() {
 	this.Operator.keyspaceReferences(this)
 	subqueryPlans := this.GetSubqueryPlans(false)
 	if subqueryPlans != nil {
-		keyspaceRefsF := func(key *algebra.Select, options uint32, plan, isk interface{}) (bool, bool) {
+		keyspaceRefsF := func(key *algebra.Select, options uint32, plan, isk interface{}) (errors.Error, bool) {
 			if qp, ok := plan.(*QueryPlan); ok {
 				qp.PlanOp().keyspaceReferences(this)
 			}
-			return true, true
+			return nil, true
 		}
 		subqueryPlans.ForEach(nil, uint32(0), true, keyspaceRefsF)
 	}
@@ -831,7 +827,7 @@ func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
 		rv := make(map[string]interface{}, 0)
 
 		// Iterate through the subquery plans and create the entry
-		verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (bool, bool) {
+		verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (errors.Error, bool) {
 			var sqOperator Operator
 
 			if qp, ok := splan.(*QueryPlan); ok {
@@ -859,7 +855,7 @@ func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
 			rv[entryKey] = entry
 			index++
 
-			return true, false
+			return nil, false
 		}
 
 		subqueryPlans.ForEach(nil, uint32(0), true, verifyF)

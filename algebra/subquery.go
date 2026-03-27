@@ -11,6 +11,7 @@ package algebra
 import (
 	"sync"
 
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
 )
@@ -340,24 +341,23 @@ func (this *SubqueryPlans) Copy(dest *SubqueryPlans, lock bool) {
 // Validation of each subquery plans.
 
 func (this *SubqueryPlans) ForEach(expr expression.Expression, options uint32, lock bool,
-	verify func(key *Select, options uint32, plan, isk interface{}) (bool, bool)) (bool, bool) {
+	verify func(key *Select, options uint32, plan, isk interface{}) (errors.Error, bool)) (errors.Error, bool) {
 
-	var good, trans bool
+	var trans bool
 	if lock {
 		this.mutex.RLock()
 		defer this.mutex.RUnlock()
 	}
 	if expr == this.expr {
-		good = true
 		for key := range this.plans {
-			good1, trans1 := verify(key, options, this.plans[key], this.isks[key])
-			if !good1 {
-				return good1, false
+			err1, trans1 := verify(key, options, this.plans[key], this.isks[key])
+			if err1 != nil {
+				return err1, false
 			}
 			trans = trans || trans1
 		}
 	}
-	return good, trans
+	return nil, trans
 }
 
 func (this *SubqueryPlans) MarshalPlans(lock bool, prepName string,
