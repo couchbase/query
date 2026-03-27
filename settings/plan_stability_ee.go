@@ -21,6 +21,57 @@ func PlanStabilityAvailable() bool {
 	return true
 }
 
+// when settings come from metakv, validate the settings (including proper type conversion)
+func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, errors.Error) {
+	planStability, ok := val.(map[string]interface{})
+	if !ok {
+		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
+	}
+	for kk, vv := range planStability {
+		if actual, ok := vv.(value.Value); ok {
+			vv = actual.Actual()
+		}
+
+		// When JSON is unmarshalled into an interface, numbers are unmarshalled into float.
+		if f, ok := vv.(float64); ok && value.IsInt(f) {
+			vv = int64(f)
+		}
+
+		switch kk {
+		case "mode":
+			switch vv := vv.(type) {
+			case int64:
+				// when setting comes from metakv
+				mode := PlanStabilityMode(vv)
+				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC_READ_ONLY {
+					planStability[kk] = mode
+				} else {
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
+				}
+			default:
+				return nil, errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
+			}
+		case "error_policy":
+			switch vv := vv.(type) {
+			case int64:
+				// when setting comes from metakv
+				error_policy := PlanStabilityErrorPolicy(vv)
+				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
+					planStability[kk] = error_policy
+				} else {
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
+				}
+			default:
+				return nil, errors.NewSettingsInvalidType(PLAN_STABILITY+".error_policy", "string", vv)
+			}
+		default:
+			return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+"."+kk, "", nil)
+		}
+	}
+
+	return planStability, nil
+}
+
 func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error {
 	psMap, ok := val.(map[string]interface{})
 	if !ok {
@@ -33,7 +84,7 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 	}
 	var oldMode PlanStabilityMode
 	if oldModeVal, ok := planStability["mode"]; ok {
-		oldMode = PlanStabilityMode(getIntValue(oldModeVal, int(PS_MODE_OFF)))
+		oldMode = oldModeVal.(PlanStabilityMode)
 	}
 
 	for kk, vv := range psMap {
@@ -67,6 +118,14 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 				} else {
 					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
 				}
+			case PlanStabilityMode:
+				mode := vv
+				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC_READ_ONLY {
+					planStability[kk] = mode
+					newMode = mode
+				} else {
+					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
+				}
 			default:
 				return errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
 			}
@@ -91,6 +150,13 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 				} else {
 					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
 				}
+			case PlanStabilityErrorPolicy:
+				error_policy := vv
+				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
+					planStability[kk] = error_policy
+				} else {
+					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
+				}
 			default:
 				return errors.NewSettingsInvalidType(PLAN_STABILITY+".error_policy", "string", vv)
 			}
@@ -105,6 +171,7 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 }
 
 // Given plan stability settings in integer form, remap to string form for easier understanding
+// (this function changes the input map and thus caller should use a copy when necessary)
 func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, errors.Error) {
 	planStability, ok := psSetting.(map[string]interface{})
 	if !ok {
@@ -134,6 +201,13 @@ func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, e
 				} else {
 					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
 				}
+			case PlanStabilityMode:
+				mode := vv
+				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC_READ_ONLY {
+					planStability[kk] = mode.String()
+				} else {
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
+				}
 			default:
 				return nil, errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
 			}
@@ -145,6 +219,13 @@ func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, e
 			case int64:
 				// when setting comes from metakv
 				error_policy := PlanStabilityErrorPolicy(vv)
+				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
+					planStability[kk] = error_policy.String()
+				} else {
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
+				}
+			case PlanStabilityErrorPolicy:
+				error_policy := vv
 				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
 					planStability[kk] = error_policy.String()
 				} else {

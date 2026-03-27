@@ -30,10 +30,6 @@ const (
 	PLAN_STABILITY = "plan_stability"
 )
 
-var _accepted_settings map[string]bool = map[string]bool{
-	PLAN_STABILITY: true,
-}
-
 func InitSettings() {
 	globalSettings = new(querySettings)
 	globalSettings.settings = make(map[string]interface{}, 4)
@@ -99,9 +95,15 @@ func processSettings(val []byte, thisNode string) {
 		}
 	}
 	for k, v := range vmap {
-		if _, ok := _accepted_settings[k]; ok {
-			globalSettings.settings[k] = v
-		} else {
+		switch k {
+		case PLAN_STABILITY:
+			planStability, err := validatePlanStabilitySetting(v)
+			if err != nil {
+				logging.Errorf("SETTINGS: Error processing plan stability settings: %v", err)
+			} else {
+				globalSettings.settings[k] = planStability
+			}
+		default:
 			invalid[k] = v
 		}
 	}
@@ -165,7 +167,10 @@ func UpdateSettings(enterprise bool, requestId string, settings interface{}) (er
 
 	var invalid []string
 	for k, v := range settingsMap {
-		if _, ok := _accepted_settings[k]; !ok {
+		switch k {
+		case PLAN_STABILITY:
+			// valid setting, no-op
+		default:
 			invalid = append(invalid, fmt.Sprintf("'%s':'%v'", k, v))
 		}
 	}
@@ -281,23 +286,4 @@ func SetSetting(name string, value interface{}) {
 
 func GetSetting(name string) interface{} {
 	return globalSettings.getSetting(name)
-}
-
-func getIntValue(val interface{}, defVal int) (intVal int) {
-	intVal = defVal
-	switch val := val.(type) {
-	case int:
-		intVal = val
-	case int64:
-		intVal = int(val)
-	case float64:
-		if value.IsInt(val) {
-			intVal = int(val)
-		}
-	case PlanStabilityMode:
-		intVal = int(val)
-	case PlanStabilityErrorPolicy:
-		intVal = int(val)
-	}
-	return intVal
 }

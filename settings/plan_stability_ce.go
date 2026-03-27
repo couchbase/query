@@ -18,6 +18,10 @@ func PlanStabilityAvailable() bool {
 	return false
 }
 
+func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, errors.Error) {
+	return nil, errors.NewSettingsEnterpriseOnly("Plan Stability")
+}
+
 func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error {
 	return errors.NewSettingsEnterpriseOnly("Plan Stability")
 }

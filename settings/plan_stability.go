@@ -136,7 +136,7 @@ func GetPlanStabilityMode() PlanStabilityMode {
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
 		if ps_mode_val, ok := ps_setting["mode"]; ok {
-			mode = PlanStabilityMode(getIntValue(ps_mode_val, int(mode)))
+			mode = ps_mode_val.(PlanStabilityMode)
 		}
 	}
 	globalSettings.RUnlock()
@@ -174,7 +174,7 @@ func GetPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
 		if ps_error_policy_val, ok := ps_setting["error_policy"]; ok {
-			error_policy = PlanStabilityErrorPolicy(getIntValue(ps_error_policy_val, int(error_policy)))
+			error_policy = ps_error_policy_val.(PlanStabilityErrorPolicy)
 		}
 	}
 	globalSettings.RUnlock()
