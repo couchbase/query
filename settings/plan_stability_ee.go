@@ -77,6 +77,15 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 	if !ok {
 		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
 	}
+
+	// use default value if not present in the new settings (e.g. UNSET used)
+	if _, ok := psMap["mode"]; !ok {
+		psMap["mode"] = PS_MODE_OFF
+	}
+	if _, ok := psMap["error_policy"]; !ok {
+		psMap["error_policy"] = PS_ERROR_MODERATE
+	}
+
 	// GetPlanStabilitySetting() returns a copy of the settings
 	planStability, err := GetPlanStabilitySetting()
 	if err != nil {
