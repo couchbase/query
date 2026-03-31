@@ -484,12 +484,12 @@ func (this *builder) visitGroup(group *algebra.Group, aggs algebra.Aggregates) {
 		}
 
 		this.addSubChildren(plan.NewInitialGroup(group.By(), aggv,
-			costInitial, cardinalityInitial, size, costInitial, true, group.GroupAs(), allowedGroupAsFields))
+			costInitial, cardinalityInitial, size, costInitial, group.GroupAs(), allowedGroupAsFields))
 		this.addChildren(this.addSubchildrenParallel())
 		this.addChildren(plan.NewIntermediateGroup(group.By(), aggv,
-			costIntermediate, cardinalityIntermediate, size, costIntermediate, true, group.GroupAs()))
+			costIntermediate, cardinalityIntermediate, size, costIntermediate, group.GroupAs()))
 		this.addChildren(plan.NewFinalGroup(group.By(), aggv,
-			costFinal, cardinalityFinal, size, costFinal, true))
+			costFinal, cardinalityFinal, size, costFinal))
 	}
 
 	this.addLetAndPredicate(group.Letting(), group.Having())
