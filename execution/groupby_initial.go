@@ -22,8 +22,9 @@ import (
 // Grouping of input data.
 type InitialGroup struct {
 	base
-	plan   *plan.InitialGroup
-	groups map[string]value.AnnotatedValue
+	plan     *plan.InitialGroup
+	aggNames []string
+	groups   map[string]value.AnnotatedValue
 }
 
 func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
@@ -56,6 +57,13 @@ func (this *InitialGroup) PlanOp() plan.Operator {
 
 func (this *InitialGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, this.Release)
+}
+
+func (this *InitialGroup) beforeItems(context *Context, parent value.Value) bool {
+	if len(this.plan.Aggregates()) > 0 {
+		this.aggNames = make([]string, len(this.plan.Aggregates()))
+	}
+	return true
 }
 
 func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -99,9 +107,20 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		return false
 	}
 
-	for _, agg := range this.plan.Aggregates() {
-		// WARNING: do not cache agg.String() - it may change during CumulateInitial
-		a := agg.String()
+	for i, agg := range this.plan.Aggregates() {
+		var a string
+		if i < len(this.aggNames) {
+			a = this.aggNames[i]
+		}
+		if a == "" {
+			a = agg.String()
+			// do not cache aggregate string if aggregate has subquery references, since
+			// the string may change (e.g. COVER transformation), and we don't know when
+			// the subquery may be executed for the first time (e.g. under a CASE)
+			if !agg.HasFlags(algebra.AGGREGATE_HAS_SUBQ) && i < len(this.aggNames) {
+				this.aggNames[i] = a
+			}
+		}
 		pv := aggregates[a]
 		if pv == nil {
 			// Log an error and explicitly panic
@@ -133,12 +152,16 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 				pv.Recycle()
 			}
 		}
-		b := agg.String()
-		aggregates[b] = v
-		// delete the previous key if agg.String() has changed
-		if a != b {
-			delete(aggregates, a)
+		b := a
+		if agg.HasFlags(algebra.AGGREGATE_HAS_SUBQ) {
+			// do not use cached agg string if agg has subquery references
+			b = agg.String()
+			// delete the previous key if agg.String() has changed
+			if a != b {
+				delete(aggregates, a)
+			}
 		}
+		aggregates[b] = v
 	}
 
 	// Update the Group Key's entry in the Map with the Group As field in the item
@@ -213,6 +236,9 @@ func (this *InitialGroup) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
 	if rv {
 		this.groups = make(map[string]value.AnnotatedValue)
+		for i := range this.aggNames {
+			this.aggNames[i] = ""
+		}
 	}
 	return rv
 }
@@ -223,5 +249,11 @@ func (this *InitialGroup) Release() {
 			delete(this.groups, k)
 		}
 		this.groups = nil
+	}
+	if this.aggNames != nil {
+		for i := range this.aggNames {
+			this.aggNames[i] = ""
+		}
+		this.aggNames = nil
 	}
 }

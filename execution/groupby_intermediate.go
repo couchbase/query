@@ -22,8 +22,9 @@ import (
 // Grouping of groups. Recursable.
 type IntermediateGroup struct {
 	base
-	plan   *plan.IntermediateGroup
-	groups map[string]value.AnnotatedValue
+	plan     *plan.IntermediateGroup
+	aggNames []string
+	groups   map[string]value.AnnotatedValue
 }
 
 func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *IntermediateGroup {
@@ -56,6 +57,13 @@ func (this *IntermediateGroup) PlanOp() plan.Operator {
 
 func (this *IntermediateGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, this.Release)
+}
+
+func (this *IntermediateGroup) beforeItems(context *Context, parent value.Value) bool {
+	if len(this.plan.Aggregates()) > 0 {
+		this.aggNames = make([]string, len(this.plan.Aggregates()))
+	}
+	return true
 }
 
 func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *Context) bool {
@@ -99,9 +107,18 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 		return false
 	}
 
-	for _, agg := range this.plan.Aggregates() {
+	for i, agg := range this.plan.Aggregates() {
 		// we can cache agg.String() and reuse it here as the aggregate expression isn't re-evaluated during this processing
-		a := agg.String()
+		var a string
+		if i < len(this.aggNames) {
+			a = this.aggNames[i]
+		}
+		if a == "" {
+			a = agg.String()
+			if i < len(this.aggNames) {
+				this.aggNames[i] = a
+			}
+		}
 		pv := cumulative[a]
 		if pv == nil {
 			// Log an error and explicitly panic
@@ -164,6 +181,9 @@ func (this *IntermediateGroup) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
 	if rv {
 		this.groups = make(map[string]value.AnnotatedValue)
+		for i := range this.aggNames {
+			this.aggNames[i] = ""
+		}
 	}
 	return rv
 }
@@ -174,5 +194,11 @@ func (this *IntermediateGroup) Release() {
 			delete(this.groups, k)
 		}
 		this.groups = nil
+	}
+	if this.aggNames != nil {
+		for i := range this.aggNames {
+			this.aggNames[i] = ""
+		}
+		this.aggNames = nil
 	}
 }

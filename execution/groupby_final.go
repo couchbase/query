@@ -21,8 +21,9 @@ import (
 
 type FinalGroup struct {
 	base
-	plan   *plan.FinalGroup
-	groups map[string]value.AnnotatedValue
+	plan     *plan.FinalGroup
+	aggNames []string
+	groups   map[string]value.AnnotatedValue
 }
 
 func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
@@ -57,6 +58,13 @@ func (this *FinalGroup) RunOnce(context *Context, parent value.Value) {
 	this.runConsumer(this, context, parent, this.Release)
 }
 
+func (this *FinalGroup) beforeItems(context *Context, parent value.Value) bool {
+	if len(this.plan.Aggregates()) > 0 {
+		this.aggNames = make([]string, len(this.plan.Aggregates()))
+	}
+	return true
+}
+
 func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context) bool {
 	// Generate the group key
 	var gk string
@@ -85,9 +93,18 @@ func (this *FinalGroup) processItem(item value.AnnotatedValue, context *Context)
 	aggregates := gv.GetAttachment(value.ATT_AGGREGATES)
 	switch aggregates := aggregates.(type) {
 	case map[string]value.Value:
-		for _, agg := range this.plan.Aggregates() {
+		for i, agg := range this.plan.Aggregates() {
 			// we can cache agg.String() and reuse it here as the aggregate expression isn't re-evaluated during this processing
-			a := agg.String()
+			var a string
+			if i < len(this.aggNames) {
+				a = this.aggNames[i]
+			}
+			if a == "" {
+				a = agg.String()
+				if i < len(this.aggNames) {
+					this.aggNames[i] = a
+				}
+			}
 			pv := aggregates[a]
 			if pv == nil {
 				// Log an error and explicitly panic
@@ -156,6 +173,9 @@ func (this *FinalGroup) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
 	if rv {
 		this.groups = make(map[string]value.AnnotatedValue)
+		for i := range this.aggNames {
+			this.aggNames[i] = ""
+		}
 	}
 	return rv
 }
@@ -166,5 +186,11 @@ func (this *FinalGroup) Release() {
 			delete(this.groups, k)
 		}
 		this.groups = nil
+	}
+	if this.aggNames != nil {
+		for i := range this.aggNames {
+			this.aggNames[i] = ""
+		}
+		this.aggNames = nil
 	}
 }
