@@ -74,8 +74,7 @@ func init() {
 
 func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
-	serverless bool, useReplica bool, skipKey func(string) bool) (interface{}, qerrors.Error) {
-
+	serverless bool, useReplica bool, skipKey func(string) bool, encryptionKey *encryption.EaRKey) (interface{}, qerrors.Error) {
 	if log == nil {
 		log = logging.NULL_LOG
 	}
@@ -88,7 +87,8 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 		}
 	}
 
-	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica, skipKey)
+	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica, skipKey,
+		encryptionKey)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -97,7 +97,8 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 }
 
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
-	sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, useReplica bool, xattrs bool, withDocs bool) (
+	sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, useReplica bool, xattrs bool, withDocs bool,
+	encryptionKey *encryption.EaRKey) (
 	interface{}, qerrors.Error) {
 
 	if log == nil {
@@ -112,7 +113,7 @@ func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint3
 		}
 	}
 
-	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, serverless, useReplica, xattrs, withDocs)
+	scan := NewRandomScan(requestId, log, collId, sampleSize, pipelineSize, serverless, useReplica, xattrs, withDocs, encryptionKey)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
@@ -360,25 +361,26 @@ type seqScan struct {
 	inactive      bool
 	timedout      bool
 	withDocs      bool
-	encryptionKey []byte
+	encryptionKey *encryption.EaRKey
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool) *seqScan {
+	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool, encryptionKey *encryption.EaRKey) *seqScan {
 
 	scan := &seqScan{
-		scanNum:      atomic.AddUint64(&scanNum, 1),
-		requestId:    requestId,
-		log:          log,
-		collId:       collId,
-		ranges:       ranges,
-		ordered:      ordered,
-		limit:        limit,
-		offset:       offset,
-		pipelineSize: pipelineSize,
-		serverless:   serverless,
-		useReplica:   useReplica,
-		skipKey:      skipKey,
+		scanNum:       atomic.AddUint64(&scanNum, 1),
+		requestId:     requestId,
+		log:           log,
+		collId:        collId,
+		ranges:        ranges,
+		ordered:       ordered,
+		limit:         limit,
+		offset:        offset,
+		pipelineSize:  pipelineSize,
+		serverless:    serverless,
+		useReplica:    useReplica,
+		skipKey:       skipKey,
+		encryptionKey: encryptionKey,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -394,22 +396,23 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 }
 
 func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize int, pipelineSize int, serverless bool,
-	useReplica bool, xattrs bool, withDocs bool) *seqScan {
+	useReplica bool, xattrs bool, withDocs bool, encryptionKey *encryption.EaRKey) *seqScan {
 
 	if sampleSize <= _SS_MIN_SAMPLE_SIZE {
 		sampleSize = _SS_MIN_SAMPLE_SIZE
 	}
 	scan := &seqScan{
-		scanNum:      atomic.AddUint64(&scanNum, 1),
-		requestId:    requestId,
-		log:          log,
-		collId:       collId,
-		sampleSize:   sampleSize,
-		pipelineSize: pipelineSize,
-		serverless:   serverless,
-		useReplica:   useReplica,
-		xattrs:       xattrs,
-		withDocs:     withDocs,
+		scanNum:       atomic.AddUint64(&scanNum, 1),
+		requestId:     requestId,
+		log:           log,
+		collId:        collId,
+		sampleSize:    sampleSize,
+		pipelineSize:  pipelineSize,
+		serverless:    serverless,
+		useReplica:    useReplica,
+		xattrs:        xattrs,
+		withDocs:      withDocs,
+		encryptionKey: encryptionKey,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -1291,7 +1294,7 @@ func (this *vbRangeScan) seek(n int) bool {
 					return false
 				}
 
-				this.encReader, err = encryption.NewCBEFCursor(this.spill, func(keyId string) []byte {
+				this.encReader, err = encryption.NewCBEFCursor(this.spill, func(keyId string) *encryption.EaRKey {
 					return this.scan.encryptionKey
 				})
 				if err != nil {
@@ -1424,8 +1427,8 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 
 		if this.scan.encryptionKey != nil {
 			if this.encWriter == nil {
-				this.encWriter, err = encryption.NewCBEFWriterSize(this.spill, "seq-scan-key", this.scan.encryptionKey,
-					encryption.CBEF_NONE, _MAX_DOC_ID_LENGTH)
+				this.encWriter, err = encryption.NewCBEFWriterSize(this.spill, this.scan.encryptionKey, encryption.CBEF_NONE,
+					_MAX_DOC_ID_LENGTH)
 				if err != nil {
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 					return false
@@ -1563,8 +1566,8 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 
 		if this.scan.encryptionKey != nil {
 			if this.encWriter == nil {
-				this.encWriter, err = encryption.NewCBEFWriterSize(this.spill, "seq-scan-key", this.scan.encryptionKey,
-					encryption.CBEF_NONE, _SS_SPILL_DOC_WRITER_BUFFER_SIZE)
+				this.encWriter, err = encryption.NewCBEFWriterSize(this.spill, this.scan.encryptionKey, encryption.CBEF_NONE,
+					_SS_SPILL_DOC_WRITER_BUFFER_SIZE)
 				if err != nil {
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 					return false

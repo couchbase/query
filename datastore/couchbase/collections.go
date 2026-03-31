@@ -21,6 +21,7 @@ import (
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/aus"
+	"github.com/couchbase/query/encryption"
 	cb "github.com/couchbase/query/primitives/couchbase"
 
 	"github.com/couchbase/query/datastore"
@@ -468,8 +469,13 @@ func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*d
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
+	encryptionKey, err := context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE,
+		BucketUUID: coll.bucket.Uid()})
+	if err != nil {
+		return nil, err
+	}
 	return coll.bucket.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
-		pipelineSize, serverless, context.UseReplica(), skipKey)
+		pipelineSize, serverless, context.UseReplica(), skipKey, encryptionKey)
 }
 
 func (coll *collection) StopScan(scan interface{}) (uint64, errors.Error) {
@@ -486,9 +492,14 @@ func (coll *collection) FetchDocs(scan interface{}, timeout time.Duration) ([]va
 
 func (coll *collection) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
 	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (interface{}, errors.Error) {
+	encryptionKey, err := context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE,
+		BucketUUID: coll.bucket.Uid()})
+	if err != nil {
+		return nil, err
+	}
 
 	return coll.bucket.cbbucket.StartRandomScan(context.RequestId(), context, coll.uid, "", "", sampleSize, timeout, pipelineSize,
-		serverless, context.UseReplica(), xattrs, withDocs)
+		serverless, context.UseReplica(), xattrs, withDocs, encryptionKey)
 }
 
 func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {

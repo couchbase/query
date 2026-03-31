@@ -39,7 +39,7 @@ type CBEFReader struct {
 }
 
 // getEncryptionKey: Function that returns the encryption key material for a given key ID
-func NewCBEFReader(r io.Reader, getEncryptionKey func(keyId string) []byte) (*CBEFReader, errors.Error) {
+func NewCBEFReader(r io.Reader, getEncryptionKey func(keyId string) *EaRKey) (*CBEFReader, errors.Error) {
 	if r == nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, fmt.Errorf("input reader is nil"))
 	}
@@ -65,7 +65,7 @@ func NewCBEFReader(r io.Reader, getEncryptionKey func(keyId string) []byte) (*CB
 	}
 
 	// Derive the key
-	derivedKey, err := cbefDeriveKey(key, salt, len(key))
+	derivedKey, err := cbefDeriveKey(key.Key, salt, len(key.Key))
 	if err != nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, err)
 	}
@@ -371,8 +371,8 @@ type CBEFCursor struct {
 	*CBEFReader
 }
 
-func NewCBEFCursor(r io.ReadSeeker, getKey func(keyId string) []byte) (*CBEFCursor, error) {
-	cbefReader, err := NewCBEFReader(r, getKey)
+func NewCBEFCursor(r io.ReadSeeker, getEncryptionKey func(keyId string) *EaRKey) (*CBEFCursor, error) {
+	cbefReader, err := NewCBEFReader(r, getEncryptionKey)
 	if err != nil {
 		return nil, err
 	}

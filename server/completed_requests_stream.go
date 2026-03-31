@@ -158,7 +158,7 @@ func (this *requestStreamFile) create() error {
 
 	this.encrypt = requestLog.stream.encrypt
 	if this.encrypt {
-		this.ew, err = encryption.NewCBEFWriterSize(this.f, "completed_reqests_stream", requestLog.stream.key,
+		this.ew, err = encryption.NewCBEFWriterSize(this.f, requestLog.stream.key,
 			encryption.CBEF_GZIP, _STREAM_BUF_SIZE)
 		if err != nil {
 			return err
@@ -277,7 +277,7 @@ type requestLogStream struct {
 	fileNum      uint64 // last known/generated file number
 
 	encrypt bool
-	key     []byte
+	key     *encryption.EaRKey
 }
 
 func (this *requestLogStream) String() string {
@@ -868,7 +868,7 @@ func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
 		// Setup reader to read the stream file
 		var r io.Reader
 		if encrypted {
-			er, err := encryption.NewCBEFReader(streamFile, func(keyId string) []byte {
+			er, err := encryption.NewCBEFReader(streamFile, func(keyId string) *encryption.EaRKey {
 				return requestLog.stream.key
 			})
 			if err != nil {

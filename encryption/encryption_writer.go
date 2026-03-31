@@ -198,20 +198,24 @@ type CBEFWriter struct {
 }
 
 // Creates a new CBEFWriter with a default buffer size
-func NewCBEFWriter(w io.Writer, keyID string, key []byte, compression CompressionType) (*CBEFWriter, errors.Error) {
-	return NewCBEFWriterSize(w, keyID, key, compression, _CBEF_DEFAULT_PLAINTEXT_LIMIT)
+func NewCBEFWriter(w io.Writer, key *EaRKey, compression CompressionType) (*CBEFWriter, errors.Error) {
+	return NewCBEFWriterSize(w, key, compression, _CBEF_DEFAULT_PLAINTEXT_LIMIT)
 }
 
 // Creates a new CBEFWriter with the specified buffer size (bytes)
-func NewCBEFWriterSize(w io.Writer, keyID string, key []byte, compression CompressionType, bufferSize int) (
+func NewCBEFWriterSize(w io.Writer, key *EaRKey, compression CompressionType, bufferSize int) (
 	*CBEFWriter, errors.Error) {
 
 	if w == nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Input writer is nil"))
 	}
 
-	if len(keyID) == 0 || len(keyID) > (_CBEF_RANDOM_SALT_OFFSET-_CBEF_KEY_ID_OFFSET) {
-		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Invalid keyID length: %d", len(keyID)))
+	if key == nil {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Key is nil"))
+	}
+
+	if len(key.Id) == 0 || len(key.Id) > (_CBEF_RANDOM_SALT_OFFSET-_CBEF_KEY_ID_OFFSET) {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Invalid keyID length: %d", len(key.Id)))
 	}
 
 	if bufferSize <= 0 {
@@ -225,8 +229,8 @@ func NewCBEFWriterSize(w io.Writer, keyID string, key []byte, compression Compre
 	header[_CBEF_COMPRESSION_OFFSET] = byte(compression)
 	header[_CBEF_KEY_DERIVATION_OFFSET] = byte(_CBEF_KEY_DERIVATION)
 	// "unused" field in the header is already set to 0 as values in a byte array are 0 by default
-	header[_CBEF_KEY_ID_LENGTH_OFFSET] = byte(len(keyID))
-	copy(header[_CBEF_KEY_ID_OFFSET:_CBEF_RANDOM_SALT_OFFSET], keyID)
+	header[_CBEF_KEY_ID_LENGTH_OFFSET] = byte(len(key.Id))
+	copy(header[_CBEF_KEY_ID_OFFSET:_CBEF_RANDOM_SALT_OFFSET], key.Id)
 
 	// Generate a random salt
 	_, err := rand.Read(header[_CBEF_RANDOM_SALT_OFFSET:_CBEF_HEADER_LENGTH])
@@ -235,7 +239,7 @@ func NewCBEFWriterSize(w io.Writer, keyID string, key []byte, compression Compre
 	}
 
 	// Dervive a new key using KBKDF
-	derivedKey, err := cbefDeriveKey(key, header[_CBEF_RANDOM_SALT_OFFSET:_CBEF_HEADER_LENGTH], len(key))
+	derivedKey, err := cbefDeriveKey(key.Key, header[_CBEF_RANDOM_SALT_OFFSET:_CBEF_HEADER_LENGTH], len(key.Key))
 	if err != nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
 	}

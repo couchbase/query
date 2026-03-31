@@ -2720,7 +2720,7 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 	var reader io.ReadSeekCloser
 	if encryption.IsCBEFReader(file) {
 		file.Seek(0, io.SeekStart)
-		cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) []byte {
+		cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) *encryption.EaRKey {
 			// TODO - add key retrieval when key management is introduced
 			return nil
 		})
@@ -2763,7 +2763,7 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 		if info, e := file.Stat(); e == nil && info.Size() >= pos {
 			if encryption.IsCBEFReader(file) {
 				file.Seek(0, io.SeekStart)
-				cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) []byte {
+				cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) *encryption.EaRKey {
 					// TODO - add key retrieval when key management is introduced
 					return nil
 				})

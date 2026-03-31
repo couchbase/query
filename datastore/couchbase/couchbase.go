@@ -39,6 +39,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/datastore/virtual"
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
@@ -3356,12 +3357,18 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
+	encryptionKey, err := context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE,
+		BucketUUID: ks.Uid()})
+	if err != nil {
+		return nil, err
+	}
+
 	if cid, ok := ks.getDefaultCid(); ok {
 		return ks.cbbucket.StartKeyScan(context.RequestId(), context, cid, "", "", r, offset, limit, ordered, timeout,
-			pipelineSize, serverless, context.UseReplica(), skipKey)
+			pipelineSize, serverless, context.UseReplica(), skipKey, encryptionKey)
 	}
 	return ks.cbbucket.StartKeyScan(context.RequestId(), context, 0, "_default", "_default", r, offset, limit, ordered, timeout,
-		pipelineSize, serverless, context.UseReplica(), skipKey)
+		pipelineSize, serverless, context.UseReplica(), skipKey, encryptionKey)
 }
 
 func (ks *keyspace) StopScan(scan interface{}) (uint64, errors.Error) {
@@ -3378,13 +3385,17 @@ func (ks *keyspace) FetchDocs(scan interface{}, timeout time.Duration) ([]value.
 
 func (ks *keyspace) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
 	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (interface{}, errors.Error) {
-
+	encryptionKey, err := context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE,
+		BucketUUID: ks.Uid()})
+	if err != nil {
+		return nil, err
+	}
 	if cid, ok := ks.getDefaultCid(); ok {
 		return ks.cbbucket.StartRandomScan(context.RequestId(), context, cid, "", "", sampleSize, timeout, pipelineSize,
-			serverless, context.UseReplica(), xattrs, withDocs)
+			serverless, context.UseReplica(), xattrs, withDocs, encryptionKey)
 	}
 	return ks.cbbucket.StartRandomScan(context.RequestId(), context, 0, "_default", "_default", sampleSize, timeout, pipelineSize,
-		serverless, context.UseReplica(), xattrs, withDocs)
+		serverless, context.UseReplica(), xattrs, withDocs, encryptionKey)
 }
 
 func getCollectionId(clientContext ...*memcached.ClientContext) (collectionId uint32, user string) {
