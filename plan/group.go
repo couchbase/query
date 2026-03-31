@@ -28,15 +28,12 @@ type InitialGroup struct {
 }
 
 func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates,
-	cost, cardinality float64, size int64, frCost float64, canSpill bool, groupAs string, groupAsFields []string) *InitialGroup {
+	cost, cardinality float64, size int64, frCost float64, groupAs string, groupAsFields []string) *InitialGroup {
 	rv := &InitialGroup{
 		keys:          keys,
 		aggregates:    aggregates,
 		groupAs:       groupAs,
 		groupAsFields: groupAsFields,
-	}
-	if canSpill {
-		rv.flags |= _CAN_SPILL
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -64,10 +61,6 @@ func (this *InitialGroup) Aggregates() algebra.Aggregates {
 
 func (this *InitialGroup) SetAggregates(aggregates algebra.Aggregates) {
 	this.aggregates = aggregates
-}
-
-func (this *InitialGroup) CanSpill() bool {
-	return (this.flags & _CAN_SPILL) != 0
 }
 
 func (this *InitialGroup) GroupAs() string {
@@ -179,14 +172,11 @@ type IntermediateGroup struct {
 }
 
 func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggregates,
-	cost, cardinality float64, size int64, frCost float64, canSpill bool, groupAs string) *IntermediateGroup {
+	cost, cardinality float64, size int64, frCost float64, groupAs string) *IntermediateGroup {
 	rv := &IntermediateGroup{
 		keys:       keys,
 		aggregates: aggregates,
 		groupAs:    groupAs,
-	}
-	if canSpill {
-		rv.flags |= _CAN_SPILL
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -214,10 +204,6 @@ func (this *IntermediateGroup) Aggregates() algebra.Aggregates {
 
 func (this *IntermediateGroup) SetAggregates(aggregates algebra.Aggregates) {
 	this.aggregates = aggregates
-}
-
-func (this *IntermediateGroup) CanSpill() bool {
-	return (this.flags & _CAN_SPILL) != 0
 }
 
 func (this *IntermediateGroup) GroupAs() string {
@@ -319,13 +305,10 @@ type FinalGroup struct {
 }
 
 func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates,
-	cost, cardinality float64, size int64, frCost float64, canSpill bool) *FinalGroup {
+	cost, cardinality float64, size int64, frCost float64) *FinalGroup {
 	rv := &FinalGroup{
 		keys:       keys,
 		aggregates: aggregates,
-	}
-	if canSpill {
-		rv.flags |= _CAN_SPILL
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -353,10 +336,6 @@ func (this *FinalGroup) Aggregates() algebra.Aggregates {
 
 func (this *FinalGroup) SetAggregates(aggregates algebra.Aggregates) {
 	this.aggregates = aggregates
-}
-
-func (this *FinalGroup) CanSpill() bool {
-	return (this.flags & _CAN_SPILL) != 0
 }
 
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
