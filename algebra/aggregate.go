@@ -183,6 +183,13 @@ func (this *AggregateBase) SetAggregateModifiers(flags uint32, filter expression
 	if !this.Distinct() && AggregateHasProperty(name, AGGREGATE_ALLOWS_INCREMENTAL) {
 		this.AddFlags(AGGREGATE_INCREMENTAL)
 	}
+
+	// check whether the aggregate has references to subqueries
+	subqs, err := expression.ListSubqueries(this.Children(), false)
+	// in case or error, assume it has subqueries to be on the safe side
+	if err != nil || len(subqs) > 0 {
+		this.AddFlags(AGGREGATE_HAS_SUBQ)
+	}
 }
 
 /*
