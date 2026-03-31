@@ -1,0 +1,236 @@
+[
+    {
+	"testcase": "prepare a statement",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE p1 FROM SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND l.c11 != r.c21 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2",
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "default:shellTest._default._default"
+                ],
+                "name": "p1",
+                "signature": {
+                    "c11": "json",
+                    "c21": "json"
+                },
+                "text": "PREPARE p1 FROM SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND l.c11 != r.c21 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2"
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to PREPARED_ONLY",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"prepared only\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "Administrator": "password"
+        },
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "prepare another statement",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE p2 FROM SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND r.c21 IS MISSING",
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "default:shellTest._default._default"
+                ],
+                "name": "p2",
+                "signature": {
+                    "c11": "json",
+                    "c21": "json"
+                },
+                "text": "PREPARE p2 FROM SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2 AND r.c21 IS MISSING"
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "Administrator": "password"
+        },
+        "results": [
+            {
+                "cnt": 3
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to AD_HOC",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"ad-hoc\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Run a statement",
+        "statements":"SELECT d.c11 FROM shellTest d JOIN shellTest b ON d.c11 = b.c21 AND b.type = \"right\" JOIN shellTest c ON d.c11 = c.c21 AND c.type = \"right\" WHERE d.type = \"left\" AND d.c11 < 2",
+        "results": [
+            {
+                "c11": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to AD_HOC_READ_ONLY",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"ad_hoc_read_only\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE adHocStatement = true",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "Administrator": "password"
+        },
+        "results": [
+            {
+                "cnt": 5
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to AD_HOC",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"ad-hoc\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Run same statement again",
+        "statements":"SELECT d.c11 FROM shellTest d JOIN shellTest b ON d.c11 = b.c21 AND b.type = \"right\" JOIN shellTest c ON d.c11 = c.c21 AND c.type = \"right\" WHERE d.type = \"left\" AND d.c11 < 2",
+        "results": [
+            {
+                "c11": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to AD_HOC_READ_ONLY",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"ad_hoc_read_only\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE adHocStatement = true",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry and usage count",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE adHocStatement = true AND uses > 1",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "Administrator": "password"
+        },
+        "results": [
+            {
+                "cnt": 5
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry with ad_hoc",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE \"ppn::%\" AND ad_hoc = true",
+        "userArgs": {
+                "Administrator": "password"
+        },
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to OFF (via UNSET)",
+        "statements":"UPDATE system:settings UNSET plan_stability.mode",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "Administrator": "password"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    }
+]
+

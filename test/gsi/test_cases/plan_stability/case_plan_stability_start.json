@@ -1,0 +1,77 @@
+[
+    {
+	"testcase": "Make sure plan stability settings are back to default",
+        "statements":"UPDATE system:settings UNSET plan_stability",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check settings",
+        "statements":"SELECT plan_stability FROM system:settings",
+        "results": [
+            {
+                "plan_stability": {
+                    "error_policy": "moderate",
+                    "mode": "off"
+                }
+            }
+        ]
+    },
+    {
+	"testcase": "prepare a statement with SAVE option to create QUERY_METADATA bucket",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE SAVE FORCE p11 FROM SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND l.c11 != r.c21 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2",
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "default:shellTest._default._default"
+                ],
+                "name": "p11",
+                "persist": true,
+                "signature": {
+                    "c11": "json",
+                    "c21": "json"
+                },
+                "text": "PREPARE p11 FROM SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON l.c12 = r.c22 AND l.c11 != r.c21 AND r.type = \"right\" WHERE l.type = \"left\" AND l.c11 > 2"
+            }
+        ]
+    },
+    {
+	"testcase": "Run a random query to give a chance for QUERY_METADATA to be created",
+        "statements":"SELECT d1.c21 FROM shellTest d1 JOIN ( SELECT d2.c11 FROM shellTest d2 JOIN ( SELECT d3.c11 FROM shellTest AS d3 WHERE d3.type = \"left\") AS d10 USE NL ON d2.c11 = d10.c11 WHERE d2.c11 IS NOT MISSING) AS final USE NL ON d1.c21 = final.c11 WHERE d1.type = \"right\"",
+        "results": [
+            {
+                "c21": 1
+            },
+            {
+                "c21": 2
+            },
+            {
+                "c21": 2
+            },
+            {
+                "c21": 3
+            },
+            {
+                "c21": 3
+            },
+            {
+                "c21": 3
+            }
+        ]
+    }
+]
+

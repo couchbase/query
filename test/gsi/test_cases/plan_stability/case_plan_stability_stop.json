@@ -1,0 +1,27 @@
+[
+    {
+	"testcase": "Make sure plan stability settings are back to default",
+        "statements":"UPDATE system:settings UNSET plan_stability",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check settings",
+        "statements":"SELECT plan_stability FROM system:settings",
+        "results": [
+            {
+                "plan_stability": {
+                    "error_policy": "moderate",
+                    "mode": "off"
+                }
+            }
+        ]
+    },
+    {
+	"testcase": "Remove saved PREPARE statement",
+        "statements":"DELETE FROM system:prepareds WHERE name = \"p11\"",
+        "results": [
+        ]
+    }
+]
+
