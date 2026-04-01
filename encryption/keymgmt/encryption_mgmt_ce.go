@@ -38,7 +38,7 @@ func (this *NoopEncryptionManager) RegisterCbauthEncryptionCallbacks() {
 }
 
 func (this *NoopEncryptionManager) GetInUseKeysCallback(dt cbauth.KeyDataType) ([]string, error) {
-	return nil, nil
+	return []string{}, nil
 }
 
 func (this *NoopEncryptionManager) DropKeysCallback(dt cbauth.KeyDataType, KeyIdsToDrop []string) {

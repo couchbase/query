@@ -77,7 +77,8 @@ func (this *NodeEncryptionManager) RefreshKeysCallback(dt cbauth.KeyDataType) er
 
 func (this *NodeEncryptionManager) GetInUseKeysCallback(dt cbauth.KeyDataType) ([]string, error) {
 	// EAR TODO
-	return nil, nil
+	// If no keys are in use, cbauth expects an empty slice to be returned, not a nil value
+	return []string{}, nil
 }
 
 func (this *NodeEncryptionManager) DropKeysCallback(dt cbauth.KeyDataType, KeyIdsToDrop []string) {

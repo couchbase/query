@@ -25,7 +25,6 @@ import (
 	//	go_http "net/http"
 	//	_ "net/http/pprof"
 
-	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/accounting"
 	acct_resolver "github.com/couchbase/query/accounting/resolver"
 	"github.com/couchbase/query/audit"
@@ -293,6 +292,10 @@ func main() {
 	// default until settings adjust
 	util.SetTemp(os.TempDir(), 0)
 
+	// Setup encryption manager
+	encryptionMgr := keymgmt.NewEncryptionManager()
+	encryptionMgr.RegisterCbauthEncryptionCallbacks()
+
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
 		logging.Errorf("%v", err.Error())
@@ -300,6 +303,8 @@ func main() {
 		os.Exit(1)
 	}
 	datastore_package.SetDatastore(datastore)
+
+	datastore.SetEncryptionProvider(encryptionMgr)
 
 	nullSecurityConfig := &datastore_package.ConnectionSecurityConfig{}
 	datastore.SetConnectionSecurityConfig(nullSecurityConfig)
@@ -445,23 +450,13 @@ func main() {
 	constructor.Init(endpoint.Router(), server.Servicers(), "")
 	tenant.Start(endpoint, *UUID, *REGULATOR_SETTINGS_FILE)
 
-	// EAR TODO - un-comment the following block once ns-server begins to push the required datatypes of keys to Query
-	/*
-		encryptionMgr := keymgmt.NewEncryptionManager()
-		datastore.SetEncryptionProvider(encryptionMgr)
-		encryptionMgr.RegisterCbauthEncryptionCallbacks()
-
-		// Retrieve the necessary encryption-at-rest keys from cbauth before starting listeners
-		// Priming loads key information from cbauth for known datatypes in the encryption manager
-		// cbauth invokes RefreshKeysCallback soon after encryption callback registration.
-		// But, if the callback is delayed, Query requests for a key type that has not been loaded yet can cause repeated key
-		// configuration fetch requests to cbauth.
-		// Priming helps avoid the potential flood of fetches by populating known key type entries upfront
-		primeEncryptionManager(encryptionMgr, datastore)
-	*/
-
-	// EAR TODO - remove the below line once above block is un-commented
-	registerDummyCbauthEncryptionCallbacks()
+	// Retrieve the necessary encryption-at-rest keys from cbauth before starting listeners
+	// Priming loads key information from cbauth for known datatypes in the encryption manager
+	// cbauth invokes RefreshKeysCallback soon after encryption callback registration.
+	// But, if the callback is delayed, Query requests for a key type that has not been loaded yet can cause repeated key
+	// configuration fetch requests to cbauth.
+	// Priming helps avoid the potential flood of fetches by populating known key type entries upfront
+	primeEncryptionManager(encryptionMgr, datastore)
 
 	// Since TLS listener has already been started by NewServiceEndpoint
 	// So not starting here
@@ -657,27 +652,4 @@ func primeEncryptionManager(encryptionMgr keymgmt.EncryptionManager, ds datastor
 	}
 
 	encryptionMgr.PrimeKeys(keyTypes)
-}
-
-// EAR TODO - remove this function once ns-server begins to push the required datatypes of keys to Query and the actual
-// callbacks can be registered
-func registerDummyCbauthEncryptionCallbacks() {
-	var dummyRefreshKeysCallback cbauth.RefreshKeysCallback = func(dt cbauth.KeyDataType) error {
-		return nil
-	}
-
-	var dummyGetInUseKeysCallback cbauth.GetInUseKeysCallback = func(dt cbauth.KeyDataType) ([]string, error) {
-		return nil, nil
-	}
-
-	var dummyDropKeysCallback cbauth.DropKeysCallback = func(dt cbauth.KeyDataType, KeyIdsToDrop []string) {
-	}
-
-	var dummySynchronizeKeyFilesCallback cbauth.SynchronizeKeyFilesCallback = func(dt cbauth.KeyDataType) error {
-		return nil
-	}
-
-	cbauth.RegisterEncryptionKeysCallbacks(dummyRefreshKeysCallback, dummyGetInUseKeysCallback, dummyDropKeysCallback,
-		dummySynchronizeKeyFilesCallback)
-
 }
