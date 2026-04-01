@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/algebra"
-	"github.com/couchbase/query/expression/parser"
 )
 
 type WindowAggregate struct {
@@ -76,7 +75,7 @@ func (this *WindowAggregate) UnmarshalJSON(body []byte) error {
 
 	this.aggregates = make(algebra.Aggregates, len(_unmarshalled.Aggs))
 	for i, agg := range _unmarshalled.Aggs {
-		agg_expr, err := parser.Parse(agg)
+		agg_expr, err := this.parseExpression(agg)
 		if err != nil {
 			return err
 		}
