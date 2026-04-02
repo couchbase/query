@@ -652,7 +652,7 @@ func Stats(prefix string, res map[string]interface{}, details bool) {
 }
 
 func (this *occurrence) writeEncryptedFFDCFile(f *os.File, opConfig operationConfig, key *encryption.EaRKey) error {
-	ew, err := encryption.NewCBEFWriterSize(f, key, encryption.CBEF_GZIP, 64*util.KiB)
+	ew, err := encryption.NewCBEFWriterSize(f, key, encryption.CBEF_ZLIB, 64*util.KiB)
 	if err != nil {
 		logging.Errorf("FFDC: [%#x] Error creating encryption writer: %v", this.id, err)
 		return err
