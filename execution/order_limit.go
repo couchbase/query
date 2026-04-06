@@ -25,11 +25,17 @@ type OrderLimit struct {
 	numProcessedRows uint64
 }
 
-func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
+func NewOrderLimit(order *plan.Order, context *Context) (*OrderLimit, error) {
 	var rv *OrderLimit
+
+	orderOp, err := NewOrder(order, context, nil)
+	if err != nil {
+		return nil, err
+	}
+
 	if order.Offset() == nil {
 		rv = &OrderLimit{
-			Order:            NewOrder(order, context, nil),
+			Order:            orderOp,
 			offset:           nil,
 			limit:            NewLimit(order.Limit(), context),
 			fallbackNum:      plan.OrderFallbackNum(),
@@ -38,7 +44,7 @@ func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
 		}
 	} else {
 		rv = &OrderLimit{
-			Order:            NewOrder(order, context, nil),
+			Order:            orderOp,
 			offset:           NewOffset(order.Offset(), context),
 			limit:            NewLimit(order.Limit(), context),
 			fallbackNum:      plan.OrderFallbackNum(),
@@ -48,7 +54,7 @@ func NewOrderLimit(order *plan.Order, context *Context) *OrderLimit {
 	}
 
 	rv.output = rv
-	return rv
+	return rv, nil
 }
 
 func (this *OrderLimit) Copy() Operator {

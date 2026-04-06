@@ -30,7 +30,7 @@ type PartSortOrder struct {
 	fallbackNum          int
 }
 
-func NewPartSortOrder(order *plan.Order, context *Context) *PartSortOrder {
+func NewPartSortOrder(order *plan.Order, context *Context) (*PartSortOrder, error) {
 	var rv *PartSortOrder
 
 	pst := order.PartialSortTermCount()
@@ -42,7 +42,12 @@ func NewPartSortOrder(order *plan.Order, context *Context) *PartSortOrder {
 		partialSortTermCount: pst,
 		fallbackNum:          plan.OrderFallbackNum(),
 	}
-	rv.Order = NewOrder(order, context, rv.remainingTermsLessThan)
+
+	orderOp, err := NewOrder(order, context, rv.remainingTermsLessThan)
+	if err != nil {
+		return nil, err
+	}
+	rv.Order = orderOp
 
 	if order.Offset() != nil {
 		rv.offset = NewOffset(order.Offset(), context)
@@ -52,7 +57,7 @@ func NewPartSortOrder(order *plan.Order, context *Context) *PartSortOrder {
 	}
 
 	rv.output = rv
-	return rv
+	return rv, nil
 }
 
 func (this *PartSortOrder) Copy() Operator {

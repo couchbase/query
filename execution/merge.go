@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/system"
@@ -34,13 +35,21 @@ type Merge struct {
 	inputs   []*Channel
 }
 
-func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) *Merge {
+func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) (*Merge, error) {
 	var updates, deletes, inserts *value.AnnotatedArray
 
 	if context.IsFeatureEnabled(util.N1QL_NEW_MERGE) {
 		// for spilling to disk use the same functions/constants as used in Order operator
 		var shouldSpill func(uint64, uint64) bool
+		var encryptionKey *encryption.EaRKey
+		var err error
+
 		if plan.CanSpill() && context.IsFeatureEnabled(util.N1QL_SPILL_TO_DISK) {
+			encryptionKey, err = context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE})
+			if err != nil {
+				return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, err)
+			}
+
 			if context.UseRequestQuota() && context.MemoryQuota() > 0 {
 				shouldSpill = func(c uint64, n uint64) bool {
 					if (c + n) <= context.ProducerThrottleQuota() {
@@ -89,13 +98,13 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 		}
 
 		if update != nil {
-			updates = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true)
+			updates = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, encryptionKey)
 		}
 		if delete != nil {
-			deletes = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true)
+			deletes = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, encryptionKey)
 		}
 		if insert != nil {
-			inserts = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true)
+			inserts = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, encryptionKey)
 		}
 	}
 
@@ -112,7 +121,7 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 	newBase(&rv.base, context)
 	rv.trackChildren(3)
 	rv.output = rv
-	return rv
+	return rv, nil
 }
 
 func (this *Merge) Accept(visitor Visitor) (interface{}, error) {

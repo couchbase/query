@@ -416,11 +416,23 @@ func (this *builder) VisitExceptAll(plan *plan.ExceptAll) (interface{}, error) {
 // Order
 func (this *builder) VisitOrder(plan *plan.Order) (interface{}, error) {
 	if plan.PartialSortTermCount() > 0 {
-		return checkOp(NewPartSortOrder(plan, this.context), this.context)
+		po, err := NewPartSortOrder(plan, this.context)
+		if err != nil {
+			return nil, err
+		}
+		return checkOp(po, this.context)
 	} else if plan.LimitPushed() {
-		return checkOp(NewOrderLimit(plan, this.context), this.context)
+		ol, err := NewOrderLimit(plan, this.context)
+		if err != nil {
+			return nil, err
+		}
+		return checkOp(ol, this.context)
 	} else {
-		return checkOp(NewOrder(plan, this.context, nil), this.context)
+		order, err := NewOrder(plan, this.context, nil)
+		if err != nil {
+			return nil, err
+		}
+		return checkOp(order, this.context)
 	}
 }
 
@@ -493,7 +505,11 @@ func (this *builder) VisitMerge(plan *plan.Merge) (interface{}, error) {
 		insert = op.(Operator)
 	}
 
-	return checkOp(NewMerge(plan, this.context, update, delete, insert), this.context)
+	merge, err := NewMerge(plan, this.context, update, delete, insert)
+	if err != nil {
+		return nil, err
+	}
+	return checkOp(merge, this.context)
 }
 
 // Alias

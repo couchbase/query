@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/accounting"
+	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/system"
@@ -38,13 +40,21 @@ const _MIN_SIZE = 128 * util.MiB
 
 var _ORDER_POOL = value.NewAnnotatedPool(_ORDER_CAP)
 
-func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue, value.AnnotatedValue) bool) *Order {
+func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue, value.AnnotatedValue) bool) (*Order, error) {
 	rv := &Order{
 		plan: plan,
 	}
 	// here only setting function to test for spilling when quota is in effect
 	var shouldSpill func(uint64, uint64) bool
+	var encryptionKey *encryption.EaRKey
+	var err error
+
 	if plan.CanSpill() && context.IsFeatureEnabled(util.N1QL_SPILL_TO_DISK) {
+		encryptionKey, err = context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE})
+		if err != nil {
+			return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, err)
+		}
+
 		if context.UseRequestQuota() && context.MemoryQuota() > 0 {
 			shouldSpill = func(c uint64, n uint64) bool {
 				if (c + n) <= context.ProducerThrottleQuota() {
@@ -110,12 +120,13 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 		trackMem,
 		less,
 		!plan.ClipValues(),
+		encryptionKey,
 	)
 
 	newBase(&rv.base, context)
 	rv.execPhase = SORT
 	rv.output = rv
-	return rv
+	return rv, nil
 }
 
 func (this *Order) Accept(visitor Visitor) (interface{}, error) {

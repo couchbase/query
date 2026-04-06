@@ -17,6 +17,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/sort"
@@ -26,6 +27,7 @@ import (
 const _SPILL_FILE_PATTERN = "av_spill_*"
 const _MAX_SPILL_FILES = 500
 const _MAX_PARENTS = 2000
+const _BUFFER_SIZE = 64 * util.KiB
 
 func init() {
 	util.RegisterTempPattern(_SPILL_FILE_PATTERN)
@@ -48,6 +50,8 @@ type spillFile struct {
 	lessFn func(AnnotatedValue, AnnotatedValue) bool
 
 	compress bool
+
+	encryptionKey *encryption.EaRKey
 }
 
 func (this *spillFile) rewind() error {
@@ -55,10 +59,21 @@ func (this *spillFile) rewind() error {
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
 	}
-	this.reader = bufio.NewReaderSize(this.f, 64*util.KiB)
-	if this.compress {
-		this.reader, _ = zlib.NewReader(this.reader)
+
+	if this.encryptionKey == nil {
+		this.reader = bufio.NewReaderSize(this.f, _BUFFER_SIZE)
+		if this.compress {
+			this.reader, _ = zlib.NewReader(this.reader)
+		}
+	} else {
+		this.reader, err = encryption.NewCBEFReader(this.f, func(keyId string) *encryption.EaRKey {
+			return this.encryptionKey
+		})
+		if err != nil {
+			return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)
+		}
 	}
+
 	this.current = nil
 	return nil
 }
@@ -145,22 +160,26 @@ type AnnotatedArray struct {
 	valFunc    func(av AnnotatedValue) bool
 
 	valIn uint64
+
+	// Set if spill files are to be encrypted
+	encryptionKey *encryption.EaRKey
 }
 
 func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(AnnotatedValues),
 	shouldSpill func(uint64, uint64) bool,
 	trackMemory func(int64) error,
 	less func(AnnotatedValue, AnnotatedValue) bool,
-	compressSpill bool) *AnnotatedArray {
+	compressSpill bool, encryptionKey *encryption.EaRKey) *AnnotatedArray {
 
 	rv := &AnnotatedArray{
-		acquire:     acquire,
-		release:     release,
-		less:        less,
-		shouldSpill: shouldSpill,
-		trackMemory: trackMemory,
-		compress:    compressSpill && logging.LogLevel() != logging.DEBUG,
-		parentsMap:  make(map[string]Value),
+		acquire:       acquire,
+		release:       release,
+		less:          less,
+		shouldSpill:   shouldSpill,
+		trackMemory:   trackMemory,
+		compress:      compressSpill && logging.LogLevel() != logging.DEBUG,
+		parentsMap:    make(map[string]Value),
+		encryptionKey: encryptionKey,
 	}
 	rv.valFunc = func(av AnnotatedValue) bool {
 		p := av.GetAttachment(ATT_PARENT)
@@ -181,13 +200,14 @@ func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(Annotated
 
 func (this *AnnotatedArray) Copy() *AnnotatedArray {
 	rv := &AnnotatedArray{
-		acquire:     this.acquire,
-		release:     this.release,
-		less:        this.less,
-		shouldSpill: this.shouldSpill,
-		trackMemory: this.trackMemory,
-		compress:    this.compress,
-		parentsMap:  make(map[string]Value),
+		acquire:       this.acquire,
+		release:       this.release,
+		less:          this.less,
+		shouldSpill:   this.shouldSpill,
+		trackMemory:   this.trackMemory,
+		compress:      this.compress,
+		parentsMap:    make(map[string]Value),
+		encryptionKey: this.encryptionKey,
 	}
 	rv.valFunc = func(av AnnotatedValue) bool {
 		p := av.GetAttachment(ATT_PARENT)
@@ -314,14 +334,29 @@ func (this *AnnotatedArray) spillToDisk() error {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
 	logging.Debugf("[%p] spilling to %s (#:%v, sz:%v, compr:%v)", this, sf.Name(), len(this.mem), this.memSize, this.compress)
-	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress}
+	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress, encryptionKey: this.encryptionKey}
 	this.spill = append(this.spill, spf)
 	var writer writerFlusher
-	if this.compress {
-		writer = zlib.NewWriter(sf)
+
+	if this.encryptionKey == nil {
+		if this.compress {
+			writer = zlib.NewWriter(sf)
+		} else {
+			writer = bufio.NewWriter(sf)
+		}
 	} else {
-		writer = bufio.NewWriter(sf)
+		compression := encryption.CBEF_NONE
+		if this.compress {
+			compression = encryption.CBEF_ZLIB
+		}
+
+		ew, err := encryption.NewCBEFWriterSize(sf, this.encryptionKey, compression, _BUFFER_SIZE)
+		if err != nil {
+			return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
+		}
+		writer = ew
 	}
+
 	for i, v := range this.mem {
 		vv := v.GetValue()
 		if sv, ok := vv.(*ScopeValue); ok {
