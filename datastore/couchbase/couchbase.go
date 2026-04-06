@@ -2862,8 +2862,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 			}
 		} else { // if err != nil then added is false
 			// refresh local meta CAS value
-			logging.Debugf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
-				MutateOpNames[op], key, cas, qualifiedName)
+			logging.Debugf("[%s] After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+				context.RequestId(), MutateOpNames[op], key, cas, qualifiedName)
 			SetMetaCas(kv.Value, cas)
 		}
 	case MOP_UPDATE:
@@ -2873,27 +2873,27 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 
 		cas, flags, _, err = getMeta(key, kv.Value, true)
 		if err != nil { // Don't perform the update if the meta values are not found
-			logging.Debugf("Failed to get meta value to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
-				MutateOpNames[op], key, qualifiedName, err)
+			logging.Debugf("[%s] Failed to get meta value to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				context.RequestId(), MutateOpNames[op], key, qualifiedName, err)
 			if retry == errors.NONE {
 				retry = errors.TRUE
 			}
 		} else if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-			logging.Debugf("Failed to preserve the expiration to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
-				MutateOpNames[op], key, qualifiedName, err)
+			logging.Debugf("[%s] Failed to preserve the expiration to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				context.RequestId(), MutateOpNames[op], key, qualifiedName, err)
 			if retry == errors.NONE {
 				retry = errors.TRUE
 			}
 		} else {
-			logging.Debugf("Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
-				MutateOpNames[op], key, cas, flags, val, qualifiedName)
+			logging.Debugf("[%s] Before %s: key {<ud>%v</ud>} CAS %v flags <ud>%v</ud> value <ud>%v</ud> for Keyspace <ud>%s</ud>.",
+				context.RequestId(), MutateOpNames[op], key, cas, flags, val, qualifiedName)
 			newCas, wu, _, err = b.cbbucket.CasWithMeta(key, int(flags), exptime, cas, val, xattrs, clientContext...)
 
 			context.RecordKvWU(tenant.Unit(wu))
 			if err == nil {
 				// refresh local meta CAS value
-				logging.Debugf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
-					MutateOpNames[op], key, cas, qualifiedName)
+				logging.Debugf("[%s] After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+					context.RequestId(), MutateOpNames[op], key, cas, qualifiedName)
 				SetMetaCas(kv.Value, newCas)
 			}
 			b.checkRefresh(err)
@@ -2901,8 +2901,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 
 	case MOP_UPSERT:
 		if err = setPreserveExpiry(present, context, clientContext...); err != nil {
-			logging.Debugf("Failed to preserve the expiration to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
-				MutateOpNames[op], key, qualifiedName, err)
+			logging.Debugf("[%s] Failed to preserve the expiration to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				context.RequestId(), MutateOpNames[op], key, qualifiedName, err)
 			if retry == errors.NONE {
 				retry = errors.TRUE
 			}
@@ -2912,8 +2912,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 			context.RecordKvWU(tenant.Unit(wu))
 			b.checkRefresh(err)
 			if err == nil {
-				logging.Debugf("After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
-					MutateOpNames[op], key, cas, qualifiedName)
+				logging.Debugf("[%s] After %s: key {<ud>%v</ud>} CAS %v for Keyspace <ud>%s</ud>.",
+					context.RequestId(), MutateOpNames[op], key, cas, qualifiedName)
 				SetMetaCas(kv.Value, newCas)
 			}
 		}
@@ -2928,8 +2928,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 		msg := fmt.Sprintf("Failed to perform %s on key %s", MutateOpNames[op], key)
 		if op == MOP_DELETE {
 			if !isNotFoundError(err) {
-				logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
-					MutateOpNames[op], key, qualifiedName, err)
+				logging.Debugf("[%s] Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+					context.RequestId(), MutateOpNames[op], key, qualifiedName, err)
 				retry, err = processIfMCError(retry, err, key, qualifiedName)
 				keyError = errors.NewCbDeleteFailedError(err, key, msg)
 			}
@@ -2939,13 +2939,13 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 				retry = errors.FALSE
 			}
 			if casMismatch {
-				logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>."+
+				logging.Debugf("[%s] Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>."+
 					" CAS mismatch due to concurrent modifications. Error %s",
-					MutateOpNames[op], key, qualifiedName, err)
+					context.RequestId(), MutateOpNames[op], key, qualifiedName, err)
 			} else {
-				logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>."+
+				logging.Debugf("[%s] Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>."+
 					" Concurrent modifications. Error %s",
-					MutateOpNames[op], key, qualifiedName, err)
+					context.RequestId(), MutateOpNames[op], key, qualifiedName, err)
 			}
 
 			retry, err = processIfMCError(retry, err, key, qualifiedName)
@@ -2956,8 +2956,8 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
 		} else {
 			// err contains key, redact
-			logging.Debugf("Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
-				MutateOpNames[op], key, qualifiedName, err)
+			logging.Debugf("[%s] Failed to perform %s on key <ud>%s<ud> for Keyspace <ud>%s</ud>. Error %s",
+				context.RequestId(), MutateOpNames[op], key, qualifiedName, err)
 			retry, err = processIfMCError(retry, err, key, qualifiedName)
 			keyError = errors.NewCbDMLError(err, msg, casMismatch, retry, key, qualifiedName)
 		}
