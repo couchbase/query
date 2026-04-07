@@ -37,7 +37,7 @@
       "max": 10
     },
     "#comment": "Test run time.",
-    "duration": "4h",
+    "duration": "8h",
     "#comment": "-1 for infinite iterations.",
     "iterations": -1,
     "request": {
