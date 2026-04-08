@@ -6,6 +6,8 @@
 //  software will be governed by the Apache License, Version 2.0, included in
 //  the file licenses/APL2.txt.
 
+//go:build enterprise
+
 package openssl
 
 import (
@@ -13,10 +15,10 @@ import (
 	"github.com/couchbase/query/encryption"
 )
 
-func KBKDFDeriveKey(masterKey []byte, label []byte, context []byte, derivedKey []byte, digest string) ([]byte, error) {
+func kBKDFDeriveKey(masterKey []byte, label []byte, context []byte, derivedKey []byte, digest string) ([]byte, error) {
 	return gocbcrypto.OpenSSLKBKDFDeriveKey(masterKey, label, context, derivedKey, digest, "")
 }
 
 func Init() {
-	encryption.KBKDFDeriveKey = KBKDFDeriveKey
+	encryption.KBKDFDeriveKey = kBKDFDeriveKey
 }

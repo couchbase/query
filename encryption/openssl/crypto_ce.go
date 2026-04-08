@@ -6,14 +6,17 @@
 //  software will be governed by the Apache License, Version 2.0, included in
 //  the file licenses/APL2.txt.
 
-package encryption
+//go:build !enterprise
+
+package openssl
 
 import (
-	"fmt"
-
+	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 )
 
-var KBKDFDeriveKey = func(masterKey []byte, label []byte, context []byte, derivedKey []byte, digest string) ([]byte, error) {
-	return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, fmt.Errorf("Key derivation function not initialized"))
+func Init() {
+	encryption.KBKDFDeriveKey = func(masterKey, label, context, derivedKey []byte, digest string) ([]byte, error) {
+		return nil, errors.NewEnterpriseFeature("Encryption at rest", "encryption.kbkdf_derive_key")
+	}
 }
