@@ -159,7 +159,7 @@ func (this *requestStreamFile) create() error {
 	this.encrypt = requestLog.stream.encrypt
 	if this.encrypt {
 		this.ew, err = encryption.NewCBEFWriterSize(this.f, requestLog.stream.key,
-			encryption.CBEF_GZIP, _STREAM_BUF_SIZE)
+			encryption.CBEF_ZLIB, _STREAM_BUF_SIZE)
 		if err != nil {
 			return err
 		}
