@@ -74,22 +74,6 @@ type Datastore interface {
 	Inferencer(name InferenceType) (Inferencer, errors.Error) // Schema inference provider by name, e.g. INF_DEFAULT
 	Inferencers() ([]Inferencer, errors.Error)                // List of schema inference providers
 	StatUpdater() (StatUpdater, errors.Error)                 // Statistics Updater
-	UserInfo() (value.Value, errors.Error)                    // The users, and their roles. JSON data.
-	GetUserInfoAll() ([]User, errors.Error)                   // Get information about all the users.
-	PutUserInfo(u *User) errors.Error                         // Set information for a specific user.
-	GetRolesAll() ([]Role, errors.Error)                      // Get all roles that exist in the system.
-	DeleteUser(u *User) errors.Error                          // Delete a user
-	GetUserInfo(u *User) errors.Error                         // Get a single user's info
-	GetGroupInfo(g *Group) errors.Error
-	PutGroupInfo(g *Group) errors.Error
-	DeleteGroup(g *Group) errors.Error
-	GroupInfo() (value.Value, errors.Error)
-	GetGroupInfoAll() ([]Group, errors.Error)
-
-	CreateBucket(string, value.Value) errors.Error
-	AlterBucket(string, value.Value) errors.Error
-	DropBucket(string) errors.Error
-	BucketInfo() (value.Value, errors.Error)
 
 	AuditInfo() (*AuditInfo, errors.Error)
 	ProcessAuditUpdateStream(callb func(uid string) error) errors.Error
@@ -119,6 +103,32 @@ type Datastore interface {
 type Systemstore interface {
 	Datastore
 	PrivilegesFromPath(fullname string, keyspace string, privilege auth.Privilege, privs *auth.Privileges)
+}
+
+// CouchbaseDatastore is an interface that extends Datastore with Couchbase-specific
+// user, group, role, and bucket management methods. Only Couchbase datastores implement this interface.
+type CouchbaseDatastore interface {
+	Datastore
+	// User management methods
+	UserInfo() (value.Value, errors.Error)  // The users, and their roles. JSON data.
+	GetUserInfoAll() ([]User, errors.Error) // Get information about all the users.
+	PutUserInfo(u *User) errors.Error       // Set information for a specific user.
+	DeleteUser(u *User) errors.Error        // Delete a user
+	GetUserInfo(u *User) errors.Error       // Get a single user's info
+	GetRolesAll() ([]Role, errors.Error)    // Get all roles that exist in the system.
+
+	// Group management methods
+	GetGroupInfo(g *Group) errors.Error
+	PutGroupInfo(g *Group) errors.Error
+	DeleteGroup(g *Group) errors.Error
+	GroupInfo() (value.Value, errors.Error)
+	GetGroupInfoAll() ([]Group, errors.Error)
+
+	// Bucket management methods
+	CreateBucket(string, value.Value) errors.Error
+	AlterBucket(string, value.Value) errors.Error
+	DropBucket(string) errors.Error
+	BucketInfo() (value.Value, errors.Error)
 }
 
 type Datastore2 interface {

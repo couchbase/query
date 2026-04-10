@@ -32,6 +32,11 @@ func NewOtherNotImplementedError(e error, msg string) Error {
 		InternalMsg: "Not Implemented " + msg, InternalCaller: CallerN(1)}
 }
 
+func NewDatastoreNotCouchbaseError() Error {
+	return &err{level: EXCEPTION, ICode: E_DATASTORE_NOT_COUCHBASE, IKey: "datastore.not_couchbase",
+		InternalMsg: "Operation not supported. This operation requires a Couchbase datastore.", InternalCaller: CallerN(1)}
+}
+
 func NewOtherIdxNotFoundError(e error, msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_OTHER_IDX_NOT_FOUND, IKey: "datastore.other.idx_not_found", ICause: e,
 		InternalMsg: "Index not found  " + msg, InternalCaller: CallerN(1)}

@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -58,8 +59,14 @@ func (this *AlterBucket) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		cbDatastore, ok := context.datastore.(datastore.CouchbaseDatastore)
+		if !ok {
+			context.Error(errors.NewDatastoreNotCouchbaseError())
+			return
+		}
+
 		this.switchPhase(_SERVTIME)
-		err := context.datastore.AlterBucket(this.plan.Node().Name(), this.plan.Node().With())
+		err := cbDatastore.AlterBucket(this.plan.Node().Name(), this.plan.Node().With())
 		if err != nil {
 			if errors.IsNotFoundError("Requested resource", err) {
 				err = errors.NewCbBucketNotFoundError(nil, this.plan.Node().Name())

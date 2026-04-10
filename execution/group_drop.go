@@ -59,16 +59,22 @@ func (this *DropGroup) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		cbDatastore, ok := context.datastore.(datastore.CouchbaseDatastore)
+		if !ok {
+			context.Error(errors.NewDatastoreNotCouchbaseError())
+			return
+		}
+
 		var g datastore.Group
 		g.Id = this.plan.Node().Group()
 
-		err := context.datastore.GetGroupInfo(&g)
+		err := cbDatastore.GetGroupInfo(&g)
 		if err != nil {
 			if this.plan.Node().FailIfNotExists() {
 				context.Error(errors.NewGroupNotFoundError(g.Id))
 			}
 		} else {
-			err := context.datastore.DeleteGroup(&g)
+			err = cbDatastore.DeleteGroup(&g)
 			if err != nil {
 				context.Error(err)
 			}

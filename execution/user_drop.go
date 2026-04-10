@@ -60,6 +60,12 @@ func (this *DropUser) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		cbDatastore, ok := context.datastore.(datastore.CouchbaseDatastore)
+		if !ok {
+			context.Error(errors.NewDatastoreNotCouchbaseError())
+			return
+		}
+
 		var u datastore.User
 		parts := strings.Split(this.plan.Node().User(), ":")
 		if len(parts) == 2 {
@@ -70,13 +76,13 @@ func (this *DropUser) RunOnce(context *Context, parent value.Value) {
 			u.Id = parts[0]
 		}
 
-		err := context.datastore.GetUserInfo(&u)
+		err := cbDatastore.GetUserInfo(&u)
 		if err != nil {
 			if this.plan.Node().FailIfNotExists() {
 				context.Error(errors.NewUserNotFoundError(u.Domain + ":" + u.Id))
 			}
 		} else {
-			err := context.datastore.DeleteUser(&u)
+			err = cbDatastore.DeleteUser(&u)
 			if err != nil {
 				context.Error(err)
 			}

@@ -15,7 +15,6 @@ with this mock datastore.
 package mock
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -139,76 +138,6 @@ func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Er
 }
 
 func (s *store) EnableStorageAudit(val bool) {
-}
-
-func (s *store) UserInfo() (value.Value, errors.Error) {
-	// Stub implementation with fixed content.
-	content := `[{"name":"Ivan Ivanov","id":"ivanivanov","domain":"local","roles":[{"role":"cluster_admin"},
-                        {"role":"bucket_admin","bucket_name":"default"}]},
-                        {"name":"Petr Petrov","id":"petrpetrov","domain":"local","roles":[{"role":"replication_admin"}]}]`
-	jsonData := make([]interface{}, 3)
-	err := json.Unmarshal([]byte(content), &jsonData)
-	if err != nil {
-		return nil, errors.NewServiceErrorInvalidJSON(err)
-	}
-	v := value.NewValue(jsonData)
-	return v, nil
-}
-
-func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
-}
-
-func (s *store) PutUserInfo(u *datastore.User) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
-}
-
-func (s *store) DeleteUser(u *datastore.User) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "DeleteUser")
-}
-
-func (s *store) GetUserInfo(u *datastore.User) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "GetUserInfo")
-}
-
-func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "GetRolesAll")
-}
-
-func (s *store) GetGroupInfo(*datastore.Group) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "GetGroupInfo")
-}
-
-func (s *store) PutGroupInfo(*datastore.Group) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "PutGroupInfo")
-}
-
-func (s *store) DeleteGroup(*datastore.Group) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "DeleteGroup")
-}
-
-func (s *store) GroupInfo() (value.Value, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "GroupInfo")
-}
-
-func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "GetGroupInfoAll")
-}
-
-func (s *store) CreateBucket(string, value.Value) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "CreateBucket")
-}
-
-func (s *store) AlterBucket(string, value.Value) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "AlterBucket")
-}
-
-func (s *store) DropBucket(string) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "DropBucket")
-}
-
-func (s *store) BucketInfo() (value.Value, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "BucketInfo")
 }
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {

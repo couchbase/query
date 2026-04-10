@@ -267,63 +267,35 @@ func (s *store) EnableStorageAudit(val bool) {
 }
 
 func (s *store) UserInfo() (value.Value, errors.Error) {
-	return s.actualStore.UserInfo()
-}
-
-func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "GetUserInfoAll")
-}
-
-func (s *store) PutUserInfo(u *datastore.User) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "PutUserInfo")
-}
-
-func (s *store) DeleteUser(u *datastore.User) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "DeleteUser")
-}
-
-func (s *store) GetUserInfo(u *datastore.User) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "GetUserInfo")
-}
-
-func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
-	return nil, errors.NewOtherNotImplementedError(nil, "GetRolesAll")
-}
-
-func (s *store) GetGroupInfo(*datastore.Group) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "GetGroupInfo")
-}
-
-func (s *store) PutGroupInfo(*datastore.Group) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "PutGroupInfo")
-}
-
-func (s *store) DeleteGroup(*datastore.Group) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "DeleteGroup")
+	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
+	if !ok {
+		return nil, errors.NewDatastoreNotCouchbaseError()
+	}
+	return cbDatastore.UserInfo()
 }
 
 func (s *store) GroupInfo() (value.Value, errors.Error) {
-	return s.actualStore.GroupInfo()
+	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
+	if !ok {
+		return nil, errors.NewDatastoreNotCouchbaseError()
+	}
+	return cbDatastore.GroupInfo()
 }
 
 func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
-	return s.actualStore.GetGroupInfoAll()
-}
-
-func (s *store) CreateBucket(string, value.Value) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "CreateBucket")
-}
-
-func (s *store) AlterBucket(string, value.Value) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "AlterBucket")
-}
-
-func (s *store) DropBucket(string) errors.Error {
-	return errors.NewOtherNotImplementedError(nil, "DropBucket")
+	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
+	if !ok {
+		return nil, errors.NewDatastoreNotCouchbaseError()
+	}
+	return cbDatastore.GetGroupInfoAll()
 }
 
 func (s *store) BucketInfo() (value.Value, errors.Error) {
-	return s.actualStore.BucketInfo()
+	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
+	if !ok {
+		return nil, errors.NewDatastoreNotCouchbaseError()
+	}
+	return cbDatastore.BucketInfo()
 }
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {

@@ -529,6 +529,7 @@ const (
 	E_OTHER_IDX_NO_DROP                          ErrorCode = 16005
 	E_OTHER_NOT_SUPPORTED                        ErrorCode = 16006
 	E_OTHER_KEY_NOT_FOUND                        ErrorCode = 16007
+	E_DATASTORE_NOT_COUCHBASE                    ErrorCode = 16008
 	E_INFERENCER_NOT_FOUND                       ErrorCode = 16020
 	E_OTHER_NO_BUCKETS                           ErrorCode = 16021
 	E_SCOPES_NOT_SUPPORTED                       ErrorCode = 16022

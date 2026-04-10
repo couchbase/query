@@ -60,6 +60,12 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		cbDatastore, ok := context.datastore.(datastore.CouchbaseDatastore)
+		if !ok {
+			context.Fatal(errors.NewDatastoreNotCouchbaseError())
+			return
+		}
+
 		// Create the set of deletable roles.
 		roleList, err := getRoles(this.plan.Node())
 		if err != nil {
@@ -73,7 +79,7 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Get the list of all valid roles, and verify that the roles to be deleted are proper.
-		validRoles, err := context.datastore.GetRolesAll()
+		validRoles, err := cbDatastore.GetRolesAll()
 		if err != nil {
 			context.Fatal(err)
 			return
@@ -85,17 +91,17 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		if this.plan.Node().Groups() {
-			this.revokeGroupRoles(context, deleteRoleMap)
+			this.revokeGroupRoles(context, cbDatastore, deleteRoleMap)
 		} else {
-			this.revokeUserRoles(context, deleteRoleMap)
+			this.revokeUserRoles(context, cbDatastore, deleteRoleMap)
 		}
 	})
 }
 
-func (this *RevokeRole) revokeUserRoles(context *Context, deleteRoleMap map[datastore.Role]bool) {
+func (this *RevokeRole) revokeUserRoles(context *Context, cbDatastore datastore.CouchbaseDatastore, deleteRoleMap map[datastore.Role]bool) {
 
 	// Get the current set of users (with their role information),  and create a map of them by domain:userid.
-	userMap, err := getUserMap(context.datastore)
+	userMap, err := getUserMap(cbDatastore)
 	if err != nil {
 		context.Fatal(err)
 		return
@@ -139,16 +145,16 @@ func (this *RevokeRole) revokeUserRoles(context *Context, deleteRoleMap map[data
 		user.Roles = newRoles
 		// Update the user with their new roles on the backend.
 		user.Password = string([]byte{0}) // we are not including the password
-		err = context.datastore.PutUserInfo(user)
+		err = cbDatastore.PutUserInfo(user)
 		if err != nil {
 			context.Error(err)
 		}
 	}
 }
 
-func (this *RevokeRole) revokeGroupRoles(context *Context, deleteRoleMap map[datastore.Role]bool) {
+func (this *RevokeRole) revokeGroupRoles(context *Context, cbDatastore datastore.CouchbaseDatastore, deleteRoleMap map[datastore.Role]bool) {
 
-	groupMap, err := getGroupMap(context.datastore)
+	groupMap, err := getGroupMap(cbDatastore)
 	if err != nil {
 		context.Fatal(err)
 		return
@@ -184,7 +190,7 @@ func (this *RevokeRole) revokeGroupRoles(context *Context, deleteRoleMap map[dat
 		}
 		group.Roles = newRoles
 
-		err = context.datastore.PutGroupInfo(group)
+		err = cbDatastore.PutGroupInfo(group)
 		if err != nil {
 			context.Error(err)
 		}

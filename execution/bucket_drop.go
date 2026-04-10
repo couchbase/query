@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/value"
@@ -58,8 +59,14 @@ func (this *DropBucket) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		cbDatastore, ok := context.datastore.(datastore.CouchbaseDatastore)
+		if !ok {
+			context.Error(errors.NewDatastoreNotCouchbaseError())
+			return
+		}
+
 		this.switchPhase(_SERVTIME)
-		err := context.datastore.DropBucket(this.plan.Node().Name())
+		err := cbDatastore.DropBucket(this.plan.Node().Name())
 		if err != nil {
 			nfe := errors.IsNotFoundError("Requested resource", err)
 			if !nfe || this.plan.Node().FailIfNotExists() {

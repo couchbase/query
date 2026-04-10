@@ -38,15 +38,20 @@ func TestSyntaxErr(t *testing.T) {
 func TestRoleStatements(t *testing.T) {
 	qc := start()
 
+	ds := qc.dstore
+	cbDatastore, ok := ds.(datastore.CouchbaseDatastore)
+	if !ok {
+		t.Skip("Skipping test: Role statements require CouchbaseDatastore")
+	}
+
 	pete := datastore.User{Name: "Peter Peterson", Id: "pete", Domain: "local",
 		Roles: []datastore.Role{datastore.Role{Name: "cluster_admin"}, datastore.Role{Name: "bucket_admin", Target: "contacts"}}}
 	sam := datastore.User{Name: "Sam Samson", Id: "sam", Domain: "local",
 		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin",
 			Target: "products"}}}
 
-	ds := qc.dstore
-	ds.PutUserInfo(&pete)
-	ds.PutUserInfo(&sam)
+	cbDatastore.PutUserInfo(&pete)
+	cbDatastore.PutUserInfo(&sam)
 
 	rr := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam", nil, nil, _NAMESPACE)
 	if rr.Err != nil {
@@ -56,7 +61,7 @@ func TestRoleStatements(t *testing.T) {
 		t.Fatalf("Expected no return, got %v", rr.Results)
 	}
 
-	users, err := ds.GetUserInfoAll()
+	users, err := cbDatastore.GetUserInfoAll()
 	if err != nil {
 		t.Fatalf("Could not get user info after running GRANT ROLE: %s", err.Error())
 	}
@@ -92,7 +97,7 @@ func TestRoleStatements(t *testing.T) {
 		t.Fatalf("Expected no return, got %v", rr.Results)
 	}
 
-	users, err = ds.GetUserInfoAll()
+	users, err = cbDatastore.GetUserInfoAll()
 	if err != nil {
 		t.Fatalf("Could not get user info after running REVOKE: %s", err.Error())
 	}

@@ -60,6 +60,12 @@ func (this *AlterUser) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		cbDatastore, ok := context.datastore.(datastore.CouchbaseDatastore)
+		if !ok {
+			context.Error(errors.NewDatastoreNotCouchbaseError())
+			return
+		}
+
 		var u datastore.User
 		parts := strings.Split(this.plan.Node().User(), ":")
 		if len(parts) == 2 {
@@ -69,7 +75,7 @@ func (this *AlterUser) RunOnce(context *Context, parent value.Value) {
 			u.Domain = "local"
 			u.Id = parts[0]
 		}
-		err := context.datastore.GetUserInfo(&u)
+		err := cbDatastore.GetUserInfo(&u)
 		if err != nil {
 			context.Error(errors.NewUserNotFoundError(u.Domain + ":" + u.Id))
 		} else {
@@ -93,7 +99,7 @@ func (this *AlterUser) RunOnce(context *Context, parent value.Value) {
 				u.Name = string([]byte{0})
 			}
 
-			err := context.datastore.PutUserInfo(&u)
+			err = cbDatastore.PutUserInfo(&u)
 			if err != nil {
 				context.Error(err)
 			}

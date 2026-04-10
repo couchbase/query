@@ -60,10 +60,16 @@ func (this *AlterGroup) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		cbDatastore, ok := context.datastore.(datastore.CouchbaseDatastore)
+		if !ok {
+			context.Error(errors.NewDatastoreNotCouchbaseError())
+			return
+		}
+
 		var g datastore.Group
 		g.Id = this.plan.Node().Group()
 
-		err := context.datastore.GetGroupInfo(&g)
+		err := cbDatastore.GetGroupInfo(&g)
 		if err != nil {
 			context.Error(errors.NewGroupNotFoundError(g.Id))
 		} else {
@@ -87,7 +93,7 @@ func (this *AlterGroup) RunOnce(context *Context, parent value.Value) {
 				g.Desc = string([]byte{0})
 			}
 
-			err = context.datastore.PutGroupInfo(&g)
+			err = cbDatastore.PutGroupInfo(&g)
 			if err != nil {
 				context.Error(err)
 			}

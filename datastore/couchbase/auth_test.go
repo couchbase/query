@@ -88,6 +88,12 @@ func (a authUser) Extras() string {
 	return ""
 }
 
+/*
+func (a authUser) GetCredential(credId string) (*cbauth.Credential, error) {
+	return nil, nil
+}
+*/
+
 type testCase struct {
 	purpose       string
 	authSource    authSource

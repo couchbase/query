@@ -6824,6 +6824,14 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_DATASTORE_NOT_COUCHBASE, // 16008
+		symbol:      "E_DATASTORE_NOT_COUCHBASE",
+		Description: "Operation not supported. This operation requires a Couchbase datastore.",
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_INFERENCER_NOT_FOUND, // 16020
 		symbol:      "E_INFERENCER_NOT_FOUND",
 		Description: "Inferencer not found «details»",

@@ -32,7 +32,11 @@ const (
 
 func validateRoles(op roleOp) errors.Error {
 	ds := datastore.GetDatastore()
-	roles, err := ds.GetRolesAll()
+	cbDatastore, ok := ds.(datastore.CouchbaseDatastore)
+	if !ok {
+		return errors.NewDatastoreNotCouchbaseError()
+	}
+	roles, err := cbDatastore.GetRolesAll()
 	if err != nil {
 		return err
 	}
@@ -85,7 +89,11 @@ func validateGroups(groups []string) errors.Error {
 		return nil
 	}
 	ds := datastore.GetDatastore()
-	val, err := ds.GroupInfo()
+	cbDatastore, ok := ds.(datastore.CouchbaseDatastore)
+	if !ok {
+		return errors.NewDatastoreNotCouchbaseError()
+	}
+	val, err := cbDatastore.GroupInfo()
 	if err != nil {
 		return err
 	}
@@ -108,7 +116,11 @@ func validateGroupRoles(roles []string) errors.Error {
 		return nil
 	}
 	ds := datastore.GetDatastore()
-	all, err := ds.GetRolesAll()
+	cbDatastore, ok := ds.(datastore.CouchbaseDatastore)
+	if !ok {
+		return errors.NewDatastoreNotCouchbaseError()
+	}
+	all, err := cbDatastore.GetRolesAll()
 	if err != nil {
 		return err
 	}
