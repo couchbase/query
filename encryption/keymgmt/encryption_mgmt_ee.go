@@ -10,6 +10,8 @@
 
 package keymgmt
 
-func NewEncryptionManager() EncryptionManager {
-	return NewNodeEncryptionManager()
+import "github.com/couchbase/query/encryption"
+
+func NewEncryptionManager(trackedDataTypes []encryption.KeyDataType, trackedEncryptors []TrackedEncryptor) EncryptionManager {
+	return NewNodeEncryptionManager(trackedDataTypes, trackedEncryptors)
 }

@@ -183,13 +183,33 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 
 	this.encrKeysInfo[dt] = info
 
-	logging.Infof("New encryption-at-rest configuration received for key data type %s. Configuration updated to: %s",
-		dt.String(), info.String())
+	logging.Infof("EAR: [data_type=%s] New encryption-at-rest configuration received. Configuration updated to: %s", dt.String(),
+		info.String())
 
 	return nil
 }
 
 func (this *nodeKeyStore) GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	return this.getKeyHelper(dt, true, "")
+}
+
+func (this *nodeKeyStore) GetKey(dt encryption.KeyDataType, keyID string) (*encryption.EaRKey, errors.Error) {
+	// Fast path to find key material
+	// Ideally this should always work, since the key material map is populated when keys are updated
+	this.lock.RLock()
+	// Return a copy of the key material pointer to allow configuration updates for this data type after returning it to the caller,
+	// without impacting the returned key material.
+	key, ok := this.encrKeysMaterial[keyID]
+	this.lock.RUnlock()
+	if ok {
+		return key, nil
+	}
+
+	return this.getKeyHelper(dt, false, keyID)
+}
+
+// Pass the keyID to find a specific key. If looking for the active key, the input keyID can be empty
+func (this *nodeKeyStore) getKeyHelper(dt encryption.KeyDataType, findActiveKey bool, keyID string) (*encryption.EaRKey, errors.Error) {
 	// Check if key info is present for the datatype
 	this.lock.RLock()
 	keyInfo, ok := this.encrKeysInfo[dt]
@@ -216,14 +236,18 @@ func (this *nodeKeyStore) GetActiveKey(dt encryption.KeyDataType) (*encryption.E
 		}
 	}
 
-	// If ActiveKeyId is empty, encryption at rest is not enabled for this data type
-	if keyInfo == nil || keyInfo.ActiveKeyId == "" {
-		return nil, nil
+	if findActiveKey {
+		// If ActiveKeyId is empty, encryption at rest is not enabled for this data type
+		if keyInfo == nil || keyInfo.ActiveKeyId == encryption.UNENCRYPTED_KEY_ID {
+			return nil, nil
+		}
+
+		keyID = keyInfo.ActiveKeyId
 	}
 
 	// Return a copy of the key material pointer to allow configuration updates for this data type after returning it to the caller,
 	// without impacting the returned key material.
-	key, ok := this.encrKeysMaterial[keyInfo.ActiveKeyId]
+	key, ok := this.encrKeysMaterial[keyID]
 	if ok {
 		return key, nil
 	}
@@ -231,12 +255,12 @@ func (this *nodeKeyStore) GetActiveKey(dt encryption.KeyDataType) (*encryption.E
 	// Go the long route to find the key material
 	// Ideally this should not happen, since the key material map is populated when keys are updated
 	for _, k := range keyInfo.Keys {
-		if k.Id == keyInfo.ActiveKeyId {
+		if k.Id == keyID {
 			return k, nil
 		}
 	}
 
-	return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_KEY_INFO_NOT_FOUND, nil, keyInfo.ActiveKeyId, dt.String())
+	return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_KEY_INFO_NOT_FOUND, nil, keyID, dt.String())
 }
 
 func (this *nodeKeyStore) primeKey(dt cbauth.KeyDataType) errors.Error {
@@ -250,8 +274,7 @@ func (this *nodeKeyStore) primeKey(dt cbauth.KeyDataType) errors.Error {
 	err := this.UpdateKeys(dt, keys, true)
 	if err != nil {
 		t := cbauthTypeToDataType(dt)
-		logging.Errorf("Error priming encryption-at-rest configuration for key data type %s: %v", t.String(),
-			err)
+		logging.Errorf("EAR: [data_type=%s] Error priming encryption-at-rest configuration: %v", t.String(), err)
 		return errors.NewEncryptionError(errors.E_ENCRYPTION_PRIME, err, t.String())
 	}
 

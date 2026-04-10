@@ -16,6 +16,7 @@ import (
 
 type EncryptionManager interface {
 	GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error)
+	GetKey(dt encryption.KeyDataType, keyID string) (*encryption.EaRKey, errors.Error)
 	PrimeKeys(keyDataTypes []encryption.KeyDataType) errors.Error
 	UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbauth.EncrKeysInfo, prime bool) errors.Error
 	RegisterCbauthEncryptionCallbacks()
@@ -23,4 +24,10 @@ type EncryptionManager interface {
 	DropKeysCallback(dt cbauth.KeyDataType, KeyIdsToDrop []string)
 	SynchronizeKeyFilesCallback(dt cbauth.KeyDataType) error
 	RefreshKeysCallback(dt cbauth.KeyDataType) error
+}
+
+type TrackedEncryptor interface {
+	GetInUseKeys(dt encryption.KeyDataType) ([]string, errors.Error)
+	DropKey(dt encryption.KeyDataType, keyId string) errors.Error
+	Name() string
 }

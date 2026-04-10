@@ -16,13 +16,17 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func NewEncryptionManager() EncryptionManager {
+func NewEncryptionManager(trackedDataTypes []encryption.KeyDataType, trackedEncryptors []TrackedEncryptor) EncryptionManager {
 	return &NoopEncryptionManager{}
 }
 
 type NoopEncryptionManager struct{}
 
 func (this *NoopEncryptionManager) GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	return nil, nil
+}
+
+func (this *NoopEncryptionManager) GetKey(dt encryption.KeyDataType, keyID string) (*encryption.EaRKey, errors.Error) {
 	return nil, nil
 }
 

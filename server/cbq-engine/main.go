@@ -293,8 +293,7 @@ func main() {
 	util.SetTemp(os.TempDir(), 0)
 
 	// Setup encryption manager
-	encryptionMgr := keymgmt.NewEncryptionManager()
-	encryptionMgr.RegisterCbauthEncryptionCallbacks()
+	encryptionMgr := setupEncryptionManager()
 
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
@@ -633,18 +632,14 @@ func waitForInitialSettings() (queryMetakv.Config, int) {
 }
 
 func primeEncryptionManager(encryptionMgr keymgmt.EncryptionManager, ds datastore_package.Datastore) {
-	var keyTypes []encryption.KeyDataType
-
-	// EAR TODO - once "other" key data type is supported by cbauth, must add here
-	dt := encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
-	keyTypes = append(keyTypes, dt)
+	keyTypes := make([]encryption.KeyDataType, 2, 10)
+	keyTypes[0] = encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
+	keyTypes[1] = encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE}
 
 	ds2, ok := ds.(datastore_package.Datastore2)
 	if ok && ds2 != nil {
-		dt.TypeName = encryption.BUCKET_KEY_DATATYPE
 		ds2.LoadAllBuckets(func(b datastore.ExtendedBucket) {
-			dt.BucketUUID = b.Uid()
-			keyTypes = append(keyTypes, dt)
+			keyTypes = append(keyTypes, encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE, BucketUUID: b.Uid()})
 		})
 	} else {
 		// This should ideally not happen in a production environment. Couchbase datastore should implement Datastore2 interface.
@@ -652,4 +647,14 @@ func primeEncryptionManager(encryptionMgr keymgmt.EncryptionManager, ds datastor
 	}
 
 	encryptionMgr.PrimeKeys(keyTypes)
+}
+
+func setupEncryptionManager() keymgmt.EncryptionManager {
+	trackedTypes := make([]encryption.KeyDataType, 2)
+	trackedTypes[0] = encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
+	trackedTypes[1] = encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE}
+
+	encryptionMgr := keymgmt.NewEncryptionManager(trackedTypes, []keymgmt.TrackedEncryptor{})
+	encryptionMgr.RegisterCbauthEncryptionCallbacks()
+	return encryptionMgr
 }

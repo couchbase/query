@@ -19,6 +19,7 @@ var (
 	BUCKET_KEY_DATATYPE = "service_bucket"
 	LOG_KEY_DATATYPE    = "log"
 	OTHER_KEY_DATATYPE  = "other"
+	UNENCRYPTED_KEY_ID  = ""
 )
 
 type KeyDataType struct {
