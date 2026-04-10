@@ -124,6 +124,28 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = "cluster.settings!read"
 	case auth.PRIV_CLUSTER_SETTINGS_WRITE:
 		permission = "cluster.settings!write"
+	case auth.PRIV_CLUSTER_CREDENTIALSTORE_READ:
+		permission = join3Strings("cluster.credentials[", target, "]!read")
+	case auth.PRIV_CLUSTER_CREDENTIALSTORE_WRITE:
+		permission = join3Strings("cluster.credentials[", target, "]!write")
+	case auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME:
+		permission = join3Strings("cluster.credentials[", target, "]!consume")
+	case auth.PRIV_CATALOG_READ:
+		permission = join3Strings("cluster.catalog[", target, "]!read")
+	case auth.PRIV_CATALOG_WRITE:
+		permission = join3Strings("cluster.catalog[", target, "]!write")
+	case auth.PRIV_CATALOG_LIST:
+		permission = join3Strings("cluster.catalog[", target, "]!list")
+	case auth.PRIV_CATALOG_CREATE:
+		permission = join3Strings("cluster.catalog[", target, "]!create")
+	case auth.PRIV_CATALOG_ALTER:
+		permission = join3Strings("cluster.catalog[", target, "]!alter")
+	case auth.PRIV_CATALOG_DROP:
+		permission = join3Strings("cluster.catalog[", target, "]!drop")
+	case auth.PRIV_USERS_READ:
+		permission = "cluster.admin.users!read"
+	case auth.PRIV_USERS_WRITE:
+		permission = "cluster.admin.users!write"
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}

@@ -615,3 +615,59 @@ func (m *ServiceMgr) wait(rev service.Revision, cancel service.Cancel) (state, e
 		return newState, nil
 	}
 }
+
+/*
+  Enable After cbauth changes
+
+func (m *ServiceMgr) ValidateExternalCatalog(params service.ExternalCatalogValidationParams) (*service.ExternalCatalogValidationResult, error) {
+	logging.Infof("ServiceMgr::ValidateExternalCatalog entry: %v", params)
+
+	result := &service.ExternalCatalogValidationResult{
+		Result: make(map[string]any),
+	}
+
+	rv := extparams.ValidateCatalog(params.Data)
+
+	for k, v := range rv {
+		result.Result[k] = &service.ExternalCatalogValidationError{Error: v.Error, Message: v.Message}
+	}
+
+	for k, v := range params.Data {
+		if _, exist := result.Result[k]; !exist {
+			result.Result[k] = &service.ExternalCatalogValidationSuccess{
+				Value:      v,
+				Visibility: "external",
+			}
+		}
+	}
+
+	logging.Infof("ServiceMgr::ValidateExternalCatalog exit")
+	return result, nil
+}
+
+func (m *ServiceMgr) ValidateExternalCollection(params service.ExternalCollectionValidationParams) (*service.ExternalCollectionValidationResult, error) {
+	logging.Infof("ServiceMgr::ValidateExternalCollection entry: %v", params)
+
+	result := &service.ExternalCollectionValidationResult{
+		Result: make(map[string]any),
+	}
+
+	rv := extparams.ValidateCollection(params.Data)
+
+	for k, v := range rv {
+		result.Result[k] = &service.ExternalCollectionValidationError{Error: v.Error, Message: v.Message}
+	}
+
+	for k, v := range params.Data {
+		if _, exist := result.Result[k]; !exist {
+			result.Result[k] = &service.ExternalCollectionValidationSuccess{
+				Value:      v,
+				Visibility: "external",
+			}
+		}
+	}
+
+	logging.Infof("ServiceMgr::ValidateExternalCollection exit")
+	return result, nil
+}
+*/

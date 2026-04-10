@@ -713,6 +713,21 @@ func (this *Context) Credentials() *auth.Credentials {
 	return this.credentials
 }
 
+/*
+  Enable after cbauth changes
+
+func (this *Context) ExternalCredential(credId string) (*cbauth.Credential, error) {
+	if credId != "" {
+		cred := this.Credentials()
+		if cred == nil || len(cred.CbauthCredentialsList) == 0 {
+			return nil, fmt.Errorf("empty credentials")
+		}
+		return cred.CbauthCredentialsList[0].GetCredential(credId)
+	}
+	return nil, nil
+}
+*/
+
 func (this *Context) IsAdmin() bool {
 	return datastore.IsAdmin(this.credentials)
 }
