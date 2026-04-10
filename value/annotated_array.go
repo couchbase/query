@@ -66,8 +66,8 @@ func (this *spillFile) rewind() error {
 			this.reader, _ = zlib.NewReader(this.reader)
 		}
 	} else {
-		this.reader, err = encryption.NewCBEFReader(this.f, func(keyId string) *encryption.EaRKey {
-			return this.encryptionKey
+		this.reader, err = encryption.NewCBEFReader(this.f, func(keyId string) (*encryption.EaRKey, errors.Error) {
+			return this.encryptionKey, nil
 		})
 		if err != nil {
 			return errors.NewValueError(errors.E_VALUE_SPILL_READ, err)

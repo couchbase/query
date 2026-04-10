@@ -63,6 +63,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
@@ -868,8 +869,8 @@ func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
 		// Setup reader to read the stream file
 		var r io.Reader
 		if encrypted {
-			er, err := encryption.NewCBEFReader(streamFile, func(keyId string) *encryption.EaRKey {
-				return requestLog.stream.key
+			er, err := encryption.NewCBEFReader(streamFile, func(keyId string) (*encryption.EaRKey, errors.Error) {
+				return requestLog.stream.key, nil
 			})
 			if err != nil {
 				return nil, err

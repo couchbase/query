@@ -39,38 +39,8 @@ type CBEFReader struct {
 }
 
 // getEncryptionKey: Function that returns the encryption key material for a given key ID
-func NewCBEFReader(r io.Reader, getEncryptionKey func(keyId string) *EaRKey) (*CBEFReader, errors.Error) {
-	if r == nil {
-		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, fmt.Errorf("input reader is nil"))
-	}
-
-	// Read and validate file header
-	header := make([]byte, _CBEF_HEADER_LENGTH)
-	if _, err := io.ReadFull(r, header); err != nil {
-		return nil,
-			errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, fmt.Errorf("Failed to read header of file: %v", err))
-	}
-
-	if err := validateCBEFHeader(header); err != nil {
-		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, err)
-	}
-
-	keyIDLength := int(header[_CBEF_KEY_ID_LENGTH_OFFSET])
-	keyID := string(header[_CBEF_KEY_ID_OFFSET : _CBEF_KEY_ID_OFFSET+keyIDLength])
-	salt := header[_CBEF_RANDOM_SALT_OFFSET:]
-
-	key := getEncryptionKey(keyID)
-	if key == nil {
-		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, fmt.Errorf("Key not found for key ID: %s", keyID))
-	}
-
-	// Derive the key
-	derivedKey, err := cbefDeriveKey(key.Key, salt, len(key.Key))
-	if err != nil {
-		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, err)
-	}
-
-	decryptor, err := newCbefDecryptor(r, derivedKey, header)
+func NewCBEFReader(r io.Reader, getEncryptionKey func(keyId string) (*EaRKey, errors.Error)) (*CBEFReader, errors.Error) {
+	decryptor, header, err := cbefDecryptorForReader(r, getEncryptionKey, false)
 	if err != nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, err)
 	}
@@ -148,7 +118,6 @@ func (this *CBEFReader) setupWrapper(compression CompressionType) error {
 type cbefDecryptor struct {
 	closed      bool
 	r           io.Reader
-	header      []byte
 	chunkHeader []byte
 	nonce       []byte
 	AD          []byte
@@ -165,18 +134,20 @@ type cbefDecryptor struct {
 
 	// Length of plaintext in buffer
 	plaintextLen int
+
+	chunkOpsOnly bool
 }
 
-func newCbefDecryptor(r io.Reader, key []byte, header []byte) (*cbefDecryptor, error) {
+func newCbefDecryptor(r io.Reader, key []byte, header []byte, chunkOpsOnly bool) (*cbefDecryptor, error) {
 
 	if r == nil {
 		return nil, fmt.Errorf("Input reader is nil")
 	}
 
 	decryptor := &cbefDecryptor{
-		r:          r,
-		header:     header,
-		fileOffset: _CBEF_HEADER_LENGTH,
+		r:            r,
+		fileOffset:   _CBEF_HEADER_LENGTH,
+		chunkOpsOnly: chunkOpsOnly,
 	}
 
 	// Set up AES-GCM
@@ -207,6 +178,10 @@ func (this *cbefDecryptor) Read(data []byte) (int, error) {
 		return 0, fmt.Errorf("Decryptor is closed")
 	}
 
+	if this.chunkOpsOnly {
+		return 0, fmt.Errorf("Read is not supported for this decryptor configuration")
+	}
+
 	if len(data) == 0 {
 		return 0, nil
 	}
@@ -229,6 +204,23 @@ func (this *cbefDecryptor) Read(data []byte) (int, error) {
 	}
 
 	return read, nil
+}
+
+func (this *cbefDecryptor) ReadChunk() ([]byte, error) {
+	if this.closed {
+		return nil, fmt.Errorf("Decryptor is closed")
+	}
+
+	if !this.chunkOpsOnly {
+		return nil, fmt.Errorf("ReadChunk is not supported for this decryptor configuration")
+	}
+
+	err := this.readAndDecrypt()
+	if err != nil {
+		return nil, err
+	}
+
+	return this.buffer[:this.plaintextLen], nil
 }
 
 // Reads the next chunk from the underlying reader and decrypts it into the buffer.
@@ -297,8 +289,6 @@ func (this *cbefDecryptor) Close() error {
 	}
 
 	this.closed = true
-
-	this.header = nil
 	this.AD = nil
 	this.nonce = nil
 	this.buffer = nil
@@ -362,6 +352,27 @@ func IsCBEFReader(r io.Reader) bool {
 }
 
 /*
+If the file header is a valid CBEF header, returns whether the file is in CBEF format and if it is, the keyID from the header
+This function expects that the reader's position is at the start of the CBEF file header. And will advance the reader's position.
+Callers should rewind the reader to the start of the reader after calling this function
+*/
+func GetKeyIdFromCBEF(r io.Reader) (bool, string) {
+	// Read and validate file header
+	header := make([]byte, _CBEF_HEADER_LENGTH)
+	if _, err := io.ReadFull(r, header); err != nil {
+		return false, ""
+	}
+
+	if err := validateCBEFHeader(header); err != nil {
+		return false, ""
+	}
+
+	keyIDLength := int(header[_CBEF_KEY_ID_LENGTH_OFFSET])
+	keyID := string(header[_CBEF_KEY_ID_OFFSET : _CBEF_KEY_ID_OFFSET+keyIDLength])
+	return true, keyID
+}
+
+/*
 CBEFCursor allows reading and seeking within encrypted CBEF files where the file header indicates no compression.
 It relies on callers supplying valid start offsets for the encrypted chunks when seeking. This is because
 seeking to an offset that is not the start of a chunk will cause subsequent reads/decryption to fail
@@ -371,8 +382,8 @@ type CBEFCursor struct {
 	*CBEFReader
 }
 
-func NewCBEFCursor(r io.ReadSeeker, getEncryptionKey func(keyId string) *EaRKey) (*CBEFCursor, error) {
-	cbefReader, err := NewCBEFReader(r, getEncryptionKey)
+func NewCBEFCursor(r io.ReadSeeker, getKey func(keyId string) (*EaRKey, errors.Error)) (*CBEFCursor, error) {
+	cbefReader, err := NewCBEFReader(r, getKey)
 	if err != nil {
 		return nil, err
 	}
@@ -400,4 +411,86 @@ func (this *CBEFCursor) Seek(offset int64, whence int) (int64, error) {
 	this.decryptor.plaintextLen = 0
 
 	return newOffset, nil
+}
+
+// Reader that reads and decrypts data from the underlying reader. Not thread safe.
+// The reader does not perform any decompression on the data read. If the data read needs to be decompressed before being returned,
+// the caller is responsible for decompressing the data after reading the decrypted bytes from the reader.
+type cbefDirectReader struct {
+	decryptor   *cbefDecryptor
+	compression CompressionType
+	closed      bool
+}
+
+func newCBEFDirectReader(r io.Reader, getEncryptionKey func(keyId string) (*EaRKey, errors.Error)) (*cbefDirectReader,
+	errors.Error) {
+	decryptor, header, err := cbefDecryptorForReader(r, getEncryptionKey, true)
+	if err != nil {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, err)
+	}
+
+	compression := CompressionType(header[_CBEF_COMPRESSION_OFFSET])
+
+	return &cbefDirectReader{
+		compression: compression,
+		decryptor:   decryptor,
+	}, nil
+}
+
+func (this *cbefDirectReader) ReadChunk() ([]byte, error) {
+	if this.closed {
+		return nil, fmt.Errorf("Encryption reader is closed")
+	}
+
+	return this.decryptor.ReadChunk()
+}
+
+func (this *cbefDirectReader) Close() error {
+	if this.closed {
+		return nil
+	}
+
+	return this.decryptor.Close()
+}
+
+// Reads the header from the CBEF reader and creates a CBEF decryptor. Returns the decryptor and file header
+func cbefDecryptorForReader(r io.Reader, getEncryptionKey func(keyId string) (*EaRKey, errors.Error), directReader bool) (*cbefDecryptor, []byte,
+	error) {
+	if r == nil {
+		return nil, nil, fmt.Errorf("input reader is nil")
+	}
+
+	// Read and validate file header
+	header := make([]byte, _CBEF_HEADER_LENGTH)
+	if _, err := io.ReadFull(r, header); err != nil {
+		return nil, nil, fmt.Errorf("Failed to read header of file: %v", err)
+	}
+
+	if err := validateCBEFHeader(header); err != nil {
+		return nil, nil, err
+	}
+
+	keyIDLength := int(header[_CBEF_KEY_ID_LENGTH_OFFSET])
+	keyID := string(header[_CBEF_KEY_ID_OFFSET : _CBEF_KEY_ID_OFFSET+keyIDLength])
+	salt := header[_CBEF_RANDOM_SALT_OFFSET:]
+
+	key, kerr := getEncryptionKey(keyID)
+	if kerr != nil {
+		return nil, nil, kerr
+	} else if key == nil {
+		return nil, nil, fmt.Errorf("Key not found for key ID: %s", keyID)
+	}
+
+	// Derive the key
+	derivedKey, err := cbefDeriveKey(key.Key, salt, len(key.Key))
+	if err != nil {
+		return nil, nil, errors.NewEncryptionError(errors.E_ENCRYPTION_READER_CREATE, err)
+	}
+
+	decryptor, err := newCbefDecryptor(r, derivedKey, header, directReader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return decryptor, header, nil
 }

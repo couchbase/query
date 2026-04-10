@@ -214,26 +214,12 @@ func NewCBEFWriterSize(w io.Writer, key *EaRKey, compression CompressionType, bu
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Key is nil"))
 	}
 
-	if len(key.Id) == 0 || len(key.Id) > (_CBEF_RANDOM_SALT_OFFSET-_CBEF_KEY_ID_OFFSET) {
-		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Invalid keyID length: %d", len(key.Id)))
-	}
-
 	if bufferSize <= 0 {
 		bufferSize = _CBEF_DEFAULT_PLAINTEXT_LIMIT
 	}
 
 	// Create file header
-	header := make([]byte, _CBEF_HEADER_LENGTH)
-	copy(header[_CBEF_MAGIC_OFFSET:_CBEF_VERSION_OFFSET], _CBEF_MAGIC)
-	header[_CBEF_VERSION_OFFSET] = _CBEF_VERSION
-	header[_CBEF_COMPRESSION_OFFSET] = byte(compression)
-	header[_CBEF_KEY_DERIVATION_OFFSET] = byte(_CBEF_KEY_DERIVATION)
-	// "unused" field in the header is already set to 0 as values in a byte array are 0 by default
-	header[_CBEF_KEY_ID_LENGTH_OFFSET] = byte(len(key.Id))
-	copy(header[_CBEF_KEY_ID_OFFSET:_CBEF_RANDOM_SALT_OFFSET], key.Id)
-
-	// Generate a random salt
-	_, err := rand.Read(header[_CBEF_RANDOM_SALT_OFFSET:_CBEF_HEADER_LENGTH])
+	header, err := createCBEFHeader(key, compression)
 	if err != nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
 	}
@@ -250,7 +236,7 @@ func NewCBEFWriterSize(w io.Writer, key *EaRKey, compression CompressionType, bu
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
 	}
 
-	encryptor, err := newCbefEncryptor(w, derivedKey, header, bufferSize)
+	encryptor, err := newBufferedCbefEncryptor(w, derivedKey, header, bufferSize)
 	if err != nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
 	}
@@ -350,11 +336,10 @@ func (this *CBEFWriter) setupOuterWriter(compression CompressionType) error {
 	return nil
 }
 
-// Buffered writer that encrypts and writes data to the underlying writer. Not thread safe.
+// Writer that encrypts and writes data to the underlying writer. Not thread safe.
 type cbefEncryptor struct {
 	closed      bool
 	w           io.Writer
-	header      []byte
 	AD          []byte
 	chunkHeader []byte
 	gcm         cipher.AEAD
@@ -366,30 +351,62 @@ type cbefEncryptor struct {
 	// Variable field of nonce
 	nonceCounter uint64
 
-	// Buffer for encryption operations
-	// Stores plaintext up to plainTextLimit. When the accumulated plaintext is encrypted, the encryption call re-uses this buffer
-	// to store the ciphertext
+	/*  Buffer for encryption operations
+	In buffered mode:
+	Stores plaintext up to plainTextLimit. When the accumulated plaintext is encrypted, the encryption call re-uses this buffer
+	to store the ciphertext
+
+	In unbuffered mode:
+	Used only as per-call space in WriteChunk() to store plaintext, and then reused for ciphertext. Is appropriately re-sized
+	depending on the size of plaintext/ciphertext.
+	Does not store plaintext to batch writes.
+	*/
 	buffer []byte
 
 	// Maximum amount of plaintext that can be stored in the buffer before encryption is performed
+	// Ignored in unbuffered mode
 	plaintextLimit int
 
 	// End of accumulated plaintext in buffer and start position for next write
 	writePos int
+
+	buffered bool
 }
 
-func newCbefEncryptor(w io.Writer, key []byte, header []byte, bufferSize int) (*cbefEncryptor, error) {
-	if w == nil {
-		return nil, fmt.Errorf("Input writer is nil")
-	}
-
+func newBufferedCbefEncryptor(w io.Writer, key []byte, header []byte, bufferSize int) (*cbefEncryptor, error) {
 	if bufferSize <= 0 || bufferSize > _CBEF_MAX_PLAINTEXT_LIMIT {
 		return nil, fmt.Errorf("Invalid buffer size: %d", bufferSize)
 	}
 
+	encryptor, err := initCbefEncryptor(w, key, header)
+	if err != nil {
+		return nil, err
+	}
+
+	// Setup the buffer
+	encryptor.buffer = make([]byte, bufferSize+encryptor.gcm.Overhead())
+	encryptor.plaintextLimit = bufferSize
+	encryptor.buffered = true
+
+	return encryptor, nil
+}
+
+func newUnbufferedCbefEncryptor(w io.Writer, key []byte, header []byte) (*cbefEncryptor, error) {
+	encryptor, err := initCbefEncryptor(w, key, header)
+	if err != nil {
+		return nil, err
+	}
+
+	return encryptor, nil
+}
+
+func initCbefEncryptor(w io.Writer, key []byte, header []byte) (*cbefEncryptor, error) {
+	if w == nil {
+		return nil, fmt.Errorf("Input writer is nil")
+	}
+
 	encryptor := &cbefEncryptor{
 		w:          w,
-		header:     header,
 		fileOffset: _CBEF_HEADER_LENGTH,
 	}
 
@@ -412,17 +429,52 @@ func newCbefEncryptor(w io.Writer, key []byte, header []byte, bufferSize int) (*
 	// Setup the nonce
 	encryptor.nonce = make([]byte, _CBEF_NONCE_LENGTH)
 
-	// Setup the buffer
-	encryptor.buffer = make([]byte, bufferSize+encryptor.gcm.Overhead())
-	encryptor.plaintextLimit = bufferSize
-
 	// Setup the chunk header
 	encryptor.chunkHeader = make([]byte, _CBEF_CHUNK_HEADER_LENGTH)
 
 	return encryptor, nil
+
+}
+
+func (this *cbefEncryptor) WriteChunk(data []byte) error {
+	if this.buffered {
+		return fmt.Errorf("WriteChunk is not supported for buffered encryptor")
+	}
+
+	if this.closed {
+		return fmt.Errorf("Encryptor is closed")
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
+	if len(data) > _CBEF_MAX_PLAINTEXT_LIMIT {
+		return fmt.Errorf("Data length exceeds maximum plaintext limit per chunk")
+	}
+
+	cipherTextLen := len(data) + this.gcm.Overhead()
+
+	if cap(this.buffer) < cipherTextLen {
+		this.buffer = make([]byte, cipherTextLen)
+	}
+
+	this.writePos = 0
+	this.writePos += copy(this.buffer, data)
+
+	err := this.encryptAndWrite()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (this *cbefEncryptor) Write(data []byte) (int, error) {
+	if !this.buffered {
+		return 0, fmt.Errorf("Write is only supported for buffered encryptor")
+	}
+
 	if this.closed {
 		return 0, fmt.Errorf("Encryptor is closed")
 	}
@@ -470,7 +522,7 @@ func (this *cbefEncryptor) Write(data []byte) (int, error) {
 
 // Flush encrypts and writes any buffered data to the uderlying writer
 func (this *cbefEncryptor) Flush() error {
-	if this.closed {
+	if this.closed || !this.buffered {
 		return nil
 	}
 
@@ -492,7 +544,6 @@ func (this *cbefEncryptor) Close() error {
 	err := this.Flush()
 
 	this.closed = true
-	this.header = nil
 	this.AD = nil
 	this.nonce = nil
 	this.buffer = nil
@@ -584,4 +635,80 @@ func cbefDeriveKey(key []byte, salt []byte, derivedKeyLen int) ([]byte, error) {
 	}
 
 	return derivedKey, nil
+}
+
+// Writer that encrypts and writes data to the underlying writer. Not thread safe.
+// The writer does not perform any compression on the data to be written. If the data needs to be compressed before being written,
+// the caller is responsible for compressing the data beforehand and passing the compressed bytes to be encrypted and written.
+type cbefDirectWriter struct {
+	encryptor *cbefEncryptor
+	closed    bool
+}
+
+func newCBEFDirectWriter(w io.Writer, key *EaRKey, compression CompressionType) (*cbefDirectWriter, errors.Error) {
+	header, err := createCBEFHeader(key, compression)
+	if err != nil {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
+	}
+
+	// Dervive a new key using KBKDF
+	derivedKey, err := cbefDeriveKey(key.Key, header[_CBEF_RANDOM_SALT_OFFSET:_CBEF_HEADER_LENGTH], len(key.Key))
+	if err != nil {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
+	}
+
+	// Write header
+	_, err = w.Write(header)
+	if err != nil {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
+	}
+
+	encryptor, err := newUnbufferedCbefEncryptor(w, derivedKey, header)
+	if err != nil {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, err)
+	}
+
+	return &cbefDirectWriter{
+		encryptor: encryptor,
+	}, nil
+}
+
+func (this *cbefDirectWriter) WriteChunk(data []byte) error {
+	if this.closed {
+		return fmt.Errorf("Encryption writer is closed")
+	}
+
+	return this.encryptor.WriteChunk(data)
+}
+
+func (this *cbefDirectWriter) Close() error {
+	if this.closed {
+		return nil
+	}
+
+	return this.encryptor.Close()
+}
+
+func createCBEFHeader(key *EaRKey, compression CompressionType) ([]byte, error) {
+	if len(key.Id) == 0 || len(key.Id) > (_CBEF_RANDOM_SALT_OFFSET-_CBEF_KEY_ID_OFFSET) {
+		return nil, fmt.Errorf("Invalid keyID length: %d", len(key.Id))
+	}
+
+	// Create file header
+	header := make([]byte, _CBEF_HEADER_LENGTH)
+	copy(header[_CBEF_MAGIC_OFFSET:_CBEF_VERSION_OFFSET], _CBEF_MAGIC)
+	header[_CBEF_VERSION_OFFSET] = _CBEF_VERSION
+	header[_CBEF_COMPRESSION_OFFSET] = byte(compression)
+	header[_CBEF_KEY_DERIVATION_OFFSET] = byte(_CBEF_KEY_DERIVATION)
+	// "unused" field in the header is already set to 0 as values in a byte array are 0 by default
+	header[_CBEF_KEY_ID_LENGTH_OFFSET] = byte(len(key.Id))
+	copy(header[_CBEF_KEY_ID_OFFSET:_CBEF_RANDOM_SALT_OFFSET], key.Id)
+
+	// Generate a random salt
+	_, err := rand.Read(header[_CBEF_RANDOM_SALT_OFFSET:_CBEF_HEADER_LENGTH])
+	if err != nil {
+		return nil, err
+	}
+
+	return header, nil
 }

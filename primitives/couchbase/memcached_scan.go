@@ -1294,8 +1294,8 @@ func (this *vbRangeScan) seek(n int) bool {
 					return false
 				}
 
-				this.encReader, err = encryption.NewCBEFCursor(this.spill, func(keyId string) *encryption.EaRKey {
-					return this.scan.encryptionKey
+				this.encReader, err = encryption.NewCBEFCursor(this.spill, func(keyId string) (*encryption.EaRKey, qerrors.Error) {
+					return this.scan.encryptionKey, nil
 				})
 				if err != nil {
 
