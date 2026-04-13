@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/cbauth/service"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/extparams"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
@@ -616,9 +617,6 @@ func (m *ServiceMgr) wait(rev service.Revision, cancel service.Cancel) (state, e
 	}
 }
 
-/*
-  Enable After cbauth changes
-
 func (m *ServiceMgr) ValidateExternalCatalog(params service.ExternalCatalogValidationParams) (*service.ExternalCatalogValidationResult, error) {
 	logging.Infof("ServiceMgr::ValidateExternalCatalog entry: %v", params)
 
@@ -670,4 +668,3 @@ func (m *ServiceMgr) ValidateExternalCollection(params service.ExternalCollectio
 	logging.Infof("ServiceMgr::ValidateExternalCollection exit")
 	return result, nil
 }
-*/
