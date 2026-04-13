@@ -175,18 +175,10 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 		}
 	}
 
-	// Get allowlist from UI
-	var allowlist map[string]interface{}
-
-	_curlContext := context.(CurlContext)
-	if _curlContext != nil {
-		allowlist = _curlContext.GetAllowlist()
-	}
-
 	accounting.UpdateCounter(accounting.CURL_CALLS)
 
 	// Now you have the URL and the options with which to call curl.
-	result, err := handleCurl(curl_url, options, allowlist, context)
+	result, err := handleCurl(curl_url, options, context)
 
 	if err != nil {
 		accounting.UpdateCounter(accounting.CURL_CALL_ERRORS)
@@ -238,30 +230,14 @@ func (this *Curl) Constructor() FunctionConstructor {
 	return NewCurl
 }
 
-func handleCurl(urlS string, options map[string]interface{}, allowlist map[string]interface{}, context Context) (
-	interface{}, error) {
+func handleCurl(urlS string, options map[string]any, context Context) (
+	any, error) {
 
-	// Convert URL string to net/url object that is valid to be used in CURL()
-	urlObj, err := CurlURLStringToObject(urlS)
+	// Parse and validate the request URL: requires http/https scheme, non-empty host,
+	// and normalises the path. Errors here identify the CURL() target URL as malformed.
+	urlObj, err := util.ParseAndValidateURL(urlS)
 	if err != nil || urlObj == nil {
-		return nil, err
-	}
-
-	// Check if the input URL contains elements that are restricted by Couchbase
-	err = cbRestrictedURLCheck(urlObj)
-	if err != nil {
-		return nil, err
-	}
-
-	url := urlObj.String()
-
-	// Handle different cases
-
-	// initial check for curl_allowlist.json has been completed. The file exists.
-	// Now we need to access the contents of the file and check for validity.
-	err = allowlistCheck(allowlist, urlObj)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("CURL(): invalid request URL %q: %v", urlS, err)
 	}
 
 	availableQuota := uint64(_MAX_NO_QUOTA_RESPONSE_SIZE)
@@ -284,6 +260,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	stringData := ""
 	stringDataUrlEnc := ""
 	silent := false
+	url := urlObj.String()
 
 	// To show errors encountered when executing the CURL function.
 	show_error := true
@@ -301,13 +278,54 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 		show_error = value.NewValue(showErrVal).Actual().(bool)
 	}
 
+	err = IsUrlAllowedInCluster(urlObj, context)
+	if err != nil {
+		return nil, err
+	}
+
+	client := http.Client{}
+	header := http.Header{}
+
+	cred_id, ok := options["cred_id"]
+	if ok {
+		if value.NewValue(cred_id).Type() != value.STRING {
+			return nil, fmt.Errorf("Incorrect type for cred_id option in CURL ")
+		}
+		credId := value.NewValue(cred_id).ToString()
+
+		// cred_id centralizes auth and TLS material in credstore; explicit options
+		// are still parsed later, but this branch seeds the client/header defaults
+		// based on the credential type stored in the credstore for the given cred_id.
+		client, header, err = HandleCred(urlObj, credId, context)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		client, err = GetDefaultHttpClient(context)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	transport := UnwrapTransport(client.Transport)
+	if transport == nil {
+		return nil, fmt.Errorf("Unable to find *http.Transport in client transport chain")
+	}
+
 	// Process the "header" option
-	header, err := headerOptionProcessing(options)
+	explicitHeader, err := headerOptionProcessing(options)
 	if err != nil {
 		if show_error {
 			return nil, err
 		}
 		return nil, nil
+	}
+
+	// User-supplied headers are applied after the credential-derived headers established by HandleCred().
+	// New header keys are appended to the existing set, while keys that conflict with credential-derived headers are intentionally overridden. This allows callers to reuse transport-level credential settings (e.g. certificates, private keys) from a stored credential while supplying a different authentication
+	// token or other request-specific headers at call time.
+	for k, v := range explicitHeader {
+		header[http.CanonicalHeaderKey(k)] = v
 	}
 
 	// Process the "get" and "request" options
@@ -342,27 +360,6 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 		Timeout: connectTimeout,
 	}
 
-	client := &http.Client{
-
-		// Override the default CheckRedirect method
-		// Now, if url redirection is attempted - call finishes after the first request
-		// no error is returned ( since CheckRedirect returns the ErrUseLastResponse error )
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-
-		Transport: &http.Transport{
-			ForceAttemptHTTP2: true,
-			TLSClientConfig: &tls.Config{
-				// By default libcurl performs SSL certificate validation
-				InsecureSkipVerify: false,
-			},
-		},
-
-		// Default value of max-time be the request timeout
-		Timeout: context.GetTimeout(),
-	}
-
 	var body io.Reader
 	var certFile, keyFile string
 	var passPhrase []byte
@@ -370,7 +367,6 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	username := ""
 	password := ""
 	authOp := false
-	transport, _ := client.Transport.(*http.Transport)
 
 	for k, val := range options {
 		// Only support valid options.
@@ -381,6 +377,8 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 		case "get", "G":
 			break
 		case "request", "X":
+			break
+		case "cred_id":
 			break
 		case "data-urlencode":
 			stringDataUrlEnc, err = handleData(true, val, show_error)
@@ -426,8 +424,8 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 				return nil, fmt.Errorf("Incorrect type for user option in CURL. It should be a string. ")
 			}
 
-			// The value of the "Authorization" specified in the "headers" option
-			// takes precedence over "user" option
+			// The Authorization header set by cred_id or the "headers" option takes
+			// precedence over the "user" option.
 			if header.Get(_DEF_HEADER_AUTHORIZATION) == "" {
 				username, password = splitUser(inputVal.ToString())
 				authOp = true
@@ -519,7 +517,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 
 		case "passphrase":
 			if inputVal.Type() != value.STRING {
-				return "", fmt.Errorf("Passphrase must be a string.")
+				return nil, fmt.Errorf("Passphrase must be a string.")
 			}
 			passPhrase = []byte(inputVal.ToString())
 
@@ -587,11 +585,10 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 
 	// Create the http request
 	req, rerr := http.NewRequest(method, url, body)
-	req.Header = header
-
 	if rerr != nil {
 		return nil, fmt.Errorf("Request could not be initialized.")
 	}
+	req.Header = header
 
 	req.Header.Set("X-N1QL-User-Agent", _N1QL_USER_AGENT)
 
@@ -605,7 +602,8 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 	}
 
 	// if "ciphers" option is not set - use the default list of ciphers from cbauth
-	if _, ok = options["ciphers"]; !ok {
+	_, credSet := options["cred_id"]
+	if _, ok = options["ciphers"]; !ok && !credSet {
 		cipherIds, err := cipherStringToIds("", true)
 		if err != nil {
 			return nil, err
@@ -688,7 +686,10 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 
 		if err := json.Unmarshal(b.Bytes(), &dat); err != nil {
 			if show_error == true {
-				return nil, fmt.Errorf("Invalid JSON endpoint %v", url)
+				// Include the HTTP status and raw body so the caller can see what
+				// the server actually returned (e.g. "415 Unsupported Media Type").
+				return nil, fmt.Errorf("HTTP %d: response from %v is not valid JSON: %s",
+					resp.StatusCode, url, strings.TrimSpace(b.String()))
 			} else {
 				return nil, nil
 			}
@@ -696,166 +697,16 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 
 		return dat, nil
 	}
+
+	// Empty response body: surface non-2xx status codes so callers are not left
+	// with a silent NULL (e.g. 415 Unsupported Media Type with no body).
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		if show_error {
+			return nil, fmt.Errorf("HTTP %d from %v", resp.StatusCode, url)
+		}
+		return nil, nil
+	}
 	return nil, nil
-}
-
-// Convert URL string to net/url object that is in a format supported by CURL()
-func CurlURLStringToObject(urlS string) (*url.URL, error) {
-
-	urlParsed, err := url.Parse(urlS)
-	if err != nil {
-		return nil, err
-	}
-
-	// Make preliminary checks of the parsed URL
-	// since the path can be appropriately parsed only if the url is in a particular format
-	// CURL() requires the protocol, host to be specified
-	// CURL() only supports http and https protocols
-	protocol := urlParsed.Scheme
-	if protocol != "http" && protocol != "https" {
-		return nil, fmt.Errorf("Unspecified or unsupported protocol scheme in request URL.")
-	}
-
-	if urlParsed.Host == "" {
-		return nil, fmt.Errorf("No host in request URL.")
-	}
-
-	// Perform relative resolution on the input URL
-	// Create a base URL object from an empty path
-	baseURL, err := url.Parse("")
-	if err != nil {
-		return nil, err
-	}
-
-	// Resolve the input url object against the base URL
-	// This will resolve references in the input URL
-	resolvedURL := baseURL.ResolveReference(urlParsed)
-
-	// Replace multiple adjacent forward slashes with a single forward slash
-	urlObj := resolvedURL.JoinPath()
-
-	return urlObj, nil
-
-}
-
-// Checks if the URL matches any URLs restricted by Couchbase
-func cbRestrictedURLCheck(url *url.URL) error {
-
-	path := url.EscapedPath()
-
-	// Restrict access to the cluster's /diag/eval endpoint
-	// Restrict any URL where the path begins with /diag/eval
-	matched := hasPathPrefix(path, "/diag/eval")
-
-	if matched {
-		return fmt.Errorf("Access restricted - %v.", url.String())
-	}
-
-	return nil
-}
-
-// Check if URLs in allowlist and disallowedList contain the input URL
-func allowlistCheck(list map[string]interface{}, urlObj *url.URL) error {
-	// Structure is as follows
-	// {
-	//  "all_access":true/false,
-	//  "allowed_urls":[ list of allowed URL strings ]
-	//  "allowed_transformed_urls":[ list of allowed net/url objects that are valid to be processed in CURL() ],
-	//  "disallowed_urls":[ list of disallowed URL strings ]
-	//  "disallowed_transformed_urls":[ list of disallowed net/url objects that are valid to be processed in CURL() ],
-	// }
-
-	// allowlist passed through ns server is empty then no access
-	if len(list) == 0 {
-		return fmt.Errorf("Allowed list for cluster is empty.")
-	}
-
-	// allowlist passed through ns server doesnt contain all access field then no access
-	allaccess, ok := list["all_access"]
-	if !ok {
-		return fmt.Errorf("all_access does not exist in allowedlist.")
-	}
-
-	_, isOk := allaccess.(bool)
-
-	if !isOk {
-		// Type check error
-		return fmt.Errorf("all_access should be boolean value in the CURL allowedlist.")
-	}
-
-	if allaccess.(bool) {
-		return nil
-	}
-
-	// ALLOWED AND DISALLOWED URLS
-
-	// If all_access false - Use only those entries that are valid.
-	// Restricted access based on fields allowed_transformed_urls and disallowed_transformed_urls
-
-	if disallowedUrls, ok_dall := list["disallowed_transformed_urls"]; ok_dall {
-		dURL, ok := disallowedUrls.([]*url.URL)
-		if !ok {
-			return fmt.Errorf("Restrict access with disallowed urls")
-		}
-		if len(dURL) > 0 {
-			disallow := matchUrl(urlObj, dURL)
-			if disallow {
-				return fmt.Errorf("The endpoint %s is not permitted", urlObj.String())
-			}
-		}
-	}
-
-	if allowedUrls, ok_all := list["allowed_transformed_urls"]; ok_all {
-		alURL, ok := allowedUrls.([]*url.URL)
-		if !ok {
-			return fmt.Errorf("allowed_urls should be list of urls present in the allowedlists.")
-		}
-		if len(alURL) > 0 {
-			allow := matchUrl(urlObj, alURL)
-			if allow {
-				return nil
-			}
-		}
-	}
-
-	// URL is not present in disallowed url and is not in allowed_urls.
-	// If it reaches here, then the url isnt in the allowed_urls or the prefix_urls, and is also
-	// not in the disallowed urls.
-	return fmt.Errorf("The end point %s is not permitted.  List allowed end points in the configuration.", urlObj.String())
-
-}
-
-// Check if URL is allowed/disallowed as per the allowlist/ disallow list
-// Checks each element of the input URL with the URLs in the list
-func matchUrl(u *url.URL, list []*url.URL) bool {
-
-	inputUserInfo := u.User.String()
-
-	for _, l := range list {
-		if u.Scheme != l.Scheme {
-			continue
-		}
-
-		if u.Host != l.Host {
-			continue
-		}
-
-		// Only in when the URL in the list has User Information - compare it with Input URL's user information
-		lUserInfo := l.User.String()
-		if lUserInfo != "" {
-			if inputUserInfo != lUserInfo {
-				continue
-			}
-		}
-
-		matched := hasPathPrefix(u.EscapedPath(), l.EscapedPath())
-
-		if matched {
-			return true
-		}
-	}
-
-	return false
 }
 
 // encodeData: if val is to be url encoded
@@ -1105,37 +956,6 @@ func isTimeoutError(err error) bool {
 	}
 
 	return false
-}
-
-// Helper function to determine if 'path' starts with a particular path 'prefix'
-func hasPathPrefix(path string, prefix string) bool {
-
-	// Initial prefix matching
-	if !strings.HasPrefix(path, prefix) {
-		return false
-	}
-
-	// If the 'prefix' path does not end with "/" then the initial prefix matching might not be sufficient
-	// The following check is to prevent the mistaken matching of cases like:
-	// path = "/testt" and prefix = "/test"
-	if !strings.HasSuffix(prefix, "/") {
-		n := len(prefix)
-
-		// It is an exact match
-		if len(path) == n {
-			return true
-		}
-
-		// if the next character after the matched prefix is a path separator / - it is a match
-		if path[n] == '/' {
-			return true
-		}
-
-		return false
-	}
-
-	return true
-
 }
 
 func getFileName(val value.Value) (string, error) {

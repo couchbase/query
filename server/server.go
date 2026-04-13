@@ -32,7 +32,6 @@ import (
 	"github.com/couchbase/query/encryption/keymgmt"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
-	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
@@ -412,8 +411,8 @@ func (this *Server) SetAllowlist(val map[string]interface{}) {
 				logging.Warnf("CURL allowed URLs list must be a list of strings.")
 			} else {
 
-				// Convert string URL to net/url object that is valid to be used in CURL()
-				u, err := expression.CurlURLStringToObject(aUrl)
+				// Parse and validate using util.ParseAndValidateURL (canonical URL parser).
+				u, err := util.ParseAndValidateURL(aUrl)
 				if err != nil {
 					logging.Warnf("URL in CURL allowed URLs list: %s - not in valid format."+
 						" The URL must include a supported protocol, host and all other components of the URL.", aUrl)
@@ -442,8 +441,8 @@ func (this *Server) SetAllowlist(val map[string]interface{}) {
 				logging.Warnf("CURL disallowed URLs list must be a list of strings.")
 			} else {
 
-				// Convert string URL to net/url object that is valid to be used in CURL()
-				u, err := expression.CurlURLStringToObject(dUrl)
+				// Parse and validate using util.ParseAndValidateURL (canonical URL parser).
+				u, err := util.ParseAndValidateURL(dUrl)
 				if err != nil {
 					logging.Warnf("URL in CURL disallowed URLs list: %s - not in valid format."+
 						" The URL must include a supported protocol, host and all other components of the URL.", dUrl)

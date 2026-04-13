@@ -357,7 +357,7 @@ func TestPathPrefixMatch(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got := pathPrefixMatch(tc.input, tc.prefix)
+		got := PathPrefixMatch(tc.input, tc.prefix)
 		if got != tc.want {
 			t.Errorf("pathPrefixMatch(%q, %q) = %v, want %v", tc.input, tc.prefix, got, tc.want)
 		}

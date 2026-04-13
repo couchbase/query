@@ -27,6 +27,18 @@ var cbRestrictedPaths = []string{
 	"/diag/eval",
 }
 
+// IsRestrictedURL reports whether u matches any of the Couchbase restricted
+// paths defined in cbRestrictedPaths. Returns true if the URL should be blocked
+// regardless of allowlist configuration.
+func IsRestrictedURL(u *url.URL) bool {
+	for _, restricted := range cbRestrictedPaths {
+		if PathPrefixMatch(u.EscapedPath(), restricted) {
+			return true
+		}
+	}
+	return false
+}
+
 // ValidateURLInAllowlist reports whether urlStr is permitted by either
 // serverAllowlist or allowlist, checking serverAllowlist first.
 //
@@ -54,14 +66,14 @@ var cbRestrictedPaths = []string{
 //  5. allowlist permits the URL → allowed.
 //  6. Neither map permits → denied.
 func ValidateURLInAllowlist(urlStr string, serverAllowlist, allowlist map[string]any) error {
-	inputURL, err := parseAndValidateURL(urlStr)
+	inputURL, err := ParseAndValidateURL(urlStr)
 	if err != nil {
 		return err
 	}
 
 	// cbRestrictedPaths are blocked regardless of any allowlist configuration.
 	for _, restricted := range cbRestrictedPaths {
-		if pathPrefixMatch(inputURL.EscapedPath(), restricted) {
+		if PathPrefixMatch(inputURL.EscapedPath(), restricted) {
 			return fmt.Errorf("access restricted - %v", urlStr)
 		}
 	}
@@ -131,8 +143,11 @@ func checkAllowlist(inputURL *url.URL, urlStr string, allowlist map[string]any) 
 	return fmt.Errorf("URL %q is not in the allowed list", urlStr)
 }
 
-// parseAndValidateURL parses urlStr and verifies it has a supported scheme and a host.
-func parseAndValidateURL(urlStr string) (*url.URL, error) {
+// ParseAndValidateURL parses urlStr, verifies it uses http or https, has a
+// non-empty host, and normalises the path (removing ".."/"." segments).
+// It is the canonical entry point for turning a raw URL string into a
+// *url.URL ready for allowlist evaluation or credential endpoint use.
+func ParseAndValidateURL(urlStr string) (*url.URL, error) {
 	u, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid URL %q: %v", urlStr, err)
@@ -216,7 +231,7 @@ func urlMatchesAny(inputURL *url.URL, patterns []*url.URL) bool {
 //   - Scheme must be identical.
 //   - Host is matched with wildcardHostMatch (supports "*.suffix" prefix wildcard).
 //   - User-info in p is only checked when non-empty.
-//   - Path is checked with pathPrefixMatch.
+//   - Path is checked with PathPrefixMatch.
 func urlMatchesPattern(inputURL, p *url.URL) bool {
 	if inputURL.Scheme != p.Scheme {
 		return false
@@ -240,7 +255,7 @@ func urlMatchesPattern(inputURL, p *url.URL) bool {
 		}
 	}
 
-	return pathPrefixMatch(inputURL.EscapedPath(), p.EscapedPath())
+	return PathPrefixMatch(inputURL.EscapedPath(), p.EscapedPath())
 }
 
 // wildcardHostMatch reports whether inputHost matches patternHost.
@@ -271,15 +286,16 @@ func wildcardHostMatch(inputHost, patternHost string) bool {
 	return label != "" && !strings.Contains(label, ".")
 }
 
-// pathPrefixMatch reports whether inputPath starts with prefixPath using
-// path-segment semantics (avoids "/test" incorrectly matching "/testsuite").
+// PathPrefixMatch reports whether inputPath starts with prefixPath using
+// path-segment semantics, preventing "/test" from incorrectly matching
+// "/testsuite".
 //
 // Rules:
 //   - If prefixPath is empty or "/", every inputPath is considered a match.
 //   - Exact match always qualifies.
 //   - A partial prefix match is valid only when the next character in inputPath
 //     is "/" (i.e., the prefix ends on a segment boundary).
-func pathPrefixMatch(inputPath, prefixPath string) bool {
+func PathPrefixMatch(inputPath, prefixPath string) bool {
 	if prefixPath == "" || prefixPath == "/" {
 		return true
 	}
