@@ -37,6 +37,6 @@ var NewJavascriptBody = func(library, object, text string) (functions.FunctionBo
 type InlineUdfContext interface {
 	GetInlineUdf(udf string) (expression.Expression, []string, bool)
 	SetInlineUdf(udf string, expr expression.Expression, varNames []string)
-	SetupSubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock, generate, trans bool) (err error)
+	SetupSubqueryPlans(udfName string, expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock, generate, trans bool) (err error)
 	VerifySubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock bool) (errors.Error, bool)
 }

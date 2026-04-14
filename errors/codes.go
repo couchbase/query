@@ -211,6 +211,7 @@ const (
 	E_ENCODING_NAME_MISMATCH                     ErrorCode = 4090
 	E_ENCODING_CONTEXT_MISMATCH                  ErrorCode = 4091
 	E_PREDEFINED_PREPARED_NAME                   ErrorCode = 4092
+	E_PREPARED_INLINE_UDF                        ErrorCode = 4093
 	E_NO_INDEX_JOIN                              ErrorCode = 4100
 	E_USE_KEYS_USE_INDEXES                       ErrorCode = 4110
 	E_NO_INDEX_SERVICE                           ErrorCode = 4115

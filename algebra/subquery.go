@@ -338,6 +338,68 @@ func (this *SubqueryPlans) Copy(dest *SubqueryPlans, lock bool) {
 	}
 }
 
+func (this *SubqueryPlans) HasSubquery(lock bool) (hasSubq bool) {
+	if lock {
+		this.mutex.RLock()
+		hasSubq = len(this.plans) > 0
+		this.mutex.RUnlock()
+	} else {
+		hasSubq = len(this.plans) > 0
+	}
+	return
+}
+
+func (this *SubqueryPlans) IsEquivalent(other *SubqueryPlans, lock bool) bool {
+	if this == nil {
+		return other == nil
+	} else if other == nil {
+		return false
+	}
+
+	// lock is meant for 'other'. if self lock is needed (for 'this') another argument will need to be added
+	if lock {
+		other.mutex.RLock()
+		defer other.mutex.RUnlock()
+	}
+
+	if len(this.plans) != len(other.plans) {
+		return false
+	}
+
+	thisString := make(map[string]int, len(this.plans))
+	otherString := make(map[string]int, len(other.plans))
+
+	for s, _ := range this.plans {
+		str := s.String()
+		if _, ok := thisString[str]; ok {
+			thisString[str]++
+		} else {
+			thisString[str] = 1
+		}
+	}
+
+	for s, _ := range other.plans {
+		str := s.String()
+		if _, ok := otherString[str]; ok {
+			otherString[str]++
+		} else {
+			otherString[str] = 1
+		}
+	}
+
+	if len(thisString) != len(otherString) {
+		return false
+	}
+
+	for s, i := range thisString {
+		if i2, ok := otherString[s]; !ok || i2 != i {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Validation of each subquery plans.
 
 func (this *SubqueryPlans) ForEach(expr expression.Expression, options uint32, lock bool,

@@ -73,6 +73,7 @@ type FunctionBody interface {
 	Test(name FunctionName) errors.Error
 	Load(FunctionName) errors.Error
 	Unload(FunctionName)
+	DeleteUdfPrepared(FunctionName)
 }
 
 type FunctionEntry struct {
@@ -164,6 +165,7 @@ func FunctionClear(key string, f func(*FunctionEntry)) bool {
 			f(ce)
 		}
 		ce.Unload(ce.FunctionName)
+		ce.DeleteUdfPrepared(ce.FunctionName)
 	}
 	return functions.cache.Delete(key, process)
 }
@@ -177,6 +179,9 @@ func ClearScopeEntries(namespace, bucket, scope string) {
 		path := ce.Path()
 		del = len(path) == 4 && namespace == path[0] && bucket == path[1] && scope == path[2]
 		ce.Unload(ce.FunctionName)
+		if del {
+			ce.DeleteUdfPrepared(ce.FunctionName)
+		}
 		id = k
 		return true
 	}
@@ -353,7 +358,9 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 
 		// if successful clear the cache locally
 		functions.cache.Delete(key, func(ce interface{}) {
-			ce.(*FunctionEntry).Unload(ce.(*FunctionEntry).FunctionName)
+			entry := ce.(*FunctionEntry)
+			entry.Unload(entry.FunctionName)
+			entry.DeleteUdfPrepared(entry.FunctionName)
 		})
 
 		// and remotely
@@ -785,6 +792,9 @@ func (this *missing) Load(name FunctionName) errors.Error {
 }
 
 func (this *missing) Unload(name FunctionName) {
+}
+
+func (this *missing) DeleteUdfPrepared(name FunctionName) {
 }
 
 func (this *missing) FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error) {

@@ -23,6 +23,8 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -49,7 +51,7 @@ type Prepared struct {
 	useCBO          bool
 	persist         bool
 	adHoc           bool
-	planLock        bool
+	inlineUdf       bool
 	keyspaceRefs    []string
 	preparedTime    time.Time // time the plan was generated
 	optimHints      *algebra.OptimHints
@@ -59,6 +61,7 @@ type Prepared struct {
 	keyspaceMetas      []ksVersion
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
+	udfSubqPlans       []byte
 	planVersion        int
 	errCount           int
 	fatalError         bool
@@ -136,16 +139,18 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 }
 
 func (this *Prepared) marshalInternal(r map[string]interface{}) {
-	r["operator"] = this.Operator
-	r["signature"] = this.signature
+	if !this.inlineUdf {
+		r["operator"] = this.Operator
+		r["signature"] = this.signature
+		r["reqType"] = this.reqType
+		r["text"] = this.text
+	}
 	r["name"] = this.name
 	r["encoded_plan"] = this.encoded_plan
-	r["text"] = this.text
 	r["indexApiVersion"] = this.indexApiVersion
 	r["featureControls"] = this.featureControls
 	r["namespace"] = this.namespace
 	r["queryContext"] = this.queryContext
-	r["reqType"] = this.reqType
 	r["planPreparedTime"] = this.preparedTime.Format(util.DEFAULT_FORMAT)
 
 	if this.userAgent != "" {
@@ -173,8 +178,11 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.adHoc {
 		r["adHocStatement"] = this.adHoc
 	}
-	if this.planLock {
-		r["planLock"] = this.planLock
+	if this.inlineUdf {
+		r["inlineUdf"] = this.inlineUdf
+		if len(this.udfSubqPlans) > 0 {
+			r["udfSubqPlans"] = this.udfSubqPlans
+		}
 	}
 	if len(this.indexScanKeyspaces) > 0 {
 		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
@@ -216,7 +224,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		UseCBO             bool                   `json:"useCBO"`
 		Persist            bool                   `json:"persist"`
 		AdHoc              bool                   `json:"adHocStatement"`
-		PlanLock           bool                   `json:"planLock"`
+		InlineUdf          bool                   `json:"inlineUdf"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
@@ -233,6 +241,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 			IndexScanKeyspaces map[string]bool `json:"indexSccanKeyspaces"`
 			SubqText           string          `json:"subquery"`
 		} `json:"subqueryPlans"`
+		UdfSubqPlans []byte `json:"udfSubqPlans"`
 	}
 
 	var op_type struct {
@@ -267,11 +276,12 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.useCBO = _unmarshalled.UseCBO
 	this.persist = _unmarshalled.Persist
 	this.adHoc = _unmarshalled.AdHoc
-	this.planLock = _unmarshalled.PlanLock
+	this.inlineUdf = _unmarshalled.InlineUdf
 	this.planVersion = _unmarshalled.Version
 	this.fatalError = _unmarshalled.FatalError
 	this.errCount = _unmarshalled.ErrCount
 	this.keyspaceRefs = _unmarshalled.KeyspaceRefs
+	this.udfSubqPlans = _unmarshalled.UdfSubqPlans
 
 	if _unmarshalled.PreparedTime != "" {
 		prepTime, err := time.Parse(util.DEFAULT_FORMAT, _unmarshalled.PreparedTime)
@@ -306,33 +316,36 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		}
 	}
 
-	var subqMap map[string]*subqPlanInfo
-	var subqPlans *algebra.SubqueryPlans
-	hasSubq := false
-	if len(_unmarshalled.SubqPlans) > 0 {
-		hasSubq = true
-		subqPlans = algebra.NewSubqueryPlans()
-		subqMap = make(map[string]*subqPlanInfo, len(_unmarshalled.SubqPlans))
-		for _, planP := range _unmarshalled.SubqPlans {
-			subqText := planP.SubqText
-			if subqText == "" {
-				return errors.NewPlanInternalError("prepared.unmarshalInternal: missing subquery text")
-			}
-			subqMap[subqText] = &subqPlanInfo{
-				op:   planP.PlanOp,
-				isks: planP.IndexScanKeyspaces,
+	// entries for inline UDF only have UDF subquery plans
+	if !this.inlineUdf {
+		var subqMap map[string]*subqPlanInfo
+		var subqPlans *algebra.SubqueryPlans
+		hasSubq := false
+		if len(_unmarshalled.SubqPlans) > 0 {
+			hasSubq = true
+			subqPlans = algebra.NewSubqueryPlans()
+			subqMap = make(map[string]*subqPlanInfo, len(_unmarshalled.SubqPlans))
+			for _, planP := range _unmarshalled.SubqPlans {
+				subqText := planP.SubqText
+				if subqText == "" {
+					return errors.NewPlanInternalError("prepared.unmarshalInternal: missing subquery text")
+				}
+				subqMap[subqText] = &subqPlanInfo{
+					op:   planP.PlanOp,
+					isks: planP.IndexScanKeyspaces,
+				}
 			}
 		}
-	}
 
-	planContext := newPlanContext(subqMap, subqPlans)
-	this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
-	if err != nil {
-		return err
-	}
+		planContext := newPlanContext(subqMap, subqPlans)
+		this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
+		if err != nil {
+			return err
+		}
 
-	if hasSubq {
-		this.subqueryPlans = subqPlans
+		if hasSubq {
+			this.subqueryPlans = subqPlans
+		}
 	}
 
 	return nil
@@ -472,12 +485,12 @@ func (this *Prepared) SetAdHoc(adHoc bool) {
 	this.adHoc = adHoc
 }
 
-func (this *Prepared) PlanLock() bool {
-	return this.planLock
+func (this *Prepared) IsInlineUdf() bool {
+	return this.inlineUdf
 }
 
-func (this *Prepared) SetPlanLock(planLock bool) {
-	this.planLock = planLock
+func (this *Prepared) SetInlineUdf() {
+	this.inlineUdf = true
 }
 
 func (this *Prepared) EncodedPlan() string {
@@ -494,6 +507,8 @@ func (this *Prepared) BuildEncodedPlan() (string, error) {
 	r := make(map[string]interface{}, 5)
 	r["planVersion"] = this.planVersion
 	this.marshalInternal(r)
+	// unset any previously generated encoded_plan
+	delete(r, "encoded_plan")
 	json_bytes, err := json.Marshal(r)
 	if err != nil {
 		return "", err
@@ -677,6 +692,10 @@ func (this *Prepared) HasVerificationError() bool {
 
 func (this *Prepared) PlanVersion() int {
 	return this.planVersion
+}
+
+func (this *Prepared) SetInlineUdfPlanVersion() {
+	this.planVersion = util.PLAN_VERSION
 }
 
 func (this *Prepared) SetDummyPlanVersion() {
@@ -866,6 +885,78 @@ func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
 	return nil
 }
 
+// when plan stability is on, for inline UDFs, we store marshalled subquery plans in the *Prepared,
+// such that if subuqery plans is needed we unmarshal each time to ensure there is sharing of the
+// subquery plans generated.
+
+func (this *Prepared) SetupUdfSubqPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock bool) error {
+	// for UDF, we put marshalled plans for the subqueries in the prepared cache
+	marshalSubqPlans := subqPlans.MarshalPlans(lock, this.name, marshalSubqueryPlan)
+	r := map[string]interface{}{
+		"udfExpr":          expr,
+		"udfSubqueryPlans": marshalSubqPlans,
+	}
+	udfSubqPlans, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+	this.udfSubqPlans = udfSubqPlans
+	return nil
+}
+
+func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlans) error {
+	var _unmarshalled struct {
+		UdfExpr      string `json:"udfExpr"`
+		UdfSubqPlans map[string]struct {
+			PlanOp             json.RawMessage `json:"plan"`
+			IndexScanKeyspaces map[string]bool `json:"indexSccanKeyspaces"`
+			SubqText           string          `json:"subquery"`
+		} `json:"udfSubqueryPlans"`
+	}
+
+	err := json.Unmarshal(this.udfSubqPlans, &_unmarshalled)
+	if err != nil {
+		return err
+	}
+
+	udfExpr, err := parser.Parse(_unmarshalled.UdfExpr)
+	if err != nil {
+		return err
+	}
+
+	for _, subqPlanInfo := range _unmarshalled.UdfSubqPlans {
+		// get the *Subquery expression
+		expr, err := parser.Parse(subqPlanInfo.SubqText)
+		if err != nil {
+			return err
+		}
+		subquery, ok := expr.(*algebra.Subquery)
+		if !ok {
+			return errors.NewPlanInternalError(fmt.Sprintf("GetUdfSubqPlans: unexpected expr type %T", expr))
+		}
+
+		// get the plan
+		var op_type struct {
+			Operator string `json:"#operator"`
+		}
+
+		err = json.Unmarshal(subqPlanInfo.PlanOp, &op_type)
+		if err != nil {
+			return err
+		}
+
+		planContext := newPlanContext(nil, nil)
+		op, err := MakeOperator(op_type.Operator, subqPlanInfo.PlanOp, planContext)
+		if err != nil {
+			return err
+		}
+
+		subqPlans.Set(subquery.Select(), udfExpr, NewQueryPlan(op), subqPlanInfo.IndexScanKeyspaces, lock)
+	}
+
+	return nil
+}
+
 func marshalSubqueryPlan(r map[string]interface{}, subselect *algebra.Select, planP, isksP interface{},
 	prepName string) string {
 
@@ -875,10 +966,12 @@ func marshalSubqueryPlan(r map[string]interface{}, subselect *algebra.Select, pl
 	if len(indexScanKeyspaces) > 0 {
 		r["indexScanKeyspaces"] = indexScanKeyspaces
 	}
-	text := subselect.String()
+	// the text needs to match what gets generated from Subquery.String()
+	var text string
 	if subselect.IsCorrelated() {
-		// this text needs to match what gets generated from Subquery.String()
-		text = "correlated (" + text + ")"
+		text = "correlated (" + subselect.String() + ")"
+	} else {
+		text = "(" + subselect.String() + ")"
 	}
 	r["subquery"] = text
 	str, _ := util.UUIDV5(prepName, text)

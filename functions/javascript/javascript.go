@@ -626,6 +626,9 @@ func (this *javascriptBody) Unload(name functions.FunctionName) {
 	this.unload(name, nameToLibrary(name))
 }
 
+func (this *javascriptBody) DeleteUdfPrepared(name functions.FunctionName) {
+}
+
 func (this *javascriptBody) load(name functions.FunctionName, id string) errors.Error {
 	var evaluator *evaluatorDesc
 

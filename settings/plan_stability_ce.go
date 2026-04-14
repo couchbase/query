@@ -29,3 +29,7 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, errors.Error) {
 	return nil, errors.NewSettingsEnterpriseOnly("Plan Stability")
 }
+
+func DeleteUdfPrepared(udfName string) errors.Error {
+	return nil
+}

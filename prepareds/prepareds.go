@@ -499,13 +499,72 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
 	if planStabilityAdHoc {
 		err := persistPrepared(prepared)
 		if err != nil {
-			logging.Errorf("Plan Stability (AD_HOC) encounters error while trying to persist plan for statement %v %v, error %v",
+			logging.Errorf("Plan Stability (AD_HOC) encounters error while trying to persist plan (%v) for statement %v, error %v",
 				prepared.Name(), prepared.Text(), err)
 			return false
 		}
 	}
 
 	return true
+}
+
+const _INLINE_UDF_NAME_PREFIX = "__INLINE_UDF__"
+
+func GetUdfPreparedName(udfName string) string {
+	return _INLINE_UDF_NAME_PREFIX + udfName
+}
+
+func AddUdfPrepared(prepared *plan.Prepared, lock bool) errors.Error {
+
+	added := true
+	prepareds.add(prepared, false, true, func(ce *CacheEntry) bool {
+		added = ce.Prepared.IsInlineUdf() && ce.Prepared.GetSubqueryPlans(false).IsEquivalent(prepared.GetSubqueryPlans(false), lock)
+		if !added {
+			logging.Infof("Prepared for Inline UDF found mismatching name and subqueries %v", prepared.Name())
+		}
+		return added
+	})
+	if !added {
+		return errors.NewInlineUdfPreparedError(prepared.Name(), "adding to prepared cache failed", nil)
+	}
+
+	err := persistPrepared(prepared)
+	if err != nil {
+		logging.Errorf("Plan Stability encounters error while trying to persist plan (%v) for inline UDF, error %v",
+			prepared.Name(), err)
+		return errors.NewInlineUdfPreparedError(prepared.Name(), "persist of prepared entry", err)
+	}
+
+	return nil
+}
+
+func GetUdfPrepared(udfName string, deltaKeyspaces map[string]bool, args ...logging.Log) (
+	prepared *plan.Prepared, err errors.Error) {
+
+	prepName := GetUdfPreparedName(udfName)
+	prepared, err = GetPrepared(prepName, deltaKeyspaces, args...)
+	if prepared == nil && err != nil && err.Code() == errors.E_NO_SUCH_PREPARED {
+		// if not in cache, check disk
+		prepared, err = loadPrepared(prepName)
+	}
+
+	if prepared != nil {
+		return prepared, nil
+	} else if err != nil && err.Code() != errors.E_NO_SUCH_PREPARED {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (this *preparedCache) DeleteUdfPrepared(udfName string) errors.Error {
+	prepared, err := GetUdfPrepared(udfName, nil, nil)
+	if err != nil && err.Code() != errors.E_NO_SUCH_PREPARED {
+		return err
+	}
+	if prepared != nil && prepared.IsInlineUdf() {
+		return DeletePreparedFunc(prepared.Name(), nil)
+	}
+	return nil
 }
 
 // Prepareds and system keyspaces
@@ -563,7 +622,8 @@ func AddPrepared(prepared *plan.Prepared) errors.Error {
 	return nil
 }
 
-func DeletePrepared(name string) errors.Error {
+// this function does not check whether the prepared has any saved query plans on disk
+func deletePreparedFromCache(name string) errors.Error {
 	if prepareds.cache.Delete(name, nil) {
 		return nil
 	}
@@ -807,15 +867,20 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// we don't trust anything strangers give us.
 	// check the plan and populate metadata counters
 	// reprepare if no good
+	// entries for inline UDF only has UDF subquery plans and thus no need to verify (verification
+	// for UDF subquery plans performed elsewhere, see VerifySubqueryPlans())
 	add := true
-	verifyErr := prepared.Verify()
-	if verifyErr != nil {
-		newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability, log)
-		if prepErr == nil {
-			prepared = newPrepared
-			add = replace
-		} else {
-			return nil, prepErr, nil
+	var verifyErr errors.Error
+	if !prepared.IsInlineUdf() {
+		verifyErr = prepared.Verify()
+		if verifyErr != nil {
+			newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability, log)
+			if prepErr == nil {
+				prepared = newPrepared
+				add = replace
+			} else {
+				return nil, prepErr, nil
+			}
 		}
 	}
 

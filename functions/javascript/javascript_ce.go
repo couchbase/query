@@ -64,3 +64,6 @@ func (this *javascriptBody) Load(name functions.FunctionName) errors.Error {
 
 func (this *javascriptBody) Unload(name functions.FunctionName) {
 }
+
+func (this *javascriptBody) DeleteUdfPrepared(name functions.FunctionName) {
+}

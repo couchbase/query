@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/functions"
 	functionsBridge "github.com/couchbase/query/functions/bridge"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/value"
 )
 
@@ -220,6 +221,10 @@ func (this *inlineBody) Load(name functions.FunctionName) errors.Error {
 func (this *inlineBody) Unload(name functions.FunctionName) {
 }
 
+func (this *inlineBody) DeleteUdfPrepared(name functions.FunctionName) {
+	settings.DeleteUdfPrepared(name.Key())
+}
+
 func (this *inlineBody) Expressions() expression.Expressions {
 	return expression.Expressions{this.expr}
 }
@@ -274,7 +279,7 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 			}
 			//  Store new plan in UDF
 			subqueryPlans = algebra.NewSubqueryPlans()
-			err = context.SetupSubqueryPlans(expr, subqueryPlans, true, true, false)
+			err = context.SetupSubqueryPlans(udfName, expr, subqueryPlans, true, true, false)
 			if err != nil {
 				this.mutex.Unlock()
 				return nil, nil, err
@@ -301,7 +306,7 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 	}
 	if err == nil {
 		// Setup subquery plans for transaction or copy from UDF to context
-		err = context.SetupSubqueryPlans(expr, subqueryPlans, true, false, trans)
+		err = context.SetupSubqueryPlans(udfName, expr, subqueryPlans, true, false, trans)
 	}
 	if err == nil {
 		// Store UDF information in the context

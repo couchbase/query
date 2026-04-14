@@ -200,6 +200,7 @@ func IsPlanStabilityErrorStrict() bool {
 
 type PlanCache interface {
 	UpdatePlanStabilityMode(oldMode, newMode PlanStabilityMode, requestId string) errors.Error
+	DeleteUdfPrepared(udfName string) errors.Error
 }
 
 var planCache PlanCache

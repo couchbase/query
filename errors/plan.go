@@ -133,6 +133,13 @@ func NewPredefinedPreparedNameError(msg string) Error {
 		InternalMsg: fmt.Sprintf("Prepared name %s is predefined (reserved). ", msg), InternalCaller: CallerN(1)}
 }
 
+func NewInlineUdfPreparedError(name, msg string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_PREPARED_INLINE_UDF, IKey: "plan.prepared.inline_udf",
+		ICause:         e,
+		InternalMsg:    fmt.Sprintf("Error with prepared entry for inline UDF %s: %s", name, msg),
+		InternalCaller: CallerN(1)}
+}
+
 func NewNoIndexJoinError(alias, op string) Error {
 	return &err{level: EXCEPTION, ICode: E_NO_INDEX_JOIN, IKey: fmt.Sprintf("plan.index_%s.no_index", op),
 		InternalMsg: fmt.Sprintf("No index available for join term %s", alias), InternalCaller: CallerN(1)}

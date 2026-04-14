@@ -28,7 +28,11 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	} else if newMode == settings.PS_MODE_OFF &&
 		(oldMode == settings.PS_MODE_PREPARED_ONLY || oldMode == settings.PS_MODE_AD_HOC || oldMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
 		// just turned off
-		return updatePreparedStmts(newMode, cacheFull)
+		// to properly handle entries for inline UDFs, we explicitly set cacheFull to true if
+		// plan stability is turned off, for situations where these entries may reside on disk
+		// but not in the prepared cache yet (entry for inline UDFs only populated in the
+		// prepared cache when it is first executed)
+		return updatePreparedStmts(newMode, true)
 	} else if newMode == settings.PS_MODE_PREPARED_ONLY &&
 		(oldMode == settings.PS_MODE_AD_HOC || oldMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
 		// switch to PREPARED_ONLY from AD_HOC or AD_HOC_READ_ONLY
@@ -93,7 +97,8 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) err
 					return false
 				}
 			}
-			if prepared.AdHoc() && (newMode == settings.PS_MODE_OFF || newMode == settings.PS_MODE_PREPARED_ONLY) {
+			if (prepared.AdHoc() || prepared.IsInlineUdf()) &&
+				(newMode == settings.PS_MODE_OFF || newMode == settings.PS_MODE_PREPARED_ONLY) {
 				// newMode is OFF or PREPARED_ONLY, need to remove entry from cache
 				// (saved query plan should be deleted above already)
 				names = append(names, fullName)
@@ -106,7 +111,7 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) err
 	}
 
 	for i := range names {
-		err = DeletePrepared(names[i])
+		err = deletePreparedFromCache(names[i])
 		if err != nil {
 			return err
 		}

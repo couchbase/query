@@ -2867,6 +2867,17 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_PREPARED_INLINE_UDF, // 4093
+		symbol:      "E_PREPARED_INLINE_UDF",
+		Description: "Error with prepared entry for inline UDF <<name>>: <<message>>.",
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_NO_INDEX_JOIN, // 4100
 		symbol:      "E_NO_INDEX_JOIN",
 		Description: "No index available for join term «term»",

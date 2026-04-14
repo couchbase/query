@@ -34,6 +34,7 @@ import (
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/planner"
+	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/system"
@@ -1363,25 +1364,125 @@ trans    - true.  plan is part of transaction and delta table involved. Generate
 Otherwise    copy Inline UDF subquery plans by reference into local context so that same plan will be re-used repeated execution.
 lock     - indicate second argument require lock
 */
-func (this *opContext) SetupSubqueryPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock,
-	generate, trans bool) (err error) {
-	if generate {
-		var hasSubquery bool
-		hasSubquery, err = this.SubqueryPlans(expr, subqPlans, nil, nil, nil, lock)
-		if err == nil && hasSubquery {
-			prepared := plan.NewPrepared(nil, nil, nil, nil, nil)
-			prepared.SetDummyPlanVersion()
-			subqPlans.SetPrepared(prepared, lock)
+func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expression,
+	subqPlans *algebra.SubqueryPlans, lock, generate, trans bool) (err error) {
+
+	var prepared *plan.Prepared
+	var err1 errors.Error
+	var hasSubquery, hasPreparedPlans bool
+	planStability := settings.IsPlanStabilityEnabled()
+	replace := true
+	if planStability {
+		// look for subquery plans in prepareds cache
+		prepared, err1 = prepareds.GetUdfPrepared(udfName, this.DeltaKeyspaces(), this.GetDsQueryContext())
+		if err1 != nil {
+			return err1
 		}
-	} else if trans {
-		// last argument will be true because second argument is from context
-		_, err = this.SubqueryPlans(expr, this.GetSubqueryPlans(true), this.deltaKeyspaces, this.namedArgs,
-			this.positionalArgs, true)
-	} else {
-		// lock is meant source (subqPlans). Destination this.... always do lock
-		subqPlans.Copy(this.GetSubqueryPlans(true), lock)
+		if prepared != nil {
+			// only an inline UDF with subqueries should have a prepared entry
+			err = prepared.GetUdfSubqPlans(lock, subqPlans)
+			if err != nil {
+				return err
+			}
+			err1, _ = this.VerifySubqueryPlans(expr, subqPlans, lock)
+			if err1 != nil {
+				error_policy := settings.GetPlanStabilityErrorPolicy()
+				if error_policy == settings.PS_ERROR_STRICT {
+					return errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
+				} else if error_policy == settings.PS_ERROR_MODERATE {
+					replace = false
+				}
+				prepared = nil
+			} else {
+				hasPreparedPlans = true
+				hasSubquery = true // prepared only generated when subqueries present
+			}
+		}
 	}
-	return err
+
+	if generate {
+		if !hasPreparedPlans {
+			hasSubquery, err = this.SubqueryPlans(expr, subqPlans, nil, nil, nil, lock)
+			if err == nil && hasSubquery {
+				prepared = plan.NewPrepared(nil, nil, nil, nil, nil)
+				prepared.SetDummyPlanVersion()
+				subqPlans.SetPrepared(prepared, lock)
+			}
+		} // else subqPlans should be populated already above (from GetUdfSubqPlans())
+	} else {
+		// we get here when we already have subquery plans in subqPlans (input argument)
+		// and want to populate subquery plans on current context, by either reparsing and
+		// regenerate the plan in case of transactions, or simply copy over the subquery
+		// plans if not transaction.
+		contextSubqPlans := this.GetSubqueryPlans(true)
+		if trans {
+			if !hasPreparedPlans {
+				// last argument will be true because second argument is from context
+				hasSubquery, err = this.SubqueryPlans(expr, contextSubqPlans,
+					this.deltaKeyspaces, this.namedArgs, this.positionalArgs, true)
+			} else if prepared != nil {
+				// hasSubquery should be true if hasPreparedPlans is true
+				// generate subquery plans from prepared plan to put on context
+				// lock is true since subqPlans is from context
+				err = prepared.GetUdfSubqPlans(true, contextSubqPlans)
+			} else {
+				// should not happen
+				err = errors.NewExecutionInternalError("SetupSubqueryPlans: prepared is nil")
+			}
+		} else {
+			// lock is meant source (subqPlans). Destination this.... always do lock
+			subqPlans.Copy(contextSubqPlans, lock)
+			hasSubquery = subqPlans.HasSubquery(lock)
+		}
+
+		if err == nil && hasSubquery && planStability && !hasPreparedPlans && replace {
+			prep := subqPlans.GetPrepared(lock)
+			if prep != nil {
+				prepared = prep.(*plan.Prepared)
+			}
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	// in case of plan stability, if the inline UDF does not yet has an entry in prepared cache, add it
+	if hasSubquery && planStability && !hasPreparedPlans && replace {
+		if prepared == nil {
+			// should not happen
+			return errors.NewExecutionInternalError("SetupSubqueryPlans: missing prepared")
+		}
+		prepared.SetName(prepareds.GetUdfPreparedName(udfName))
+		prepared.SetIndexApiVersion(this.indexApiVersion)
+		prepared.SetFeatureControls(this.featureControls)
+		prepared.SetNamespace(this.namespace)
+		prepared.SetQueryContext(this.queryContext)
+		prepared.SetUseFts(this.useFts)
+		prepared.SetUseCBO(this.useCBO)
+		prepared.SetUserAgent(this.userAgent)
+		prepared.SetRemoteAddr(this.remoteAddr)
+		prepared.SetPreparedTime(time.Now())
+		prepared.SetInlineUdf()
+		prepared.SetInlineUdfPlanVersion()
+
+		err = prepared.SetupUdfSubqPlans(expr, subqPlans, lock)
+		if err != nil {
+			return err
+		}
+
+		// build encoded_plan after setting up UDF subquery plans
+		_, err = prepared.BuildEncodedPlan()
+		if err != nil {
+			return err
+		}
+
+		err = prepareds.AddUdfPrepared(prepared, lock)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 /*

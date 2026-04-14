@@ -177,3 +177,6 @@ func (this *golangBody) Load(name functions.FunctionName) errors.Error {
 
 func (this *golangBody) Unload(name functions.FunctionName) {
 }
+
+func (this *golangBody) DeleteUdfPrepared(name functions.FunctionName) {
+}
