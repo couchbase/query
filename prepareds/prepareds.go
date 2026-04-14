@@ -477,6 +477,7 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
 		return false
 	}
 
+	fullName := encodeName(prepared.Name(), prepared.QueryContext())
 	planStabilityAdHoc := prepared.AdHoc() && settings.IsPlanStabilityAdHoc()
 	featureName := "Auto Prepare"
 	if planStabilityAdHoc {
@@ -488,7 +489,7 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
 		added = ce.Prepared.Text() == prepared.Text()
 		if !added {
 			logging.Infof("%s found mismatching name and statement %v %v %v", featureName,
-				prepared.Name(), prepared.Text(), ce.Prepared.Text())
+				fullName, prepared.Text(), ce.Prepared.Text())
 		}
 		return added
 	})
@@ -500,9 +501,11 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
 		err := persistPrepared(prepared)
 		if err != nil {
 			logging.Errorf("Plan Stability (AD_HOC) encounters error while trying to persist plan (%v) for statement %v, error %v",
-				prepared.Name(), prepared.Text(), err)
+				fullName, prepared.Text(), err)
 			return false
 		}
+
+		distributePrepared(fullName, prepared.EncodedPlan())
 	}
 
 	return true
