@@ -12,7 +12,7 @@ package extparams
 
 func ValidateCatalog(params map[string]any) map[string]*ExternalParamsError {
 	rv := make(map[string]*ExternalParamsError, len(params))
-	for k, v := range params {
+	for k := range params {
 		rv[k] = &ExternalParamsError{"CE unsupported", "Parameter not supported."}
 	}
 	return rv
@@ -20,7 +20,7 @@ func ValidateCatalog(params map[string]any) map[string]*ExternalParamsError {
 
 func ValidateCollection(params map[string]any) map[string]*ExternalParamsError {
 	rv := make(map[string]*ExternalParamsError, len(params))
-	for k, v := range params {
+	for k := range params {
 		rv[k] = &ExternalParamsError{"CE unsupported", "Parameter not supported."}
 	}
 	return rv
