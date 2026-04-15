@@ -1118,19 +1118,20 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 	qc.RUnlock()
 	if done {
 		return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil,
-			logging.NULL_LOG)
+			settings.PS_MODE_DEFAULT, settings.PS_ERROR_DEFAULT, logging.NULL_LOG)
 	}
 
 	// we redecode the encoded plan to make sure that we can transmit it correctly across nodes
 	rv, err, _ := prepareds.DecodePreparedWithContext(ra["name"].(string), queryContext, ra["encoded_plan"].(string),
-		false, nil, false, false, logging.NULL_LOG)
+		false, nil, false, false, settings.PS_MODE_DEFAULT, settings.PS_ERROR_DEFAULT, logging.NULL_LOG)
 	if err != nil {
 		return rv, err
 	}
 	qc.Lock()
 	qc.prepDone[statement] = true
 	qc.Unlock()
-	return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil, logging.NULL_LOG)
+	return prepareds.GetPreparedWithContext(ra["name"].(string), queryContext, make(map[string]bool, 1), 0, nil,
+		settings.PS_MODE_DEFAULT, settings.PS_ERROR_DEFAULT, logging.NULL_LOG)
 }
 
 /*

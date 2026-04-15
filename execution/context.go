@@ -403,6 +403,10 @@ type Context struct {
 	// from being affected by key drops/rotations in the node's encryption manager.
 	activeKeyInfo map[encryption.KeyDataType]*encryption.EaRKey
 	keysMutex     *sync.RWMutex
+
+	// plan stability settings
+	planStabilityMode        settings.PlanStabilityMode
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy
 }
 
 func NewContext(requestId string, datastore datastore.Datastore, systemstore datastore.Systemstore,
@@ -460,6 +464,9 @@ func NewContext(requestId string, datastore datastore.Datastore, systemstore dat
 		// inconsistent key caches.
 		activeKeyInfo: make(map[encryption.KeyDataType]*encryption.EaRKey),
 		keysMutex:     &sync.RWMutex{},
+
+		planStabilityMode:        settings.GetPlanStabilityMode(),
+		planStabilityErrorPolicy: settings.GetPlanStabilityErrorPolicy(),
 	}
 	rv.logLevel = reqLog
 	rv.SetupMemTrackingLogging(logging.LogLevel())
@@ -540,6 +547,9 @@ func (this *Context) Copy() *Context {
 		// Encryption material should be the shared across contexts
 		activeKeyInfo: this.activeKeyInfo,
 		keysMutex:     this.keysMutex,
+
+		planStabilityMode:        this.planStabilityMode,
+		planStabilityErrorPolicy: this.planStabilityErrorPolicy,
 	}
 
 	if this.optimizer != nil {
@@ -1313,7 +1323,7 @@ func (this *opContext) SubqueryPlan(node *algebra.Select, mutex *sync.RWMutex, d
 	}
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs, positionalArgs,
 		this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
-		deltaKeyspaces, this, false)
+		deltaKeyspaces, this, false, this.planStabilityMode, this.planStabilityErrorPolicy)
 	qp, subplanIsks, err, _ := planner.Build(node, this.datastore, this.systemstore, this.namespace,
 		true, false, false, &prepContext)
 	if err != nil {
@@ -1370,11 +1380,12 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 	var prepared *plan.Prepared
 	var err1 errors.Error
 	var hasSubquery, hasPreparedPlans bool
-	planStability := settings.IsPlanStabilityEnabled()
+	planStability := this.IsPlanStabilityEnabled()
 	replace := true
 	if planStability {
 		// look for subquery plans in prepareds cache
-		prepared, err1 = prepareds.GetUdfPrepared(udfName, this.DeltaKeyspaces(), this.GetDsQueryContext())
+		prepared, err1 = prepareds.GetUdfPrepared(udfName, this.deltaKeyspaces, this.planStabilityMode,
+			this.planStabilityErrorPolicy, this)
 		if err1 != nil {
 			return err1
 		}
@@ -1386,10 +1397,9 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 			}
 			err1, _ = this.VerifySubqueryPlans(expr, subqPlans, lock)
 			if err1 != nil {
-				error_policy := settings.GetPlanStabilityErrorPolicy()
-				if error_policy == settings.PS_ERROR_STRICT {
+				if this.IsPlanStabilityErrorStrict() {
 					return errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
-				} else if error_policy == settings.PS_ERROR_MODERATE {
+				} else if this.IsPlanStabilityErrorModerate() {
 					replace = false
 				}
 				prepared = nil
@@ -1602,9 +1612,9 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 				}
 			}
 		}
-		if !planFound && (this.prepared.Persist() || settings.IsPlanStabilityEnabled()) {
+		if !planFound && (this.prepared.Persist() || this.IsPlanStabilityEnabled()) {
 			logging.Debugf("Plan Stability (mode %d): subquery plan not found. Prepared name(%s) persist(%t) subquery (%s)",
-				settings.GetPlanStabilityMode(), this.prepared.Name(), this.prepared.Persist(), query.String())
+				this.GetPlanStabilityMode(), this.prepared.Name(), this.prepared.Persist(), query.String())
 		}
 	}
 
@@ -2559,4 +2569,47 @@ func (this *Context) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encrypt
 	this.activeKeyInfo[dt] = key
 	this.keysMutex.Unlock()
 	return key, nil
+}
+
+// plan stability
+func (this *Context) GetPlanStabilityMode() settings.PlanStabilityMode {
+	return this.planStabilityMode
+}
+
+func (this *Context) IsPlanStabilityEnabled() bool {
+	return this.planStabilityMode == settings.PS_MODE_PREPARED_ONLY ||
+		this.planStabilityMode == settings.PS_MODE_AD_HOC ||
+		this.planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY
+}
+
+func (this *Context) IsPlanStabilityDisabled() bool {
+	return this.planStabilityMode == settings.PS_MODE_OFF
+}
+
+func (this *Context) IsPlanStabilityPreparedOnly() bool {
+	return this.planStabilityMode == settings.PS_MODE_PREPARED_ONLY
+}
+
+func (this *Context) IsPlanStabilityAdHoc() bool {
+	return this.planStabilityMode == settings.PS_MODE_AD_HOC
+}
+
+func (this *Context) IsPlanStabilityAdHocReadOnly() bool {
+	return this.planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY
+}
+
+func (this *Context) GetPlanStabilityErrorPolicy() settings.PlanStabilityErrorPolicy {
+	return this.planStabilityErrorPolicy
+}
+
+func (this *Context) IsPlanStabilityErrorStrict() bool {
+	return this.planStabilityErrorPolicy == settings.PS_ERROR_STRICT
+}
+
+func (this *Context) IsPlanStabilityErrorModerate() bool {
+	return this.planStabilityErrorPolicy == settings.PS_ERROR_MODERATE
+}
+
+func (this *Context) IsPlanStabilityErrorFlexible() bool {
+	return this.planStabilityErrorPolicy == settings.PS_ERROR_FLEXIBLE
 }

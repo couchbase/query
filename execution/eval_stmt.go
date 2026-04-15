@@ -26,7 +26,6 @@ import (
 	"github.com/couchbase/query/rewrite"
 	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/semantics"
-	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
@@ -317,12 +316,12 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	}
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
 		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
-		this.deltaKeyspaces, this, false)
+		this.deltaKeyspaces, this, false, this.planStabilityMode, this.planStabilityErrorPolicy)
 
 	if autoPrepare {
 		name = prepareds.GetAutoPrepareName(statement, &prepContext)
 		if name != "" {
-			prepared = prepareds.GetAutoPreparePlan(name, statement, this.namespace, false, &prepContext)
+			prepared = prepareds.GetAutoPreparePlan(name, statement, this.namespace, &prepContext)
 			if prepared != nil {
 				if readonly && !prepared.Readonly() {
 					return nil, nil, false, fmt.Errorf("not a readonly request")
@@ -393,7 +392,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 
 	//  monitoring code TBD
 	prepared, err, _ = planner.BuildPrepared(stmt, this.datastore, this.systemstore, this.namespace,
-		subquery, true, persist || settings.IsPlanStabilityEnabled(), &prepContext)
+		subquery, true, persist || this.IsPlanStabilityEnabled(), &prepContext)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -423,7 +422,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		exec, _ := stmt.(*algebra.Execute)
 		prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), this.queryContext,
 			this.deltaKeyspaces, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-			&reprepTime, this)
+			&reprepTime, this.planStabilityMode, this.planStabilityErrorPolicy, this)
 		//  monitoring code TBD
 		if err != nil {
 			return nil, prepared, isPrepared, err
@@ -448,9 +447,9 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 			prepared.SetUseFts(this.useFts)
 			prepared.SetPreparedTime(prep) // set the time the plan was generated
 			prepared.SetPersist(persist)
-			prepared.SetAdHoc(!persist && settings.IsPlanStabilityAdHoc())
+			prepared.SetAdHoc(!persist && this.IsPlanStabilityAdHoc())
 			prepared.KeyspaceReferences()
-			prepareds.AddAutoPreparePlan(stmt, prepared)
+			prepareds.AddAutoPreparePlan(stmt, prepared, this.planStabilityMode)
 		}
 
 	}
@@ -1113,7 +1112,8 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 	var prepContext planner.PrepareContext
 
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs, positionalArgs, this.indexApiVersion,
-		this.featureControls, this.useFts, this.useCBO, this.optimizer, this.deltaKeyspaces, this, false)
+		this.featureControls, this.useFts, this.useCBO, this.optimizer, this.deltaKeyspaces, this, false,
+		this.planStabilityMode, this.planStabilityErrorPolicy)
 
 	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext, this)
 

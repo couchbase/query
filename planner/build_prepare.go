@@ -12,7 +12,6 @@ import (
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
-	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -36,10 +35,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	}
 
 	persist := stmt.Save()
-	planStabilityMode := settings.GetPlanStabilityMode()
-	planStability := planStabilityMode == settings.PS_MODE_PREPARED_ONLY ||
-		planStabilityMode == settings.PS_MODE_AD_HOC ||
-		planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY
+	planStability := this.context.IsPlanStabilityEnabled()
 
 	if !force {
 		var gpErr errors.Error
@@ -87,7 +83,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetRemoteAddr(this.context.dsContext.RemoteAddr())
 	prep.SetPreparedTime(util.Now().ToTime())
 	prep.SetPersist(persist)
-	prep.SetAdHoc(!persist && planStabilityMode == settings.PS_MODE_AD_HOC)
+	prep.SetAdHoc(!persist && this.context.IsPlanStabilityAdHoc())
 	prep.KeyspaceReferences()
 
 	json_bytes, err := prep.MarshalJSON()

@@ -67,7 +67,7 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 
 		if this.plan.Force() {
 			plan := this.plan.Plan()
-			err := prepareds.AddPrepared(plan)
+			err := prepareds.AddPrepared(plan, context.IsPlanStabilityEnabled())
 			if err != nil {
 				context.Fatal(err)
 				return

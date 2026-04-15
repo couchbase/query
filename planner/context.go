@@ -11,6 +11,7 @@ package planner
 import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/value"
 )
 
@@ -27,12 +28,16 @@ type PrepareContext struct {
 	deltaKeyspaces  map[string]bool
 	dsContext       datastore.QueryContext
 	isPrepare       bool
+
+	planStabilityMode        settings.PlanStabilityMode
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy
 }
 
 func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	namedArgs map[string]value.Value, positionalArgs value.Values,
 	indexApiVersion int, featureControls uint64, useFts, useCBO bool, optimizer Optimizer,
-	deltaKeyspaces map[string]bool, dsContext datastore.QueryContext, isPrepare bool) {
+	deltaKeyspaces map[string]bool, dsContext datastore.QueryContext, isPrepare bool,
+	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) {
 	rv.requestId = requestId
 	rv.queryContext = queryContext
 	rv.namedArgs = namedArgs
@@ -45,6 +50,8 @@ func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	rv.deltaKeyspaces = deltaKeyspaces
 	rv.dsContext = dsContext
 	rv.isPrepare = isPrepare
+	rv.planStabilityMode = planStabilityMode
+	rv.planStabilityErrorPolicy = planStabilityErrorPolicy
 	return
 }
 
@@ -125,4 +132,34 @@ func (this *PrepareContext) Context() datastore.QueryContext {
 
 func (this *PrepareContext) SetIsPrepare() {
 	this.isPrepare = true
+}
+
+func (this *PrepareContext) GetPlanStabilityMode() settings.PlanStabilityMode {
+	return this.planStabilityMode
+}
+
+func (this *PrepareContext) IsPlanStabilityEnabled() bool {
+	return this.planStabilityMode == settings.PS_MODE_PREPARED_ONLY ||
+		this.planStabilityMode == settings.PS_MODE_AD_HOC ||
+		this.planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY
+}
+
+func (this *PrepareContext) IsPlanStabilityDisabled() bool {
+	return this.planStabilityMode == settings.PS_MODE_OFF
+}
+
+func (this *PrepareContext) IsPlanStabilityPreparedOnly() bool {
+	return this.planStabilityMode == settings.PS_MODE_PREPARED_ONLY
+}
+
+func (this *PrepareContext) IsPlanStabilityAdHoc() bool {
+	return this.planStabilityMode == settings.PS_MODE_AD_HOC
+}
+
+func (this *PrepareContext) IsPlanStabilityAdHocReadOnly() bool {
+	return this.planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY
+}
+
+func (this *PrepareContext) GetPlanStabilityErrorPolicy() settings.PlanStabilityErrorPolicy {
+	return this.planStabilityErrorPolicy
 }

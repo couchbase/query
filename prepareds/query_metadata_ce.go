@@ -13,6 +13,7 @@ package prepareds
 import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/settings"
 )
 
 func hasQueryMetadata(create bool, requestId, createReason string, waitOnCreate bool) (bool, errors.Error) {
@@ -23,7 +24,8 @@ func PreparedsFromPersisted() {
 	// no-op
 }
 
-func loadPrepared(name string) (*plan.Prepared, errors.Error) {
+func loadPrepared(name string, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) (*plan.Prepared, errors.Error) {
 	return nil, errors.NewEnterpriseFeature("Plan Stability", "prepareds.load_prepared")
 }
 

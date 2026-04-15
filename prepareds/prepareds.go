@@ -147,7 +147,9 @@ func PreparedsRemotePrime() {
 					func(doc map[string]interface{}) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
-							_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, false, logging.NULL_LOG)
+							_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, false,
+								settings.GetPlanStabilityMode(), settings.GetPlanStabilityErrorPolicy(),
+								logging.NULL_LOG)
 							if err == nil {
 								count++
 								if reprepareCause != nil {
@@ -305,7 +307,8 @@ func encodeName(name string, queryContext string) string {
 }
 
 func (this *preparedCache) GetPlan(name, text, namespace string, context *planner.PrepareContext) (*plan.Prepared, errors.Error) {
-	prep, err := getPrepared(name, context.QueryContext(), context.DeltaKeyspaces(), OPT_VERIFY, nil, context.Context())
+	prep, err := getPrepared(name, context.QueryContext(), context.DeltaKeyspaces(), OPT_VERIFY, nil,
+		context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context.Context())
 	if err != nil {
 		if err.Code() == errors.E_NO_SUCH_PREPARED {
 			return nil, nil
@@ -420,7 +423,7 @@ func GetAutoPrepareName(text string, context *planner.PrepareContext) string {
 	return name
 }
 
-func GetAutoPreparePlan(name, text, namespace string, planStabilityAdHoc bool, context *planner.PrepareContext) *plan.Prepared {
+func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareContext) *plan.Prepared {
 
 	// for auto prepare, we don't verify or reprepare because that would mean
 	// accepting valid but possibly suboptimal statements
@@ -432,12 +435,13 @@ func GetAutoPreparePlan(name, text, namespace string, planStabilityAdHoc bool, c
 	// The new statement will have the latest change counters, so until we
 	// have a new index no other planning will be necessary
 	options := uint32(OPT_TRACK)
-	if planStabilityAdHoc {
+	if context.IsPlanStabilityAdHoc() || context.IsPlanStabilityAdHocReadOnly() {
 		options |= OPT_VERIFY
 	} else {
 		options |= OPT_METACHECK
 	}
-	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), options, nil, context.Context())
+	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), options, nil, context.GetPlanStabilityMode(),
+		context.GetPlanStabilityErrorPolicy(), context.Context())
 	if err != nil {
 		if err.Code() != errors.E_NO_SUCH_PREPARED {
 			logging.Infof("Auto Prepare plan fetching failed with %v", err)
@@ -457,7 +461,7 @@ func GetAutoPreparePlan(name, text, namespace string, planStabilityAdHoc bool, c
 	return prep
 }
 
-func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
+func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) bool {
 
 	// certain statements we don't cache anyway
 	switch stmt.Type() {
@@ -478,7 +482,7 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared) bool {
 	}
 
 	fullName := encodeName(prepared.Name(), prepared.QueryContext())
-	planStabilityAdHoc := prepared.AdHoc() && settings.IsPlanStabilityAdHoc()
+	planStabilityAdHoc := prepared.AdHoc() && (planStabilityMode == settings.PS_MODE_AD_HOC)
 	featureName := "Auto Prepare"
 	if planStabilityAdHoc {
 		featureName = "Plan Stability (AD_HOC)"
@@ -541,14 +545,14 @@ func AddUdfPrepared(prepared *plan.Prepared, lock bool) errors.Error {
 	return nil
 }
 
-func GetUdfPrepared(udfName string, deltaKeyspaces map[string]bool, args ...logging.Log) (
-	prepared *plan.Prepared, err errors.Error) {
+func GetUdfPrepared(udfName string, deltaKeyspaces map[string]bool, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, args ...logging.Log) (prepared *plan.Prepared, err errors.Error) {
 
 	prepName := GetUdfPreparedName(udfName)
-	prepared, err = GetPrepared(prepName, deltaKeyspaces, args...)
+	prepared, err = GetPrepared(prepName, deltaKeyspaces, planStabilityMode, planStabilityErrorPolicy, args...)
 	if prepared == nil && err != nil && err.Code() == errors.E_NO_SUCH_PREPARED {
 		// if not in cache, check disk
-		prepared, err = loadPrepared(prepName)
+		prepared, err = loadPrepared(prepName, planStabilityMode, planStabilityErrorPolicy)
 	}
 
 	if prepared != nil {
@@ -559,8 +563,9 @@ func GetUdfPrepared(udfName string, deltaKeyspaces map[string]bool, args ...logg
 	return nil, nil
 }
 
-func (this *preparedCache) DeleteUdfPrepared(udfName string) errors.Error {
-	prepared, err := GetUdfPrepared(udfName, nil, nil)
+func (this *preparedCache) DeleteUdfPrepared(udfName string, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) errors.Error {
+	prepared, err := GetUdfPrepared(udfName, nil, planStabilityMode, planStabilityErrorPolicy, nil)
 	if err != nil && err.Code() != errors.E_NO_SUCH_PREPARED {
 		return err
 	}
@@ -599,7 +604,7 @@ func PreparedDo(name string, f func(*CacheEntry)) {
 	_ = prepareds.cache.Get(name, process)
 }
 
-func AddPrepared(prepared *plan.Prepared) errors.Error {
+func AddPrepared(prepared *plan.Prepared, planStability bool) errors.Error {
 	added := true
 
 	prepareds.add(prepared, false, false, func(ce *CacheEntry) bool {
@@ -614,7 +619,7 @@ func AddPrepared(prepared *plan.Prepared) errors.Error {
 			fmt.Sprintf("duplicate name: %s", fullName))
 	}
 
-	if prepared.Persist() || settings.IsPlanStabilityEnabled() {
+	if prepared.Persist() || planStability {
 		err := persistPrepared(prepared)
 		if err != nil {
 			return err
@@ -654,39 +659,44 @@ func DeletePreparedFunc(name string, f func(*CacheEntry) bool) errors.Error {
 	return nil
 }
 
-func GetPrepared(fullName string, deltaKeyspaces map[string]bool, args ...logging.Log) (
-	prepared *plan.Prepared, err errors.Error) {
+func GetPrepared(fullName string, deltaKeyspaces map[string]bool, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, args ...logging.Log) (prepared *plan.Prepared, err errors.Error) {
 
 	var l logging.Log
 	if len(args) > 0 {
 		l = args[0]
 	}
-	return getPrepared(fullName, "", deltaKeyspaces, 0, nil, l)
+	return getPrepared(fullName, "", deltaKeyspaces, 0, nil, planStabilityMode, planStabilityErrorPolicy, l)
 }
 
 func GetPreparedWithContext(preparedName string, queryContext string, deltaKeyspaces map[string]bool,
-	options uint32, phaseTime *time.Duration, args ...logging.Log) (*plan.Prepared, errors.Error) {
+	options uint32, phaseTime *time.Duration, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, args ...logging.Log) (*plan.Prepared, errors.Error) {
 
 	var l logging.Log
 	if len(args) > 0 {
 		l = args[0]
 	}
-	return getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, l)
+	return getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, planStabilityMode, planStabilityErrorPolicy, l)
 }
 
 func getPrepared(preparedName string, queryContext string, deltaKeyspaces map[string]bool, options uint32,
-	phaseTime *time.Duration, log logging.Log) (prepared *plan.Prepared, err errors.Error) {
+	phaseTime *time.Duration, planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
+	log logging.Log) (prepared *plan.Prepared, err errors.Error) {
 
-	prepared, err = prepareds.getPrepared(preparedName, queryContext, options, phaseTime, log)
+	prepared, err = prepareds.getPrepared(preparedName, queryContext, options, phaseTime,
+		planStabilityMode, planStabilityErrorPolicy, log)
 	if err == nil {
 		if len(deltaKeyspaces) > 0 || (deltaKeyspaces != nil && prepared.Type() == "DELETE") {
-			prepared, err = getTxPrepared(prepared, deltaKeyspaces, phaseTime, log)
+			prepared, err = getTxPrepared(prepared, deltaKeyspaces, phaseTime,
+				planStabilityMode, planStabilityErrorPolicy, log)
 		}
 	}
 	return prepared, err
 }
 
 func (prepareds *preparedCache) getPrepared(preparedName string, queryContext string, options uint32, phaseTime *time.Duration,
+	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
 	log logging.Log) (*plan.Prepared, errors.Error) {
 
 	var err errors.Error
@@ -720,7 +730,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		}
 	}
 
-	planStability := settings.GetPlanStabilityMode() != settings.PS_MODE_OFF
+	planStability := planStabilityMode != settings.PS_MODE_OFF
 
 	if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
 		distributed.RemoteAccess().GetRemoteDoc(host, encodedName, "prepareds", "GET",
@@ -728,7 +738,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
 					prepared, err, _ = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime,
-						true, planStability, log)
+						true, planStability, planStabilityMode, planStabilityErrorPolicy, log)
 				}
 			},
 			func(warn errors.Error) {
@@ -782,9 +792,10 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			}
 		} else if !good || prepared.PreparedTime().IsZero() {
 			var replace bool
-			prepared, replace, err = reprepare(prepared, nil, phaseTime, planStability, log)
+			prepared, replace, err = reprepare(prepared, nil, phaseTime, planStability,
+				planStabilityMode, planStabilityErrorPolicy, log)
 			if err == nil && replace {
-				err = AddPrepared(prepared)
+				err = AddPrepared(prepared, planStability)
 			}
 		}
 	}
@@ -794,7 +805,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 	if prepared == nil {
 		// if the prepared cache is full, also try to load from disk
 		if prepareds.cache.Size() >= prepareds.cache.Limit() {
-			prepared, err = loadPrepared(encodedName)
+			prepared, err = loadPrepared(encodedName, planStabilityMode, planStabilityErrorPolicy)
 			if err != nil {
 				return nil, err
 			}
@@ -833,16 +844,20 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 }
 
 func DecodePrepared(prepared_name string, prepared_stmt string, reprep, planStability bool,
+	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
 	log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
-	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, planStability, log)
+	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, planStability,
+		planStabilityMode, planStabilityErrorPolicy, log)
 }
 
 func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool,
-	phaseTime *time.Duration, reprep, planStability bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
+	phaseTime *time.Duration, reprep, planStability bool, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
 
 	added := true
 
-	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, planStability, log)
+	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, planStability,
+		planStabilityMode, planStabilityErrorPolicy, log)
 	if err != nil {
 		return nil, err, nil
 	}
@@ -877,7 +892,8 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	if !prepared.IsInlineUdf() {
 		verifyErr = prepared.Verify()
 		if verifyErr != nil {
-			newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability, log)
+			newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability,
+				planStabilityMode, planStabilityErrorPolicy, log)
 			if prepErr == nil {
 				prepared = newPrepared
 				add = replace
@@ -922,7 +938,10 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	}
 }
 
-func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planStability bool, log logging.Log) (*plan.Prepared, errors.Error, errors.Error) {
+func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planStability bool,
+	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
+	log logging.Log) (*plan.Prepared, errors.Error, errors.Error) {
+
 	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded)
 	if err != nil {
 		if reprep && len(bytes) > 0 {
@@ -936,7 +955,8 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planSta
 				err1 = json.Unmarshal(text, &stmt)
 				if err1 == nil {
 					prepared.SetText(stmt)
-					pl, _, _ := reprepare(prepared, nil, phaseTime, planStability, log)
+					pl, _, _ := reprepare(prepared, nil, phaseTime, planStability,
+						planStabilityMode, planStabilityErrorPolicy, log)
 					if pl != nil {
 						return pl, nil, err
 					}
@@ -949,7 +969,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planSta
 	} else if reprep && (prepared.PlanVersion() > util.PLAN_VERSION) {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
-		pl, _, err := reprepare(prepared, nil, phaseTime, false, log)
+		pl, _, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -970,14 +990,14 @@ func distributePrepared(name, plan string) {
 }
 
 func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
-	planStability bool, log logging.Log) (*plan.Prepared, bool, errors.Error) {
+	planStability bool, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (*plan.Prepared, bool, errors.Error) {
 
 	replace := true
 	if planStability {
-		error_policy := settings.GetPlanStabilityErrorPolicy()
-		if error_policy == settings.PS_ERROR_STRICT {
+		if planStabilityErrorPolicy == settings.PS_ERROR_STRICT {
 			return nil, false, errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
-		} else if error_policy == settings.PS_ERROR_MODERATE {
+		} else if planStabilityErrorPolicy == settings.PS_ERROR_MODERATE {
 			replace = false
 		}
 	}
@@ -1013,7 +1033,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, prepared.QueryContext(), nil, nil,
 		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), prepared.UseCBO(),
-		optimizer, deltaKeyspaces, nil, true)
+		optimizer, deltaKeyspaces, nil, true, planStabilityMode, planStabilityErrorPolicy)
 
 	statement := stmt
 	if prepStmt, ok := stmt.(*algebra.Prepare); ok {
@@ -1075,7 +1095,8 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string,
 	// don't pass datastore context for prepared statements
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, queryContext, nil, nil,
-		util.GetMaxIndexAPI(), util.GetN1qlFeatureControl(), false, useCBO, optimizer, nil, nil, true)
+		util.GetMaxIndexAPI(), util.GetN1qlFeatureControl(), false, useCBO, optimizer, nil, nil, true,
+		settings.GetPlanStabilityMode(), settings.GetPlanStabilityErrorPolicy())
 
 	stmt, err := n1ql.ParseStatement2(statement, namespace, queryContext, log)
 	if err != nil {
@@ -1118,21 +1139,23 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string,
 		return nil, errors.NewPlanError(err, "")
 	}
 
-	return prepared, AddPrepared(prepared)
+	return prepared, AddPrepared(prepared, settings.IsPlanStabilityEnabled())
 }
 
 const (
 	_PREPARE_TX_KEYSPACES = 1
 )
 
-func getTxPrepared(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration, log logging.Log) (
-	txPrepared *plan.Prepared, err errors.Error) {
+func getTxPrepared(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
+	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
+	log logging.Log) (txPrepared *plan.Prepared, err errors.Error) {
 	var hashCode string
 	txPrepared, hashCode = prepared.GetTxPrepared(deltaKeyspaces)
 	if txPrepared != nil {
 		return
 	}
-	txPrepared, _, err = reprepare(prepared, deltaKeyspaces, phaseTime, settings.GetPlanStabilityMode() != settings.PS_MODE_OFF, log)
+	txPrepared, _, err = reprepare(prepared, deltaKeyspaces, phaseTime, (planStabilityMode != settings.PS_MODE_OFF),
+		planStabilityMode, planStabilityErrorPolicy, log)
 	if err == nil {
 		prepared.SetTxPrepared(txPrepared, hashCode)
 	}

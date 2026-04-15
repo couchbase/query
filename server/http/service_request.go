@@ -34,6 +34,7 @@ import (
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
+	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
@@ -321,7 +322,10 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 		return errors.NewServiceErrorMultipleValues("natural and prepared")
 	}
 
-	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime, log)
+	planStabilityMode := settings.GetPlanStabilityMode()
+	planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
+	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime,
+		planStabilityMode, planStabilityErrorPolicy, log)
 
 	// MB-18841 (encoded_plan processing affects latency)
 	// MB-19509 (encoded_plan may corrupt cache)
@@ -345,7 +349,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
 			decoded_plan, plan_err, _ = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan,
-				(prepared == nil), &phaseTime, true, false, log)
+				(prepared == nil), &phaseTime, true, false, planStabilityMode, planStabilityErrorPolicy, log)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {
@@ -1157,7 +1161,10 @@ func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, 
 }
 
 func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{},
-	phaseTime *time.Duration, log logging.Log) (string, *plan.Prepared, errors.Error) {
+	phaseTime *time.Duration, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (
+	string, *plan.Prepared, errors.Error) {
+
 	prepared_name, err := a.getPreparedName(parm, val)
 	if err != nil || prepared_name == "" {
 		log.Debugf("%v %v", parm, err)
@@ -1166,7 +1173,8 @@ func getPrepared(a httpRequestArgs, queryContext string, parm string, val interf
 
 	// Monitoring API: track prepared statement access
 	prepared, err := prepareds.GetPreparedWithContext(prepared_name, queryContext, nil,
-		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime, log)
+		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime,
+		planStabilityMode, planStabilityErrorPolicy, log)
 	if err != nil || prepared == nil {
 		log.Debugf("%v %v", prepared_name, err)
 		return prepared_name, nil, err

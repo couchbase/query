@@ -253,7 +253,7 @@ func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, e
 
 func DeleteUdfPrepared(udfName string) errors.Error {
 	if IsPlanStabilityEnabled() {
-		return planCache.DeleteUdfPrepared(udfName)
+		return planCache.DeleteUdfPrepared(udfName, GetPlanStabilityMode(), GetPlanStabilityErrorPolicy())
 	}
 
 	return nil

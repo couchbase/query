@@ -639,13 +639,15 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errors.NewAdminBodyError(err1)
 		}
 
-		prepared, _ := prepareds.GetPrepared(name, nil, logging.NULL_LOG)
+		planStabilityMode := settings.GetPlanStabilityMode()
+		planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
+		prepared, _ := prepareds.GetPrepared(name, nil, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 
 		// nothing to do if the prepared is there and the plan matches
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
 			return "", nil
 		}
-		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false, logging.NULL_LOG)
+		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 		if err != nil {
 			return nil, err
 		}

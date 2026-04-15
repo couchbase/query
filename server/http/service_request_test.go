@@ -282,7 +282,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 		"args":     insertArgs,
 	})
 
-	prepared, _ := prepareds.GetPrepared(name, nil)
+	prepared, _ := prepareds.GetPrepared(name, nil, settings.PS_MODE_DEFAULT, settings.PS_ERROR_DEFAULT)
 	if prepared == nil {
 		t.Errorf("Expected to resolve prepared statement with name %v", name)
 		return
@@ -326,7 +326,7 @@ func doPrepare(t *testing.T, name string, stmt string) {
 	})
 
 	// Verify the name is in the prepared cache:
-	prepared, err := prepareds.GetPrepared(name, nil)
+	prepared, err := prepareds.GetPrepared(name, nil, settings.PS_MODE_DEFAULT, settings.PS_ERROR_DEFAULT)
 	if err != nil {
 		t.Errorf("Unexpected error looking up prepared: %v", err)
 	}

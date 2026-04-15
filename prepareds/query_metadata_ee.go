@@ -46,9 +46,13 @@ func PreparedsFromPersisted() {
 		if queryMetadata == nil {
 			return
 		}
+		planStability := settings.IsPlanStabilityEnabled()
+		planStabilityMode := settings.GetPlanStabilityMode()
+		planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
 		decodeFailedReason := make(map[string]errors.Error, _DEF_MAP_SIZE)
 		decodeReprepReason := make(map[string]errors.Errors, _DEF_MAP_SIZE)
-		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(true, decodeFailedReason, decodeReprepReason, processPreparedPlan)
+		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(true, planStability, planStabilityMode,
+			planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, processPreparedPlan)
 
 		preparedPrimeReport.Success = success
 		preparedPrimeReport.Failed = fail
@@ -72,10 +76,11 @@ func PreparedsFromPersisted() {
 	}
 }
 
-func processPreparedPlan(name, encoded_plan string, persist bool, decodeFailedReason map[string]errors.Error,
+func processPreparedPlan(name, encoded_plan string, persist, planStability bool, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, decodeFailedReason map[string]errors.Error,
 	decodeReprepReason map[string]errors.Errors) (success bool, reprep bool) {
-	_, err, reprepareCause := DecodePrepared(name, encoded_plan, true,
-		(settings.GetPlanStabilityMode() != settings.PS_MODE_OFF), logging.NULL_LOG)
+	_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, planStability,
+		planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 	if err != nil {
 		if decodeFailedReason != nil {
 			decodeFailedReason[name] = err
@@ -92,7 +97,8 @@ func processPreparedPlan(name, encoded_plan string, persist bool, decodeFailedRe
 	return
 }
 
-func loadPrepared(name string) (*plan.Prepared, errors.Error) {
+func loadPrepared(name string, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) (*plan.Prepared, errors.Error) {
 	encoded_plan, err := dictionary.LoadPreparedPlan(name)
 	if err != nil {
 		return nil, err
@@ -100,8 +106,8 @@ func loadPrepared(name string) (*plan.Prepared, errors.Error) {
 		return nil, nil
 	}
 
-	prepared, err, _ := DecodePrepared(name, encoded_plan, true,
-		(settings.GetPlanStabilityMode() != settings.PS_MODE_OFF), logging.NULL_LOG)
+	prepared, err, _ := DecodePrepared(name, encoded_plan, true, (planStabilityMode != settings.PS_MODE_OFF),
+		planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 
 	return prepared, err
 }

@@ -41,6 +41,8 @@ const (
 	PS_MODE_AD_HOC_READ_ONLY
 )
 
+const PS_MODE_DEFAULT = PS_MODE_OFF
+
 var _PS_MODE_MAP map[string]PlanStabilityMode = map[string]PlanStabilityMode{
 	"off":              PS_MODE_OFF,
 	"prepared_only":    PS_MODE_PREPARED_ONLY,
@@ -52,6 +54,7 @@ var _PS_MODE_MAP map[string]PlanStabilityMode = map[string]PlanStabilityMode{
 	"ad_hoc_read_only": PS_MODE_AD_HOC_READ_ONLY,
 	"ad-hoc-read-only": PS_MODE_AD_HOC_READ_ONLY,
 	"ad hoc read only": PS_MODE_AD_HOC_READ_ONLY,
+	"default":          PS_MODE_DEFAULT,
 }
 
 func (this PlanStabilityMode) String() string {
@@ -91,10 +94,13 @@ const (
 	PS_ERROR_STRICT
 )
 
+const PS_ERROR_DEFAULT = PS_ERROR_MODERATE
+
 var _PS_ERROR_POLICY_MAP map[string]PlanStabilityErrorPolicy = map[string]PlanStabilityErrorPolicy{
 	"flexible": PS_ERROR_FLEXIBLE,
 	"moderate": PS_ERROR_MODERATE,
 	"strict":   PS_ERROR_STRICT,
+	"default":  PS_ERROR_DEFAULT,
 }
 
 func (this PlanStabilityErrorPolicy) String() string {
@@ -111,8 +117,8 @@ func (this PlanStabilityErrorPolicy) String() string {
 
 func defaultPlanStabilitySettings() map[string]interface{} {
 	return map[string]interface{}{
-		"mode":         PS_MODE_OFF,
-		"error_policy": PS_ERROR_MODERATE,
+		"mode":         PS_MODE_DEFAULT,
+		"error_policy": PS_ERROR_DEFAULT,
 	}
 }
 
@@ -131,7 +137,7 @@ func SetPlanStabilitySetting(psSetting map[string]interface{}) {
 }
 
 func GetPlanStabilityMode() PlanStabilityMode {
-	mode := PS_MODE_OFF
+	mode := PS_MODE_DEFAULT
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
@@ -169,7 +175,7 @@ func IsPlanStabilityAdHocReadOnly() bool {
 }
 
 func GetPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
-	error_policy := PS_ERROR_MODERATE
+	error_policy := PS_ERROR_DEFAULT
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
@@ -200,7 +206,7 @@ func IsPlanStabilityErrorStrict() bool {
 
 type PlanCache interface {
 	UpdatePlanStabilityMode(oldMode, newMode PlanStabilityMode, requestId string) errors.Error
-	DeleteUdfPrepared(udfName string) errors.Error
+	DeleteUdfPrepared(udfName string, planStabilityMode PlanStabilityMode, planStabilityErrorPolicy PlanStabilityErrorPolicy) errors.Error
 }
 
 var planCache PlanCache

@@ -1894,7 +1894,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		autoPrepare = request.AutoPrepare() == value.TRUE
 	}
 
-	planStabilityMode := settings.GetPlanStabilityMode()
+	planStabilityMode := context.GetPlanStabilityMode()
 	planStabilityAdHoc := planStabilityMode == settings.PS_MODE_AD_HOC
 	planStabilityAdHocRead := planStabilityAdHoc || (planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY)
 	planStability := planStabilityAdHocRead || (planStabilityMode == settings.PS_MODE_PREPARED_ONLY)
@@ -1913,12 +1913,13 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), nil, nil,
 			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
-			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, true)
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, true,
+			context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy())
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
 			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(),
-				request.Namespace(), planStabilityAdHocRead, &prepContext)
+				request.Namespace(), &prepContext)
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false
@@ -2006,7 +2007,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		var prepContext planner.PrepareContext
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
 			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
-			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, isPrepare)
+			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, isPrepare,
+			context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy())
 		if stmt, ok := stmt.(*algebra.Advise); ok {
 			stmt.SetContext(execution.NewOpContext(context))
 		}
@@ -2089,7 +2091,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 						prepared.KeyspaceReferences()
 
 						// trigger prepare metrics recording
-						if prepareds.AddAutoPreparePlan(stmt, prepared) {
+						if prepareds.AddAutoPreparePlan(stmt, prepared, context.GetPlanStabilityMode()) {
 							request.SetPrepared(prepared)
 						}
 					}
@@ -2223,7 +2225,7 @@ func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepa
 
 			prepared, er = prepareds.GetPreparedWithContext(name, request.QueryContext(),
 				context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-				&reprepTime, context)
+				&reprepTime, context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context)
 			if reprepTime > 0 {
 				request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 			}
@@ -2249,7 +2251,7 @@ func (this *Server) getPreparedByName(prepareName string, request Request, conte
 
 	prepared, err := prepareds.GetPreparedWithContext(prepareName, request.QueryContext(),
 		context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-		&reprepTime, context)
+		&reprepTime, context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context)
 	if reprepTime > 0 {
 		request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 	}
