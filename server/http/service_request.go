@@ -723,6 +723,8 @@ func handleKvTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 	return err
 }
 
+const _MAX_SCAN_REPORT_WAIT = time.Second * 15
+
 func handleScanReportWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	var timeout time.Duration
 
@@ -730,6 +732,9 @@ func handleScanReportWait(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	if err == nil && t != "" {
 		timeout, err = newDuration(t)
 		if err == nil {
+			if timeout < 0 || timeout > _MAX_SCAN_REPORT_WAIT {
+				return errors.NewServiceErrorBadValue(fmt.Errorf("%s is invalid, duration must be positive and less than or equal to 15 seconds", parm), parm)
+			}
 			rv.SetScanReportWait(timeout)
 		}
 	}
