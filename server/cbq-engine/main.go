@@ -89,10 +89,11 @@ const (
 	_DEF_CE_MAXCPUS             = 4
 	_DEF_REQUEST_ERROR_LIMIT    = errors.DEFAULT_REQUEST_ERROR_LIMIT
 	_DEF_SEQSCAN_KEYS           = 10000
+	_STUB_STORE_ADDRESS         = "stub:"
 )
 
 var DATASTORE = flag.String("datastore", "", "Datastore address (http://URL or dir:PATH or mock:)")
-var CONFIGSTORE = flag.String("configstore", "stub:", "Configuration store address (http://URL or stub:)")
+var CONFIGSTORE = flag.String("configstore", _STUB_STORE_ADDRESS, "Configuration store address (http://URL or stub:)")
 var ACCTSTORE = flag.String("acctstore", "gometrics:", "Accounting store address (http://URL or stub:)")
 var NAMESPACE = flag.String("namespace", "default", "Default namespace")
 var TIMEOUT = flag.Duration("timeout", 0*time.Second,
@@ -292,9 +293,6 @@ func main() {
 	// default until settings adjust
 	util.SetTemp(os.TempDir(), 0)
 
-	// Setup encryption manager
-	encryptionMgr := setupEncryptionManager()
-
 	datastore, err := resolver.NewDatastore(*DATASTORE)
 	if err != nil {
 		logging.Errorf("%v", err.Error())
@@ -302,8 +300,6 @@ func main() {
 		os.Exit(1)
 	}
 	datastore_package.SetDatastore(datastore)
-
-	datastore.SetEncryptionProvider(encryptionMgr)
 
 	nullSecurityConfig := &datastore_package.ConnectionSecurityConfig{}
 	datastore.SetConnectionSecurityConfig(nullSecurityConfig)
@@ -334,6 +330,16 @@ func main() {
 	} else {
 		// Create the metrics we are interested in
 		accounting.RegisterMetrics(acctstore)
+	}
+
+	// Setup encryption manager only when query service is not in standalone dev mode
+	// As cbauth does not push encryption info to services that are not part of the cluster
+	var encryptionMgr keymgmt.EncryptionManager
+	if *CONFIGSTORE != _STUB_STORE_ADDRESS {
+		encryptionMgr := setupEncryptionManager()
+		datastore.SetEncryptionProvider(encryptionMgr)
+	} else if !*ENTERPRISE {
+		logging.Infof("Encryption manager not created since query service is in standalone mode.")
 	}
 
 	// Start the completed requests log
@@ -449,13 +455,18 @@ func main() {
 	constructor.Init(endpoint.Router(), server.Servicers(), "")
 	tenant.Start(endpoint, *UUID, *REGULATOR_SETTINGS_FILE)
 
-	// Retrieve the necessary encryption-at-rest keys from cbauth before starting listeners
-	// Priming loads key information from cbauth for known datatypes in the encryption manager
-	// cbauth invokes RefreshKeysCallback soon after encryption callback registration.
-	// But, if the callback is delayed, Query requests for a key type that has not been loaded yet can cause repeated key
-	// configuration fetch requests to cbauth.
-	// Priming helps avoid the potential flood of fetches by populating known key type entries upfront
-	primeEncryptionManager(encryptionMgr, datastore)
+	/*  Retrieve the necessary encryption-at-rest keys from cbauth before starting listeners
+		Priming loads key information from cbauth for known datatypes in the encryption manager
+	    cbauth invokes RefreshKeysCallback soon after encryption callback registration.
+		But, if the callback is delayed, Query requests for a key type that has not been loaded yet can cause repeated key
+		configuration fetch requests to cbauth.
+		Priming helps avoid the potential flood of fetches by populating known key type entries upfront
+		Priming slightly later in the initialization sequence to give cbauth time to receive keys from ns_server, and also to
+		hopefully deliver encryption info via callbacks (which may already prime the manager). This reduces overall priming time
+	*/
+	if encryptionMgr != nil {
+		primeEncryptionManager(encryptionMgr, datastore)
+	}
 
 	// Since TLS listener has already been started by NewServiceEndpoint
 	// So not starting here
