@@ -172,7 +172,7 @@ type store struct {
 	connectionUrl      string                // where to contact ns_server
 	connSecConfig      *datastore.ConnectionSecurityConfig
 	nslock             sync.RWMutex
-	encryptionProvider datastore.EncryptionProvider
+	encryptionProvider encryption.EncryptionProvider
 }
 
 func (s *store) Id() string {
@@ -3937,10 +3937,10 @@ func (s *store) CheckSystemCollection(bucketName, requestId string, forceIndex b
 	return empty, nil
 }
 
-func (s *store) EncryptionProvider() (datastore.EncryptionProvider, errors.Error) {
-	return s.encryptionProvider, nil
+func (s *store) EncryptionProvider() encryption.EncryptionProvider {
+	return s.encryptionProvider
 }
 
-func (s *store) SetEncryptionProvider(encProvider datastore.EncryptionProvider) {
+func (s *store) SetEncryptionProvider(encProvider encryption.EncryptionProvider) {
 	s.encryptionProvider = encProvider
 }

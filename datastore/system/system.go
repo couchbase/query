@@ -355,14 +355,6 @@ func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexCo
 	defer conn.Sender().Close()
 }
 
-func (s *store) EncryptionProvider() (datastore.EncryptionProvider, errors.Error) {
-	return s.actualStore.EncryptionProvider()
-}
-
-func (s *store) SetEncryptionProvider(datastore.EncryptionProvider) {
-	return
-}
-
 func NewDatastore(actualStore datastore.Datastore, acctStore accounting.AccountingStore,
 	enterprise bool) (datastore.Systemstore, errors.Error) {
 	s := &store{actualStore: actualStore, acctStore: acctStore, enterprise: enterprise}

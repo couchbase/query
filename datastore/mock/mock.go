@@ -196,14 +196,6 @@ func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexCo
 	defer conn.Sender().Close()
 }
 
-func (s *store) EncryptionProvider() (datastore.EncryptionProvider, errors.Error) {
-	return datastore.NoopEncryptionProviderInstance, nil
-}
-
-func (s *store) SetEncryptionProvider(datastore.EncryptionProvider) {
-	return
-}
-
 // namespace represents a mock-based Namespace.
 type namespace struct {
 	store         *store

@@ -11,6 +11,8 @@ package encryption
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/couchbase/query/errors"
 )
 
 // Avoid external dependencies in the top-level encryption package
@@ -54,4 +56,9 @@ type EaRKey struct {
 func (k *EaRKey) String() string {
 	b, _ := json.Marshal(k)
 	return string(b)
+}
+
+type EncryptionProvider interface {
+	GetActiveKey(dt KeyDataType) (*EaRKey, errors.Error)
+	GetKey(dt KeyDataType, keyID string) (*EaRKey, errors.Error)
 }

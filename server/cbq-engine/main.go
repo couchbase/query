@@ -201,7 +201,7 @@ func main() {
 	}
 	numProcs := util.SetNumCPUs(max_cpus, num_cpus, tenant.IsServerless())
 
-	ffdc.Init(*LOG_DIR)
+	ffdcEncryptor := ffdc.Init(*LOG_DIR)
 
 	// Use the IPv4/IPv6 flags to setup listener bool value
 	// This is for external interfaces / listeners
@@ -335,12 +335,23 @@ func main() {
 	// Setup encryption manager only when query service is not in standalone dev mode
 	// As cbauth does not push encryption info to services that are not part of the cluster
 	var encryptionMgr keymgmt.EncryptionManager
-	if *CONFIGSTORE != _STUB_STORE_ADDRESS {
-		encryptionMgr := setupEncryptionManager()
-		datastore.SetEncryptionProvider(encryptionMgr)
-	} else if !*ENTERPRISE {
-		logging.Infof("Encryption manager not created since query service is in standalone mode.")
+	encryptionMgr = &keymgmt.NoopEncryptionManager{}
+	cbDs, cbOk := datastore.(datastore_package.CouchbaseDatastore)
+	if cbOk {
+		if *CONFIGSTORE != _STUB_STORE_ADDRESS {
+			var err error
+			encryptionMgr, err = setupEncryptionManager([]keymgmt.TrackedEncryptor{ffdcEncryptor})
+			if err != nil {
+				logging.Fatalf("EAR: Error setting up encryption manager: %v", err)
+				os.Exit(1)
+			}
+		} else if *ENTERPRISE {
+			logging.Infof("EAR: Encryption manager not created since query service is in standalone mode")
+		}
+
+		cbDs.SetEncryptionProvider(encryptionMgr)
 	}
+	ffdcEncryptor.InitEncryptionProvider(encryptionMgr)
 
 	// Start the completed requests log
 	if *COMPLETED_THRESHOLD == -1 {
@@ -485,9 +496,6 @@ func main() {
 		logging.Errorf("Error with Setting up SSL endpoints : %v", err.Error())
 		os.Exit(1)
 	}
-
-	// Start the FFDC periodic reset routine
-	ffdc.StartFFDC()
 
 	// topology awareness - after listeners are ready to handle requests
 	_ = control.NewManager(*UUID)
@@ -654,18 +662,21 @@ func primeEncryptionManager(encryptionMgr keymgmt.EncryptionManager, ds datastor
 		})
 	} else {
 		// This should ideally not happen in a production environment. Couchbase datastore should implement Datastore2 interface.
-		logging.Errorf("Error priming encryption keys. Datastore does not implement Datastore2 interface.")
+		logging.Errorf("EAR: Error priming encryption keys. Datastore does not implement Datastore2 interface.")
 	}
 
 	encryptionMgr.PrimeKeys(keyTypes)
 }
 
-func setupEncryptionManager() keymgmt.EncryptionManager {
+func setupEncryptionManager(encryptors []keymgmt.TrackedEncryptor) (keymgmt.EncryptionManager, error) {
 	trackedTypes := make([]encryption.KeyDataType, 2)
 	trackedTypes[0] = encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
 	trackedTypes[1] = encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE}
 
-	encryptionMgr := keymgmt.NewEncryptionManager(trackedTypes, []keymgmt.TrackedEncryptor{})
-	encryptionMgr.RegisterCbauthEncryptionCallbacks()
-	return encryptionMgr
+	encryptionMgr := keymgmt.NewEncryptionManager(trackedTypes, encryptors)
+	err := encryptionMgr.RegisterCbauthEncryptionCallbacks()
+	if err != nil {
+		logging.Fatalf("EAR: Error registering cbauth encryption callbacks: %v", err)
+	}
+	return encryptionMgr, err
 }

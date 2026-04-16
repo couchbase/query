@@ -345,9 +345,14 @@ func getActiveKeyFromDatastore(dt encryption.KeyDataType) (*encryption.EaRKey, e
 		return nil, errors.NewNoDatastoreError()
 	}
 
-	encryptionProvider, err := ds.EncryptionProvider()
-	if err != nil || encryptionProvider == nil {
-		return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, err)
+	cbDs, ok := ds.(CouchbaseDatastore)
+	if !ok {
+		return nil, nil
+	}
+
+	encryptionProvider := cbDs.EncryptionProvider()
+	if encryptionProvider == nil {
+		return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
 	}
 
 	return encryptionProvider.GetActiveKey(dt)

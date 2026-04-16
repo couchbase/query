@@ -2554,11 +2554,17 @@ func (this *Context) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encrypt
 		return key, nil
 	}
 
-	em, err := this.datastore.EncryptionProvider()
-	if err != nil || em == nil {
-		return nil, err
+	cbDs, ok := this.datastore.(datastore.CouchbaseDatastore)
+	if !ok {
+		return nil, nil
 	}
 
+	em := cbDs.EncryptionProvider()
+	if em == nil {
+		return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
+	}
+
+	var err errors.Error
 	key, err = em.GetActiveKey(dt)
 	if err != nil {
 		return nil, err

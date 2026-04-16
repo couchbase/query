@@ -15,11 +15,6 @@ import (
 
 var NoopEncryptionProviderInstance = &NoopEncryptionProvider{}
 
-type EncryptionProvider interface {
-	GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error)
-	GetKey(dt encryption.KeyDataType, keyID string) (*encryption.EaRKey, errors.Error)
-}
-
 type NoopEncryptionProvider struct{}
 
 func (NoopEncryptionProvider) GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {

@@ -209,14 +209,6 @@ func (s *store) TransactionDeltaKeyScan(keyspace string, conn *datastore.IndexCo
 	defer conn.Sender().Close()
 }
 
-func (s *store) EncryptionProvider() (datastore.EncryptionProvider, errors.Error) {
-	return datastore.NoopEncryptionProviderInstance, nil
-}
-
-func (s *store) SetEncryptionProvider(datastore.EncryptionProvider) {
-	return
-}
-
 // NewStore creates a new file-based store for the given filepath.
 func NewDatastore(path string) (s datastore.Datastore, e errors.Error) {
 	path, er := filepath.Abs(path)

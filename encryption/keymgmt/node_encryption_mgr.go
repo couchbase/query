@@ -86,8 +86,8 @@ func (this *NodeEncryptionManager) GetKey(dt encryption.KeyDataType, keyID strin
 	return this.keyStore.GetKey(dt, keyID)
 }
 
-func (this *NodeEncryptionManager) RegisterCbauthEncryptionCallbacks() {
-	cbauth.RegisterEncryptionKeysCallbacks(this.RefreshKeysCallback, this.GetInUseKeysCallback, this.DropKeysCallback,
+func (this *NodeEncryptionManager) RegisterCbauthEncryptionCallbacks() error {
+	return cbauth.RegisterEncryptionKeysCallbacks(this.RefreshKeysCallback, this.GetInUseKeysCallback, this.DropKeysCallback,
 		this.SynchronizeKeyFilesCallback)
 }
 
@@ -179,18 +179,18 @@ func (this *NodeEncryptionManager) DropKeysCallback(dt cbauth.KeyDataType, KeyId
 	qdt := cbauthTypeToDataType(dt)
 	_, ok := this.trackedDatatypes[qdt]
 	if !ok {
-		logging.Warnf("EAR: [data_type=%s] Received request to drop key ids %s for a key data type that Query does not"+
+		logging.Warnf("EAR: [data_type=%s] Received request to drop key ids %q for a key data type that Query does not"+
 			" subscribe to. Ignoring the request.", qdt.String(), KeyIdsToDrop)
 		return
 	}
 
-	logging.Infof("EAR: [data_type=%s] Received request to drop key ids %v", qdt.String(), KeyIdsToDrop)
-
 	if len(this.encryptors) == 0 {
-		logging.Infof("EAR: [data_type=%s] No encryptors registered with the manager. Ignoring the request as no action required.",
-			qdt.String())
+		logging.Infof("EAR: [data_type=%s]  Received request to drop key ids %q. No encryptors registered with the manager."+
+			"Ignoring the request.", qdt.String(), KeyIdsToDrop)
 		return
 	}
+
+	logging.Infof("EAR: [data_type=%s] Received request to drop key ids %q", qdt.String(), KeyIdsToDrop)
 
 	this.dropLock.Lock()
 	// Perform de-duplication
@@ -241,11 +241,18 @@ func (this *NodeEncryptionManager) dropKeysWorker() {
 			this.dropLock.Unlock()
 			locked = false
 
-			var dropErr errors.Error
+			var dropErr error
+			var failedEncryptor string
 			for _, encryptor := range this.encryptors {
+				logging.Infof("EAR: [data_type=%s] Dropping key %q from encryptor %s", key.dataType.String(), key.keyID,
+					encryptor.Name())
 				dropErr = encryptor.DropKey(key.dataType, key.keyID)
 				if dropErr != nil {
+					failedEncryptor = encryptor.Name()
 					break
+				} else {
+					logging.Infof("EAR: [data_type=%s] Successfully dropped key %q from encryptor %s", key.dataType.String(),
+						key.keyID, encryptor.Name())
 				}
 			}
 
@@ -259,7 +266,10 @@ func (this *NodeEncryptionManager) dropKeysWorker() {
 			if dropErr == nil {
 				logging.Infof("EAR: [data_type=%s] Successfully dropped key %s", key.dataType.String(), key.keyID)
 			} else {
-				logging.Errorf("EAR: [data_type=%s] Error dropping key %s: %v", key.dataType.String(), key.keyID, dropErr)
+				logging.Errorf("EAR: [data_type=%s] Error dropping key %s due to failure in encryptor %s: %v",
+					key.dataType.String(), key.keyID, failedEncryptor, dropErr)
+				dropErr = fmt.Errorf("Error dropping key %s due to failure in encryptor %s: %v", key.keyID, failedEncryptor,
+					dropErr)
 			}
 			cdt := dataTypeToCbauthType(key.dataType)
 

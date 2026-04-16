@@ -26,8 +26,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	go_errors "errors"
+
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/encryption/keymgmt"
+	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
 )
@@ -38,6 +42,8 @@ const _OCCURENCE_LIMIT = 30
 const FFDC_MIN_INTERVAL = time.Second * 10
 const _MAX_CAPTURE_WAIT_TIME = time.Second * 10
 const _CPU_PROFILE_TIME = time.Second * 10
+const _ENCRYPTION_BUFFER_SIZE = 64 * util.KiB
+const _UNSET_KEY_ID = "UNSET"
 
 const (
 	Heap      = "heap"
@@ -51,17 +57,25 @@ const (
 )
 
 const fileNamePrefix = "query_ffdc"
-const defaultLogsPath = "var/lib/couchbase/logs"
-const staticConfigFile = "etc/couchbase/static_config"
+const reencryptPrefix = "reencrypt_"
+const reencryptFileNamePrefix = reencryptPrefix + fileNamePrefix
+const unencryptedFileExtension = ".gz" // Encrypted files will not have the ".gz" extension
 
-var _path string
 var pidString string
 var cbLogDir string
 
+// Initializing a concrete structure because actions can be set in the operations map post-initialization i.e post Init()
+// But initialization requires awareness of what actions are sensitive in order to correctly track the scanned FFDC files on disk
+var sensitiveActions = map[string]bool{
+	Completed: true,
+	Active:    true,
+	Vitals:    true,
+}
+
 type operationConfig struct {
-	op      func(io.Writer) error
-	encrypt bool
-	async   bool
+	op        func(io.Writer) error
+	sensitive bool
+	async     bool
 }
 
 // some actions require external dependencies and are therefore set via the Set() function
@@ -170,10 +184,6 @@ var operations = map[string]operationConfig{
 	},
 }
 
-func StartFFDC() {
-	go periodicReset(15 * time.Minute)
-}
-
 func runCommand(w io.Writer, path string, options string) error {
 	var cmd *exec.Cmd
 	if options != "" {
@@ -213,15 +223,36 @@ func Human(v uint64) string {
 	}
 }
 
+type occurrenceState uint32
+
+const (
+	_IDLE occurrenceState = iota
+	_CAPTURING
+	_CLEANING
+	_REENCRYPTING
+)
+
 type occurrence struct {
-	when          time.Time
-	ts            string
-	id            int64
-	files         []string
-	encryptionSet bool
+	when time.Time
+	ts   string
+	id   int64
+
+	// Is an in memory list of Query generated FFDC files on disk associated with this occurrence
+	// Will be the source of truth for key management and file operations
+	files     []*ffdcFile
+	filesLock sync.RWMutex
+
+	state           atomic.Int32
+	pendingCaptures atomic.Int32
 }
 
 func (this *occurrence) capture(event string, what string) {
+	handoffCompletion := false
+	defer func() {
+		if !handoffCompletion {
+			this.completeAction()
+		}
+	}()
 
 	var opConfig operationConfig
 	if op, ok := operations[what]; ok {
@@ -232,7 +263,17 @@ func (this *occurrence) capture(event string, what string) {
 		return
 	}
 
-	encrypt := this.encryptionSet && opConfig.encrypt
+	var encryptionKey *encryption.EaRKey
+	if opConfig.sensitive {
+		var encErr errors.Error
+		encryptionKey, encErr = ffdcMgr.getActiveKey()
+		if encErr != nil {
+			logging.Errorf("FFDC: [%#x] Error obtaining active encryption key: %v", this.id, encErr)
+			return
+		}
+	}
+
+	encrypt := encryptionKey != nil && opConfig.sensitive
 	var nameBuilder strings.Builder
 	nameBuilder.WriteString(fileNamePrefix)
 	nameBuilder.WriteByte('_')
@@ -245,21 +286,36 @@ func (this *occurrence) capture(event string, what string) {
 	nameBuilder.WriteString(this.ts)
 
 	if !encrypt {
-		nameBuilder.WriteString(".gz")
+		nameBuilder.WriteString(unencryptedFileExtension)
 	}
 
 	name := nameBuilder.String()
 
 	f, err := os.Create(path.Join(GetPath(), name))
 	if err == nil {
-		this.files = append(this.files, name)
+		ffdcFile := &ffdcFile{
+			name:        name,
+			sensitive:   opConfig.sensitive,
+			targetKeyId: _UNSET_KEY_ID,
+		}
+
+		if encryptionKey != nil {
+			ffdcFile.currentKeyId = encryptionKey.Id
+		} else {
+			ffdcFile.currentKeyId = encryption.UNENCRYPTED_KEY_ID
+		}
+
+		this.filesLock.Lock()
+		this.files = append(this.files, ffdcFile)
+		this.filesLock.Unlock()
 
 		if opConfig.async {
+			handoffCompletion = true
 			go func() {
+				defer this.completeAction()
 				var err error
 				if encrypt {
-					// TODO - pass key material when key management is introduced
-					err = this.writeEncryptedFFDCFile(f, opConfig, nil)
+					err = this.writeEncryptedFFDCFile(f, opConfig, encryptionKey)
 				} else {
 					err = this.writeUnencryptedFFDCFile(f, opConfig)
 				}
@@ -269,14 +325,17 @@ func (this *occurrence) capture(event string, what string) {
 				if err != nil {
 					logging.Errorf("FFDC: [%#x] Error capturing '%v' to %v: %v", this.id, what, name, err)
 				} else {
-					logging.Infof("FFDC: [%#x] Captured: %v", this.id, path.Base(name))
+					msg := fmt.Sprintf("FFDC: [%#x] Captured: %v", this.id, path.Base(name))
+					if encrypt {
+						msg += fmt.Sprintf(" encrypted with keyId: %v", encryptionKey.Id)
+					}
+					logging.Infof(msg)
 				}
 			}()
 			logging.Infof("FFDC: [%#x] Started capture of: %v", this.id, path.Base(name))
 		} else {
 			if encrypt {
-				// TODO - pass key material when key management is introduced
-				err = this.writeEncryptedFFDCFile(f, opConfig, nil)
+				err = this.writeEncryptedFFDCFile(f, opConfig, encryptionKey)
 			} else {
 				err = this.writeUnencryptedFFDCFile(f, opConfig)
 			}
@@ -286,7 +345,11 @@ func (this *occurrence) capture(event string, what string) {
 			if err != nil {
 				logging.Errorf("FFDC: [%#x] Error capturing '%v' to %v: %v", this.id, what, name, err)
 			} else {
-				logging.Infof("FFDC: [%#x] Captured: %v", this.id, path.Base(name))
+				msg := fmt.Sprintf("FFDC: [%#x] Captured: %v", this.id, path.Base(name))
+				if encrypt {
+					msg += fmt.Sprintf(" encrypted with keyId: %v", encryptionKey.Id)
+				}
+				logging.Infof(msg)
 			}
 		}
 	} else {
@@ -295,10 +358,13 @@ func (this *occurrence) capture(event string, what string) {
 }
 
 func (this *occurrence) cleanup(inaccessibleOnly bool) {
+	this.filesLock.Lock()
+	defer this.filesLock.Unlock()
 	for i := 0; i < len(this.files); {
+		name := this.files[i].Name(true)
 		if inaccessibleOnly {
-			if _, err := os.Stat(path.Join(GetPath(), this.files[i])); err != nil {
-				logging.Infof("FFDC: [%#x] dump has been removed: %v", this.id, this.files[i])
+			if _, err := os.Stat(path.Join(GetPath(), name)); err != nil {
+				logging.Infof("FFDC: [%#x] dump has been removed: %v", this.id, name)
 				if i+1 < len(this.files) {
 					copy(this.files[i:], this.files[i+1:])
 				}
@@ -307,8 +373,11 @@ func (this *occurrence) cleanup(inaccessibleOnly bool) {
 				i++
 			}
 		} else {
-			logging.Infof("FFDC: [%#x] removing dump: %v", this.id, this.files[i])
-			os.Remove(path.Join(GetPath(), this.files[i]))
+			logging.Infof("FFDC: [%#x] removing dump: %v", this.id, name)
+			err := os.Remove(path.Join(GetPath(), name))
+			if err != nil && !go_errors.Is(err, os.ErrNotExist) {
+				ffdcMgr.trackOrphanFile(this.files[i])
+			}
 			i++
 		}
 	}
@@ -317,8 +386,14 @@ func (this *occurrence) cleanup(inaccessibleOnly bool) {
 	}
 }
 
+func (this *occurrence) completeAction() {
+	if this.pendingCaptures.Add(-1) == 0 {
+		this.state.Store(int32(_IDLE))
+	}
+}
+
 type reason struct {
-	sync.Mutex
+	sync.RWMutex
 	count       int64
 	event       string
 	msg         string
@@ -367,7 +442,12 @@ func (this *reason) shouldCapture() *occurrence {
 	}
 	accounting.UpdateCounter(accounting.FFDC_TOTAL)
 	this.cleanup()
+
 	occ := &occurrence{when: now, id: now.UnixMilli(), ts: now.Format("2006-01-02-150405.000")}
+	if len(this.actions) > 0 {
+		occ.state.Store(int32(_CAPTURING))
+		occ.pendingCaptures.Store(int32(len(this.actions)))
+	}
 	this.occurrences = append(this.occurrences, occ)
 	return occ
 }
@@ -408,14 +488,14 @@ func (this *reason) reset() {
 }
 
 // Periodically reset the event
-func periodicReset(interval time.Duration) {
+func periodicActions(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer func() {
 		ticker.Stop()
 		// cannot panic and die
 		err := recover()
 		logging.Debugf("FFDC: Periodic reset routine failed with error: %v. Restarting.", err)
-		go periodicReset(interval)
+		go periodicActions(interval)
 	}()
 
 	for range ticker.C {
@@ -423,47 +503,128 @@ func periodicReset(interval time.Duration) {
 		for _, r := range reasons {
 			r.reset()
 		}
+
+		// Clean up orphaned files
+		ffdcMgr.cleanupOrphanFiles()
 	}
 
 }
 
 func (this *reason) cleanup() {
 	for i := 0; i < len(this.occurrences); {
+
+		if !this.occurrences[i].state.CompareAndSwap(int32(_IDLE), int32(_CLEANING)) {
+			i++
+			continue
+		}
+
 		// remove references to inaccessible files
 		this.occurrences[i].cleanup(true)
-		if len(this.occurrences[i].files) == 0 {
+
+		this.occurrences[i].filesLock.RLock()
+		nFiles := len(this.occurrences[i].files)
+		this.occurrences[i].filesLock.RUnlock()
+
+		if nFiles == 0 {
 			if i+1 < len(this.occurrences) {
 				copy(this.occurrences[i:], this.occurrences[i+1:])
 			}
 			this.occurrences = this.occurrences[:len(this.occurrences)-1]
 		} else {
+			// Change state for the occurrence only for those occurrences that remain in the list
+			this.occurrences[i].state.Store(int32(_IDLE))
 			i++
 		}
+
 	}
 
 	if len(this.occurrences) < _OCCURENCE_LIMIT {
 		return
 	}
 	n := _OCCURENCE_LIMIT / 2
+
 	if time.Now().AddDate(0, -1, 0).After(this.occurrences[0].when) {
 		n = 0
 	}
 	occ := this.occurrences[n]
+
+	if !occ.state.CompareAndSwap(int32(_IDLE), int32(_CLEANING)) {
+		return
+	}
+
 	copy(this.occurrences[n:], this.occurrences[n+1:])
 	this.occurrences = this.occurrences[:len(this.occurrences)-1]
 	occ.cleanup(false)
 }
 
-func (this *reason) getOccurence(ts string) *occurrence {
+func (this *reason) getOccurence(ts string, fileName string) *occurrence {
 	if len(this.occurrences) > 0 {
 		occ := this.occurrences[len(this.occurrences)-1]
-		if len(occ.files) == 0 || strings.HasSuffix(occ.files[0], ts) {
+		if occ.ts == ts {
 			return occ
 		}
 	}
 	occ := &occurrence{ts: ts}
+
+	// Occurrences in a given reason will always have different timestamps, because we do not allow captures within FFDC_MIN_INTERVAL
+	// of the last occurrence
 	this.occurrences = append(this.occurrences, occ)
 	return occ
+}
+
+func (this *reason) processForKeyDrop(keyIdToDrop string, ffdcMgr *ffdcManager) error {
+	// Create a snapshot of occurrences
+	this.Lock()
+	occList := make([]*occurrence, 0, len(this.occurrences))
+	for _, occ := range this.occurrences {
+		if occ.state.CompareAndSwap(int32(_IDLE), int32(_REENCRYPTING)) {
+			occList = append(occList, occ)
+		}
+	}
+	this.Unlock()
+
+	var dropErr error
+
+	// Track error and continue processing other files even if a failure occurs
+	// This is to maximize the number of files that get re-encrypted in this attempt.
+	for _, occ := range occList {
+		activeKey, err := ffdcMgr.getActiveKey()
+		if err != nil {
+			logging.Errorf("FFDC: [%#x] Failed to get active key during drop key operation: %v", occ.id, err)
+			dropErr = err
+			occ.state.Store(int32(_IDLE))
+			continue
+		}
+
+		// Active key drop is not allowed.
+		if (activeKey == nil && keyIdToDrop == encryption.UNENCRYPTED_KEY_ID) || (activeKey != nil && keyIdToDrop == activeKey.Id) {
+			logging.Errorf("FFDC: [%#x] Attempt to drop active key", occ.id)
+			dropErr = fmt.Errorf("Attempt to drop active key")
+			occ.state.Store(int32(_IDLE))
+			continue
+		}
+
+		// Can iterate over the occurrence's files list without a lock as no appends/deletes can occur on the list
+		// when it is in _REENCRYPTING state
+		for _, ffdc := range occ.files {
+
+			name, sensitive, currentKeyId, _ := ffdc.AllFields(true)
+			if !sensitive || currentKeyId != keyIdToDrop {
+				continue
+			}
+
+			dropErr = ffdc.transformForKeyDrop(keyIdToDrop, activeKey, ffdcMgr)
+			if dropErr != nil {
+				logging.Errorf("FFDC: [%#x] Failed to transform file %v: %v", occ.id, name, dropErr)
+				dropErr = fmt.Errorf("Failed to transform file %v in occurrence %v: %v", name, occ.id, dropErr)
+				continue
+			}
+		}
+
+		occ.state.Store(int32(_IDLE))
+	}
+
+	return dropErr
 }
 
 // Get the path to the Couchbase log directory.
@@ -471,7 +632,7 @@ func GetPath() string {
 	return cbLogDir
 }
 
-func Init(logDir string) {
+func Init(logDir string) keymgmt.TrackedEncryptor {
 	defer func() {
 		e := recover()
 		if e != nil {
@@ -491,14 +652,36 @@ func Init(logDir string) {
 	logging.Infof("FFDC: Capture path: %v", capturePath)
 	d, err := os.Open(capturePath)
 	if err == nil {
-		var files []string
+		var files []*ffdcFile // Should only contain files with prefix "query_ffdc"
 		sz := int64(0)
 		for {
 			ents, err := d.ReadDir(10)
 			if err == nil {
 				for i := range ents {
-					if !ents[i].IsDir() && strings.HasPrefix(ents[i].Name(), fileNamePrefix) {
-						files = append(files, ents[i].Name())
+
+					if ents[i].IsDir() {
+						continue
+					}
+
+					name := ents[i].Name()
+
+					// Delete if file is staging ffdc file. If cannot delete, track as an orphan file
+					if strings.HasPrefix(name, reencryptFileNamePrefix) {
+						err := os.Remove(path.Join(GetPath(), name))
+						if err != nil && !go_errors.Is(err, os.ErrNotExist) {
+							ffdcMgr.trackOrphanFileFromName(name)
+						}
+						continue
+					} else if strings.HasPrefix(name, fileNamePrefix) {
+						ffdcFile, queryGenerated, err := genFfdcFile(name)
+						if err != nil {
+							ffdcMgr.trackOrphanFileFromName(name)
+							continue
+						}
+						if !queryGenerated || ffdcFile == nil {
+							continue
+						}
+						files = append(files, ffdcFile)
 						if i, err := ents[i].Info(); err == nil {
 							sz += i.Size()
 						}
@@ -512,18 +695,20 @@ func Init(logDir string) {
 		d.Close()
 		if len(files) > 0 {
 			sort.Slice(files, func(i int, j int) bool {
-				a := strings.LastIndexByte(files[i], '_')
-				b := strings.LastIndexByte(files[j], '_')
-				return files[i][a:] < files[j][b:]
+				a := strings.LastIndexByte(files[i].name, '_')
+				b := strings.LastIndexByte(files[j].name, '_')
+				return strings.TrimSuffix(files[i].name[a:], unencryptedFileExtension) < strings.TrimSuffix(files[j].name[b:], unencryptedFileExtension)
 			})
 			for i := range files {
-				parts := strings.Split(files[i][len(fileNamePrefix)+1:], "_")
+				parts := strings.Split(files[i].name[len(fileNamePrefix)+1:], "_")
+				// This check is fine as the files list will only contain query_ffdc files
 				if len(parts) < 4 {
 					continue
 				}
 				var occ *occurrence
 				if reas, ok := reasons[parts[0]]; ok {
-					occ = reas.getOccurence(parts[len(parts)-1])
+					ts := strings.TrimSuffix(parts[len(parts)-1], unencryptedFileExtension)
+					occ = reas.getOccurence(ts, files[i].name)
 				}
 				if occ != nil {
 					occ.files = append(occ.files, files[i])
@@ -532,6 +717,10 @@ func Init(logDir string) {
 		}
 		logging.Infof("FFDC: Found %v existing dump file(s); %v bytes.", len(files), sz)
 	}
+
+	go periodicActions(15 * time.Minute)
+
+	return ffdcMgr
 }
 
 func Set(what string, action func(io.Writer) error) {
@@ -543,11 +732,12 @@ func Set(what string, action func(io.Writer) error) {
 		op: action,
 	}
 
-	switch what {
-	case Completed, Active, Vitals:
-		opConfig.encrypt = true
-	case CPU:
+	if what == CPU {
 		opConfig.async = true
+	}
+
+	if ok := sensitiveActions[what]; ok {
+		opConfig.sensitive = true
 	}
 
 	operations[what] = opConfig
@@ -652,7 +842,7 @@ func Stats(prefix string, res map[string]interface{}, details bool) {
 }
 
 func (this *occurrence) writeEncryptedFFDCFile(f *os.File, opConfig operationConfig, key *encryption.EaRKey) error {
-	ew, err := encryption.NewCBEFWriterSize(f, key, encryption.CBEF_ZLIB, 64*util.KiB)
+	ew, err := encryption.NewCBEFWriterSize(f, key, encryption.CBEF_ZLIB, _ENCRYPTION_BUFFER_SIZE)
 	if err != nil {
 		logging.Errorf("FFDC: [%#x] Error creating encryption writer: %v", this.id, err)
 		return err

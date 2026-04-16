@@ -19,7 +19,7 @@ type EncryptionManager interface {
 	GetKey(dt encryption.KeyDataType, keyID string) (*encryption.EaRKey, errors.Error)
 	PrimeKeys(keyDataTypes []encryption.KeyDataType) errors.Error
 	UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbauth.EncrKeysInfo, prime bool) errors.Error
-	RegisterCbauthEncryptionCallbacks()
+	RegisterCbauthEncryptionCallbacks() error
 	GetInUseKeysCallback(dt cbauth.KeyDataType) ([]string, error)
 	DropKeysCallback(dt cbauth.KeyDataType, KeyIdsToDrop []string)
 	SynchronizeKeyFilesCallback(dt cbauth.KeyDataType) error
@@ -27,7 +27,45 @@ type EncryptionManager interface {
 }
 
 type TrackedEncryptor interface {
-	GetInUseKeys(dt encryption.KeyDataType) ([]string, errors.Error)
-	DropKey(dt encryption.KeyDataType, keyId string) errors.Error
+	GetInUseKeys(dt encryption.KeyDataType) ([]string, error)
+	DropKey(dt encryption.KeyDataType, keyId string) error
 	Name() string
+	InitEncryptionProvider(encProvider encryption.EncryptionProvider)
+}
+
+type NoopEncryptionManager struct{}
+
+func (this *NoopEncryptionManager) GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
+	return nil, nil
+}
+
+func (this *NoopEncryptionManager) GetKey(dt encryption.KeyDataType, keyID string) (*encryption.EaRKey, errors.Error) {
+	return nil, nil
+}
+
+func (this *NoopEncryptionManager) PrimeKeys(keyDataTypes []encryption.KeyDataType) errors.Error {
+	return nil
+}
+
+func (this *NoopEncryptionManager) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbauth.EncrKeysInfo, prime bool) errors.Error {
+	return nil
+}
+
+func (this *NoopEncryptionManager) RegisterCbauthEncryptionCallbacks() error {
+	return nil
+}
+
+func (this *NoopEncryptionManager) GetInUseKeysCallback(dt cbauth.KeyDataType) ([]string, error) {
+	return []string{}, nil
+}
+
+func (this *NoopEncryptionManager) DropKeysCallback(dt cbauth.KeyDataType, KeyIdsToDrop []string) {
+}
+
+func (this *NoopEncryptionManager) SynchronizeKeyFilesCallback(dt cbauth.KeyDataType) error {
+	return nil
+}
+
+func (this *NoopEncryptionManager) RefreshKeysCallback(dt cbauth.KeyDataType) error {
+	return nil
 }
