@@ -10,3 +10,5 @@ parser/n1ql/y.go
 test/multistore/data
 value/example/example
 finderr/finderr
+.claude/settings.local.json
+.claude/todos/
