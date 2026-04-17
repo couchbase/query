@@ -40,7 +40,7 @@ while [ $# -gt 0 ]; do
     -tags)
       shift
       [[ "$1" == "enterprise" ]] && enterprise=1
-      args="$args -tags $1"
+      args="$args -tags $1,udf_query"
       ;;
     -u) uflag=-u ;;
     -s) sflag=1 ;;
