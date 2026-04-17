@@ -29,7 +29,7 @@ INCLUDE (FindCouchbaseGo)
 INCLUDE (FindCouchbaseOpenSSL)
 
 IF (BUILD_ENTERPRISE)
-    SET (_gotags "enterprise")
+    SET (_gotags "enterprise udf_query")
     SET (NEWEVAL_DIR ../eventing-ee/evaluator)
     SET(_eval_no_default_path NO_DEFAULT_PATH)
 ELSE (BUILD_ENTERPRISE)
