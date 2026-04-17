@@ -1748,9 +1748,11 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 
 		// create the bucket if not found
 		args := map[string]interface{}{
-			"bucketType": "couchbase",
-			"name":       name,
-			"ramQuotaMB": 100,
+			"bucketType":     "couchbase",
+			"name":           name,
+			"ramQuotaMB":     100,
+			"storageBackend": "magma",
+			"numVBuckets":    128,
 		}
 		var ret interface{}
 		// allow "bucket already exists" error in case duplicate create
