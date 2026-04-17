@@ -2062,7 +2062,7 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		case "EXECUTE":
 			var err errors.Error
 			exec, _ := stmt.(*algebra.Execute)
-			if prepared, err = this.getPreparedByName(exec.Prepared(), request, context); err != nil {
+			if prepared, err = this.getPreparedByName(exec.Prepared(), request, context, true); err != nil {
 				return nil, err
 			}
 
@@ -2126,7 +2126,11 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 	} else {
 		if (request.TxId() != "" || request.TxImplicit()) && !autoPrepare {
 			var err errors.Error
-			if prepared, err = this.getPreparedByName(prepared.Name(), request, context); err != nil {
+			// Do not track Uses here: the prepared statement was already tracked when the request
+			// was parsed (handlePrepared → GetPreparedWithContext with OPT_TRACK). Re-fetching
+			// with delta keyspace context is needed for correctness but must not double-count
+			// Uses, which would cause avgElapsedTime = RequestTime/(2N) < minElapsedTime.
+			if prepared, err = this.getPreparedByName(prepared.Name(), request, context, false); err != nil {
 				return nil, err
 			}
 		}
@@ -2269,13 +2273,17 @@ func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepa
 	return prepared, nil
 }
 
-func (this *Server) getPreparedByName(prepareName string, request Request, context *execution.Context) (
+func (this *Server) getPreparedByName(prepareName string, request Request, context *execution.Context, track bool) (
 	*plan.Prepared, errors.Error) {
 
 	var reprepTime time.Duration
 
+	options := uint32(prepareds.OPT_REMOTE | prepareds.OPT_VERIFY)
+	if track {
+		options |= prepareds.OPT_TRACK
+	}
 	prepared, err := prepareds.GetPreparedWithContext(prepareName, request.QueryContext(),
-		context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
+		context.DeltaKeyspaces(), options,
 		&reprepTime, context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context)
 	if reprepTime > 0 {
 		request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
