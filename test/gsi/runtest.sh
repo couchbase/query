@@ -64,6 +64,6 @@ then
     read -sp "Enter natural_orgid: " natural_orgid;echo; export natural_orgid;echo;
 fi
 # strip indexer client info-level messages to retain some utility in the output
-(go test -v -p 1 -tags enterprise ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
+(go test -v -p 1 -tags enterprise,udf_query ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
 cd ../..
 source ./resetval.sh
