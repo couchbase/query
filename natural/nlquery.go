@@ -826,7 +826,7 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 		return "", nil, err
 	}
 	if isErrorResponse(content) {
-		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, content)
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, content)
 	}
 
 	parse := util.Now()
@@ -912,7 +912,7 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 		return "", "", nil, err
 	}
 	if isErrorResponse(content) {
-		return "", "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, content)
+		return "", "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, content)
 	}
 
 	parse := util.Now()
@@ -1031,7 +1031,7 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string
 		return "", nil, err
 	}
 	if isErrorResponse(content) {
-		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, content)
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, content)
 	}
 
 	parse := util.Now()
@@ -1356,7 +1356,7 @@ func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
 		val := chatdoc.GetValue()
 		if vt := val.Type(); vt != value.OBJECT {
 			return errors.NewNaturalLanguageRequestError(errors.E_NL_UNEXPECTED_CHAT_DOC,
-				fmt.Sprintf("value type for chat document: %s expected object type", val, vt))
+				fmt.Sprintf("value type for chat document: %s expected object type %s", val, vt))
 		}
 
 		claimer, ok := val.Field("claimer")
@@ -1442,9 +1442,9 @@ func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
 	}
 
 	if !claimed {
-		logging.Errorf("Chat claim failed after %v retries: failed to update the chat document for chat id: %s", maxRetry, chatId)
+		logging.Errorf("Chat claim failed after %d retries: failed to update the chat document for chat id: %s", maxRetry, chatId)
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
-			fmt.Sprintf("failed to claim chat document for chat id: %s after retries: %s", maxRetry, chatId))
+			fmt.Sprintf("failed to claim chat document for chat id: %s after retries: %d", chatId, maxRetry))
 	}
 
 	dpairs := make([]value.Pair, 1)
@@ -1471,10 +1471,10 @@ func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
 	}
 
 	if !claimcompleted {
-		logging.Errorf("Chat claim completion failed after %v retries:"+
+		logging.Errorf("Chat claim completion failed after %d retries:"+
 			" error in deleting the chat document for chat id: %s", maxRetry, chatId)
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
-			fmt.Sprintf("failed to complete the claim for chat document for chat id: %s after retries: %s", maxRetry, chatId))
+			fmt.Sprintf("failed to complete the claim for chat document for chat id: %s after retries: %d", chatId, maxRetry))
 	}
 
 	ce.Id = chatId
