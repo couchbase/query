@@ -35,6 +35,7 @@ enterprise=0
 uflag=
 sflag=0
 fflag=1
+vflag=0
 while [ $# -gt 0 ]; do
   case $1 in
     -tags)
@@ -46,6 +47,7 @@ while [ $# -gt 0 ]; do
     -s) sflag=1 ;;
     -S) sflag=2 ;;
     -nofmt) fflag=0 ;;
+    -vet) vflag=1 ;;
     *) args="$args $1" ;;
   esac
   shift
@@ -386,12 +388,35 @@ then
   fi
 fi
 
+if [[ ($vflag != 0) ]]
+then
+  echo go vet $* ./...
+  go vet $* ./...
+  if [ $? -ne 0 ]
+  then
+    exit 1
+  fi
+  if [[ $enterprise == 1 ]]; then
+    (echo go vet $* ../query-ee/...; cd ../query-ee; go vet $* ./...)
+    if [ $? -ne 0 ]
+    then
+      exit 1
+    fi
+  fi
+fi
+
 echo cd server/cbq-engine
 cd server/cbq-engine
 ./build.sh $*
 if [ $? -ne 0 ]
 then
   exit 1
+fi
+if [[ "Darwin" = `uname` ]]; then
+    lpath=`otool -l cbq-engine |grep LC_RPATH -A 2 | grep "/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/lib"`
+    if [[ -z "$lpath" ]]; then
+       install_name_tool -add_rpath /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/lib cbq-engine
+    fi
 fi
 cd ../..
 
