@@ -29,6 +29,7 @@ import (
 	"github.com/couchbase/query/clustering"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
+	"github.com/couchbase/query/encryption/keymgmt"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/expression"
@@ -272,6 +273,7 @@ type Server struct {
 	requestGate            requestGate
 	admissionsLock         sync.Mutex
 	admissionsRoutineState admissionsRoutineState
+	encryptionManager      keymgmt.EncryptionManager
 }
 
 // Default and min Keep Alive Length
@@ -2725,4 +2727,12 @@ func (this *Server) SetN1qlFeatureControl(control uint64) {
 
 	this.admissionsLock.Unlock()
 
+}
+
+func (this *Server) SetEncryptionManager(mgr keymgmt.EncryptionManager) {
+	this.encryptionManager = mgr
+}
+
+func (this *Server) EncryptionManager() keymgmt.EncryptionManager {
+	return this.encryptionManager
 }

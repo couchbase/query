@@ -118,7 +118,25 @@ func (this *NodeEncryptionManager) RefreshKeysCallback(dt cbauth.KeyDataType) er
 // Must returns "" if there is any un-encrypted data on disk
 // Must return the active key ID if encryption at rest is enabled for the data type
 func (this *NodeEncryptionManager) GetInUseKeysCallback(dt cbauth.KeyDataType) ([]string, error) {
-	qdt := cbauthTypeToDataType(dt)
+	return this.getInUseKeys(cbauthTypeToDataType(dt))
+}
+
+func (this *NodeEncryptionManager) GetAllInUseKeys() (map[encryption.KeyDataType][]string, error) {
+	allKeys := make(map[encryption.KeyDataType][]string, len(this.trackedDatatypes))
+
+	for dt := range this.trackedDatatypes {
+		keys, err := this.getInUseKeys(dt)
+		if err != nil {
+			return nil, err
+		}
+
+		allKeys[dt] = keys
+	}
+
+	return allKeys, nil
+}
+
+func (this *NodeEncryptionManager) getInUseKeys(qdt encryption.KeyDataType) ([]string, error) {
 	_, ok := this.trackedDatatypes[qdt]
 	if !ok {
 		// if no keys are tracked for the provided data type, cbauth requires this method to return empty list instead of nil

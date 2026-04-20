@@ -24,6 +24,7 @@ type EncryptionManager interface {
 	DropKeysCallback(dt cbauth.KeyDataType, KeyIdsToDrop []string)
 	SynchronizeKeyFilesCallback(dt cbauth.KeyDataType) error
 	RefreshKeysCallback(dt cbauth.KeyDataType) error
+	GetAllInUseKeys() (map[encryption.KeyDataType][]string, error)
 }
 
 type TrackedEncryptor interface {
@@ -57,6 +58,10 @@ func (this *NoopEncryptionManager) RegisterCbauthEncryptionCallbacks() error {
 
 func (this *NoopEncryptionManager) GetInUseKeysCallback(dt cbauth.KeyDataType) ([]string, error) {
 	return []string{}, nil
+}
+
+func (this *NoopEncryptionManager) GetAllInUseKeys() (map[encryption.KeyDataType][]string, error) {
+	return map[encryption.KeyDataType][]string{}, nil
 }
 
 func (this *NoopEncryptionManager) DropKeysCallback(dt cbauth.KeyDataType, KeyIdsToDrop []string) {

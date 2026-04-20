@@ -403,6 +403,8 @@ func main() {
 	datastore_package.SetSystemstore(server.Systemstore())
 	prepareds.PreparedsReprepareInit(datastore, sys)
 
+	server.SetEncryptionManager(encryptionMgr)
+
 	// only non cluster-setting options
 	server.SetCpuProfile(*CPU_PROFILE)
 	server.SetKeepAlive(*KEEP_ALIVE_LENGTH)

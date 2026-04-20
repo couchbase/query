@@ -60,21 +60,22 @@ import (
 )
 
 const (
-	accountingPrefix   = adminPrefix + "/stats"
-	vitalsPrefix       = adminPrefix + "/vitals"
-	preparedsPrefix    = adminPrefix + "/prepareds"
-	requestsPrefix     = adminPrefix + "/active_requests"
-	completedsPrefix   = adminPrefix + "/completed_requests"
-	functionsPrefix    = adminPrefix + "/functions_cache"
-	dictionaryPrefix   = adminPrefix + "/dictionary_cache"
-	tasksPrefix        = adminPrefix + "/tasks_cache"
-	indexesPrefix      = adminPrefix + "/indexes"
-	expvarsRoute       = "/debug/vars"
-	prometheusLow      = "/_prometheusMetrics"
-	prometheusHigh     = "/_prometheusMetricsHigh"
-	transactionsPrefix = adminPrefix + "/transactions"
-	backupPrefix       = "/api/v1"
-	sequencesPrefix    = adminPrefix + "/sequences_cache"
+	accountingPrefix     = adminPrefix + "/stats"
+	vitalsPrefix         = adminPrefix + "/vitals"
+	preparedsPrefix      = adminPrefix + "/prepareds"
+	requestsPrefix       = adminPrefix + "/active_requests"
+	completedsPrefix     = adminPrefix + "/completed_requests"
+	functionsPrefix      = adminPrefix + "/functions_cache"
+	dictionaryPrefix     = adminPrefix + "/dictionary_cache"
+	tasksPrefix          = adminPrefix + "/tasks_cache"
+	indexesPrefix        = adminPrefix + "/indexes"
+	expvarsRoute         = "/debug/vars"
+	prometheusLow        = "/_prometheusMetrics"
+	prometheusHigh       = "/_prometheusMetricsHigh"
+	transactionsPrefix   = adminPrefix + "/transactions"
+	backupPrefix         = "/api/v1"
+	sequencesPrefix      = adminPrefix + "/sequences_cache"
+	encryptionKeysPrefix = adminPrefix + "/encryption_at_rest"
 )
 
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
@@ -202,6 +203,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	naturalHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doNaturalChats, false)
 	}
+	encryptionKeysHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doEncryption, false)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -249,6 +253,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		adminPrefix + "/migration":              {handler: migrationHandler, methods: []string{"DELETE"}},
 		indexesPrefix + "/natural_chats":        {handler: naturalIndexHandler, methods: []string{"GET"}},
 		adminPrefix + "/natural_chats/{chatId}": {handler: naturalHandler, methods: []string{"GET", "DELETE"}},
+		encryptionKeysPrefix:                    {handler: encryptionKeysHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -3291,4 +3296,38 @@ func doNaturalChatIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 	}, nil)
 
 	return chatIds, nil
+}
+
+func doEncryption(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	interface{}, errors.Error) {
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_SECURITY_READ), req, af)
+	if err != nil {
+		return nil, err
+	}
+
+	if !endpoint.server.Enterprise() {
+		return nil, errors.NewEnterpriseFeature("Encryption at rest", "encryption.encryption_at_rest_endpoint")
+	}
+
+	encMgr := endpoint.server.EncryptionManager()
+	if encMgr == nil {
+		return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
+	}
+
+	switch req.Method {
+	case "GET":
+		allKeys, err := encMgr.GetAllInUseKeys()
+		if err != nil {
+			return nil, errors.NewServiceErrorBadValue(err, "get in-use encryption keys")
+		}
+
+		rv := make(map[string]interface{}, len(allKeys))
+		for datatype, keyIDs := range allKeys {
+			rv[datatype.String()] = keyIDs
+		}
+
+		return map[string]interface{}{"keys.in_use": rv}, nil
+	default:
+		return nil, errors.NewServiceErrorHttpMethod(req.Method)
+	}
 }
