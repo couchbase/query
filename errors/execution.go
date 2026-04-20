@@ -281,10 +281,11 @@ func NewUpdateMissingClone() Error {
 }
 
 // restricted field updates in system keyspace
-func NewUpdateInvalidField(key string, field string) Error {
+func NewUpdateInvalidField(key string, field string, unset bool) Error {
 	c := make(map[string]interface{})
 	c["key"] = key
 	c["field"] = field
+	c["unset"] = unset
 	return &err{level: EXCEPTION, ICode: E_UPDATE_INVALID_FIELD, IKey: "execution.update_invalid_field",
 		InternalMsg: "Invalid field update.", cause: c, InternalCaller: CallerN(1)}
 }

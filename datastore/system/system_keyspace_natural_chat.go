@@ -9,6 +9,7 @@
 package system
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/couchbase/query/datastore"
@@ -84,6 +85,7 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 				continue // no such chat, possibly removed
 			}
 			ce := rv.(*natural.ChatEntry)
+			// not his chat
 			if userName != "" && ce.User != userName {
 				continue
 			}
@@ -96,14 +98,15 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 		} else {
 			distributed.RemoteAccess().GetRemoteDoc(node, localkey, "natural_chats", "GET",
 				func(doc map[string]interface{}) {
-					doc["node"] = node
-					item := value.NewAnnotatedValue(doc)
-					item.SetId(key)
-
-					keysMap[key] = item
+					if doc != nil {
+						doc["node"] = node
+						item := value.NewAnnotatedValue(doc)
+						item.SetId(key)
+						keysMap[key] = item
+					}
 				},
 				func(warn errors.Error) {
-					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) && !warn.HasCause(errors.E_NL_CHAT_WRONG_USER) {
 						context.Warning(warn)
 					}
 				}, creds, "", nil)
@@ -133,12 +136,19 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 						context.Warning(errors.NewQueryMetadataError("unexpected document for key "+key, err))
 						continue
 					}
-					item := value.NewAnnotatedValue(b)
-					chatId := strings.TrimPrefix(key, natural.CHAT_DOC_PREFIX)
-					item.SetId(key)
-					item.SetField("paused", true)
-					item.SetField("chatId", chatId)
-					keysMap[key] = item
+					if b != nil {
+						item := value.NewAnnotatedValue(b)
+						if userval, ok := item.Field("user"); ok {
+							if userName != "" && userval.Actual() != userName {
+								continue
+							}
+						}
+						chatId := strings.TrimPrefix(key, natural.CHAT_DOC_PREFIX)
+						item.SetId(key)
+						item.SetField("paused", true)
+						item.SetField("chatId", chatId)
+						keysMap[key] = item
+					}
 				}
 			}
 		}
@@ -151,7 +161,7 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 
 	var creds distributed.Creds
 
-	userName := credsFromContext(context)
+	userName := datastore.CredsString(context.Credentials())
 	if userName == "" {
 		creds = distributed.NO_CREDS
 	} else {
@@ -253,6 +263,113 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 	} else {
 		return deletedCount, nil, errs
 	}
+}
+
+func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
+	var errs errors.Errors
+	var creds distributed.Creds
+
+	userName := datastore.CredsString(context.Credentials())
+	if userName == "" {
+		creds = distributed.NO_CREDS
+	} else {
+		creds = distributed.Creds(userName)
+	}
+	whoAmI := distributed.RemoteAccess().WhoAmI()
+	updatedCount := 0
+	var updated value.Pairs
+
+	for _, pair := range updates {
+		name := pair.Name
+		var err errors.Error
+
+		// paused (on-disk) chats cannot be updated
+		prefixlen := len(natural.CHAT_DOC_PREFIX)
+		if len(name) > prefixlen && name[:prefixlen] == natural.CHAT_DOC_PREFIX {
+			err = errors.NewSystemNotSupportedError(nil, "UPDATE not supported for paused chats in system:natural_chats")
+		} else {
+			node, localKey := distributed.RemoteAccess().SplitKey(name)
+
+			if node == whoAmI {
+				rv := natural.GetConversation(localKey)
+				if rv != nil {
+					ce := rv.(*natural.ChatEntry)
+					if userName != "" && ce.User != userName {
+						err = errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+					} else {
+						item := natural.FormatChatEntry(ce)
+						for field, v := range pair.Value.Fields() {
+							if field == "node" || field == "inactivityTimeout" {
+								continue
+							}
+							if cv, ok := item[field]; !ok || value.NewValue(v).Equals(value.NewValue(cv)) != value.TRUE_VALUE {
+								errs = append(errs, errors.NewUpdateInvalidField(name, field, false))
+								delete(item, field)
+							}
+						}
+						for field, _ := range item {
+							if field == "node" || field == "inactivityTimeout" {
+								continue
+							}
+							if _, ok := pair.Value.Field(field); !ok {
+								errs = append(errs, errors.NewUpdateInvalidField(name, field, true))
+							}
+						}
+
+						if t, ok := pair.Value.Field("inactivityTimeout"); ok {
+							timeout, perr := natural.ParseChatTimeout(t.Actual())
+							if perr != nil {
+								err = errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, perr)
+							} else {
+								err = ce.AlterTimeout(userName, timeout)
+							}
+						} else {
+							err = errors.NewUpdateInvalidField(name, "inactivityTimeout", true)
+						}
+
+					}
+				} else {
+					err = errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, localKey)
+				}
+			} else {
+				if t, ok := pair.Value.Field("inactivityTimeout"); ok {
+					data := map[string]interface{}{
+						"inactivityTimeout": t.Actual(),
+					}
+					dt, derr := json.Marshal(data)
+					if derr == nil {
+						distributed.RemoteAccess().DoRemoteOps([]string{node}, "natural_chats", "PATCH", localKey, string(dt),
+							func(warn errors.Error) {
+								if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+									context.Warning(warn)
+								}
+							}, creds, "")
+					}
+				} else {
+					err = errors.NewUpdateInvalidField(name, "inactivityTimeout", true)
+				}
+			}
+		}
+
+		if err != nil {
+			errs = append(errs, err)
+			if preserveMutations {
+				return updatedCount, updated, errs
+			}
+			return updatedCount, nil, errs
+		}
+		updatedCount++
+		if preserveMutations {
+			updated = append(updated, pair)
+		}
+	}
+
+	if preserveMutations {
+		return updatedCount, updated, errs
+	}
+	return updatedCount, nil, errs
 }
 
 func (b *naturalchatsKeyspace) Id() string {

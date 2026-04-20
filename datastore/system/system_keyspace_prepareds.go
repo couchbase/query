@@ -648,7 +648,7 @@ func (b *preparedsKeyspace) Update(updates value.Pairs, context datastore.QueryC
 					items, _ := formatPrepared(ce, localKey, node, context)
 					for k, v := range pair.Value.Fields() {
 						if cv, ok := items[k]; !ok || value.NewValue(v).Equals(value.NewValue(cv)) != value.TRUE_VALUE {
-							errs = append(errs, errors.NewUpdateInvalidField(name, k))
+							errs = append(errs, errors.NewUpdateInvalidField(name, k, false))
 						}
 						delete(items, k)
 					}
@@ -657,7 +657,7 @@ func (b *preparedsKeyspace) Update(updates value.Pairs, context datastore.QueryC
 						delete(items, "planPreparedTime")
 					}
 					for k, _ := range items {
-						errs = append(errs, errors.NewUpdateInvalidField(name, k))
+						errs = append(errs, errors.NewUpdateInvalidField(name, k, false))
 					}
 				}
 			})

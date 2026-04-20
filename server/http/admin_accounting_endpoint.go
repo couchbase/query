@@ -252,7 +252,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		sequencesPrefix + "/{name}":             {handler: sequenceHandler, methods: []string{"GET"}},
 		adminPrefix + "/migration":              {handler: migrationHandler, methods: []string{"DELETE"}},
 		indexesPrefix + "/natural_chats":        {handler: naturalIndexHandler, methods: []string{"GET"}},
-		adminPrefix + "/natural_chats/{chatId}": {handler: naturalHandler, methods: []string{"GET", "DELETE"}},
+		adminPrefix + "/natural_chats/{chatId}": {handler: naturalHandler, methods: []string{"GET", "DELETE", "PATCH"}},
 		encryptionKeysPrefix:                    {handler: encryptionKeysHandler, methods: []string{"GET"}},
 	}
 
@@ -3232,17 +3232,25 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	interface{}, errors.Error) {
 
 	_, chatId := router.RequestValue(req, "chatId")
-	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:natural_chats", auth.PRIV_SYSTEM_READ), req, af)
+	af.EventTypeId = audit.API_ADMIN_NATURAL_CHATS
+	af.Name = chatId
+
+	err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:natural_chats", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
 		return nil, err
 	}
-
-	impersonate, err1 := endpoint.getImpersonate(req)
-	if err1 != nil {
-		return nil, err1
+	if isInternal {
+		// Do not audit internal requests. They are an internal API used
+		// only for queries to system:natural_chats, and would cause too
+		// many log messages to be generated.
+		af.EventTypeId = audit.API_DO_NOT_AUDIT
 	}
+
 	if req.Method == "GET" {
+		impersonate, err1 := endpoint.getImpersonate(req)
+		if err1 != nil {
+			return nil, err1
+		}
 		c := natural.GetConversation(chatId)
 		if c != nil {
 			if ce, ok := c.(*natural.ChatEntry); ok {
@@ -3255,6 +3263,10 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
 		}
 	} else if req.Method == "DELETE" {
+		impersonate, err1 := endpoint.getImpersonate(req)
+		if err1 != nil {
+			return nil, err1
+		}
 		c := natural.GetConversation(chatId)
 		if c != nil {
 			if ce, ok := c.(*natural.ChatEntry); ok && ce != nil {
@@ -3274,6 +3286,37 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		} else {
 			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
 		}
+	} else if req.Method == "PATCH" {
+		b, err := io.ReadAll(req.Body)
+		defer req.Body.Close()
+		if err != nil {
+			return false, errors.NewServiceErrorBadValue(err, "unable to read request body")
+		}
+
+		var body map[string]interface{}
+		err = json.Unmarshal(b, &body)
+		if err != nil {
+			return false, errors.NewServiceErrorBadValue(err, "unable to parse request body as JSON")
+		}
+
+		impersonate, err1 := endpoint.getImpersonate(req)
+		if err1 != nil {
+			return nil, err1
+		}
+
+		if t, ok := body["inactivityTimeout"]; ok {
+
+			if timeout, err := natural.ParseChatTimeout(t); err != nil {
+				return false, errors.NewServiceErrorBadValue(err, "invalid inactivityTimeout value")
+			} else {
+				err := natural.ProcessAlterChat(chatId, impersonate, timeout)
+				if err != nil {
+					return false, err
+				}
+				return true, nil
+			}
+		}
+		return false, errors.NewServiceErrorBadValue(nil, "missing required field: inactivityTimeout")
 	}
 	return nil, errors.NewServiceErrorHttpMethod(req.Method)
 }

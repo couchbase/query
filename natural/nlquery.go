@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -63,6 +64,8 @@ const (
 	waitTimeout          = 20 * time.Second
 	maxCorrectionRetries = 4
 )
+
+const _CHAT_LOG_PREFIX = "NLCHAT:"
 
 var naturalchatHistory *util.GenCache
 
@@ -145,15 +148,70 @@ func init() {
 	naturalchatHistory = util.NewGenCache(_CHAT_LIMIT)
 }
 
+const _CHAT_INACTIVITY_TIMEOUT = 60 * time.Minute
+
 type ChatEntry struct {
-	Id        string
-	prompt    *prompt
-	Keyspaces []*algebra.Path
-	Removed   bool
-	User      string
-	Paused    bool
-	Summary   string
+	Id                string
+	prompt            *prompt
+	Keyspaces         []*algebra.Path
+	Removed           bool
+	User              string
+	Paused            bool
+	Summary           string
+	timer             *time.Timer
+	timerGen          int
+	inactivityTimeout time.Duration
 	sync.Mutex
+}
+
+func (ce *ChatEntry) AlterTimeout(datastorecreds string, timeout time.Duration) errors.Error {
+	ce.Lock()
+	defer ce.Unlock()
+	if ce.Removed || ce.Paused {
+		return nil
+	}
+	if datastorecreds != "" && ce.User != datastorecreds {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+	}
+	ce.inactivityTimeout = timeout
+	ce.resetInactivityTimerLocked()
+	return nil
+}
+
+// resetInactivityTimerLocked restarts the inactivity timer using the per-chat timeout (or the default).
+// Must be called while holding ce.Lock() or before the entry is added to the cache.
+func (ce *ChatEntry) resetInactivityTimerLocked() {
+	if ce.timer != nil {
+		ce.timer.Stop()
+	}
+	timeout := ce.effectiveInactivityTimeout()
+	ce.timerGen++
+	gen := ce.timerGen
+	ce.timer = time.AfterFunc(timeout, func() {
+		ce.Lock()
+		defer ce.Unlock()
+		// was the fired expiry go routine from the most recent timer, last minute resets?
+		// if yes, is the entry not already removed or paused
+		if gen == ce.timerGen && !ce.Removed && !ce.Paused {
+			DeleteConversation(ce.Id)
+			ce.Removed = true
+			logging.Infof("%s ChatEntry with id %s removed due to inactivity", _CHAT_LOG_PREFIX, ce.Id)
+		}
+	})
+}
+
+func (ce *ChatEntry) stopInactivityTimer() {
+	if ce.timer != nil {
+		ce.timer.Stop()
+		ce.timer = nil
+	}
+}
+
+func (ce *ChatEntry) effectiveInactivityTimeout() time.Duration {
+	if ce.inactivityTimeout > 0 {
+		return ce.inactivityTimeout
+	}
+	return _CHAT_INACTIVITY_TIMEOUT
 }
 
 func IsChatCacheFull() bool {
@@ -206,6 +264,7 @@ func FormatChatEntry(ce *ChatEntry) map[string]interface{} {
 	if summary := ce.Summary; summary != "" {
 		item["summary"] = summary
 	}
+	item["inactivityTimeout"] = ce.effectiveInactivityTimeout().String()
 	return item
 }
 
@@ -1026,7 +1085,6 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string
 	chatcompletionreq := util.Now()
 	content, err := doChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
 	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
-	completeConversationPrompt(content, ce, prompt)
 	if err != nil {
 		return "", nil, err
 	}
@@ -1059,22 +1117,24 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string
 		for i := 1; i < maxCorrectionRetries; i++ {
 			content, stmt, nlAlgebraStmt, parseErr = retryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
 			if parseErr == nil {
-				completeConversationPrompt(content, ce, prompt)
+				completeConversationPromptLocked(content, ce, prompt)
 				record(execution.NLRETRY, util.Since(retrytime))
 				return stmt, nlAlgebraStmt, nil
 			} else {
 				prompt = buildRetryPrompt(prompt, content, parseErr.Error())
 			}
 		}
-		completeConversationPrompt(content, ce, prompt)
+		completeConversationPromptLocked(content, ce, prompt)
 		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
 			fmt.Sprintf("failed to parse generated statement- %v", orgContent), parseErr)
 	}
 
-	return stmt, nlAlgebraStmt, nil
+	completeConversationPromptLocked(content, ce, prompt)
+	return stmt, nlAlgebraStmt, err
 }
 
-func completeConversationPrompt(content string, ce *ChatEntry, prompt *prompt) {
+// caller should have already acquired lock on ce
+func completeConversationPromptLocked(content string, ce *ChatEntry, prompt *prompt) {
 	if content != "" {
 		assistantmessage := message{
 			Role:    "assistant",
@@ -1083,11 +1143,12 @@ func completeConversationPrompt(content string, ce *ChatEntry, prompt *prompt) {
 		prompt.Messages = append(prompt.Messages, assistantmessage)
 
 		ce.prompt = prompt
+		ce.resetInactivityTimerLocked()
 		naturalchatHistory.Add(ce, ce.Id, nil)
 	}
 }
 
-func ProcessBeginChat(naturalcontext, datastorecreds string, keyspaces []*algebra.Path) (string, errors.Error) {
+func ProcessBeginChat(naturalcontext, datastorecreds string, keyspaces []*algebra.Path, timeout time.Duration) (string, errors.Error) {
 
 	if IsChatCacheFull() {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_CACHE_FULL)
@@ -1099,10 +1160,12 @@ func ProcessBeginChat(naturalcontext, datastorecreds string, keyspaces []*algebr
 	}
 
 	ce := &ChatEntry{
-		Id:        chatId,
-		Keyspaces: keyspaces,
-		User:      datastorecreds,
+		Id:                chatId,
+		Keyspaces:         keyspaces,
+		User:              datastorecreds,
+		inactivityTimeout: timeout,
 	}
+	ce.resetInactivityTimerLocked()
 	AddConversation(ce, chatId)
 	return chatId, nil
 }
@@ -1122,10 +1185,55 @@ func ProcessEndChat(chatId, datastorecreds string) errors.Error {
 		ce.Unlock()
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
 	}
+	ce.stopInactivityTimer()
 	DeleteConversation(chatId)
 	ce.Removed = true
 	ce.Unlock()
+	logging.Infof("%s Chat with id %s ended", _CHAT_LOG_PREFIX, chatId)
 	return nil
+}
+
+func ParseChatTimeout(v interface{}) (time.Duration, error) {
+	var timeout time.Duration
+	switch val := v.(type) {
+	case float64:
+		timeout = time.Duration(val) * time.Second
+	case string:
+		if d, err := time.ParseDuration(val); err == nil {
+			timeout = d
+		} else if n, err := strconv.ParseFloat(val, 64); err == nil {
+			timeout = time.Duration(n) * time.Second
+		} else {
+			return 0, fmt.Errorf("invalid timeout string: %v", val)
+		}
+	default:
+		return 0, fmt.Errorf("invalid timeout type: %T", v)
+	}
+
+	if timeout < _CHAT_INACTIVITY_TIMEOUT {
+		return 0, fmt.Errorf("inactivity timeout must be at least %v", _CHAT_INACTIVITY_TIMEOUT)
+	}
+
+	return timeout, nil
+}
+
+func ProcessAlterChat(chatId, datastorecreds string, timeout time.Duration) errors.Error {
+	if chatId == "" {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID)
+	}
+	if timeout <= 0 {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, "timeout must be a positive number of seconds")
+	}
+
+	rv := GetConversation(chatId)
+	if rv == nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, chatId)
+	}
+	ce, ok := rv.(*ChatEntry)
+	if !ok {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL, "failed to cast cache entry")
+	}
+	return ce.AlterTimeout(datastorecreds, timeout)
 }
 
 const CHAT_DOC_TTL_DURATION = 7 * 24 * time.Hour
@@ -1221,7 +1329,7 @@ func ProcessPauseChat(chatId, requestId, datastorecreds string,
 				time.Sleep(insertInterval)
 				insertInterval *= 2
 			} else {
-				logging.Errorf("Error inserting into QUERY_METADATA bucket: %v (key %s)", errs, key)
+				logging.Errorf("%s Error inserting into QUERY_METADATA bucket: %v (key %s)", _CHAT_LOG_PREFIX, errs, key)
 				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
 					fmt.Sprintf("err inserting the chat document: %v", errs))
 			}
@@ -1229,7 +1337,10 @@ func ProcessPauseChat(chatId, requestId, datastorecreds string,
 			break
 		}
 	}
+	ce.stopInactivityTimer()
 	DeleteConversation(chatId)
+	ce.Paused = true
+	logging.Infof("%s Chat with id %s paused", _CHAT_LOG_PREFIX, chatId)
 	return nil
 }
 
@@ -1419,7 +1530,8 @@ func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
 					retryClaim = true
 					break
 				} else {
-					logging.Errorf("Chat claim failed: error updating QUERY_METADATA bucket (key %s): %v", key, errs)
+					logging.Errorf("%s Chat claim failed: error updating QUERY_METADATA bucket (key %s): %v",
+						_CHAT_LOG_PREFIX, key, errs)
 					return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
 						fmt.Sprintf("err updating the chat document: %v", errs))
 				}
@@ -1436,13 +1548,13 @@ func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
 		}
 
 		if claimed {
-			logging.Infof("Chat claimed successfully for chat id: %s", chatId)
+			logging.Infof("%s Chat claimed successfully for chat id: %s", _CHAT_LOG_PREFIX, chatId)
 			break
 		}
 	}
 
 	if !claimed {
-		logging.Errorf("Chat claim failed after %d retries: failed to update the chat document for chat id: %s", maxRetry, chatId)
+		logging.Errorf("%s Chat claim failed after %d retries: failed to update the chat document for chat id: %s", _CHAT_LOG_PREFIX, maxRetry, chatId)
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
 			fmt.Sprintf("failed to claim chat document for chat id: %s after retries: %d", chatId, maxRetry))
 	}
@@ -1459,26 +1571,29 @@ func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
 				time.Sleep(completeClaimInterval)
 				completeClaimInterval *= 2
 			} else {
-				logging.Errorf("Chat claim completion failed: error deleting from QUERY_METADATA bucket (key %s): %v", key, errs)
+				logging.Errorf("%s Chat claim completion failed: error deleting from QUERY_METADATA bucket (key %s): %v",
+					_CHAT_LOG_PREFIX, key, errs)
 				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
 					fmt.Sprintf("err deleting the chat document: %v", errs))
 			}
 		} else {
-			logging.Infof("Chat claim completed for chat id: %s", chatId)
+			logging.Infof("%s Chat claim completed for chat id: %s", _CHAT_LOG_PREFIX, chatId)
 			claimcompleted = true
 			break
 		}
 	}
 
 	if !claimcompleted {
-		logging.Errorf("Chat claim completion failed after %d retries:"+
-			" error in deleting the chat document for chat id: %s", maxRetry, chatId)
+		logging.Errorf("%s Chat claim completion failed after %d retries:"+
+			" error in deleting the chat document for chat id: %s", _CHAT_LOG_PREFIX, maxRetry, chatId)
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
 			fmt.Sprintf("failed to complete the claim for chat document for chat id: %s after retries: %d", chatId, maxRetry))
 	}
 
 	ce.Id = chatId
+	ce.resetInactivityTimerLocked()
 	AddConversation(ce, ce.Id)
+	logging.Infof("%s Chat with id %s resumed", _CHAT_LOG_PREFIX, chatId)
 	return nil
 }
 
@@ -1530,6 +1645,9 @@ func (ce *ChatEntry) MarshalJSON() ([]byte, error) {
 	if summ := ce.Summary; summ != "" {
 		rv["summary"] = summ
 	}
+	if timeout := ce.inactivityTimeout; timeout > 0 {
+		rv["inactivity_timeout"] = timeout.String()
+	}
 	return json.Marshal(rv)
 }
 
@@ -1539,6 +1657,7 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 		Prompt    *prompt  `json:"prompt"`
 		User      string   `json:"user"`
 		Summary   string   `json:"summary"`
+		Timeout   string   `json:"inactivity_timeout"`
 	}
 
 	err := json.Unmarshal(body, &unmarshalledStruct)
@@ -1563,10 +1682,18 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 	if summary := unmarshalledStruct.Summary; summary != "" {
 		ce.Summary = summary
 	}
+	if timeout := unmarshalledStruct.Timeout; timeout != "" {
+		if d, err := time.ParseDuration(timeout); err == nil && d > 0 {
+			ce.inactivityTimeout = d
+		} else {
+			return fmt.Errorf("invalid inactivity timeout value: %s", timeout)
+		}
+	}
 	return nil
 }
 
 func (ce *ChatEntry) Reset() {
+	ce.stopInactivityTimer()
 	ce.User = ""
 	ce.Keyspaces = nil
 	ce.prompt = nil

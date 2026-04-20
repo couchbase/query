@@ -8354,6 +8354,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_INVALID_CHAT_TIMEOUT, // 19236
+		symbol:      "E_NL_INVALID_CHAT_TIMEOUT",
+		Description: "invalid chat timeout value",
+		IsUser:      YES,
+		Reason: []string{
+			"The specified chat timeout value is not a valid duration string or is out of acceptable range.",
+		},
+		Action: []string{
+			"Assess the cause in the error and adjust the chat timeout value accordingly.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCRYPTION_READER_CREATE, // 19300
 		symbol:      "E_ENCRYPTION_READER_CREATE",
 		Description: "Failed to create encryption reader",

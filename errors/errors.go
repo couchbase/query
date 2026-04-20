@@ -580,17 +580,41 @@ func (e *err) HasCause(code ErrorCode) bool {
 			}
 			c = cse.Cause()
 		case map[string]interface{}:
-			cde, ok := cse["code"]
-			if ok {
+			if cde, ok := cse["code"]; ok {
 				switch cde := cde.(type) {
 				case int32:
 					if cde == int32(code) {
+						return true
+					}
+				case float64:
+					if int32(cde) == int32(code) {
 						return true
 					}
 				case ErrorCode:
 					if cde == code {
 						return true
 					}
+				}
+			} else if cerr, ok := cse["error"]; ok {
+				if cerrMap, ok := cerr.(map[string]interface{}); ok {
+					cde, ok := cerrMap["code"]
+					if ok {
+						switch cde := cde.(type) {
+						case int32:
+							if cde == int32(code) {
+								return true
+							}
+						case float64:
+							if int32(cde) == int32(code) {
+								return true
+							}
+						case ErrorCode:
+							if cde == code {
+								return true
+							}
+						}
+					}
+					cse = cerrMap
 				}
 			}
 			c, _ = cse["cause"]

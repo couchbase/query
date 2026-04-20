@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/event"
+	"github.com/couchbase/query/natural"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/tenant"
@@ -101,6 +102,10 @@ type Request interface {
 	NaturalPauseChat() bool
 	SetNaturalResumeChat(bool)
 	NaturalResumeChat() bool
+	SetNaturalAlterChat(bool)
+	NaturalAlterChat() bool
+	SetNaturalChatTimeout(time.Duration)
+	NaturalChatTimeout() time.Duration
 	SetNaturalSummarize(value.Tristate)
 	NaturalSummarize() value.Tristate
 	SetNaturalChatId(chatId string)
@@ -466,6 +471,8 @@ type BaseRequest struct {
 	nlendchat            bool
 	nlpausechat          bool
 	nlresumechat         bool
+	nlalterchat          bool
+	nlchattimeout        time.Duration
 	nlsummarize          value.Tristate
 
 	// effectively temporary storage for the TRACE level request logging ahead of being included in completed_requests
@@ -1821,6 +1828,22 @@ func (this *BaseRequest) NaturalResumeChat() bool {
 	return this.nlresumechat
 }
 
+func (this *BaseRequest) SetNaturalAlterChat(alter bool) {
+	this.nlalterchat = alter
+}
+
+func (this *BaseRequest) NaturalAlterChat() bool {
+	return this.nlalterchat
+}
+
+func (this *BaseRequest) SetNaturalChatTimeout(d time.Duration) {
+	this.nlchattimeout = d
+}
+
+func (this *BaseRequest) NaturalChatTimeout() time.Duration {
+	return this.nlchattimeout
+}
+
 func (this *BaseRequest) SetNaturalSummarize(summ value.Tristate) {
 	this.nlsummarize = summ
 }
@@ -2005,7 +2028,9 @@ var pausechatpattern = "[pP][aA][uU][sS][eE][[:space:]]+[cC][hH][aA][tT][[:space
 
 var resumechatpattern = "[rR][eE][sS][uU][mM][eE][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
 
-var combinednaturalstatement = regexp.MustCompile((fmt.Sprintf("%s|%s|%s|%s|%s", uaipattern, beginchatpattern, endchatpattern, pausechatpattern, resumechatpattern)))
+var alterchatpattern = "[aA][lL][tT][eE][rR][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
+
+var combinednaturalstatement = regexp.MustCompile((fmt.Sprintf("%s|%s|%s|%s|%s|%s", uaipattern, beginchatpattern, endchatpattern, pausechatpattern, resumechatpattern, alterchatpattern)))
 
 func (this *BaseRequest) ProcessNatural() errors.Error {
 	s := this.Statement()
@@ -2050,6 +2075,13 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 		this.SetNatural("")
 		this.SetStatement("")
 		return this.processNaturalResumeChat(s[m[1]:])
+
+	case strings.HasPrefix(matchString, "alter"):
+		this.SetNaturalAlterChat(true)
+		this.SetNatural("")
+		this.SetStatement("")
+		return this.processNaturalAlterChat(s[m[1]:])
+
 	default:
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_UNRECOGNIZED_STATEMENT)
 	}
@@ -2223,6 +2255,12 @@ func (this *BaseRequest) processNaturalBeginChat(s string) errors.Error {
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
+		case "timeout":
+			if d, err := natural.ParseChatTimeout(v); err == nil {
+				this.SetNaturalChatTimeout(d)
+			} else {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, err)
+			}
 		default:
 			return errors.NewAdminUnknownSettingError(k)
 		}
@@ -2319,6 +2357,44 @@ func (this *BaseRequest) processNaturalResumeChat(s string) errors.Error {
 		default:
 			return errors.NewAdminUnknownSettingError(k)
 		}
+	}
+	return nil
+}
+
+func (this *BaseRequest) processNaturalAlterChat(s string) errors.Error {
+
+	m1 := with.FindString(s)
+	if m1 == "" {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "timeout")
+	}
+	s = s[len(m1)-1:]
+	d := sys_json.NewDecoder(strings.NewReader(s))
+	var opts map[string]interface{}
+	e := d.Decode(&opts)
+	if e != nil {
+		return errors.NewAdminEncodingError(e)
+	}
+
+	for k, v := range opts {
+		switch k {
+		case "chatId":
+			if s, ok := v.(string); ok {
+				this.SetNaturalChatId(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		case "timeout":
+			if d, err := natural.ParseChatTimeout(v); err == nil {
+				this.SetNaturalChatTimeout(d)
+			} else {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, err)
+			}
+		default:
+			return errors.NewAdminUnknownSettingError(k)
+		}
+	}
+	if this.NaturalChatTimeout() == 0 {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "timeout")
 	}
 	return nil
 }

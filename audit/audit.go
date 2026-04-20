@@ -479,6 +479,7 @@ const (
 	API_STMT_CREATE_BUCKET               = 28741
 	API_STMT_ALTER_BUCKET                = 28742
 	API_STMT_DROP_BUCKET                 = 28743
+	API_ADMIN_NATURAL_CHATS              = 28744
 )
 
 // Event types are described in /query/etc/audit_descriptor.json
@@ -524,6 +525,7 @@ var _EVENT_TYPE_MAP = map[string]uint32{
 	"CREATE_BUCKET":             API_STMT_CREATE_BUCKET,
 	"ALTER_BUCKET":              API_STMT_ALTER_BUCKET,
 	"DROP_BUCKET":               API_STMT_DROP_BUCKET,
+	"ADMIN_NATURAL_CHATS":       API_ADMIN_NATURAL_CHATS,
 }
 
 func Submit(event Auditable) {

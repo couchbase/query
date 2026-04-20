@@ -656,6 +656,7 @@ const (
 	E_NL_CHAT_RESUME_FAILED                      ErrorCode = 19233
 	E_NL_CHAT_SUMMARIZE_FAILED                   ErrorCode = 19234
 	E_NL_UNEXPECTED_CHAT_DOC                     ErrorCode = 19235
+	E_NL_INVALID_CHAT_TIMEOUT                    ErrorCode = 19236
 	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
 	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
 	E_NO_ENCRYPTION_MANAGER                      ErrorCode = 19302

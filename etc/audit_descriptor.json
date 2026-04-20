@@ -3310,6 +3310,31 @@
           }
         ]
       }
+    },
+    {
+      "id": 28744,
+      "name": "/admin/natural_chats API request",
+      "description": "An HTTP request was made to access natural language chats",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "errorCode": 1,
+        "errorMessage": ""
+      }
     }
   ]
 }

@@ -62,6 +62,7 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_CHAT_RESUME_FAILED:         {SERVE_NATURAL_CHAT, "Resume failed: %s"},
 	E_NL_CHAT_SUMMARIZE_FAILED:      {SERVE_NATURAL_CHAT, "Summarize failed: %s"},
 	E_NL_UNEXPECTED_CHAT_DOC:        {SERVE_NATURAL_CHAT, "unexpected chat document received: %s"},
+	E_NL_INVALID_CHAT_TIMEOUT:       {SERVE_NATURAL_CHAT, "invalid chat timeout value"},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {
