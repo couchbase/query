@@ -128,6 +128,8 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) err
 	return nil
 }
 
+const _TEXT_SIZE = 50
+
 func persistPrepared(prepared *plan.Prepared) errors.Error {
 	var err1 error
 	fullName := encodeName(prepared.Name(), prepared.QueryContext())
@@ -138,8 +140,19 @@ func persistPrepared(prepared *plan.Prepared) errors.Error {
 			return errors.NewPreparedEncodedPlanError(fullName, err1)
 		}
 	}
-	err1 = dictionary.PersistPrepared(fullName, encoded_plan,
-		prepared.Persist(), prepared.AdHoc(), prepared.GetKeyspaceReferences())
+	// include the first _TEXT_SIZE bytes of the prepared text for ad hoc statements
+	// (the entire text is part of encoded_plan, the separate text here is just for recognition)
+	var text string
+	if prepared.AdHoc() {
+		fullText := prepared.Text()
+		if len(fullText) <= _TEXT_SIZE {
+			text = fullText
+		} else {
+			text = fullText[:_TEXT_SIZE] + "..."
+		}
+	}
+	err1 = dictionary.PersistPrepared(fullName, encoded_plan, text,
+		prepared.Persist(), prepared.AdHoc(), prepared.IsInlineUdf(), prepared.GetKeyspaceReferences())
 	if err1 != nil {
 		return errors.NewPreparedSavePlanError(fullName, err1)
 	}
