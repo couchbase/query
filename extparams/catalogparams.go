@@ -43,25 +43,26 @@ const (
 	_catalogType                    = "catalogType"
 	_catalogSource                  = "catalogSource"
 	_catalogCredentialId            = "credentialId"
-	_catalogRevison                 = "rev"
+	_catalogCompatVersion           = "compat_version"
 	_catalogUid                     = "uid"
 	_catalogParamURI                = "uri"
 	_catalogParamWarehouse          = "warehouse"
 	_catalogParamSigV4SigningName   = "sigv4SigningName"
 	_catalogParamSigV4SigningRegion = "sigv4SigningRegion"
 	_catalogParamQuotaProjectID     = "quotaProjectId"
+	CatalogRevison                  = "rev"
 )
 
 var catalogParamsTypes = map[string]any{_catalogName: "", _catalogType: "", _catalogSource: "", _catalogCredentialId: "",
-	_catalogRevison: "", _catalogUid: "", _catalogParamURI: "", _catalogParamWarehouse: "", _catalogParamSigV4SigningName: "",
-	_catalogParamSigV4SigningRegion: "", _catalogParamQuotaProjectID: ""}
+	CatalogRevison: 1, _catalogUid: "", _catalogParamURI: "", _catalogParamWarehouse: "", _catalogParamSigV4SigningName: "",
+	_catalogParamSigV4SigningRegion: "", _catalogParamQuotaProjectID: "", _catalogCompatVersion: 1}
 
 var catalogMandatoryTypeParams = map[string][]string{
 	CatalogTypeIceberg: {_catalogName, _catalogType, _catalogSource, _catalogCredentialId},
 }
 
 var catalogOptionalTypeParams = map[string][]string{
-	CatalogTypeIceberg: {_catalogRevison, _catalogUid},
+	CatalogTypeIceberg: {CatalogRevison, _catalogUid, _catalogCompatVersion},
 }
 
 // Valid parameters for each source type
@@ -166,8 +167,12 @@ func validateCatalog(params map[string]any) map[string]*ExternalParamsError {
 			tv = optv
 		}
 		if reflect.TypeOf(v) != reflect.TypeOf(tv) {
-			msg := fmt.Sprintf("Parameter value type: '%s'. Expected type: '%s'", getValType(v), getValType(tv))
-			rv[k] = &ExternalParamsError{msg, "Parameter value type not matched."}
+			sv := getValType(v)
+			stv := getValType(tv)
+			if sv != stv {
+				msg := fmt.Sprintf("Parameter value type: '%s'. Expected type: '%s'", sv, stv)
+				rv[k] = &ExternalParamsError{msg, "Parameter value type not matched."}
+			}
 		}
 	}
 	for k, _ := range typeParams {
@@ -184,7 +189,7 @@ type CatalogEntry struct {
 	CatalogType        string `json:"catalogType"`
 	Source             string `json:"catalogSource"`
 	CredentialId       string `json:"credentialId"`
-	Revision           string `json:"rev,omitempty"`
+	Revision           int    `json:"rev,omitempty"`
 	URI                string `json:"uri,omitempty"`
 	Warehouse          string `json:"warehouse,omitempty"`
 	SigV4SigningName   string `json:"sigv4SigningName,omitempty"`

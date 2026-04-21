@@ -19,7 +19,6 @@ const (
 	_collectionCatalog           = "catalog"
 	_collectionCatalogType       = "catalogType"
 	_collectionCredentialId      = "credentialId"
-	_collectionRevison           = "rev"
 	_collectionFormat            = "format"
 	_collectionNamespace         = "namespace"
 	_collectionTableName         = "tableName"
@@ -30,12 +29,14 @@ const (
 	_collectionBucket            = "bucket"
 	_collectionScope             = "scope"
 	_collectionName              = "name"
+	_collectionCompatVersion     = "compat_version"
+	CollectionRevison            = "rev"
 )
 
-var collectionParamsTypes = map[string]any{_collectionRevison: "", _collectionFormat: "", _collectionNamespace: "",
+var collectionParamsTypes = map[string]any{CollectionRevison: "", _collectionFormat: "", _collectionNamespace: "",
 	_collectionTableName: "", _collectionSnapshotId: "", _collectionSnapshotTimestamp: "", _collectionParallelScans: 1,
 	_collectionCatalog: "", _collectionCatalogType: "", _collectionCredentialId: "",
-	_collectionUid: "", _collectionBucket: "", _collectionScope: "", _collectionName: ""}
+	_collectionUid: "", _collectionBucket: "", _collectionScope: "", _collectionName: "", _collectionCompatVersion: 1}
 
 // Valid parameters for each catalog type
 var collectionMandatoryTypeParams = map[string][]string{
@@ -43,8 +44,8 @@ var collectionMandatoryTypeParams = map[string][]string{
 }
 
 var collectionOptinalTypeParams = map[string][]string{
-	CatalogTypeIceberg: {_collectionRevison, _collectionSnapshotId, _collectionSnapshotTimestamp, _collectionParallelScans,
-		_collectionFormat, _collectionUid, _collectionBucket, _collectionScope, _collectionName},
+	CatalogTypeIceberg: {CollectionRevison, _collectionSnapshotId, _collectionSnapshotTimestamp, _collectionParallelScans,
+		_collectionFormat, _collectionUid, _collectionBucket, _collectionScope, _collectionName, _collectionCompatVersion},
 }
 
 func validateCollection(params map[string]any) map[string]*ExternalParamsError {
@@ -74,8 +75,12 @@ func validateCollection(params map[string]any) map[string]*ExternalParamsError {
 			tv = optv
 		}
 		if reflect.TypeOf(v) != reflect.TypeOf(tv) {
-			msg := fmt.Sprintf("Parameter value type: '%s'. Expected type: '%s'", getValType(v), getValType(tv))
-			rv[k] = &ExternalParamsError{msg, "Parameter value type not matched."}
+			sv := getValType(v)
+			stv := getValType(tv)
+			if sv != stv {
+				msg := fmt.Sprintf("Parameter value type: '%s'. Expected type: '%s'", sv, stv)
+				rv[k] = &ExternalParamsError{msg, "Parameter value type not matched."}
+			}
 		}
 	}
 	for k, _ := range typeParams {
