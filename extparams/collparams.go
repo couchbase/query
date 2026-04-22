@@ -152,10 +152,10 @@ func GetCollectionEntry(params map[string]any) (*ExternalCollectionEntry, error)
 // ExternalCollectionEntry represents an Collection stored in metakv
 type ExternalCollectionEntry struct {
 	SUid              string `json:"uid"`
-	Bucket            string `json:"bucket"`
-	Scope             string `json:"scope"`
+	Bucket            string `json:"bucket,omitempty"`
+	Scope             string `json:"scope,omitempty"`
 	Collection        string `json:"name"`
-	Revision          string `json:"rev,omitempty"`
+	Revision          int    `json:"rev,omitempty"`
 	Format            string `json:"format,omitempty"`
 	Catalog           string `json:"catalog"`
 	CatalogType       string `json:"catalogType"`
@@ -164,7 +164,7 @@ type ExternalCollectionEntry struct {
 	TableName         string `json:"tableName"`
 	SnapshotId        string `json:"snapshotId,omitempty"`
 	SnapshotTimestamp string `json:"snapshotTimestamp,omitempty"`
-	ParallelScans     int    `json:"parallelScans"`
+	ParallelScans     int    `json:"parallelScans,omitempty"`
 	Uid               uint64
 	CatalogInfo       *CatalogEntry
 }
