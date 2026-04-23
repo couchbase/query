@@ -13,7 +13,7 @@ package algebra
  */
 func CanSkipAutoPrepare(stmt Statement) bool {
 	switch stmt := stmt.(type) {
-	case *InferKeyspace, *InferExpression, *Explain, *ExplainFunction, *Prepare, *Execute,
+	case *InferKeyspace, *InferExpression, *Explain, *ExplainFunction, *Advise, *Prepare, *Execute,
 		*UpdateStatistics,
 		*CreateIndex, *DropIndex, *BuildIndexes, *AlterIndex, *CreatePrimaryIndex,
 		*CreateBucket, *DropBucket, *AlterBucket,
