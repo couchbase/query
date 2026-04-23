@@ -12,7 +12,7 @@ package algebra
  * With auto prepare, determine whether a statement can skip being prepared
  */
 func CanSkipAutoPrepare(stmt Statement) bool {
-	switch stmt.(type) {
+	switch stmt := stmt.(type) {
 	case *InferKeyspace, *InferExpression, *Explain, *ExplainFunction, *Advise, *Prepare, *Execute,
 		*UpdateStatistics,
 		*CreateIndex, *DropIndex, *BuildIndexes, *AlterIndex, *CreatePrimaryIndex,
@@ -23,6 +23,14 @@ func CanSkipAutoPrepare(stmt Statement) bool {
 		*StartTransaction, *CommitTransaction, *RollbackTransaction, *Savepoint, *TransactionIsolation,
 		*CreateSequence, *DropSequence, *AlterSequence:
 		return true
+	case *Insert:
+		if stmt.query == nil {
+			return true
+		}
+	case *Upsert:
+		if stmt.query == nil {
+			return true
+		}
 	}
 	return false
 }
