@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/mock"
@@ -32,6 +33,14 @@ type queryContextImpl struct {
 
 func (ci *queryContextImpl) Credentials() *auth.Credentials {
 	return ci.creds
+}
+
+func (ci *queryContextImpl) Credential() cbauth.Creds {
+	return nil
+}
+
+func (ci *queryContextImpl) ExternalCredential(credId string) (*cbauth.Credential, error) {
+	return nil, nil
 }
 
 func (ci *queryContextImpl) GetReqDeadline() time.Time {

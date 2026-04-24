@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
@@ -30,6 +31,8 @@ type Context interface {
 	Now() time.Time
 	GetTimeout() time.Duration
 	Credentials() *auth.Credentials
+	Credential() cbauth.Creds
+	ExternalCredential(credId string) (*cbauth.Credential, error)
 	DatastoreVersion() string
 	NewQueryContext(queryContext string, readonly bool) interface{}
 	AdminContext() (interface{}, error)

@@ -11,6 +11,7 @@ package expression
 import (
 	"time"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
@@ -53,6 +54,14 @@ func (this *IndexContext) GetTimeout() time.Duration {
 }
 
 func (this *IndexContext) Credentials() *auth.Credentials {
+	return nil
+}
+
+func (this *IndexContext) ExternalCredential(credId string) (*cbauth.Credential, error) {
+	return nil, nil
+}
+
+func (this *IndexContext) Credential() cbauth.Creds {
 	return nil
 }
 

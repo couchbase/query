@@ -9,9 +9,11 @@
 package datastore
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
@@ -155,6 +157,8 @@ type QueryContext interface {
 	GetReqDeadline() time.Time
 	UseReplica() bool
 	Credentials() *auth.Credentials
+	Credential() cbauth.Creds
+	ExternalCredential(credId string) (*cbauth.Credential, error)
 	Warning(errors.Error)
 	Error(errors.Error)
 	GetTxContext() interface{}
@@ -183,10 +187,33 @@ type QueryContext interface {
 }
 
 type queryContextImpl struct {
+	credentials *auth.Credentials
 }
 
 func (ci *queryContextImpl) Credentials() *auth.Credentials {
+	if ci.credentials != nil {
+		return ci.credentials
+	}
 	return auth.NewCredentials()
+}
+
+func (this *queryContextImpl) Credential() cbauth.Creds {
+	cred := this.Credentials()
+	if cred == nil || len(cred.CbauthCredentialsList) == 0 {
+		return nil
+	}
+	return cred.CbauthCredentialsList[0]
+}
+
+func (this *queryContextImpl) ExternalCredential(credId string) (*cbauth.Credential, error) {
+	if credId == "" {
+		return nil, fmt.Errorf("Empty Credential id provided")
+	}
+	cred := this.Credentials()
+	if cred == nil || len(cred.CbauthCredentialsList) == 0 {
+		return nil, fmt.Errorf("No Credentials found for the given Credential id '%s'", credId)
+	}
+	return cred.CbauthCredentialsList[0].GetCredential(credId)
 }
 
 func (ci *queryContextImpl) Warning(err errors.Error) {
@@ -356,4 +383,10 @@ func getActiveKeyFromDatastore(dt encryption.KeyDataType) (*encryption.EaRKey, e
 	}
 
 	return encryptionProvider.GetActiveKey(dt)
+}
+
+// NewQueryContextWithCredentials creates a QueryContext with the given credentials
+func NewQueryContextWithCredentials(creds *auth.Credentials) QueryContext {
+	ctx := &queryContextImpl{credentials: creds}
+	return ctx
 }

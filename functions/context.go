@@ -17,6 +17,7 @@ package functions
 import (
 	"time"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
@@ -27,6 +28,8 @@ type Context interface {
 	Now() time.Time
 	GetTimeout() time.Duration
 	Credentials() *auth.Credentials
+	Credential() cbauth.Creds
+	ExternalCredential(credId string) (*cbauth.Credential, error)
 	IsAdmin() bool
 	DatastoreVersion() string
 	NewQueryContext(queryContext string, readonly bool) interface{}
