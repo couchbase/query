@@ -193,11 +193,11 @@ func (ci *queryContextImpl) Credentials() *auth.Credentials {
 	return auth.NewCredentials()
 }
 
-func (this *queryContextImpl) Credential() cbauth.Creds {
+func (ci *queryContextImpl) Credential() cbauth.Creds {
 	return nil
 }
 
-func (this *queryContextImpl) ExternalCredential(credId string) (*cbauth.Credential, error) {
+func (ci *queryContextImpl) ExternalCredential(credId string) (*cbauth.Credential, error) {
 	if credId == "" {
 		return nil, fmt.Errorf("Empty Credential id provided")
 	}
@@ -385,19 +385,19 @@ func (ci *queryContextWithCredentials) Credentials() *auth.Credentials {
 	return auth.NewCredentials()
 }
 
-func (this *queryContextWithCredentials) Credential() cbauth.Creds {
-	cred := this.Credentials()
+func (ci *queryContextWithCredentials) Credential() cbauth.Creds {
+	cred := ci.Credentials()
 	if cred == nil || len(cred.CbauthCredentialsList) == 0 {
 		return nil
 	}
 	return cred.CbauthCredentialsList[0]
 }
 
-func (this *queryContextWithCredentials) ExternalCredential(credId string) (*cbauth.Credential, error) {
+func (ci *queryContextWithCredentials) ExternalCredential(credId string) (*cbauth.Credential, error) {
 	if credId == "" {
 		return nil, fmt.Errorf("Empty Credential id provided")
 	}
-	cred := this.Credentials()
+	cred := ci.Credentials()
 	if cred == nil || len(cred.CbauthCredentialsList) == 0 {
 		return nil, fmt.Errorf("No Credentials found for the given Credential id '%s'", credId)
 	}
