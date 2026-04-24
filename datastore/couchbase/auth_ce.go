@@ -132,45 +132,45 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 		base_role = "query_use_sequential_scans"
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 		action = "Run the index advisor and create an appropriate index, or check that your expected index is online."
-	case auth.PRIV_CLUSTER_CREDENTIALSTORE_READ:
-		privilege = "grant user read permission"
-		base_role = "admin/security"
-	case auth.PRIV_CLUSTER_CREDENTIALSTORE_WRITE:
-		privilege = "grant user write permission"
-		base_role = "admin/security"
-	case auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME:
-		privilege = "grant user consume permission"
-		base_role = "admin/security"
-	case auth.PRIV_CATALOG_READ:
-		privilege = "read catalog"
-		base_role = "catalog_full_access"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
-	case auth.PRIV_CATALOG_WRITE:
-		privilege = "write catalog"
-		base_role = "catalog_full_access"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
-	case auth.PRIV_CATALOG_LIST:
-		privilege = "list catalog"
-		base_role = "catalog_full_access"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
-	case auth.PRIV_CATALOG_CREATE:
-		privilege = "create catalog"
-		base_role = "catalog_full_access"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
-	case auth.PRIV_CATALOG_ALTER:
-		privilege = "alter catalog"
-		base_role = "catalog_full_access"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
-	case auth.PRIV_CATALOG_DROP:
-		privilege = "drop catalog"
-		base_role = "catalog_full_access"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+	case auth.PRIV_CLUSTER_SETTINGS_READ:
+		privilege = "read system information"
+		base_role = "admin"
+	case auth.PRIV_CLUSTER_SETTINGS_WRITE:
+		privilege = "perform system administrator operations"
+		base_role = "admin"
 	case auth.PRIV_USERS_READ:
-		privilege = "read user information"
-		base_role = "admin"
+		privilege = "Local User Admin"
+		base_role = "user_admin_local"
 	case auth.PRIV_USERS_WRITE:
-		privilege = "write to user information"
-		base_role = "admin"
+		privilege = "Local User Admin"
+		base_role = "user_admin_local"
+	case auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME:
+		privilege = "Credential Consumer"
+		base_role = "credential_consumer"
+	case auth.PRIV_CATALOGS_READ:
+		privilege = "Catalog Read"
+		base_role = "catalogs_read"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+	case auth.PRIV_CATALOGS_WRITE:
+		privilege = "Catalog Write"
+		base_role = "catalogs_write"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+	case auth.PRIV_CATALOG_SELECT:
+		privilege = "Catalog Select"
+		base_role = "catalog_select"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+	case auth.PRIV_CATALOG_UPDATE:
+		privilege = "Catalog Update"
+		base_role = "catalog_update"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+	case auth.PRIV_CATALOG_INSERT:
+		privilege = "Catalog Insert"
+		base_role = "catalog_insert"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+	case auth.PRIV_CATALOG_DELETE:
+		privilege = "Catalog Delete"
+		base_role = "catalog_delete"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	default:
 		privilege = "run this type of query"
 		base_role = "admin"

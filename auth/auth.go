@@ -65,17 +65,15 @@ const (
 	PRIV_SYSTEM_WRITE                           Privilege = 43 // Write access to system namespace
 	PRIV_CLUSTER_SETTINGS_READ                  Privilege = 44 // Read access to cluster settings
 	PRIV_CLUSTER_SETTINGS_WRITE                 Privilege = 45 // Write access to cluster settings
-	PRIV_CLUSTER_CREDENTIALSTORE_READ           Privilege = 46 // Read access to cluster credentials store
-	PRIV_CLUSTER_CREDENTIALSTORE_WRITE          Privilege = 47 // Write access to cluster credentials store
+	PRIV_USERS_READ                             Privilege = 46 // Read access to users (cluster.admin.users!read)
+	PRIV_USERS_WRITE                            Privilege = 47 // Write access to users (cluster.admin.users!write)
 	PRIV_CLUSTER_CREDENTIALSTORE_CONSUME        Privilege = 48 // Consume access to cluster credentials store
-	PRIV_CATALOG_READ                           Privilege = 49 // Read access to catalogs
-	PRIV_CATALOG_WRITE                          Privilege = 50 // Write access to catalogs
-	PRIV_CATALOG_LIST                           Privilege = 51 // List access to catalogs
-	PRIV_CATALOG_CREATE                         Privilege = 52 // Create access to catalogs
-	PRIV_CATALOG_ALTER                          Privilege = 53 // Alter access to catalogs
-	PRIV_CATALOG_DROP                           Privilege = 54 // Drop access to catalogs
-	PRIV_USERS_READ                             Privilege = 55 // Read access to users (cluster.admin.users!read)
-	PRIV_USERS_WRITE                            Privilege = 56 // Write access to users (cluster.admin.users!write)
+	PRIV_CATALOGS_READ                          Privilege = 49 // Read access to catalogs
+	PRIV_CATALOGS_WRITE                         Privilege = 50 // Write access to catalogs
+	PRIV_CATALOG_SELECT                         Privilege = 51 // SELECT access to catalog
+	PRIV_CATALOG_UPDATE                         Privilege = 52 // UPDATE access to catalog
+	PRIV_CATALOG_INSERT                         Privilege = 53 // INSERT access to catalog
+	PRIV_CATALOG_DELETE                         Privilege = 54 // DELETE access to catalog
 )
 
 type PrivilegePair struct {
