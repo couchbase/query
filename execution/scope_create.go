@@ -61,7 +61,7 @@ func (this *CreateScope) RunOnce(context *Context, parent value.Value) {
 
 		// Actually create scope
 		this.switchPhase(_SERVTIME)
-		err := this.plan.Bucket().CreateScope(this.plan.Node().Name())
+		err := this.plan.Bucket().CreateScope(context, this.plan.Node().Name())
 		if err != nil {
 			if !errors.IsScopeExistsError(err) || this.plan.Node().FailIfExists() {
 				context.Error(err)

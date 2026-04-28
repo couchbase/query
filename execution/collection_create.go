@@ -59,11 +59,18 @@ func (this *CreateCollection) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		// Actually create collection
 		this.switchPhase(_SERVTIME)
-		err := this.plan.Scope().CreateCollection(this.plan.Node().Name(), this.plan.Node().With())
+		node := this.plan.Node()
+
+		scope := this.plan.Scope()
+		var catalog, credential string
+		if node.IsExternal() {
+			catalog = node.Catalog()
+			credential = node.Credential()
+		}
+		err := scope.CreateCollection(context, node.Name(), catalog, credential, node.With())
 		if err != nil {
-			if !errors.IsCollectionExistsError(err) || this.plan.Node().FailIfExists() {
+			if !errors.IsCollectionExistsError(err) || node.FailIfExists() {
 				context.Error(err)
 			}
 		}

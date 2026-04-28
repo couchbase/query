@@ -132,6 +132,10 @@ func (this *scanIdxCol) VisitDummyScan(op *plan.DummyScan) (interface{}, error) 
 	return nil, nil
 }
 
+func (this *scanIdxCol) VisitExternalScan(op *plan.ExternalScan) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *scanIdxCol) VisitCountScan(op *plan.CountScan) (interface{}, error) {
 	return nil, nil
 }
@@ -418,6 +422,24 @@ func (this *scanIdxCol) VisitDropBucket(op *plan.DropBucket) (interface{}, error
 	return nil, nil
 }
 
+// Catalog DDL
+func (this *scanIdxCol) VisitCreateCatalog(op *plan.CreateCatalog) (any, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitAlterCatalog(op *plan.AlterCatalog) (any, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropCatalog(op *plan.DropCatalog) (any, error) {
+	return nil, nil
+}
+
+// Collection DDL
+func (this *scanIdxCol) VisitAlterCollection(op *plan.AlterCollection) (any, error) {
+	return nil, nil
+}
+
 // Scope and Collection DDL
 func (this *scanIdxCol) VisitCreateScope(op *plan.CreateScope) (interface{}, error) {
 	return nil, nil
@@ -672,5 +694,17 @@ func (this *scanIdxCol) VisitDropSequence(op *plan.DropSequence) (interface{}, e
 }
 
 func (this *scanIdxCol) VisitAlterSequence(op *plan.AlterSequence) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitCreateCredentialStore(op *plan.CreateCredentialStore) (any, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitAlterCredentialStore(op *plan.AlterCredentialStore) (any, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitDropCredentialStore(op *plan.DropCredentialStore) (any, error) {
 	return nil, nil
 }

@@ -214,6 +214,7 @@ const (
 	INDEX_SCANS_HVI
 	FTS_SEARCHES_SVI
 	VECTOR_DISTANCE_FUNC
+	EXTERNAL_SCANS
 	APPROX_VECTOR_DISTANCE_FUNC
 	REQUESTS_GSI
 	REQUESTS_SEARCH
@@ -325,6 +326,7 @@ const (
 	_INDEX_SCANS_HVI             = "index_scans_hvi"
 	_FTS_SEARCHES_SVI            = "fts_searches_svi"
 	_VECTOR_DISTANCE_FUNC        = "vector_distance_func"
+	_EXTERNAL_SCANS              = "external_scans"
 	_APPROX_VECTOR_DISTANCE_FUNC = "approx_vector_distance_func"
 	_REQUESTS_GSI                = "requests_gsi"
 	_REQUESTS_SEARCH             = "requests_search"
@@ -420,6 +422,7 @@ var metricNames = []string{
 	_INDEX_SCANS_HVI,
 	_FTS_SEARCHES_SVI,
 	_VECTOR_DISTANCE_FUNC,
+	_EXTERNAL_SCANS,
 	_APPROX_VECTOR_DISTANCE_FUNC,
 	_REQUESTS_GSI,
 	_REQUESTS_SEARCH,
@@ -519,7 +522,7 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 	natural bool, naturaloutput string,
 	index_scans, primary_scans, index_scans_gsi, primary_scans_gsi, index_scans_fts,
 	primary_scans_fts, index_scans_seq, primary_scans_seq, fts_searches, index_scans_cvi,
-	index_scans_hvi, fts_searches_svi, vector_distance, approx_vector_distance int,
+	index_scans_hvi, fts_searches_svi, vector_distance, external_scans, approx_vector_distance int,
 	scanConsistency string, used_memory uint64) {
 
 	if acctstore == nil {
@@ -556,6 +559,7 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 	counters[INDEX_SCANS_HVI].Inc(int64(index_scans_hvi))
 	counters[FTS_SEARCHES_SVI].Inc(int64(fts_searches_svi))
 	counters[VECTOR_DISTANCE_FUNC].Inc(int64(vector_distance))
+	counters[EXTERNAL_SCANS].Inc(int64(external_scans))
 	counters[APPROX_VECTOR_DISTANCE_FUNC].Inc(int64(approx_vector_distance))
 	counters[REQUEST_TIME].Inc(int64(request_time))
 	counters[SERVICE_TIME].Inc(int64(service_time))

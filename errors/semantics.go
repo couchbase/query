@@ -271,6 +271,12 @@ func NewVectorConstantIndexKey(name string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewFieldEmpty(stmtType, fieldName string) Error {
+	return &err{level: EXCEPTION, ICode: E_EMPTY_REQUIRED_FIELD, IKey: "semantics_field_empty",
+		InternalMsg:    fmt.Sprintf("Field '%s' is empty for %s", fieldName, stmtType),
+		InternalCaller: CallerN(1)}
+}
+
 /*
 ---- BEGIN MOVED error numbers ----
 

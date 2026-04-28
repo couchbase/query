@@ -51,7 +51,7 @@ func (b *myUserInfoKeyspace) Count(context datastore.QueryContext) (int64, error
 		return false
 	}
 
-	sliceOfUsers, err := getUserInfoList(b.namespace.store)
+	sliceOfUsers, err := getUserInfoList(context, b.namespace.store)
 	if err != nil {
 		return 0, err
 	}
@@ -94,7 +94,7 @@ func (b *myUserInfoKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 		return false
 	}
 
-	sliceOfUsers, err := getUserInfoList(b.namespace.store)
+	sliceOfUsers, err := getUserInfoList(context, b.namespace.store)
 	if err != nil {
 		return []errors.Error{err}
 	}
@@ -193,7 +193,11 @@ func (pi *myUserInfoIndex) Scan(requestId string, span *datastore.Span, distinct
 func (pi *myUserInfoIndex) ScanEntries(requestId string, limit int64, cons datastore.ScanConsistency,
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
-	sliceOfUsers, err := getUserInfoList(pi.keyspace.namespace.store)
+	ctx := conn.QueryContext()
+	if ctx == nil {
+		ctx = datastore.NULL_QUERY_CONTEXT
+	}
+	sliceOfUsers, err := getUserInfoList(ctx, pi.keyspace.namespace.store)
 	if err != nil {
 		conn.Fatal(err)
 		return

@@ -16,13 +16,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/couchbase/cbauth"
 	atomic "github.com/couchbase/go-couchbase/platform"
 	memcached "github.com/couchbase/gomemcached/client" // package name is memcached
 	gsi "github.com/couchbase/indexing/secondary/queryport/n1ql"
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/aus"
 	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/extparams"
 	cb "github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/primitives/external"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -30,10 +33,16 @@ import (
 	functionsStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/sequences"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
 const _DEFAULT_SCOPE_COLLECTION_NAME = "._default._default"
+
+// ExternalCollection is an interface for external collections that provides access to external entry info
+type ExternalCollection interface {
+	ExternalEntry() *extparams.ExternalCollectionEntry
+}
 
 type scope struct {
 	id       string
@@ -120,28 +129,55 @@ const _CREATE_COLLECTION_MAXTTL = "maxTTL"
 
 var _CREATE_COLLECTION_OPTIONS = []string{_CREATE_COLLECTION_MAXTTL}
 
-func (sc *scope) CreateCollection(name string, with value.Value) errors.Error {
-	maxTTL := int64(0)
+func (sc *scope) CreateCollection(context datastore.QueryContext, name, catalog, credential string, with value.Value) errors.Error {
+	var params map[string]interface{}
+
 	if with != nil {
-		err := validateWithOptions(with, _CREATE_COLLECTION_OPTIONS)
-		if err != nil {
-			return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
-		}
-		maxTTL, _, err = getIntWithOption(with, _CREATE_COLLECTION_MAXTTL, false)
-		if err != nil {
-			return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
+		if catalog != "" {
+			params, _ = with.Actual().(map[string]interface{})
+		} else {
+			// Regular collection - validate regular WITH options and put maxTTL into params
+			err := validateWithOptions(with, _CREATE_COLLECTION_OPTIONS)
+			if err != nil {
+				return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
+			}
+			maxTTL, _, err := getIntWithOption(with, _CREATE_COLLECTION_MAXTTL, false)
+			if err != nil {
+				return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
+			}
+			if maxTTL != 0 {
+				params = map[string]interface{}{_CREATE_COLLECTION_MAXTTL: maxTTL}
+			}
 		}
 	}
-	err := sc.bucket.cbbucket.CreateCollection(sc.id, name, int(maxTTL))
+
+	err := sc.bucket.cbbucket.CreateCollection(context.Credential(), sc.id, name, catalog, credential, params)
 	if err != nil {
 		return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
 	}
-	sc.bucket.setNeedsManifest()
+	if catalog == "" {
+		sc.bucket.setNeedsManifest()
+	}
 	return nil
 }
 
-func (sc *scope) DropCollection(name string) errors.Error {
-	err := sc.bucket.cbbucket.DropCollection(sc.id, name)
+func (sc *scope) AlterCollection(context datastore.QueryContext, name string, with value.Value) errors.Error {
+	var params map[string]any
+	if with != nil {
+		bytes, err := with.MarshalJSON()
+		if err == nil {
+			json.Unmarshal(bytes, &params)
+		}
+	}
+	cbErr := sc.bucket.cbbucket.AlterCollection(context.Credential(), sc.id, name, params)
+	if cbErr != nil {
+		return errors.NewCbBucketAlterCollectionError(sc.objectFullName(name), cbErr)
+	}
+	return nil
+}
+
+func (sc *scope) DropCollection(context datastore.QueryContext, name string) errors.Error {
+	err := sc.bucket.cbbucket.DropCollection(context.Credential(), sc.id, name)
 	if err != nil {
 		return errors.NewCbBucketDropCollectionError(sc.objectFullName(name), err)
 	}
@@ -175,6 +211,8 @@ type collection struct {
 	isBucket         bool
 	maxTTL           int64
 	isSystem         bool
+	isExternal       bool
+	externalEntry    *extparams.ExternalCollectionEntry
 }
 
 func getUser(context datastore.QueryContext) string {
@@ -261,6 +299,11 @@ func (coll *collection) Size(context datastore.QueryContext) (int64, errors.Erro
 
 func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 
+	// external collections don't have indexers
+	if coll.isExternal {
+		return nil, nil
+	}
+
 	// default collection
 	if coll.isDefault {
 		k := datastore.Keyspace(coll.bucket)
@@ -291,6 +334,11 @@ func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, er
 
 func (coll *collection) Indexers() ([]datastore.Indexer, errors.Error) {
 	var err errors.Error
+
+	// external collections don't have indexers
+	if coll.isExternal {
+		return nil, nil
+	}
 
 	// default collection
 	if coll.isDefault {
@@ -442,8 +490,8 @@ func (coll *collection) Release(bclose bool) {
 	}
 }
 
-func (coll *collection) Flush() errors.Error {
-	err := coll.bucket.cbbucket.FlushCollection(coll.scope.id, coll.id)
+func (coll *collection) Flush(context datastore.QueryContext) errors.Error {
+	err := coll.bucket.cbbucket.FlushCollection(context.Credential(), coll.scope.id, coll.id)
 	if err != nil {
 		return errors.NewCbBucketFlushCollectionError(coll.scope.objectFullName(coll.id), err)
 	}
@@ -456,6 +504,117 @@ func (coll *collection) IsBucket() bool {
 
 func (coll *collection) IsSystemCollection() bool {
 	return coll.isSystem
+}
+
+func (coll *collection) IsExternalCollection() bool {
+	return coll.isExternal
+}
+
+// credentialAllowlist builds an allowlist map from a credential's URLWhitelist guardrail.
+// Returns nil when the credential is nil or carries no URLWhitelist, which causes
+// ValidateURLInAllowlist to skip this allowlist entry entirely.
+func credentialAllowlist(cred *cbauth.Credential) map[string]interface{} {
+	if cred == nil {
+		return nil
+	}
+	wl := cred.Meta.Guardrails.URLWhitelist
+	if wl == nil {
+		return nil
+	}
+	return map[string]interface{}{
+		util.AllowlistKeyAllAccess:      wl.AllAccess,
+		util.AllowlistKeyAllowedURLs:    wl.AllowedURLs,
+		util.AllowlistKeyDisallowedURLs: wl.DisallowedURLs,
+	}
+}
+
+func (coll *collection) ExternalScan(params *datastore.ExternalScanParams, queryContext datastore.QueryContext,
+	conn *datastore.IndexConnection) {
+	defer conn.Sender().Close()
+	params.ErrTemplate["name"] = coll.fullName
+	if !coll.isExternal {
+		conn.Fatal(errors.NewDatastoreExternalCollectionError(nil,
+			"ExternalScan called on non-external collection", params.ErrTemplate))
+		return
+	}
+
+	var externalEntry *extparams.ExternalCollectionEntry
+	var catalogInfo *extparams.CatalogEntry
+
+	if params.ExternalEntry == nil {
+		externalEntry = coll.externalEntry
+		if externalEntry == nil {
+			conn.Fatal(errors.NewDatastoreExternalCollectionError(nil,
+				"External collection metadata not found", params.ErrTemplate))
+			return
+		}
+		catalogInfo = externalEntry.CatalogInfo
+		if catalogInfo == nil {
+			coll.bucket.namespace.nslock.RLock()
+			catalogInfo = coll.bucket.namespace.externalCatalogs[externalEntry.Catalog]
+			coll.bucket.namespace.nslock.RUnlock()
+		}
+		if catalogInfo == nil {
+			conn.Fatal(errors.NewDatastoreExternalCollectionError(nil,
+				"Catalog information not found for external collection", params.ErrTemplate))
+			return
+		}
+		params.ErrTemplate["catalogType"] = catalogInfo.CatalogType
+		params.ErrTemplate["catalogCredId"] = catalogInfo.CredentialId
+		params.ErrTemplate["collCredId"] = externalEntry.CredentialId
+
+		if catalogInfo.CredentialId != "" {
+			cred, credErr := queryContext.ExternalCredential(catalogInfo.CredentialId)
+			if credErr != nil {
+				conn.Fatal(errors.NewDatastoreExternalCollectionError(nil,
+					fmt.Sprintf("Catalog Credential error :%v", credErr), params.ErrTemplate))
+				return
+			}
+			params.CatalogCred = cred
+			if catalogInfo.URI != "" {
+				if err := util.ValidateURLInAllowlist(catalogInfo.URI, nil, credentialAllowlist(params.CatalogCred)); err != nil {
+					conn.Fatal(errors.NewDatastoreExternalCollectionError(nil,
+						fmt.Sprintf("Catalog URI not permitted: %v", err), params.ErrTemplate))
+					return
+				}
+			}
+		}
+		if externalEntry.CredentialId != "" && externalEntry.CredentialId == catalogInfo.CredentialId {
+			params.CollectionCred = params.CatalogCred
+		} else {
+			cred, credErr := queryContext.ExternalCredential(externalEntry.CredentialId)
+			if credErr != nil {
+				conn.Fatal(errors.NewDatastoreExternalCollectionError(nil,
+					fmt.Sprintf("Collection Credential error :%v", credErr), params.ErrTemplate))
+				return
+			}
+			params.CollectionCred = cred
+		}
+		params.ExternalEntry = externalEntry
+	} else {
+		externalEntry = params.ExternalEntry.(*extparams.ExternalCollectionEntry)
+		catalogInfo = externalEntry.CatalogInfo
+		if catalogInfo == nil {
+			coll.bucket.namespace.nslock.RLock()
+			catalogInfo = coll.bucket.namespace.externalCatalogs[externalEntry.Catalog]
+			coll.bucket.namespace.nslock.RUnlock()
+		}
+	}
+
+	switch catalogInfo.CatalogType {
+	case extparams.CatalogTypeIceberg:
+		if err := external.ScanIcebergCatalog(externalEntry, params, queryContext, conn); err != nil {
+			conn.Fatal(err)
+		}
+	default:
+		conn.Fatal(errors.NewDatastoreExternalCollectionError(nil,
+			fmt.Sprintf("Catalog type '%s' is not supported for external scan", catalogInfo.CatalogType),
+			params.ErrTemplate))
+	}
+}
+
+func (coll *collection) ExternalEntry() *extparams.ExternalCollectionEntry {
+	return coll.externalEntry
 }
 
 func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange,
@@ -502,7 +661,11 @@ func (coll *collection) StartRandomScan(context datastore.QueryContext, sampleSi
 		serverless, context.UseReplica(), xattrs, withDocs, encryptionKey)
 }
 
-func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
+func buildScopesAndCollections(mani *cb.Manifest, externalMani *cb.ExternalManifest,
+	bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
+	bucket.namespace.nslock.RLock()
+	catalogs := bucket.namespace.externalCatalogs
+	bucket.namespace.nslock.RUnlock()
 	scopes := make(map[string]*scope, len(mani.Scopes))
 	var defaultCollection *collection
 
@@ -554,18 +717,45 @@ func buildScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]
 				coll.isSystem = scope.id == _BUCKET_SYSTEM_SCOPE && coll.id == _BUCKET_SYSTEM_COLLECTION
 			}
 		}
+
+		if externalMani != nil {
+			if extCollections, eok := externalMani.Scopes[s.Name]; eok {
+				for _, ec := range extCollections.Collections {
+					ecCopy := *ec
+					ecCopy.CatalogInfo = catalogs[ec.Catalog]
+					coll := &collection{
+						id:            ec.Collection,
+						name:          ec.Collection,
+						namespace:     bucket.namespace,
+						fullName:      bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + ec.Collection,
+						scope:         scope,
+						bucket:        bucket,
+						authKey:       bucket.name + ":" + scope.id + ":" + ec.Collection,
+						isExternal:    true,
+						externalEntry: &ecCopy,
+					}
+					scope.keyspaces[ec.Collection] = coll
+				}
+			}
+		}
+
 		scopes[s.Name] = scope
 	}
 	return scopes, defaultCollection
 }
 
-func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
+func refreshScopesAndCollections(mani *cb.Manifest, externalMani *cb.ExternalManifest,
+	bucket *keyspace) (map[string]*scope, datastore.Keyspace) {
 	oldScopes := bucket.scopes
 
 	// this shouldn't happen on a refresh, but if there aren't old scopes, just go
 	if oldScopes == nil {
 		return nil, nil
 	}
+
+	bucket.namespace.nslock.RLock()
+	catalogs := bucket.namespace.externalCatalogs
+	bucket.namespace.nslock.RUnlock()
 
 	scopes := make(map[string]*scope, len(mani.Scopes))
 	var defaultCollection *collection
@@ -657,6 +847,28 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 				coll.isSystem = scope.id == _BUCKET_SYSTEM_SCOPE && coll.id == _BUCKET_SYSTEM_COLLECTION
 			}
 		}
+
+		if externalMani != nil {
+			if extCollections, eok := externalMani.Scopes[s.Name]; eok {
+				for _, ec := range extCollections.Collections {
+					ecCopy := *ec
+					ecCopy.CatalogInfo = catalogs[ec.Catalog]
+					coll := &collection{
+						id:            ec.Collection,
+						name:          ec.Collection,
+						namespace:     bucket.namespace,
+						fullName:      bucket.namespace.name + ":" + bucket.name + "." + s.Name + "." + ec.Collection,
+						scope:         scope,
+						bucket:        bucket,
+						authKey:       bucket.name + ":" + scope.id + ":" + ec.Collection,
+						isExternal:    true,
+						externalEntry: &ecCopy,
+					}
+					scope.keyspaces[ec.Collection] = coll
+				}
+			}
+		}
+
 		scopes[s.Name] = scope
 
 		// clear collections that have disappeared

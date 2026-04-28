@@ -61,6 +61,8 @@ const KEYSPACE_NAME_AUS_SETTINGS = "aus_settings"
 const KEYSPACE_NAME_AWR = "awr"
 const KEYSPACE_NAME_SETTINGS = "settings"
 const KEYSPACE_NAME_NATURAL_CHAT = "natural_chats"
+const KEYSPACE_NAME_CATALOGS = "catalogs"
+const KEYSPACE_NAME_CATALOGS_INFO = "catalogs_info"
 
 const PRIMARY_INDEX_NAME = "#primary"
 
@@ -119,9 +121,11 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_SCOPES:
 		case KEYSPACE_NAME_ALL_SCOPES:
 		case KEYSPACE_NAME_BUCKETS:
+		case KEYSPACE_NAME_CATALOGS:
+		case KEYSPACE_NAME_MY_USER_INFO:
+		case KEYSPACE_NAME_CATALOGS_INFO:
 		case KEYSPACE_NAME_INDEXES:
 		case KEYSPACE_NAME_ALL_INDEXES:
-		case KEYSPACE_NAME_MY_USER_INFO:
 		case KEYSPACE_NAME_FUNCTIONS:
 		case KEYSPACE_NAME_SEQUENCES:
 		case KEYSPACE_NAME_ALL_SEQUENCES:
@@ -267,36 +271,36 @@ func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Er
 func (s *store) EnableStorageAudit(val bool) {
 }
 
-func (s *store) UserInfo() (value.Value, errors.Error) {
+func (s *store) UserInfo(context datastore.QueryContext) (value.Value, errors.Error) {
 	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
 	if !ok {
 		return nil, errors.NewDatastoreNotCouchbaseError()
 	}
-	return cbDatastore.UserInfo()
+	return cbDatastore.UserInfo(context)
 }
 
-func (s *store) GroupInfo() (value.Value, errors.Error) {
+func (s *store) GroupInfo(context datastore.QueryContext) (value.Value, errors.Error) {
 	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
 	if !ok {
 		return nil, errors.NewDatastoreNotCouchbaseError()
 	}
-	return cbDatastore.GroupInfo()
+	return cbDatastore.GroupInfo(context)
 }
 
-func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
+func (s *store) GetGroupInfoAll(context datastore.QueryContext) ([]datastore.Group, errors.Error) {
 	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
 	if !ok {
 		return nil, errors.NewDatastoreNotCouchbaseError()
 	}
-	return cbDatastore.GetGroupInfoAll()
+	return cbDatastore.GetGroupInfoAll(context)
 }
 
-func (s *store) BucketInfo() (value.Value, errors.Error) {
+func (s *store) BucketInfo(context datastore.QueryContext) (value.Value, errors.Error) {
 	cbDatastore, ok := s.actualStore.(datastore.CouchbaseDatastore)
 	if !ok {
 		return nil, errors.NewDatastoreNotCouchbaseError()
 	}
-	return cbDatastore.BucketInfo()
+	return cbDatastore.BucketInfo(context)
 }
 
 func (s *store) CreateSystemCBOStats(requestId string) errors.Error {

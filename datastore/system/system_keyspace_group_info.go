@@ -39,8 +39,8 @@ func (b *groupInfoKeyspace) Name() string {
 	return b.name
 }
 
-func getGroupInfoList(s *store) ([]interface{}, errors.Error) {
-	val, err := s.GroupInfo()
+func getGroupInfoList(context datastore.QueryContext, s *store) ([]interface{}, errors.Error) {
+	val, err := s.GroupInfo(context)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func getGroupInfoList(s *store) ([]interface{}, errors.Error) {
 }
 
 func (b *groupInfoKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-	uil, err := getGroupInfoList(b.namespace.store)
+	uil, err := getGroupInfoList(context, b.namespace.store)
 	if err != nil {
 		return 0, err
 	}
@@ -78,7 +78,7 @@ func (b *groupInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 func (b *groupInfoKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
-	sliceOfGroups, err := getGroupInfoList(b.namespace.store)
+	sliceOfGroups, err := getGroupInfoList(context, b.namespace.store)
 	if err != nil {
 		return []errors.Error{err}
 	}
@@ -196,7 +196,11 @@ func (pi *groupInfoIndex) ScanEntries(requestId string, limit int64, cons datast
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
-	sliceOfGroups, err := getGroupInfoList(pi.keyspace.namespace.store)
+	ctx := conn.QueryContext()
+	if ctx == nil {
+		ctx = datastore.NULL_QUERY_CONTEXT
+	}
+	sliceOfGroups, err := getGroupInfoList(ctx, pi.keyspace.namespace.store)
 	if err != nil {
 		conn.Fatal(err)
 		return

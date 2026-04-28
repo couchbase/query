@@ -132,6 +132,11 @@ func (this *execAnalyser) VisitDummyScan(op *DummyScan) (interface{}, error) {
 	return nil, nil
 }
 
+func (this *execAnalyser) VisitExternalScan(op *ExternalScan) (interface{}, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
 func (this *execAnalyser) VisitCountScan(op *CountScan) (interface{}, error) {
 	this.record(op.getBase())
 	return nil, nil
@@ -593,6 +598,11 @@ func (this *execAnalyser) VisitCreateCollection(op *CreateCollection) (interface
 	return nil, nil
 }
 
+func (this *execAnalyser) VisitAlterCollection(op *AlterCollection) (any, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
 func (this *execAnalyser) VisitDropCollection(op *DropCollection) (interface{}, error) {
 	this.record(op.getBase())
 	return nil, nil
@@ -708,6 +718,21 @@ func (this *execAnalyser) VisitAlterSequence(op *AlterSequence) (interface{}, er
 	return nil, nil
 }
 
+func (this *execAnalyser) VisitCreateCredentialStore(op *CreateCredentialStore) (any, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
+func (this *execAnalyser) VisitAlterCredentialStore(op *AlterCredentialStore) (any, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
+func (this *execAnalyser) VisitDropCredentialStore(op *DropCredentialStore) (any, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
 func (this *execAnalyser) VisitAlterBucket(op *AlterBucket) (interface{}, error) {
 	this.record(op.getBase())
 	return nil, nil
@@ -719,6 +744,21 @@ func (this *execAnalyser) VisitCreateBucket(op *CreateBucket) (interface{}, erro
 }
 
 func (this *execAnalyser) VisitDropBucket(op *DropBucket) (interface{}, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
+func (this *execAnalyser) VisitCreateCatalog(op *CreateCatalog) (any, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
+func (this *execAnalyser) VisitAlterCatalog(op *AlterCatalog) (any, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
+func (this *execAnalyser) VisitDropCatalog(op *DropCatalog) (any, error) {
 	this.record(op.getBase())
 	return nil, nil
 }

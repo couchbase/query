@@ -144,32 +144,34 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 	case auth.PRIV_USERS_WRITE:
 		privilege = "Local User Admin"
 		base_role = "user_admin_local"
+	case auth.PRIV_QUERY_SCOPE_ADMIN:
+		privilege = "manage scopes and collections"
+		base_role = "scope_admin"
+		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME:
 		privilege = "Credential Consumer"
 		base_role = "credential_consumer"
 	case auth.PRIV_CATALOGS_READ:
-		privilege = "Catalog Read"
-		base_role = "catalogs_read"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+		privilege = "Exteranl Catalogs Read Only Admin"
+		base_role = "external_catalog_admin"
 	case auth.PRIV_CATALOGS_WRITE:
-		privilege = "Catalog Write"
-		base_role = "catalogs_write"
-		role = fmt.Sprintf("%s on %s", base_role, keyspace)
+		privilege = "Exteranl Catalogs Admin"
+		base_role = "external_catalog_admin"
 	case auth.PRIV_CATALOG_SELECT:
-		privilege = "Catalog Select"
-		base_role = "catalog_select"
+		privilege = fmt.Sprintf("run SELECT queries on %s Catalog", keyspace)
+		base_role = "query_select_external_catalog"
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_CATALOG_UPDATE:
-		privilege = "Catalog Update"
-		base_role = "catalog_update"
+		privilege = fmt.Sprintf("run UPDATE queries on %s Catalog", keyspace)
+		base_role = "query_update_external_catalog"
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_CATALOG_INSERT:
-		privilege = "Catalog Insert"
-		base_role = "catalog_insert"
+		privilege = fmt.Sprintf("run INSERT queries on %s Catalog", keyspace)
+		base_role = "query_insert_external_catalog"
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	case auth.PRIV_CATALOG_DELETE:
-		privilege = "Catalog Delete"
-		base_role = "catalog_delete"
+		privilege = fmt.Sprintf("run DELETE queries on %s Catalog", keyspace)
+		base_role = "query_delete_external_catalog"
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 	default:
 		privilege = "run this type of query"

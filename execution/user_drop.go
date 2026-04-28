@@ -76,13 +76,13 @@ func (this *DropUser) RunOnce(context *Context, parent value.Value) {
 			u.Id = parts[0]
 		}
 
-		err := cbDatastore.GetUserInfo(&u)
+		err := cbDatastore.GetUserInfo(context, &u)
 		if err != nil {
 			if this.plan.Node().FailIfNotExists() {
 				context.Error(errors.NewUserNotFoundError(u.Domain + ":" + u.Id))
 			}
 		} else {
-			err = cbDatastore.DeleteUser(&u)
+			err = cbDatastore.DeleteUser(context, &u)
 			if err != nil {
 				context.Error(err)
 			}

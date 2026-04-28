@@ -742,6 +742,136 @@ func PathString(expr Expression) (alias, path string, err error) {
 	return rv.alias, rv.path.String(), err
 }
 
+type exprToPaths struct {
+	MapperBase
+	aliasPaths   map[string]map[string]bool
+	caseSenstive bool
+	alias        string
+	curAlias     string
+	curPath      strings.Builder
+}
+
+func (this *exprToPaths) finshPath() bool {
+	if this.alias == "" || this.alias == this.curAlias {
+		if this.curAlias != "" {
+			if this.curPath.Len() == 0 {
+				return true // keyspace
+			}
+			paths, ok := this.aliasPaths[this.curAlias]
+			if !ok {
+				paths = make(map[string]bool)
+				this.aliasPaths[this.curAlias] = paths
+			}
+			s := this.curPath.String()
+			if ok, _ := paths[s]; !ok {
+				paths[s] = true
+			}
+			this.curAlias = ""
+			this.curPath.Reset()
+		}
+	}
+	return false
+}
+
+func (this *exprToPaths) pathsSlice(pathsMap map[string]bool) (rv []string) {
+	rv = make([]string, 0, len(pathsMap))
+	for p, _ := range pathsMap {
+		rv = append(rv, p)
+	}
+	sort.Strings(rv)
+	rv1 := make([]string, 0, len(pathsMap))
+	prev := ""
+	for _, s := range rv {
+		if prev == "" {
+			rv1 = append(rv1, s)
+			prev = s
+		} else if !strings.HasPrefix(s, prev) {
+			rv1 = append(rv1, s)
+			prev = s
+		}
+	}
+	return rv1
+
+}
+
+func NewExprToPaths(alias string, caseSenstive bool) *exprToPaths {
+	stringer := NewStringer()
+	rv := &exprToPaths{}
+	rv.caseSenstive = caseSenstive
+	rv.alias = alias
+	rv.aliasPaths = make(map[string]map[string]bool)
+	rv.curPath.Grow(128) // Pre-allocate buffer for path
+	rv.SetMapper(rv)
+	rv.SetMapFunc(func(expr Expression) (Expression, error) {
+		switch expr2 := expr.(type) {
+		case *Meta:
+			return expr, nil
+		case *Identifier:
+			rv.curAlias = expr2.Alias()
+			return expr, nil
+		case *Field:
+			var sv string
+			second := expr2.Second().Value()
+			if second != nil {
+				sv = second.ToString()
+			}
+			if sv == "" {
+				return expr, fmt.Errorf("not path")
+			}
+			_, err := rv.Map(expr2.First())
+			if err != nil {
+				return expr, err
+			}
+			if rv.alias == "" || rv.alias == rv.curAlias {
+				if !rv.caseSenstive && expr2.CaseInsensitive() {
+					if rv.curAlias != "" && rv.curPath.Len() > 0 {
+						rv.finshPath()
+					} else {
+						return expr, fmt.Errorf("not path")
+					}
+				}
+				if rv.curPath.Len() > 0 {
+					rv.curPath.WriteString(".")
+				}
+				rv.curPath.WriteString("`")
+				rv.curPath.WriteString(sv)
+				rv.curPath.WriteString("`")
+				if expr2.CaseInsensitive() {
+					rv.curPath.WriteString("i")
+				}
+				return expr, nil
+			}
+		case *Element:
+			if _, err := rv.Map(expr2.First()); err != nil {
+				return expr, err
+			}
+			if expr2.Second().Value() != nil {
+				rv.curPath.WriteString("[")
+				rv.curPath.WriteString(stringer.Visit(expr2.Second()))
+				rv.curPath.WriteString("]")
+				return expr, nil
+			}
+			return expr, fmt.Errorf("not path")
+		case *Self:
+			return expr, fmt.Errorf("not path")
+		default:
+			if rv.finshPath() {
+				return expr, fmt.Errorf("not path")
+			}
+			for _, child := range expr.Children() {
+				_, err := rv.Map(child)
+				if err != nil {
+					return expr, fmt.Errorf("not path")
+				}
+			}
+
+		}
+		return expr, nil
+	})
+
+	return rv
+}
+
 const _NAME_CAP = 16
 
 var _NAME_POOL = util.NewStringPool(256)

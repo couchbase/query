@@ -131,9 +131,9 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 	case auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME:
 		permission = join3Strings("cluster.credentials[", target, "]!consume")
 	case auth.PRIV_CATALOGS_READ:
-		permission = join3Strings("cluster.catalog[", target, "]!read")
+		permission = "cluster.admin.catalogs!read"
 	case auth.PRIV_CATALOGS_WRITE:
-		permission = join3Strings("cluster.catalog[", target, "]!write")
+		permission = "cluster.admin.catalogs!write"
 	case auth.PRIV_CATALOG_SELECT:
 		permission = join3Strings("cluster.catalog[", target, "].n1ql.select!execute")
 	case auth.PRIV_CATALOG_UPDATE:

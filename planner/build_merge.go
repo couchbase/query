@@ -133,7 +133,7 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 		return nil, err
 	}
 
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}

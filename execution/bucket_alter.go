@@ -66,7 +66,7 @@ func (this *AlterBucket) RunOnce(context *Context, parent value.Value) {
 		}
 
 		this.switchPhase(_SERVTIME)
-		err := cbDatastore.AlterBucket(this.plan.Node().Name(), this.plan.Node().With())
+		err := cbDatastore.AlterBucket(context, this.plan.Node().Name(), this.plan.Node().With())
 		if err != nil {
 			if errors.IsNotFoundError("Requested resource", err) {
 				err = errors.NewCbBucketNotFoundError(nil, this.plan.Node().Name())

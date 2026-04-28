@@ -45,6 +45,10 @@ type Visitor interface {
 	VisitCreateBucket(stmt *CreateBucket) (interface{}, error)
 	VisitAlterBucket(stmt *AlterBucket) (interface{}, error)
 	VisitDropBucket(stmt *DropBucket) (interface{}, error)
+	VisitCreateCatalog(stmt *CreateCatalog) (any, error)
+	VisitAlterCatalog(stmt *AlterCatalog) (any, error)
+	VisitDropCatalog(stmt *DropCatalog) (any, error)
+	VisitAlterCollection(stmt *AlterCollection) (any, error)
 
 	/*
 		USER statements.
@@ -121,6 +125,10 @@ type Visitor interface {
 	VisitCreateSequence(stmt *CreateSequence) (interface{}, error)
 	VisitDropSequence(stmt *DropSequence) (interface{}, error)
 	VisitAlterSequence(stmt *AlterSequence) (interface{}, error)
+
+	VisitCreateCredentialStore(stmt *CreateCredentialStore) (any, error)
+	VisitAlterCredentialStore(stmt *AlterCredentialStore) (any, error)
+	VisitDropCredentialStore(stmt *DropCredentialStore) (any, error)
 }
 
 type NodeVisitor interface {

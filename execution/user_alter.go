@@ -75,7 +75,7 @@ func (this *AlterUser) RunOnce(context *Context, parent value.Value) {
 			u.Domain = "local"
 			u.Id = parts[0]
 		}
-		err := cbDatastore.GetUserInfo(&u)
+		err := cbDatastore.GetUserInfo(context, &u)
 		if err != nil {
 			context.Error(errors.NewUserNotFoundError(u.Domain + ":" + u.Id))
 		} else {
@@ -99,7 +99,7 @@ func (this *AlterUser) RunOnce(context *Context, parent value.Value) {
 				u.Name = string([]byte{0})
 			}
 
-			err = cbDatastore.PutUserInfo(&u)
+			err = cbDatastore.PutUserInfo(context, &u)
 			if err != nil {
 				context.Error(err)
 			}

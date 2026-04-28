@@ -66,7 +66,7 @@ func (this *DropBucket) RunOnce(context *Context, parent value.Value) {
 		}
 
 		this.switchPhase(_SERVTIME)
-		err := cbDatastore.DropBucket(this.plan.Node().Name())
+		err := cbDatastore.DropBucket(context, this.plan.Node().Name())
 		if err != nil {
 			nfe := errors.IsNotFoundError("Requested resource", err)
 			if !nfe || this.plan.Node().FailIfNotExists() {

@@ -79,8 +79,9 @@ type idxVersion struct {
 }
 
 type ksVersion struct {
-	ksMeta  datastore.KeyspaceMetadata
-	version uint64
+	ksMeta          datastore.KeyspaceMetadata
+	version         uint64
+	externalVersion uint64
 }
 
 func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces map[string]bool,
@@ -567,15 +568,16 @@ func (this *Prepared) addIndexer(indexer datastore.Indexer) errors.Error {
 
 // Locking is handled by the top level caller!
 func (this *Prepared) addKeyspaceMetadata(ksMeta datastore.KeyspaceMetadata) {
-	version := ksMeta.MetadataVersion()
+	version, externalVersion := ksMeta.MetadataVersion()
 	for i, ks := range this.keyspaceMetas {
 		if ks.ksMeta.MetadataId() == ksMeta.MetadataId() {
 			this.keyspaceMetas[i].ksMeta = ksMeta
 			this.keyspaceMetas[i].version = version
+			this.keyspaceMetas[i].externalVersion = externalVersion
 			return
 		}
 	}
-	this.keyspaceMetas = append(this.keyspaceMetas, ksVersion{ksMeta, version})
+	this.keyspaceMetas = append(this.keyspaceMetas, ksVersion{ksMeta, version, externalVersion})
 }
 
 func (this *Prepared) MetadataCheck() bool {
@@ -591,7 +593,8 @@ func (this *Prepared) MetadataCheck() bool {
 	// now check that metadata is good for the namespaces involved
 	// if the bucket has been deleted, the version is expected to be different
 	for _, ks := range this.keyspaceMetas {
-		if ks.ksMeta.MetadataVersion() != ks.version {
+		v, ev := ks.ksMeta.MetadataVersion()
+		if v != ks.version || ev != ks.externalVersion {
 			return false
 		}
 	}

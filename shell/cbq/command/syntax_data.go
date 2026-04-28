@@ -22,6 +22,18 @@ var statement_syntax = map[string][][]string{
 		[]string{"SPARSE"},
 		[]string{"VECTOR"},
 		[]string{"CYCLE"},
+		[]string{"SOURCE"},
+		[]string{"CATALOG"},
+		[]string{"CONSUME"},
+		[]string{"TYPE"},
+		[]string{"SNAPSHOT"},
+		[]string{"TIMESTAMP"},
+		[]string{"CREDENTIALSTORE"},
+		[]string{"EXTERNAL"},
+	},
+	"perm_ident_or_str": [][]string{
+		[]string{"permitted_identifiers"},
+		[]string{"<quoted string>"},
 	},
 	"statements": [][]string{
 		[]string{"advise"},
@@ -43,6 +55,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"function_statement"},
 		[]string{"transaction_statement"},
 		[]string{"sequence_statement"},
+		[]string{"credentialstore_statement"},
 	},
 	"advise": [][]string{
 		[]string{"ADVISE", "[index]", "statement"},
@@ -99,8 +112,10 @@ var statement_syntax = map[string][][]string{
 	"ddl_statement": [][]string{
 		[]string{"index_statement"},
 		[]string{"bucket_statement"},
+		[]string{"catalog_statement"},
 		[]string{"scope_statement"},
 		[]string{"collection_statement"},
+		[]string{"external_collection_statement"},
 	},
 	"user_statement": [][]string{
 		[]string{"create_user"},
@@ -127,6 +142,11 @@ var statement_syntax = map[string][][]string{
 		[]string{"alter_bucket"},
 		[]string{"drop_bucket"},
 	},
+	"catalog_statement": [][]string{
+		[]string{"create_catalog"},
+		[]string{"alter_catalog"},
+		[]string{"drop_catalog"},
+	},
 	"scope_statement": [][]string{
 		[]string{"create_scope"},
 		[]string{"drop_scope"},
@@ -134,7 +154,11 @@ var statement_syntax = map[string][][]string{
 	"collection_statement": [][]string{
 		[]string{"create_collection"},
 		[]string{"drop_collection"},
+		[]string{"alter_collection"},
 		[]string{"flush_collection"},
+	},
+	"external_collection_statement": [][]string{
+		[]string{"create_external_collection"},
 	},
 	"function_statement": [][]string{
 		[]string{"create_function"},
@@ -265,14 +289,20 @@ var statement_syntax = map[string][][]string{
 	},
 	"simple_from_term": [][]string{
 		[]string{"keyspace_term"},
-		[]string{"expression", "[as_alias]", "[use]"},
+		[]string{"expression", "[as_alias]", "[at_snapshot]", "[use]"},
 	},
 	"unnest": [][]string{
 		[]string{"UNNEST"},
 		[]string{"FLATTEN"},
 	},
 	"keyspace_term": [][]string{
-		[]string{"keyspace_path", "[as_alias]", "[use]"},
+		[]string{"keyspace_path", "[as_alias]", "[at_snapshot]", "[use]"},
+	},
+	"[at_snapshot]": [][]string{
+		[]string{"AT", "SNAPSHOT", "expression"},
+		[]string{"AT", "TIMESTAMP", "expression"},
+		[]string{"AT", "LPAREN", "SNAPSHOT", "expression", "RPAREN"},
+		[]string{"AT", "LPAREN", "TIMESTAMP", "expression", "RPAREN"},
 	},
 	"keyspace_path": [][]string{
 		[]string{"namespace_term", "keyspace_name"},
@@ -639,6 +669,10 @@ var statement_syntax = map[string][][]string{
 	"group_role_list_item": [][]string{
 		[]string{"role_name"},
 		[]string{"role_name", "ON", "keyspace_scope"},
+		[]string{"credentialstore_privilege", "ON", "perm_ident_or_str"},
+		[]string{"credentialstore_privilege"},
+		[]string{"catalog_privilege", "ON", "perm_ident_or_str"},
+		[]string{"catalog_privilege"},
 	},
 	"group_or_groups": [][]string{
 		[]string{"GROUP"},
@@ -655,6 +689,18 @@ var statement_syntax = map[string][][]string{
 		[]string{"GRANT", "role_list", "ON", "keyspace_scope_list", "TO", "user_users", "user_list"},
 		[]string{"GRANT", "role_list", "TO", "group_or_groups", "groups"},
 		[]string{"GRANT", "role_list", "ON", "keyspace_scope_list", "TO", "group_or_groups", "groups"},
+		[]string{"GRANT", "credentialstore_privilege", "ON", "ident_list", "TO", "user_list"},
+		[]string{"GRANT", "credentialstore_privilege", "ON", "ident_list", "TO", "user_users", "user_list"},
+		[]string{"GRANT", "credentialstore_privilege", "ON", "ident_list", "TO", "group_or_groups", "groups"},
+		[]string{"GRANT", "credentialstore_privilege", "TO", "user_list"},
+		[]string{"GRANT", "credentialstore_privilege", "TO", "user_users", "user_list"},
+		[]string{"GRANT", "credentialstore_privilege", "TO", "group_or_groups", "groups"},
+		[]string{"GRANT", "catalog_privilege", "ON", "ident_list", "TO", "user_list"},
+		[]string{"GRANT", "catalog_privilege", "ON", "ident_list", "TO", "user_users", "user_list"},
+		[]string{"GRANT", "catalog_privilege", "ON", "ident_list", "TO", "group_or_groups", "groups"},
+		[]string{"GRANT", "catalog_privilege", "TO", "user_list"},
+		[]string{"GRANT", "catalog_privilege", "TO", "user_users", "user_list"},
+		[]string{"GRANT", "catalog_privilege", "TO", "group_or_groups", "groups"},
 	},
 	"role_list": [][]string{
 		[]string{"role_name"},
@@ -666,6 +712,19 @@ var statement_syntax = map[string][][]string{
 		[]string{"INSERT"},
 		[]string{"UPDATE"},
 		[]string{"DELETE"},
+	},
+	"catalog_privilege": [][]string{
+		[]string{"SELECT", "CATALOG"},
+		[]string{"INSERT", "CATALOG"},
+		[]string{"UPDATE", "CATALOG"},
+		[]string{"DELETE", "CATALOG"},
+	},
+	"credentialstore_privilege": [][]string{
+		[]string{"CONSUME", "CREDENTIALSTORE"},
+	},
+	"ident_list": [][]string{
+		[]string{"perm_ident_or_str"},
+		[]string{"ident_list", "COMMA", "perm_ident_or_str"},
 	},
 	"keyspace_scope_list": [][]string{
 		[]string{"keyspace_scope"},
@@ -694,6 +753,18 @@ var statement_syntax = map[string][][]string{
 		[]string{"REVOKE", "role_list", "ON", "keyspace_scope_list", "FROM", "user_users", "user_list"},
 		[]string{"REVOKE", "role_list", "FROM", "group_or_groups", "groups"},
 		[]string{"REVOKE", "role_list", "ON", "keyspace_scope_list", "FROM", "group_or_groups", "groups"},
+		[]string{"REVOKE", "credentialstore_privilege", "ON", "ident_list", "FROM", "user_list"},
+		[]string{"REVOKE", "credentialstore_privilege", "ON", "ident_list", "FROM", "user_users", "user_list"},
+		[]string{"REVOKE", "credentialstore_privilege", "ON", "ident_list", "FROM", "group_or_groups", "groups"},
+		[]string{"REVOKE", "credentialstore_privilege", "FROM", "user_list"},
+		[]string{"REVOKE", "credentialstore_privilege", "FROM", "user_users", "user_list"},
+		[]string{"REVOKE", "credentialstore_privilege", "FROM", "group_or_groups", "groups"},
+		[]string{"REVOKE", "catalog_privilege", "ON", "ident_list", "FROM", "user_list"},
+		[]string{"REVOKE", "catalog_privilege", "ON", "ident_list", "FROM", "user_users", "user_list"},
+		[]string{"REVOKE", "catalog_privilege", "ON", "ident_list", "FROM", "group_or_groups", "groups"},
+		[]string{"REVOKE", "catalog_privilege", "FROM", "user_list"},
+		[]string{"REVOKE", "catalog_privilege", "FROM", "user_users", "user_list"},
+		[]string{"REVOKE", "catalog_privilege", "FROM", "group_or_groups", "groups"},
 	},
 	"[def_with_clause]": [][]string{
 		[]string{"[with_clause]"},
@@ -709,6 +780,15 @@ var statement_syntax = map[string][][]string{
 	"drop_bucket": [][]string{
 		[]string{"DROP", "BUCKET", "[if_exists]", "permitted_identifiers"},
 		[]string{"DROP", "DATABASE", "[if_exists]", "permitted_identifiers"},
+	},
+	"create_catalog": [][]string{
+		[]string{"CREATE", "CATALOG", "[if_not_exists]", "perm_ident_or_str", "TYPE", "perm_ident_or_str", "SOURCE", "perm_ident_or_str", "AT", "perm_ident_or_str", "with_clause"},
+	},
+	"alter_catalog": [][]string{
+		[]string{"ALTER", "CATALOG", "perm_ident_or_str", "with_clause"},
+	},
+	"drop_catalog": [][]string{
+		[]string{"DROP", "CATALOG", "[if_exists]", "perm_ident_or_str"},
 	},
 	"create_scope": [][]string{
 		[]string{"CREATE", "SCOPE", "named_scope_ref", "[if_not_exists]"},
@@ -732,6 +812,12 @@ var statement_syntax = map[string][][]string{
 	"flush_or_truncate": [][]string{
 		[]string{"FLUSH"},
 		[]string{"TRUNCATE"},
+	},
+	"create_external_collection": [][]string{
+		[]string{"CREATE", "EXTERNAL", "COLLECTION", "[if_not_exists]", "named_keyspace_ref", "ON", "perm_ident_or_str", "AT", "perm_ident_or_str", "with_clause"},
+	},
+	"alter_collection": [][]string{
+		[]string{"ALTER", "COLLECTION", "named_keyspace_ref", "with_clause"},
 	},
 	"create_index": [][]string{
 		[]string{"CREATE", "PRIMARY", "INDEX", "[if_not_exists]", "ON", "named_keyspace_ref", "[index_partition]", "[index_using]", "[with_clause]"},
@@ -1317,5 +1403,19 @@ var statement_syntax = map[string][][]string{
 	"sequence_expr": [][]string{
 		[]string{"sequence_next"},
 		[]string{"sequence_prev"},
+	},
+	"credentialstore_statement": [][]string{
+		[]string{"create_credentialstore"},
+		[]string{"alter_credentialstore"},
+		[]string{"drop_credentialstore"},
+	},
+	"create_credentialstore": [][]string{
+		[]string{"CREATE", "CREDENTIALSTORE", "[if_not_exists]", "perm_ident_or_str", "with_clause"},
+	},
+	"alter_credentialstore": [][]string{
+		[]string{"ALTER", "CREDENTIALSTORE", "perm_ident_or_str", "with_clause"},
+	},
+	"drop_credentialstore": [][]string{
+		[]string{"DROP", "CREDENTIALSTORE", "[if_exists]", "perm_ident_or_str"},
 	},
 }

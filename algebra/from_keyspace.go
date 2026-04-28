@@ -58,11 +58,14 @@ type KeyspaceTerm struct {
 	property        uint32
 	protectedString string
 	extraPrivs      []auth.Privilege
+	externalPrivs   *auth.Privileges
 	validateKeys    bool
 	correlated      bool
 	fromTwoParts    bool
 	correlation     map[string]uint32
 	errorContext    expression.ErrorContext
+	snapshotIdExpr  expression.Expression
+	snapshotTsExpr  expression.Expression
 }
 
 func NewKeyspaceTermFromPath(path *Path, as string,
@@ -148,6 +151,7 @@ func (this *KeyspaceTerm) Privileges() (privs *auth.Privileges, err errors.Error
 		}
 	}
 
+	privs.AddAll(this.externalPrivs)
 	if err == nil {
 		if this.joinKeys != nil {
 			privs.AddAll(this.joinKeys.Privileges())
@@ -163,6 +167,16 @@ func (this *KeyspaceTerm) SetExtraPrivilege(priv auth.Privilege) {
 		return
 	}
 	this.extraPrivs = append(this.extraPrivs, priv)
+}
+
+func (this *KeyspaceTerm) AddExternalPrivilege(target string, priv auth.Privilege, Props int) {
+	if target == "" {
+		return
+	}
+	if this.externalPrivs == nil {
+		this.externalPrivs = auth.NewPrivileges()
+	}
+	this.externalPrivs.Add(target, priv, Props)
 }
 
 func PrivilegesFromPath(priv auth.Privilege, path *Path) (*auth.Privileges, errors.Error) {
@@ -369,6 +383,26 @@ func (this *KeyspaceTerm) SetValidateKeys(on bool) {
 
 func (this *KeyspaceTerm) ValidateKeys() bool {
 	return this.validateKeys
+}
+
+func (this *KeyspaceTerm) SnapshotIdExpr() expression.Expression {
+	return this.snapshotIdExpr
+}
+
+func (this *KeyspaceTerm) SetSnapshotIdExpr(snapshotIdExpr expression.Expression) {
+	this.snapshotIdExpr = snapshotIdExpr
+}
+
+func (this *KeyspaceTerm) SnapshotTimestampExpr() expression.Expression {
+	return this.snapshotTsExpr
+}
+
+func (this *KeyspaceTerm) SetSnapshotTimestampExpr(snapshotTsExpr expression.Expression) {
+	this.snapshotTsExpr = snapshotTsExpr
+}
+
+func (this *KeyspaceTerm) HasSnapshotOption() bool {
+	return this.snapshotIdExpr != nil || this.snapshotTsExpr != nil
 }
 
 func (this *KeyspaceTerm) FromExpression() expression.Expression {

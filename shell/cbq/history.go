@@ -38,7 +38,20 @@ func LoadHistory(liner *liner.State, dir string) (errors.ErrorCode, string) {
 
 var redactSpecialNamedParamRegex = regexp.MustCompile(`(\s+-[\$@]_\w+_\s+).*?;`)
 
+// credentialStoreStmtRegex matches CREATE/ALTER CREDENTIALSTORE statements with proper spacing
+var credentialStoreStmtRegex = regexp.MustCompile(`(?i)^\s*(CREATE|ALTER)\s+CREDENTIALSTORE\b`)
+
+// isCredentialStoreStatement checks if the statement is a CREDENTIALSTORE statement
+// that should be excluded from history (CREATE/ALTER contain sensitive info)
+func isCredentialStoreStatement(line string) bool {
+	return credentialStoreStmtRegex.MatchString(line)
+}
+
 func UpdateHistory(liner *liner.State, dir, line string) (errors.ErrorCode, string) {
+	// Skip CREDENTIALSTORE statements from history
+	if isCredentialStoreStatement(line) {
+		return 0, ""
+	}
 	rline := redactSpecialNamedParamRegex.ReplaceAllString(line, "$1***;")
 	liner.AppendHistory(rline)
 	if dir != "" {

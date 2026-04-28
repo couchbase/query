@@ -97,7 +97,7 @@ func (this *CreateBucket) RunOnce(context *Context, parent value.Value) {
 				}
 			}
 		}
-		err := cbDatastore.CreateBucket(this.plan.Node().Name(), with)
+		err := cbDatastore.CreateBucket(context, this.plan.Node().Name(), with)
 		if err != nil {
 			ae := errors.IsExistsError("Bucket", err)
 			if !ae || this.plan.Node().FailIfExists() {

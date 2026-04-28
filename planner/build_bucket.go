@@ -15,9 +15,11 @@ import (
 func (this *builder) VisitCreateBucket(stmt *algebra.CreateBucket) (interface{}, error) {
 	return plan.NewQueryPlan(plan.NewCreateBucket(stmt)), nil
 }
+
 func (this *builder) VisitAlterBucket(stmt *algebra.AlterBucket) (interface{}, error) {
 	return plan.NewQueryPlan(plan.NewAlterBucket(stmt)), nil
 }
+
 func (this *builder) VisitDropBucket(stmt *algebra.DropBucket) (interface{}, error) {
 	return plan.NewQueryPlan(plan.NewDropBucket(stmt)), nil
 }

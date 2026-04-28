@@ -35,14 +35,6 @@ func (ci *queryContextImpl) Credentials() *auth.Credentials {
 	return ci.creds
 }
 
-func (ci *queryContextImpl) Credential() cbauth.Creds {
-	return nil
-}
-
-func (ci *queryContextImpl) ExternalCredential(credId string) (*cbauth.Credential, error) {
-	return nil, nil
-}
-
 func (ci *queryContextImpl) GetReqDeadline() time.Time {
 	return time.Time{}
 }
@@ -188,6 +180,25 @@ func (ci *queryContextImpl) FormatDuration(time.Duration) string {
 
 func (this *queryContextImpl) GetActiveEncryptionKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
 	return nil, nil
+}
+
+func (ci *queryContextImpl) Credential() cbauth.Creds {
+	cred := ci.Credentials()
+	if cred == nil || len(cred.CbauthCredentialsList) == 0 {
+		return nil
+	}
+	return cred.CbauthCredentialsList[0]
+}
+
+func (ci *queryContextImpl) ExternalCredential(credId string) (*cbauth.Credential, error) {
+	if credId == "" {
+		return nil, nil
+	}
+	cred := ci.Credentials()
+	if cred == nil || len(cred.CbauthCredentialsList) == 0 {
+		return nil, nil
+	}
+	return cred.CbauthCredentialsList[0].GetCredential(credId)
 }
 
 func TestSystem(t *testing.T) {

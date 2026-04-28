@@ -668,6 +668,7 @@ func (this *HttpEndpoint) doStats(request *httpRequest, srvr *server.Server) {
 		int(request.PhaseOperator(execution.INDEX_SCAN_HVI)),
 		int(request.PhaseOperator(execution.FTS_SEARCH_SVI)),
 		int(request.PhaseOperator(execution.VECTOR_DISTANCE)),
+		int(request.PhaseOperator(execution.EXTERNAL_SCAN)),
 		int(request.PhaseOperator(execution.APPROX_VECTOR_DISTANCE)),
 		string(request.ScanConsistency()), request.UsedMemory())
 

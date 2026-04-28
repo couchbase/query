@@ -51,9 +51,29 @@ func (this *GrantRole) PlanOp() plan.Operator {
 
 func validateRoles(candidateRoles, allRoles []datastore.Role) errors.Error {
 	for _, candidate := range candidateRoles {
+		// Catalog roles require a target (catalog name), except admin/reader which are global
+		if candidate.SourceType == datastore.SOURCE_CATALOG {
+			if candidate.Target == "" {
+				lc := strings.ToLower(candidate.Name)
+				if lc != "external_catalog_admin" && lc != "external_catalog_reader" {
+					return errors.NewRoleRequiresCatalogError(candidate.Name)
+				}
+			}
+			continue
+		}
+
+		// CredentialStore roles require a target (credential store name)
+		if candidate.SourceType == datastore.SOURCE_CREDENTIALSTORE {
+			if candidate.Target == "" {
+				return errors.NewRoleRequiresCredentialStoreError(candidate.Name)
+			}
+			continue
+		}
+
+		// Keyspace roles - validate against permitted roles
 		foundMatch := false
 		for _, permittedRole := range allRoles {
-			if candidate.Name == permittedRole.Name {
+			if candidate.Name == permittedRole.Name && candidate.SourceType == permittedRole.SourceType {
 				if candidate.Target == "" {
 					if permittedRole.Target == "*" {
 						return errors.NewRoleRequiresKeyspaceError(candidate.Name)
@@ -79,22 +99,31 @@ func validateRoles(candidateRoles, allRoles []datastore.Role) errors.Error {
 type roleSource interface {
 	Roles() []string
 	Keyspaces() []*algebra.KeyspaceRef
+	SourceType() string
 }
 
 func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
-	rolesList := auth.NormalizeRoleNames(node.Roles())
+	rolesList := auth.NormalizeRoleNames(node.Roles(), node.SourceType())
 	keyspaceList := node.Keyspaces()
+	sourceType := node.SourceType()
 
 	if len(keyspaceList) == 0 {
 		ret := make([]datastore.Role, len(rolesList))
 		for i, v := range rolesList {
 			ret[i].Name = v
+			ret[i].SourceType = sourceType
 		}
 		return ret, nil
 	} else {
 		ret := make([]datastore.Role, 0, len(rolesList)*len(keyspaceList))
 		for _, role := range rolesList {
 			for _, ks := range keyspaceList {
+				// For catalog and credentialstore roles, use keyspace name directly as target
+				if sourceType != datastore.SOURCE_KEYSPACE {
+					ret = append(ret, datastore.Role{Name: role, Target: ks.FullName(), SourceType: sourceType})
+					continue
+				}
+
 				parts := ks.Path().Parts()
 				if len(parts) != 3 {
 					keyspace, err := datastore.GetKeyspace(parts...)
@@ -107,19 +136,19 @@ func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
 							if bucket == nil {
 								return nil, errors.NewNoSuchBucketError(ks.FullName())
 							}
-							ret = append(ret, datastore.Role{Name: role, Target: bucket.AuthKey()})
+							ret = append(ret, datastore.Role{Name: role, Target: bucket.AuthKey(), SourceType: sourceType})
 						} else {
 							return nil, errors.NewNoSuchKeyspaceError(ks.FullName())
 						}
 					} else {
-						ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey()})
+						ret = append(ret, datastore.Role{Name: role, Target: keyspace.AuthKey(), SourceType: sourceType})
 					}
 				} else {
 					scope, _ := datastore.GetScope(parts...)
 					if scope == nil {
 						return nil, errors.NewNoSuchScopeError(ks.FullName())
 					}
-					ret = append(ret, datastore.Role{Name: role, Target: scope.AuthKey()})
+					ret = append(ret, datastore.Role{Name: role, Target: scope.AuthKey(), SourceType: sourceType})
 				}
 			}
 		}
@@ -129,10 +158,10 @@ func getRoles(node roleSource) ([]datastore.Role, errors.Error) {
 
 // Retrieve the complete set of current users and their roles.
 // Return them as a map indexed by domain:user_id.
-func getUserMap(ds datastore.CouchbaseDatastore) (map[string]*datastore.User, errors.Error) {
+func getUserMap(context datastore.QueryContext, ds datastore.CouchbaseDatastore) (map[string]*datastore.User, errors.Error) {
 	// Get the current set of users (with their role information),
 	// and create a map of them by id.
-	currentUsers, err := ds.GetUserInfoAll()
+	currentUsers, err := ds.GetUserInfoAll(context)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +216,7 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Get the list of all valid roles, and verify that the roles to be granted are proper.
-		validRoles, err := cbDatastore.GetRolesAll()
+		validRoles, err := cbDatastore.GetRolesAll(context)
 		if err != nil {
 			context.Fatal(err)
 			return
@@ -208,7 +237,7 @@ func (this *GrantRole) RunOnce(context *Context, parent value.Value) {
 
 func (this *GrantRole) grantUserRoles(context *Context, cbDatastore datastore.CouchbaseDatastore, roleList []datastore.Role) {
 
-	userMap, err := getUserMap(cbDatastore)
+	userMap, err := getUserMap(context, cbDatastore)
 	if err != nil {
 		context.Fatal(err)
 		return
@@ -234,23 +263,23 @@ func (this *GrantRole) grantUserRoles(context *Context, cbDatastore datastore.Co
 				}
 			}
 			if alreadyHasRole {
-				context.Warning(errors.NewRoleAlreadyPresent("User", userId, auth.RoleToAlias(newRole.Name), newRole.Target))
+				context.Warning(errors.NewRoleAlreadyPresent("User", userId, auth.RoleToAlias(newRole.Name), newRole.Target, newRole.SourceType))
 				continue
 			}
 			user.Roles = append(user.Roles, newRole)
 		}
 		// Update the user with their new roles on the backend.
 		user.Password = string([]byte{0}) // we are not including the password
-		err = cbDatastore.PutUserInfo(user)
+		err = cbDatastore.PutUserInfo(context, user)
 		if err != nil {
 			context.Error(err)
 		}
 	}
 }
 
-func getGroupMap(ds datastore.CouchbaseDatastore) (map[string]*datastore.Group, errors.Error) {
+func getGroupMap(context datastore.QueryContext, ds datastore.CouchbaseDatastore) (map[string]*datastore.Group, errors.Error) {
 	// Get the current set of groups (with their role information) and create a map of them by id.
-	currentGroups, err := ds.GetGroupInfoAll()
+	currentGroups, err := ds.GetGroupInfoAll(context)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +300,7 @@ func getGroupsMap(groups []string) map[string]bool {
 
 func (this *GrantRole) grantGroupRoles(context *Context, cbDatastore datastore.CouchbaseDatastore, roleList []datastore.Role) {
 
-	groupMap, err := getGroupMap(cbDatastore)
+	groupMap, err := getGroupMap(context, cbDatastore)
 	if err != nil {
 		context.Fatal(err)
 		return
@@ -297,13 +326,13 @@ func (this *GrantRole) grantGroupRoles(context *Context, cbDatastore datastore.C
 				}
 			}
 			if alreadyHasRole {
-				context.Warning(errors.NewRoleAlreadyPresent("Group", groupId, auth.RoleToAlias(newRole.Name), newRole.Target))
+				context.Warning(errors.NewRoleAlreadyPresent("Group", groupId, auth.RoleToAlias(newRole.Name), newRole.Target, newRole.SourceType))
 				continue
 			}
 			group.Roles = append(group.Roles, newRole)
 		}
 		// Update the group with their new roles on the backend.
-		err = cbDatastore.PutGroupInfo(group)
+		err = cbDatastore.PutGroupInfo(context, group)
 		if err != nil {
 			context.Error(err)
 		}

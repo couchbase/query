@@ -55,6 +55,7 @@ func (this *DropCollection) MarshalBase(f func(map[string]interface{})) map[stri
 	this.node.Keyspace().MarshalKeyspace(r)
 	// invert so the default if not present is to fail if not exists
 	r["ifExists"] = !this.node.FailIfNotExists()
+
 	if f != nil {
 		f(r)
 	}
@@ -79,11 +80,12 @@ func (this *DropCollection) UnmarshalJSON(body []byte) error {
 	// Build this.node.
 	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
+
 	this.scope, err = datastore.GetScope(ksref.Path().Parts()[0:3]...)
 	if err != nil {
 		return err
 	}
-	// invert IfExists to obtain FailIfNotExists
+
 	this.node = algebra.NewDropCollection(ksref, !_unmarshalled.IfExists)
 
 	return nil
@@ -91,7 +93,6 @@ func (this *DropCollection) UnmarshalJSON(body []byte) error {
 
 func (this *DropCollection) verify(prepared *Prepared) errors.Error {
 	var err errors.Error
-
 	this.scope, err = verifyScope(this.scope, prepared)
 	return err
 }

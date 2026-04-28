@@ -56,11 +56,11 @@ func (this *keyspaceBase) Uid() string {
 	return this.name
 }
 
-func (this *keyspaceBase) CreateScope(name string) errors.Error {
+func (this *keyspaceBase) CreateScope(context datastore.QueryContext, name string) errors.Error {
 	return errors.NewScopesNotSupportedError(this.name)
 }
 
-func (this *keyspaceBase) DropScope(name string) errors.Error {
+func (this *keyspaceBase) DropScope(context datastore.QueryContext, name string) errors.Error {
 	return errors.NewScopesNotSupportedError(this.name)
 }
 
@@ -90,7 +90,7 @@ func (b *keyspaceBase) Delete(deletes value.Pairs, context datastore.QueryContex
 	return 0, nil, _ERRS_SYSTEM_NOT_SUPPORTED
 }
 
-func (this *keyspaceBase) Flush() errors.Error {
+func (this *keyspaceBase) Flush(context datastore.QueryContext) errors.Error {
 	return errors.NewNoFlushError(this.name)
 }
 
@@ -100,6 +100,15 @@ func (this *keyspaceBase) IsBucket() bool {
 
 func (this *keyspaceBase) IsSystemCollection() bool {
 	return false
+}
+
+func (this *keyspaceBase) IsExternalCollection() bool {
+	return false
+}
+
+func (this *keyspaceBase) ExternalScan(params *datastore.ExternalScanParams, context datastore.QueryContext,
+	conn *datastore.IndexConnection) {
+	conn.Fatal(errors.NewDatastoreExternalCollectionError(nil, "ExternalScan not supported on system keyspaces", nil))
 }
 
 func (this *keyspaceBase) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {

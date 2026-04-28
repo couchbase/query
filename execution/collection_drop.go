@@ -59,11 +59,13 @@ func (this *DropCollection) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
-		// Actually drop collection
 		this.switchPhase(_SERVTIME)
-		err := this.plan.Scope().DropCollection(this.plan.Node().Name())
+		node := this.plan.Node()
+
+		scope := this.plan.Scope()
+		err := scope.DropCollection(context, node.Name())
 		if err != nil {
-			if !errors.IsCollectionNotFoundError(err) || this.plan.Node().FailIfNotExists() {
+			if !errors.IsCollectionNotFoundError(err) || node.FailIfNotExists() {
 				context.Error(err)
 			}
 		}

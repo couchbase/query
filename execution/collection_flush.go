@@ -60,7 +60,7 @@ func (this *FlushCollection) RunOnce(context *Context, parent value.Value) {
 
 		// Actually flush collection
 		this.switchPhase(_SERVTIME)
-		err := this.plan.Keyspace().Flush()
+		err := this.plan.Keyspace().Flush(context)
 		if err != nil {
 			context.Error(err)
 		}

@@ -16,6 +16,7 @@ package.
 package couchbase
 
 import (
+	go_context "context"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -41,9 +42,11 @@ import (
 	"github.com/couchbase/query/datastore/virtual"
 	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/extparams"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
 	cb "github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/primitives/external"
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/tenant"
@@ -643,16 +646,37 @@ type DefaultObject struct {
 	Uid string `json:"auditUid"`
 }
 
-func (s *store) UserInfo() (value.Value, errors.Error) {
-	data, err := s.client.GetUserRoles()
+func (s *store) UserInfo(context datastore.QueryContext) (value.Value, errors.Error) {
+	data, err := s.client.GetUserRoles(context.Credential())
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
 	return value.NewValue(data), nil
 }
 
-func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
-	sourceUsers, err := s.client.GetUserInfoAll()
+// cbRoleTarget maps the source-specific fields of a primitives Role to the unified
+// Target string and SourceType used by datastore.Role.
+func cbRoleTarget(roleName, bucketName, scopeName, collectionName, catalogName, credentialId string) (target, sourceType string) {
+	_, sourceType = auth.RoleToAliasSource(roleName)
+	switch sourceType {
+	case auth.SOURCE_CATALOG:
+		target = catalogName
+	case auth.SOURCE_CREDENTIALSTORE:
+		target = credentialId
+	default:
+		if collectionName != "" && collectionName != "*" {
+			target = bucketName + ":" + scopeName + ":" + collectionName
+		} else if scopeName != "" && scopeName != "*" {
+			target = bucketName + ":" + scopeName
+		} else {
+			target = bucketName
+		}
+	}
+	return
+}
+
+func (s *store) GetUserInfoAll(context datastore.QueryContext) ([]datastore.User, errors.Error) {
+	sourceUsers, err := s.client.GetUserInfoAll(context.Credential())
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
@@ -664,20 +688,22 @@ func (s *store) GetUserInfoAll() ([]datastore.User, errors.Error) {
 		roles := make([]datastore.Role, len(u.Roles))
 		for j, r := range u.Roles {
 			roles[j].Name = r.Role
-			if r.CollectionName != "" && r.CollectionName != "*" {
-				roles[j].Target = r.BucketName + ":" + r.ScopeName + ":" + r.CollectionName
-			} else if r.ScopeName != "" && r.ScopeName != "*" {
-				roles[j].Target = r.BucketName + ":" + r.ScopeName
-			} else if r.BucketName != "" {
-				roles[j].Target = r.BucketName
-			}
+			roles[j].Target, roles[j].SourceType = cbRoleTarget(r.Role, r.BucketName, r.ScopeName, r.CollectionName, r.CatalogName, r.CredentialId)
 		}
 		resultUsers[i].Roles = roles
 	}
 	return resultUsers, nil
 }
 
-func (s *store) PutUserInfo(u *datastore.User) errors.Error {
+func credInfo(context datastore.QueryContext) []string {
+	if cred := context.Credential(); cred != nil {
+		user, domain := cred.User()
+		return []string{user, domain}
+	}
+	return nil
+}
+
+func (s *store) PutUserInfo(context datastore.QueryContext, u *datastore.User) errors.Error {
 	var outputUser cb.User
 	outputUser.Name = u.Name
 	outputUser.Id = u.Id
@@ -685,35 +711,45 @@ func (s *store) PutUserInfo(u *datastore.User) errors.Error {
 	outputUser.Domain = u.Domain
 	for i, r := range u.Roles {
 		outputUser.Roles[i].Role = r.Name
+		outputUser.Roles[i].SourceType = r.SourceType
 		if len(r.Target) > 0 {
-			outputUser.Roles[i].BucketName = r.Target
+			switch r.SourceType {
+			case auth.SOURCE_CREDENTIALSTORE:
+				outputUser.Roles[i].CredentialId = r.Target
+			case auth.SOURCE_CATALOG:
+				outputUser.Roles[i].CatalogName = r.Target
+			default:
+				outputUser.Roles[i].BucketName = r.Target
+			}
 		}
 	}
 	outputUser.Password = u.Password
 	outputUser.Groups = u.Groups
-	err := s.client.PutUserInfo(&outputUser)
+	cred := context.Credential()
+	err := s.client.PutUserInfo(cred, &outputUser)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err, "user")
+		return errors.NewSystemUnableToUpdateError(err, "user", credInfo(context)...)
 	}
 	return nil
 }
 
-func (s *store) DeleteUser(u *datastore.User) errors.Error {
+func (s *store) DeleteUser(context datastore.QueryContext, u *datastore.User) errors.Error {
 	var outputUser cb.User
 	outputUser.Id = u.Id
 	outputUser.Domain = u.Domain
-	err := s.client.DeleteUser(&outputUser)
+	cred := context.Credential()
+	err := s.client.DeleteUser(cred, &outputUser)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err, "user")
+		return errors.NewSystemUnableToUpdateError(err, "user", credInfo(context)...)
 	}
 	return nil
 }
 
-func (s *store) GetUserInfo(u *datastore.User) errors.Error {
+func (s *store) GetUserInfo(context datastore.QueryContext, u *datastore.User) errors.Error {
 	var outputUser cb.User
 	outputUser.Id = u.Id
 	outputUser.Domain = u.Domain
-	err := s.client.GetUserInfo(&outputUser)
+	err := s.client.GetUserInfo(context.Credential(), &outputUser)
 	if err != nil {
 		return errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
@@ -723,8 +759,8 @@ func (s *store) GetUserInfo(u *datastore.User) errors.Error {
 		u.Roles = make([]datastore.Role, len(outputUser.Roles))
 		for i, v := range outputUser.Roles {
 			u.Roles[i].Name = v.Role
-			u.Roles[i].Target = v.BucketName
-			u.Roles[i].IsScope = v.ScopeName != "" && v.CollectionName == ""
+			u.Roles[i].Target, u.Roles[i].SourceType = cbRoleTarget(v.Role, v.BucketName, v.ScopeName, v.CollectionName, v.CatalogName, v.CredentialId)
+			u.Roles[i].IsScope = u.Roles[i].SourceType == auth.SOURCE_KEYSPACE && v.ScopeName != "" && v.CollectionName == ""
 		}
 	}
 	u.Name = outputUser.Name
@@ -732,24 +768,24 @@ func (s *store) GetUserInfo(u *datastore.User) errors.Error {
 	return nil
 }
 
-func (s *store) GetRolesAll() ([]datastore.Role, errors.Error) {
-	roleDescList, err := s.client.GetRolesAll()
+func (s *store) GetRolesAll(context datastore.QueryContext) ([]datastore.Role, errors.Error) {
+	roleDescList, err := s.client.GetRolesAll(context.Credential())
 	if err != nil {
 		return nil, errors.NewDatastoreUnableToRetrieveRoles(err)
 	}
 	roles := make([]datastore.Role, len(roleDescList))
 	for i, rd := range roleDescList {
 		roles[i].Name = rd.Role
-		roles[i].Target = rd.BucketName
-		roles[i].IsScope = rd.ScopeName != "" && rd.CollectionName == ""
+		roles[i].Target, roles[i].SourceType = cbRoleTarget(rd.Role, rd.BucketName, rd.ScopeName, rd.CollectionName, rd.CatalogName, rd.CredentialId)
+		roles[i].IsScope = roles[i].SourceType == auth.SOURCE_KEYSPACE && rd.ScopeName != "" && rd.CollectionName == ""
 	}
 	return roles, nil
 }
 
-func (s *store) GetGroupInfo(g *datastore.Group) errors.Error {
+func (s *store) GetGroupInfo(context datastore.QueryContext, g *datastore.Group) errors.Error {
 	var outputGroup cb.Group
 	outputGroup.Id = g.Id
-	err := s.client.GetGroupInfo(&outputGroup)
+	err := s.client.GetGroupInfo(context.Credential(), &outputGroup)
 	if err != nil {
 		return errors.NewSystemUnableToRetrieveError(err, "group information")
 	}
@@ -758,16 +794,9 @@ func (s *store) GetGroupInfo(g *datastore.Group) errors.Error {
 	if len(outputGroup.Roles) > 0 {
 		g.Roles = make([]datastore.Role, len(outputGroup.Roles))
 		for i := range outputGroup.Roles {
-			g.Roles[i].Name = outputGroup.Roles[i].Role
-			if outputGroup.Roles[i].BucketName != "" {
-				g.Roles[i].Target = outputGroup.Roles[i].BucketName
-				if outputGroup.Roles[i].ScopeName != "" && outputGroup.Roles[i].ScopeName != "*" {
-					g.Roles[i].Target += ":" + outputGroup.Roles[i].ScopeName
-					if outputGroup.Roles[i].CollectionName != "" && outputGroup.Roles[i].CollectionName != "*" {
-						g.Roles[i].Target += ":" + outputGroup.Roles[i].CollectionName
-					}
-				}
-			}
+			r := outputGroup.Roles[i]
+			g.Roles[i].Name = r.Role
+			g.Roles[i].Target, g.Roles[i].SourceType = cbRoleTarget(r.Role, r.BucketName, r.ScopeName, r.CollectionName, r.CatalogName, r.CredentialId)
 		}
 	} else {
 		g.Roles = nil
@@ -775,7 +804,7 @@ func (s *store) GetGroupInfo(g *datastore.Group) errors.Error {
 	return nil
 }
 
-func (s *store) PutGroupInfo(g *datastore.Group) errors.Error {
+func (s *store) PutGroupInfo(context datastore.QueryContext, g *datastore.Group) errors.Error {
 	var outputGroup cb.Group
 	outputGroup.Id = g.Id
 	outputGroup.Desc = g.Desc
@@ -783,45 +812,55 @@ func (s *store) PutGroupInfo(g *datastore.Group) errors.Error {
 		outputGroup.Roles = make([]cb.Role, len(g.Roles))
 		for i := range g.Roles {
 			outputGroup.Roles[i].Role = g.Roles[i].Name
+			outputGroup.Roles[i].SourceType = g.Roles[i].SourceType
 			if len(g.Roles[i].Target) > 0 {
-				parts := strings.Split(g.Roles[i].Target, ":")
-				outputGroup.Roles[i].BucketName = parts[0]
-				if len(parts) > 1 {
-					outputGroup.Roles[i].ScopeName = parts[1]
-				}
-				if len(parts) > 2 {
-					outputGroup.Roles[i].CollectionName = parts[2]
+				switch g.Roles[i].SourceType {
+				case auth.SOURCE_CREDENTIALSTORE:
+					outputGroup.Roles[i].CredentialId = g.Roles[i].Target
+				case auth.SOURCE_CATALOG:
+					outputGroup.Roles[i].CatalogName = g.Roles[i].Target
+				default:
+					parts := strings.Split(g.Roles[i].Target, ":")
+					outputGroup.Roles[i].BucketName = parts[0]
+					if len(parts) > 1 {
+						outputGroup.Roles[i].ScopeName = parts[1]
+					}
+					if len(parts) > 2 {
+						outputGroup.Roles[i].CollectionName = parts[2]
+					}
 				}
 			}
 		}
 	}
-	err := s.client.PutGroupInfo(&outputGroup)
+	cred := context.Credential()
+	err := s.client.PutGroupInfo(cred, &outputGroup)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err, "group")
+		return errors.NewSystemUnableToUpdateError(err, "group", credInfo(context)...)
 	}
 	return nil
 }
 
-func (s *store) DeleteGroup(g *datastore.Group) errors.Error {
+func (s *store) DeleteGroup(context datastore.QueryContext, g *datastore.Group) errors.Error {
 	var outputGroup cb.Group
 	outputGroup.Id = g.Id
-	err := s.client.DeleteGroup(&outputGroup)
+	cred := context.Credential()
+	err := s.client.DeleteGroup(cred, &outputGroup)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err, "group")
+		return errors.NewSystemUnableToUpdateError(err, "group", credInfo(context)...)
 	}
 	return nil
 }
 
-func (s *store) GroupInfo() (value.Value, errors.Error) {
-	sourceGroups, err := s.client.GroupInfo()
+func (s *store) GroupInfo(context datastore.QueryContext) (value.Value, errors.Error) {
+	sourceGroups, err := s.client.GroupInfo(context.Credential())
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "group information")
 	}
 	return value.NewValue(sourceGroups), nil
 }
 
-func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
-	sourceGroups, err := s.client.GetGroupInfoAll()
+func (s *store) GetGroupInfoAll(context datastore.QueryContext) ([]datastore.Group, errors.Error) {
+	sourceGroups, err := s.client.GetGroupInfoAll(context.Credential())
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "group information")
 	}
@@ -832,57 +871,218 @@ func (s *store) GetGroupInfoAll() ([]datastore.Group, errors.Error) {
 		roles := make([]datastore.Role, len(g.Roles))
 		for j, r := range g.Roles {
 			roles[j].Name = r.Role
-			if r.CollectionName != "" && r.CollectionName != "*" {
-				roles[j].Target = r.BucketName + ":" + r.ScopeName + ":" + r.CollectionName
-			} else if r.ScopeName != "" && r.ScopeName != "*" {
-				roles[j].Target = r.BucketName + ":" + r.ScopeName
-			} else if r.BucketName != "" {
-				roles[j].Target = r.BucketName
-			}
+			roles[j].Target, roles[j].SourceType = cbRoleTarget(r.Role, r.BucketName, r.ScopeName, r.CollectionName, r.CatalogName, r.CredentialId)
 		}
 		resultGroups[i].Roles = roles
 	}
 	return resultGroups, nil
 }
 
-func (s *store) CreateBucket(name string, with value.Value) errors.Error {
+func (s *store) CreateBucket(context datastore.QueryContext, name string, with value.Value) errors.Error {
 	withArg := with.CopyForUpdate().Actual().(map[string]interface{})
 	withArg["name"] = name
 	b, _ := json.Marshal(withArg)
 	var param map[string]interface{}
 	json.Unmarshal(b, &param)
-	err := s.client.CreateBucket(param)
+	cred := context.Credential()
+	err := s.client.CreateBucket(cred, param)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err, "bucket")
+		return errors.NewSystemUnableToUpdateError(err, "bucket", credInfo(context)...)
 	}
 	return nil
 }
 
-func (s *store) AlterBucket(name string, with value.Value) errors.Error {
+func (s *store) AlterBucket(context datastore.QueryContext, name string, with value.Value) errors.Error {
 	b, _ := json.Marshal(with)
 	var param map[string]interface{}
 	json.Unmarshal(b, &param)
-	err := s.client.AlterBucket(name, param)
+	cred := context.Credential()
+	err := s.client.AlterBucket(cred, name, param)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err, "bucket")
+		return errors.NewSystemUnableToUpdateError(err, "bucket", credInfo(context)...)
 	}
 	return nil
 }
 
-func (s *store) DropBucket(name string) errors.Error {
-	err := s.client.DropBucket(name)
+func (s *store) DropBucket(context datastore.QueryContext, name string) errors.Error {
+	cred := context.Credential()
+	err := s.client.DropBucket(cred, name)
 	if err != nil {
-		return errors.NewSystemUnableToUpdateError(err, "bucket")
+		return errors.NewSystemUnableToUpdateError(err, "bucket", credInfo(context)...)
 	}
 	return nil
 }
 
-func (s *store) BucketInfo() (value.Value, errors.Error) {
-	sourceBuckets, err := s.client.BucketInfo()
+func (s *store) BucketInfo(context datastore.QueryContext) (value.Value, errors.Error) {
+	sourceBuckets, err := s.client.BucketInfo(context.Credential())
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "bucket information")
 	}
 	return value.NewValue(sourceBuckets), nil
+}
+
+func (s *store) CreateCatalog(context datastore.QueryContext, name, catalogType, source, credential string, with value.Value) errors.Error {
+	var params map[string]any
+	if with != nil {
+		bytes, err := with.MarshalJSON()
+		if err == nil {
+			json.Unmarshal(bytes, &params)
+		}
+	}
+
+	err := s.client.CreateCatalog(context.Credential(), name, catalogType, source, credential, params)
+	if err != nil {
+		if cb.AlreadyExistsError(err) {
+			return errors.NewCbCatalogExistsError(name)
+		}
+		return errors.NewCbCatalogCreateError(name, err)
+	}
+	return nil
+}
+
+func (s *store) AlterCatalog(context datastore.QueryContext, name string, with value.Value) errors.Error {
+	var params map[string]any
+	if with != nil {
+		bytes, err := with.MarshalJSON()
+		if err == nil {
+			json.Unmarshal(bytes, &params)
+		}
+	}
+
+	err := s.client.AlterCatalog(context.Credential(), name, params)
+	if err != nil {
+		return errors.NewCbCatalogAlterError(name, err)
+	}
+	return nil
+}
+
+func (s *store) DropCatalog(context datastore.QueryContext, name string) errors.Error {
+	err := s.client.DropCatalog(context.Credential(), name)
+	if err != nil {
+		return errors.NewCbCatalogDropError(name, err)
+	}
+	return nil
+}
+
+func (s *store) GetCatalogs(ctx datastore.QueryContext, name string, infoFlags uint64) (value.Value, errors.Error) {
+	p, _ := s.NamespaceByName("default")
+	if p == nil {
+		return value.NewValue([]any{}), nil
+	}
+	ns := p.(*namespace)
+	ns.nslock.RLock()
+	catalogs := ns.externalCatalogs
+	ns.nslock.RUnlock()
+
+	if name != "" {
+		entry := catalogs[name]
+		if entry == nil {
+			return nil, nil
+		}
+		var catalogMap map[string]any
+		if extparams.GetAny(entry, &catalogMap) != nil {
+			return nil, nil
+		}
+		if infoFlags != 0 {
+			s.loadCatalogMetadata(ctx, catalogMap, infoFlags)
+		}
+		return value.NewValue(catalogMap), nil
+	}
+
+	result := make([]any, 0, len(catalogs))
+	for _, entry := range catalogs {
+		if entry == nil {
+			continue
+		}
+		var catalogMap map[string]any
+		if extparams.GetAny(entry, &catalogMap) != nil {
+			continue
+		}
+		if infoFlags != 0 {
+			s.loadCatalogMetadata(ctx, catalogMap, infoFlags)
+		}
+		result = append(result, catalogMap)
+	}
+	return value.NewValue(result), nil
+}
+
+func (s *store) loadCatalogMetadata(ctx datastore.QueryContext, catalogMap map[string]any, infoFlags uint64) {
+	credId, _ := catalogMap["credentialId"].(string)
+	if credId == "" {
+		return
+	}
+
+	cred, credErr := ctx.ExternalCredential(credId)
+	if credErr != nil || cred == nil {
+		return
+	}
+
+	// Convert to CatalogEntry for LoadCatalogMetadata
+	var entry extparams.CatalogEntry
+	if err := extparams.GetAny(catalogMap, &entry); err != nil {
+		return
+	}
+
+	// Load Iceberg catalog metadata (namespaces, tables)
+	deadline := time.Now().Add(external.IcebergScanTimeout)
+	if qd := ctx.GetReqDeadline(); !qd.IsZero() && qd.Before(deadline) {
+		deadline = qd
+	}
+	goCtx, cancel := go_context.WithDeadline(go_context.Background(), deadline)
+	defer cancel()
+	metadata, metaErr := external.LoadCatalogMetadata(goCtx, &entry, cred, infoFlags)
+	if metaErr != nil || metadata == nil {
+		return
+	}
+
+	// Convert metadata to map[string]any
+	var metaMap map[string]any
+	if extparams.GetAny(metadata, &metaMap) == nil {
+		catalogMap["metadata"] = metaMap
+	}
+}
+
+func (s *store) CreateCredentialStore(context datastore.QueryContext, name string, with value.Value) errors.Error {
+	var params map[string]any
+	if with != nil {
+		bytes, err := with.MarshalJSON()
+		if err == nil {
+			json.Unmarshal(bytes, &params)
+		}
+	}
+
+	err := s.client.CreateCredentialStore(context.Credential(), name, params)
+	if err != nil {
+		if cb.AlreadyExistsError(err) {
+			return errors.NewCbCredentialStoreExistsError(name)
+		}
+		return errors.NewCbCredentialStoreCreateError(name, err)
+	}
+	return nil
+}
+
+func (s *store) AlterCredentialStore(context datastore.QueryContext, name string, with value.Value) errors.Error {
+	var params map[string]any
+	if with != nil {
+		bytes, err := with.MarshalJSON()
+		if err == nil {
+			json.Unmarshal(bytes, &params)
+		}
+	}
+
+	err := s.client.AlterCredentialStore(context.Credential(), name, params)
+	if err != nil {
+		return errors.NewCbCredentialStoreAlterError(name, err)
+	}
+	return nil
+}
+
+func (s *store) DropCredentialStore(context datastore.QueryContext, name string) errors.Error {
+	err := s.client.DropCredentialStore(context.Credential(), name)
+	if err != nil {
+		return errors.NewCbCredentialStoreDropError(name, err)
+	}
+	return nil
 }
 
 func (s *store) SetClientConnectionSecurityConfig() (err error) {
@@ -1137,6 +1337,25 @@ func (s *store) manageTenant(bucket string) {
 	}
 }
 
+func (p *namespace) loadExternalCatalogsAndWatch() {
+	if p.name != "default" {
+		return
+	}
+	catalogs, uid, err := p.cbNamespace.GetExternalCatalogs()
+	if err != nil {
+		logging.Infof("Unable to retrieve external catalogs for pool %s: %v", p.name, err)
+	} else {
+		p.nslock.Lock()
+		p.externalCatalogs = catalogs
+		p.externalCatalogsManifestUid = uid
+		p.nslock.Unlock()
+		logging.Infof("Loaded external catalogs for pool %s uid %v", p.name, uid)
+	}
+	p.cbNamespace.RunPoolUpdater2(p.store.NamespaceUpdateCallback, func(name string, err error) {
+		logging.Infof("Pool updater for %s exited: %v", name, err)
+	})
+}
+
 func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 	cbpool, err := s.client.GetPool(name)
 	if err != nil {
@@ -1177,6 +1396,8 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 		keyspaceCache: make(map[string]*keyspaceEntry),
 	}
 
+	rv.loadExternalCatalogsAndWatch()
+
 	return &rv, nil
 }
 
@@ -1198,14 +1419,17 @@ func fullName(elems ...string) string {
 
 // a namespace represents a couchbase pool
 type namespace struct {
-	store         *store
-	name          string
-	cbNamespace   *cb.Pool
-	last          util.Time // last time we refreshed the pool
-	keyspaceCache map[string]*keyspaceEntry
-	version       uint64
-	lock          sync.RWMutex // lock to guard the keyspaceCache
-	nslock        sync.RWMutex // lock for this structure
+	store                          *store
+	name                           string
+	cbNamespace                    *cb.Pool
+	last                           util.Time // last time we refreshed the pool
+	version                        uint64
+	externalCatalogsManifestUid    uint64 // current external Catalogs manifest id
+	newexternalCatalogsManifestUid uint64 // announced external Catalogs manifest id
+	keyspaceCache                  map[string]*keyspaceEntry
+	externalCatalogs               map[string]*extparams.CatalogEntry
+	lock                           sync.RWMutex // lock to guard the keyspaceCache
+	nslock                         sync.RWMutex // lock for this structure
 }
 
 type keyspaceEntry struct {
@@ -1369,38 +1593,44 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	}
 	p.lock.RUnlock()
 	if keyspace != nil {
-
-		// shortcut if good, or only manifest needed
-		switch keyspace.flags {
-		case _NEEDS_MANIFEST:
-
+		manifestFlags := keyspace.flags & (_NEEDS_MANIFEST | _CATALOG_MANIFEST_CHANGED)
+		if keyspace.flags == 0 {
+			return keyspace, nil
+		} else if manifestFlags != 0 {
+			// shortcut if good, or only manifest needed
 			// avoid a race condition where we read a manifest while the uid is increased
 			// by the bucket update callback
 			for {
 				mani, err := keyspace.cbbucket.GetCollectionsManifest()
-				if err == nil {
+				externalMani, eErr := keyspace.cbbucket.GetExternalCollectionsManifest()
+				if err == nil && eErr == nil {
 
 					// see later: another case for shared optimistic locks.
 					// only the first one in gets to change scopes, every one else's work is wasted
-					scopes, defaultCollection := refreshScopesAndCollections(mani, keyspace)
+					scopes, defaultCollection := refreshScopesAndCollections(mani, externalMani, keyspace)
 
 					// if any other flag has been set in the interim, we go the reload route
 					keyspace.Lock()
-					if keyspace.flags == _NEEDS_MANIFEST {
+					if keyspace.flags == manifestFlags {
 
 						// another manifest arrived in the interim, and we've loaded the old one
 						// try again
-						if mani.Uid < keyspace.newCollectionsManifestUid {
+						if mani.Uid < keyspace.newCollectionsManifestUid ||
+							externalMani.Uid < keyspace.newExternalCollectionsManifestUid {
 							keyspace.Unlock()
 							continue
 						}
 
 						// do not update if somebody has already done it
-						if mani.Uid > keyspace.collectionsManifestUid ||
-							keyspace.collectionsManifestUid == _INVALID_MANIFEST_UID {
+						if keyspace.flags&_CATALOG_MANIFEST_CHANGED != 0 ||
+							mani.Uid > keyspace.collectionsManifestUid ||
+							keyspace.collectionsManifestUid == _INVALID_MANIFEST_UID ||
+							externalMani.Uid > keyspace.externalCollectionsManifestUid ||
+							keyspace.externalCollectionsManifestUid == _INVALID_MANIFEST_UID {
 							keyspace.collectionsManifestUid = mani.Uid
+							keyspace.externalCollectionsManifestUid = externalMani.Uid
 							keyspace.scopes = scopes
-							logging.Infof("Refreshed manifest for bucket %v id %v", name, mani.Uid)
+							logging.Infof("Refreshed manifest for bucket %v id %v (external %v)", name, mani.Uid, externalMani.Uid)
 
 							// if there's no scopes fall back to bucket access
 							if len(scopes) == 0 {
@@ -1416,12 +1646,10 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 						return keyspace, nil
 					}
 				} else {
-					logging.Infof("Unable to retrieve collections info for bucket %s: %v", name, err)
+					logging.Infof("Unable to retrieve collections info for bucket %s: %v, external(%v)", name, err, eErr)
 				}
 				break
 			}
-		case 0:
-			return keyspace, nil
 		}
 	}
 
@@ -1561,8 +1789,8 @@ func (p *namespace) KeyspaceById(id string) (datastore.Keyspace, errors.Error) {
 }
 
 // namespace implements KeyspaceMetadata
-func (p *namespace) MetadataVersion() uint64 {
-	return p.version
+func (p *namespace) MetadataVersion() (uint64, uint64) {
+	return p.version, p.externalCatalogsManifestUid
 }
 
 // ditto
@@ -1776,12 +2004,15 @@ func (p *namespace) reload2(newpool *cb.Pool, version *uint64) {
 
 	// ...MB-33185 let go of old pool when noone is accessing it
 	oldPool.Close()
+
+	p.loadExternalCatalogsAndWatch()
 }
 
 const (
-	_DELETED        = 1 << iota // this bucket no longer exists
-	_NEEDS_REFRESH              // received error that indicates the bucket needs refreshing
-	_NEEDS_MANIFEST             // scopes or collections changed
+	_DELETED                  = 1 << iota // this bucket no longer exists
+	_NEEDS_REFRESH                        // received error that indicates the bucket needs refreshing
+	_NEEDS_MANIFEST                       // scopes or collections changed
+	_CATALOG_MANIFEST_CHANGED             // catalog manifest changed
 )
 
 const _INVALID_MANIFEST_UID = math.MaxUint64
@@ -1801,11 +2032,13 @@ type keyspace struct {
 	chkIndex       chkIndexDict
 	indexersLoaded bool
 
-	collectionsManifestUid    uint64            // current manifest id
-	newCollectionsManifestUid uint64            // announced manifest id
-	scopes                    map[string]*scope // scopes by id
-	defaultCollection         datastore.Keyspace
-	last                      util.Time // last refresh
+	collectionsManifestUid            uint64            // current manifest id
+	newCollectionsManifestUid         uint64            // announced manifest id
+	externalCollectionsManifestUid    uint64            // current external manifest id
+	newExternalCollectionsManifestUid uint64            // announced external manifest id
+	scopes                            map[string]*scope // scopes by id
+	defaultCollection                 datastore.Keyspace
+	last                              util.Time // last refresh
 }
 
 var _NO_SCOPES map[string]*scope = map[string]*scope{}
@@ -1861,22 +2094,25 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 
 	rv.scopes = _NO_SCOPES
 	mani, err := cbbucket.GetCollectionsManifest()
-	if err == nil {
+	externalMani, eErr := cbbucket.GetExternalCollectionsManifest()
+	if err == nil && eErr == nil {
 		rv.collectionsManifestUid = mani.Uid
-		rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, rv)
-		logging.Infof("Loaded manifest for bucket %v id %v", name, mani.Uid)
+		rv.externalCollectionsManifestUid = externalMani.Uid
+		rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, externalMani, rv)
+		logging.Infof("Loaded manifest for bucket %v id %v external(%v)", name, mani.Uid, externalMani.Uid)
 	} else {
 		level := logging.INFO
 		// if we're a bit early and the data service is still starting up we may key a KEY_NOENT result here
 		// don't write this to the log so that we don't cause any alarm
-		if strings.Contains(err.Error(), "status=KEY_ENOENT, opcode=0x89") {
+		if err != nil && strings.Contains(err.Error(), "status=KEY_ENOENT, opcode=0x89") {
 			level = logging.DEBUG
 		}
-		logging.Logf(level, "Unable to retrieve collections info for bucket %s: %v", name, err)
+		logging.Logf(level, "Unable to retrieve collections info for bucket %s: %v (external %v)", name, err, eErr)
 		// set collectionsManifestUid to _INVALID_MANIFEST_UID such that if collection becomes
 		// available (e.g. after legacy node is removed from cluster during rolling upgrade)
 		// it'll trigger a refresh of collection manifest
 		rv.collectionsManifestUid = _INVALID_MANIFEST_UID
+		rv.externalCollectionsManifestUid = _INVALID_MANIFEST_UID
 	}
 
 	// if we don't have any scope (not even default) revert to old style keyspace
@@ -1955,6 +2191,16 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket, msgPrefix string) 
 				checkSysBucket = true
 			}
 		}
+		eUid, _ := strconv.ParseUint(bucket.ExternalCollectionsManifestUid, 16, 64)
+		if ks.cbKeyspace.externalCollectionsManifestUid != eUid {
+			if ks.cbKeyspace.externalCollectionsManifestUid == _INVALID_MANIFEST_UID {
+				logging.Infof("%s received external manifest id %v", msgPrefix, eUid)
+			} else {
+				logging.Infof("%s switching external manifest id from %v to %v", msgPrefix, ks.cbKeyspace.externalCollectionsManifestUid, eUid)
+			}
+			ks.cbKeyspace.flags |= _NEEDS_MANIFEST
+			ks.cbKeyspace.newExternalCollectionsManifestUid = eUid
+		}
 
 		var missingCapabilities map[string]datastore.Migration
 		if len(ks.cbKeyspace.cbbucket.Capabilities) != len(bucket.Capabilities) {
@@ -2005,6 +2251,56 @@ func (p *namespace) KeyspaceUpdateCallback(bucket *cb.Bucket, msgPrefix string) 
 	return ret
 }
 
+// Called by primitives/couchbase if the pool is updated
+func (s *store) NamespaceUpdateCallback(externalCatalogsManifestUid uint64, msgPrefix string) bool {
+	s.nslock.RLock()
+	ns, ok := s.namespaceCache["default"]
+	s.nslock.RUnlock()
+	if !ok || ns == nil {
+		return true
+	}
+
+	ns.nslock.RLock()
+	currentUid := ns.externalCatalogsManifestUid
+	changed := ns.externalCatalogsManifestUid == 0 || externalCatalogsManifestUid > ns.externalCatalogsManifestUid
+	pool := ns.cbNamespace
+	ns.nslock.RUnlock()
+
+	if !changed {
+		return true
+	}
+
+	if currentUid == 0 {
+		logging.Infof("%s received external catalogs manifest id %v", externalCatalogsManifestUid)
+	} else {
+		logging.Infof("%s switching external catalogs manifest id from %v to %v", msgPrefix,
+			currentUid, externalCatalogsManifestUid)
+	}
+
+	catalogs, uid, err := pool.GetExternalCatalogs()
+	if err != nil {
+		logging.Errorf("%s failed to get external catalogs: %v", msgPrefix, err)
+		return true
+	}
+
+	ns.nslock.Lock()
+	ns.externalCatalogs = catalogs
+	ns.externalCatalogsManifestUid = uid
+	ns.nslock.Unlock()
+
+	ns.lock.Lock()
+	for _, entry := range ns.keyspaceCache {
+		if entry.cbKeyspace != nil {
+			entry.cbKeyspace.Lock()
+			entry.cbKeyspace.flags |= _CATALOG_MANIFEST_CHANGED
+			entry.cbKeyspace.Unlock()
+		}
+	}
+	ns.lock.Unlock()
+
+	return true
+}
+
 func (b *keyspace) MarshalJSON() ([]byte, error) {
 	return json.Marshal(b.cbbucket)
 }
@@ -2052,14 +2348,14 @@ func (b *keyspace) Uid() string {
 }
 
 // keyspace (as a bucket) implements KeyspaceMetadata
-func (b *keyspace) MetadataVersion() uint64 {
+func (b *keyspace) MetadataVersion() (uint64, uint64) {
 
 	// this bucket doesn't exist anymore or it needs a new manifest:
 	// fail any quick prepared verify, and force a full one instead
-	if b.flags&(_DELETED|_NEEDS_MANIFEST) != 0 {
-		return math.MaxUint64
+	if b.flags&(_DELETED|_NEEDS_MANIFEST|_CATALOG_MANIFEST_CHANGED) != 0 {
+		return math.MaxUint64, math.MaxUint64
 	}
-	return b.collectionsManifestUid
+	return b.collectionsManifestUid, b.externalCollectionsManifestUid
 }
 
 // ditto
@@ -3298,8 +3594,8 @@ func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
 	return nil, errors.NewCbScopeNotFoundError(nil, fullName(ks.namespace.name, ks.name, name))
 }
 
-func (ks *keyspace) CreateScope(name string) errors.Error {
-	err := ks.cbbucket.CreateScope(name)
+func (ks *keyspace) CreateScope(context datastore.QueryContext, name string) errors.Error {
+	err := ks.cbbucket.CreateScope(context.Credential(), name)
 	if err != nil {
 		return errors.NewCbBucketCreateScopeError(fullName(ks.namespace.name, ks.name, name), err)
 	}
@@ -3307,8 +3603,8 @@ func (ks *keyspace) CreateScope(name string) errors.Error {
 	return nil
 }
 
-func (ks *keyspace) DropScope(name string) errors.Error {
-	err := ks.cbbucket.DropScope(name)
+func (ks *keyspace) DropScope(context datastore.QueryContext, name string) errors.Error {
+	err := ks.cbbucket.DropScope(context.Credential(), name)
 	if err != nil {
 		return errors.NewCbBucketDropScopeError(fullName(ks.namespace.name, ks.name, name), err)
 	}
@@ -3320,7 +3616,7 @@ func (ks *keyspace) DropScope(name string) errors.Error {
 	return nil
 }
 
-func (ks *keyspace) Flush() errors.Error {
+func (ks *keyspace) Flush(context datastore.QueryContext) errors.Error {
 	return errors.NewNoFlushError(ks.name)
 }
 
@@ -3330,6 +3626,15 @@ func (b *keyspace) IsBucket() bool {
 
 func (b *keyspace) IsSystemCollection() bool {
 	return false
+}
+
+func (b *keyspace) IsExternalCollection() bool {
+	return false
+}
+
+func (b *keyspace) ExternalScan(params *datastore.ExternalScanParams, context datastore.QueryContext,
+	conn *datastore.IndexConnection) {
+	conn.Fatal(errors.NewDatastoreExternalCollectionError(nil, "ExternalScan not supported on bucket keyspaces", nil))
 }
 
 func (ks *keyspace) getDefaultCid() (uint32, bool) {

@@ -397,33 +397,65 @@ func NewRoleNotFoundError(role string) Error {
 		InternalMsg: fmt.Sprintf("Role %s is not valid.", role), InternalCaller: CallerN(1)}
 }
 
-func NewRoleAlreadyPresent(what string, id string, role string, target string) Error {
+func NewRoleRequiresCatalogError(role string) Error {
+	c := make(map[string]interface{})
+	c["role"] = role
+	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_CATALOG, IKey: "execution.role_requires_catalog", cause: c,
+		InternalMsg: fmt.Sprintf("Role %s requires a catalog name.", role), InternalCaller: CallerN(1)}
+}
+
+func NewRoleRequiresCredentialStoreError(role string) Error {
+	c := make(map[string]interface{})
+	c["role"] = role
+	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_CREDENTIALSTORE, IKey: "execution.role_requires_credentialstore", cause: c,
+		InternalMsg: fmt.Sprintf("Role %s requires a credential store name.", role), InternalCaller: CallerN(1)}
+}
+
+func NewRoleAlreadyPresent(what string, id string, role string, target string, sourceType string) Error {
 	var msg string
 	c := make(map[string]interface{})
 	c["role"] = role
 	c["id"] = id
 	c["what"] = strings.ToLower(what)
+	if sourceType == "" {
+		c["sourceType"] = "keyspace"
+	} else {
+		c["sourceType"] = sourceType
+	}
 	if target == "" {
 		msg = fmt.Sprintf("%s %s already has role %s.", what, id, role)
 	} else {
 		msg = fmt.Sprintf("%s %s already has role %s on %s.", what, id, role, strings.ReplaceAll(target, ":", "."))
-		c["path"] = strings.Split("default:"+target, ":")
+		if sourceType == "" {
+			c["path"] = strings.Split("default:"+target, ":")
+		} else {
+			c["path"] = target
+		}
 	}
 	return &err{level: WARNING, ICode: W_ROLE_ALREADY_PRESENT, IKey: "execution.role_already_present",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewRoleNotPresent(what string, id string, role string, target string) Error {
+func NewRoleNotPresent(what string, id string, role string, target string, sourceType string) Error {
 	var msg string
 	c := make(map[string]interface{})
 	c["role"] = role
 	c["id"] = id
 	c["what"] = strings.ToLower(what)
+	if sourceType == "" {
+		c["sourceType"] = "keyspace"
+	} else {
+		c["sourceType"] = sourceType
+	}
 	if target == "" {
 		msg = fmt.Sprintf("%s %s did not have role %s.", what, id, role)
 	} else {
 		msg = fmt.Sprintf("%s %s did not have role %s on %s.", what, id, role, strings.ReplaceAll(target, ":", "."))
-		c["path"] = strings.Split("default:"+target, ":")
+		if sourceType == "" {
+			c["path"] = strings.Split("default:"+target, ":")
+		} else {
+			c["path"] = target
+		}
 	}
 	return &err{level: WARNING, ICode: W_ROLE_NOT_PRESENT, IKey: "execution.role_not_present",
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}

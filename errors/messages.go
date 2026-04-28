@@ -2586,6 +2586,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_EMPTY_REQUIRED_FIELD, // 3500
+		symbol:      "E_EMPTY_REQUIRED_FIELD",
+		Description: "A required field is empty in the DDL statement.",
+		Reason: []string{
+			"A required field was not specified or was empty in a DDL statement.",
+		},
+		Action: []string{
+			"Ensure all required fields are specified with non-empty values.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PLAN, // 4000
 		symbol:      "E_PLAN",
 		Description: "A planning error occurred.",
@@ -4183,6 +4198,36 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_ROLE_REQUIRES_CATALOG, // 5251
+		symbol:      "E_ROLE_REQUIRES_CATALOG",
+		Description: "Catalog role «role» requires a catalog name.",
+		Reason: []string{
+			"A catalog role was specified without a catalog name in a grant or revoke statement.",
+		},
+		Action: []string{
+			"Specify a catalog name with the ON clause.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_ROLE_REQUIRES_CREDENTIALSTORE, // 5252
+		symbol:      "E_ROLE_REQUIRES_CREDENTIALSTORE",
+		Description: "Credential store role «role» requires a credential store name.",
+		Reason: []string{
+			"A credential store role was specified without a credential store name in a grant or revoke statement.",
+		},
+		Action: []string{
+			"Specify a credential store name with the ON clause.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        W_ROLE_ALREADY_PRESENT, // 5260
 		symbol:      "W_ROLE_ALREADY_PRESENT",
 		Description: "User «name» already has role «role» «bucket»",
@@ -5537,16 +5582,16 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_BUCKET_UPDATER_MAX_ERRORS, // 10300
-		symbol:      "E_BUCKET_UPDATER_MAX_ERRORS",
+		Code:        E_UPDATER_MAX_ERRORS, // 10300
+		symbol:      "E_UPDATER_MAX_ERRORS",
 		Description: "Max failures reached. Last error: «error»",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket in the node encountered more failures than the " +
+			"The process responsible for synchronising changes to the bucket or pool in the node encountered more failures than the " +
 				"maximum tolerated.",
-			"The bucket was dropped outside of the node and the synchronisation endpoint was no longer available.",
+			"The bucket or pool was dropped outside of the node and the synchronisation endpoint was no longer available.",
 		},
 		Action: []string{
-			"If the bucket was dropped this error is expected.",
+			"If the bucket or pool was dropped this error is expected.",
 			"Contact support.",
 		},
 		AppliesTo: []string{
@@ -5554,12 +5599,12 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_BUCKET_UPDATER_NO_HEALTHY_NODES, // 10301
-		symbol:      "E_BUCKET_UPDATER_NO_HEALTHY_NODES",
+		Code:        E_UPDATER_NO_HEALTHY_NODES, // 10301
+		symbol:      "E_UPDATER_NO_HEALTHY_NODES",
 		Description: "No healthy nodes found.",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket was unable to find a healthy node on which to find " +
-				"the bucket.",
+			"The process responsible for synchronising changes to the bucket or pool was unable to find a healthy node on which to find " +
+				"the bucket or pool.",
 		},
 		Action: []string{
 			"Contact support.",
@@ -5569,11 +5614,11 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_BUCKET_UPDATER_STREAM_ERROR, // 10302
-		symbol:      "E_BUCKET_UPDATER_STREAM_ERROR",
+		Code:        E_UPDATER_STREAM_ERROR, // 10302
+		symbol:      "E_UPDATER_STREAM_ERROR",
 		Description: "Streaming error",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket encountered an error reading the information " +
+			"The process responsible for synchronising changes to the bucket or pool encountered an error reading the information " +
 				"stream from the orchestrator.",
 		},
 		Action: []string{
@@ -5584,11 +5629,11 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_BUCKET_UPDATER_AUTH_ERROR, // 10303
-		symbol:      "E_BUCKET_UPDATER_AUTH_ERROR",
+		Code:        E_UPDATER_AUTH_ERROR, // 10303
+		symbol:      "E_UPDATER_AUTH_ERROR",
 		Description: "Authentication error: «details»",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket failed to connect to the orchestrator.",
+			"The process responsible for synchronising changes to the bucket or pool failed to connect to the orchestrator.",
 		},
 		Action: []string{
 			"Contact support.",
@@ -5598,11 +5643,11 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_BUCKET_UPDATER_CONNECTION_FAILED, // 10304
-		symbol:      "E_BUCKET_UPDATER_CONNECTION_FAILED",
+		Code:        E_UPDATER_CONNECTION_FAILED, // 10304
+		symbol:      "E_UPDATER_CONNECTION_FAILED",
 		Description: "Failed to connect to host.",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket failed to connect to the orchestrator.",
+			"The process responsible for synchronising changes to the bucket or pool failed to connect to the orchestrator.",
 		},
 		Action: []string{
 			"Contact support.",
@@ -5612,8 +5657,8 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_BUCKET_UPDATER_ERROR_MAPPING, // 10305
-		symbol:      "E_BUCKET_UPDATER_ERROR_MAPPING",
+		Code:        E_UPDATER_ERROR_MAPPING, // 10305
+		symbol:      "E_UPDATER_ERROR_MAPPING",
 		Description: "Mapping error: «details»",
 		Action: []string{
 			"Contact support.",
@@ -5623,16 +5668,16 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_BUCKET_UPDATER_EP_NOT_FOUND, // 10306
-		symbol:      "E_BUCKET_UPDATER_EP_NOT_FOUND",
+		Code:        E_UPDATER_EP_NOT_FOUND, // 10306
+		symbol:      "E_UPDATER_EP_NOT_FOUND",
 		Description: "Streaming endpoint not found",
 		Reason: []string{
-			"The process responsible for synchronising changes to the bucket in the node was unable to find the orchestrator " +
-				"endpoint for the bucket.",
-			"The bucket was dropped outside of the node and the synchronisation endpoint was no longer available.",
+			"The process responsible for synchronising changes to the bucket or pool in the node was unable to find the orchestrator " +
+				"endpoint for the bucket or pool.",
+			"The bucket or pool was dropped outside of the node and the synchronisation endpoint was no longer available.",
 		},
 		Action: []string{
-			"If the bucket was dropped this error is expected.",
+			"If the bucket or pool was dropped this error is expected.",
 			"Contact support.",
 		},
 		AppliesTo: []string{
@@ -6496,6 +6541,201 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Review the statement and ensure bucket names are unique.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CATALOG_EXISTS, // 12051
+		symbol:      "E_CB_CATALOG_EXISTS",
+		Description: "Catalog «catalog» already exists.",
+		Reason: []string{
+			"A CREATE CATALOG statement attempted to create a catalog that already existed.",
+		},
+		Action: []string{
+			"Review the statement and ensure catalog names are unique.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CATALOG_NOT_FOUND, // 12052
+		symbol:      "E_CB_CATALOG_NOT_FOUND",
+		Description: "Catalog «catalog» not found.",
+		Reason: []string{
+			"The specified catalog does not exist.",
+		},
+		Action: []string{
+			"Review the statement and ensure the catalog name is correct.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CATALOG_CREATE, // 12053
+		symbol:      "E_CB_CATALOG_CREATE",
+		Description: "Error while creating catalog «catalog».",
+		Reason: []string{
+			"An error occurred while attempting to create the catalog.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CATALOG_ALTER, // 12054
+		symbol:      "E_CB_CATALOG_ALTER",
+		Description: "Error while altering catalog «catalog».",
+		Reason: []string{
+			"An error occurred while attempting to alter the catalog.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CATALOG_DROP, // 12055
+		symbol:      "E_CB_CATALOG_DROP",
+		Description: "Error while dropping catalog «catalog».",
+		Reason: []string{
+			"An error occurred while attempting to drop the catalog.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CATALOG_GET, // 12056
+		symbol:      "E_CB_CATALOG_GET",
+		Description: "Error while getting catalogs.",
+		Reason: []string{
+			"An error occurred while attempting to retrieve catalog information.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CREDENTIALSTORE_EXISTS, // 12057
+		symbol:      "E_CB_CREDENTIALSTORE_EXISTS",
+		Description: "Credential store «credentialStore» already exists.",
+		Reason: []string{
+			"A CREATE CREDENTIALSTORE statement attempted to create a credential store that already existed.",
+		},
+		Action: []string{
+			"Review the statement and ensure credential store names are unique.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CREDENTIALSTORE_NOT_FOUND, // 12058
+		symbol:      "E_CB_CREDENTIALSTORE_NOT_FOUND",
+		Description: "Credential store «credentialStore» not found.",
+		Reason: []string{
+			"The specified credential store does not exist.",
+		},
+		Action: []string{
+			"Review the statement and ensure the credential store name is correct.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CREDENTIALSTORE_CREATE, // 12059
+		symbol:      "E_CB_CREDENTIALSTORE_CREATE",
+		Description: "Error while creating credential store «credentialStore».",
+		Reason: []string{
+			"An error occurred while attempting to create the credential store.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CREDENTIALSTORE_ALTER, // 12060
+		symbol:      "E_CB_CREDENTIALSTORE_ALTER",
+		Description: "Error while altering credential store «credentialStore».",
+		Reason: []string{
+			"An error occurred while attempting to alter the credential store.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_CREDENTIALSTORE_DROP, // 12061
+		symbol:      "E_CB_CREDENTIALSTORE_DROP",
+		Description: "Error while dropping credential store «credentialStore».",
+		Reason: []string{
+			"An error occurred while attempting to drop the credential store.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_BUCKET_ALTER_COLLECTION, // 12063
+		symbol:      "E_CB_BUCKET_ALTER_COLLECTION",
+		Description: "Error while altering collection «name»",
+		Reason: []string{
+			"An error occurred while attempting to alter the collection.",
+		},
+		Action: []string{
+			"Review the error details and retry the operation.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_CB_EXTERNAL_COLLECTION, // 12056
+		symbol:      "E_CB_EXTERNAL_COLLECTION",
+		Description: "External collection error.",
+		Reason: []string{
+			"An error occurred while accessing an external collection.",
+		},
+		Action: []string{
+			"Review the error details and ensure the external collection is properly configured.",
 		},
 		IsUser: YES,
 		AppliesTo: []string{

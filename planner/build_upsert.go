@@ -19,7 +19,7 @@ func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 
-	keyspace, err := this.getNameKeyspace(ksref, true)
+	keyspace, err := this.getNameKeyspace(ksref, true, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}

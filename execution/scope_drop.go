@@ -61,7 +61,7 @@ func (this *DropScope) RunOnce(context *Context, parent value.Value) {
 
 		// Actually drop scope
 		this.switchPhase(_SERVTIME)
-		err := this.plan.Bucket().DropScope(this.plan.Node().Name())
+		err := this.plan.Bucket().DropScope(context, this.plan.Node().Name())
 		if err != nil {
 			if !errors.IsScopeNotFoundError(err) || this.plan.Node().FailIfNotExists() {
 				context.Error(err)

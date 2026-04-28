@@ -27,6 +27,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
@@ -48,6 +49,14 @@ const (
 	CURRENT_BACKUP_VERSION = 0
 	BACKUP_VERSION_1       = 1
 	BACKUP_VERSION_2       = 2
+)
+
+// CatalogInfoFlags controls which metadata sections are loaded from an external catalog.
+const (
+	CatalogInfoSchema    uint64 = 1 << iota // load column schema
+	CatalogInfoSnapshots                    // load snapshot history
+	CatalogInfoFiles                        // load data file list
+	CatalogInfoAll       uint64 = CatalogInfoSchema | CatalogInfoSnapshots | CatalogInfoFiles
 )
 
 // Datastore represents a cluster or single-node server.
@@ -103,33 +112,45 @@ type Systemstore interface {
 }
 
 // CouchbaseDatastore is an interface that extends Datastore with Couchbase-specific
-// user, group, role, and bucket management methods. Only Couchbase datastores implement this interface.
+// User, Group, Role, Bucket, Catalog and Credential Store management methods.
+// Only Couchbase datastores implement this interface.
 type CouchbaseDatastore interface {
 	Datastore
 	// User management methods
-	UserInfo() (value.Value, errors.Error)  // The users, and their roles. JSON data.
-	GetUserInfoAll() ([]User, errors.Error) // Get information about all the users.
-	PutUserInfo(u *User) errors.Error       // Set information for a specific user.
-	DeleteUser(u *User) errors.Error        // Delete a user
-	GetUserInfo(u *User) errors.Error       // Get a single user's info
-	GetRolesAll() ([]Role, errors.Error)    // Get all roles that exist in the system.
+	UserInfo(context QueryContext) (value.Value, errors.Error)  // The users, and their roles. JSON data.
+	GetUserInfoAll(context QueryContext) ([]User, errors.Error) // Get information about all the users.
+	PutUserInfo(context QueryContext, u *User) errors.Error     // Set information for a specific user.
+	DeleteUser(context QueryContext, u *User) errors.Error      // Delete a user
+	GetUserInfo(context QueryContext, u *User) errors.Error     // Get a single user's info
+	GetRolesAll(context QueryContext) ([]Role, errors.Error)    // Get all roles that exist in the system.
 
 	// Group management methods
-	GetGroupInfo(g *Group) errors.Error
-	PutGroupInfo(g *Group) errors.Error
-	DeleteGroup(g *Group) errors.Error
-	GroupInfo() (value.Value, errors.Error)
-	GetGroupInfoAll() ([]Group, errors.Error)
+	GetGroupInfo(context QueryContext, g *Group) errors.Error
+	PutGroupInfo(context QueryContext, g *Group) errors.Error
+	DeleteGroup(context QueryContext, g *Group) errors.Error
+	GroupInfo(context QueryContext) (value.Value, errors.Error)
+	GetGroupInfoAll(context QueryContext) ([]Group, errors.Error)
 
 	// Bucket management methods
-	CreateBucket(string, value.Value) errors.Error
-	AlterBucket(string, value.Value) errors.Error
-	DropBucket(string) errors.Error
-	BucketInfo() (value.Value, errors.Error)
+	CreateBucket(context QueryContext, name string, with value.Value) errors.Error
+	AlterBucket(context QueryContext, name string, with value.Value) errors.Error
+	DropBucket(context QueryContext, name string) errors.Error
+	BucketInfo(context QueryContext) (value.Value, errors.Error)
 
 	// Encryption key management methods
 	EncryptionProvider() encryption.EncryptionProvider
 	SetEncryptionProvider(encryptionProvider encryption.EncryptionProvider)
+
+	// Catalog management methods
+	CreateCatalog(context QueryContext, name, catalogType, source, credential string, with value.Value) errors.Error
+	AlterCatalog(context QueryContext, name string, with value.Value) errors.Error
+	DropCatalog(context QueryContext, name string) errors.Error
+	GetCatalogs(context QueryContext, name string, infoFlags uint64) (value.Value, errors.Error)
+
+	// CredentialStore management methods
+	CreateCredentialStore(context QueryContext, name string, with value.Value) errors.Error
+	AlterCredentialStore(context QueryContext, name string, with value.Value) errors.Error
+	DropCredentialStore(context QueryContext, name string) errors.Error
 }
 
 type Datastore2 interface {
@@ -212,8 +233,8 @@ type Bucket interface {
 	ScopeById(name string) (Scope, errors.Error)   // Find a scope in this bucket using the scope's id
 	ScopeByName(name string) (Scope, errors.Error) // Find a scope in this bucket using the scope's name
 
-	CreateScope(name string) errors.Error // Create a new scope
-	DropScope(name string) errors.Error   // Drop a scope
+	CreateScope(context QueryContext, name string) errors.Error // Create a new scope
+	DropScope(context QueryContext, name string) errors.Error   // Drop a scope
 }
 type ExtendedBucket interface {
 	Bucket
@@ -237,8 +258,9 @@ type Scope interface {
 	KeyspaceById(name string) (Keyspace, errors.Error)   // Find a keyspace in this scope using the keyspace's id
 	KeyspaceByName(name string) (Keyspace, errors.Error) // Find a keyspace in this scope using the keyspace's name
 
-	CreateCollection(name string, with value.Value) errors.Error // Create a new collection
-	DropCollection(name string) errors.Error                     // Drop a collection
+	CreateCollection(context QueryContext, name, catalog, credential string, with value.Value) errors.Error // Create a new collection
+	AlterCollection(context QueryContext, name string, with value.Value) errors.Error                       // Alter a collection
+	DropCollection(context QueryContext, name string) errors.Error                                          // Drop a collection
 }
 
 // Keyspace is a map of key-value entries (typically key-document, but
@@ -310,11 +332,42 @@ type Keyspace interface {
 
 	SetSubDoc(key string, elems value.Pairs, context QueryContext) (value.Pairs, errors.Error)
 
-	Flush() errors.Error // For flush collection
+	Flush(context QueryContext) errors.Error // For flush collection
 	IsBucket() bool
 	Release(close bool) // Release any resources held by this object
 
 	IsSystemCollection() bool
+	IsExternalCollection() bool
+
+	// ExternalScan scans an external collection (e.g., Iceberg tables)
+	ExternalScan(params *ExternalScanParams, context QueryContext, conn *IndexConnection)
+}
+
+// ExternalScanParams carries all parameters for an external collection scan.
+// Stable fields (SnapshotId, Alias, Projection, ResultObject, ErrTemplate) are set
+// once on first use. Per-iteration fields (Filter, Parent, RequestId) are updated
+// each NL-join iteration. Infrastructure fields (CatalogCred, CollectionCred,
+// ScanCatalog) accumulate after the first scan and are reused by subsequent ones.
+type ExternalScanParams struct {
+	RequestId         string
+	Filter            expression.Expression
+	SnapshotId        string
+	SnapshotTimestamp string
+	Limit             int64
+	Offset            int64
+	Alias             string
+	Projection        []string
+	ResultObject      map[string]any
+	ErrTemplate       map[string]any
+	CatalogCred       *cbauth.Credential
+	CollectionCred    *cbauth.Credential
+	Parent            value.Value
+	// ScanCatalog holds the live catalog.Catalog client. Type is any to avoid import cycle.
+	ScanCatalog any
+	// ExternalEntry caches the collection metadata pointer. Type is any to avoid import cycle.
+	ExternalEntry any
+	// ScanOptions holds the scan options built on first scan. Type is any to avoid import cycle.
+	ScanOptions any
 }
 
 // sequential scan
@@ -399,8 +452,8 @@ const (
 )
 
 type KeyspaceMetadata interface {
-	MetadataVersion() uint64 // A counter that shows the current version of the list of objects contained within
-	MetadataId() string      // A unique identifier across all of the stores. We choose the path of the object
+	MetadataVersion() (uint64, uint64) // A counter that shows the current version of the list of objects contained within
+	MetadataId() string                // A unique identifier across all of the stores. We choose the path of the object
 }
 
 // migration infrastructure
@@ -817,10 +870,18 @@ type User struct {
 	Groups   []string
 }
 
+// Source type constants for role grant/revoke (same as algebra)
+const (
+	SOURCE_KEYSPACE        = ""
+	SOURCE_CATALOG         = "catalog"
+	SOURCE_CREDENTIALSTORE = "credentialstore"
+)
+
 type Role struct {
-	Name    string
-	Target  string
-	IsScope bool
+	Name       string
+	Target     string
+	IsScope    bool
+	SourceType string
 }
 
 type Group struct {

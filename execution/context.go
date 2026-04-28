@@ -84,6 +84,7 @@ const (
 	INDEX_SCAN_CVI
 	INDEX_SCAN_HVI
 	FTS_SEARCH_SVI
+	EXTERNAL_SCAN
 
 	// Expression layer
 	ADVISOR
@@ -152,6 +153,7 @@ var _PHASE_NAMES = []string{
 	INDEX_SCAN_CVI:   "indexScan.CVI",
 	INDEX_SCAN_HVI:   "indexScan.HVI",
 	FTS_SEARCH_SVI:   "ftsSearch.SVI",
+	EXTERNAL_SCAN:    "externalScan",
 
 	ADVISOR: "advisor",
 

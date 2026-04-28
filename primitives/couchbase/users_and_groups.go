@@ -12,6 +12,9 @@ package couchbase
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/couchbase/cbauth"
+	"github.com/couchbase/query/auth"
 )
 
 type User struct {
@@ -25,9 +28,12 @@ type User struct {
 
 type Role struct {
 	Role           string
+	SourceType     string `json:"sourceType"`
 	BucketName     string `json:"bucket_name"`
 	ScopeName      string `json:"scope_name"`
 	CollectionName string `json:"collection_name"`
+	CredentialId   string `json:"credential_id"`
+	CatalogName    string `json:"catalog_name"`
 }
 
 type Group struct {
@@ -41,22 +47,24 @@ type Group struct {
 // {"role":"query_select","bucket_name":"*","name":"Query Select","desc":"Can execute SELECT statement on bucket to retrieve data"}
 type RoleDescription struct {
 	Role           string
+	SourceType     string `json:"sourceType"`
 	Name           string
 	Desc           string
 	Ce             bool
 	BucketName     string `json:"bucket_name"`
 	ScopeName      string `json:"scope_name"`
 	CollectionName string `json:"collection_name"`
+	CredentialId   string `json:"credential_id"`
+	CatalogName    string `json:"catalog_name"`
 }
 
-// Return user-role data, as parsed JSON.
 // Sample:
 //
 //	[{"id":"ivanivanov","name":"Ivan Ivanov","roles":[{"role":"cluster_admin"},{"bucket_name":"default","role":"bucket_admin"}]},
 //	 {"id":"petrpetrov","name":"Petr Petrov","roles":[{"role":"replication_admin"}]}]
-func (c *Client) GetUserRoles() ([]interface{}, error) {
+func (c *Client) GetUserRoles(cred cbauth.Creds) ([]interface{}, error) {
 	ret := make([]interface{}, 0, 1)
-	err := c.parseURLResponse("/settings/rbac/users", &ret)
+	err := c.parseURLResponse("/settings/rbac/users", cred, &ret)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +72,7 @@ func (c *Client) GetUserRoles() ([]interface{}, error) {
 	// Get the configured administrator.
 	// Expected result: {"port":8091,"username":"Administrator"}
 	adminInfo := make(map[string]interface{}, 2)
-	err = c.parseURLResponse("/settings/web", &adminInfo)
+	err = c.parseURLResponse("/settings/web", cred, &adminInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -87,11 +95,18 @@ func (c *Client) GetUserRoles() ([]interface{}, error) {
 	return ret, nil
 }
 
-func (c *Client) GetUserInfoAll() ([]User, error) {
+func (c *Client) GetUserInfoAll(cred cbauth.Creds) ([]User, error) {
 	ret := make([]User, 0, 16)
-	err := c.parseURLResponse("/settings/rbac/users", &ret)
+	err := c.parseURLResponse("/settings/rbac/users", cred, &ret)
 	if err != nil {
 		return nil, err
+	}
+	// Set SourceType for each role based on role name
+	for i := range ret {
+		for j := range ret[i].Roles {
+			_, sourceType := auth.RoleToAliasSource(ret[i].Roles[j].Role)
+			ret[i].Roles[j].SourceType = sourceType
+		}
 	}
 	return ret, nil
 }
@@ -103,16 +118,39 @@ func rolesToParamFormat(roles []Role) string {
 			buffer.WriteString(",")
 		}
 		buffer.WriteString(role.Role)
-		if role.BucketName != "" {
-			buffer.WriteString("[")
-			buffer.WriteString(role.BucketName)
-			buffer.WriteString("]")
+		switch role.SourceType {
+		case auth.SOURCE_CATALOG:
+			if role.CatalogName != "" {
+				buffer.WriteString("[")
+				buffer.WriteString(role.CatalogName)
+				buffer.WriteString("]")
+			}
+		case auth.SOURCE_CREDENTIALSTORE:
+			if role.CredentialId != "" {
+				buffer.WriteString("[")
+				buffer.WriteString(role.CredentialId)
+				buffer.WriteString("]")
+			}
+		default: // keyspace
+			if role.BucketName != "" {
+				buffer.WriteString("[")
+				buffer.WriteString(role.BucketName)
+				if role.ScopeName != "" && role.ScopeName != "*" {
+					buffer.WriteString(":")
+					buffer.WriteString(role.ScopeName)
+					if role.CollectionName != "" && role.CollectionName != "*" {
+						buffer.WriteString(":")
+						buffer.WriteString(role.CollectionName)
+					}
+				}
+				buffer.WriteString("]")
+			}
 		}
 	}
 	return buffer.String()
 }
 
-func (c *Client) PutUserInfo(u *User) error {
+func (c *Client) PutUserInfo(cred cbauth.Creds, u *User) error {
 	params := make(map[string]interface{})
 	if u.Name != string([]byte{0}) {
 		params["name"] = u.Name
@@ -147,20 +185,25 @@ func (c *Client) PutUserInfo(u *User) error {
 		return fmt.Errorf("Unknown user type: %s", u.Domain)
 	}
 	var ret string // PUT returns an empty string. We ignore it.
-	err := c.parsePutURLResponseTerse(target, params, &ret)
+	err := c.parsePutURLResponseTerse(target, cred, params, &ret)
 	return err
 }
 
-func (c *Client) GetRolesAll() ([]RoleDescription, error) {
+func (c *Client) GetRolesAll(cred cbauth.Creds) ([]RoleDescription, error) {
 	ret := make([]RoleDescription, 0, 32)
-	err := c.parseURLResponse("/settings/rbac/roles", &ret)
+	err := c.parseURLResponse("/settings/rbac/roles", cred, &ret)
 	if err != nil {
 		return nil, err
+	}
+	// Set SourceType for each role based on role name
+	for i := range ret {
+		_, sourceType := auth.RoleToAliasSource(ret[i].Role)
+		ret[i].SourceType = sourceType
 	}
 	return ret, nil
 }
 
-func (c *Client) DeleteUser(u *User) error {
+func (c *Client) DeleteUser(cred cbauth.Creds, u *User) error {
 	var target string
 	switch u.Domain {
 	case "external":
@@ -171,11 +214,11 @@ func (c *Client) DeleteUser(u *User) error {
 		return fmt.Errorf("Unknown user type: %s", u.Domain)
 	}
 	var ret string // PUT returns an empty string. We ignore it.
-	err := c.parseDeleteURLResponseTerse(target, nil, &ret)
+	err := c.parseDeleteURLResponseTerse(target, cred, nil, &ret)
 	return err
 }
 
-func (c *Client) GetUserInfo(u *User) error {
+func (c *Client) GetUserInfo(cred cbauth.Creds, u *User) error {
 	var target string
 	switch u.Domain {
 	case "external":
@@ -185,17 +228,17 @@ func (c *Client) GetUserInfo(u *User) error {
 	default:
 		return fmt.Errorf("Unknown user type: %s", u.Domain)
 	}
-	err := c.parseURLResponse(target, u)
+	err := c.parseURLResponse(target, cred, u)
 	return err
 }
 
-func (c *Client) GetGroupInfo(g *Group) error {
+func (c *Client) GetGroupInfo(cred cbauth.Creds, g *Group) error {
 	target := fmt.Sprintf("/settings/rbac/groups/%s", g.Id)
-	err := c.parseURLResponse(target, g)
+	err := c.parseURLResponse(target, cred, g)
 	return err
 }
 
-func (c *Client) PutGroupInfo(g *Group) error {
+func (c *Client) PutGroupInfo(cred cbauth.Creds, g *Group) error {
 	params := make(map[string]interface{})
 	if g.Desc != string([]byte{0}) {
 		params["description"] = g.Desc
@@ -207,48 +250,66 @@ func (c *Client) PutGroupInfo(g *Group) error {
 			s += ","
 		}
 		s += g.Roles[i].Role
-		if g.Roles[i].BucketName != "" {
-			s += "[" + g.Roles[i].BucketName
-			if g.Roles[i].ScopeName != "" && g.Roles[i].ScopeName != "*" {
-				s += ":" + g.Roles[i].ScopeName
-				if g.Roles[i].CollectionName != "" && g.Roles[i].CollectionName != "*" {
-					s += ":" + g.Roles[i].CollectionName
-				}
+		switch g.Roles[i].SourceType {
+		case auth.SOURCE_CATALOG:
+			if g.Roles[i].CatalogName != "" {
+				s += "[" + g.Roles[i].CatalogName + "]"
 			}
-			s += "]"
+		case auth.SOURCE_CREDENTIALSTORE:
+			if g.Roles[i].CredentialId != "" {
+				s += "[" + g.Roles[i].CredentialId + "]"
+			}
+		default: // keyspace
+			if g.Roles[i].BucketName != "" {
+				s += "[" + g.Roles[i].BucketName
+				if g.Roles[i].ScopeName != "" && g.Roles[i].ScopeName != "*" {
+					s += ":" + g.Roles[i].ScopeName
+					if g.Roles[i].CollectionName != "" && g.Roles[i].CollectionName != "*" {
+						s += ":" + g.Roles[i].CollectionName
+					}
+				}
+				s += "]"
+			}
 		}
 		first = false
 	}
 	params["roles"] = s
 	target := fmt.Sprintf("/settings/rbac/groups/%s", g.Id)
 	var ret string // PUT returns an empty string. We ignore it.
-	err := c.parsePutURLResponseTerse(target, params, &ret)
+	err := c.parsePutURLResponseTerse(target, cred, params, &ret)
 	return err
 }
 
-func (c *Client) DeleteGroup(g *Group) error {
+func (c *Client) DeleteGroup(cred cbauth.Creds, g *Group) error {
 	target := fmt.Sprintf("/settings/rbac/groups/%s", g.Id)
 	var ret string // PUT returns an empty string. We ignore it.
-	err := c.parseDeleteURLResponseTerse(target, nil, &ret)
+	err := c.parseDeleteURLResponseTerse(target, cred, nil, &ret)
 	return err
 }
 
 // The subtle different between GroupInfo() and GetGroupInfoAll() is the returned maps from GroupInfo() may be missing fields
 // which are always present in the Group type.
-func (c *Client) GroupInfo() ([]interface{}, error) {
+func (c *Client) GroupInfo(cred cbauth.Creds) ([]interface{}, error) {
 	ret := make([]interface{}, 0, 1)
-	err := c.parseURLResponse("/settings/rbac/groups", &ret)
+	err := c.parseURLResponse("/settings/rbac/groups", cred, &ret)
 	if err != nil {
 		return nil, err
 	}
 	return ret, nil
 }
 
-func (c *Client) GetGroupInfoAll() ([]Group, error) {
+func (c *Client) GetGroupInfoAll(cred cbauth.Creds) ([]Group, error) {
 	ret := make([]Group, 0, 16)
-	err := c.parseURLResponse("/settings/rbac/groups", &ret)
+	err := c.parseURLResponse("/settings/rbac/groups", cred, &ret)
 	if err != nil {
 		return nil, err
+	}
+	// Set SourceType for each role based on role name
+	for i := range ret {
+		for j := range ret[i].Roles {
+			_, sourceType := auth.RoleToAliasSource(ret[i].Roles[j].Role)
+			ret[i].Roles[j].SourceType = sourceType
+		}
 	}
 	return ret, nil
 }

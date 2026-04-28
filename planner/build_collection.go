@@ -9,6 +9,7 @@
 package planner
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -89,9 +90,26 @@ func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interfac
 
 func (this *builder) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}
 	return plan.NewQueryPlan(plan.NewFlushCollection(keyspace, stmt)), nil
+}
+
+func (this *builder) VisitAlterCollection(stmt *algebra.AlterCollection) (any, error) {
+	ksref := stmt.Keyspace()
+	scope, err := getScope(this.context.Credentials(), false, ksref.Path().Parts()...)
+	if err != nil {
+		return nil, err
+	}
+	keyspace, err1 := this.getNameKeyspace(ksref, false, false, stmt.Type())
+	if err1 != nil {
+		return nil, err1
+	}
+	if keyspace != nil && !keyspace.IsExternalCollection() {
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("%s is not supported on non-external collections",
+			strings.ReplaceAll(stmt.Type(), "_", " ")))
+	}
+	return plan.NewQueryPlan(plan.NewAlterCollection(scope, stmt)), nil
 }

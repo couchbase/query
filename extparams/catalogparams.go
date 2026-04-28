@@ -27,14 +27,22 @@ const (
 	CatalogTypeIceberg = "ICEBERG"
 )
 
-// Valid source types (stored and compared in uppercase, but accept lowercase input)
+// Valid source types (stored and compared in uppercase, but accept lowercase input).
+//
+// REST is the canonical name for a generic Iceberg REST catalog (works with any
+// REST-compliant catalog server: Unity Catalog, Snowflake Open Catalog, Polaris,
+// Nessie REST, Tabular, Apache Gravitino, etc.). NESSIE_REST and UNITY_CATALOG
+// are accepted aliases that share the same implementation.
 const (
 	CatalogSourceAWSGlue          = "AWS_GLUE"
 	CatalogSourceAWSGlueRest      = "AWS_GLUE_REST"
 	CatalogSourceS3Tables         = "S3_TABLES"
 	CatalogSourceBiglakeMetastore = "BIGLAKE_METASTORE"
 	CatalogSourceNessie           = "NESSIE"
+	CatalogSourceRest             = "REST"
 	CatalogSourceNessieRest       = "NESSIE_REST"
+	CatalogSourceUnityCatalog     = "UNITY_CATALOG"
+	CatalogSourceSQL              = "SQL"
 )
 
 // Catalog parameter names
@@ -50,29 +58,50 @@ const (
 	_catalogParamSigV4SigningName   = "sigv4SigningName"
 	_catalogParamSigV4SigningRegion = "sigv4SigningRegion"
 	_catalogParamQuotaProjectID     = "quotaProjectId"
+	_catalogParamSQLDialect         = "sqlDialect"
 	CatalogRevison                  = "rev"
 )
 
 var catalogParamsTypes = map[string]any{_catalogName: "", _catalogType: "", _catalogSource: "", _catalogCredentialId: "",
 	CatalogRevison: 1, _catalogUid: "", _catalogParamURI: "", _catalogParamWarehouse: "", _catalogParamSigV4SigningName: "",
-	_catalogParamSigV4SigningRegion: "", _catalogParamQuotaProjectID: "", _catalogCompatVersion: 1}
+	_catalogParamSigV4SigningRegion: "", _catalogParamQuotaProjectID: "", _catalogCompatVersion: 1,
+	_catalogParamSQLDialect: ""}
 
 var catalogMandatoryTypeParams = map[string][]string{
-	CatalogTypeIceberg: {_catalogName, _catalogType, _catalogSource, _catalogCredentialId},
+	CatalogTypeIceberg: {_catalogName, _catalogType, _catalogSource},
 }
 
 var catalogOptionalTypeParams = map[string][]string{
 	CatalogTypeIceberg: {CatalogRevison, _catalogUid, _catalogCompatVersion},
 }
 
-// Valid parameters for each source type
+// Valid (mandatory) parameters for each source type.
+// credentialId is required for all cloud-backed sources but omitted for SQL
+// (whose credentials are embedded in the connection URI).
 var catalogSourceTypeParams = map[string][]string{
-	CatalogSourceAWSGlue:          {},
-	CatalogSourceAWSGlueRest:      {_catalogParamURI, _catalogParamSigV4SigningRegion},
-	CatalogSourceS3Tables:         {_catalogParamURI, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamWarehouse},
-	CatalogSourceBiglakeMetastore: {_catalogParamURI, _catalogParamWarehouse, _catalogParamQuotaProjectID},
-	CatalogSourceNessie:           {_catalogParamURI, _catalogParamWarehouse},
-	CatalogSourceNessieRest:       {_catalogParamURI},
+	CatalogSourceAWSGlue:          {_catalogCredentialId},
+	CatalogSourceAWSGlueRest:      {_catalogCredentialId, _catalogParamURI, _catalogParamSigV4SigningRegion},
+	CatalogSourceS3Tables:         {_catalogCredentialId, _catalogParamURI, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamWarehouse},
+	CatalogSourceBiglakeMetastore: {_catalogCredentialId, _catalogParamURI, _catalogParamWarehouse, _catalogParamQuotaProjectID},
+	CatalogSourceNessie:           {_catalogCredentialId, _catalogParamURI, _catalogParamWarehouse},
+	CatalogSourceRest:             {_catalogCredentialId, _catalogParamURI},
+	CatalogSourceNessieRest:       {_catalogCredentialId, _catalogParamURI},
+	CatalogSourceUnityCatalog:     {_catalogCredentialId, _catalogParamURI},
+	CatalogSourceSQL:              {_catalogParamURI, _catalogParamSQLDialect},
+}
+
+// Optional parameters for each source type. REST/NESSIE_REST/UNITY_CATALOG accept
+// sigv4SigningRegion, sigv4SigningName, and quotaProjectId so the generic REST
+// catalog can substitute for AWS_GLUE_REST / S3_TABLES / BIGLAKE_METASTORE when
+// the user supplies the right credential and signing metadata.
+// SQL accepts an optional credentialId pointing to an http/basic credential
+// whose username and password are injected into the DSN at connect time,
+// keeping the URI itself credential-free.
+var catalogSourceOptionalParams = map[string][]string{
+	CatalogSourceRest:         {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
+	CatalogSourceNessieRest:   {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
+	CatalogSourceUnityCatalog: {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
+	CatalogSourceSQL:          {_catalogCredentialId},
 }
 
 var validCatalogTypes = map[string]bool{
@@ -155,6 +184,9 @@ func validateCatalog(params map[string]any) map[string]*ExternalParamsError {
 	for _, s := range catalogSourceTypeParams[source] {
 		typeParams[s] = catalogParamsTypes[s]
 	}
+	for _, s := range catalogSourceOptionalParams[source] {
+		typeOptinalParams[s] = catalogParamsTypes[s]
+	}
 
 	for k, v := range params {
 		tv, exists := typeParams[k]
@@ -188,13 +220,14 @@ type CatalogEntry struct {
 	Name               string `json:"name"`
 	CatalogType        string `json:"catalogType"`
 	Source             string `json:"catalogSource"`
-	CredentialId       string `json:"credentialId"`
+	CredentialId       string `json:"credentialId,omitempty"`
 	Revision           int    `json:"rev,omitempty"`
 	URI                string `json:"uri,omitempty"`
 	Warehouse          string `json:"warehouse,omitempty"`
 	SigV4SigningName   string `json:"sigv4SigningName,omitempty"`
 	SigV4SigningRegion string `json:"sigv4SigningRegion,omitempty"`
 	QuotaProjectID     string `json:"quotaProjectId,omitempty"`
+	SQLDialect         string `json:"sqlDialect,omitempty"`
 	SUid               string `json:"uid"`
 	Uid                uint64
 }

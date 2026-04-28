@@ -124,8 +124,8 @@ func NewSystemUnableToRetrieveError(e error, what string) Error {
 		InternalCaller: CallerN(1), retry: TRUE}
 }
 
-func NewSystemUnableToUpdateError(e error, what string) Error {
-	c := make(map[string]interface{}, 1)
+func NewSystemUnableToUpdateError(e error, what string, credInfo ...string) Error {
+	c := make(map[string]interface{}, 4)
 	c["data"] = what
 	v := getErrorForCause(e)
 	if s, ok := v.(string); ok {
@@ -133,8 +133,12 @@ func NewSystemUnableToUpdateError(e error, what string) Error {
 	} else {
 		c["error"] = v
 	}
+	if len(credInfo) >= 2 && credInfo[0] != "" {
+		c["user"] = credInfo[0]
+		c["domain"] = credInfo[1]
+	}
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_UNABLE_TO_UPDATE, IKey: "datastore.system.unable_to_update", ICause: e,
-		cause: c, InternalMsg: fmt.Sprintf("System datastore : unable to update %s information in server", what),
+		cause: c, InternalMsg: fmt.Sprintf("unable to update %s information in server", what),
 		InternalCaller: CallerN(1)}
 }
 

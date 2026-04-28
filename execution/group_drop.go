@@ -68,13 +68,13 @@ func (this *DropGroup) RunOnce(context *Context, parent value.Value) {
 		var g datastore.Group
 		g.Id = this.plan.Node().Group()
 
-		err := cbDatastore.GetGroupInfo(&g)
+		err := cbDatastore.GetGroupInfo(context, &g)
 		if err != nil {
 			if this.plan.Node().FailIfNotExists() {
 				context.Error(errors.NewGroupNotFoundError(g.Id))
 			}
 		} else {
-			err = cbDatastore.DeleteGroup(&g)
+			err = cbDatastore.DeleteGroup(context, &g)
 			if err != nil {
 				context.Error(err)
 			}

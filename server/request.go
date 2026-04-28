@@ -637,9 +637,8 @@ func (this *BaseRequest) RedactedStatement() string {
 
 func (this *BaseRequest) Sensitive() bool {
 	switch this.reqType {
-	case "CREATE_USER":
-		return true
-	case "ALTER_USER":
+	case "CREATE_USER", "ALTER_USER",
+		"CREATE_CREDENTIALSTORE", "ALTER_CREDENTIALSTORE":
 		return true
 	default:
 		return false

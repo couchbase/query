@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/gomemcached" // package name is 'gomemcached'
 	ntls "github.com/couchbase/goutils/tls"
+	"github.com/couchbase/query/extparams"
 	"github.com/couchbase/query/logging"
 )
 
@@ -227,13 +228,49 @@ type Pool struct {
 
 	BucketURL map[string]string `json:"buckets"`
 
-	MemoryQuota         float64 `json:"memoryQuota"`
-	CbasMemoryQuota     float64 `json:"cbasMemoryQuota"`
-	EventingMemoryQuota float64 `json:"eventingMemoryQuota"`
-	FtsMemoryQuota      float64 `json:"ftsMemoryQuota"`
-	IndexMemoryQuota    float64 `json:"indexMemoryQuota"`
+	MemoryQuota                 float64 `json:"memoryQuota"`
+	CbasMemoryQuota             float64 `json:"cbasMemoryQuota"`
+	EventingMemoryQuota         float64 `json:"eventingMemoryQuota"`
+	FtsMemoryQuota              float64 `json:"ftsMemoryQuota"`
+	IndexMemoryQuota            float64 `json:"indexMemoryQuota"`
+	ExternalCatalogsManifestUid uint64  `json:"externalCatalogsManifestUid"`
 
-	client *Client
+	updater io.ReadCloser
+	client  *Client
+}
+
+func (p *Pool) GetExternalCatalogs() (map[string]*extparams.CatalogEntry, uint64, error) {
+	p.RLock()
+	client := p.client
+	p.RUnlock()
+
+	ret, err := client.getCatalogsRaw(nil)
+	if err != nil {
+		if strings.Contains(err.Error(), HTTP_404) {
+			return nil, 0, nil
+		}
+		return nil, 0, err
+	}
+
+	var uid uint64
+	rv := make(map[string]*extparams.CatalogEntry, len(ret))
+	for n, v := range ret {
+		if n == "uid" {
+			json.Unmarshal(v, &uid)
+			continue
+		}
+		var vm map[string]any
+		if err := json.Unmarshal(v, &vm); err != nil {
+			continue
+		}
+		vm["name"] = n
+		entry, err := extparams.GetCatalogEntry(vm)
+		if err != nil {
+			continue
+		}
+		rv[n] = entry
+	}
+	return rv, uid, nil
 }
 
 // VBucketServerMap is the a mapping of vbuckets to nodes.
@@ -293,31 +330,32 @@ func sameSlice(a []int, b []int) bool {
 // take a boolean parameter "bucketLocked".
 type Bucket struct {
 	sync.RWMutex
-	readCount              uint64
-	writeCount             uint64
-	retryCount             uint64
-	kvThrottleCount        uint64
-	kvThrottleDuration     uint64
-	refreshes              uint64
-	vbcTime                uint64
-	doTime                 uint64
-	opTime                 uint64
-	bulkTime               uint64
-	AuthType               string             `json:"authType"`
-	Capabilities           []string           `json:"bucketCapabilities"`
-	CapabilitiesVersion    string             `json:"bucketCapabilitiesVer"`
-	CollectionsManifestUid string             `json:"collectionsManifestUid"`
-	Type                   string             `json:"bucketType"`
-	Name                   string             `json:"name"`
-	NodeLocator            string             `json:"nodeLocator"`
-	Quota                  map[string]float64 `json:"quota,omitempty"`
-	Replicas               int                `json:"replicaNumber"`
-	URI                    string             `json:"uri"`
-	StreamingURI           string             `json:"streamingUri"`
-	LocalRandomKeyURI      string             `json:"localRandomKeyUri,omitempty"`
-	UUID                   string             `json:"uuid"`
-	ConflictResolutionType string             `json:"conflictResolutionType,omitempty"`
-	DDocs                  struct {
+	readCount                      uint64
+	writeCount                     uint64
+	retryCount                     uint64
+	kvThrottleCount                uint64
+	kvThrottleDuration             uint64
+	refreshes                      uint64
+	vbcTime                        uint64
+	doTime                         uint64
+	opTime                         uint64
+	bulkTime                       uint64
+	AuthType                       string             `json:"authType"`
+	Capabilities                   []string           `json:"bucketCapabilities"`
+	CapabilitiesVersion            string             `json:"bucketCapabilitiesVer"`
+	CollectionsManifestUid         string             `json:"collectionsManifestUid"`
+	ExternalCollectionsManifestUid string             `json:"externalCollectionsManifestUid"`
+	Type                           string             `json:"bucketType"`
+	Name                           string             `json:"name"`
+	NodeLocator                    string             `json:"nodeLocator"`
+	Quota                          map[string]float64 `json:"quota,omitempty"`
+	Replicas                       int                `json:"replicaNumber"`
+	URI                            string             `json:"uri"`
+	StreamingURI                   string             `json:"streamingUri"`
+	LocalRandomKeyURI              string             `json:"localRandomKeyUri,omitempty"`
+	UUID                           string             `json:"uuid"`
+	ConflictResolutionType         string             `json:"conflictResolutionType,omitempty"`
+	DDocs                          struct {
 		URI string `json:"uri"`
 	} `json:"ddocs,omitempty"`
 	BasicStats  map[string]interface{} `json:"basicStats,omitempty"`
@@ -611,54 +649,70 @@ func uriAdj(s string) string {
 	return strings.Replace(s, "%", "%25", -1)
 }
 
-func (b *Bucket) CreateScope(scope string) error {
+func (b *Bucket) CreateScope(cred cbauth.Creds, scope string) error {
 	b.RLock()
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
 	args := map[string]interface{}{"name": scope}
-	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes", args, nil)
+	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes", cred, args, nil)
 }
 
-func (b *Bucket) DropScope(scope string) error {
+func (b *Bucket) DropScope(cred cbauth.Creds, scope string) error {
 	b.RLock()
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
-	return client.parseDeleteURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope), nil, nil)
+	return client.parseDeleteURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope), cred, nil, nil)
 }
 
-func (b *Bucket) CreateCollection(scope string, collection string, maxTTL int) error {
+func (b *Bucket) CreateCollection(cred cbauth.Creds, scope, collection, catalog, credential string, params map[string]interface{}) error {
 	b.RLock()
-	pool := b.pool
-	client := pool.client
+	client := b.pool.client
 	b.RUnlock()
-	var args map[string]interface{}
-	if maxTTL != 0 {
-		args = map[string]interface{}{"name": collection, "maxTTL": maxTTL}
-	} else {
-		args = map[string]interface{}{"name": collection}
+
+	// External collection - store in metakv
+	if catalog != "" {
+		return b.CreateExternalCollection(cred, scope, collection, catalog, credential, params)
+	}
+
+	// Regular collection - create via ns_server
+	args := map[string]interface{}{"name": collection}
+	for k, v := range params {
+		args[k] = v
 	}
 	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections",
-		args, nil)
+		cred, args, nil)
 }
 
-func (b *Bucket) DropCollection(scope string, collection string) error {
+func (b *Bucket) AlterCollection(cred cbauth.Creds, scope, collection string, params map[string]any) error {
+	// Only supported for EXTERNAL Collection
+	return b.AlterExternalCollection(cred, scope, collection, params)
+}
+
+func (b *Bucket) DropCollection(cred cbauth.Creds, scope, collection string) error {
 	b.RLock()
-	pool := b.pool
-	client := pool.client
+	client := b.pool.client
 	b.RUnlock()
+
+	// Try to drop external collection from metakv first
+	err := b.DropExternalCollection(cred, scope, collection)
+	if err == nil {
+		return nil
+	}
+
+	// If not found in metakv, try regular collection drop via ns_server
 	return client.parseDeleteURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope)+"/collections/"+
-		uriAdj(collection), nil, nil)
+		uriAdj(collection), cred, nil, nil)
 }
 
-func (b *Bucket) FlushCollection(scope string, collection string) error {
+func (b *Bucket) FlushCollection(cred cbauth.Creds, scope string, collection string) error {
 	b.RLock()
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
 	args := map[string]interface{}{"name": collection, "scope": scope}
-	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/collections-flush", args, nil)
+	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/collections-flush", cred, args, nil)
 }
 
 func (b *Bucket) authHandler(bucketLocked bool) (ah AuthHandler) {
@@ -818,22 +872,27 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-func doPutAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{},
-	terse bool) error {
+func doPostAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds, out interface{},
+	terse bool, userAgent string) error {
 
-	return doOutputAPI("PUT", baseURL, path, params, authHandler, out, terse)
+	return doOutputAPI("POST", baseURL, path, params, authHandler, cred, out, terse, userAgent)
 }
 
-func doPostAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{},
-	terse bool) error {
-
-	return doOutputAPI("POST", baseURL, path, params, authHandler, out, terse)
+func doPatchAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds,
+	out interface{}, terse bool, userAgent string) error {
+	return doOutputAPI("PATCH", baseURL, path, params, authHandler, cred, out, terse, userAgent)
 }
 
-func doDeleteAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, out interface{},
-	terse bool) error {
+func doDeleteAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds, out interface{},
+	terse bool, userAgent string) error {
 
-	return doOutputAPI("DELETE", baseURL, path, params, authHandler, out, terse)
+	return doOutputAPI("DELETE", baseURL, path, params, authHandler, cred, out, terse, userAgent)
+}
+
+func doPutAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds, out interface{},
+	terse bool, userAgent string) error {
+
+	return doOutputAPI("PUT", baseURL, path, params, authHandler, cred, out, terse, userAgent)
 }
 
 func doOutputAPI(
@@ -842,8 +901,10 @@ func doOutputAPI(
 	path string,
 	params map[string]interface{},
 	authHandler AuthHandler,
+	cred cbauth.Creds,
 	out interface{},
-	terse bool) error {
+	terse bool,
+	userAgent string) error {
 
 	var requestUrl string
 
@@ -864,6 +925,11 @@ func doOutputAPI(
 	}
 
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	if userAgent != "" {
+		req.Header.Set("User-Agent", userAgent)
+	}
+
+	cbauth.SetOnBehalfOfHeaders(req, cred)
 
 	err = maybeAddAuth(req, authHandler)
 	if err != nil {
@@ -925,6 +991,7 @@ func queryRestAPI(
 	baseURL *url.URL,
 	path string,
 	authHandler AuthHandler,
+	cred cbauth.Creds,
 	out interface{},
 	terse bool,
 	userAgent string) error {
@@ -983,24 +1050,73 @@ func queryRestAPI(
 	return nil
 }
 
-func (c *Client) parseURLResponse(path string, out interface{}) error {
-	return queryRestAPI(c.BaseURL, path, c.ah, out, false, c.userAgent)
+func (c *Client) parseURLResponse(path string, cred cbauth.Creds, out interface{}) error {
+	return queryRestAPI(c.BaseURL, path, c.ah, cred, out, false, c.userAgent)
 }
 
-func (c *Client) parsePostURLResponseTerse(path string, params map[string]interface{}, out interface{}) error {
-	return doPostAPI(c.BaseURL, path, params, c.ah, out, true)
+func (c *Client) parsePostURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}) error {
+	return doPostAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent)
 }
 
-func (c *Client) parseDeleteURLResponseTerse(path string, params map[string]interface{}, out interface{}) error {
-	return doDeleteAPI(c.BaseURL, path, params, c.ah, out, true)
+func (c *Client) parsePatchURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}) error {
+	return doPatchAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent)
 }
 
-func (c *Client) parsePutURLResponse(path string, params map[string]interface{}, out interface{}) error {
-	return doPutAPI(c.BaseURL, path, params, c.ah, out, false)
+func (c *Client) parseDeleteURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}) error {
+	return doDeleteAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent)
 }
 
-func (c *Client) parsePutURLResponseTerse(path string, params map[string]interface{}, out interface{}) error {
-	return doPutAPI(c.BaseURL, path, params, c.ah, out, true)
+func (c *Client) parsePutURLResponse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}) error {
+	return doPutAPI(c.BaseURL, path, params, c.ah, cred, out, false, c.userAgent)
+}
+
+func (c *Client) parsePatchURLResponse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}) error {
+	return doPatchAPI(c.BaseURL, path, params, c.ah, cred, out, false, c.userAgent)
+}
+
+func (c *Client) parsePutURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}) error {
+	return doPutAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent)
+}
+
+// parsePostURLResponseJSON sends a POST request with JSON body
+func (c *Client) parsePostURLResponseJSON(path string, cred cbauth.Creds, params map[string]any, out interface{}) error {
+	var requestUrl string
+	if q := bytes.IndexByte([]byte(path), '?'); q > 0 {
+		requestUrl = c.BaseURL.Scheme + "://" + c.BaseURL.Host + path[:q] + "?" + path[q+1:]
+	} else {
+		requestUrl = c.BaseURL.Scheme + "://" + c.BaseURL.Host + path
+	}
+
+	body, err := json.Marshal(params)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", requestUrl, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	if c.userAgent != "" {
+		req.Header.Set("User-Agent", c.userAgent)
+	}
+
+	err = maybeAddAuth(req, c.ah)
+	if err != nil {
+		return err
+	}
+
+	res, err := doHTTPRequest(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if out != nil {
+		return json.NewDecoder(res.Body).Decode(out)
+	}
+	return nil
 }
 
 type basicAuth struct {
@@ -1033,7 +1149,7 @@ func ConnectWithAuth(baseU string, ah AuthHandler, userAgent string) (c Client, 
 	c.ah = ah
 	c.SetUserAgent(userAgent)
 
-	return c, c.parseURLResponse("/pools", &c.Info)
+	return c, c.parseURLResponse("/pools", nil, &c.Info)
 }
 
 // Call this method with a TLS certificate file name to make communication
@@ -1292,7 +1408,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	for i := _REFRESH_RETRIES; i > 0; i-- {
 		retry := false
 		tmpb = &Bucket{}
-		err = pool.client.parseURLResponse(uri, tmpb)
+		err = pool.client.parseURLResponse(uri, nil, tmpb)
 		if err == nil && len(tmpb.VBSMJson.VBucketMap) == 0 {
 			err = fmt.Errorf("Invalid URL (%v) response: empty vBucketMap", uri)
 			retry = true
@@ -1422,7 +1538,7 @@ func (b *Bucket) mkConnPool(node string, poolServices *PoolServices) (*connectio
 
 func (p *Pool) refresh() (err error) {
 	buckets := []Bucket{}
-	err = p.client.parseURLResponse(p.BucketURL["uri"], &buckets)
+	err = p.client.parseURLResponse(p.BucketURL["uri"], nil, &buckets)
 	if err != nil {
 		return err
 	}
@@ -1465,7 +1581,7 @@ func (c *Client) GetPool(name string) (p Pool, err error) {
 		return p, errors.New("No pool named " + name)
 	}
 
-	err = c.parseURLResponse(poolURI, &p)
+	err = c.parseURLResponse(poolURI, nil, &p)
 	if err != nil {
 		return p, err
 	}
@@ -1490,7 +1606,7 @@ func (c *Client) GetPoolServices(name string) (ps PoolServices, err error) {
 	}
 
 	poolURI := "/pools/" + poolName + "/nodeServices"
-	err = c.parseURLResponse(poolURI, &ps)
+	err = c.parseURLResponse(poolURI, nil, &ps)
 
 	return
 }
@@ -1535,6 +1651,7 @@ func (b *Bucket) MarshalJSON() ([]byte, error) {
 	m["Capabilities"] = b.Capabilities
 	m["CapabilitiesVersion"] = b.CapabilitiesVersion
 	m["CollectionsManifestUid"] = b.CollectionsManifestUid
+	m["ExternalCollectionsManifestUid"] = b.ExternalCollectionsManifestUid
 	m["Type"] = b.Type
 	m["Name"] = b.Name
 	m["NodeLocator"] = b.NodeLocator
@@ -1682,7 +1799,7 @@ func (p *Pool) BucketExists(name string) bool {
 		return false
 	}
 	buckets := []Bucket{}
-	err := p.client.parseURLResponse(p.BucketURL["uri"], &buckets)
+	err := p.client.parseURLResponse(p.BucketURL["uri"], nil, &buckets)
 	if err != nil {
 		return false
 	}
@@ -1704,6 +1821,9 @@ func (p *Pool) Close() {
 	// MB-36186 make the bucket map inaccessible
 	bucketMap := p.BucketMap
 	p.BucketMap = nil
+	if p.updater != nil {
+		p.updater.Close()
+	}
 
 	p.Unlock()
 
@@ -1757,7 +1877,7 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 		var ret interface{}
 		// allow "bucket already exists" error in case duplicate create
 		// (e.g. two query nodes starting at same time)
-		err = c.parsePostURLResponseTerse("/pools/default/buckets", args, &ret)
+		err = c.parsePostURLResponseTerse("/pools/default/buckets", nil, args, &ret)
 		if err != nil && !AlreadyExistsError(err) {
 			return nil, err
 		}
@@ -1798,7 +1918,7 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 }
 
 func DropSystemBucket(c *Client, name string) error {
-	err := c.parseDeleteURLResponseTerse("/pools/default/buckets/"+name, nil, nil)
+	err := c.parseDeleteURLResponseTerse("/pools/default/buckets/"+name, nil, nil, nil)
 	return err
 }
 
@@ -1916,7 +2036,7 @@ func (c *Client) GetPoolNodes(name string) ([]PoolNode, error) {
 	}
 
 	p := &PoolNodes{}
-	err = c.parseURLResponse(poolURI, p)
+	err = c.parseURLResponse(poolURI, nil, p)
 	if err != nil {
 		return nil, err
 	}

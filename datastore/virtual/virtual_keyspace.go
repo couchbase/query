@@ -73,11 +73,11 @@ func (b *virtualBucket) DefaultKeyspace() (datastore.Keyspace, errors.Error) {
 	return nil, errors.NewBucketNoDefaultCollectionError(b.id)
 }
 
-func (b *virtualBucket) CreateScope(name string) errors.Error {
+func (b *virtualBucket) CreateScope(context datastore.QueryContext, name string) errors.Error {
 	return errors.NewVirtualBucketCreateScopeError(name, fmt.Errorf("not supported by virtual buckets"))
 }
 
-func (b *virtualBucket) DropScope(name string) errors.Error {
+func (b *virtualBucket) DropScope(context datastore.QueryContext, name string) errors.Error {
 	return errors.NewVirtualBucketDropScopeError(name, fmt.Errorf("not supported by virtual buckets"))
 }
 
@@ -135,11 +135,15 @@ func (sc *virtualScope) KeyspaceByName(name string) (datastore.Keyspace, errors.
 	return sc.keyspace, nil
 }
 
-func (sc *virtualScope) CreateCollection(name string, with value.Value) errors.Error {
+func (sc *virtualScope) CreateCollection(context datastore.QueryContext, name, catalog, credential string, with value.Value) errors.Error {
 	return errors.NewCbBucketCreateCollectionError(name, fmt.Errorf("not supported by virtual scopes"))
 }
 
-func (sc *virtualScope) DropCollection(name string) errors.Error {
+func (sc *virtualScope) AlterCollection(context datastore.QueryContext, name string, with value.Value) errors.Error {
+	return errors.NewCbBucketCreateCollectionError(name, fmt.Errorf("not supported by virtual scopes"))
+}
+
+func (sc *virtualScope) DropCollection(context datastore.QueryContext, name string) errors.Error {
 	return errors.NewCbBucketDropCollectionError(name, fmt.Errorf("not supported by virtual scopes"))
 }
 
@@ -301,7 +305,7 @@ func (this *virtualKeyspace) SetSubDoc(string, value.Pairs, datastore.QueryConte
 
 func (this *virtualKeyspace) Release(close bool) {}
 
-func (this *virtualKeyspace) Flush() errors.Error {
+func (this *virtualKeyspace) Flush(context datastore.QueryContext) errors.Error {
 	return errors.NewVirtualKSNotSupportedError(nil, "Flush for virtual keyspace.")
 }
 
@@ -311,4 +315,13 @@ func (this *virtualKeyspace) IsBucket() bool {
 
 func (this *virtualKeyspace) IsSystemCollection() bool {
 	return false
+}
+
+func (this *virtualKeyspace) IsExternalCollection() bool {
+	return false
+}
+
+func (this *virtualKeyspace) ExternalScan(params *datastore.ExternalScanParams, context datastore.QueryContext,
+	conn *datastore.IndexConnection) {
+	conn.Fatal(errors.NewDatastoreExternalCollectionError(nil, "ExternalScan not supported on virtual keyspaces", nil))
 }

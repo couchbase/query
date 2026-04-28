@@ -158,6 +158,10 @@ func (this *builder) VisitDummyScan(plan *plan.DummyScan) (interface{}, error) {
 	return checkOp(NewDummyScan(plan, this.context), this.context)
 }
 
+func (this *builder) VisitExternalScan(plan *plan.ExternalScan) (interface{}, error) {
+	return checkOp(NewExternalScan(plan, this.context), this.context)
+}
+
 func (this *builder) VisitCountScan(plan *plan.CountScan) (interface{}, error) {
 	return checkOp(NewCountScan(plan, this.context), this.context)
 }
@@ -715,6 +719,11 @@ func (this *builder) VisitCreateCollection(plan *plan.CreateCollection) (interfa
 	return checkOp(NewCreateCollection(plan, this.context), this.context)
 }
 
+// AlterCollection
+func (this *builder) VisitAlterCollection(plan *plan.AlterCollection) (any, error) {
+	return checkOp(NewAlterCollection(plan, this.context), this.context)
+}
+
 // DropCollection
 func (this *builder) VisitDropCollection(plan *plan.DropCollection) (interface{}, error) {
 	return checkOp(NewDropCollection(plan, this.context), this.context)
@@ -738,6 +747,21 @@ func (this *builder) VisitAlterBucket(plan *plan.AlterBucket) (interface{}, erro
 // DropBucket
 func (this *builder) VisitDropBucket(plan *plan.DropBucket) (interface{}, error) {
 	return checkOp(NewDropBucket(plan, this.context), this.context)
+}
+
+// CreateCatalog
+func (this *builder) VisitCreateCatalog(plan *plan.CreateCatalog) (any, error) {
+	return checkOp(NewCreateCatalog(plan, this.context), this.context)
+}
+
+// AlterCatalog
+func (this *builder) VisitAlterCatalog(plan *plan.AlterCatalog) (any, error) {
+	return checkOp(NewAlterCatalog(plan, this.context), this.context)
+}
+
+// DropCatalog
+func (this *builder) VisitDropCatalog(plan *plan.DropCatalog) (any, error) {
+	return checkOp(NewDropCatalog(plan, this.context), this.context)
 }
 
 // Prepare
@@ -840,4 +864,16 @@ func (this *builder) VisitDropSequence(plan *plan.DropSequence) (interface{}, er
 
 func (this *builder) VisitAlterSequence(plan *plan.AlterSequence) (interface{}, error) {
 	return checkOp(NewAlterSequence(plan, this.context), this.context)
+}
+
+func (this *builder) VisitCreateCredentialStore(plan *plan.CreateCredentialStore) (any, error) {
+	return checkOp(NewCreateCredentialStore(plan, this.context), this.context)
+}
+
+func (this *builder) VisitAlterCredentialStore(plan *plan.AlterCredentialStore) (any, error) {
+	return checkOp(NewAlterCredentialStore(plan, this.context), this.context)
+}
+
+func (this *builder) VisitDropCredentialStore(plan *plan.DropCredentialStore) (any, error) {
+	return checkOp(NewDropCredentialStore(plan, this.context), this.context)
 }

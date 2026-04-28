@@ -44,6 +44,18 @@ func (this *Rewrite) VisitDropBucket(stmt *algebra.DropBucket) (interface{}, err
 	return stmt, stmt.MapExpressions(this)
 }
 
+func (this *Rewrite) VisitCreateCatalog(stmt *algebra.CreateCatalog) (any, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitAlterCatalog(stmt *algebra.AlterCatalog) (any, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitDropCatalog(stmt *algebra.DropCatalog) (any, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
 func (this *Rewrite) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
 	return stmt, stmt.MapExpressions(this)
 }
@@ -53,6 +65,10 @@ func (this *Rewrite) VisitDropScope(stmt *algebra.DropScope) (interface{}, error
 }
 
 func (this *Rewrite) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitAlterCollection(stmt *algebra.AlterCollection) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
@@ -85,5 +101,17 @@ func (this *Rewrite) VisitDropSequence(stmt *algebra.DropSequence) (interface{},
 }
 
 func (this *Rewrite) VisitAlterSequence(stmt *algebra.AlterSequence) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitCreateCredentialStore(stmt *algebra.CreateCredentialStore) (any, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitAlterCredentialStore(stmt *algebra.AlterCredentialStore) (any, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
+func (this *Rewrite) VisitDropCredentialStore(stmt *algebra.DropCredentialStore) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }

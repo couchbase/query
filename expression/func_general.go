@@ -289,6 +289,7 @@ const (
 	_SEQUENCE_INFO
 	_FUNCTION_INFO
 	_PREPARED_INFO
+	_CATALOG_INFO
 )
 
 type ExtractDDL struct {
@@ -435,6 +436,71 @@ func buildFunctionDDL(funcVal value.Value, bucket string) string {
 	return b.String()
 }
 
+// buildCatalogDDL builds a CREATE CATALOG DDL statement from catalog metadata
+func buildCatalogDDL(catVal value.Value) string {
+	var b strings.Builder
+
+	name, ok := catVal.Field("name")
+	if !ok {
+		return ""
+	}
+
+	b.WriteString("CREATE CATALOG IF NOT EXISTS `")
+	b.WriteString(name.ToString())
+	b.WriteString("`")
+
+	// TYPE is required
+	if catalogType, ok := catVal.Field("catalogType"); ok {
+		b.WriteString(" TYPE `")
+		b.WriteString(catalogType.ToString())
+		b.WriteString("`")
+	}
+
+	// SOURCE is optional
+	if source, ok := catVal.Field("catalogSource"); ok && source.ToString() != "" {
+		b.WriteString(" SOURCE `")
+		b.WriteString(source.ToString())
+		b.WriteString("`")
+	}
+
+	// AT credential is required
+	if credId, ok := catVal.Field("credentialId"); ok {
+		credStr := credId.ToString()
+		if credStr == "" {
+			// NESSIE with out Auth
+			b.WriteString(" AT ''")
+		} else {
+			b.WriteString(" AT `")
+			b.WriteString(credId.ToString())
+			b.WriteString("`")
+		}
+	}
+
+	// Build WITH clause for additional parameters using map
+	withFields := []string{"uri", "warehouse", "sigv4SigningName", "sigv4SigningRegion", "quotaProjectId"}
+	var withParts []string
+
+	for _, field := range withFields {
+		if val, ok := catVal.Field(field); ok && val.ToString() != "" {
+			withParts = append(withParts, fmt.Sprintf("'%s':'%s'", field, val.ToString()))
+		}
+	}
+
+	if len(withParts) > 0 {
+		b.WriteString(" WITH {")
+		for i, part := range withParts {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(part)
+		}
+		b.WriteString("}")
+	}
+
+	b.WriteRune(';')
+	return b.String()
+}
+
 func (this *ExtractDDL) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -531,6 +597,8 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 						flags |= _FUNCTION_INFO
 					case "prepared":
 						flags |= _PREPARED_INFO
+					case "catalog":
+						flags |= _CATALOG_INFO
 					default:
 						return value.MISSING_VALUE, errors.NewWarning(fmt.Sprintf("Invalid flag: %v", act[i]))
 					}
@@ -542,7 +610,13 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			return value.MISSING_VALUE, errors.NewWarning("Invalid flags.")
 		}
 	}
-	if flags&(_BUCKET_INFO|_SCOPE_INFO|_COLLECTION_INFO|_INDEX_INFO|_SEQUENCE_INFO|_FUNCTION_INFO|_PREPARED_INFO) == 0 {
+
+	// If COLLECTION is requested, CATALOG must be included implicitly
+	if flags&_COLLECTION_INFO != 0 {
+		flags |= _CATALOG_INFO
+	}
+
+	if flags&(_BUCKET_INFO|_SCOPE_INFO|_COLLECTION_INFO|_INDEX_INFO|_SEQUENCE_INFO|_FUNCTION_INFO|_PREPARED_INFO|_CATALOG_INFO) == 0 {
 		return value.NULL_VALUE, errors.NewWarning("Flags exclude all data.")
 	}
 
@@ -568,6 +642,24 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		for _, gf := range globalFunctions {
 			funcVal := value.NewValue(gf)
 			if ddl := buildFunctionDDL(funcVal, ""); ddl != "" {
+				res = append(res, ddl)
+			}
+		}
+	}
+
+	// Extract catalogs (independent of buckets)
+	if flags&_CATALOG_INFO != 0 {
+		stmt := "SELECT name, catalogType, catalogSource, credentialId, uri, warehouse, " +
+			"sigv4SigningName, sigv4SigningRegion, quotaProjectId " +
+			"FROM system:catalogs ORDER BY name"
+		v, _, err := context.EvaluateStatement(stmt, nil, nil, false, true, false, "")
+		if err != nil {
+			return value.MISSING_VALUE, err
+		}
+		catalogs := v.Actual().([]interface{})
+		for _, cat := range catalogs {
+			catVal := value.NewValue(cat)
+			if ddl := buildCatalogDDL(catVal); ddl != "" {
 				res = append(res, ddl)
 			}
 		}
@@ -703,7 +795,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 				}
 
 				if flags&_COLLECTION_INFO != 0 {
-					stmt = "SELECT name, maxTTL FROM system:keyspaces WHERE `bucket` = ? AND `scope` = ? ORDER BY name"
+					stmt = "SELECT name, maxTTL, catalog, credentialId, `with` FROM system:keyspaces WHERE `bucket` = ? AND `scope` = ? ORDER BY name"
 					v, _, err := context.EvaluateStatement(stmt, nil, append(posArg, value.NewValue(scope)), false, true, false, "")
 					if err != nil {
 						return value.MISSING_VALUE, err
@@ -719,16 +811,71 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 						}
 
 						sb.Reset()
-						sb.WriteString("CREATE COLLECTION `")
-						sb.WriteString(bucket)
-						sb.WriteString("`.`")
-						sb.WriteString(scope)
-						sb.WriteString("`.`")
-						sb.WriteString(name.ToString())
-						if maxTTL, ok := cv.Field("maxTTL"); ok {
-							sb.WriteString(" WITH {'maxTTL':")
-							sb.WriteString(maxTTL.ToString())
-							sb.WriteRune('}')
+
+						// Check if this is an external collection
+						if catalog, ok := cv.Field("catalog"); ok && catalog.ToString() != "" {
+							// External collection
+							sb.WriteString("CREATE EXTERNAL COLLECTION `")
+							sb.WriteString(bucket)
+							sb.WriteString("`.`")
+							sb.WriteString(scope)
+							sb.WriteString("`.`")
+							sb.WriteString(name.ToString())
+							sb.WriteString("` ON `")
+							sb.WriteString(catalog.ToString())
+							sb.WriteString("`")
+							if credId, ok := cv.Field("credentialId"); ok && credId.ToString() != "" {
+								sb.WriteString(" AT `")
+								sb.WriteString(credId.ToString())
+								sb.WriteString("`")
+							}
+							// Build WITH clause with proper type handling
+							withFields := []struct {
+								name     string
+								isString bool
+							}{
+								{"namespace", true},
+								{"tableName", true},
+								{"snapshotId", true},
+								{"snapshotTimestamp", true},
+								{"format", true},
+								{"parallelScans", false},
+							}
+							var withParts []string
+							for _, wf := range withFields {
+								if val, ok := cv.Field(wf.name); ok {
+									if wf.isString {
+										if val.ToString() != "" {
+											withParts = append(withParts, fmt.Sprintf("'%s':'%s'", wf.name, val.ToString()))
+										}
+									} else {
+										withParts = append(withParts, fmt.Sprintf("'%s':%s", wf.name, val.ToString()))
+									}
+								}
+							}
+							if len(withParts) > 0 {
+								sb.WriteString(" WITH {")
+								for i, part := range withParts {
+									if i > 0 {
+										sb.WriteString(", ")
+									}
+									sb.WriteString(part)
+								}
+								sb.WriteString("}")
+							}
+						} else {
+							// Regular collection
+							sb.WriteString("CREATE COLLECTION `")
+							sb.WriteString(bucket)
+							sb.WriteString("`.`")
+							sb.WriteString(scope)
+							sb.WriteString("`.`")
+							sb.WriteString(name.ToString())
+							if maxTTL, ok := cv.Field("maxTTL"); ok {
+								sb.WriteString(" WITH {'maxTTL':")
+								sb.WriteString(maxTTL.ToString())
+								sb.WriteRune('}')
+							}
 						}
 						sb.WriteRune(';')
 						res = append(res, sb.String())

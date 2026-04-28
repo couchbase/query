@@ -11,31 +11,33 @@ package couchbase
 
 import (
 	"fmt"
+
+	"github.com/couchbase/cbauth"
 )
 
-func (c *Client) CreateBucket(params map[string]interface{}) error {
+func (c *Client) CreateBucket(cred cbauth.Creds, params map[string]interface{}) error {
 	var ret interface{}
-	err := c.parsePostURLResponseTerse("/pools/default/buckets", params, &ret)
+	err := c.parsePostURLResponseTerse("/pools/default/buckets", cred, params, &ret)
 	return err
 }
 
-func (c *Client) AlterBucket(name string, params map[string]interface{}) error {
-	var ret interface{}
-	target := fmt.Sprintf("/pools/default/buckets/%s", name)
-	err := c.parsePostURLResponseTerse(target, params, &ret)
-	return err
-}
-
-func (c *Client) DropBucket(name string) error {
+func (c *Client) AlterBucket(cred cbauth.Creds, name string, params map[string]interface{}) error {
 	var ret interface{}
 	target := fmt.Sprintf("/pools/default/buckets/%s", name)
-	err := c.parseDeleteURLResponseTerse(target, nil, &ret)
+	err := c.parsePostURLResponseTerse(target, cred, params, &ret)
 	return err
 }
 
-func (c *Client) BucketInfo() ([]interface{}, error) {
+func (c *Client) DropBucket(cred cbauth.Creds, name string) error {
+	var ret interface{}
+	target := fmt.Sprintf("/pools/default/buckets/%s", name)
+	err := c.parseDeleteURLResponseTerse(target, cred, nil, &ret)
+	return err
+}
+
+func (c *Client) BucketInfo(cred cbauth.Creds) ([]interface{}, error) {
 	ret := make([]interface{}, 0, 1)
-	err := c.parseURLResponse("/pools/default/buckets", &ret)
+	err := c.parseURLResponse("/pools/default/buckets", cred, &ret)
 	if err != nil {
 		return nil, err
 	}

@@ -440,7 +440,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if userArgs == nil {
 		query.SetCredentials(_ALL_USERS)
 	} else {
-		users := auth.NewCredentials(_ALL_USERS.UsersAndPasswords()...)
+		users := auth.NewCredentials()
 		for k, v := range userArgs {
 			users.Set(k, v)
 		}

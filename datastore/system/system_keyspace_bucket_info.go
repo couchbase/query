@@ -39,8 +39,8 @@ func (b *bucketInfoKeyspace) Name() string {
 	return b.name
 }
 
-func getBucketInfoList(s *store) ([]interface{}, errors.Error) {
-	val, err := s.BucketInfo()
+func getBucketInfoList(context datastore.QueryContext, s *store) ([]interface{}, errors.Error) {
+	val, err := s.BucketInfo(context)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func getBucketInfoList(s *store) ([]interface{}, errors.Error) {
 }
 
 func (b *bucketInfoKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
-	uil, err := getBucketInfoList(b.namespace.store)
+	uil, err := getBucketInfoList(context, b.namespace.store)
 	if err != nil {
 		return 0, err
 	}
@@ -78,7 +78,7 @@ func (b *bucketInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 
 func (b *bucketInfoKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
-	sliceOfBuckets, err := getBucketInfoList(b.namespace.store)
+	sliceOfBuckets, err := getBucketInfoList(context, b.namespace.store)
 	if err != nil {
 		return []errors.Error{err}
 	}
@@ -239,7 +239,11 @@ func (pi *bucketInfoIndex) ScanEntries(requestId string, limit int64, cons datas
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 	defer conn.Sender().Close()
 
-	sliceOfBuckets, err := getBucketInfoList(pi.keyspace.namespace.store)
+	ctx := conn.QueryContext()
+	if ctx == nil {
+		ctx = datastore.NULL_QUERY_CONTEXT
+	}
+	sliceOfBuckets, err := getBucketInfoList(ctx, pi.keyspace.namespace.store)
 	if err != nil {
 		conn.Fatal(err)
 		return

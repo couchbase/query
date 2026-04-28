@@ -137,6 +137,10 @@ func (this *collector) VisitDummyScan(plop *plan.DummyScan) (interface{}, error)
 	return nil, nil
 }
 
+func (this *collector) VisitExternalScan(plop *plan.ExternalScan) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *collector) VisitCountScan(plop *plan.CountScan) (interface{}, error) {
 	return nil, nil
 }
@@ -565,6 +569,18 @@ func (this *collector) VisitAlterSequence(plop *plan.AlterSequence) (interface{}
 	return nil, nil
 }
 
+func (this *collector) VisitCreateCredentialStore(plop *plan.CreateCredentialStore) (any, error) {
+	return nil, nil
+}
+
+func (this *collector) VisitAlterCredentialStore(plop *plan.AlterCredentialStore) (any, error) {
+	return nil, nil
+}
+
+func (this *collector) VisitDropCredentialStore(plop *plan.DropCredentialStore) (any, error) {
+	return nil, nil
+}
+
 func (this *collector) VisitCreateBucket(plop *plan.CreateBucket) (interface{}, error) {
 	return nil, nil
 }
@@ -574,6 +590,22 @@ func (this *collector) VisitAlterBucket(plop *plan.AlterBucket) (interface{}, er
 }
 
 func (this *collector) VisitDropBucket(plop *plan.DropBucket) (interface{}, error) {
+	return nil, nil
+}
+
+func (this *collector) VisitCreateCatalog(plop *plan.CreateCatalog) (any, error) {
+	return nil, nil
+}
+
+func (this *collector) VisitAlterCatalog(plop *plan.AlterCatalog) (any, error) {
+	return nil, nil
+}
+
+func (this *collector) VisitDropCatalog(plop *plan.DropCatalog) (any, error) {
+	return nil, nil
+}
+
+func (this *collector) VisitAlterCollection(plop *plan.AlterCollection) (any, error) {
 	return nil, nil
 }
 

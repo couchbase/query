@@ -50,8 +50,8 @@ func TestRoleStatements(t *testing.T) {
 		Roles: []datastore.Role{datastore.Role{Name: "replication_admin"}, datastore.Role{Name: "bucket_admin",
 			Target: "products"}}}
 
-	cbDatastore.PutUserInfo(&pete)
-	cbDatastore.PutUserInfo(&sam)
+	cbDatastore.PutUserInfo(datastore.NULL_QUERY_CONTEXT, &pete)
+	cbDatastore.PutUserInfo(datastore.NULL_QUERY_CONTEXT, &sam)
 
 	rr := Run(qc, true, "GRANT bucket_admin ON products TO pete, sam", nil, nil, _NAMESPACE)
 	if rr.Err != nil {
@@ -61,7 +61,7 @@ func TestRoleStatements(t *testing.T) {
 		t.Fatalf("Expected no return, got %v", rr.Results)
 	}
 
-	users, err := cbDatastore.GetUserInfoAll()
+	users, err := cbDatastore.GetUserInfoAll(datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Fatalf("Could not get user info after running GRANT ROLE: %s", err.Error())
 	}
@@ -97,7 +97,7 @@ func TestRoleStatements(t *testing.T) {
 		t.Fatalf("Expected no return, got %v", rr.Results)
 	}
 
-	users, err = cbDatastore.GetUserInfoAll()
+	users, err = cbDatastore.GetUserInfoAll(datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		t.Fatalf("Could not get user info after running REVOKE: %s", err.Error())
 	}

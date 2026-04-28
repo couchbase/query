@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -69,7 +70,7 @@ func (this *AlterGroup) RunOnce(context *Context, parent value.Value) {
 		var g datastore.Group
 		g.Id = this.plan.Node().Group()
 
-		err := cbDatastore.GetGroupInfo(&g)
+		err := cbDatastore.GetGroupInfo(context, &g)
 		if err != nil {
 			context.Error(errors.NewGroupNotFoundError(g.Id))
 		} else {
@@ -78,6 +79,7 @@ func (this *AlterGroup) RunOnce(context *Context, parent value.Value) {
 				for i := range r {
 					p1 := strings.Split(r[i], "[")
 					g.Roles[i].Name = p1[0]
+					_, g.Roles[i].SourceType = auth.RoleToAliasSource(p1[0])
 					if len(p1) > 1 {
 						g.Roles[i].Target = strings.TrimSuffix(p1[1], "]")
 					}
@@ -93,7 +95,7 @@ func (this *AlterGroup) RunOnce(context *Context, parent value.Value) {
 				g.Desc = string([]byte{0})
 			}
 
-			err = cbDatastore.PutGroupInfo(&g)
+			err = cbDatastore.PutGroupInfo(context, &g)
 			if err != nil {
 				context.Error(err)
 			}

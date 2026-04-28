@@ -527,6 +527,10 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		return
 	}
 
+	if request.Sensitive() {
+		return
+	}
+
 	// these assignments are a bit hacky, but simplify our life
 	request.resultCount = int64(result_count)
 	request.resultSize = int64(result_size)
@@ -618,8 +622,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	if stmt != "" {
 		re.Statement = stmt
 	}
-	stmtType := request.Type()
-	if stmtType != "" {
+	if stmtType := request.Type(); stmtType != "" {
 		re.StatementType = stmtType
 	}
 	plan := request.Prepared()

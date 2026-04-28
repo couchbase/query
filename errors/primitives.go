@@ -12,48 +12,48 @@ import (
 	"fmt"
 )
 
-func NewBucketUpdaterMaxErrors(e error) Error {
+func NewUpdaterMaxErrors(name string, e error) Error {
 	c := make(map[string]interface{})
 	c["last_error"] = e
-	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_MAX_ERRORS, IKey: "primitives.updater.max_errors", cause: c,
-		InternalMsg: fmt.Sprintf("Max failures reached. Last error: %v", e), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_UPDATER_MAX_ERRORS, IKey: "primitives.updater.max_errors", cause: c,
+		InternalMsg: fmt.Sprintf("%s: Max failures reached. Last error: %v", name, e), InternalCaller: CallerN(1)}
 }
 
-func NewBucketUpdaterNoHealthyNodesFound() Error {
-	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_NO_HEALTHY_NODES, IKey: "primitives.updater.no_healthy_nodes",
-		InternalMsg: "No healthy nodes found.", InternalCaller: CallerN(1)}
+func NewUpdaterNoHealthyNodesFound(name string) Error {
+	return &err{level: EXCEPTION, ICode: E_UPDATER_NO_HEALTHY_NODES, IKey: "primitives.updater.no_healthy_nodes",
+		InternalMsg: fmt.Sprintf("%s: No healthy nodes found.", name), InternalCaller: CallerN(1)}
 }
 
-func NewBucketUpdaterStreamingError(e error) Error {
+func NewUpdaterStreamingError(name string, e error) Error {
 	c := make(map[string]interface{})
 	c["stream_error"] = e
-	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_STREAM_ERROR, IKey: "primitives.updater.stream_error", cause: c,
-		InternalMsg: fmt.Sprintf("Streaming error: %v", e), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_UPDATER_STREAM_ERROR, IKey: "primitives.updater.stream_error", cause: c,
+		InternalMsg: fmt.Sprintf("%s: Streaming error: %v", name, e), InternalCaller: CallerN(1)}
 }
 
-func NewBucketUpdaterAuthError(e error) Error {
+func NewUpdaterAuthError(name string, e error) Error {
 	c := make(map[string]interface{})
 	c["auth_error"] = e
-	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_AUTH_ERROR, IKey: "primitives.updater.auth_error", cause: c,
-		InternalMsg: fmt.Sprintf("Authentication error: %v", e), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_UPDATER_AUTH_ERROR, IKey: "primitives.updater.auth_error", cause: c,
+		InternalMsg: fmt.Sprintf("%s: Authentication error: %v", name, e), InternalCaller: CallerN(1)}
 }
 
-func NewBucketUpdaterFailedToConnectToHost(status int, body interface{}) Error {
+func NewUpdaterFailedToConnectToHost(name string, status int, body interface{}) Error {
 	c := make(map[string]interface{})
 	c["status"] = status
 	c["body"] = body
-	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_CONNECTION_FAILED, IKey: "primitives.updater.connection_failed", cause: c,
-		InternalMsg: fmt.Sprintf("Failed to connect to host. Status %v Body %s", status, body), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_UPDATER_CONNECTION_FAILED, IKey: "primitives.updater.connection_failed", cause: c,
+		InternalMsg: fmt.Sprintf("%s: Failed to connect to host. Status %v Body %s", name, status, body), InternalCaller: CallerN(1)}
 }
 
-func NewBucketUpdaterMappingError(e error) Error {
+func NewUpdaterMappingError(name string, e error) Error {
 	c := make(map[string]interface{})
 	c["mapping_error"] = e
-	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_ERROR_MAPPING, IKey: "primitives.updater.mapping", cause: c,
-		InternalMsg: fmt.Sprintf("Mapping error: %v", e), InternalCaller: CallerN(1)}
+	return &err{level: EXCEPTION, ICode: E_UPDATER_ERROR_MAPPING, IKey: "primitives.updater.mapping", cause: c,
+		InternalMsg: fmt.Sprintf("%s: Mapping error: %v", name, e), InternalCaller: CallerN(1)}
 }
 
-func NewBucketUpdaterEndpointNotFoundError() Error {
-	return &err{level: EXCEPTION, ICode: E_BUCKET_UPDATER_EP_NOT_FOUND, IKey: "primitives.updater.endpoint_not_found",
-		InternalMsg: "Streaming endpoint not found", InternalCaller: CallerN(1)}
+func NewUpdaterEndpointNotFoundError(name string) Error {
+	return &err{level: EXCEPTION, ICode: E_UPDATER_EP_NOT_FOUND, IKey: "primitives.updater.endpoint_not_found",
+		InternalMsg: fmt.Sprintf("%s: Streaming endpoint not found", name), InternalCaller: CallerN(1)}
 }

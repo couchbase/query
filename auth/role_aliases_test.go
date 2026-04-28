@@ -40,7 +40,7 @@ func TestNormalizeRoleNames(t *testing.T) {
 	val := []string{"this", "THAT", "select", "QUERY_", "insert_"}
 	exp := []string{"this", "that", "query_select", "query_", "insert_"}
 
-	ret := NormalizeRoleNames(val)
+	ret := NormalizeRoleNames(val, "")
 	if len(ret) != len(exp) {
 		t.Fatalf("Expected %v, got %v", exp, ret)
 	}

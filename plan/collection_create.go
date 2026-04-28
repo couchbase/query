@@ -60,6 +60,13 @@ func (this *CreateCollection) MarshalBase(f func(map[string]interface{})) map[st
 
 	r["with"] = this.node.With()
 
+	// External collection fields
+	if this.node.IsExternal() {
+		r["isExternal"] = true
+		r["catalog"] = this.node.Catalog()
+		r["credential"] = this.node.Credential()
+	}
+
 	if f != nil {
 		f(r)
 	}
@@ -75,6 +82,9 @@ func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 		Keyspace    string          `json:"keyspace"`
 		IfNotExists bool            `json:"ifNotExists"`
 		With        json.RawMessage `json:"with"`
+		IsExternal  bool            `json:"isExternal"`
+		Catalog     string          `json:"catalog"`
+		Credential  string          `json:"credential"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -84,6 +94,7 @@ func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 
 	ksref := algebra.NewKeyspaceRefFromPath(algebra.NewPathLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), "")
+
 	this.scope, err = datastore.GetScope(ksref.Path().Parts()[0:3]...)
 	if err != nil {
 		return err
@@ -93,14 +104,15 @@ func (this *CreateCollection) UnmarshalJSON(body []byte) error {
 	if len(_unmarshalled.With) > 0 {
 		with = value.NewValue([]byte(_unmarshalled.With))
 	}
+
 	// invert IfNotExists to obtain FailIfExists
-	this.node = algebra.NewCreateCollection(ksref, !_unmarshalled.IfNotExists, with)
+	this.node = algebra.NewCreateCollection(ksref, _unmarshalled.Catalog,
+		_unmarshalled.Credential, !_unmarshalled.IfNotExists, with)
 	return nil
 }
 
 func (this *CreateCollection) verify(prepared *Prepared) errors.Error {
 	var err errors.Error
-
 	this.scope, err = verifyScope(this.scope, prepared)
 	return err
 }

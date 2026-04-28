@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/datastore/couchbase"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
@@ -46,6 +47,9 @@ func (b *keyspaceKeyspace) Name() string {
 // Checks if the user has permissions to access system keyspaces
 // isInternal: whether the authorization check is for an internal action.
 func canAccessSystemTables(context datastore.QueryContext, isInternal bool) bool {
+	if context == nil {
+		return false
+	}
 	privs := auth.NewPrivileges()
 	privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 
@@ -276,6 +280,30 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context dat
 					})
 					if keyspace.MaxTTL() != 0 {
 						doc.SetField("maxTTL", value.NewValue(keyspace.MaxTTL()))
+					}
+					// Check if this is an external collection and add catalog info
+					if keyspace.IsExternalCollection() {
+						if coll, ok := keyspace.(couchbase.ExternalCollection); ok {
+							entry := coll.ExternalEntry()
+							if entry != nil {
+								doc.SetField("catalog", entry.Catalog)
+								doc.SetField("catalogType", entry.CatalogType)
+								doc.SetField("credentialId", entry.CredentialId)
+								with := make(map[string]interface{})
+								with["namespace"] = entry.Namespace
+								with["tableName"] = entry.TableName
+								if entry.SnapshotId != "" {
+									with["snapshotId"] = entry.SnapshotId
+								}
+								if entry.SnapshotTimestamp != "" {
+									with["snapshotTimestamp"] = entry.SnapshotTimestamp
+								}
+								if entry.Format != "" {
+									with["format"] = entry.Format
+								}
+								doc.SetField("with", with)
+							}
+						}
 					}
 					if b.info {
 						res, err2 := keyspace.Stats(context, []datastore.KeyspaceStats{datastore.KEYSPACE_COUNT,

@@ -25,6 +25,7 @@ const (
 	_collectionSnapshotId        = "snapshotId"
 	_collectionSnapshotTimestamp = "snapshotTimestamp"
 	_collectionParallelScans     = "parallelScans"
+	_collectionDecimalToDouble   = "decimal-to-double"
 	_collectionUid               = "uid"
 	_collectionBucket            = "bucket"
 	_collectionScope             = "scope"
@@ -35,7 +36,8 @@ const (
 
 var collectionParamsTypes = map[string]any{CollectionRevison: "", _collectionFormat: "", _collectionNamespace: "",
 	_collectionTableName: "", _collectionSnapshotId: "", _collectionSnapshotTimestamp: "", _collectionParallelScans: 1,
-	_collectionCatalog: "", _collectionCatalogType: "", _collectionCredentialId: "",
+	_collectionDecimalToDouble: false,
+	_collectionCatalog:         "", _collectionCatalogType: "", _collectionCredentialId: "",
 	_collectionUid: "", _collectionBucket: "", _collectionScope: "", _collectionName: "", _collectionCompatVersion: 1}
 
 // Valid parameters for each catalog type
@@ -45,6 +47,7 @@ var collectionMandatoryTypeParams = map[string][]string{
 
 var collectionOptinalTypeParams = map[string][]string{
 	CatalogTypeIceberg: {CollectionRevison, _collectionSnapshotId, _collectionSnapshotTimestamp, _collectionParallelScans,
+		_collectionDecimalToDouble,
 		_collectionFormat, _collectionUid, _collectionBucket, _collectionScope, _collectionName, _collectionCompatVersion},
 }
 
@@ -92,10 +95,8 @@ func validateCollection(params map[string]any) map[string]*ExternalParamsError {
 	return rv
 }
 
-func SetExternalCollectionInfo(bucket, scope, collection, catalog, catalogType, credential string, params map[string]any) map[string]any {
+func SetExternalCollectionInfo(collection, catalog, catalogType, credential string, params map[string]any) map[string]any {
 	nparams := maps.Clone(params)
-	nparams[_collectionBucket] = bucket
-	nparams[_collectionScope] = scope
 	nparams[_collectionCatalog] = catalog
 	nparams[_collectionCatalogType] = catalogType
 	nparams[_collectionCredentialId] = credential
@@ -152,8 +153,6 @@ func GetCollectionEntry(params map[string]any) (*ExternalCollectionEntry, error)
 // ExternalCollectionEntry represents an Collection stored in metakv
 type ExternalCollectionEntry struct {
 	SUid              string `json:"uid"`
-	Bucket            string `json:"bucket,omitempty"`
-	Scope             string `json:"scope,omitempty"`
 	Collection        string `json:"name"`
 	Revision          int    `json:"rev,omitempty"`
 	Format            string `json:"format,omitempty"`
@@ -165,6 +164,7 @@ type ExternalCollectionEntry struct {
 	SnapshotId        string `json:"snapshotId,omitempty"`
 	SnapshotTimestamp string `json:"snapshotTimestamp,omitempty"`
 	ParallelScans     int    `json:"parallelScans,omitempty"`
+	DecimalToDouble   bool   `json:"decimal-to-double,omitempty"`
 	Uid               uint64
-	CatalogInfo       *CatalogEntry
+	CatalogInfo       *CatalogEntry `json:"-"`
 }

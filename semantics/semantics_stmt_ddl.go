@@ -256,6 +256,62 @@ func (this *SemChecker) VisitDropBucket(stmt *algebra.DropBucket) (interface{}, 
 	return nil, stmt.MapExpressions(this)
 }
 
+func (this *SemChecker) VisitCreateCatalog(stmt *algebra.CreateCatalog) (any, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_create_catalog")
+	}
+
+	if stmt.Name() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "name")
+	}
+	if stmt.CatalogType() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "catalogType")
+	}
+	if stmt.Source() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "source")
+	}
+	if stmt.Credential() == "" && !strings.HasPrefix(strings.ToUpper(stmt.Source()), "NESSIE") {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "credential")
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitAlterCatalog(stmt *algebra.AlterCatalog) (any, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_alter_catalog")
+	}
+	if stmt.Name() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "name")
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitDropCatalog(stmt *algebra.DropCatalog) (any, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_drop_catalog")
+	}
+	if stmt.Name() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "name")
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitAlterCollection(stmt *algebra.AlterCollection) (any, error) {
+	if stmt.Keyspace().Path().Namespace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "namespace")
+	}
+	if stmt.Keyspace().Path().Bucket() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "bucket")
+	}
+	if stmt.Keyspace().Path().Scope() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "scope")
+	}
+	if stmt.Keyspace().Path().Keyspace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "collection")
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
 func (this *SemChecker) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
 	return nil, stmt.MapExpressions(this)
 }
@@ -265,14 +321,58 @@ func (this *SemChecker) VisitDropScope(stmt *algebra.DropScope) (interface{}, er
 }
 
 func (this *SemChecker) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
+	if stmt.Keyspace().Path().Namespace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "namespace")
+	}
+	if stmt.Keyspace().Path().Bucket() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "bucket")
+	}
+	if stmt.Keyspace().Path().Scope() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "scope")
+	}
+	if stmt.Keyspace().Path().Keyspace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "collection")
+	}
+	if stmt.IsExternal() {
+		if stmt.Catalog() == "" {
+			return nil, errors.NewFieldEmpty(stmt.Type(), "catalog")
+		}
+		if stmt.Credential() == "" {
+			return nil, errors.NewFieldEmpty(stmt.Type(), "credential")
+		}
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
+	if stmt.Keyspace().Path().Namespace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "namespace")
+	}
+	if stmt.Keyspace().Path().Bucket() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "bucket")
+	}
+	if stmt.Keyspace().Path().Scope() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "scope")
+	}
+	if stmt.Keyspace().Path().Keyspace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "collection")
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
 func (this *SemChecker) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
+	if stmt.Keyspace().Path().Namespace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "namespace")
+	}
+	if stmt.Keyspace().Path().Bucket() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "bucket")
+	}
+	if stmt.Keyspace().Path().Scope() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "scope")
+	}
+	if stmt.Keyspace().Path().Keyspace() == "" {
+		return nil, errors.NewFieldEmpty(stmt.Type(), "collection")
+	}
 	return nil, stmt.MapExpressions(this)
 }
 
@@ -325,5 +425,26 @@ func (this *SemChecker) VisitDropSequence(stmt *algebra.DropSequence) (interface
 }
 
 func (this *SemChecker) VisitAlterSequence(stmt *algebra.AlterSequence) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitCreateCredentialStore(stmt *algebra.CreateCredentialStore) (any, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_create_credentialstore")
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitAlterCredentialStore(stmt *algebra.AlterCredentialStore) (any, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_alter_credentialstore")
+	}
+	return nil, stmt.MapExpressions(this)
+}
+
+func (this *SemChecker) VisitDropCredentialStore(stmt *algebra.DropCredentialStore) (any, error) {
+	if !this.hasSemFlag(_SEM_ENTERPRISE) {
+		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_drop_credentialstore")
+	}
 	return nil, stmt.MapExpressions(this)
 }

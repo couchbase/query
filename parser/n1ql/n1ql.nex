@@ -172,6 +172,7 @@
 /[bB][yY]/                     { lval.s = yylex.Text(); yylex.curOffset += 2; return BY }
 /[cC][aA][lL][lL]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return CALL }
 /[cC][aA][cC][hH][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return CACHE }
+/[cC][aA][tT][aA][lL][oO][gG]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return CATALOG }
 /[cC][aA][sS][eE]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return CASE }
 /[cC][aA][sS][tT]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return CAST }
 /[cC][lL][uU][sS][tT][eE][rR]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return CLUSTER }
@@ -180,10 +181,12 @@
 /[cC][oO][mM][mM][iI][tT]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return COMMIT }
 /[cC][oO][mM][mM][iI][tT][tT][eE][dD]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return COMMITTED }
 /[cC][oO][nN][nN][eE][cC][tT]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return CONNECT }
+/[cC][oO][nN][sS][uU][mM][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return CONSUME }
 /[cC][oO][nN][tT][iI][nN][uU][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return CONTINUE }
 /[cC][oO][rR][rR][eE][lL][aA][tT][eE][dD]/ { lval.s = yylex.Text(); yylex.curOffset += 10; return _CORRELATED }
 /[cC][oO][vV][eE][rR]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return _COVER }
 /[cC][rR][eE][aA][tT][eE]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return CREATE }
+/[cC][rR][eE][dD][eE][nN][tT][iI][aA][lL][sS][tT][oO][rR][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 15; return CREDENTIALSTORE }
 /[cC][uU][rR][rR][eE][nN][tT]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return CURRENT }
 /[cC][yY][cC][lL][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return CYCLE }
 /[dD][aA][tT][aA][bB][aA][sS][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return DATABASE }
@@ -215,6 +218,7 @@
     lval.tokOffset = yylex.curOffset
     return EXPLAIN
 }
+/[eE][xX][tT][eE][rR][nN][aA][lL]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return EXTERNAL }
 /[fF][aA][lL][sS][eE]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return FALSE }
 /[fF][eE][tT][cC][hH]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return FETCH }
 /[fF][iI][lL][tT][eE][rR]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return FILTER }
@@ -360,7 +364,9 @@
 /[sS][eE][qQ][uU][eE][nN][cC][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return SEQUENCE }
 /[sS][eE][tT]/                 { lval.s = yylex.Text(); yylex.curOffset += 3; return SET }
 /[sS][hH][oO][wW]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return SHOW }
+/[sS][nN][aA][pP][sS][hH][oO][tT]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return SNAPSHOT }
 /[sS][oO][mM][eE]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return SOME }
+/[sS][oO][uU][rR][cC][eE]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return SOURCE }
 /[sS][pP][aA][rR][sS][eE]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return SPARSE }
 /[sS][tT][aA][rR][tT]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return START }
 /[sS][tT][aA][tT][iI][sS][tT][iI][cC][sS]/ { lval.s = yylex.Text(); yylex.curOffset += 10; return STATISTICS }
@@ -368,12 +374,14 @@
 /[sS][yY][sS][tT][eE][mM]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return SYSTEM }
 /[tT][hH][eE][nN]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return THEN }
 /[tT][iI][eE][sS]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return TIES }
+/[tT][iI][mM][eE][sS][tT][aA][mM][pP]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return TIMESTAMP }
 /[tT][oO]/                     { lval.s = yylex.Text(); yylex.curOffset += 2; return TO }
 /[tT][rR][aA][nN]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return TRAN }
 /[tT][rR][aA][nN][sS][aA][cC][tT][iI][oO][nN]/ { lval.s = yylex.Text(); yylex.curOffset += 11; return TRANSACTION }
 /[tT][rR][iI][gG][gG][eE][rR]/ { lval.s = yylex.Text(); yylex.curOffset += 7; return TRIGGER }
 /[tT][rR][uU][eE]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return TRUE }
 /[tT][rR][uU][nN][cC][aA][tT][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return TRUNCATE }
+/[tT][yY][pP][eE]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return TYPE }
 /[uU][nN][bB][oO][uU][nN][dD][eE][dD]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return UNBOUNDED }
 /[uU][nN][dD][eE][rR]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return UNDER }
 /[uU][nN][iI][oO][nN]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return UNION }

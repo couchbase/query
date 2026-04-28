@@ -8,6 +8,7 @@
 package planner
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/couchbase/query/algebra"
@@ -19,7 +20,7 @@ import (
 
 func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}
@@ -27,6 +28,9 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 	indexer, er := keyspace.Indexer(stmt.Using())
 	if er != nil {
 		return nil, er
+	}
+	if indexer == nil {
+		return nil, errors.NewCbIndexerNotImplementedError(nil, "Indexer not available for this keyspace")
 	}
 
 	er = indexer.Refresh()
@@ -45,7 +49,7 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 
 func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +57,9 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 	indexer, er := keyspace.Indexer(stmt.Using())
 	if er != nil {
 		return nil, er
+	}
+	if indexer == nil {
+		return nil, errors.NewCbIndexerNotImplementedError(nil, "Indexer not available for this keyspace")
 	}
 
 	er = indexer.Refresh()
@@ -89,7 +96,7 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 
 func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +104,9 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 	indexer, er := keyspace.Indexer(stmt.Using())
 	if er != nil {
 		return nil, er
+	}
+	if indexer == nil {
+		return nil, errors.NewCbIndexerNotImplementedError(nil, "Indexer not available for this keyspace")
 	}
 
 	er = indexer.Refresh()
@@ -111,7 +121,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 
 func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +129,9 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 	indexer, er := keyspace.Indexer(stmt.Using())
 	if er != nil {
 		return nil, er
+	}
+	if indexer == nil {
+		return nil, errors.NewCbIndexerNotImplementedError(nil, "Indexer not available for this keyspace")
 	}
 
 	er = indexer.Refresh()
@@ -133,7 +146,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 
 func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +154,9 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 	indexer, er := keyspace.Indexer(stmt.Using())
 	if er != nil {
 		return nil, er
+	}
+	if indexer == nil {
+		return nil, errors.NewCbIndexerNotImplementedError(nil, "Indexer not available for this keyspace")
 	}
 
 	er = indexer.Refresh()
@@ -151,7 +167,7 @@ func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{},
 	return plan.NewQueryPlan(plan.NewBuildIndexes(keyspace, stmt)), nil
 }
 
-func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (datastore.Keyspace, error) {
+func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic, checkExt bool, source string) (datastore.Keyspace, error) {
 	path := ks.Path()
 	if path == nil {
 		if dynamic {
@@ -184,6 +200,10 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic bool) (dat
 
 	if err == nil && this.indexAdvisor {
 		this.setKeyspaceFound()
+	}
+	if checkExt && keyspace != nil && keyspace.IsExternalCollection() {
+		return nil, errors.NewPlanInternalError(fmt.Sprintf("%s is not supported on external collections",
+			strings.ReplaceAll(source, "_", " ")))
 	}
 
 	return keyspace, err

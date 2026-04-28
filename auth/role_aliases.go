@@ -20,29 +20,39 @@ import "strings"
 //
 // This package contains the code for supporting this functionality.
 
+// Source type constants
+const (
+	SOURCE_KEYSPACE        = ""
+	SOURCE_CATALOG         = "catalog"
+	SOURCE_CREDENTIALSTORE = "credentialstore"
+)
+
 var _SHORT_TO_LONG = map[string]string{
-	"select": "query_select",
-	"insert": "query_insert",
-	"update": "query_update",
-	"delete": "query_delete",
+	"select":  "query_select",
+	"insert":  "query_insert",
+	"update":  "query_update",
+	"delete":  "query_delete",
+	"consume": "credential_consumer",
 }
 
 var _LONG_TO_SHORT = map[string]string{
-	"query_select": "select",
-	"query_insert": "insert",
-	"query_update": "update",
-	"query_delete": "delete",
+	"query_select":                  "select",
+	"query_insert":                  "insert",
+	"query_update":                  "update",
+	"query_delete":                  "delete",
+	"query_select_external_catalog": "select",
+	"query_insert_external_catalog": "insert",
+	"query_update_external_catalog": "update",
+	"query_delete_external_catalog": "delete",
+	"external_catalog_admin":        "external_catalog_admin",
+	"external_catalog_reader":       "external_catalog_reader",
+	"credential_consumer":           "consume",
 }
 
-func NormalizeRoleNames(names []string) []string {
+func NormalizeRoleNames(names []string, sourceType string) []string {
 	ret := make([]string, len(names))
 	for i, v := range names {
-		lc := strings.ToLower(v)
-		role, found := _SHORT_TO_LONG[lc]
-		if !found {
-			role = lc
-		}
-		ret[i] = role
+		ret[i] = AliasToRole(v, sourceType)
 	}
 	return ret
 }
@@ -55,11 +65,38 @@ func RoleToAlias(role string) string {
 	return alias
 }
 
-func AliasToRole(alias string) string {
+// RoleToAliasSource splits the role name and returns the alias and source type
+// Returns: (alias, sourceType)
+func RoleToAliasSource(role string) (string, string) {
+	alias, found := _LONG_TO_SHORT[role]
+	if !found {
+		return role, SOURCE_KEYSPACE
+	}
+
+	// Split the role name to get source type
+	parts := strings.SplitN(role, "_", 4)
+	switch len(parts) {
+	case 2:
+		if parts[0] == "credential" {
+			return alias, SOURCE_CREDENTIALSTORE
+		}
+	case 3:
+		if parts[1] == "catalog" {
+			return alias, SOURCE_CATALOG
+		}
+	case 4:
+		return alias, SOURCE_CATALOG
+	}
+	return alias, SOURCE_KEYSPACE
+}
+
+func AliasToRole(alias, sourceType string) string {
 	lc := strings.ToLower(alias)
 	role, found := _SHORT_TO_LONG[lc]
 	if !found {
 		return lc
+	} else if sourceType == SOURCE_CATALOG {
+		return role + "_external_" + sourceType
 	}
 	return role
 }

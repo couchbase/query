@@ -46,7 +46,7 @@ func (b *applicableRolesKeyspace) Count(context datastore.QueryContext) (int64, 
 	if !ok {
 		return 0, errors.NewDatastoreNotCouchbaseError()
 	}
-	users, err := cbDatastore.GetUserInfoAll()
+	users, err := cbDatastore.GetUserInfoAll(context)
 	if err != nil {
 		return 0, err
 	}
@@ -79,17 +79,25 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 			errs = append(errs, err)
 			continue
 		}
-		valMap := make(map[string]interface{}, 3)
+		valMap := make(map[string]interface{}, 5)
 		valMap["grantee"] = grantee
-		valMap["role"] = auth.RoleToAlias(role)
+		alias, sourceType := auth.RoleToAliasSource(role)
+		valMap["role"] = alias
 		if target != "" {
-			object := strings.SplitN(target, ".", 3)
-			valMap["bucket_name"] = object[0]
-			if len(object) > 1 {
-				valMap["scope_name"] = object[1]
-			}
-			if len(object) > 2 {
-				valMap["collection_name"] = object[2]
+			switch sourceType {
+			case auth.SOURCE_CATALOG:
+				valMap["catalog_name"] = target
+			case auth.SOURCE_CREDENTIALSTORE:
+				valMap["credentialstore_name"] = target
+			default:
+				object := strings.SplitN(target, ":", 3)
+				valMap["bucket_name"] = object[0]
+				if len(object) > 1 {
+					valMap["scope_name"] = object[1]
+				}
+				if len(object) > 2 {
+					valMap["collection_name"] = object[2]
+				}
 			}
 		}
 		val := value.NewValue(valMap)
@@ -187,14 +195,17 @@ func (pi *applicableRolesIndex) ScanEntries(requestId string, limit int64, cons 
 	pi.scanEntries(limit, conn, nil)
 }
 
-// sample key: "ivanivanov/bucket_admin/testbucket"
+// sample keys: "ivanivanov/bucket_admin/testbucket"
+//
+//	"ivanivanov/query_select_external_catalog/myCatalog"
+//	"ivanivanov/credential_consumer/myCredStore"
 func makeAppRolesKey(id, roleName, target string) string {
 	return fmt.Sprintf("%s/%s/%s", id, roleName, target)
 }
 
 func splitAppRolesKey(key string) (err errors.Error, id, roleName, target string) {
-	fields := strings.Split(key, "/")
-	if len(fields) != 3 {
+	fields := strings.SplitN(key, "/", 3)
+	if len(fields) < 3 {
 		err = errors.NewSystemMalformedKeyError(key, "system:applicable_roles")
 		return
 	}
@@ -211,7 +222,11 @@ func (pi *applicableRolesIndex) scanEntries(limit int64, conn *datastore.IndexCo
 		conn.Error(errors.NewDatastoreNotCouchbaseError())
 		return
 	}
-	users, err := cbDatastore.GetUserInfoAll()
+	ctx := conn.QueryContext()
+	if ctx == nil {
+		ctx = datastore.NULL_QUERY_CONTEXT
+	}
+	users, err := cbDatastore.GetUserInfoAll(ctx)
 	if err != nil {
 		conn.Error(err)
 		return

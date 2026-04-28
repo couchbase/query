@@ -78,7 +78,7 @@ func (s *store) createSysCollection(bucketName, scopeName, collectionName, index
 		// _system scope automatically created
 		if scopeName != _BUCKET_SYSTEM_SCOPE {
 			// allow "already exists" error in case of duplicated Create call
-			er = sysBucket.CreateScope(scopeName)
+			er = sysBucket.CreateScope(datastore.NULL_QUERY_CONTEXT, scopeName)
 			if er != nil && !cb.AlreadyExistsError(er) {
 				return er
 			}
@@ -120,7 +120,7 @@ func (s *store) createSysCollection(bucketName, scopeName, collectionName, index
 		// _query collection automatically created
 		if collectionName != _BUCKET_SYSTEM_COLLECTION {
 			// allow "already exists" error in case of duplicated Create call
-			er = sysScope.CreateCollection(collectionName, nil)
+			er = sysScope.CreateCollection(datastore.NULL_QUERY_CONTEXT, collectionName, "", "", nil)
 			if er != nil && !cb.AlreadyExistsError(er) {
 				return er
 			}

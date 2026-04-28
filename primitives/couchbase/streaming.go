@@ -165,6 +165,7 @@ const STREAM_RETRY_PERIOD = 100 * time.Millisecond
 
 type NotifyFn func(bucket string, err error)
 type StreamingFn func(bucket *Bucket, msgPrefix string) bool
+type PoolStreamingFn func(externalCatalogsManifestUid uint64, msgPrefix string) bool
 
 // Use TCP keepalive to detect half close sockets
 var updaterTransport http.RoundTripper = &http.Transport{
@@ -236,7 +237,7 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) boo
 					delete(p.BucketMap, name)
 					p.Unlock()
 				}
-				if err.Code() != errors.E_BUCKET_UPDATER_EP_NOT_FOUND {
+				if err.Code() != errors.E_UPDATER_EP_NOT_FOUND {
 					logging.Errorf("%s (%s) exited with: %v", msgPrefix, name, err)
 				}
 			}
@@ -284,12 +285,12 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 	for {
 
 		if failures == MAX_RETRY_COUNT {
-			return errors.NewBucketUpdaterMaxErrors(returnErr)
+			return errors.NewUpdaterMaxErrors(b.GetName(), returnErr)
 		}
 
 		nodes := b.Nodes()
 		if len(nodes) < 1 {
-			return errors.NewBucketUpdaterNoHealthyNodesFound()
+			return errors.NewUpdaterNoHealthyNodesFound(b.GetName())
 		}
 
 		streamUrl := b.pool.client.BaseURL.JoinPath("/pools/default/bucketsStreaming/", uriAdj(b.GetName())).String()
@@ -304,7 +305,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 		req, err := http.NewRequest("GET", streamUrl, nil)
 		if err != nil {
 			logging.Infof("%s Error creating request: %v", msgPrefix, err)
-			return errors.NewBucketUpdaterStreamingError(err)
+			return errors.NewUpdaterStreamingError(b.GetName(), err)
 		}
 		req.Header.Set("User-Agent", USER_AGENT)
 
@@ -314,7 +315,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 		b.RUnlock()
 		if err != nil {
 			logging.Infof("%s Error setting request auth: %v", msgPrefix, err)
-			return errors.NewBucketUpdaterAuthError(err)
+			return errors.NewUpdaterAuthError(b.GetName(), err)
 		}
 
 		res, err := doHTTPRequestForUpdate(req)
@@ -325,20 +326,20 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 					logging.Infof("%s %v (Retrying %v)", msgPrefix, err, failures)
 					time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
 				} else {
-					returnErr = errors.NewBucketUpdaterStreamingError(err)
+					returnErr = errors.NewUpdaterStreamingError(b.GetName(), err)
 				}
 				continue
 			}
-			return errors.NewBucketUpdaterStreamingError(err)
+			return errors.NewUpdaterStreamingError(b.GetName(), err)
 		} else if res.StatusCode == http.StatusNotFound {
 			// bucket has been removed, shut down
 			logging.Infof("%s Streaming endpoint not found. Exiting.", msgPrefix)
-			return errors.NewBucketUpdaterEndpointNotFoundError()
+			return errors.NewUpdaterEndpointNotFoundError(b.GetName())
 		} else if res.StatusCode != http.StatusOK {
 			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
 			logging.Errorf("%s Status %v - %s", msgPrefix, res.StatusCode, bod)
 			res.Body.Close()
-			returnErr = errors.NewBucketUpdaterFailedToConnectToHost(res.StatusCode, bod)
+			returnErr = errors.NewUpdaterFailedToConnectToHost(b.GetName(), res.StatusCode, bod)
 			failures++
 			continue
 		}
@@ -429,7 +430,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 					hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, b.pool.client.disableNonSSLPorts)
 					if err != nil {
 						b.Unlock()
-						return errors.NewBucketUpdaterMappingError(err)
+						return errors.NewUpdaterMappingError(b.GetName(), err)
 					}
 				}
 				if b.ah != nil {
@@ -462,6 +463,160 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 		failures++
 		continue
 
+	}
+	return nil
+}
+
+func (p *Pool) streamingURI() (string, errors.Error) {
+	for _, pool := range p.client.Info.Pools {
+		if pool.Name == "default" {
+			if pool.StreamingURI == "" {
+				break
+			}
+			return pool.StreamingURI, nil
+		}
+	}
+	return "", errors.NewUpdaterStreamingError("pool", fmt.Errorf("no streaming URI for pool"))
+}
+
+func (p *Pool) RunPoolUpdater2(streamingFn PoolStreamingFn, notify NotifyFn) {
+	p.Lock()
+	if p.updater != nil {
+		p.updater.Close()
+		p.updater = nil
+	}
+	p.Unlock()
+	go func() {
+		id := atomic.AddInt32(&updaterId, 1) & 0xffff
+		msgPrefix := fmt.Sprintf("[%p:pool:%04x] Updater:", p, id)
+		err := p.UpdatePool2(msgPrefix, streamingFn)
+		if err != nil {
+			if notify != nil {
+				notify("default", err)
+			}
+			logging.Errorf("%s exited with: %v", msgPrefix, err)
+		}
+	}()
+}
+
+func (p *Pool) UpdatePool2(msgPrefix string, streamingFn PoolStreamingFn) errors.Error {
+	var failures int
+	var returnErr error
+	var updater io.ReadCloser
+
+	defer func() {
+		log := false
+		p.Lock()
+		if p.updater == updater {
+			p.updater = nil
+			log = true
+		}
+		p.Unlock()
+		if log {
+			logging.Debugf("%s Resetting p.updater (%p) on exit", msgPrefix, updater)
+		}
+	}()
+
+	for {
+		if failures == MAX_RETRY_COUNT {
+			return errors.NewUpdaterMaxErrors("pool", returnErr)
+		}
+
+		streamURI, qErr := p.streamingURI()
+		if qErr != nil {
+			return qErr
+		}
+
+		streamUrl := p.client.BaseURL.Scheme + "://" + p.client.BaseURL.Host + streamURI
+		logging.Infof("%s Streaming %s", msgPrefix, streamUrl)
+
+		req, goErr := http.NewRequest("GET", streamUrl, nil)
+		if goErr != nil {
+			return errors.NewUpdaterStreamingError("pool", goErr)
+		}
+		req.Header.Set("User-Agent", USER_AGENT)
+
+		goErr = maybeAddAuth(req, p.client.ah)
+		if goErr != nil {
+			return errors.NewUpdaterAuthError("pool", goErr)
+		}
+
+		res, goErr := doHTTPRequestForUpdate(req)
+		if goErr != nil {
+			if isConnError(goErr) {
+				failures++
+				if failures < MAX_RETRY_COUNT {
+					logging.Infof("%s %v (Retrying %v)", msgPrefix, goErr, failures)
+					time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
+				} else {
+					returnErr = errors.NewUpdaterStreamingError("pool", goErr)
+				}
+				continue
+			}
+			return errors.NewUpdaterStreamingError("pool", goErr)
+		} else if res.StatusCode == http.StatusNotFound {
+			logging.Infof("%s Streaming endpoint not found. Exiting.", msgPrefix)
+			return errors.NewUpdaterEndpointNotFoundError("pool")
+		} else if res.StatusCode != http.StatusOK {
+			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
+			logging.Errorf("%s Status %v - %s", msgPrefix, res.StatusCode, bod)
+			res.Body.Close()
+			returnErr = errors.NewUpdaterFailedToConnectToHost("pool", res.StatusCode, bod)
+			failures++
+			continue
+		}
+
+		p.Lock()
+		if p.updater != updater {
+			p.Unlock()
+			res.Body.Close()
+			logging.Infof("%s New updater found", msgPrefix)
+			return nil
+		}
+		p.updater = res.Body
+		updater = p.updater
+		p.Unlock()
+
+		dec := json.NewDecoder(res.Body)
+		tmpPool := &Pool{}
+		for {
+			p.RLock()
+			terminate := p.updater != updater
+			p.RUnlock()
+			if terminate {
+				res.Body.Close()
+				logging.Infof("%s Stopping (changed)", msgPrefix)
+				return nil
+			}
+
+			err := dec.Decode(tmpPool)
+
+			p.RLock()
+			terminate = p.updater != updater
+			p.RUnlock()
+			if terminate {
+				logging.Infof("%s Stopping (changed)", msgPrefix)
+				return nil
+			}
+
+			if err != nil {
+				logging.Debugf("%s Decode error: %v", msgPrefix, err)
+				returnErr = err
+				res.Body.Close()
+				break
+			}
+
+			failures = 0
+
+			if streamingFn != nil {
+				if !streamingFn(tmpPool.ExternalCatalogsManifestUid, msgPrefix) {
+					return nil
+				}
+			}
+			logging.Debugf("%s Got new pool configuration", msgPrefix)
+		}
+		failures++
+		continue
 	}
 	return nil
 }

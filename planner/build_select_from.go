@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/extparams"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/util"
@@ -323,6 +324,31 @@ func (this *builder) GetSubPaths(ksTerm *algebra.KeyspaceTerm, keyspace string) 
 	return names, nil
 }
 
+func addExternalPrivilages(node *algebra.KeyspaceTerm, keyspace datastore.Keyspace, stmt string) {
+	if externalKeyspace, ok := keyspace.(interface {
+		ExternalEntry() *extparams.ExternalCollectionEntry
+	}); ok {
+		ec := externalKeyspace.ExternalEntry()
+		node.AddExternalPrivilege(ec.CredentialId, auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME, auth.PRIV_PROPS_NONE)
+		if ec.CatalogInfo != nil {
+			if ec.CatalogInfo.CredentialId != "" {
+				node.AddExternalPrivilege(ec.CatalogInfo.CredentialId,
+					auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME, auth.PRIV_PROPS_NONE)
+			}
+			switch stmt {
+			case "SELECT":
+				node.AddExternalPrivilege(ec.CatalogInfo.Name, auth.PRIV_CATALOG_SELECT, auth.PRIV_PROPS_NONE)
+			case "UPDATE":
+				node.AddExternalPrivilege(ec.CatalogInfo.Name, auth.PRIV_CATALOG_UPDATE, auth.PRIV_PROPS_NONE)
+			case "INSERT":
+				node.AddExternalPrivilege(ec.CatalogInfo.Name, auth.PRIV_CATALOG_INSERT, auth.PRIV_PROPS_NONE)
+			case "DELETE":
+				node.AddExternalPrivilege(ec.CatalogInfo.Name, auth.PRIV_CATALOG_DELETE, auth.PRIV_PROPS_NONE)
+			}
+		}
+	}
+}
+
 func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
 	node.SetDefaultNamespace(this.namespace)
 	keyspace, err := this.getTermKeyspace(node)
@@ -335,14 +361,63 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("VisitKeyspaceTerm: baseKeyspace for %s not found", node.Alias()))
 	}
 
+	// Check if this is an external collection
+	isExternalCollection := keyspace != nil && keyspace.IsExternalCollection()
+	if isExternalCollection {
+		if node.Keys() != nil {
+			return nil, errors.NewPlanError(nil, "USE KEYS is not supported on external collections")
+		}
+		// Validate snapshot expressions are static (compile-time constants)
+		if node.SnapshotIdExpr() != nil && node.SnapshotIdExpr().Static() == nil {
+			return nil, errors.NewPlanError(nil, "SNAPSHOT expression must be a static value")
+		}
+		if node.SnapshotTimestampExpr() != nil && node.SnapshotTimestampExpr().Static() == nil {
+			return nil, errors.NewPlanError(nil, "TIMESTAMP expression must be a static value")
+		}
+		addExternalPrivilages(node, keyspace, "SELECT")
+	} else if node.HasSnapshotOption() {
+		// Snapshot options are only valid for external collections
+		return nil, errors.NewPlanError(nil, "Snapshot options are only supported on external collections")
+	}
+
+	if !isExternalCollection && node.HasSnapshotOption() {
+		return nil, errors.NewPlanError(nil, "Snapshot options are only supported on external collections")
+	}
+
 	var inCorrSubq bool
 	if this.subquery && this.correlated {
+		// External collections are not supported in correlated subqueries
+		if isExternalCollection {
+			return nil, errors.NewPlanError(nil, "External collections are not supported in correlated subqueries")
+		}
 		node.SetInCorrSubq()
 		baseKeyspace.SetInCorrSubq()
 		inCorrSubq = true
 	}
 
-	scan, err := this.selectScan(keyspace, node, false)
+	var scan plan.Operator
+	var extFilter expression.Expression
+	// External collections don't support index scans, use ExternalScan
+	if isExternalCollection {
+		// Get the filter for external collection
+		filter, _, filterErr := this.getFilter(node.Alias(), false, false, nil)
+		if filterErr != nil {
+			return nil, filterErr
+		}
+		extFilter = filter
+		names := this.node.Expressions().GetPathsForAlias(node.Alias(), false)
+		externalScan := plan.NewExternalScan(keyspace, node, nil, filter,
+			node.SnapshotIdExpr(), node.SnapshotTimestampExpr(),
+			OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
+		if len(names) > 0 {
+			externalScan.SetEarlyProjection(names)
+		}
+		scan = externalScan
+		this.maxParallelism = 1
+		this.resetPushDowns()
+	} else {
+		scan, err = this.selectScan(keyspace, node, false)
+	}
 
 	uncovered := len(this.coveringScans) == 0 && this.countScan == nil
 	this.appendQueryInfo(scan, keyspace, node, uncovered)
@@ -366,8 +441,11 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		}
 	}
 	this.addChildren(scan)
+	if isExternalCollection && extFilter != nil {
+		this.addSubChildren(plan.NewFilter(extFilter, node.Alias(), float64(0), float64(0), int64(0), float64(0)))
+	}
 
-	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias())
+	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias()) && !isExternalCollection
 
 	if useCBO {
 		err = this.markPlanFlags(scan, node)
@@ -376,7 +454,9 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		}
 	}
 
-	if len(this.coveringScans) == 0 && this.countScan == nil {
+	// For external collections, ExternalScan handles fetching, subPaths, projection, and filter
+	// So skip Fetch operator creation
+	if !isExternalCollection && len(this.coveringScans) == 0 && this.countScan == nil {
 		err := this.checkEarlyProjection(this.initialProjection)
 		if err != nil {
 			return nil, err
@@ -464,10 +544,6 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			fetch.SetEarlyProjection(baseKeyspace.EarlyProjection())
 		}
 
-		// no need to separate out the filter if the query has a single keyspace
-		// in case of result cache being used (primary scan on inner of nested-loop join
-		// or inside correlated subquery), the result cache is on the Fetch operator, and
-		// should not be affected by the Filter operator after the Fetch operator.
 		if len(this.baseKeyspaces) > 1 {
 
 			filter, _, err := this.getFilter(node.Alias(), false, true, nil)
@@ -488,7 +564,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
 			}
 		}
-	} else if this.countScan == nil && len(this.coveringScans) > 0 &&
+	} else if !isExternalCollection && this.countScan == nil && len(this.coveringScans) > 0 &&
 		(inCorrSubq || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)) {
 
 		// if we have a covering index scan on primary index
@@ -700,6 +776,10 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 		return nil, err
 	}
 
+	if keyspace != nil && keyspace.IsExternalCollection() {
+		return nil, errors.NewPlanError(nil, "ON KEYS is not supported on external collections")
+	}
+
 	subPaths, err := this.GetSubPaths(right, right.Alias())
 	if err != nil {
 		return nil, err
@@ -755,6 +835,10 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 	keyspace, err := this.getTermKeyspace(right)
 	if err != nil {
 		return nil, err
+	}
+
+	if keyspace != nil && keyspace.IsExternalCollection() {
+		return nil, errors.NewPlanError(nil, "ON KEY is not supported on external collections")
 	}
 
 	err = this.markJoinIndexAllHint(right.Alias())
@@ -841,6 +925,10 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 		return nil, err
 	}
 
+	if keyspace != nil && keyspace.IsExternalCollection() {
+		return nil, errors.NewPlanError(nil, "ON KEYS is not supported on external collections")
+	}
+
 	subPaths, err := this.GetSubPaths(right, right.Alias())
 	if err != nil {
 		return nil, err
@@ -892,6 +980,10 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 	keyspace, err := this.getTermKeyspace(right)
 	if err != nil {
 		return nil, err
+	}
+
+	if keyspace != nil && keyspace.IsExternalCollection() {
+		return nil, errors.NewPlanError(nil, "ON KEY is not supported on external collections")
 	}
 
 	nest, err := this.buildIndexNest(keyspace, node)
@@ -1078,6 +1170,10 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	keyspace, err := this.getTermKeyspace(from)
 	if err != nil {
 		return false, err
+	}
+
+	if keyspace != nil && keyspace.IsExternalCollection() {
+		return false, nil
 	}
 
 	for _, term := range node.Projection().Terms() {

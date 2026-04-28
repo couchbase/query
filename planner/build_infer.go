@@ -15,7 +15,7 @@ import (
 
 func (this *builder) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}

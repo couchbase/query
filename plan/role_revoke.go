@@ -48,6 +48,7 @@ func (this *RevokeRole) MarshalBase(f func(map[string]interface{})) map[string]i
 	r["keyspaces"] = this.node.Keyspaces()
 	r["users"] = this.node.Users()
 	r["groups"] = this.node.Groups()
+	r["sourceType"] = this.node.SourceType()
 	if f != nil {
 		f(r)
 	}
@@ -56,11 +57,12 @@ func (this *RevokeRole) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *RevokeRole) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_         string                 `json:"#operator"`
-		Roles     []string               `json:"roles"`
-		Keyspaces []*algebra.KeyspaceRef `json:"keyspaces"`
-		Users     []string               `json:"users"`
-		Groups    bool                   `json:"groups"`
+		_          string                 `json:"#operator"`
+		Roles      []string               `json:"roles"`
+		Keyspaces  []*algebra.KeyspaceRef `json:"keyspaces"`
+		Users      []string               `json:"users"`
+		Groups     bool                   `json:"groups"`
+		SourceType string                 `json:"sourceType"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -68,7 +70,7 @@ func (this *RevokeRole) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	this.node = algebra.NewRevokeRole(_unmarshalled.Roles, _unmarshalled.Keyspaces, _unmarshalled.Users, _unmarshalled.Groups)
+	this.node = algebra.NewRevokeRole(_unmarshalled.Roles, _unmarshalled.Keyspaces, _unmarshalled.Users, _unmarshalled.Groups, _unmarshalled.SourceType)
 	return nil
 }
 

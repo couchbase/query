@@ -18,6 +18,7 @@ type Visitor interface {
 	VisitKeyScan(op *KeyScan) (interface{}, error)
 	VisitValueScan(op *ValueScan) (interface{}, error)
 	VisitDummyScan(op *DummyScan) (interface{}, error)
+	VisitExternalScan(op *ExternalScan) (interface{}, error)
 	VisitCountScan(op *CountScan) (interface{}, error)
 	VisitIndexCountScan(op *IndexCountScan) (interface{}, error)
 	VisitIndexCountScan2(op *IndexCountScan2) (interface{}, error)
@@ -124,12 +125,18 @@ type Visitor interface {
 	VisitAlterBucket(op *AlterBucket) (interface{}, error)
 	VisitDropBucket(op *DropBucket) (interface{}, error)
 
+	// Catalog DDL
+	VisitCreateCatalog(op *CreateCatalog) (any, error)
+	VisitAlterCatalog(op *AlterCatalog) (any, error)
+	VisitDropCatalog(op *DropCatalog) (any, error)
+
 	// Scope and Collection  DDL
 	VisitCreateScope(op *CreateScope) (interface{}, error)
 	VisitDropScope(op *DropScope) (interface{}, error)
 	VisitCreateCollection(op *CreateCollection) (interface{}, error)
 	VisitDropCollection(op *DropCollection) (interface{}, error)
 	VisitFlushCollection(op *FlushCollection) (interface{}, error)
+	VisitAlterCollection(op *AlterCollection) (any, error)
 
 	// Users
 	VisitCreateUser(op *CreateUser) (interface{}, error)
@@ -181,4 +188,9 @@ type Visitor interface {
 	VisitCreateSequence(op *CreateSequence) (interface{}, error)
 	VisitDropSequence(op *DropSequence) (interface{}, error)
 	VisitAlterSequence(op *AlterSequence) (interface{}, error)
+
+	// CredentialStore
+	VisitCreateCredentialStore(op *CreateCredentialStore) (any, error)
+	VisitAlterCredentialStore(op *AlterCredentialStore) (any, error)
+	VisitDropCredentialStore(op *DropCredentialStore) (any, error)
 }

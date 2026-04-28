@@ -21,6 +21,7 @@ import (
 type roleOp interface {
 	Roles() []string
 	Keyspaces() []*algebra.KeyspaceRef
+	SourceType() string
 }
 
 const (
@@ -31,12 +32,13 @@ const (
 )
 
 func validateRoles(op roleOp) errors.Error {
+	sourceType := op.SourceType()
 	ds := datastore.GetDatastore()
 	cbDatastore, ok := ds.(datastore.CouchbaseDatastore)
 	if !ok {
 		return errors.NewDatastoreNotCouchbaseError()
 	}
-	roles, err := cbDatastore.GetRolesAll()
+	roles, err := cbDatastore.GetRolesAll(datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		return err
 	}
@@ -59,7 +61,7 @@ func validateRoles(op roleOp) errors.Error {
 	}
 
 outer:
-	for _, r := range auth.NormalizeRoleNames(op.Roles()) {
+	for _, r := range auth.NormalizeRoleNames(op.Roles(), sourceType) {
 		for i := range roles {
 			if roles[i].Name == r {
 				switch {
@@ -93,7 +95,7 @@ func validateGroups(groups []string) errors.Error {
 	if !ok {
 		return errors.NewDatastoreNotCouchbaseError()
 	}
-	val, err := cbDatastore.GroupInfo()
+	val, err := cbDatastore.GroupInfo(datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		return err
 	}
@@ -120,7 +122,7 @@ func validateGroupRoles(roles []string) errors.Error {
 	if !ok {
 		return errors.NewDatastoreNotCouchbaseError()
 	}
-	all, err := cbDatastore.GetRolesAll()
+	all, err := cbDatastore.GetRolesAll(datastore.NULL_QUERY_CONTEXT)
 	if err != nil {
 		return err
 	}

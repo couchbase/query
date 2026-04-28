@@ -623,6 +623,11 @@
 		"added": "8.0.0",
 		"help": "The number of VECTOR_DISTANCE() calls made by statements."
 	},
+	"n1ql_external_scans": {
+		"type": "counter",
+		"added": "8.1.0",
+		"help": "Total number of external collection scans."
+	},
 	"n1ql_approx_vector_distance_func": {
 		"type": "counter",
 		"added": "8.0.0",

@@ -50,6 +50,9 @@ func (b *indexKeyspace) Name() string {
 func handleKeyspace(keyspace datastore.Keyspace, warnF func(err errors.Error), includeResults bool, handleF func(id string),
 	includeSeqScan bool) errors.Error {
 
+	if keyspace.IsExternalCollection() {
+		return nil
+	}
 	indexers, excp := keyspace.Indexers()
 	if excp == nil {
 		for _, indexer := range indexers {
@@ -229,6 +232,10 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 		return err
 	}
 
+	if keyspace.IsExternalCollection() {
+		return nil
+	}
+
 	indexers, err := keyspace.Indexers()
 	if err != nil {
 		logging.Infof("Indexer returned error %v", err)
@@ -316,6 +323,9 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 	keyspace, err := scope.KeyspaceById(keyspaceId)
 	if err != nil {
 		return err
+	}
+	if keyspace.IsExternalCollection() {
+		return nil
 	}
 
 	indexers, err := keyspace.Indexers()

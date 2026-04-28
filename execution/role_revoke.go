@@ -79,7 +79,7 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// Get the list of all valid roles, and verify that the roles to be deleted are proper.
-		validRoles, err := cbDatastore.GetRolesAll()
+		validRoles, err := cbDatastore.GetRolesAll(context)
 		if err != nil {
 			context.Fatal(err)
 			return
@@ -101,7 +101,7 @@ func (this *RevokeRole) RunOnce(context *Context, parent value.Value) {
 func (this *RevokeRole) revokeUserRoles(context *Context, cbDatastore datastore.CouchbaseDatastore, deleteRoleMap map[datastore.Role]bool) {
 
 	// Get the current set of users (with their role information),  and create a map of them by domain:userid.
-	userMap, err := getUserMap(cbDatastore)
+	userMap, err := getUserMap(context, cbDatastore)
 	if err != nil {
 		context.Fatal(err)
 		return
@@ -126,7 +126,7 @@ func (this *RevokeRole) revokeUserRoles(context *Context, cbDatastore datastore.
 					continue eachDeleteRole
 				}
 			}
-			context.Warning(errors.NewRoleNotPresent("User", userId, auth.RoleToAlias(deleteRole.Name), deleteRole.Target))
+			context.Warning(errors.NewRoleNotPresent("User", userId, auth.RoleToAlias(deleteRole.Name), deleteRole.Target, deleteRole.SourceType))
 		}
 
 		// Create a new list of roles for the user: their current
@@ -145,7 +145,7 @@ func (this *RevokeRole) revokeUserRoles(context *Context, cbDatastore datastore.
 		user.Roles = newRoles
 		// Update the user with their new roles on the backend.
 		user.Password = string([]byte{0}) // we are not including the password
-		err = cbDatastore.PutUserInfo(user)
+		err = cbDatastore.PutUserInfo(context, user)
 		if err != nil {
 			context.Error(err)
 		}
@@ -154,7 +154,7 @@ func (this *RevokeRole) revokeUserRoles(context *Context, cbDatastore datastore.
 
 func (this *RevokeRole) revokeGroupRoles(context *Context, cbDatastore datastore.CouchbaseDatastore, deleteRoleMap map[datastore.Role]bool) {
 
-	groupMap, err := getGroupMap(cbDatastore)
+	groupMap, err := getGroupMap(context, cbDatastore)
 	if err != nil {
 		context.Fatal(err)
 		return
@@ -175,7 +175,7 @@ func (this *RevokeRole) revokeGroupRoles(context *Context, cbDatastore datastore
 					continue eachDeleteRole
 				}
 			}
-			context.Warning(errors.NewRoleNotPresent("Group", groupId, auth.RoleToAlias(deleteRole.Name), deleteRole.Target))
+			context.Warning(errors.NewRoleNotPresent("Group", groupId, auth.RoleToAlias(deleteRole.Name), deleteRole.Target, deleteRole.SourceType))
 		}
 
 		newRoles := make([]datastore.Role, 0, len(group.Roles))
@@ -190,7 +190,7 @@ func (this *RevokeRole) revokeGroupRoles(context *Context, cbDatastore datastore
 		}
 		group.Roles = newRoles
 
-		err = cbDatastore.PutGroupInfo(group)
+		err = cbDatastore.PutGroupInfo(context, group)
 		if err != nil {
 			context.Error(err)
 		}

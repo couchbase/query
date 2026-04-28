@@ -321,8 +321,8 @@ func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, er
 	return virtual.NewVirtualKeyspace(p, path)
 }
 
-func (p *namespace) MetadataVersion() uint64 {
-	return 0
+func (p *namespace) MetadataVersion() (uint64, uint64) {
+	return 0, 0
 }
 
 func (p *namespace) MetadataId() string {
@@ -437,8 +437,8 @@ func (b *keyspace) MaxTTL() int64 {
 	return 0
 }
 
-func (b *keyspace) MetadataVersion() uint64 {
-	return 0
+func (b *keyspace) MetadataVersion() (uint64, uint64) {
+	return 0, 0
 }
 
 func (this *keyspace) Stats(context datastore.QueryContext, which []datastore.KeyspaceStats) ([]int64, errors.Error) {
@@ -671,15 +671,15 @@ func (b *keyspace) SetSubDoc(string, value.Pairs, datastore.QueryContext) (value
 func (b *keyspace) Release(close bool) {
 }
 
-func (b *keyspace) CreateScope(name string) errors.Error {
+func (b *keyspace) CreateScope(context datastore.QueryContext, name string) errors.Error {
 	return errors.NewScopesNotSupportedError(b.name)
 }
 
-func (b *keyspace) DropScope(name string) errors.Error {
+func (b *keyspace) DropScope(context datastore.QueryContext, name string) errors.Error {
 	return errors.NewScopesNotSupportedError(b.name)
 }
 
-func (b *keyspace) Flush() errors.Error {
+func (b *keyspace) Flush(context datastore.QueryContext) errors.Error {
 	return errors.NewNoFlushError(b.name)
 }
 
@@ -689,6 +689,15 @@ func (b *keyspace) IsBucket() bool {
 
 func (b *keyspace) IsSystemCollection() bool {
 	return false
+}
+
+func (b *keyspace) IsExternalCollection() bool {
+	return false
+}
+
+func (b *keyspace) ExternalScan(params *datastore.ExternalScanParams, context datastore.QueryContext,
+	conn *datastore.IndexConnection) {
+	conn.Fatal(errors.NewDatastoreExternalCollectionError(nil, "ExternalScan not supported on file keyspaces", nil))
 }
 
 func (b *keyspace) path() string {

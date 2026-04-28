@@ -125,6 +125,11 @@ func (this *planShape) VisitDummyScan(op *execution.DummyScan) (interface{}, err
 	return nil, nil
 }
 
+func (this *planShape) VisitExternalScan(op *execution.ExternalScan) (interface{}, error) {
+	this.add(planshape.EXTERNALSCAN)
+	return nil, nil
+}
+
 func (this *planShape) VisitCountScan(op *execution.CountScan) (interface{}, error) {
 	plan := op.PlanOp().(*plan.CountScan)
 	this.add(planshape.COUNTSCAN)
@@ -576,6 +581,11 @@ func (this *planShape) VisitCreateCollection(op *execution.CreateCollection) (in
 	return nil, nil
 }
 
+func (this *planShape) VisitAlterCollection(op *execution.AlterCollection) (any, error) {
+	this.add(planshape.ALTERCOLLECTION)
+	return nil, nil
+}
+
 func (this *planShape) VisitDropCollection(op *execution.DropCollection) (interface{}, error) {
 	this.add(planshape.DROPCOLLECTION)
 	return nil, nil
@@ -691,6 +701,21 @@ func (this *planShape) VisitAlterSequence(op *execution.AlterSequence) (interfac
 	return nil, nil
 }
 
+func (this *planShape) VisitCreateCredentialStore(op *execution.CreateCredentialStore) (any, error) {
+	this.add(planshape.CREATECREDENTIALSTORE)
+	return nil, nil
+}
+
+func (this *planShape) VisitAlterCredentialStore(op *execution.AlterCredentialStore) (any, error) {
+	this.add(planshape.ALTERCREDENTIALSTORE)
+	return nil, nil
+}
+
+func (this *planShape) VisitDropCredentialStore(op *execution.DropCredentialStore) (any, error) {
+	this.add(planshape.DROPCREDENTIALSTORE)
+	return nil, nil
+}
+
 func (this *planShape) VisitCreateBucket(op *execution.CreateBucket) (interface{}, error) {
 	this.add(planshape.CREATEBUCKET)
 	return nil, nil
@@ -703,6 +728,21 @@ func (this *planShape) VisitDropBucket(op *execution.DropBucket) (interface{}, e
 
 func (this *planShape) VisitAlterBucket(op *execution.AlterBucket) (interface{}, error) {
 	this.add(planshape.ALTERBUCKET)
+	return nil, nil
+}
+
+func (this *planShape) VisitCreateCatalog(op *execution.CreateCatalog) (any, error) {
+	this.add(planshape.CREATECATALOG)
+	return nil, nil
+}
+
+func (this *planShape) VisitDropCatalog(op *execution.DropCatalog) (any, error) {
+	this.add(planshape.DROPCATALOG)
+	return nil, nil
+}
+
+func (this *planShape) VisitAlterCatalog(op *execution.AlterCatalog) (any, error) {
+	this.add(planshape.ALTERCATALOG)
 	return nil, nil
 }
 

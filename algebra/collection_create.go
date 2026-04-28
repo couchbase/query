@@ -29,17 +29,28 @@ type CreateCollection struct {
 	keyspace     *KeyspaceRef `json:"keyspace"`
 	failIfExists bool         `json:"failIfExists"`
 	with         value.Value  `json:"with"`
+
+	// External collection fields
+	isExternal bool   `json:"isExternal"`
+	catalog    string `json:"catalog,omitempty"`
+	credential string `json:"credential,omitempty"`
 }
 
 /*
 The function NewCreateCollection returns a pointer to the
 CreateCollection struct with the input argument values as fields.
+If catalog is non-empty, it creates an external collection.
 */
-func NewCreateCollection(keyspace *KeyspaceRef, failIfExists bool, with value.Value) *CreateCollection {
+func NewCreateCollection(keyspace *KeyspaceRef, catalog, credential string,
+	failIfExists bool, with value.Value) *CreateCollection {
+
 	rv := &CreateCollection{
 		keyspace:     keyspace,
 		failIfExists: failIfExists,
 		with:         with,
+		isExternal:   catalog != "",
+		catalog:      catalog,
+		credential:   credential,
 	}
 
 	rv.stmt = rv
@@ -112,6 +123,18 @@ func (this *CreateCollection) With() value.Value {
 	return this.with
 }
 
+func (this *CreateCollection) IsExternal() bool {
+	return this.isExternal
+}
+
+func (this *CreateCollection) Catalog() string {
+	return this.catalog
+}
+
+func (this *CreateCollection) Credential() string {
+	return this.credential
+}
+
 /*
 Marshals input receiver into byte array.
 */
@@ -119,6 +142,11 @@ func (this *CreateCollection) MarshalJSON() ([]byte, error) {
 	r := map[string]interface{}{"type": "createCollection"}
 	r["keyspaceRef"] = this.keyspace
 	r["failIfExists"] = this.failIfExists
+	if this.isExternal {
+		r["isExternal"] = true
+		r["catalog"] = this.catalog
+		r["credential"] = this.credential
+	}
 	return json.Marshal(r)
 }
 
@@ -132,12 +160,30 @@ func (this *CreateCollection) FailIfExists() bool {
 
 func (this *CreateCollection) String() string {
 	var s strings.Builder
-	s.WriteString("CREATE COLLECTION ")
+	if this.isExternal {
+		s.WriteString("CREATE EXTERNAL COLLECTION ")
+	} else {
+		s.WriteString("CREATE COLLECTION ")
+	}
 
 	if !this.failIfExists {
 		s.WriteString("IF NOT EXISTS ")
 	}
 	s.WriteString(this.keyspace.Path().ProtectedString())
+
+	if this.isExternal {
+		s.WriteString(" ON `")
+		s.WriteString(this.catalog)
+		s.WriteRune('`')
+		s.WriteString(" AT `")
+		s.WriteString(this.credential)
+		s.WriteRune('`')
+	}
+
+	if this.with != nil {
+		s.WriteString(" WITH ")
+		s.WriteString(this.with.String())
+	}
 
 	return s.String()
 }

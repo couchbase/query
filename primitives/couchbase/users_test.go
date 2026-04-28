@@ -24,7 +24,7 @@ func TestGetRolesAll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unable to connect: %v", err)
 	}
-	roles, err := client.GetRolesAll()
+	roles, err := client.GetRolesAll(nil)
 	if err != nil {
 		t.Fatalf("Unable to get roles: %v", err)
 	}

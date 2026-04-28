@@ -206,6 +206,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	encryptionKeysHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doEncryption, false)
 	}
+	catalogsHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doCatalogs, false)
+	}
 	routeMap := map[string]struct {
 		handler handlerFunc
 		methods []string
@@ -254,6 +257,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 		indexesPrefix + "/natural_chats":        {handler: naturalIndexHandler, methods: []string{"GET"}},
 		adminPrefix + "/natural_chats/{chatId}": {handler: naturalHandler, methods: []string{"GET", "DELETE", "PATCH"}},
 		encryptionKeysPrefix:                    {handler: encryptionKeysHandler, methods: []string{"GET"}},
+		adminPrefix + "/catalogs":               {handler: catalogsHandler, methods: []string{"GET"}},
 	}
 
 	for route, h := range routeMap {
@@ -564,10 +568,8 @@ func (endpoint *HttpEndpoint) Authorize(req *http.Request) errors.Error {
 	return err
 }
 
-// Authenticates and authorizes a request.
-// Returns if the request was sent from the internal Query service user.
-func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(privileges *auth.Privileges, req *http.Request,
-	af *audit.ApiAuditFields) (errors.Error, bool) {
+func (endpoint *HttpEndpoint) verifyCredsFromRequest(privileges *auth.Privileges, req *http.Request,
+	af *audit.ApiAuditFields) (*auth.Credentials, errors.Error, bool) {
 
 	ds := datastore.GetDatastore()
 	creds := endpoint.getCredentialsFromRequest(ds, req)
@@ -580,10 +582,19 @@ func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(privileges *auth.Priv
 	}
 
 	if len(users) > 0 {
-		return err, checkInternalQueryUser(users[0], req)
+		return creds, err, checkInternalQueryUser(users[0], req)
 	}
 
-	return err, false
+	return creds, err, false
+}
+
+// Authenticates and authorizes a request.
+// Returns if the request was sent from the internal Query service user.
+func (endpoint *HttpEndpoint) verifyCredentialsFromRequest(privileges *auth.Privileges, req *http.Request,
+	af *audit.ApiAuditFields) (errors.Error, bool) {
+
+	_, err, isInternal := endpoint.verifyCredsFromRequest(privileges, req, af)
+	return err, isInternal
 }
 
 func getPrivileges(target string, priv auth.Privilege) *auth.Privileges {
@@ -2170,7 +2181,16 @@ func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
 			_, err = w.Write([]byte{','})
 		}
 		if err == nil {
+			sensitive := request.Sensitive()
 			r := activeRequestWorkHorse(endpoint, request, true, true, util.GetDurationStyle())
+			// Remove statement fields for sensitive statements
+			if sensitive {
+				if m, ok := r.(map[string]interface{}); ok {
+					delete(m, "statement")
+					delete(m, "sanitized_statement")
+					delete(m, "preparedText")
+				}
+			}
 			err = json.MarshalNoEscapeToBuffer(r, &buf)
 			if err == nil {
 				_, err = buf.WriteTo(w)
@@ -3359,7 +3379,6 @@ func doEncryption(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	if err != nil {
 		return nil, err
 	}
-
 	if !endpoint.server.Enterprise() {
 		return nil, errors.NewEnterpriseFeature("Encryption at rest", "encryption.encryption_at_rest_endpoint")
 	}
@@ -3385,4 +3404,31 @@ func doEncryption(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
+}
+
+func doCatalogs(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
+	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+
+	af.EventTypeId = audit.API_ADMIN_CATALOGS
+
+	creds, err, _ := endpoint.verifyCredsFromRequest(getPrivileges("", auth.PRIV_CLUSTER_ADMIN), req, af)
+	if err != nil {
+		return nil, err
+	}
+	ds := datastore.GetDatastore()
+	cbDs, ok := ds.(datastore.CouchbaseDatastore)
+	if !ok {
+		return nil, errors.NewDatastoreNotCouchbaseError()
+	}
+
+	name := req.FormValue("name")
+	// infoFlags: 1=schema, 2=snapshots, 4=files, 7=all
+	infoFlags, _ := strconv.ParseUint(req.FormValue("infoFlags"), 0, 64)
+	ctx := datastore.NewQueryContextWithCredentials(creds)
+	val, err := cbDs.GetCatalogs(ctx, name, infoFlags)
+	if err != nil {
+		return nil, err
+	}
+
+	return val.Actual(), nil
 }

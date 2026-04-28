@@ -59,6 +59,7 @@ var _OPERATORS = map[string]Operator{
 	"UnionScan":               &UnionScan{},
 	"DistinctScan":            &DistinctScan{},
 	"ExpressionScan":          &ExpressionScan{},
+	"ExternalScan":            &ExternalScan{},
 
 	// IndexFtsSearch
 	"IndexFtsSearch": &IndexFtsSearch{},
@@ -181,6 +182,7 @@ var _OPERATORS = map[string]Operator{
 	"CreateCollection": &CreateCollection{},
 	"DropCollection":   &DropCollection{},
 	"FlushCollection":  &FlushCollection{},
+	"AlterCollection":  &AlterCollection{},
 
 	// Functions
 	"CreateFunction":  &CreateFunction{},
@@ -217,4 +219,14 @@ var _OPERATORS = map[string]Operator{
 	"CreateBucket": &CreateBucket{},
 	"AlterBucket":  &AlterBucket{},
 	"DropBucket":   &DropBucket{},
+
+	// Catalogs
+	"CreateCatalog": &CreateCatalog{},
+	"AlterCatalog":  &AlterCatalog{},
+	"DropCatalog":   &DropCatalog{},
+
+	// CredentialStore
+	"CreateCredentialStore": &CreateCredentialStore{},
+	"AlterCredentialStore":  &AlterCredentialStore{},
+	"DropCredentialStore":   &DropCredentialStore{},
 }

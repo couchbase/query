@@ -143,8 +143,18 @@ func (b *bucketKeyspace) fetchOne(ns string, bn string) (value.AnnotatedValue, e
 				"path":         path(namespace.Name(), bucket.Name()),
 				"uuid":         bucket.Uid(),
 			})
-			if m, ok := bucket.(interface{ MetadataVersion() uint64 }); ok {
-				doc.SetField("manifest_id", m.MetadataVersion())
+			if m, ok := bucket.(interface{ MetadataVersion() (uint64, uint64) }); ok {
+				v, ev := m.MetadataVersion()
+				doc.SetField("manifest_id", v)
+				if ev != 0 {
+					doc.SetField("external_manifest_id", ev)
+				}
+			}
+			if m, ok := bucket.Namespace().(interface{ MetadataVersion() (uint64, uint64) }); ok {
+				_, cv := m.MetadataVersion()
+				if cv != 0 {
+					doc.SetField("catalog_manifest_id", cv)
+				}
 			}
 			return doc, nil
 		}

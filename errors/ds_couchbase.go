@@ -261,6 +261,18 @@ func NewCbBucketDropCollectionError(coll string, e error) Error {
 		cause: c, InternalMsg: "Error while dropping collection " + coll, InternalCaller: CallerN(1)}
 }
 
+func NewCbBucketAlterCollectionError(coll string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["collection"] = coll
+	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_ALTER_COLLECTION, IKey: "datastore.couchbase.alter_collection", ICause: e,
+		cause: c, InternalMsg: "Error while altering collection " + coll, InternalCaller: CallerN(1)}
+}
+
 func NewCbBucketFlushCollectionError(coll string, e error) Error {
 	c := make(map[string]interface{})
 	if _, ok := e.(Error); ok {
@@ -271,6 +283,133 @@ func NewCbBucketFlushCollectionError(coll string, e error) Error {
 	c["collection"] = coll
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_FLUSH_COLLECTION, IKey: "datastore.couchbase.flush_collection", ICause: e,
 		cause: c, InternalMsg: "Error while flushing collection " + coll, InternalCaller: CallerN(1)}
+}
+
+func NewCbCatalogExistsError(name string) Error {
+	c := make(map[string]interface{})
+	c["catalog"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_EXISTS, IKey: "datastore.couchbase.catalog_already_exists",
+		cause: c, InternalMsg: "Catalog '" + name + "' already exists.", InternalCaller: CallerN(1)}
+}
+
+func NewCbCatalogNotFoundError(e error, name string) Error {
+	c := make(map[string]interface{})
+	c["catalog"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_NOT_FOUND, IKey: "datastore.couchbase.catalog_not_found", ICause: e, cause: c,
+		InternalMsg: "Catalog not found: " + name, InternalCaller: CallerN(1)}
+}
+
+func NewCbCatalogCreateError(name string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["catalog"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_CREATE, IKey: "datastore.couchbase.create_catalog", ICause: e,
+		cause: c, InternalMsg: "Error while creating catalog " + name, InternalCaller: CallerN(1)}
+}
+
+func NewCbCatalogAlterError(name string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["catalog"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_ALTER, IKey: "datastore.couchbase.alter_catalog", ICause: e,
+		cause: c, InternalMsg: "Error while altering catalog " + name, InternalCaller: CallerN(1)}
+}
+
+func NewCbCatalogDropError(name string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["catalog"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_DROP, IKey: "datastore.couchbase.drop_catalog", ICause: e,
+		cause: c, InternalMsg: "Error while dropping catalog " + name, InternalCaller: CallerN(1)}
+}
+
+func NewCbCatalogGetError(e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_GET, IKey: "datastore.couchbase.get_catalogs", ICause: e,
+		cause: c, InternalMsg: "Error while getting catalogs", InternalCaller: CallerN(1)}
+}
+
+func NewCbCredentialStoreExistsError(name string) Error {
+	c := make(map[string]interface{})
+	c["credentialStore"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CREDENTIALSTORE_EXISTS, IKey: "datastore.couchbase.credentialstore_already_exists",
+		cause: c, InternalMsg: "Credential store '" + name + "' already exists.", InternalCaller: CallerN(1)}
+}
+
+func NewCbCredentialStoreNotFoundError(e error, name string) Error {
+	c := make(map[string]interface{})
+	c["credentialStore"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CREDENTIALSTORE_NOT_FOUND, IKey: "datastore.couchbase.credentialstore_not_found", ICause: e, cause: c,
+		InternalMsg: "Credential store not found: " + name, InternalCaller: CallerN(1)}
+}
+
+func NewCbCredentialStoreCreateError(name string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["credentialStore"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CREDENTIALSTORE_CREATE, IKey: "datastore.couchbase.create_credentialstore", ICause: e,
+		cause: c, InternalMsg: "Error while creating credential store " + name, InternalCaller: CallerN(1)}
+}
+
+func NewCbCredentialStoreAlterError(name string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["credentialStore"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CREDENTIALSTORE_ALTER, IKey: "datastore.couchbase.alter_credentialstore", ICause: e,
+		cause: c, InternalMsg: "Error while altering credential store " + name, InternalCaller: CallerN(1)}
+}
+
+func NewCbCredentialStoreDropError(name string, e error) Error {
+	c := make(map[string]interface{})
+	if _, ok := e.(Error); ok {
+		c["error"] = e
+	} else if e != nil {
+		c["error"] = e.Error()
+	}
+	c["credentialStore"] = name
+	return &err{level: EXCEPTION, ICode: E_CB_CREDENTIALSTORE_DROP, IKey: "datastore.couchbase.drop_credentialstore", ICause: e,
+		cause: c, InternalMsg: "Error while dropping credential store " + name, InternalCaller: CallerN(1)}
+}
+
+func NewDatastoreExternalCollectionError(e error, msg string, ec map[string]interface{}) Error {
+	var c interface{}
+	if e != nil || len(ec) > 0 {
+		m := make(map[string]interface{})
+		if e != nil {
+			m["error"] = e.Error()
+		}
+		for s, v := range ec {
+			m[s] = v
+		}
+		c = m
+	}
+	return &err{level: EXCEPTION, ICode: E_CB_EXTERNAL_COLLECTION, IKey: "datastore.couchbase.external_collection",
+		ICause: e, cause: c, InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
 func NewBinaryDocumentMutationError(op, key string) Error {

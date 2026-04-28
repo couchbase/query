@@ -12,6 +12,6 @@ export NS_SERVER_CBAUTH_URL="http://127.0.0.1:8091/_cbauth"
 export NS_SERVER_CBAUTH_USER="Administrator"
 export NS_SERVER_CBAUTH_PWD="password"
 export NS_SERVER_CBAUTH_RPC_URL="http://127.0.0.1:8091/cbauth-demo"
-export CBAUTH_REVRPC_URL="http://Administrator:password@127.0.0.1:8091/n1ql"
+export CBAUTH_REVRPC_URL="http://Administrator:password@127.0.0.1:8091/cbq-engine"
 export CBAUTH_TLS_CONFIG="{}"
 export GSI_TEST=true

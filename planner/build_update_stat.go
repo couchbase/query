@@ -15,7 +15,7 @@ import (
 
 func (this *builder) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
 	ksref := stmt.Keyspace()
-	keyspace, err := this.getNameKeyspace(ksref, false)
+	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
 		return nil, err
 	}

@@ -400,3 +400,30 @@ func HasSystemXattrs(expr Expression) bool {
 		}
 	}
 }
+
+func (this Expressions) GetPathsForAlias(alias string, caseSenstive bool) []string {
+	rv := NewExprToPaths(alias, caseSenstive)
+	for _, expr := range this {
+		_, err := rv.Map(expr)
+		if err != nil || rv.finshPath() {
+			return nil
+		}
+	}
+	return rv.pathsSlice(rv.aliasPaths[rv.alias])
+}
+
+func (this Expressions) GetPaths(caseSenstive bool) map[string][]string {
+	rv := NewExprToPaths("", caseSenstive)
+	for _, expr := range this {
+		_, err := rv.Map(expr)
+		if err != nil || rv.finshPath() {
+			return nil
+		}
+	}
+
+	rv1 := make(map[string][]string, len(rv.aliasPaths))
+	for alias, pathMap := range rv.aliasPaths {
+		rv1[alias] = rv.pathsSlice(pathMap)
+	}
+	return rv1
+}

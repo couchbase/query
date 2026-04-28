@@ -73,8 +73,8 @@ func (p *namespace) KeyspaceByName(name string) (datastore.Keyspace, errors.Erro
 	return b, nil
 }
 
-func (p *namespace) MetadataVersion() uint64 {
-	return 0
+func (p *namespace) MetadataVersion() (uint64, uint64) {
+	return 0, 0
 }
 
 func (p *namespace) MetadataId() string {
@@ -320,6 +320,18 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 		return e
 	}
 	registerKeyspace(p, nlChat)
+
+	catalogs, e := newCatalogsKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, catalogs)
+
+	catalogsInfo, e := newCatalogsInfoKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, catalogsInfo)
 
 	return nil
 }

@@ -3335,6 +3335,456 @@
         "errorCode": 1,
         "errorMessage": ""
       }
+    },
+    {
+      "id": 28745,
+      "name": "ALTER COLLECTION statement",
+      "description": "A N1QL ALTER COLLECTION statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28746,
+      "name": "CREATE CATALOG statement",
+      "description": "A N1QL CREATE CATALOG statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28747,
+      "name": "ALTER CATALOG statement",
+      "description": "A N1QL ALTER CATALOG statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28748,
+      "name": "DROP CATALOG statement",
+      "description": "A N1QL DROP CATALOG statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28749,
+      "name": "CREATE CREDENTIALSTORE statement",
+      "description": "A N1QL CREATE CREDENTIALSTORE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28750,
+      "name": "ALTER CREDENTIALSTORE statement",
+      "description": "A N1QL ALTER CREDENTIALSTORE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28751,
+      "name": "DROP CREDENTIALSTORE statement",
+      "description": "A N1QL DROP CREDENTIALSTORE statement was executed",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "requestId": "",
+        "statement": "",
+        "isAdHoc": true,
+        "userAgent": "",
+        "node": "",
+        "status": "",
+        "metrics": {
+          "elapsedTime": "1.0s",
+          "executionTime": "0.75s",
+          "resultCount": 1,
+          "resultSize": 18,
+          "mutationCount": 0,
+          "sortCount": 1,
+          "errorCount": 0,
+          "warningCount": 1
+        }
+      },
+      "optional_fields": {
+        "clientContextId": "",
+        "queryContext": "",
+        "namedArgs": {
+          "name1": "",
+          "name2": ""
+        },
+        "positionalArgs": [
+          ""
+        ],
+        "errors": [
+          {
+            "code": 1000,
+            "msg": ""
+          },
+          {
+            "code": 1001,
+            "msg": ""
+          }
+        ]
+      }
+    },
+    {
+      "id": 28752,
+      "name": "/admin/catalogs API request",
+      "description": "An HTTP request was made to list or inspect external catalogs",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "httpMethod": "",
+        "httpResultCode": 1
+      },
+      "optional_fields": {
+        "request": "",
+        "local": {
+          "ip": "",
+          "port": 1
+        },
+        "errorCode": 1,
+        "errorMessage": ""
+      }
     }
   ]
 }

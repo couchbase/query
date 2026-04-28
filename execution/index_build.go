@@ -10,6 +10,7 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -67,6 +68,12 @@ func (this *BuildIndexes) RunOnce(context *Context, parent value.Value) {
 		indexer, err := this.plan.Keyspace().Indexer(node.Using())
 		if err != nil {
 			context.Error(err)
+			return
+		}
+		if indexer == nil {
+			name := this.plan.Keyspace().Name()
+			context.Error(errors.NewCbIndexerNotImplementedError(nil,
+				fmt.Sprintf("Indexer not available for '%s' keyspace", name)))
 			return
 		}
 

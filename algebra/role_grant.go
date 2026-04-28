@@ -18,27 +18,46 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+// Source type constants for role grant/revoke
+const (
+	SOURCE_KEYSPACE        = ""
+	SOURCE_CATALOG         = "catalog"
+	SOURCE_CREDENTIALSTORE = "credentialstore"
+)
+
 type GrantRole struct {
 	statementBase
 
-	roles     []string       `json:"roles"`
-	keyspaces []*KeyspaceRef `json:"keyspaces"`
-	users     []string       `json:"users"`
-	groups    bool           `json:"groups"`
+	roles      []string       `json:"roles"`
+	keyspaces  []*KeyspaceRef `json:"keyspaces"`
+	users      []string       `json:"users"`
+	groups     bool           `json:"groups"`
+	sourceType string         `json:"sourceType"`
 }
 
 /*
 The function NewGrantRole returns a pointer to the
 GrantRole struct with the input argument values as fields.
 */
-func NewGrantRole(roles []string, keyspaces []*KeyspaceRef, users []string, groups bool) *GrantRole {
-	rv := &GrantRole{
-		roles:     roles,
-		keyspaces: keyspaces,
-		users:     users,
-		groups:    groups,
+// NewGrantRoleInfer constructs a GrantRole for the no-ON-clause form, inferring
+// the source type and wildcard keyspace target from the role names.
+func NewGrantRoleInfer(roles []string, users []string, groups bool) *GrantRole {
+	sourceType, needsTarget := SourceTypeFromRoles(roles)
+	var keyspaces []*KeyspaceRef
+	if needsTarget {
+		keyspaces = []*KeyspaceRef{NewKeyspaceRefWithContext("*", "", "", "")}
 	}
+	return NewGrantRole(roles, keyspaces, users, groups, sourceType)
+}
 
+func NewGrantRole(roles []string, keyspaces []*KeyspaceRef, users []string, groups bool, sourceType string) *GrantRole {
+	rv := &GrantRole{
+		roles:      roles,
+		keyspaces:  keyspaces,
+		users:      users,
+		groups:     groups,
+		sourceType: sourceType,
+	}
 	rv.stmt = rv
 	return rv
 }
@@ -122,6 +141,13 @@ func (this *GrantRole) Keyspaces() []*KeyspaceRef {
 }
 
 /*
+Returns the source type for the roles being assigned.
+*/
+func (this *GrantRole) SourceType() string {
+	return this.sourceType
+}
+
+/*
 Marshals input receiver into byte array.
 */
 func (this *GrantRole) MarshalJSON() ([]byte, error) {
@@ -130,8 +156,55 @@ func (this *GrantRole) MarshalJSON() ([]byte, error) {
 	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles
 	r["groups"] = this.groups
+	if this.sourceType != "" {
+		r["sourceType"] = this.sourceType
+	}
 
 	return json.Marshal(r)
+}
+
+// SourceTypeFromRoles infers the source type from a list of role names and whether a target (ON clause) is required.
+// The bool is true when all roles have the _external_catalog suffix or are credential_consumer.
+// _external_catalog suffix roles must not be mixed with external_catalog_admin / external_catalog_reader.
+// Mixed source types return SOURCE_KEYSPACE, false.
+func SourceTypeFromRoles(roles []string) (string, bool) {
+	roleSourceType := func(lc string) string {
+		if strings.HasSuffix(lc, "_external_catalog") || lc == "external_catalog_admin" || lc == "external_catalog_reader" {
+			return SOURCE_CATALOG
+		}
+		if lc == "credential_consumer" {
+			return SOURCE_CREDENTIALSTORE
+		}
+		return SOURCE_KEYSPACE
+	}
+
+	if len(roles) == 0 {
+		return SOURCE_KEYSPACE, false
+	}
+
+	var hasSuffixCatalog, hasAdminOrReader bool
+	lc0 := strings.ToLower(roles[0])
+	result := roleSourceType(lc0)
+
+	for _, role := range roles {
+		lc := strings.ToLower(role)
+		if roleSourceType(lc) != result {
+			return SOURCE_KEYSPACE, false
+		}
+		if strings.HasSuffix(lc, "_external_catalog") {
+			hasSuffixCatalog = true
+		} else if lc == "external_catalog_admin" || lc == "external_catalog_reader" {
+			hasAdminOrReader = true
+		}
+	}
+
+	// _external_catalog suffix roles must not be combined with external_catalog_admin/reader
+	if hasSuffixCatalog && hasAdminOrReader {
+		return SOURCE_KEYSPACE, false
+	}
+
+	needsTarget := hasSuffixCatalog || result == SOURCE_CREDENTIALSTORE
+	return result, needsTarget
 }
 
 func (this *GrantRole) Type() string {
@@ -148,6 +221,10 @@ func (this *GrantRole) String() string {
 		s.WriteRune('`')
 		s.WriteString(role)
 		s.WriteRune('`')
+		if this.sourceType != "" {
+			s.WriteRune(' ')
+			s.WriteString(strings.ToUpper(this.sourceType))
+		}
 	}
 
 	if len(this.keyspaces) > 0 {

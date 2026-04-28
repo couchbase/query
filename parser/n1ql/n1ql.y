@@ -155,6 +155,7 @@ column int
 %token BY
 %token CALL
 %token CACHE
+%token CATALOG
 %token CASE
 %token CAST
 %token CLUSTER
@@ -163,10 +164,12 @@ column int
 %token COMMIT
 %token COMMITTED
 %token CONNECT
+%token CONSUME
 %token CONTINUE
 %token _CORRELATED
 %token _COVER
 %token CREATE
+%token CREDENTIALSTORE
 %token CURRENT
 %token CYCLE
 %token DATABASE
@@ -193,6 +196,7 @@ column int
 %token EXECUTE
 %token EXISTS
 %token EXPLAIN
+%token EXTERNAL
 %token FALSE
 %token FETCH
 %token FILTER
@@ -324,7 +328,9 @@ column int
 %token SET
 %token SEQUENCE
 %token SHOW
+%token SNAPSHOT
 %token SOME
+%token SOURCE
 %token SPARSE
 %token START
 %token STATISTICS
@@ -332,12 +338,14 @@ column int
 %token SYSTEM
 %token THEN
 %token TIES
+%token TIMESTAMP
 %token TO
 %token TRAN
 %token TRANSACTION
 %token TRIGGER
 %token TRUE
 %token TRUNCATE
+%token TYPE
 %token UNBOUNDED
 %token UNDER
 %token UNION
@@ -405,7 +413,10 @@ column int
 
 /* Types */
 %type <s>                STR
-%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER USERS permitted_identifiers SEQUENCE VECTOR DENSE SPARSE MULTI CYCLE
+%type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER USERS SEQUENCE CYCLE
+%type <s>                VECTOR DENSE SPARSE MULTI CONSUME
+%type <s>                CATALOG SOURCE TYPE SNAPSHOT TIMESTAMP CREDENTIALSTORE EXTERNAL
+%type <s>                permitted_identifiers perm_ident_or_str
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -457,6 +468,7 @@ column int
 %type <simpleFromTerm>   simple_from_term
 %type <keyspaceTerm>     keyspace_term
 %type <keyspacePath>     keyspace_path
+%type <exprs>            opt_at_snapshot
 %type <b>                opt_join_type opt_quantifier
 %type <path>             path
 %type <s>                namespace_term namespace_name path_part keyspace_name
@@ -495,11 +507,14 @@ column int
 %type <statement>        transaction_stmt start_transaction commit_transaction rollback_transaction
 %type <statement>        savepoint set_transaction_isolation
 %type <statement>        collection_stmt create_collection drop_collection flush_collection
+%type <statement>        external_collection_stmt create_external_collection alter_collection
 %type <statement>        role_stmt grant_role revoke_role
 %type <statement>        user_stmt create_user alter_user drop_user
 %type <statement>        group_stmt create_group alter_group drop_group
 %type <statement>        function_stmt create_function drop_function execute_function
 %type <statement>        bucket_stmt create_bucket alter_bucket drop_bucket
+%type <statement>        catalog_stmt create_catalog alter_catalog drop_catalog
+%type <statement>        credentialstore_stmt create_credentialstore alter_credentialstore drop_credentialstore
 
 %type <keyspaceRef>      keyspace_ref simple_keyspace_ref
 %type <pairs>            values values_list next_values
@@ -543,7 +558,8 @@ column int
 %type <keyspaceRefs>     keyspace_scope_list
 %type <keyspaceRef>      keyspace_scope
 %type <ss>               role_list group_role_list
-%type <s>                role_name group_role_list_item
+%type <ss>               ident_list
+%type <s>                role_name group_role_list_item catalog_privilege credentialstore_privilege
 %type <s>                user group_name
 
 %type <u32>              opt_ikattr ikattr
@@ -625,6 +641,28 @@ SPARSE
 VECTOR
 |
 CYCLE
+|
+SOURCE
+|
+CATALOG
+|
+CONSUME
+|
+TYPE
+|
+SNAPSHOT
+|
+TIMESTAMP
+|
+CREDENTIALSTORE
+|
+EXTERNAL
+;
+
+perm_ident_or_str:
+permitted_identifiers
+|
+STR
 ;
 
 opt_trailer:
@@ -671,6 +709,8 @@ function_stmt
 transaction_stmt
 |
 sequence_stmt
+|
+credentialstore_stmt
 ;
 
 advise:
@@ -883,9 +923,13 @@ index_stmt
 |
 bucket_stmt
 |
+catalog_stmt
+|
 scope_stmt
 |
 collection_stmt
+|
+external_collection_stmt
 ;
 
 user_stmt:
@@ -928,6 +972,14 @@ alter_bucket
 drop_bucket
 ;
 
+catalog_stmt:
+create_catalog
+|
+alter_catalog
+|
+drop_catalog
+;
+
 scope_stmt:
 create_scope
 |
@@ -939,7 +991,13 @@ create_collection
 |
 drop_collection
 |
+alter_collection
+|
 flush_collection
+;
+
+external_collection_stmt:
+create_external_collection
 ;
 
 function_stmt:
@@ -1496,7 +1554,7 @@ keyspace_term
     $$ = $1
 }
 |
-expr opt_as_alias opt_use
+expr opt_as_alias opt_at_snapshot opt_use
 {
     l := $<line>1
     c := $<column>1
@@ -1511,10 +1569,13 @@ expr opt_as_alias opt_use
             if $2 == "" {
                 return yylex.(*lexer).FatalError("Subquery in FROM clause must have an alias.", $<line>1, $<column>1)
             }
-            if $3.Keys() != nil || $3.Indexes() != nil {
-                return yylex.(*lexer).FatalError("FROM Subquery cannot have USE KEYS or USE INDEX.", $<line>3, $<column>3)
+            if $3 != nil {
+                return yylex.(*lexer).FatalError("AT SNAPSHOT/TIMESTAMP is not allowed on subqueries.", $<line>3, $<column>3)
             }
-            sqterm := algebra.NewSubqueryTerm(other.Select(), $2, $3.JoinHint())
+            if $4.Keys() != nil || $4.Indexes() != nil {
+                return yylex.(*lexer).FatalError("FROM Subquery cannot have USE KEYS or USE INDEX.", $<line>4, $<column>4)
+            }
+            sqterm := algebra.NewSubqueryTerm(other.Select(), $2, $4.JoinHint())
             sqterm.SetErrorContext(l, c)
             $$ = sqterm
         case *expression.Identifier:
@@ -1522,19 +1583,29 @@ expr opt_as_alias opt_use
                 return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", $<line>1, $<column>1)
             }
             ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathWithContext(other.Alias(), yylex.(*lexer).Namespace(),
-                yylex.(*lexer).QueryContext()), $2, $3.Keys(), $3.Indexes())
-            ksterm.SetValidateKeys($3.ValidateKeys())
+                yylex.(*lexer).QueryContext()), $2, $4.Keys(), $4.Indexes())
+            ksterm.SetValidateKeys($4.ValidateKeys())
             ksterm.SetErrorContext($<line>1, $<column>1)
-            $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
+            if $3 != nil {
+                if $3[0] != nil {
+                    ksterm.SetSnapshotIdExpr($3[0])
+                } else if len($3) == 2 && $3[1] != nil {
+                    ksterm.SetSnapshotTimestampExpr($3[1])
+                }
+            }
+            $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $4.JoinHint())
         case *algebra.NamedParameter, *algebra.PositionalParameter:
-            if $3.Indexes() == nil {
-                if $3.Keys() != nil {
-                    ksterm := algebra.NewKeyspaceTermFromExpression(other, $2, $3.Keys(), $3.Indexes(), $3.JoinHint())
-                    ksterm.SetValidateKeys($3.ValidateKeys())
+            if $3 != nil {
+                return yylex.(*lexer).FatalError("AT SNAPSHOT/TIMESTAMP is not allowed on parameter expressions.", $<line>3, $<column>3)
+            }
+            if $4.Indexes() == nil {
+                if $4.Keys() != nil {
+                    ksterm := algebra.NewKeyspaceTermFromExpression(other, $2, $4.Keys(), $4.Indexes(), $4.JoinHint())
+                    ksterm.SetValidateKeys($4.ValidateKeys())
                     ksterm.SetErrorContext(l, c)
                     $$ = ksterm
                 } else {
-                    $$ = algebra.NewExpressionTerm(other, $2, nil, false, $3.JoinHint())
+                    $$ = algebra.NewExpressionTerm(other, $2, nil, false, $4.JoinHint())
                 }
             } else {
                 return yylex.(*lexer).FatalError("FROM <placeholder> cannot have USE INDEX.", $<line>1, $<column>1)
@@ -1551,11 +1622,18 @@ expr opt_as_alias opt_use
                         l, c := cs.GetErrorContext()
                         return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", l, c)
                     }
-                    ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $3.Keys(), $3.Indexes())
+                    ksterm := algebra.NewKeyspaceTermFromPath(longPath, $2, $4.Keys(), $4.Indexes())
                     ksterm.SetFromTwoParts()
-                    ksterm.SetValidateKeys($3.ValidateKeys())
+                    ksterm.SetValidateKeys($4.ValidateKeys())
                     ksterm.SetErrorContext($<line>1, $<column>1)
-                    $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
+                    if $3 != nil {
+                        if $3[0] != nil {
+                            ksterm.SetSnapshotIdExpr($3[0])
+                        } else if len($3) == 2 && $3[1] != nil {
+                            ksterm.SetSnapshotTimestampExpr($3[1])
+                        }
+                    }
+                    $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $4.JoinHint())
                 }
             } else if len(path) == 3 {
                 if cs := other.GetFirstCaseSensitivePathElement(); cs != nil {
@@ -1563,10 +1641,17 @@ expr opt_as_alias opt_use
                     return yylex.(*lexer).FatalError("Keyspace term must be case sensitive", l, c)
                 }
                 ksterm := algebra.NewKeyspaceTermFromPath(algebra.NewPathLong(yylex.(*lexer).Namespace(), path[0], path[1],
-                    path[2]), $2, $3.Keys(), $3.Indexes())
-                ksterm.SetValidateKeys($3.ValidateKeys())
+                    path[2]), $2, $4.Keys(), $4.Indexes())
+                ksterm.SetValidateKeys($4.ValidateKeys())
                 ksterm.SetErrorContext($<line>1, $<column>1)
-                $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $3.JoinHint())
+                if $3 != nil {
+                    if $3[0] != nil {
+                        ksterm.SetSnapshotIdExpr($3[0])
+                    } else if len($3) == 2 && $3[1] != nil {
+                        ksterm.SetSnapshotTimestampExpr($3[1])
+                    }
+                }
+                $$ = algebra.NewExpressionTerm(other, $2, ksterm, other.Parenthesis() == false, $4.JoinHint())
             } else {
                 isExpr = true
             }
@@ -1574,8 +1659,11 @@ expr opt_as_alias opt_use
             isExpr = true
     }
     if isExpr {
-        if $3.Keys() == nil && $3.Indexes() == nil {
-            $$ = algebra.NewExpressionTerm($1, $2, nil, false, $3.JoinHint())
+        if $3 != nil {
+            return yylex.(*lexer).FatalError("AT SNAPSHOT/TIMESTAMP is only allowed on keyspace terms, not expressions.", $<line>3, $<column>3)
+        }
+        if $4.Keys() == nil && $4.Indexes() == nil {
+            $$ = algebra.NewExpressionTerm($1, $2, nil, false, $4.JoinHint())
         } else {
             return yylex.(*lexer).FatalError("FROM Expression cannot have USE KEYS or USE INDEX.", $<line>1, $<column>1)
         }
@@ -1590,15 +1678,49 @@ FLATTEN
 ;
 
 keyspace_term:
-keyspace_path opt_as_alias opt_use
+keyspace_path opt_as_alias opt_at_snapshot opt_use
 {
-    ksterm := algebra.NewKeyspaceTermFromPath($1, $2, $3.Keys(), $3.Indexes())
-    ksterm.SetValidateKeys($3.ValidateKeys())
+    ksterm := algebra.NewKeyspaceTermFromPath($1, $2, $4.Keys(), $4.Indexes())
+    ksterm.SetValidateKeys($4.ValidateKeys())
     ksterm.SetErrorContext($<line>1, $<column>1)
-    if $3.JoinHint() != algebra.JOIN_HINT_NONE {
-        ksterm.SetJoinHint($3.JoinHint())
+    if $4.JoinHint() != algebra.JOIN_HINT_NONE {
+        ksterm.SetJoinHint($4.JoinHint())
+    }
+    if $3 != nil {
+        if $3[0] != nil {
+            ksterm.SetSnapshotIdExpr($3[0])
+        } else if len($3) == 2 && $3[1] != nil {
+            ksterm.SetSnapshotTimestampExpr($3[1])
+        }
     }
     $$ = ksterm
+}
+;
+
+opt_at_snapshot:
+/* empty */
+{
+    $$ = nil
+}
+|
+AT SNAPSHOT expr
+{
+        $$ = expression.Expressions{$3, nil}
+}
+|
+AT TIMESTAMP expr
+{
+        $$ = expression.Expressions{nil, $3}
+}
+|
+AT LPAREN SNAPSHOT expr RPAREN
+{
+        $$ = expression.Expressions{$4, nil}
+}
+|
+AT LPAREN TIMESTAMP expr RPAREN
+{
+        $$ = expression.Expressions{nil, $4}
 }
 ;
 
@@ -3107,7 +3229,27 @@ role_name ON keyspace_scope
         // strip the namespace as endpoint doesn't accept it in the target information
         fn = fn[i+1:]
     }
-    $$ = auth.AliasToRole($1) + "[" + strings.ReplaceAll(fn, ".", ":") + "]"
+    $$ = auth.AliasToRole($1, algebra.SOURCE_KEYSPACE) + "[" + strings.ReplaceAll(fn, ".", ":") + "]"
+}
+|
+credentialstore_privilege ON perm_ident_or_str
+{
+    $$ = auth.AliasToRole($1, algebra.SOURCE_CREDENTIALSTORE) + "[" + $3 + "]"
+}
+|
+credentialstore_privilege
+{
+    $$ = auth.AliasToRole($1, algebra.SOURCE_CREDENTIALSTORE) + "[*]"
+}
+|
+catalog_privilege ON perm_ident_or_str
+{
+    $$ = auth.AliasToRole($1, algebra.SOURCE_CATALOG) + "[" + $3 + "]"
+}
+|
+catalog_privilege
+{
+    $$ = auth.AliasToRole($1, algebra.SOURCE_CATALOG) + "[*]"
 }
 ;
 
@@ -3132,32 +3274,122 @@ USERS
 grant_role:
 GRANT role_list TO user_list
 {
-    $$ = algebra.NewGrantRole($2, nil, $4, false)
+    $$ = algebra.NewGrantRoleInfer($2, $4, false)
 }
 |
 GRANT role_list ON keyspace_scope_list TO user_list
 {
-    $$ = algebra.NewGrantRole($2, $4, $6, false)
+    $$ = algebra.NewGrantRole($2, $4, $6, false, algebra.SOURCE_KEYSPACE)
 }
 |
 GRANT role_list TO user_users user_list
 {
-    $$ = algebra.NewGrantRole($2, nil, $5, false)
+    $$ = algebra.NewGrantRoleInfer($2, $5, false)
 }
 |
 GRANT role_list ON keyspace_scope_list TO user_users user_list
 {
-    $$ = algebra.NewGrantRole($2, $4, $7, false)
+    $$ = algebra.NewGrantRole($2, $4, $7, false, algebra.SOURCE_KEYSPACE)
 }
 |
 GRANT role_list TO group_or_groups groups
 {
-    $$ = algebra.NewGrantRole($2, nil, $5, true)
+    $$ = algebra.NewGrantRoleInfer($2, $5, true)
 }
 |
 GRANT role_list ON keyspace_scope_list TO group_or_groups groups
 {
-    $$ = algebra.NewGrantRole($2, $4, $7, true)
+    $$ = algebra.NewGrantRole($2, $4, $7, true, algebra.SOURCE_KEYSPACE)
+}
+|
+GRANT credentialstore_privilege ON ident_list TO user_list
+{
+    keyspaces := make([]*algebra.KeyspaceRef,0,len($4))
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $6, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+GRANT credentialstore_privilege ON ident_list TO user_users user_list
+{
+    keyspaces := make([]*algebra.KeyspaceRef,0,len($4))
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $7, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+GRANT credentialstore_privilege ON ident_list TO group_or_groups groups
+{
+    keyspaces := make([]*algebra.KeyspaceRef,0,len($4))
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $7, true, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+GRANT credentialstore_privilege TO user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $4, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+GRANT credentialstore_privilege TO user_users user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $5, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+GRANT credentialstore_privilege TO group_or_groups groups
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $5, true, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+GRANT catalog_privilege ON ident_list TO user_list
+{
+    keyspaces := make([]*algebra.KeyspaceRef,0,len($4))
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $6, false, algebra.SOURCE_CATALOG)
+}
+|
+GRANT catalog_privilege ON ident_list TO user_users user_list
+{
+    keyspaces := make([]*algebra.KeyspaceRef,0,len($4))
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $7, false, algebra.SOURCE_CATALOG)
+}
+|
+GRANT catalog_privilege ON ident_list TO group_or_groups groups
+{
+    keyspaces := make([]*algebra.KeyspaceRef,0,len($4))
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $7, true, algebra.SOURCE_CATALOG)
+}
+|
+GRANT catalog_privilege TO user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $4, false, algebra.SOURCE_CATALOG)
+}
+|
+GRANT catalog_privilege TO user_users user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $5, false, algebra.SOURCE_CATALOG)
+}
+|
+GRANT catalog_privilege TO group_or_groups groups
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewGrantRole([]string{$2}, keyspaces, $5, true, algebra.SOURCE_CATALOG)
 }
 ;
 
@@ -3200,6 +3432,47 @@ DELETE
 }
 ;
 
+catalog_privilege:
+SELECT CATALOG
+{
+    $$ = "select"
+}
+|
+INSERT CATALOG
+{
+    $$ = "insert"
+}
+|
+UPDATE CATALOG
+{
+    $$ = "update"
+}
+|
+DELETE CATALOG
+{
+    $$ = "delete"
+}
+;
+
+credentialstore_privilege:
+CONSUME CREDENTIALSTORE
+{
+    $$ = "consume"
+}
+;
+
+ident_list:
+perm_ident_or_str
+{
+    $$ = []string{ $1 }
+}
+|
+ident_list COMMA perm_ident_or_str
+{
+    $$ = append($1, $3)
+}
+;
+
 keyspace_scope_list:
 keyspace_scope
 {
@@ -3223,7 +3496,8 @@ path_part DOT path_part
     path, err := algebra.NewPathFromElementsWithContext([]string{ $1, $3 }, yylex.(*lexer).Namespace(),
                                  yylex.(*lexer).QueryContext())
     if err != nil {
-        return yylex.(*lexer).FatalError(err.Error(), $<line>1, $<column>1)
+        // no query context: treat as bucket.scope under the lexer namespace
+        path = algebra.NewPathScope(yylex.(*lexer).Namespace(), $1, $3)
     }
     $$ = algebra.NewKeyspaceRefFromPath(path, "")
 }
@@ -3286,32 +3560,122 @@ permitted_identifiers COLON permitted_identifiers
 revoke_role:
 REVOKE role_list FROM user_list
 {
-    $$ = algebra.NewRevokeRole($2, nil, $4, false)
+    $$ = algebra.NewRevokeRoleInfer($2, $4, false)
 }
 |
 REVOKE role_list ON keyspace_scope_list FROM user_list
 {
-    $$ = algebra.NewRevokeRole($2, $4, $6, false)
+    $$ = algebra.NewRevokeRole($2, $4, $6, false, algebra.SOURCE_KEYSPACE)
 }
 |
 REVOKE role_list FROM user_users user_list
 {
-    $$ = algebra.NewRevokeRole($2, nil, $5, false)
+    $$ = algebra.NewRevokeRoleInfer($2, $5, false)
 }
 |
 REVOKE role_list ON keyspace_scope_list FROM user_users user_list
 {
-    $$ = algebra.NewRevokeRole($2, $4, $7, false)
+    $$ = algebra.NewRevokeRole($2, $4, $7, false, algebra.SOURCE_KEYSPACE)
 }
 |
 REVOKE role_list FROM group_or_groups groups
 {
-    $$ = algebra.NewRevokeRole($2, nil, $5, true)
+    $$ = algebra.NewRevokeRoleInfer($2, $5, true)
 }
 |
 REVOKE role_list ON keyspace_scope_list FROM group_or_groups groups
 {
-    $$ = algebra.NewRevokeRole($2, $4, $7, true)
+    $$ = algebra.NewRevokeRole($2, $4, $7, true, algebra.SOURCE_KEYSPACE)
+}
+|
+REVOKE credentialstore_privilege ON ident_list FROM user_list
+{
+    var keyspaces []*algebra.KeyspaceRef
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $6, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+REVOKE credentialstore_privilege ON ident_list FROM user_users user_list
+{
+    var keyspaces []*algebra.KeyspaceRef
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $7, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+REVOKE credentialstore_privilege ON ident_list FROM group_or_groups groups
+{
+    var keyspaces []*algebra.KeyspaceRef
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $7, true, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+REVOKE credentialstore_privilege FROM user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $4, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+REVOKE credentialstore_privilege FROM user_users user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $5, false, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+REVOKE credentialstore_privilege FROM group_or_groups groups
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $5, true, algebra.SOURCE_CREDENTIALSTORE)
+}
+|
+REVOKE catalog_privilege ON ident_list FROM user_list
+{
+    var keyspaces []*algebra.KeyspaceRef
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $6, false, algebra.SOURCE_CATALOG)
+}
+|
+REVOKE catalog_privilege ON ident_list FROM user_users user_list
+{
+    var keyspaces []*algebra.KeyspaceRef
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $7, false, algebra.SOURCE_CATALOG)
+}
+|
+REVOKE catalog_privilege ON ident_list FROM group_or_groups groups
+{
+    var keyspaces []*algebra.KeyspaceRef
+    for _, id := range $4 {
+        keyspaces = append(keyspaces, algebra.NewKeyspaceRefWithContext(id, "", "", ""))
+    }
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $7, true, algebra.SOURCE_CATALOG)
+}
+|
+REVOKE catalog_privilege FROM user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $4, false, algebra.SOURCE_CATALOG)
+}
+|
+REVOKE catalog_privilege FROM user_users user_list
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $5, false, algebra.SOURCE_CATALOG)
+}
+|
+REVOKE catalog_privilege FROM group_or_groups groups
+{
+    keyspaces := []*algebra.KeyspaceRef{algebra.NewKeyspaceRefWithContext("*", "", "", "")}
+    $$ = algebra.NewRevokeRole([]string{$2}, keyspaces, $5, true, algebra.SOURCE_CATALOG)
 }
 ;
 
@@ -3382,6 +3746,45 @@ DROP DATABASE opt_if_exists permitted_identifiers
 
 /*************************************************
  *
+ * CREATE CATALOG
+ *
+ *************************************************/
+
+create_catalog:
+CREATE CATALOG opt_if_not_exists perm_ident_or_str TYPE perm_ident_or_str SOURCE perm_ident_or_str AT perm_ident_or_str with_clause
+{
+    $$ = algebra.NewCreateCatalog($4, $6, $8, $10, $3, $11)
+}
+;
+
+/*************************************************
+ *
+ * ALTER CATALOG
+ *
+ *************************************************/
+
+alter_catalog:
+ALTER CATALOG perm_ident_or_str with_clause
+{
+    $$ = algebra.NewAlterCatalog($3, $4)
+}
+;
+
+/*************************************************
+ *
+ * DROP CATALOG
+ *
+ *************************************************/
+
+drop_catalog:
+DROP CATALOG opt_if_exists perm_ident_or_str
+{
+    $$ = algebra.NewDropCatalog($4, $3)
+}
+;
+
+/*************************************************
+ *
  * CREATE SCOPE
  *
  *************************************************/
@@ -3425,12 +3828,12 @@ DROP SCOPE IF EXISTS named_scope_ref
 create_collection:
 CREATE COLLECTION named_keyspace_ref opt_if_not_exists opt_with_clause
 {
-    $$ = algebra.NewCreateCollection($3, $4, $5)
+    $$ = algebra.NewCreateCollection($3, "", "", $4, $5)
 }
 |
 CREATE COLLECTION IF NOT EXISTS named_keyspace_ref opt_with_clause
 {
-    $$ = algebra.NewCreateCollection($6, false, $7)
+    $$ = algebra.NewCreateCollection($6, "", "", false, $7)
 }
 ;
 
@@ -3469,6 +3872,32 @@ flush_or_truncate:
 FLUSH
 |
 TRUNCATE
+;
+
+/*************************************************
+ *
+ * CREATE EXTERNAL COLLECTION
+ *
+ *************************************************/
+
+create_external_collection:
+CREATE EXTERNAL COLLECTION opt_if_not_exists named_keyspace_ref ON perm_ident_or_str AT perm_ident_or_str with_clause
+{
+    $$ = algebra.NewCreateCollection($5, $7, $9, $4, $10)
+}
+;
+
+/*************************************************
+ *
+ * ALTER COLLECTION
+ *
+ *************************************************/
+
+alter_collection:
+ALTER COLLECTION named_keyspace_ref with_clause
+{
+    $$ = algebra.NewAlterCollection($3, $4)
+}
 ;
 
 /*************************************************
@@ -6359,5 +6788,40 @@ sequence_prev
         return yylex.(*lexer).FatalError("Invalid sequence name", $<line>1, $<column>1)
     }
     $$ = s
+}
+;
+
+/*************************************************
+ *
+ * CREDENTIALSTORE statements
+ *
+ *************************************************/
+
+credentialstore_stmt:
+create_credentialstore
+|
+alter_credentialstore
+|
+drop_credentialstore
+;
+
+create_credentialstore:
+CREATE CREDENTIALSTORE opt_if_not_exists perm_ident_or_str with_clause
+{
+    $$ = algebra.NewCreateCredentialStore($4, $3, $5)
+}
+;
+
+alter_credentialstore:
+ALTER CREDENTIALSTORE perm_ident_or_str with_clause
+{
+    $$ = algebra.NewAlterCredentialStore($3, $4)
+}
+;
+
+drop_credentialstore:
+DROP CREDENTIALSTORE opt_if_exists perm_ident_or_str
+{
+    $$ = algebra.NewDropCredentialStore($4, $3)
 }
 ;

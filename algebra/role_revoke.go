@@ -21,24 +21,36 @@ import (
 type RevokeRole struct {
 	statementBase
 
-	roles     []string       `json:"roles"`
-	keyspaces []*KeyspaceRef `json:"keyspaces"`
-	users     []string       `json:"users"`
-	groups    bool           `json:"groups"`
+	roles      []string       `json:"roles"`
+	keyspaces  []*KeyspaceRef `json:"keyspaces"`
+	users      []string       `json:"users"`
+	groups     bool           `json:"groups"`
+	sourceType string         `json:"sourceType"`
 }
 
 /*
 The function NewRevokeRole returns a pointer to the
 RevokeRole struct with the input argument values as fields.
 */
-func NewRevokeRole(roles []string, keyspaces []*KeyspaceRef, users []string, groups bool) *RevokeRole {
-	rv := &RevokeRole{
-		roles:     roles,
-		keyspaces: keyspaces,
-		users:     users,
-		groups:    groups,
+// NewRevokeRoleInfer constructs a RevokeRole for the no-ON-clause form, inferring
+// the source type and wildcard keyspace target from the role names.
+func NewRevokeRoleInfer(roles []string, users []string, groups bool) *RevokeRole {
+	sourceType, needsTarget := SourceTypeFromRoles(roles)
+	var keyspaces []*KeyspaceRef
+	if needsTarget {
+		keyspaces = []*KeyspaceRef{NewKeyspaceRefWithContext("*", "", "", "")}
 	}
+	return NewRevokeRole(roles, keyspaces, users, groups, sourceType)
+}
 
+func NewRevokeRole(roles []string, keyspaces []*KeyspaceRef, users []string, groups bool, sourceType string) *RevokeRole {
+	rv := &RevokeRole{
+		roles:      roles,
+		keyspaces:  keyspaces,
+		users:      users,
+		groups:     groups,
+		sourceType: sourceType,
+	}
 	rv.stmt = rv
 	return rv
 }
@@ -122,6 +134,13 @@ func (this *RevokeRole) Keyspaces() []*KeyspaceRef {
 }
 
 /*
+Returns the source type for the roles being revoked.
+*/
+func (this *RevokeRole) SourceType() string {
+	return this.sourceType
+}
+
+/*
 Marshals input receiver into byte array.
 */
 func (this *RevokeRole) MarshalJSON() ([]byte, error) {
@@ -130,6 +149,9 @@ func (this *RevokeRole) MarshalJSON() ([]byte, error) {
 	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles
 	r["groups"] = this.groups
+	if this.sourceType != "" {
+		r["sourceType"] = this.sourceType
+	}
 
 	return json.Marshal(r)
 }
@@ -149,6 +171,10 @@ func (this *RevokeRole) String() string {
 		s.WriteRune('`')
 		s.WriteString(role)
 		s.WriteRune('`')
+		if this.sourceType != "" {
+			s.WriteRune(' ')
+			s.WriteString(strings.ToUpper(this.sourceType))
+		}
 	}
 
 	if len(this.keyspaces) > 0 {

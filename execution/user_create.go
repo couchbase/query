@@ -76,7 +76,7 @@ func (this *CreateUser) RunOnce(context *Context, parent value.Value) {
 			u.Id = parts[0]
 		}
 
-		err := cbDatastore.GetUserInfo(&u)
+		err := cbDatastore.GetUserInfo(context, &u)
 		if err == nil {
 			if this.plan.Node().FailIfExists() {
 				context.Error(errors.NewUserExistsError(u.Domain + ":" + u.Id))
@@ -102,7 +102,7 @@ func (this *CreateUser) RunOnce(context *Context, parent value.Value) {
 				u.Name = string([]byte{0})
 			}
 
-			err = cbDatastore.PutUserInfo(&u)
+			err = cbDatastore.PutUserInfo(context, &u)
 			if err != nil {
 				context.Error(err)
 			}
