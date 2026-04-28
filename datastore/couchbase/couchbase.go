@@ -3610,7 +3610,8 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 		return errs[0]
 	}
 	if numIndexNodes == 0 {
-		return errors.NewNoIndexServiceError()
+		return errors.NewNoIndexServiceError(fmt.Errorf("attempting to create primary index %s"+
+			" on the system collection of the bucket %s", idxName, indexer3.BucketId()))
 	}
 
 	// next make sure index storage mode is set

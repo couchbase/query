@@ -156,9 +156,9 @@ func NewNoPrimaryIndexError(alias string) Error {
 		cause: c, InternalCaller: CallerN(1)}
 }
 
-func NewNoIndexServiceError() Error {
+func NewNoIndexServiceError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_NO_INDEX_SERVICE, IKey: "plan.build_primary_index.no_index_service",
-		InternalMsg: "Index service not available.", InternalCaller: CallerN(1)}
+		InternalMsg: "Index service not available.", ICause: e, InternalCaller: CallerN(2)}
 }
 
 func NewPrimaryIndexOfflineError(name string) Error {

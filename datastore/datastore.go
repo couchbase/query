@@ -928,8 +928,9 @@ func getSystemCollectionIndexConnection(systemCollection Keyspace, bucketName st
 		return nil, nil, err
 	}
 
-	// if not successful so far, e.g. if bucket doesn't have SEQ_SCAN support, or if SEQ_SCAN
-	// is disabled, try to wait for the creation of primary index (issued above) synchronously
+	// MB-60646 allows forcible usage of sequential scan for system collection
+	// if not successful so far the bucket doesn't have SEQ_SCAN support,
+	// try to wait for the creation of primary index (issued above) synchronously
 	logging.Debugf("Creating primary index on system collection for bucket %s synchronously", systemCollection.Scope().BucketId())
 	var empty bool
 	empty, err = primaryFunc(systemCollection.Scope().BucketId())
