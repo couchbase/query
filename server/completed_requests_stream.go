@@ -30,7 +30,8 @@ list.
 Encryption at rest:
 
 If encryption at rest is enabled, the same request JSON stream is written, but the stream file (`rlstream.<id>`) is stored in CBEF
-format with GZIP compression enabled, ensuring the payload on disk is encrypted. When encryption is enabled, the TOC is not appended
+format with ZLIB compression enabled, ensuring the payload on disk is encrypted. // The data is ZLIB compressed, as cbcat tool
+currently does not support GZIP and only supports ZLIB compression type. When encryption is enabled, the TOC is not appended
 to the encrypted stream file. Instead, the TOC is written to a separate metadata file (`metadata.rlstream.<id>`). During archival,
 the stream and metadata files are renamed to `local_request_log.<num>` and `metadata.local_request_log.<num>` respectively.
 
@@ -52,6 +53,7 @@ import (
 	"container/list"
 	"encoding/binary"
 	"encoding/json"
+	go_errors "errors"
 	"fmt"
 	"io"
 	"os"
@@ -63,6 +65,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/encryption/keymgmt"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/ffdc"
 	"github.com/couchbase/query/logging"
@@ -70,26 +73,30 @@ import (
 )
 
 const (
-	_MSG_PREFIX                              = "CRS: "
-	_REQUEST_LOG_STREAM_FILE                 = "local_request_log."
-	_REQUEST_LOG_STREAM_ACTIVE_FILE          = "rlstream."
-	_REQUEST_LOG_STREAM_METADATA_FILE        = "metadata." + _REQUEST_LOG_STREAM_FILE
-	_REQUEST_LOG_STREAM_ACTIVE_METADATA_FILE = "metadata." + _REQUEST_LOG_STREAM_ACTIVE_FILE
-	_STREAM_BUF_SIZE                         = util.KiB * 64
-	_ACTIVE_FILES                            = uint64(16)
-	_SWEEP_INTERVAL                          = time.Second * 30
-	_MAX_RAW_SIZE                            = util.MiB * 100   // maximum raw size before closing (size when cached for reading)
-	_MIN_RAW_SIZE                            = util.KiB * 256   // minimum raw size before being considered for initial idle flushing
-	_MAX_IDLE_1                              = time.Minute * 10 // idle stream files with at least _MIN_RAW_SIZE closed after this interval
-	_MAX_IDLE_2                              = time.Minute * 60 // idle stream files closed after this interval
-	_STREAM_MAGIC                            = 0x4352534D       // "CRSM"
-	_MAX_CACHE                               = 5                // maximum number of cached files (materialised) for reading
-	_RLS_TIMEOUT                             = time.Second * 10 // maximum time to wait writing to the stop channel
+	_MSG_PREFIX                                = "CRS: "
+	_REQUEST_LOG_STREAM_FILE                   = "local_request_log."
+	_REQUEST_LOG_STREAM_ACTIVE_FILE            = "rlstream."
+	_REQUEST_LOG_STREAM_METADATA_FILE          = "metadata." + _REQUEST_LOG_STREAM_FILE
+	_REQUEST_LOG_STREAM_ACTIVE_METADATA_FILE   = "metadata." + _REQUEST_LOG_STREAM_ACTIVE_FILE
+	_STREAM_BUF_SIZE                           = util.KiB * 64
+	_ACTIVE_FILES                              = uint64(16)
+	_SWEEP_INTERVAL                            = time.Second * 30
+	_CRS_CLEANUP_INTERVAL                      = 15 * time.Minute
+	_MAX_RAW_SIZE                              = util.KiB * 10    // maximum raw size before closing (size when cached for reading)
+	_MIN_RAW_SIZE                              = util.KiB * 256   // minimum raw size before being considered for initial idle flushing
+	_MAX_IDLE_1                                = time.Minute * 10 // idle stream files with at least _MIN_RAW_SIZE closed after this interval
+	_MAX_IDLE_2                                = time.Minute * 60 // idle stream files closed after this interval
+	_STREAM_MAGIC                              = 0x4352534D       // "CRSM"
+	_MAX_CACHE                                 = 5                // maximum number of cached files (materialised) for reading
+	_RLS_TIMEOUT                               = time.Second * 10 // maximum time to wait writing to the stop channel
+	_STREAM_UNSET_KEY_ID                       = "UNSET"          // indicates that the stream file is not encrypted; this is used to avoid unnecessary calls to the encryption provider when encryption is disabled
+	_STREAM_REENCRYPT_ARCHIVE_FILE_NAME_PREFIX = "reencrypt_" + _REQUEST_LOG_STREAM_FILE
 )
+
+var crsKeyDataType = encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
 
 type requestStreamFile struct {
 	sync.Mutex
-	encrypt bool
 	f       *os.File
 	w       *bufio.Writer
 	z       *gzip.Writer
@@ -100,6 +107,9 @@ type requestStreamFile struct {
 	size    int64     // file size set when closing. This will include the size of the metadata file if stream file is encrypted
 	mtime   time.Time // time of last write
 	offsets []uint64  // entry offsets in uncompressed data stream
+
+	keyID              string
+	encryptionProvider encryption.EncryptionProvider
 }
 
 func (this *requestStreamFile) MarshalJSON() ([]byte, error) {
@@ -151,20 +161,39 @@ func (this *requestStreamFile) encode(v interface{}) error {
 }
 
 func (this *requestStreamFile) create() error {
+	if this.encryptionProvider == nil {
+		return errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
+	}
+
+	encryptionKey, err1 := this.encryptionProvider.GetActiveKey(crsKeyDataType)
+	if err1 != nil {
+		return err1
+	}
+
 	var err error
 	this.f, err = os.Create(requestLogStreamActiveFileName(this.index))
 	if err != nil {
 		return err
 	}
 
-	this.encrypt = requestLog.stream.encrypt
-	if this.encrypt {
-		this.ew, err = encryption.NewCBEFWriterSize(this.f, requestLog.stream.key,
-			encryption.CBEF_ZLIB, _STREAM_BUF_SIZE)
+	if encryptionKey != nil {
+		this.ew, err = encryption.NewCBEFWriterSize(this.f, encryptionKey, encryption.CBEF_ZLIB, _STREAM_BUF_SIZE)
 		if err != nil {
+			// If any error occurs during active stream file creation, truncate and set this.f to nil
+			// The trigger to create the stream file is requestStreamFile.f being nil.
+			// So, if an error occurs during creation, setting this.f to nil allows the next request to trigger a new attempt at
+			//  creating the stream file.
+			// We do not need to delete the file on disk as the next attempt to create the file, will not raise an error on
+			// os.Create(), but will rather just truncate the existing file
+			this.f.Truncate(0)
+			this.f.Close()
+			this.f = nil
+			this.ew = nil
 			return err
 		}
+		this.keyID = encryptionKey.Id
 	} else {
+		this.keyID = encryption.UNENCRYPTED_KEY_ID
 		this.w = bufio.NewWriterSize(this.f, _STREAM_BUF_SIZE)
 		this.z = gzip.NewWriter(this.w)
 	}
@@ -203,7 +232,7 @@ func (this *requestStreamFile) close() {
 		buf = binary.BigEndian.AppendUint32(buf, uint32(len(this.offsets)))
 		buf = binary.BigEndian.AppendUint64(buf, this.written)
 
-		if !this.encrypt {
+		if this.keyID == encryption.UNENCRYPTED_KEY_ID {
 			// write trailer after ZIP stream
 			// non-ZIP bytes are ignored by command-line utilities accessing the file directly
 			this.f.Write(buf)
@@ -240,45 +269,271 @@ func requestMetadataFileName(num uint64) string {
 	return fmt.Sprintf("%s/%s%d", ffdc.GetPath(), _REQUEST_LOG_STREAM_METADATA_FILE, num)
 }
 
-func removeArchiveFiles(num uint64) {
-	os.Remove(requestLogStreamFileName(num))
+func requestLogStreamTransformFileName(num uint64) string {
+	return fmt.Sprintf("%s/%s%d", ffdc.GetPath(), _STREAM_REENCRYPT_ARCHIVE_FILE_NAME_PREFIX, num)
+}
+
+func logFilePath(fileName string) string {
+	return fmt.Sprintf("%s/%s", ffdc.GetPath(), fileName)
+}
+
+// Will acquire the requestLogStream's orphanLock for tracking files that failed to be removed. Will unlock after
+func removeArchiveFiles(num uint64, stream *requestLogStream) {
+	removeCRSFile(requestLogStreamFileName(num), stream)
 	os.Remove(requestMetadataFileName(num))
 }
 
-func removeActiveFiles(num uint64) {
-	os.Remove(requestLogStreamActiveFileName(num))
+// Will acquire the requestLogStream's orphanLock for tracking files that failed to be removed. Will unlock after
+
+func removeActiveFiles(num uint64, stream *requestLogStream) {
+	removeCRSFile(requestLogStreamActiveFileName(num), stream)
 	os.Remove(requestMetadataActiveFileName(num))
+}
+
+// Use this to delete any sensitive files
+// Will acquire the requestLogStream's orphanLock for tracking files that failed to be removed. Will unlock after
+func removeCRSFile(path string, stream *requestLogStream) {
+	err := os.Remove(path)
+	if err == nil || go_errors.Is(err, os.ErrNotExist) {
+		return
+	}
+
+	err = os.Truncate(path, 0)
+	if err == nil || go_errors.Is(err, os.ErrNotExist) {
+		return
+	}
+
+	f, err := os.Open(path)
+	keyid := encryption.UNENCRYPTED_KEY_ID
+	if err == nil {
+		encrypted, id := encryption.GetKeyIdFromCBEF(f)
+		if encrypted {
+			keyid = id
+		}
+		f.Close()
+	}
+
+	stream.orphanLock.Lock()
+	if stream.orphanFiles == nil {
+		stream.orphanFiles = make([]crsOrphanFile, 0, 8)
+	}
+
+	stream.orphanFiles = append(stream.orphanFiles, crsOrphanFile{keyID: keyid, path: path})
+	logging.Warnf(_MSG_PREFIX+"Failed to remove file %v encrypted with key id %+q: %v. Tracking as orphan file.", path, keyid,
+		err)
+	stream.orphanLock.Unlock()
 }
 
 // info about a managed file (not an active stream file)
 type fileInfo struct {
-	num       uint64
-	size      uint64
-	count     int // may be -1 if unknown
-	encrypted bool
+	num              uint64 // This should not be changed once set
+	size             uint64
+	count            int // may be -1 if unknown
+	currKeyID        string
+	targetKeyID      string
+	fileReadingCount int           // number of active readers of the file on disk
+	operation        archiveFileOp // The maintenance operation being performed on this file
+	lock             sync.RWMutex
+}
+
+func newBaseFileInfo(num uint64, size uint64, count int, currentKeyID string) *fileInfo {
+	fi := &fileInfo{num: num, size: size, count: count, currKeyID: _STREAM_UNSET_KEY_ID, targetKeyID: _STREAM_UNSET_KEY_ID}
+
+	if currentKeyID != _STREAM_UNSET_KEY_ID {
+		fi.currKeyID = currentKeyID
+	}
+	return fi
+}
+
+func (this *fileInfo) getSize(lock bool) uint64 {
+	if lock {
+		this.lock.RLock()
+		defer this.lock.RUnlock()
+	}
+	return this.size
+}
+
+func (this *fileInfo) getCount(lock bool) int {
+	if lock {
+		this.lock.RLock()
+		defer this.lock.RUnlock()
+	}
+	return this.count
+}
+
+func (this *fileInfo) getCurrKeyID(lock bool) string {
+	if lock {
+		this.lock.RLock()
+		defer this.lock.RUnlock()
+	}
+	return this.currKeyID
+}
+
+func (this *fileInfo) getTargetKeyID(lock bool) string {
+	if lock {
+		this.lock.RLock()
+		defer this.lock.RUnlock()
+	}
+	return this.targetKeyID
+}
+
+func (this *fileInfo) getFileReadingCount(lock bool) int {
+	if lock {
+		this.lock.RLock()
+		defer this.lock.RUnlock()
+	}
+	return this.fileReadingCount
+}
+
+func (this *fileInfo) setCount(lock bool, count int) {
+	if lock {
+		this.lock.Lock()
+		defer this.lock.Unlock()
+	}
+	this.count = count
+}
+
+func (this *fileInfo) setTargetKeyID(lock bool, targetKeyID string) {
+	if lock {
+		this.lock.Lock()
+		defer this.lock.Unlock()
+	}
+	this.targetKeyID = targetKeyID
+}
+
+func (this *fileInfo) setSize(lock bool, size uint64) {
+	if lock {
+		this.lock.Lock()
+		defer this.lock.Unlock()
+	}
+	this.size = size
+}
+
+func (this *fileInfo) resetAfterTransform(lock bool, newCurrKeyID string) {
+	if lock {
+		this.lock.Lock()
+		defer this.lock.Unlock()
+	}
+	this.targetKeyID = _STREAM_UNSET_KEY_ID
+	this.currKeyID = newCurrKeyID
+}
+
+func (this *fileInfo) getCurrentKeyID(lock bool) string {
+	if lock {
+		this.lock.RLock()
+		defer this.lock.RUnlock()
+	}
+	return this.currKeyID
+}
+
+func (this *fileInfo) activeMaintenanceOperation() archiveFileOp {
+	this.lock.RLock()
+	op := this.operation
+	this.lock.RUnlock()
+	return op
+}
+
+func (this *fileInfo) beginLoad() bool {
+	var beginLoad bool
+	this.lock.Lock()
+	if this.operation == _ARCHIVE_NONE || this.operation == _ARCHIVE_TRANSFORMING {
+		this.fileReadingCount++
+		beginLoad = true
+	}
+	this.lock.Unlock()
+	return beginLoad
+}
+
+func (this *fileInfo) endLoad() {
+	this.lock.Lock()
+	this.fileReadingCount--
+	this.lock.Unlock()
+}
+
+func (this *fileInfo) beginTransform() bool {
+	var beginTransform bool
+	this.lock.Lock()
+	if this.operation == _ARCHIVE_NONE {
+		this.operation = _ARCHIVE_TRANSFORMING
+		beginTransform = true
+	}
+	this.lock.Unlock()
+	return beginTransform
+}
+
+func (this *fileInfo) endTransform() {
+	this.lock.Lock()
+	if this.operation == _ARCHIVE_TRANSFORMING {
+		this.operation = _ARCHIVE_NONE
+	}
+	this.lock.Unlock()
+}
+
+func (this *fileInfo) beginDelete() bool {
+	var startDelete bool
+	this.lock.Lock()
+	if this.operation == _ARCHIVE_NONE && this.fileReadingCount == 0 {
+		this.operation = _ARCHIVE_DELETING
+		startDelete = true
+	}
+	this.lock.Unlock()
+	return startDelete
+}
+
+func (this *fileInfo) endDelete() {
+	this.lock.Lock()
+	if this.operation == _ARCHIVE_DELETING {
+		this.operation = _ARCHIVE_NONE
+	}
+	this.lock.Unlock()
+}
+
+type archiveFileOp int
+
+const (
+	_ARCHIVE_NONE archiveFileOp = iota
+	_ARCHIVE_DELETING
+	_ARCHIVE_TRANSFORMING
+)
+
+type crsOrphanFile struct {
+	keyID string
+	path  string
 }
 
 type requestLogStream struct {
 	sync.Mutex
 
+	bootstrapped bool
+
 	stop chan bool
 
-	configSize uint64     // target size to remain below
-	size       uint64     // maintained sum of all file sizes
-	files      *list.List // fileInfo
-	filesLock  sync.Mutex
+	configSize uint64 // target size to remain below
+	size       uint64 // maintained sum of all file sizes
+
+	// In memory list of archive files on disk. Will be the source of truth of archive files for the purpose of key management
+	// and file operations
+	files     *list.List // entries are of type *fileInfo
+	filesLock sync.Mutex
 
 	cache readCache
 
 	// writing
-	active       uint64 // used to determine if active; for atomic operations
+	active uint64 // used to determine if active; for atomic operations
+
+	// In memory list of active files on disk. Will be the source of truth of active files for the purpose of key management and
+	// file operations
 	streamFiles  []*requestStreamFile
 	streamCount  uint64 // stats
 	streamErrors uint64 // stats
 	fileNum      uint64 // last known/generated file number
 
-	encrypt bool
-	key     *encryption.EaRKey
+	encryptionProvider encryption.EncryptionProvider
+
+	// List of files that are deemed as orphans due to errors
+	// Orphan files are considered in key tracking to keep key-in-use reporting correct even when file operations fail
+	orphanFiles []crsOrphanFile
+	orphanLock  sync.RWMutex
 }
 
 func (this *requestLogStream) String() string {
@@ -317,7 +572,6 @@ func (this *requestLogStream) stopCapture() bool {
 	this.filesLock.Unlock()
 	close(this.stop)
 	this.stop = nil
-	this.streamFiles = nil
 	this.configSize = 0
 	logging.Debugf("Stopped: %v", this)
 	this.Unlock()
@@ -335,10 +589,15 @@ func (this *requestLogStream) startCapture(newSize uint64) bool {
 	this.loadFiles()
 	this.stop = make(chan bool, 1)
 	go this.spaceManagementProc(this.stop)
-	this.streamFiles = make([]*requestStreamFile, _ACTIVE_FILES)
-	for i := range this.streamFiles {
-		this.streamFiles[i] = &requestStreamFile{index: uint64(i)}
+
+	if len(this.streamFiles) == 0 {
+		this.streamFiles = make([]*requestStreamFile, _ACTIVE_FILES)
+		for i := range this.streamFiles {
+			this.streamFiles[i] = &requestStreamFile{index: uint64(i), keyID: _STREAM_UNSET_KEY_ID,
+				encryptionProvider: this.encryptionProvider}
+		}
 	}
+
 	this.streamCount = 0
 	this.streamErrors = 0
 	atomic.StoreUint64(&this.active, 1)
@@ -349,6 +608,10 @@ func (this *requestLogStream) startCapture(newSize uint64) bool {
 
 // populates the managed files information
 func (this *requestLogStream) loadFiles() {
+	if this.bootstrapped { // Expects requestLogStream to be locked
+		return
+	}
+
 	active := atomic.LoadUint64(&this.active) == 0
 	this.filesLock.Lock()
 	this.files = list.New()
@@ -358,7 +621,7 @@ func (this *requestLogStream) loadFiles() {
 	// list the stream files
 	d, err := os.Open(ffdc.GetPath())
 	if err == nil {
-		fi := make([]fileInfo, 0, 128)
+		fi := make([]*fileInfo, 0, 128)
 		for {
 			ents, err := d.ReadDir(10)
 			if err == nil {
@@ -382,10 +645,10 @@ func (this *requestLogStream) loadFiles() {
 						if err != nil {
 							logging.Warnf(_MSG_PREFIX+"Failed to open file during loading %v (%v). Skipping file.",
 								ents[i].Name(), err)
-							removeArchiveFiles(num)
+							removeArchiveFiles(num, this)
 							continue
 						}
-						encrypted := isEncrypted(f)
+						encrypted, keyId := isEncrypted(f)
 						f.Close()
 
 						if encrypted {
@@ -396,13 +659,14 @@ func (this *requestLogStream) loadFiles() {
 							} else {
 								logging.Warnf(_MSG_PREFIX+"Failed to open metadata file during loading %v (%v). Skipping file.",
 									metadataFile, err)
-								removeArchiveFiles(num)
+								removeArchiveFiles(num, this)
 								continue
 							}
 						}
 
 						sz += fsz
-						fi = append(fi, fileInfo{num: num, size: fsz, count: -1, encrypted: encrypted})
+						ffdcFi := newBaseFileInfo(num, fsz, -1, keyId)
+						fi = append(fi, ffdcFi)
 					} else if !active && strings.HasPrefix(ents[i].Name(), _REQUEST_LOG_STREAM_ACTIVE_FILE) {
 						numStr := ents[i].Name()[len(_REQUEST_LOG_STREAM_ACTIVE_FILE):]
 						num, err := strconv.ParseUint(numStr, 10, 64)
@@ -415,6 +679,8 @@ func (this *requestLogStream) loadFiles() {
 							fsz = uint64(info.Size())
 						}
 						actsz = append(actsz, fsz)
+					} else if strings.HasPrefix(ents[i].Name(), _STREAM_REENCRYPT_ARCHIVE_FILE_NAME_PREFIX) {
+						removeCRSFile(logFilePath(ents[i].Name()), this)
 					}
 				}
 			}
@@ -432,11 +698,11 @@ func (this *requestLogStream) loadFiles() {
 			if err != nil {
 				logging.Warnf(_MSG_PREFIX+"Failed to find/open past active file %v file during loading: %v. Skipping file.",
 					acts[i], err)
-				removeActiveFiles(acts[i])
+				removeActiveFiles(acts[i], this)
 				continue
 			}
 
-			encrypted := isEncrypted(f)
+			encrypted, keyId := isEncrypted(f)
 
 			// Check if there is valid TOC/metadata for the stream file
 			var metadataFile *os.File // The file that contains the TOC/metadata
@@ -446,7 +712,7 @@ func (this *requestLogStream) loadFiles() {
 					f.Close()
 					logging.Warnf(_MSG_PREFIX+"Failed to find/open past active metadata file %v during loading. Skipping file.",
 						acts[i])
-					removeActiveFiles(acts[i])
+					removeActiveFiles(acts[i], this)
 					continue
 				}
 				metadataFile = m
@@ -472,19 +738,19 @@ func (this *requestLogStream) loadFiles() {
 				if stat, err := metadataFile.Stat(); err == nil {
 					metadataSize = uint64(stat.Size())
 				}
-				metadataFile.Close()
 			}
 			f.Close()
+			metadataFile.Close()
 
 			if !validMagic {
 				logging.Warnf(_MSG_PREFIX+"No valid metadata found for past active file %v during loading. Skipping file.", acts[i])
-				removeActiveFiles(acts[i])
+				removeActiveFiles(acts[i], this)
 				continue
 			}
 
 			if e := os.Rename(activeFile, requestLogStreamFileName(num)); e != nil {
 				logging.Warnf(_MSG_PREFIX+"Failed to rename past active file %v to archive file %v. Skipping file.", acts[i], num)
-				removeActiveFiles(acts[i])
+				removeActiveFiles(acts[i], this)
 				continue
 			}
 
@@ -493,13 +759,14 @@ func (this *requestLogStream) loadFiles() {
 					logging.Warnf(_MSG_PREFIX+
 						"Failed to rename past metadata active file %v to metadata archive file %v (%v). Skipping file.",
 						acts[i], num, e)
-					removeActiveFiles(acts[i])
+					removeActiveFiles(acts[i], this)
 					continue
 				}
 			}
 
 			sz += actsz[i]
-			fi = append(fi, fileInfo{num: num, size: actsz[i] + metadataSize, count: -1, encrypted: encrypted})
+			ffdcFi := newBaseFileInfo(num, actsz[i]+metadataSize, -1, keyId)
+			fi = append(fi, ffdcFi)
 
 		}
 		if len(fi) > 0 {
@@ -510,11 +777,16 @@ func (this *requestLogStream) loadFiles() {
 				this.files.PushBack(fi[i])
 			}
 		}
+
+		this.bootstrapped = true
+	} else {
+		logging.Errorf(_MSG_PREFIX+"Failed to bootstrap managed file information. Could not open directory %v: %v",
+			ffdc.GetPath(), err)
 	}
 	if atomic.LoadUint64(&this.active) == 0 {
 		atomic.StoreUint64(&this.size, sz)
 		if e := this.files.Back(); e != nil {
-			atomic.StoreUint64(&this.fileNum, e.Value.(fileInfo).num)
+			atomic.StoreUint64(&this.fileNum, e.Value.(*fileInfo).num)
 		}
 	}
 	this.filesLock.Unlock()
@@ -543,38 +815,41 @@ func (this *requestLogStream) encode(i interface{}) {
 }
 
 // expects the file to be locked and will unlock when done
-func (this *requestLogStream) archive(file *requestStreamFile, lockFilesList bool) uint64 {
-	var fi fileInfo
+func (this *requestLogStream) archive(file *requestStreamFile, lockFilesList bool) {
+	archive := newBaseFileInfo(atomic.AddUint64(&this.fileNum, 1), uint64(file.size), int(len(file.offsets)), _STREAM_UNSET_KEY_ID)
+	var renameErr error
+	renameErr = os.Rename(requestLogStreamActiveFileName(file.index), requestLogStreamFileName(archive.num))
+	if renameErr != nil {
+		logging.Warnf(_MSG_PREFIX+"Failed to rename active file %v to archive file %v (%v).", file.index, archive.num, renameErr)
+		file.Unlock()
+		return
+	}
 
-	fi.num = atomic.AddUint64(&this.fileNum, 1)
-	fi.size = uint64(file.size)
-	fi.count = int(len(file.offsets))
+	// The file's keyID will either be a keyID or the unencrypted value
+	if file.keyID != encryption.UNENCRYPTED_KEY_ID {
+		if e := os.Rename(requestMetadataActiveFileName(file.index), requestMetadataFileName(archive.num)); e != nil {
+			logging.Warnf(_MSG_PREFIX+"Failed to rename metadata active file %v to metadata archive file %v (%v)", file.index,
+				archive.num, e)
+		}
+	}
 
 	file.size = 0
 	file.mtime = time.Time{}
 
-	if e := os.Rename(requestLogStreamActiveFileName(file.index), requestLogStreamFileName(fi.num)); e != nil {
-		logging.Warnf(_MSG_PREFIX+"Failed to rename active file %v to archive file %v (%v)", file.index, fi.num, e)
-	}
+	archive.currKeyID = file.keyID
 
-	if this.encrypt {
-		if e := os.Rename(requestMetadataActiveFileName(file.index), requestMetadataFileName(fi.num)); e != nil {
-			logging.Warnf(_MSG_PREFIX+"Failed to rename metadata active file %v to metadata archive file %v (%v)", file.index,
-				fi.num, e)
-		}
-	}
-
+	// Reset the keyID since there is no physical file associated with the file object anymore
+	file.keyID = _STREAM_UNSET_KEY_ID
 	file.Unlock()
 
 	if lockFilesList {
 		this.filesLock.Lock()
 	}
-	atomic.AddUint64(&this.size, fi.size)
-	this.files.PushBack(fi)
+	atomic.AddUint64(&this.size, archive.size)
+	this.files.PushBack(archive)
 	if lockFilesList {
 		this.filesLock.Unlock()
 	}
-	return fi.num
 }
 
 // background routine handling space management
@@ -658,11 +933,12 @@ func (this *requestLogStream) spaceManagementProc(stop chan bool) {
 					var nit *list.Element
 					for it := this.files.Front(); it != nil; it = nit {
 						nit = it.Next()
-						itfi := it.Value.(fileInfo)
+						itfi := it.Value.(*fileInfo)
 						if _, ok := fi[itfi.num]; !ok {
-							released += itfi.size
-							if atomic.LoadUint64(&this.size) >= itfi.size {
-								atomic.AddUint64(&this.size, ^(itfi.size - 1))
+							archiveSz := itfi.getSize(true)
+							released += archiveSz
+							if atomic.LoadUint64(&this.size) >= archiveSz {
+								atomic.AddUint64(&this.size, ^(archiveSz - 1))
 							} else {
 								atomic.StoreUint64(&this.size, 0)
 							}
@@ -670,23 +946,30 @@ func (this *requestLogStream) spaceManagementProc(stop chan bool) {
 						}
 					}
 				}
+
 				// remove files to bring size back down to configured maximum
 				if atomic.LoadUint64(&this.size) > this.configSize {
 					var nit *list.Element
 					for it := this.files.Front(); it != nil && atomic.LoadUint64(&this.size) > this.configSize; it = nit {
 						nit = it.Next()
-						itfi := it.Value.(fileInfo)
+						itfi := it.Value.(*fileInfo)
+
 						if _, ok := fi[itfi.num]; ok {
-							released += itfi.size
-							if atomic.LoadUint64(&this.size) >= itfi.size {
-								atomic.AddUint64(&this.size, ^(itfi.size - 1))
+
+							if !itfi.beginDelete() {
+								continue
+							}
+
+							archiveSz := itfi.getSize(true)
+							released += archiveSz
+							if atomic.LoadUint64(&this.size) >= archiveSz {
+								atomic.AddUint64(&this.size, ^(archiveSz - 1))
 							} else {
 								atomic.StoreUint64(&this.size, 0)
 							}
 							this.files.Remove(it)
-							os.Remove(requestLogStreamFileName(itfi.num))
-							// If the stream file is not enrypted, the metadata file is not present. so this would be a no-op
-							os.Remove(requestMetadataFileName(itfi.num))
+							removeArchiveFiles(itfi.num, this)
+							itfi.endDelete()
 						}
 					}
 				}
@@ -712,14 +995,24 @@ func (this *requestLogStream) entryCounts() []uint64 {
 	res := make([]uint64, 0, 128)
 	this.filesLock.Lock()
 	for it := this.files.Front(); it != nil; it = it.Next() {
-		itfi := it.Value.(fileInfo)
-		if itfi.count == -1 {
+		itfi := it.Value.(*fileInfo)
+
+		itfi.lock.RLock()
+		currKeyID := itfi.getCurrKeyID(false)
+		count := itfi.getCount(false)
+		itfi.lock.RUnlock()
+
+		if count == -1 {
+			if !itfi.beginLoad() {
+				continue
+			}
 
 			var f *os.File
 			var e error
 
 			// attempt to update the file information
-			if !itfi.encrypted {
+
+			if currKeyID == encryption.UNENCRYPTED_KEY_ID {
 				f, e = os.Open(requestLogStreamFileName(itfi.num))
 			} else {
 				f, e = os.Open(requestMetadataFileName(itfi.num))
@@ -730,16 +1023,18 @@ func (this *requestLogStream) entryCounts() []uint64 {
 					buf := make([]byte, 8)
 					_, e = f.Read(buf)
 					if e == nil && binary.BigEndian.Uint32(buf) == _STREAM_MAGIC {
-						itfi.count = int(binary.BigEndian.Uint32(buf[4:]))
-						it.Value = itfi
+						count = int(binary.BigEndian.Uint32(buf[4:]))
+						itfi.setCount(true, count)
 					}
 				}
 				f.Close()
 			}
+
+			itfi.endLoad()
 		}
-		if itfi.count != -1 {
+		if count != -1 {
 			res = append(res, itfi.num)
-			res = append(res, uint64(itfi.count))
+			res = append(res, uint64(count))
 		}
 	}
 	this.filesLock.Unlock()
@@ -751,6 +1046,13 @@ type readCacheEntry struct {
 	num     uint64
 	raw     []byte   // when read in
 	offsets []uint64 // when read in
+
+	// Pinned entries are kept resident in the cache and are not eligible for eviction until they are un-pinned.
+	// This is used while an archive file is being transformed so that reads can keep serving data from the cached copy
+	// until the operation finishes.
+	// During transformation, the transformed data is written to a temporary file, which is then renamed to replace
+	// the original file.
+	pinned bool
 }
 
 func (this *readCacheEntry) MarshalJSON() ([]byte, error) {
@@ -803,7 +1105,6 @@ func (this *readCache) get(num uint64) *readCacheEntry {
 	for it := this.cache.Front(); it != nil; it = it.Next() {
 		ce = it.Value.(*readCacheEntry)
 		if ce.num == num {
-			ce.Lock()
 			this.cache.MoveToFront(it) // MRU
 			break
 		}
@@ -813,28 +1114,118 @@ func (this *readCache) get(num uint64) *readCacheEntry {
 	return ce
 }
 
-func (this *readCache) add(num uint64) *readCacheEntry {
+// Adds entry if not already present in cache.
+// If the entry already exists in the cache and 'pin' is set to true, will pin the existing entry to the cache
+func (this *readCache) add(num uint64, ce *readCacheEntry, pin bool) *readCacheEntry {
 	this.Lock()
-	for this.cache.Len() >= _MAX_CACHE {
-		this.cache.Remove(this.cache.Back())
+
+	if this.cache == nil {
+		this.cache = list.New()
 	}
-	ce := &readCacheEntry{num: num}
-	this.cache.PushFront(ce)
-	ce.Lock()
+
+	var found bool
+	var entry *readCacheEntry
+	for it := this.cache.Front(); it != nil; it = it.Next() {
+		entry = it.Value.(*readCacheEntry)
+		if entry.num == num {
+			if pin {
+				entry.Lock()
+				entry.pinned = true
+				entry.Unlock()
+			}
+			this.cache.MoveToFront(it) // MRU
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		for this.cache.Len() >= _MAX_CACHE {
+			allPinned := true
+			for it := this.cache.Back(); it != nil; it = it.Prev() {
+				entry = it.Value.(*readCacheEntry)
+
+				entry.Lock()
+				if entry.pinned {
+					entry.Unlock()
+					continue
+				}
+				entry.Unlock()
+
+				this.cache.Remove(it)
+				allPinned = false
+				break
+			}
+
+			if allPinned {
+				break
+			}
+		}
+
+		ce.num = num
+		ce.pinned = pin
+		this.cache.PushFront(ce)
+		entry = ce
+	}
+
 	this.Unlock()
-	return ce
+	return entry
 }
 
-func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
+func (this *readCache) setPinForEntryIfPresent(num uint64, pin bool) bool {
+	this.Lock()
+
+	if this.cache == nil {
+		this.cache = list.New()
+	}
+
+	var present bool
+	for it := this.cache.Front(); it != nil; it = it.Next() {
+		entry := it.Value.(*readCacheEntry)
+		if entry.num == num {
+			entry.Lock()
+			entry.pinned = pin
+			present = true
+			entry.Unlock()
+			break
+		}
+	}
+	this.Unlock()
+	return present
+}
+
+func (this *requestLogStream) load(num uint64, pin bool) (*readCacheEntry, error) {
 	ce := this.cache.get(num)
 	if ce == nil {
+
+		this.filesLock.Lock()
+		var canLoad bool
+		var encrypted bool
+		for it := this.files.Front(); it != nil; it = it.Next() {
+			itfi := it.Value.(*fileInfo)
+
+			if itfi.num == num {
+				if itfi.beginLoad() {
+					defer itfi.endLoad()
+					canLoad = true
+					encrypted = itfi.getCurrentKeyID(true) != encryption.UNENCRYPTED_KEY_ID
+				}
+				break
+			}
+		}
+
+		this.filesLock.Unlock()
+
+		if !canLoad {
+			return nil, nil
+		}
+
 		streamFile, err := os.Open(requestLogStreamFileName(num))
 		if err != nil {
 			return nil, err
 		}
 
 		defer streamFile.Close()
-		encrypted := isEncrypted(streamFile)
 
 		// Read and validate the metadata/ TOC
 		var metadataFile io.ReadSeekCloser
@@ -869,8 +1260,12 @@ func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
 		// Setup reader to read the stream file
 		var r io.Reader
 		if encrypted {
+			if this.encryptionProvider == nil {
+				return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
+			}
+
 			er, err := encryption.NewCBEFReader(streamFile, func(keyId string) (*encryption.EaRKey, errors.Error) {
-				return requestLog.stream.key, nil
+				return this.encryptionProvider.GetKey(crsKeyDataType, keyId)
 			})
 			if err != nil {
 				return nil, err
@@ -905,7 +1300,8 @@ func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
 			}
 		}
 		raw = raw[:start]
-		ce = this.cache.add(num)
+
+		ce = &readCacheEntry{}
 		ce.raw = raw
 		ce.offsets = make([]uint64, binary.BigEndian.Uint32(buf[4:]))
 		off := make([]byte, 8)
@@ -924,11 +1320,526 @@ func (this *requestLogStream) load(num uint64) (*readCacheEntry, error) {
 			}
 			ce.offsets[i] = binary.BigEndian.Uint64(off)
 		}
+
+		ce.pinned = pin
+		ce = this.cache.add(num, ce, pin)
 	}
 	return ce, nil
 }
 
+// Encryption at rest related methods
+
+func (this *requestLogStream) InitEncryptionProvider(encProvider encryption.EncryptionProvider) {
+	this.Lock()
+	this.encryptionProvider = encProvider
+	// Load existing files. This is needed to track encrypted files. Irrespective of whether completed request streaming is enabled
+	// or not
+	requestLog.stream.loadFiles()
+	this.Unlock()
+}
+
+func (this *requestLogStream) Name() string {
+	return "Completed Request Stream"
+}
+
+func (this *requestLogStream) GetInUseKeys(dt encryption.KeyDataType) ([]string, error) {
+	if dt.TypeName != crsKeyDataType.TypeName {
+		return []string{}, nil
+	}
+
+	keys := make(map[string]bool, 12)
+
+	// Get the keys used by the active stream files
+	this.filesLock.Lock()
+	for _, active := range this.streamFiles {
+		active.Lock()
+		if active.keyID != _STREAM_UNSET_KEY_ID {
+			keys[active.keyID] = true
+		}
+		active.Unlock()
+	}
+	this.filesLock.Unlock()
+
+	// Get the keys used by the archived files
+	this.filesLock.Lock()
+	if this.files != nil {
+		for archive := this.files.Front(); archive != nil; archive = archive.Next() {
+			a := archive.Value.(*fileInfo)
+			a.lock.RLock()
+			currKeyId := a.getCurrKeyID(false)
+			if currKeyId != _STREAM_UNSET_KEY_ID {
+				keys[currKeyId] = true
+			}
+
+			targetKeyId := a.getTargetKeyID(false)
+			if targetKeyId != _STREAM_UNSET_KEY_ID {
+				keys[targetKeyId] = true
+			}
+			a.lock.RUnlock()
+		}
+	}
+	this.filesLock.Unlock()
+
+	// Get the keys being used by orphan files
+	this.orphanLock.RLock()
+	for _, o := range this.orphanFiles {
+		if o.keyID != _STREAM_UNSET_KEY_ID {
+			keys[o.keyID] = true
+		}
+	}
+	this.orphanLock.RUnlock()
+
+	keysInUse := make([]string, len(keys))
+	i := 0
+	for k := range keys {
+		keysInUse[i] = k
+		i++
+	}
+
+	return keysInUse, nil
+}
+
+func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop string) error {
+	if dt.TypeName != crsKeyDataType.TypeName {
+		return nil
+	}
+
+	// Archive all active files using the key to be dropped
+	this.Lock()
+	for _, active := range this.streamFiles {
+		active.Lock()
+		if active.keyID == keyIdToDrop {
+			active.close()
+			if active.size > 0 {
+				// archive() will unlock the active file
+				this.archive(active, true)
+				continue
+			}
+		}
+		active.Unlock()
+	}
+	this.Unlock()
+
+	// Identify archive files using the key being dropped. And appropriately transform them to use the current active key
+	snapshot := make([]*fileInfo, 0, 12)
+	this.filesLock.Lock()
+	if this.files != nil {
+		for archive := this.files.Front(); archive != nil; archive = archive.Next() {
+			a := archive.Value.(*fileInfo)
+			if a.getCurrKeyID(true) == keyIdToDrop {
+				snapshot = append(snapshot, a)
+			}
+		}
+	}
+	this.filesLock.Unlock()
+
+	for _, archive := range snapshot {
+		if !archive.beginTransform() {
+			continue
+		}
+
+		postOp := func() {
+			archive.endTransform()
+			// Unpin cache entry after transformation is done
+			this.cache.setPinForEntryIfPresent(archive.num, false)
+		}
+
+		// While the on-disk file is being transformed and renamed, readers can continue to serve data from the cached entry
+		// for this file. Loading and [inning the cache entry ensures the entry remains available in the cache for reads and
+		// protected from cache eviction, until transformation is complete. Once transformation is done, the entry is un-pinned
+		// from the cache
+		present := this.cache.setPinForEntryIfPresent(archive.num, true)
+		if !present {
+			_, err := this.load(archive.num, true)
+			if err != nil {
+				postOp()
+				return fmt.Errorf("Error loading archive file %s: %v", requestLogStreamFileName(archive.num), err)
+			}
+		}
+
+		if this.encryptionProvider == nil {
+			postOp()
+			return errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
+		}
+
+		activeKey, err := this.encryptionProvider.GetActiveKey(crsKeyDataType)
+		if err != nil {
+			postOp()
+			return err
+		}
+
+		transformErr := archive.transformForKeyDrop(keyIdToDrop, activeKey, this.encryptionProvider, this)
+		postOp()
+
+		if transformErr != nil {
+			return fmt.Errorf("Transformation of archive file %v failed with error: %v", requestLogStreamFileName(archive.num),
+				transformErr)
+		}
+	}
+
+	// Check if any files are still using the key to be dropped
+	this.filesLock.Lock()
+	for _, active := range this.streamFiles {
+		active.Lock()
+		if active.keyID == keyIdToDrop {
+			active.Unlock()
+			this.filesLock.Unlock()
+			return fmt.Errorf("Key is still in use by active file %v", requestLogStreamActiveFileName(active.index))
+		}
+		active.Unlock()
+	}
+
+	for archive := this.files.Front(); archive != nil; archive = archive.Next() {
+		a := archive.Value.(*fileInfo)
+		// No need to check target key ID since the transformation procedure was just completed earlier and the target key ID
+		// would be unset by said procedure
+		if a.getCurrKeyID(true) == keyIdToDrop {
+			this.filesLock.Unlock()
+			return fmt.Errorf("Key is still in use by archived file %v", requestLogStreamFileName(a.num))
+		}
+	}
+	this.filesLock.Unlock()
+
+	// Perform an orphan file cleanup
+	this.cleanupOrphanFiles()
+
+	this.orphanLock.RLock()
+	for _, o := range this.orphanFiles {
+		if o.keyID == keyIdToDrop {
+			this.orphanLock.RUnlock()
+			return fmt.Errorf("Key is still in use by orphan file %v", o.path)
+		}
+	}
+	this.orphanLock.RUnlock()
+
+	return nil
+}
+
+func (this *requestLogStream) ActiveKeyRotated(dt encryption.KeyDataType) {
+	if dt.TypeName != crsKeyDataType.TypeName {
+		return
+	}
+
+	// When the active key is rotated, the rotated active key should not be used to encrypt new data
+	// Close and archive all active stream files so that new writes create new active files that use the new active key
+	// This prevents any further data from being written with the old key
+	this.Lock()
+	for _, active := range this.streamFiles {
+		active.Lock()
+		if active.keyID != _STREAM_UNSET_KEY_ID {
+			active.close()
+			if active.size > 0 {
+				// archive() will unlock the active file
+				this.archive(active, true)
+				continue
+			}
+		}
+		active.Unlock()
+	}
+	this.Unlock()
+}
+
+func (this *requestLogStream) cleanupOrphanFiles() {
+	this.orphanLock.Lock()
+	for i := 0; i < len(this.orphanFiles); i++ {
+		o := this.orphanFiles[i]
+		err := os.Remove(o.path)
+		if err != nil && !os.IsNotExist(err) {
+			err = os.Truncate(o.path, 0)
+		}
+
+		if err != nil && !os.IsNotExist(err) {
+			logging.Warnf(_MSG_PREFIX+"Failed to remove orphan file %v: %v", o.path, err)
+			continue
+		}
+
+		logging.Infof(_MSG_PREFIX+"Removed orphan file %v", o.path)
+		copy(this.orphanFiles[i:], this.orphanFiles[i+1:])
+		this.orphanFiles = this.orphanFiles[:len(this.orphanFiles)-1]
+	}
+	this.orphanLock.Unlock()
+}
+
+func (this *requestLogStream) periodicCRSCleanup() {
+	ticker := time.NewTicker(_SWEEP_INTERVAL)
+	defer func() {
+		ticker.Stop()
+		// cannot panic and die
+		err := recover()
+		logging.Debugf(_MSG_PREFIX+"Periodic cleanup routine failed with error: %v. Restarting.", err)
+		go this.periodicCRSCleanup()
+	}()
+
+	for range ticker.C {
+		this.cleanupOrphanFiles()
+	}
+}
+
+func (fi *fileInfo) encryptUnencryptedFile(activeKey *encryption.EaRKey) error {
+	origPath := requestLogStreamFileName(fi.num)
+	encPath := requestLogStreamTransformFileName(fi.num)
+	metaPath := requestMetadataFileName(fi.num)
+
+	f, err := os.Open(origPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// Encrypt all the request data i.e the compressed data upto the TOC
+	buf := bufio.NewReaderSize(f, _STREAM_BUF_SIZE)
+	gz, err := gzip.NewReader(buf)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+	gz.Multistream(false) // we have trailing data that gzip should not attempt to interpret
+
+	encFile, err := os.Create(encPath)
+	if err != nil {
+		return err
+	}
+	defer encFile.Close()
+
+	err = encryption.EncryptFileAsCBEF(gz, encFile, activeKey, encryption.CBEF_ZLIB, _STREAM_BUF_SIZE)
+	if err != nil {
+		return err
+	}
+
+	// Write the TOC to the metadata file
+	// Read last 16 bytes for the trailer of the TOC
+	_, err = f.Seek(-16, io.SeekEnd)
+	if err != nil {
+		return err
+	}
+
+	trailer := make([]byte, 16)
+	if _, err := io.ReadFull(f, trailer); err != nil {
+		return err
+	}
+	count := binary.BigEndian.Uint32(trailer[4:8]) // Number of JSON request entries in the file
+
+	// The TOC consists of the trailer (16 bytes) and the offset table (8 bytes per JSON request entry)
+	tocLen := int64(16 + 8*count)
+
+	_, err = f.Seek(-tocLen, io.SeekEnd)
+	if err != nil {
+		return err
+	}
+
+	toc := make([]byte, tocLen)
+	_, err = io.ReadFull(f, toc)
+	if err != nil {
+		return err
+	}
+
+	metaFile, err := os.Create(metaPath)
+	if err != nil {
+		return err
+	}
+	defer metaFile.Close()
+
+	_, err = metaFile.Write(toc)
+	if err != nil {
+		return err
+	}
+
+	// Do not swap here. Just return success.
+	return nil
+}
+
+func (fi *fileInfo) reencryptEncryptedFile(encProvider encryption.EncryptionProvider, activeKey *encryption.EaRKey) error {
+
+	origPath := requestLogStreamFileName(fi.num)
+	encPath := requestLogStreamTransformFileName(fi.num)
+
+	src, err := os.Open(origPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.Create(encPath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	err = encryption.ReEncryptCBEFFile(src, dst,
+		func(keyID string) (*encryption.EaRKey, errors.Error) {
+			return encProvider.GetKey(
+				crsKeyDataType,
+				keyID,
+			)
+		},
+		activeKey,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fi *fileInfo) decryptEncryptedFile(encProvider encryption.EncryptionProvider) error {
+	origPath := requestLogStreamFileName(fi.num)
+	metaPath := requestMetadataFileName(fi.num)
+	decPath := requestLogStreamTransformFileName(fi.num)
+
+	src, err := os.Open(origPath)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.Create(decPath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	bw := bufio.NewWriterSize(dst, _STREAM_BUF_SIZE)
+	gw := gzip.NewWriter(bw)
+
+	err = encryption.DecryptCBEFFile(src, gw, func(keyID string) (*encryption.EaRKey, errors.Error) {
+		return encProvider.GetKey(
+			crsKeyDataType,
+			keyID,
+		)
+	})
+	gw.Close()
+	bw.Flush()
+
+	// Write TOC to a new metadata file
+	metaFile, err := os.Open(metaPath)
+	if err != nil {
+		// If the metadata file for does not exist for some reason, just continue with success.
+		// There is no need to block key drop in this case
+		if go_errors.Is(err, os.ErrNotExist) {
+			return nil
+
+		}
+		return err
+	}
+	defer metaFile.Close()
+
+	_, err = io.Copy(dst, metaFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (this *fileInfo) transformForKeyDrop(keyIdToDrop string, activeKey *encryption.EaRKey,
+	encProvider encryption.EncryptionProvider, stream *requestLogStream) error {
+
+	if (activeKey == nil && keyIdToDrop == encryption.UNENCRYPTED_KEY_ID) || (activeKey != nil && keyIdToDrop == activeKey.Id) {
+		return fmt.Errorf("Attempt to drop active key")
+	}
+
+	targetKeyID := _STREAM_UNSET_KEY_ID
+
+	// Step 1: create transformed file
+	var transformErr error
+	// unencrypted -> encrypted (active key)
+	if keyIdToDrop == encryption.UNENCRYPTED_KEY_ID {
+		targetKeyID = activeKey.Id
+		this.setTargetKeyID(true, targetKeyID)
+		transformErr = this.encryptUnencryptedFile(activeKey)
+	} else if activeKey == nil { // encrypted -> unencrypted
+		targetKeyID = encryption.UNENCRYPTED_KEY_ID
+		this.setTargetKeyID(true, targetKeyID)
+		transformErr = this.decryptEncryptedFile(encProvider)
+	} else { // encrypted (old key) -> encrypted (active key)
+		targetKeyID = activeKey.Id
+		this.setTargetKeyID(true, targetKeyID)
+		transformErr = this.reencryptEncryptedFile(encProvider, activeKey)
+	}
+
+	origPath := requestLogStreamFileName(this.num)
+	transformPath := requestLogStreamTransformFileName(this.num)
+
+	cleanup := func() {
+		// Delete the transform file
+		removeCRSFile(transformPath, stream)
+		this.setTargetKeyID(true, _STREAM_UNSET_KEY_ID)
+	}
+
+	if transformErr != nil {
+		cleanup()
+		return transformErr
+	}
+
+	// Step 2: Swap the transformed file with the original file
+	// Check if readers are drained before swapping. Do not infinitely wait here, since we do not want to block key drop entirely
+	// due to blocked readers
+	retries := 5
+	for i := 0; i <= retries; i++ {
+		if i == retries {
+			cleanup()
+			return fmt.Errorf(
+				"Failed to replace the original file with the transformed file as original file is in use by active readers." +
+					"Retries exhausted.")
+		}
+
+		if this.getFileReadingCount(true) == 0 {
+			break
+		}
+		time.Sleep(time.Second * 5)
+	}
+
+	// Perform swap
+	err := os.Rename(transformPath, origPath)
+	if err != nil {
+		cleanup()
+		return err
+	}
+
+	// Step 3: transformation-specific post-swap processing
+	if activeKey == nil { // encrypted -> unencrypted
+		// Delete the metadata file since unencrypted files do not have separate metadata files
+		metadataPath := requestMetadataFileName(this.num)
+		// It is alright if remove fails at the metadata file has no sensitive info
+		os.Truncate(metadataPath, 0)
+		os.Remove(metadataPath)
+	}
+
+	// Step 4: transformation-specific new size computation
+	// It is okay if getting file size stats fails, it is a non fatal error. It is a best effort operation
+	if activeKey == nil { // encrypted -> unencrypted
+		stat, err := os.Stat(origPath)
+		if err == nil {
+			this.setSize(true, uint64(stat.Size()))
+		}
+	} else if keyIdToDrop == encryption.UNENCRYPTED_KEY_ID { // unencrypted -> encrypted (active key)
+		sz := 0
+		stat, err := os.Stat(origPath)
+		if err == nil {
+			sz += int(stat.Size())
+
+			metasz, err := os.Stat(requestMetadataFileName(this.num))
+			if err == nil {
+				sz += int(metasz.Size())
+			}
+
+			this.setSize(true, uint64(sz))
+		}
+
+	}
+
+	// Step 5: Reset file information
+	this.resetAfterTransform(true, targetKeyID)
+	return nil
+}
+
 // External API
+
+func InitRequestStream() keymgmt.TrackedEncryptor {
+	go requestLog.stream.periodicCRSCleanup()
+	return &requestLog.stream
+}
 
 // returns a _flat_ (for memory efficiency) array of file number & record count pairs
 // this is used to produce the system namespace "index" for the streamed history
@@ -937,13 +1848,17 @@ func RequestsFileStreamFileInfo() []uint64 {
 }
 
 func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user string, fn func(map[string]interface{}) bool) error {
-	ce, err := requestLog.stream.load(fileNum)
+	ce, err := requestLog.stream.load(fileNum, false)
 	if err != nil {
 		return err
 	}
+
+	if ce == nil {
+		return nil
+	}
+
 	max := uint64(len(ce.offsets))
 	if skip >= max {
-		ce.Unlock()
 		return nil
 	}
 	if count == 0 {
@@ -954,7 +1869,6 @@ func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user stri
 			if v := ce.read(i); v != nil {
 				if m, ok := v.(map[string]interface{}); ok {
 					if !fn(m) {
-						ce.Unlock()
 						return nil
 					}
 					count--
@@ -968,7 +1882,6 @@ func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user stri
 					if m["users"] == user {
 						if skip == 0 {
 							if !fn(m) {
-								ce.Unlock()
 								return nil
 							}
 							count--
@@ -980,7 +1893,6 @@ func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user stri
 			}
 		}
 	}
-	ce.Unlock()
 	return nil
 }
 
@@ -1054,12 +1966,8 @@ func streamToFile(e *RequestLogEntry) {
 	}
 }
 
-func isEncrypted(file *os.File) bool {
-	var encrypted bool
-	if encryption.IsCBEFReader(file) {
-		encrypted = true
-	}
-
+func isEncrypted(file *os.File) (bool, string) {
+	encrypted, keyID := encryption.GetKeyIdFromCBEF(file)
 	file.Seek(0, io.SeekStart)
-	return encrypted
+	return encrypted, keyID
 }

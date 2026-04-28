@@ -208,6 +208,10 @@ func (this *ffdcManager) DropKey(dt encryption.KeyDataType, keyIdToDrop string) 
 	return nil
 }
 
+func (this *ffdcManager) ActiveKeyRotated(dt encryption.KeyDataType) {
+	// No action required, as the FFDC capture process is expected to be short-lived.
+}
+
 func (this *ffdcManager) trackOrphanFile(file *ffdcFile) {
 	this.Lock()
 	this.orphanFiles = append(this.orphanFiles, file)

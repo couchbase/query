@@ -71,14 +71,14 @@ func (this *nodeKeyStore) PrimeKeys(keyDataTypes []encryption.KeyDataType) error
 	return nil
 }
 
-func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbauth.EncrKeysInfo, prime bool) errors.Error {
+func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbauth.EncrKeysInfo, prime bool) (errors.Error, bool) {
 	if newInfo == nil {
-		return nil
+		return nil, false
 	}
 
 	dt, err := validateKeyDataType(dataType)
 	if err != nil {
-		return err
+		return err, false
 	}
 
 	this.lock.Lock()
@@ -96,6 +96,7 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 	// Update the manager if no config exists or the new config differs from the existing config for this type
 	currInfo, exists := this.encrKeysInfo[dt]
 	var changed bool
+	var activeKeyRotation bool
 
 	if prime {
 		// Update only if there is no entry yet for this data type.
@@ -104,7 +105,7 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 		if !exists || currInfo == nil {
 			changed = true
 		} else {
-			return nil
+			return nil, false
 		}
 
 	} else if !exists || currInfo == nil {
@@ -112,6 +113,7 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 	} else {
 		if currInfo.ActiveKeyId != newInfo.ActiveKeyId {
 			changed = true
+			activeKeyRotation = true
 		} else if len(currInfo.Keys) != len(newInfo.Keys) {
 			changed = true
 		} else if len(currInfo.UnavailableKeyIds) != len(newInfo.UnavailableKeyIds) {
@@ -137,7 +139,7 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 	}
 
 	if !changed {
-		return nil
+		return nil, false
 	}
 
 	if currInfo != nil {
@@ -186,7 +188,7 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 	logging.Infof("EAR: [data_type=%s] New encryption-at-rest configuration received. Configuration updated to: %s", dt.String(),
 		info.String())
 
-	return nil
+	return nil, activeKeyRotation
 }
 
 func (this *nodeKeyStore) GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
@@ -271,7 +273,7 @@ func (this *nodeKeyStore) primeKey(dt cbauth.KeyDataType) errors.Error {
 		return errors.NewEncryptionError(errors.E_ENCRYPTION_PRIME, cbErr, cbauthTypeToDataType(dt).String())
 	}
 
-	err := this.UpdateKeys(dt, keys, true)
+	err, _ := this.UpdateKeys(dt, keys, true)
 	if err != nil {
 		t := cbauthTypeToDataType(dt)
 		logging.Errorf("EAR: [data_type=%s] Error priming encryption-at-rest configuration: %v", t.String(), err)

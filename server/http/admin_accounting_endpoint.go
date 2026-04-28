@@ -2727,9 +2727,15 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 	var reader io.ReadSeekCloser
 	if encryption.IsCBEFReader(file) {
 		file.Seek(0, io.SeekStart)
+
+		encMgr := ep.server.EncryptionManager()
+		if encMgr == nil {
+			file.Close()
+			return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
+		}
+
 		cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) (*encryption.EaRKey, errors.Error) {
-			// TODO - add key retrieval when key management is introduced
-			return nil, nil
+			return encMgr.GetKey(encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}, keyId)
 		})
 		if err1 != nil {
 			file.Close()
@@ -2769,10 +2775,16 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 		}
 		if info, e := file.Stat(); e == nil && info.Size() >= pos {
 			if encryption.IsCBEFReader(file) {
+
+				encMgr := ep.server.EncryptionManager()
+				if encMgr == nil {
+					file.Close()
+					return nil, errors.NewEncryptionError(errors.E_NO_ENCRYPTION_MANAGER, nil)
+				}
+
 				file.Seek(0, io.SeekStart)
 				cbefr, err1 := encryption.NewCBEFCursor(file, func(keyId string) (*encryption.EaRKey, errors.Error) {
-					// TODO - add key retrieval when key management is introduced
-					return nil, nil
+					return encMgr.GetKey(encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}, keyId)
 				})
 				if err1 != nil {
 					file.Close()

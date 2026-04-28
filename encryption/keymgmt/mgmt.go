@@ -32,6 +32,7 @@ type TrackedEncryptor interface {
 	DropKey(dt encryption.KeyDataType, keyId string) error
 	Name() string
 	InitEncryptionProvider(encProvider encryption.EncryptionProvider)
+	ActiveKeyRotated(dt encryption.KeyDataType)
 }
 
 type NoopEncryptionManager struct{}

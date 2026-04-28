@@ -332,6 +332,18 @@ func main() {
 		accounting.RegisterMetrics(acctstore)
 	}
 
+	// Start the completed requests log
+	if *COMPLETED_THRESHOLD == -1 {
+		if tenant.IsServerless() {
+			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD_SL
+		} else {
+			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD
+		}
+	}
+
+	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT, _DEF_SEQSCAN_KEYS)
+	creqEncryptor := server_package.InitRequestStream()
+
 	// Setup encryption manager only when query service is not in standalone dev mode
 	// As cbauth does not push encryption info to services that are not part of the cluster
 	var encryptionMgr keymgmt.EncryptionManager
@@ -340,7 +352,7 @@ func main() {
 	if cbOk {
 		if *CONFIGSTORE != _STUB_STORE_ADDRESS {
 			var err error
-			encryptionMgr, err = setupEncryptionManager([]keymgmt.TrackedEncryptor{ffdcEncryptor})
+			encryptionMgr, err = setupEncryptionManager([]keymgmt.TrackedEncryptor{ffdcEncryptor, creqEncryptor})
 			if err != nil {
 				logging.Fatalf("EAR: Error setting up encryption manager: %v", err)
 				os.Exit(1)
@@ -352,17 +364,7 @@ func main() {
 		cbDs.SetEncryptionProvider(encryptionMgr)
 	}
 	ffdcEncryptor.InitEncryptionProvider(encryptionMgr)
-
-	// Start the completed requests log
-	if *COMPLETED_THRESHOLD == -1 {
-		if tenant.IsServerless() {
-			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD_SL
-		} else {
-			*COMPLETED_THRESHOLD = _DEF_COMPLETED_THRESHOLD
-		}
-	}
-
-	server_package.RequestsInit(*COMPLETED_THRESHOLD, *COMPLETED_LIMIT, _DEF_SEQSCAN_KEYS)
+	creqEncryptor.InitEncryptionProvider(encryptionMgr)
 
 	// Initialized the prepared statement cache
 	if *PREPARED_LIMIT <= 0 {

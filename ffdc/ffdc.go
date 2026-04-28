@@ -718,6 +718,8 @@ func Init(logDir string) keymgmt.TrackedEncryptor {
 		logging.Infof("FFDC: Found %v existing dump file(s); %v bytes.", len(files), sz)
 	}
 
+	ffdcMgr.cleanupOrphanFiles()
+
 	go periodicActions(15 * time.Minute)
 
 	return ffdcMgr
@@ -842,6 +844,7 @@ func Stats(prefix string, res map[string]interface{}, details bool) {
 }
 
 func (this *occurrence) writeEncryptedFFDCFile(f *os.File, opConfig operationConfig, key *encryption.EaRKey) error {
+	// The data is ZLIB compressed, as cbcat tool currently does not support GZIP and only supports ZLIB compression type
 	ew, err := encryption.NewCBEFWriterSize(f, key, encryption.CBEF_ZLIB, _ENCRYPTION_BUFFER_SIZE)
 	if err != nil {
 		logging.Errorf("FFDC: [%#x] Error creating encryption writer: %v", this.id, err)
