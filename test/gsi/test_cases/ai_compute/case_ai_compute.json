@@ -1,0 +1,92 @@
+[
+    {
+        "testcase": "AI_COMPUTE: EXPLAIN with PARTITION BY shows WindowAggregate operator",
+        "ordered": false,
+        "errorCode": 5340,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate' END"
+        },
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'"
+    },
+    {
+        "testcase": "AI_COMPUTE: EXPLAIN without PARTITION BY shows WindowAggregate operator",
+        "ordered": false,
+        "errorCode": 5340,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate' END"
+        },
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'"
+    },
+    {
+        "testcase": "AI_RERANK: EXPLAIN with PARTITION BY shows WindowAggregate operator",
+        "ordered": false,
+        "errorCode": 5340,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate' END"
+        },
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'"
+    },
+    {
+        "testcase": "AI_RERANK: EXPLAIN without PARTITION BY shows WindowAggregate operator",
+        "ordered": false,
+        "errorCode": 5340,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate' END"
+        },
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'"
+    },
+    {
+        "testcase": "AI_COMPUTE: EXPLAIN without model field is accepted (model is optional)",
+        "ordered": false,
+        "errorCode": 5340,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate' END"
+        },
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'"
+    },
+    {
+        "testcase": "AI_RERANK: EXPLAIN without model field is accepted (model is optional)",
+        "ordered": false,
+        "errorCode": 5340,
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'WindowAggregate' END"
+        },
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'"
+    }
+]

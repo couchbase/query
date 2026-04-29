@@ -1,0 +1,201 @@
+[
+    {
+        "testcase": "AI_COMPUTE: OVER clause is required",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, 'database technology') AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "Invalid function AI_COMPUTE"
+    },
+    {
+        "testcase": "AI_COMPUTE: ORDER BY in OVER clause is not allowed",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category ORDER BY d.text) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "ORDER BY clause is not allowed"
+    },
+    {
+        "testcase": "AI_COMPUTE: window frame in OVER clause is not allowed without ORDER BY",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "window frame is not allowed without ORDER BY"
+    },
+    {
+        "testcase": "AI_COMPUTE: second argument must be a static object (non-static field reference)",
+        "statements": "SELECT AI_COMPUTE(d.text, d.category) OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "second value must be static object"
+    },
+    {
+        "testcase": "AI_COMPUTE: second argument must be a static object (string literal is not an object)",
+        "statements": "SELECT AI_COMPUTE(d.text, 'not-an-object') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "second value must be static object"
+    },
+    {
+        "testcase": "AI_COMPUTE: empty options object",
+        "statements": "SELECT AI_COMPUTE(d.text, {}) OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: second argument (options) must not be empty"
+    },
+    {
+        "testcase": "AI_COMPUTE: missing action field in options",
+        "statements": "SELECT AI_COMPUTE(d.text, {'uri':'http://localhost:9999/rerank'}) OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: 'action' field must be a string"
+    },
+    {
+        "testcase": "AI_COMPUTE: invalid action value in options",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'bogus', 'uri':'http://localhost:9999/rerank'}) OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: unsupported action"
+    },
+    {
+        "testcase": "AI_COMPUTE: action field is not a string",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':123, 'uri':'http://localhost:9999/rerank'}) OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: 'action' field must be a string"
+    },
+    {
+        "testcase": "AI_COMPUTE: missing URI in options",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank'}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: 'uri' field is required"
+    },
+    {
+        "testcase": "AI_COMPUTE: empty string URI in options",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':''}, 'test') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: 'uri' field is required"
+    },
+
+    {
+        "testcase": "AI_COMPUTE: named parameter $cfg that is not an object is caught at runtime",
+        "_comment": "Named parameters bypass the plan-time static-object check because op.Value() returns nil for runtime-resolved params. The type error is caught in setAiCompute.",
+        "namedArgs": {"cfg": "not-an-object"},
+        "statements": "SELECT AI_COMPUTE(d.text, $cfg) OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: second argument (options) must be an object"
+    },
+    {
+        "testcase": "AI_COMPUTE: named parameter $cfg with unsupported action",
+        "namedArgs": {"cfg": {"action": "bogus", "uri": "http://localhost:9999/rerank"}},
+        "statements": "SELECT AI_COMPUTE(d.text, $cfg) OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: unsupported action"
+    },
+    {
+        "testcase": "AI_COMPUTE: named parameter $cfg with missing URI",
+        "namedArgs": {"cfg": {"action": "rerank"}},
+        "statements": "SELECT AI_COMPUTE(d.text, $cfg, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: 'uri' field is required"
+    },
+
+    {
+        "testcase": "AI_COMPUTE: empty options with no PARTITION BY",
+        "statements": "SELECT AI_COMPUTE(d.text, {}) OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: second argument (options) must not be empty"
+    },
+    {
+        "testcase": "AI_COMPUTE: missing action with no PARTITION BY",
+        "statements": "SELECT AI_COMPUTE(d.text, {'uri':'http://localhost:9999/rerank'}) OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: 'action' field must be a string"
+    },
+    {
+        "testcase": "AI_COMPUTE: missing URI with no PARTITION BY",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank'}, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: 'uri' field is required"
+    },
+
+    {
+        "testcase": "AI_RERANK: OVER clause is required",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, 'test') AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "Invalid function AI_RERANK"
+    },
+    {
+        "testcase": "AI_RERANK: ORDER BY in OVER clause is not allowed",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category ORDER BY d.text) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "ORDER BY clause is not allowed"
+    },
+    {
+        "testcase": "AI_RERANK: window frame without ORDER BY is not allowed",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, 'database technology') OVER(PARTITION BY d.category ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "window frame is not allowed without ORDER BY"
+    },
+    {
+        "testcase": "AI_RERANK: second argument must be a static object (non-static field reference)",
+        "statements": "SELECT AI_RERANK(d.text, d.category, 'test') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "second value must be static object"
+    },
+    {
+        "testcase": "AI_RERANK: second argument must be a static object (string literal is not an object)",
+        "statements": "SELECT AI_RERANK(d.text, 'not-an-object', 'test') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "second value must be static object"
+    },
+    {
+        "testcase": "AI_RERANK: empty query string with PARTITION BY",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, '') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: third argument (query) must not be empty"
+    },
+    {
+        "testcase": "AI_RERANK: empty query string with no PARTITION BY",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, '') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: third argument (query) must not be empty"
+    },
+    {
+        "testcase": "AI_RERANK: non-string query argument",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':'http://localhost:9999/rerank'}, 123) OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: third argument (query) must be a string"
+    },
+    {
+        "testcase": "AI_RERANK: empty options object",
+        "statements": "SELECT AI_RERANK(d.text, {}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: second argument (options) must not be empty"
+    },
+    {
+        "testcase": "AI_RERANK: empty options object with no PARTITION BY",
+        "statements": "SELECT AI_RERANK(d.text, {}, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: second argument (options) must not be empty"
+    },
+    {
+        "testcase": "AI_RERANK: empty string URI in options",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':''}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: 'uri' field is required"
+    },
+    {
+        "testcase": "AI_RERANK: empty string URI with no PARTITION BY",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':''}, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: 'uri' field is required"
+    },
+    {
+        "testcase": "AI_RERANK: URI field is not a string",
+        "statements": "SELECT AI_RERANK(d.text, {'uri':123}, 'database technology') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: 'uri' field is required"
+    },
+
+    {
+        "testcase": "AI_RERANK: named parameter $cfg that is not an object is caught at runtime",
+        "_comment": "Named parameters bypass the plan-time static-object check (Value() returns nil at plan time). The type error is caught in setAiRerank.",
+        "namedArgs": {"cfg": "not-an-object"},
+        "statements": "SELECT AI_RERANK(d.text, $cfg, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: second argument (options) must be an object"
+    },
+    {
+        "testcase": "AI_RERANK: named parameter $cfg missing URI field",
+        "namedArgs": {"cfg": {"model": "rerank-v3.5"}},
+        "statements": "SELECT AI_RERANK(d.text, $cfg, 'database technology') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_rerank'",
+        "error": "AI_RERANK: 'uri' field is required"
+    },
+
+    {
+        "testcase": "AI_COMPUTE: action rerank with missing query argument",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}) OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: action 'rerank' requires a query as the third argument"
+    },
+    {
+        "testcase": "AI_COMPUTE: action rerank with empty query string",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, '') OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: third argument (query) must not be empty"
+    },
+    {
+        "testcase": "AI_COMPUTE: action rerank with non-string query argument",
+        "statements": "SELECT AI_COMPUTE(d.text, {'action':'rerank', 'uri':'http://localhost:9999/rerank'}, 123) OVER(PARTITION BY d.category) AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: third argument (query) must be a string"
+    },
+    {
+        "testcase": "AI_COMPUTE: named param action rerank with missing query argument",
+        "namedArgs": {"cfg": {"action": "rerank", "uri": "http://localhost:9999/rerank"}},
+        "statements": "SELECT AI_COMPUTE(d.text, $cfg) OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: action 'rerank' requires a query as the third argument"
+    },
+    {
+        "testcase": "AI_COMPUTE: named param action rerank with empty query string",
+        "namedArgs": {"cfg": {"action": "rerank", "uri": "http://localhost:9999/rerank"}},
+        "statements": "SELECT AI_COMPUTE(d.text, $cfg, '') OVER() AS score FROM orders AS d WHERE d.test_id = 'ai_compute'",
+        "error": "AI_COMPUTE: third argument (query) must not be empty"
+    }
+]

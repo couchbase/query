@@ -89,6 +89,20 @@ func (this *SemChecker) visitAggregateFunction(agg algebra.Aggregate) (err error
 				"semantics.visit_aggregate_function.window")
 		}
 	}
+	if algebra.AggregateHasProperty(agg.Name(), algebra.AGGREGATE_WINDOW_2ND_OBJECT) && len(agg.Operands()) > 1 {
+		// second argument must be a constant or expression and must evaluate to a positive non zero integer
+		op := agg.Operands()[1]
+		ok := (op != nil && op.Static() != nil)
+		if ok {
+			val := op.Value()
+			ok = val == nil || (val.Type() == value.OBJECT)
+		}
+
+		if !ok {
+			return errors.NewWindowSemanticError(aggName, "", "second value must be static object",
+				"semantics.visit_aggregate_function.window")
+		}
+	}
 
 	oby := wTerm.OrderBy()
 	windowFrame := wTerm.WindowFrame()

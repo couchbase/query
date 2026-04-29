@@ -9,13 +9,20 @@
 package execution
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -40,6 +47,26 @@ type WindowAggregate struct {
 	flags        uint32
 }
 
+const (
+	_AI_RERANK = 1 << iota
+	_AI_SENTIMENT
+)
+
+var _AI_ACTIONS = map[string]int{
+	"rerank":    _AI_RERANK,
+	"sentiment": _AI_SENTIMENT,
+}
+
+type AiOptions struct {
+	uriObj    *url.URL
+	query     string
+	cred_id   string
+	action    int
+	batchSize int64
+	model     string
+	header    map[string]interface{}
+}
+
 /*
 Aggregate specific information
 */
@@ -60,6 +87,8 @@ type AggregateInfo struct {
 	obyValues         value.Values
 	repeats           value.Value
 	preVal            value.Value
+	options           *AiOptions
+	aiValues          value.Values
 	preAgg            algebra.Aggregate
 	flags             uint32
 }
@@ -101,6 +130,9 @@ const (
 	_WINDOW_LEAD
 	_WINDOW_NOEQUAL_ROWS
 	_WINDOW_FL_DUPLICATES
+	_WINDOW_AICOMPUTE
+	_WINDOW_AIFULLSET
+	_WINDOW_AIRERANK
 )
 
 var _AGG_FLAGS = map[string]uint32{
@@ -116,6 +148,8 @@ var _AGG_FLAGS = map[string]uint32{
 	"nth_value":       _WINDOW_NTH_VALUE,
 	"lag":             _WINDOW_LAG | _WINDOW_NOEQUAL_ROWS,
 	"lead":            _WINDOW_LEAD | _WINDOW_NOEQUAL_ROWS,
+	"ai_compute":      _WINDOW_AICOMPUTE,
+	"ai_rerank":       _WINDOW_AIRERANK,
 }
 
 const _WINDOW_CAP = 512
@@ -240,7 +274,161 @@ func (this *AggregateInfo) hasFlags(flags uint32) bool {
  Setup aggregate specific information
 */
 
+func (this *AggregateInfo) setAiCompute(context *opContext, parent value.Value) error {
+	optionsVal, err := this.agg.Operands()[1].Evaluate(parent, context)
+	if err != nil {
+		return err
+	}
+
+	if optionsVal.Type() != value.OBJECT {
+		return fmt.Errorf("AI_COMPUTE: second argument (options) must be an object")
+	}
+
+	// Check for empty options object
+	fields := optionsVal.Fields()
+	if len(fields) == 0 {
+		return fmt.Errorf("AI_COMPUTE: second argument (options) must not be empty")
+	}
+
+	this.options = &AiOptions{batchSize: _WINDOW_CAP}
+	this.aiValues = make(value.Values, 0, _WINDOW_CAP)
+
+	// Validate action
+	if v, ok := optionsVal.Field("action"); !ok || v.Type() != value.STRING {
+		return fmt.Errorf("AI_COMPUTE: 'action' field must be a string")
+	} else {
+		if action, ok := _AI_ACTIONS[strings.ToLower(v.ToString())]; ok {
+			this.options.action = action
+		} else {
+			return fmt.Errorf("AI_COMPUTE: unsupported action %q - supported: rerank", v.ToString())
+		}
+	}
+
+	// Validate uri
+	if v, ok := optionsVal.Field("uri"); !ok || v.Type() != value.STRING || v.ToString() == "" {
+		return fmt.Errorf("AI_COMPUTE: 'uri' field is required and must not be empty")
+	} else {
+		uriObj, err := util.ParseAndValidateURL(v.ToString())
+		if err != nil {
+			return err
+		}
+		if err := expression.IsUrlAllowedInCluster(uriObj, context); err != nil {
+			return err
+		}
+		this.options.uriObj = uriObj
+	}
+
+	if v, ok := optionsVal.Field("header"); ok && v.Type() == value.OBJECT {
+		this.options.header = v.Actual().(map[string]interface{})
+	}
+	if v, ok := optionsVal.Field("batchSize"); ok && v.Type() == value.NUMBER {
+		this.options.batchSize = value.AsNumberValue(v).Int64()
+	}
+	if v, ok := optionsVal.Field("model"); ok && v.Type() == value.STRING {
+		this.options.model = v.ToString()
+	}
+	if v, ok := optionsVal.Field("cred_id"); ok && v.Type() == value.STRING {
+		this.options.cred_id = v.ToString()
+	}
+	if this.options.batchSize <= 0 || this.options.batchSize > _WINDOW_CAP {
+		this.options.batchSize = _WINDOW_CAP
+	}
+
+	// Action-specific: rerank requires query as the third argument.
+	if this.options.action == _AI_RERANK {
+		if len(this.agg.Operands()) < 3 {
+			return fmt.Errorf("AI_COMPUTE: action 'rerank' requires a query as the third argument")
+		}
+		queryVal, err := this.agg.Operands()[2].Evaluate(parent, context)
+		if err != nil {
+			return err
+		}
+		if queryVal.Type() != value.STRING {
+			return fmt.Errorf("AI_COMPUTE: third argument (query) must be a string")
+		}
+		if queryVal.ToString() == "" {
+			return fmt.Errorf("AI_COMPUTE: third argument (query) must not be empty")
+		}
+		this.options.query = queryVal.ToString()
+		this.addFlags(_WINDOW_AIFULLSET)
+		this.options.batchSize = -1
+	}
+
+	return nil
+}
+
+// setAiRerank initialises options for the AI_RERANK(docs, options, query) window function.
+// operand[1] must evaluate to an object (uri, model, cred_id, header).
+// operand[2] must evaluate to a non-empty string (the query text).
+// The action is always _AI_RERANK — it is not read from the options object.
+func (this *AggregateInfo) setAiRerank(context *opContext, parent value.Value) error {
+	// Evaluate operand[1]: options object
+	optionsVal, err := this.agg.Operands()[1].Evaluate(parent, context)
+	if err != nil {
+		return err
+	}
+	if optionsVal.Type() != value.OBJECT {
+		return fmt.Errorf("AI_RERANK: second argument (options) must be an object")
+	}
+	if len(optionsVal.Fields()) == 0 {
+		return fmt.Errorf("AI_RERANK: second argument (options) must not be empty")
+	}
+
+	// Evaluate operand[2]: query string
+	queryVal, err := this.agg.Operands()[2].Evaluate(parent, context)
+	if err != nil {
+		return err
+	}
+	if queryVal.Type() != value.STRING {
+		return fmt.Errorf("AI_RERANK: third argument (query) must be a string")
+	}
+	if queryVal.ToString() == "" {
+		return fmt.Errorf("AI_RERANK: third argument (query) must not be empty")
+	}
+
+	this.options = &AiOptions{
+		action:    _AI_RERANK,
+		query:     queryVal.ToString(),
+		batchSize: -1, // rerank always operates on the full partition
+	}
+	this.aiValues = make(value.Values, 0, _WINDOW_CAP)
+
+	// Validate and store URI (mandatory).
+	v, ok := optionsVal.Field("uri")
+	if !ok || v.Type() != value.STRING || v.ToString() == "" {
+		return fmt.Errorf("AI_RERANK: 'uri' field is required and must not be empty")
+	}
+	uriObj, err := util.ParseAndValidateURL(v.ToString())
+	if err != nil {
+		return err
+	}
+	if err := expression.IsUrlAllowedInCluster(uriObj, context); err != nil {
+		return err
+	}
+	this.options.uriObj = uriObj
+
+	if v, ok := optionsVal.Field("header"); ok && v.Type() == value.OBJECT {
+		this.options.header = v.Actual().(map[string]interface{})
+	}
+	if v, ok := optionsVal.Field("model"); ok && v.Type() == value.STRING {
+		this.options.model = v.ToString()
+	}
+	if v, ok := optionsVal.Field("cred_id"); ok && v.Type() == value.STRING {
+		this.options.cred_id = v.ToString()
+	}
+
+	// Rerank always needs the full partition before it can call the API.
+	this.addFlags(_WINDOW_AIFULLSET)
+
+	return nil
+}
+
 func (this *AggregateInfo) setOnce(context *opContext, parent value.Value) (err error) {
+	if this.hasFlags(_WINDOW_AICOMPUTE) {
+		return this.setAiCompute(context, parent)
+	} else if this.hasFlags(_WINDOW_AIRERANK) {
+		return this.setAiRerank(context, parent)
+	}
 
 	// No ORDER BY all rows in parttition has same aggregate value. Evaluate once.
 	this.once = this.wTerm.OrderBy() == nil && !this.hasFlags(_WINDOW_ROW_NUMBER)
@@ -365,6 +553,21 @@ evaluate the aggregate
 func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem int64) (err error) {
 	var item value.AnnotatedValue
 
+	cAiItem := cItem
+	if this.hasFlags(_WINDOW_AICOMPUTE | _WINDOW_AIRERANK) {
+		if !this.hasFlags(_WINDOW_AIFULLSET) {
+			si := (cItem / this.options.batchSize) * this.options.batchSize
+			cAiItem = cItem % this.options.batchSize
+			wf = &windowFrame{sIndex: si, cIndex: cItem, eIndex: si + this.options.batchSize}
+		}
+		if cAiItem == 0 {
+			this.aiValues = this.aiValues[0:0]
+		} else {
+			this.val = this.aiValues[cAiItem]
+			return
+		}
+	}
+
 	// set the start row and end row reset boundarires
 	s := wf.sIndex
 	e := wf.eIndex
@@ -454,9 +657,153 @@ func (this *AggregateInfo) evaluate(op *WindowAggregate, wf *windowFrame, cItem 
 	}
 
 	// final aggregation value
-	this.val, err = this.agg.ComputeFinal(this.val, &op.operatorCtx)
+	val, err := this.agg.ComputeFinal(this.val, &op.operatorCtx)
+	if err != nil {
+		return err
+	}
+	if this.hasFlags(_WINDOW_AIRERANK) {
+		// ai_rerank: direct one-hop call to the canonical rerank implementation.
+		err = this.aiRerankEvaluate(val, op)
+		if err == nil {
+			this.val = this.aiValues[cAiItem]
+		}
+	} else if this.hasFlags(_WINDOW_AICOMPUTE) {
+		// ai_compute: goes through aiEvaluate which may delegate to aiRerankEvaluate.
+		err = this.aiEvaluate(val, op)
+		if err == nil {
+			this.val = this.aiValues[cAiItem]
+		}
+	} else {
+		this.val = val
+	}
 
 	return err
+}
+
+// aiRerankEvaluate is the canonical implementation of the rerank HTTP call.
+// It is called directly by ai_rerank (one hop) and via aiEvaluate by
+// ai_compute with action:"rerank" (two hops).
+func (this *AggregateInfo) aiRerankEvaluate(val value.Value, op *WindowAggregate) error {
+	if val.Type() != value.ARRAY {
+		return fmt.Errorf("AI_RERANK: expected an array of document values")
+	}
+
+	uriObj := this.options.uriObj
+
+	docs := val.Actual().([]interface{})
+	if len(docs) == 0 {
+		return nil
+	}
+
+	payloadMap := map[string]interface{}{
+		"query":     this.options.query,
+		"documents": docs,
+	}
+	if this.options.model != "" {
+		payloadMap["model"] = this.options.model
+	}
+
+	payload, err := json.Marshal(payloadMap)
+	if err != nil {
+		return err
+	}
+
+	client := http.Client{}
+	header := http.Header{}
+
+	if this.options.cred_id != "" {
+		client, header, err = expression.HandleCred(uriObj, this.options.cred_id, &op.operatorCtx)
+		if err != nil {
+			return err
+		}
+	} else {
+		client, err = expression.GetDefaultHttpClient(&op.operatorCtx)
+		if err != nil {
+			return err
+		}
+	}
+	if client.Timeout == 0 {
+		client.Timeout = 30 * time.Second
+	}
+
+	// The request body is always a JSON-encoded payload.  Set Content-Type so that
+	// APIs that enforce it (returning HTTP 415 otherwise) work without the caller
+	// having to add it to config.header manually.  User-provided header entries
+	// applied in the loop below can override this default if necessary.
+	header.Set("Content-Type", "application/json")
+
+	if this.options.header != nil {
+		for k, v := range this.options.header {
+			// When config is a N1QL literal object the values in the map are
+			// value.Value (e.g. stringValue), not plain Go strings.  Handle both
+			// so the header is correctly forwarded regardless of the code path.
+			switch sv := v.(type) {
+			case string:
+				header.Set(k, sv)
+			case value.Value:
+				if sv.Type() == value.STRING {
+					header.Set(k, sv.ToString())
+				}
+			}
+		}
+	}
+
+	req, err := http.NewRequest("POST", uriObj.String(), bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header = header
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("AI_RERANK: API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	this.aiValues = make(value.Values, len(docs))
+
+	var response struct {
+		Results []map[string]interface{} `json:"results"`
+	}
+	if err = json.Unmarshal(body, &response); err != nil {
+		return err
+	}
+
+	for _, respDoc := range response.Results {
+		idx, ok := respDoc["index"].(float64)
+		if !ok {
+			continue
+		}
+		if int(idx) < 0 || int(idx) >= len(this.aiValues) {
+			return fmt.Errorf("AI_RERANK: invalid index in response: %v", idx)
+		}
+		score, hasScore := respDoc["relevance_score"]
+		if !hasScore || score == nil {
+			return fmt.Errorf("AI_RERANK: missing relevance_score in response at index %v", idx)
+		}
+		this.aiValues[int(idx)] = value.NewValue(score)
+	}
+
+	return nil
+}
+
+func (this *AggregateInfo) aiEvaluate(val value.Value, op *WindowAggregate) error {
+	switch this.options.action {
+	case _AI_RERANK:
+		// Delegate to the canonical rerank implementation (two-hop path for ai_compute).
+		return this.aiRerankEvaluate(val, op)
+	default:
+		return fmt.Errorf("AI_COMPUTE: unsupported action (internal error)")
+	}
 }
 
 /*
@@ -614,7 +961,7 @@ func (this *AggregateInfo) windowFramePositions(op *WindowAggregate, c int64) (*
 	this.dupsFollowing = 0
 	windowFrame := this.wTerm.WindowFrame()
 
-	if this.once || this.hasFlags(_WINDOW_LEAD) {
+	if this.once || this.hasFlags(_WINDOW_LEAD) || this.hasFlags(_WINDOW_AIFULLSET) {
 		eIndex = op.nItems - 1
 	} else if windowFrame != nil {
 		wfes := windowFrame.WindowFrameExtents()

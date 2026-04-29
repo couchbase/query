@@ -465,6 +465,14 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	// wait till all the results are ready
 	<-mr.done
 	mockServer.saveTxId(gv, query.Type(), mr.results)
+	// Execution-time Fatal() errors go through the promoted BaseRequest.Fatal() which
+	// stores them in BaseRequest.errors, bypassing MockQuery.Error()/MockQuery.Fail()
+	// that set MockResponse.err. Surface them here so tests can match on them.
+	if mr.err == nil {
+		if errs := query.Errors(); len(errs) > 0 {
+			mr.err = errs[0]
+		}
+	}
 	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount, mr.generatedStmt}
 }
 
@@ -1119,7 +1127,10 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 	}
 	prepareStmt := "PREPARE " + statement
 	rr := Run(qc, queryParams, prepareStmt, namespace, nil, nil, nil)
-	if rr.Err != nil || len(rr.Results) != 1 {
+	if rr.Err != nil {
+		return nil, rr.Err
+	}
+	if len(rr.Results) != 1 {
 		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, rr.Results))
 	}
 	ra := rr.Results[0].(map[string]interface{})
