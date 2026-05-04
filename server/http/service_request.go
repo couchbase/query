@@ -1023,6 +1023,7 @@ const ( // Request argument names
 	NATURAL_CRED       = "natural_cred"
 	NATURAL_ORGID      = "natural_orgid"
 	NATURAL_CONTEXT    = "natural_context"
+	NATURAL_HINT       = "natural_hint"
 	NATURAL_OUTPUT     = "natural_output"
 	NATURAL_EXECUTE    = "natural_execute"
 	NATURAL_CHATID     = "natural_chatid"
@@ -1091,6 +1092,7 @@ var _PARAMETERS = map[string]*argHandler{
 	NATURAL_CRED:    {handleNaturalCred, false},
 	NATURAL_ORGID:   {handleNaturalOrgId, false},
 	NATURAL_CONTEXT: {handleNaturalContext, false},
+	NATURAL_HINT:    {handleNaturalHint, false},
 	NATURAL_OUTPUT:  {handleNaturalOutput, false},
 	NATURAL_EXECUTE: {handleNaturalExecute, false},
 	NATURAL_CHATID:  {handleNaturalChatId, false},
@@ -2535,6 +2537,14 @@ func handleNaturalContext(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	naturalContext, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalContext(naturalContext)
+	}
+	return err
+}
+
+func handleNaturalHint(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalHint, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetNaturalHint(naturalHint)
 	}
 	return err
 }

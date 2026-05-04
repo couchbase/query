@@ -420,7 +420,7 @@ type prompt struct {
 const _INIT_SIZE = 250
 const _MAX_PROMPT_SIZE = util.MiB
 
-func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary string, forfts bool) (*prompt, errors.Error) {
+func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string, forfts bool) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -453,7 +453,13 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary st
 	userMessageBuf.WriteString(string(binKeyspacesInfo))
 	userMessageBuf.WriteString("\n\nPrompt: \"")
 	userMessageBuf.WriteString(naturalPrompt)
-	userMessageBuf.WriteString("\"\n\nBased on the above Information, write valid SQL++ only and with no explanation." +
+	userMessageBuf.WriteString("\"")
+	if hint != "" {
+		userMessageBuf.WriteString("\n\nHint: \"")
+		userMessageBuf.WriteString(hint)
+		userMessageBuf.WriteString("\"")
+	}
+	userMessageBuf.WriteString("\n\nBased on the above Information, write valid SQL++ only and with no explanation." +
 		"\n\nNote query context is unset." +
 		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
 		"\n\nAlias is for ease of use." +
@@ -481,7 +487,7 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary st
 	return rv, nil
 }
 
-func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary string) (*prompt, errors.Error) {
+func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -513,7 +519,13 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary 
 	userMessageBuf.WriteString(string(binKeyspacesInfo))
 	userMessageBuf.WriteString("\n\nPrompt: \"")
 	userMessageBuf.WriteString(naturalPrompt)
-	userMessageBuf.WriteString("\"\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
+	userMessageBuf.WriteString("\"")
+	if hint != "" {
+		userMessageBuf.WriteString("\n\nHint: \"")
+		userMessageBuf.WriteString(hint)
+		userMessageBuf.WriteString("\"")
+	}
+	userMessageBuf.WriteString("\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
 		" no explanation that implements the request in the Prompt." +
 		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
 		"\nAlways comment using multiline comment syntax,i.e /* ... */ as you have construct a SQL++ managed user defined function" +
@@ -860,7 +872,7 @@ func throttleRequest() errors.Error {
 	}
 }
 
-func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nloutputOpt naturalOutput,
+func ProcessRequest(nlCred, nlOrgId, nlquery, nlHint string, elems []*algebra.Path, nloutputOpt naturalOutput,
 	explain, advise bool,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
@@ -889,11 +901,11 @@ func ProcessRequest(nlCred, nlOrgId, nlquery string, elems []*algebra.Path, nlou
 	var prompt *prompt
 	switch nloutputOpt {
 	case SQL:
-		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", false)
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", nlHint, false)
 	case JSUDF:
-		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, "")
+		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, "", nlHint)
 	case FTSSQL:
-		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", true)
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", nlHint, true)
 	default:
 		err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 	}
@@ -1019,7 +1031,7 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 	return content, stmt, nlAlgebraStmt, parseErr
 }
 
-func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string, nloutputOpt naturalOutput,
+func ProcessConversationalRequest(nlCred, nlOrgId, nlquery, nlHint string, chatId string, nloutputOpt naturalOutput,
 	explain, advise bool,
 	user string,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
@@ -1072,11 +1084,11 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery string, chatId string
 
 		switch nloutputOpt {
 		case SQL:
-			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, false)
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint, false)
 		case JSUDF:
-			prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, ce.Summary)
+			prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint)
 		case FTSSQL:
-			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, true)
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint, true)
 		default:
 			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 		}

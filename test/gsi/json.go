@@ -426,6 +426,12 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 		}
 	}
 
+	if nlhint, ok := queryParams["natural_hint"]; ok {
+		if nlhint, ok := nlhint.(string); ok {
+			query.SetNaturalHint(nlhint)
+		}
+	}
+
 	err := query.ProcessNatural()
 	if err != nil {
 		return &RunResult{nil, nil, err, -1, false}
@@ -710,6 +716,12 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 				queryParams = map[string]interface{}{}
 			}
 			queryParams["natural_orgid"] = naturalOrgID
+		}
+		if naturalHint := os.Getenv("natural_hint"); naturalHint != "" {
+			if queryParams == nil {
+				queryParams = map[string]interface{}{}
+			}
+			queryParams["natural_hint"] = naturalHint
 		}
 
 		if explain {

@@ -934,11 +934,11 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	if chatId != "" {
 		user := datastore.CredsString(request.Credentials())
 		stmt, nlAlgebraStmt, err = natural.ProcessConversationalRequest(request.NaturalCred(), request.NaturalOrganizationId(),
-			nlquery, chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), user,
+			nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), user,
 			request.ExecutionContext(), request.Output().AddPhaseTime)
 	} else {
 		stmt, nlAlgebraStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
-			nlquery, elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+			nlquery, request.NaturalHint(), elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
 			request.ExecutionContext(), request.Output().AddPhaseTime)
 	}
 

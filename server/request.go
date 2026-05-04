@@ -85,6 +85,8 @@ type Request interface {
 	NaturalCred() string
 	SetNaturalOrganizationId(orgId string)
 	NaturalOrganizationId() string
+	SetNaturalHint(hint string)
+	NaturalHint() string
 	SetNaturalStatement(algebra.Statement)
 	NaturalStatement() algebra.Statement
 	NaturalShowOnly() bool
@@ -461,6 +463,7 @@ type BaseRequest struct {
 	naturalCred          string
 	naturalOrgId         string
 	naturalContext       string
+	naturalHint          string
 	nlStatement          algebra.Statement
 	nlShowOnly           bool
 	nloutput             string
@@ -1756,6 +1759,14 @@ func (this *BaseRequest) NaturalContext() string {
 	return this.naturalContext
 }
 
+func (this *BaseRequest) SetNaturalHint(hint string) {
+	this.naturalHint = hint
+}
+
+func (this *BaseRequest) NaturalHint() string {
+	return this.naturalHint
+}
+
 func (this *BaseRequest) SetNaturalStatement(nlstmt algebra.Statement) {
 	this.nlStatement = nlstmt
 }
@@ -2206,6 +2217,12 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 		case "chatId":
 			if s, ok := v.(string); ok {
 				this.SetNaturalChatId(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		case "hint":
+			if s, ok := v.(string); ok {
+				this.SetNaturalHint(s)
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
