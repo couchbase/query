@@ -83,7 +83,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 	prep.SetRemoteAddr(this.context.dsContext.RemoteAddr())
 	prep.SetPreparedTime(util.Now().ToTime())
 	prep.SetPersist(persist)
-	prep.SetAdHoc(!persist && this.context.IsPlanStabilityAdHoc())
+	// no need to call SetAdHoc() here since this is a PREPARE statement
 	prep.KeyspaceReferences()
 
 	json_bytes, err := prep.MarshalJSON()
