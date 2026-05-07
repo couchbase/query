@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -802,7 +803,29 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 	context NaturalContext) (map[string]interface{}, errors.Error) {
 
 	var err errors.Error
+	priv := auth.NewPrivileges()
+
+	var ds datastore.Datastore
+	if context != nil {
+		ds = context.Datastore()
+		if ds == nil {
+			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, fmt.Errorf("no datastore"))
+		}
+	} else {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, fmt.Errorf("no context"))
+	}
 	for _, p := range elems {
+		ps := p.SimpleString()
+		if p.IsSystem() || (strings.Contains(ps, ":") && algebra.IsSystemName(ps)) {
+			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT,
+				fmt.Errorf("system keyspace is not allowed: %s", ps))
+		}
+		priv.List = priv.List[:0]
+		priv.Add(ps, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
+		err = ds.Authorize(priv, context.Credentials())
+		if err != nil {
+			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err)
+		}
 		schema := map[string]string{}
 		schema, err = inferSchema(schema, p, context)
 

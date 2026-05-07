@@ -8085,10 +8085,13 @@ var errData = []ErrData{
 		Reason: []string{
 			"Validation of the \"natural_context\" parameter failed for the reason specified.",
 			"Validation of the \"keyspaces\" option failed for the reason specified.",
+			"Insufficient permissions to access the keyspaces provided for natural language processing.",
+			"System keyspaces cannot be used for natural language processing.",
 		},
 		Action: []string{
 			"Revise the \"natural_context\" parameter.",
 			"Revise the \"keyspaces\" option.",
+			"Ensure the natural language processing credentials have permissions to access the keyspaces provided.",
 		},
 		AppliesTo: []string{
 			"Server",
