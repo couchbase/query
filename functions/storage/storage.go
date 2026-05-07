@@ -20,8 +20,8 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/functions"
-	"github.com/couchbase/query/functions/metakv"
-	"github.com/couchbase/query/functions/system"
+	metaStorage "github.com/couchbase/query/functions/metakv"
+	systemStorage "github.com/couchbase/query/functions/system"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/migration"
 	"github.com/couchbase/query/tenant"
@@ -92,9 +92,7 @@ func Migrate() {
 		return
 	}
 
-	// functions already migrated (checkSetComplete() already called previously via MigrationCheck())
-	complete, _ := migration.IsComplete(_UDF_MIGRATION)
-	if complete {
+	if checkSetComplete() {
 		logging.Infof("UDF migration: Already done")
 		return
 	}
