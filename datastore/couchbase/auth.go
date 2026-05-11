@@ -124,6 +124,10 @@ func privilegeString(namespace, target, obj string, requested auth.Privilege) (s
 		permission = "cluster.settings!read"
 	case auth.PRIV_CLUSTER_SETTINGS_WRITE:
 		permission = "cluster.settings!write"
+	case auth.PRIV_USERS_READ:
+		permission = "cluster.admin.users!read"
+	case auth.PRIV_USERS_WRITE:
+		permission = "cluster.admin.users!write"
 	default:
 		return "", fmt.Errorf("Invalid Privileges")
 	}

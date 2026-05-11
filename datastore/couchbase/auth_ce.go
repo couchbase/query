@@ -132,6 +132,12 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 		base_role = "query_use_sequential_scans"
 		role = fmt.Sprintf("%s on %s", base_role, keyspace)
 		action = "Run the index advisor and create an appropriate index, or check that your expected index is online."
+	case auth.PRIV_USERS_READ:
+		privilege = "Local User Admin"
+		base_role = "user_admin_local"
+	case auth.PRIV_USERS_WRITE:
+		privilege = "Local User Admin"
+		base_role = "user_admin_local"
 	default:
 		privilege = "run this type of query"
 		base_role = "admin"

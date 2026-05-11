@@ -65,6 +65,8 @@ const (
 	PRIV_SYSTEM_WRITE                           Privilege = 43 // Write access to system namespace
 	PRIV_CLUSTER_SETTINGS_READ                  Privilege = 44 // Read access to cluster settings
 	PRIV_CLUSTER_SETTINGS_WRITE                 Privilege = 45 // Write access to cluster settings
+	PRIV_USERS_READ                             Privilege = 46 // Read access to users
+	PRIV_USERS_WRITE                            Privilege = 47 // Write access to users
 )
 
 type PrivilegePair struct {

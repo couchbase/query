@@ -138,6 +138,12 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 	case auth.PRIV_CLUSTER_SETTINGS_WRITE:
 		privilege = "perform system administrator operations"
 		base_role = "admin"
+	case auth.PRIV_USERS_READ:
+		privilege = "Local User Admin"
+		base_role = "user_admin_local"
+	case auth.PRIV_USERS_WRITE:
+		privilege = "Local User Admin"
+		base_role = "user_admin_local"
 	default:
 		privilege = "run this type of query"
 		base_role = "admin"

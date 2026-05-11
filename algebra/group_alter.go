@@ -71,7 +71,7 @@ func (this *AlterGroup) Expressions() expression.Expressions {
 func (this *AlterGroup) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	// This works because no bucket name is needed for this type of authorization.
-	privs.Add("", auth.PRIV_SECURITY_WRITE, auth.PRIV_PROPS_NONE)
+	privs.Add("", auth.PRIV_USERS_WRITE, auth.PRIV_PROPS_NONE)
 	return privs, nil
 }
 
