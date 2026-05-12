@@ -1781,7 +1781,8 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 		if !redact {
 			item["statement"] = this.RedactedStatement()
 		} else {
-			sanstmt, _, err := sanitizer.SanitizeStatement(stmt, this.Namespace(), this.QueryContext(), this.ExecutionContext().TxContext() != nil, false)
+			sanstmt, _, err := sanitizer.SanitizeStatement(stmt, this.Namespace(), this.QueryContext(),
+				this.executionContext != nil && this.executionContext.TxContext() != nil, false)
 			if err == nil {
 				item["sanitized_statement"] = sanstmt
 			} else {
