@@ -1102,6 +1102,8 @@ func (c *Client) parsePostURLResponseJSON(path string, cred cbauth.Creds, params
 		req.Header.Set("User-Agent", c.userAgent)
 	}
 
+	cbauth.SetOnBehalfOfHeaders(req, cred)
+
 	err = maybeAddAuth(req, c.ah)
 	if err != nil {
 		return err
