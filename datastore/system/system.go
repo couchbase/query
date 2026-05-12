@@ -100,7 +100,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 	case auth.PRIV_QUERY_SELECT:
 		switch keyspace {
 		case KEYSPACE_NAME_USER_INFO, KEYSPACE_NAME_APPLICABLE_ROLES, KEYSPACE_NAME_GROUP_INFO:
-			privs.Add(fullname, auth.PRIV_SECURITY_READ, auth.PRIV_PROPS_NONE)
+			privs.Add(fullname, auth.PRIV_USERS_READ, auth.PRIV_PROPS_NONE)
 
 		// may be open, depending whether admin REST endpoint is open
 		case KEYSPACE_NAME_NODES:
