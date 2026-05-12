@@ -11,7 +11,7 @@
 package command
 
 var statement_syntax = map[string][][]string{
-	"permitted_identifiers": [][]string{
+	"alias_identifiers": [][]string{
 		[]string{"<identifier>"},
 		[]string{"DEFAULT"},
 		[]string{"USER"},
@@ -30,6 +30,10 @@ var statement_syntax = map[string][][]string{
 		[]string{"TIMESTAMP"},
 		[]string{"CREDENTIALSTORE"},
 		[]string{"EXTERNAL"},
+	},
+	"permitted_identifiers": [][]string{
+		[]string{"alias_identifiers"},
+		[]string{"ORDER"},
 	},
 	"perm_ident_or_str": [][]string{
 		[]string{"permitted_identifiers"},
@@ -259,7 +263,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"AS", "alias"},
 	},
 	"alias": [][]string{
-		[]string{"permitted_identifiers"},
+		[]string{"alias_identifiers"},
 	},
 	"from": [][]string{
 		[]string{"FROM", "from_terms"},
@@ -1217,7 +1221,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"LPAREN", "[window_name]", "[window_partition]", "[order_by]", "[window_frame]", "RPAREN"},
 	},
 	"[window_name]": [][]string{
-		[]string{"permitted_identifiers"},
+		[]string{"alias_identifiers"},
 	},
 	"[window_partition]": [][]string{
 		[]string{"PARTITION", "BY", "exprs"},

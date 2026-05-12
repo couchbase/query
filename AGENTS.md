@@ -102,10 +102,16 @@ Build tag `-tags enterprise` enables: eventing-ee (JavaScript UDFs), vector sear
 
 ## Parser Regeneration
 
-If you modify `algebra/parser/n1ql/n1ql.y`:
+If you modify `parser/n1ql/n1ql.y`, regenerate via the build script (preferred) or manually:
 ```bash
-goyacc -l -p yy -o algebra/parser/n1ql/n1ql.go algebra/parser/n1ql/n1ql.y
+# Preferred — runs goyacc then go build
+cd parser/n1ql && ./build.sh
+
+# Manual (from parser/n1ql/ directory)
+goyacc n1ql.y      # generates y.go (the goyacc output)
 ```
+
+**IMPORTANT**: `parser/n1ql/n1ql.go` is the **handwritten** parser API wrapper — do NOT overwrite it with goyacc output. The goyacc-generated file is `y.go` (not tracked in git). Never run `goyacc -o n1ql.go ...`.
 
 ## Module Structure
 

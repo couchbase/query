@@ -415,8 +415,8 @@ column int
 %type <s>                STR
 %type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER USERS SEQUENCE CYCLE
 %type <s>                VECTOR DENSE SPARSE MULTI CONSUME
-%type <s>                CATALOG SOURCE TYPE SNAPSHOT TIMESTAMP CREDENTIALSTORE EXTERNAL
-%type <s>                permitted_identifiers perm_ident_or_str
+%type <s>                CATALOG SOURCE TYPE SNAPSHOT TIMESTAMP CREDENTIALSTORE EXTERNAL ORDER
+%type <s>                permitted_identifiers alias_identifiers perm_ident_or_str
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -621,7 +621,9 @@ hints_input
 }
 ;
 
-permitted_identifiers:
+/* Identifiers safe to use as aliases and window names (excludes ORDER to avoid
+   shift/reduce conflicts where ORDER BY takes precedence over an unquoted alias). */
+alias_identifiers:
 IDENT
 |
 DEFAULT
@@ -657,6 +659,13 @@ TIMESTAMP
 CREDENTIALSTORE
 |
 EXTERNAL
+;
+
+permitted_identifiers:
+alias_identifiers
+|
+ORDER
+{ $$ = $1 }
 ;
 
 perm_ident_or_str:
@@ -1357,7 +1366,7 @@ AS alias
 ;
 
 alias:
-permitted_identifiers
+alias_identifiers
 ;
 
 
@@ -6101,7 +6110,7 @@ opt_window_name:
 /* empty */
 { $$ = "" }
 |
-permitted_identifiers
+alias_identifiers
 ;
 
 opt_window_partition:
