@@ -87,7 +87,7 @@ var catalogSourceTypeParams = map[string][]string{
 	CatalogSourceRest:             {_catalogCredentialId, _catalogParamURI},
 	CatalogSourceNessieRest:       {_catalogCredentialId, _catalogParamURI},
 	CatalogSourceUnityCatalog:     {_catalogCredentialId, _catalogParamURI},
-	CatalogSourceSQL:              {_catalogParamURI, _catalogParamSQLDialect},
+	CatalogSourceSQL:              {_catalogParamURI},
 }
 
 // Optional parameters for each source type. REST/NESSIE_REST/UNITY_CATALOG accept
@@ -101,7 +101,7 @@ var catalogSourceOptionalParams = map[string][]string{
 	CatalogSourceRest:         {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
 	CatalogSourceNessieRest:   {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
 	CatalogSourceUnityCatalog: {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
-	CatalogSourceSQL:          {_catalogCredentialId},
+	CatalogSourceSQL:          {_catalogCredentialId, _catalogParamSQLDialect},
 }
 
 var validCatalogTypes = map[string]bool{

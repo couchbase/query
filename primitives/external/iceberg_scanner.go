@@ -525,6 +525,30 @@ func fetchAzureManagedTokenForCatalog(managedIdentityID, customEndpoint, resourc
 	return result.AccessToken, nil
 }
 
+// sqlDialectFromURI derives the bun SQL dialect and Go driver name from the DSN URI
+// scheme. An explicit override dialect (from the sqlDialect catalog parameter) takes
+// precedence. Supported: postgres/postgresql → postgres (lib/pq), all else → sqlite
+// (mattn/go-sqlite3).
+func sqlDialectFromURI(uri, override string) (icesql.SupportedDialect, string, error) {
+	if override != "" {
+		d := icesql.SupportedDialect(strings.ToLower(override))
+		switch d {
+		case icesql.Postgres:
+			return d, "postgres", nil
+		case icesql.SQLite:
+			return d, "sqlite3", nil
+		default:
+			return "", "", fmt.Errorf("unsupported sqlDialect '%s': valid values are postgres, sqlite", override)
+		}
+	}
+	lower := strings.ToLower(uri)
+	if strings.HasPrefix(lower, "postgres://") || strings.HasPrefix(lower, "postgresql://") {
+		return icesql.Postgres, "postgres", nil
+	}
+	// sqlite: file path, sqlite://, or any non-postgres URI
+	return icesql.SQLite, "sqlite3", nil
+}
+
 // injectSQLCredentials takes a DSN URI and an optional http/basic credential and
 // returns a DSN with username and password injected.  If the credential is nil or
 // the URI already carries user-info, the original DSN is returned unchanged.
@@ -956,18 +980,9 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		if opts.URI == "" {
 			return nil, fmt.Errorf("URI (DSN connection string) is required for SQL source type")
 		}
-		if opts.SQLDialect == "" {
-			return nil, fmt.Errorf("sqlDialect is required for SQL source type")
-		}
-		dialect := icesql.SupportedDialect(strings.ToLower(opts.SQLDialect))
-		// Map dialect → Go database/sql driver name (matches the blank imports below).
-		driverMap := map[icesql.SupportedDialect]string{
-			icesql.Postgres: "postgres", // lib/pq
-			icesql.SQLite:   "sqlite3",  // mattn/go-sqlite3
-		}
-		driver, ok := driverMap[dialect]
-		if !ok {
-			return nil, fmt.Errorf("unsupported sqlDialect '%s': valid values are postgres, sqlite", opts.SQLDialect)
+		dialect, driver, err := sqlDialectFromURI(opts.URI, opts.SQLDialect)
+		if err != nil {
+			return nil, err
 		}
 		dsn, err := injectSQLCredentials(opts.URI, opts.CatalogCred)
 		if err != nil {
