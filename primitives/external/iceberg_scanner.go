@@ -15,6 +15,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -526,6 +527,26 @@ func fetchAzureManagedTokenForCatalog(managedIdentityID, customEndpoint, resourc
 }
 
 // sqlDialectFromURI derives the bun SQL dialect and Go driver name from the DSN URI
+// enrichRESTCatalogError replaces the opaque ": " error that iceberg-go produces
+// when the server returns a non-Iceberg error body (e.g. an AWS auth rejection in
+// AWS JSON format). In that case errorResponse.Error() = Type+": "+Message = ": "
+// because both fields are empty after JSON decode fails to find the "error" key.
+// We unwrap to the sentinel (ErrForbidden / ErrUnauthorized) and add actionable context.
+func enrichRESTCatalogError(err error, signingName, region string) error {
+	if err.Error() != ": " {
+		return err
+	}
+	hint := fmt.Sprintf("server returned an unrecognized error body (likely an auth/signing rejection) — check credentials, sigv4SigningRegion (%q) and sigv4SigningName (%q)", region, signingName)
+	switch {
+	case errors.Is(err, rest.ErrForbidden):
+		return fmt.Errorf("forbidden: %s", hint)
+	case errors.Is(err, rest.ErrUnauthorized):
+		return fmt.Errorf("unauthorized: %s", hint)
+	default:
+		return fmt.Errorf("%s", hint)
+	}
+}
+
 // scheme. An explicit override dialect (from the sqlDialect catalog parameter) takes
 // precedence. Supported: postgres/postgresql → postgres (lib/pq), all else → sqlite
 // (mattn/go-sqlite3).
@@ -789,7 +810,7 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 			opts.URI, region, signingName, opts.Warehouse)
 		cat, err := rest.NewCatalog(ctx, "s3-tables", opts.URI, restOpts...)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create S3_TABLES catalog: %w", err)
+			return nil, fmt.Errorf("failed to create S3_TABLES catalog: %w", enrichRESTCatalogError(err, signingName, region))
 		}
 		return cat, nil
 
@@ -1012,6 +1033,13 @@ func (s *Scanner) LoadTable(ctx go_context.Context) error {
 	// Use identifier slice as expected by iceberg-go
 	tbl, err := s.catalog.LoadTable(ctx, s.tableIdent)
 	if err != nil {
+		if strings.Contains(err.Error(), "Lake Formation") {
+			return fmt.Errorf("failed to load table %s.%s: insufficient Lake Formation permissions — "+
+				"run: aws lakeformation grant-permissions --principal DataLakePrincipalIdentifier=<role-arn> "+
+				"--permissions SELECT --resource '{\"Table\":{\"DatabaseName\":\"%s\",\"Name\":\"%s\"}}' "+
+				"and ensure the IAM role has lakeformation:GetDataAccess: %w",
+				s.databaseName, s.tableName, s.databaseName, s.tableName, err)
+		}
 		return fmt.Errorf("failed to load table %s.%s: %w", s.databaseName, s.tableName, err)
 	}
 
