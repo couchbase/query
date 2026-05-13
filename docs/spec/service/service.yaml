@@ -3,7 +3,7 @@ info:
   title: Query Service REST API
   version: '7.6'
   description: |-
-    The Query Service REST API is provided by the Query service.
+    The Query Service REST API is provided by the Query Service.
     This API enables you to run SQL++ queries and set request-level parameters.
 
 servers:
@@ -45,12 +45,54 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/Request"
+            examples:
+              named:
+                summary: Named Parameters
+                description: This request uses named parameters.
+                externalValue: 'examples/exnamed.json'
+              numbered:
+                summary: Numbered Positional Parameters
+                description: This request uses numbered positional parameters.
+                externalValue: 'examples/exnumbered.json'
+              positional:
+                summary: Unnumbered Positional Parameters
+                description: This request uses unnumbered positional parameters.
+                externalValue: 'examples/expositional.json'
+              wildcard:
+                summary: Wildcards
+                description: |-
+                  This request uses a wildcard.
+
+                  The `%` symbol is the escape character in URIs, so when using `%` as a wildcard in a query, you may need to escape it by replacing it with its corresponding ASCII code `%25`.
+                externalValue: 'examples/exwildcard.json'
+              authrequest:
+                summary: Authentication Parameter
+                description: |-
+                  This request authenticates using a request parameter.
+                  You must use this method of authentication if a request requires more than one set of credentials.
+                externalValue: 'examples/exauthrequest.json'
+              atplus:
+                summary: Bounded Consistency with a Scan Vector
+                description: |-
+                  This request uses `at_plus` consistency with a sparse scan vector.
+                externalValue: 'examples/exatplus.json'
           application/x-www-form-urlencoded:
             schema:
               $ref: "#/components/schemas/Request"
       security:
         - Header: []
         - Parameter: []
+      x-codeSamples:
+        - lang: Shell
+          label: Form Data
+          description: Because it's sent as form data, the statement in this example avoids using a semicolon.
+          source:
+            $ref: 'examples/exformdata.sh'
+        - lang: Shell
+          label: JSON
+          description: Because it's sent as a JSON object, the statement in this example can contain a semicolon.
+          source:
+            $ref: 'examples/exsuccessful.sh'
       responses:
         "200":
           $ref: '#/components/responses/OK'
@@ -76,10 +118,10 @@ paths:
           $ref: '#/components/responses/ServiceUnavailable'
     get:
       operationId: get_service
-      summary: Read-Only Query Service
+      summary: GET-Only Query Service
       description: |-
         Enables you to execute a SQL++ statement.
-        This method allows you to run SELECT queries, and specify query parameters.
+        This method allows you to run SELECT queries and other DML statements, and specify query parameters.
 
         This endpoint is intended for situations where use of the `POST` method is restricted.
       parameters:
@@ -96,6 +138,10 @@ paths:
       security:
         - Header: []
         - Parameter: []
+      x-codeSamples:
+        - lang: Shell
+          source:
+            $ref: 'examples/exreadonly.sh'
       responses:
         "200":
           $ref: '#/components/responses/OK'
@@ -170,7 +216,7 @@ components:
   Forbidden:
     description: |-
       Forbidden.
-      There is a read-only violation.
+      A read-only violation occurred.
       Either there was an attempt to create or update in a GET request or a POST request where `readonly` is set, or the client does not have the authorization to modify an object (index, keyspace or namespace) in the statement.
 
   NotFound:
@@ -192,7 +238,7 @@ components:
   Conflict:
     description: |-
       Conflict.
-      There is an attempt to create an object (keyspace or index) that already exists.
+      The request attempted to create an object (keyspace or index) that already exists.
 
   Gone:
     description: |-
@@ -203,7 +249,7 @@ components:
   InternalServerError:
     description: |-
       Internal server error.
-      There was an unforeseen problem processing the request.
+      An unforeseen problem occurred processing the request.
 
   PayloadTooLarge:
     description: |-
@@ -213,7 +259,7 @@ components:
   ServiceUnavailable:
     description: |-
       Service unavailable.
-      There is an issue (that is possibly temporary) preventing the request being processed; the request queue is full or the data store is not accessible.
+      An issue (that's possibly temporary) is preventing the request being processed; the request queue is full or the data store is not accessible.
     content:
       application/json:
         schema:
@@ -236,7 +282,7 @@ components:
 
           The value is an array of JSON values, one for each positional parameter in the statement.
 
-          Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
+          For more information, see [Named Parameters and Positional Parameters][section_srh_tlm_n1b].
 
           [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
         x-desc-refs: |-
@@ -270,10 +316,10 @@ components:
         type: boolean
         x-desc-name: auto_execute
         description: |-
-          Specifies that prepared statements should be executed automatically as soon as they are created.
+          Specifies that prepared statements should be executed automatically as soon as they're created.
           This saves you from having to make two separate requests in cases where you want to prepare a statement and execute it immediately.
 
-          Refer to [Auto-Execute][auto-execute] for more information.
+          For more information, see [Auto-Execute][auto-execute].
 
           [auto-execute]: ../n1ql/n1ql-language-reference/prepare.html#auto-execute
         x-desc-refs: |-
@@ -286,8 +332,8 @@ components:
         type: string
         x-desc-name: client_context_id
         description: |-
-          A piece of data supplied by the client that is echoed in the response, if present.
-          SQL++ is agnostic about the content of this parameter; it is just echoed in the response.
+          A piece of data supplied by the client that's echoed in the response, if present.
+          SQL++ is agnostic about the content of this parameter; it's just echoed in the response.
 
           * Maximum allowed size is 64 characters; all others will be cut.
           * If it contains an escape character `/` or quote `"`, it will be rejected as error code 1110.
@@ -324,7 +370,7 @@ components:
       creds:
         type: array
         items:
-          $ref: "#/components/schemas/Credentials"
+          $ref: "#/components/schemas/RequestCredentials"
         x-desc-name: creds
         description: |-
           Specifies the login credentials.
@@ -370,7 +416,7 @@ components:
         x-desc-name: encoded_plan
         description: |-
           In Couchbase Server 6.5 and later, this parameter is ignored and has no effect.
-          It is included for compatibility with previous versions of Couchbase Server.
+          It's included for compatibility with previous versions of Couchbase Server.
       encoding:
         type: string
         x-desc-name: encoding
@@ -543,10 +589,10 @@ components:
         type: string
         x-desc-name: prepared
         description: |-
-          _Required_ if `statement` not provided.
+          Required if `statement` not provided.
 
           The name of the prepared SQL++ statement to be executed.
-          Refer to [EXECUTE][execute] for examples.
+          For examples, see [EXECUTE][execute].
 
           If both `prepared` and `statement` are present and non-empty, an error is returned.
 
@@ -619,7 +665,7 @@ components:
         description: |-
           Specifies the namespace, bucket, and scope used to resolve partial keyspace references within the request.
 
-          The query context may be a _full path_, containing namespace, bucket, and scope; or a _relative path_, containing just the bucket and scope.
+          The query context may be a full path, containing namespace, bucket, and scope; or a relative path, containing just the bucket and scope.
           Currently, only the `default` namespace is available.
           If the namespace name is omitted, the default namespace in the current session is used.
         x-has-default: true
@@ -651,7 +697,7 @@ components:
         format: int32
         x-desc-name: scan_cap_req
         description: |-
-          Maximum buffered channel size between the indexer client and the query service for index scans.
+          Maximum buffered channel size between the indexer client and the Query Service for index scans.
           This parameter controls when to use scan backfill.
 
           Use `0` or a negative number to disable.
@@ -683,8 +729,9 @@ components:
 
           * `at_plus` &mdash;
           This implements bounded consistency.
-          The request includes a `scan_vector` parameter and value, which is used as a lower bound.
-          This can be used to implement read-your-own-writes (RYOW).
+          When scan consistency is set to `at_plus`, you must also specify the `scan_vector` parameter for queries using a single keyspace, or the `scan_vectors` parameter for queries using multiple keyspaces.
+          This is used as a lower bound for the statements in the request.
+          You can use this setting to implement read-your-own-writes (RYOW).
 
           * `request_plus` &mdash;
           This implements strong consistency per request.
@@ -699,11 +746,11 @@ components:
 
           Values are case-insensitive.
 
-          For multi-statement requests, the default behavior is RYOW within each request.
-          If you want to disable RYOW within a request, add a separate `request_consistency` parameter that can be set to `not_bounded`.
-
           If the request contains a `BEGIN TRANSACTION` statement, or a DML statement with the `tximplicit` parameter set to `true`, then this parameter sets the transactional scan consistency.
-          Refer to [Transactional Scan Consistency][transactional-scan-consistency] for details.
+          For more information, see [Transactional Scan Consistency][transactional-scan-consistency].
+
+          The default transactional scan consistency is RYOW for each statement within the transaction.
+          If you want to disable RYOW for a statement within the transaction, set `scan_consistency` for that statement to `not_bounded`.
 
           [transactional-scan-consistency]: ../n1ql/n1ql-manage/query-settings.html#transactional-scan-consistency
         x-desc-refs: |-
@@ -714,46 +761,9 @@ components:
         default: not_bounded
         example: at_plus
       scan_vector:
-        type: object
-        x-type: array
-        x-desc-name: scan_vector
-        description: |-
-          _Required_ if `scan_consistency` is `at_plus` and `scan_vectors` not provided.
-
-          Specify the lower bound vector timestamp for one keyspace when using `at_plus` scan consistency.
-
-          Scan vectors are built of two-element [`value`, `guard`] entries:
-
-          * `value`: a vBucket's sequence number (a JSON number)
-          * `guard`: a vBucket's UUID (a string)
-
-          Scan vectors have two forms:
-
-          1. Full: an array of [`value`, `guard`] entries, giving an entry for every vBucket in the system.
-          2. Sparse: an object providing entries for specific vBuckets, mapping a vBucket number (a string) to each [`value`, `guard`] entry.
-
-          Note that `scan_vector` can only be used if the query uses at most one keyspace; if it is used for a query referencing more than one keyspace, the query will fail with an error.
-
-          For queries referencing multiple keyspaces, use `scan_vectors`.
-        x-has-example: true
-        example:
-          5:
-            - 5409393
-            - VB5ID
-          19:
-            - 47574574
-            - VB19ID
+        $ref: '#/components/schemas/RequestScanVector'
       scan_vectors:
-        type: object
-        x-type: array
-        x-desc-name: scan_vectors
-        description: |-
-          _Required_ if `scan_consistency` is `at_plus` and `scan_vector` not provided.
-
-          A map from keyspace names to scan vectors.
-          See `scan_vector`.
-
-          The scan vectors can be Full or Sparse.
+        $ref: '#/components/schemas/RequestScanVectors'
       scan_wait:
         type: string
         format: duration
@@ -764,7 +774,7 @@ components:
           Specifies the maximum time the client is willing to wait for an index to catch up to the vector timestamp in the request.
 
           Specifies how much time the client is willing to wait for the indexer to satisfy the required `scan_consistency` and `scan_vector` criteria.
-          After receiving the scan request, if the indexer is unable to catch up within the `scan_wait` time and initiate the scan, the indexer aborts with an error and the scan fails.
+          After receiving the scan request, if the indexer is unable to catch up within the `scan_wait` time and start the scan, the indexer aborts with an error and the scan fails.
 
           Its format includes an amount and a mandatory unit, e.g. `10ms` (10 milliseconds) or `0.5s` (half a second).
           Valid units are:
@@ -804,7 +814,7 @@ components:
         type: string
         x-desc-name: statement
         description: |-
-          _Required_ if `prepared` not provided.
+          Required if `prepared` not provided.
 
           Any valid SQL++ statement for a POST request, or a read-only SQL++ statement (SELECT, EXPLAIN) for a GET request.
 
@@ -869,7 +879,7 @@ components:
         format: UUID
         x-desc-name: txid
         description: |-
-          _Required_ for statements within a transaction.
+          Required for statements within a transaction.
 
           Transaction ID.
           Specifies the transaction to which a statement belongs.
@@ -885,8 +895,8 @@ components:
         description: |-
           Specifies that a DML statement is a singleton transaction.
 
-          When this parameter is true, the Query service starts a transaction and executes the statement.
-          If execution is successful, the Query service commits the transaction; otherwise the transaction is rolled back.
+          When this parameter is true, the Query Service starts a transaction and executes the statement.
+          If execution is successful, the Query Service commits the transaction; otherwise the transaction is rolled back.
 
           The statement may not be part of an ongoing transaction.
           If the `txid` request-level parameter is set, the `tximplicit` parameter is ignored.
@@ -911,7 +921,7 @@ components:
         description: |-
           Maximum time to spend on a transaction before timing out.
           Only applies to `BEGIN TRANSACTION` statements, or DML statements for which `tximplicit` is set.
-          For other statements, it is ignored.
+          For other statements, it's ignored.
 
           Within a transaction, the request-level `timeout` parameter is ignored.
           The transaction timeout clock starts when the `BEGIN WORK` statement is successful.
@@ -976,10 +986,10 @@ components:
           If the query contains a `USING FTS` hint, that takes priority over this parameter.
 
           If the query does not contain a `USING FTS` hint, and this parameter is set to true, all Search indexes are considered for the query.
-          If a qualified Search index is available, it is selected for the query.
+          If a qualified Search index is available, it's selected for the query.
           If none of the available Search indexes are qualified, the available GSI indexes are considered instead.
 
-          Refer to [Flex Indexes][flex-indexes] for more information.
+          For more information, see [Flex Indexes][flex-indexes].
 
           [flex-indexes]: ../n1ql/n1ql-language-reference/flex-indexes.html
         x-desc-refs: |-
@@ -1012,7 +1022,7 @@ components:
 
           Reading from replica is only possible if the cluster uses Couchbase Server 7.6.0 or later.
 
-          Note that KV range scans cannot currently be started on a replica vBucket.
+          You cannot currently start KV range scans on a replica vBucket.
           If a query uses sequential scan and a data node becomes unavailable, the query might return an error, even if read from replica is enabled for the request.
         x-desc-more: |-
           The [node-level][use-replica-srv] `use-replica` setting specifies the default for this property for a single node.
@@ -1042,14 +1052,14 @@ components:
 
         The value of the named parameter can be any JSON value.
 
-        Refer to [Named Parameters and Positional Parameters][section_srh_tlm_n1b] for details.
+        For more information, see [Named Parameters and Positional Parameters][section_srh_tlm_n1b].
 
         [section_srh_tlm_n1b]: ../n1ql/n1ql-manage/query-settings.html#section_srh_tlm_n1b
       x-desc-refs: |-
         [section_srh_tlm_n1b]: #section_srh_tlm_n1b
       example: LAX
       x-has-example: true
-  Credentials:
+  RequestCredentials:
     type: object
     title: Credentials
     properties:
@@ -1057,14 +1067,75 @@ components:
         type: string
         description: |-
           An identity for authentication.
-          Note that bucket names may be prefixed with `local:`, and admin names may be prefixed with `admin:`.
+          Bucket names may be prefixed with `local:`, and admin names may be prefixed with `admin:`.
         x-has-example: true
         example: "local:bucket-name"
       pass:
         type: string
+        format: password
         description: A password for authentication.
         x-has-example: true
         example: "password"
+
+  RequestScanVector:
+    x-desc-name: scan_vector
+    x-additionalPropertiesName: keyspace
+    title: Scan Vector
+    description: |-
+      Specifies the lower bound vector timestamp for a single keyspace when using `at_plus` scan consistency.
+
+      The scan vector may be full or sparse.
+
+      * A full scan vector is an array of [`value`, `guard`] entries, giving an entry for every vBucket in the system.
+
+      * A sparse scan vector is an object mapping [`value`, `guard`] entries to specific vBuckets.
+      The name of each property in the object is a vBucket number (a string).
+    example: {
+      "5": [5409393, "VB5ID"],
+      "19": [47574574, "VB19ID"]
+      }
+    oneOf:
+      - $ref: '#/components/schemas/RequestScanVectorFull'
+      - $ref: '#/components/schemas/RequestScanVectorSparse'
+  RequestScanVectors:
+    x-desc-name: scan_vectors
+    title: Scan Vectors
+    type: object
+    description: |-
+      Specifies the lower bound vector timestamps for multiple keyspaces when using `at_plus` scan consistency.
+
+      An object mapping scan vectors to keyspaces.
+      The name of each property in the object is a keyspace name.
+    additionalProperties:
+      $ref: '#/components/schemas/RequestScanVector'
+  RequestScanVectorFull:
+    type: array
+    title: Full Scan Vector
+    description: An array of [`value`, `guard`] entries, giving an entry for every vBucket in the system.
+    items:
+      $ref: '#/components/schemas/RequestScanVectorValueGuard'
+  RequestScanVectorSparse:
+    type: object
+    title: Sparse Scan Vector
+    description: An object providing entries for specific vBuckets, mapping a vBucket number (a string) to each [`value`, `guard`] entry.
+    additionalProperties:
+      $ref: '#/components/schemas/RequestScanVectorValueGuard'
+  RequestScanVectorValueGuard:
+    x-additionalPropertiesName: vBucket
+    type: array
+    title: Value-Guard Entry
+    description: |-
+      A nested array containing two elements, the `value` and the `guard`.
+    minItems: 2
+    maxItems: 2
+    items:
+      description: |-
+        The first item is the `value`.
+        This is a vBucket's sequence number (a JSON number).
+
+        The second item is the `guard`.
+        This is a vBucket's UUID (a string).
+      nullable: false
 
   Response:
     type: object
@@ -1109,23 +1180,24 @@ components:
           An array of 0 or more error objects.
           If an error occurred during processing of the request, it will be represented by an error object in this list.
         items:
-          $ref: "#/components/schemas/Conditions"
+          $ref: "#/components/schemas/ResponseConditions"
       warnings:
         type: array
         description: |-
           An array of 0 or more warning objects.
-          If a warning occurred during processing of the request, it is represented by a warning object in this list.
+          If a warning occurred during processing of the request, it's represented by a warning object in this list.
         items:
-          $ref: "#/components/schemas/Conditions"
+          $ref: "#/components/schemas/ResponseConditions"
       metrics:
-        $ref: "#/components/schemas/Metrics"
+        $ref: "#/components/schemas/ResponseMetrics"
       controls:
-        $ref: "#/components/schemas/Controls"
+        $ref: "#/components/schemas/ResponseControls"
       profile:
-        $ref: "#/components/schemas/Profile"
+        $ref: "#/components/schemas/ResponseProfile"
 
-  Conditions:
+  ResponseConditions:
     type: object
+    title: Conditions
     description: Errors and warnings have the following format.
     required:
       - code
@@ -1170,8 +1242,9 @@ components:
           Indicates if the condition is transient &mdash; for example, the queue is full.
           If the value is `false`, it tells clients and users that a retry without modification produces the same condition.
 
-  Metrics:
+  ResponseMetrics:
     type: object
+    title: Metrics
     description: An object containing metrics about the request.
     required:
       - elapsedTime
@@ -1181,10 +1254,10 @@ components:
     properties:
       elapsedTime:
         type: string
-        description: The total time taken for the request, that is the time from when the request was received until the results were returned.
+        description: The total time taken for the request &mdash; in other words, the time from when the request was received until the results were returned.
       executionTime:
         type: string
-        description: The time taken for the execution of the request, that is the time from when query execution started until the results were returned.
+        description: The time taken for the execution of the request &mdash; in other words, the time from when query execution started until the results were returned.
       resultCount:
         type: integer
         format: unsigned
@@ -1220,8 +1293,9 @@ components:
         format: unsigned
         description: The number of warnings that occurred during the request.
 
-  Controls:
+  ResponseControls:
     type: object
+    title: Controls
     description: |-
       An object containing runtime information provided along with the request.
       Present only if `controls` was set to true in the request parameters.
@@ -1244,8 +1318,9 @@ components:
         x-has-example: true
         example: SELECT
 
-  Profile:
+  ResponseProfile:
     type: object
+    title: Profile
     description: |-
       An object containing monitoring and profiling information about the request.
       Present only if `profile` was set to `"phases"` or `"timings"` in the request parameters.
@@ -1306,6 +1381,9 @@ components:
             "run": "16.892181ms"
           }
       executionTimings:
+        $ref: "#/components/schemas/ResponseProfileTiming"
+
+  ResponseProfileTiming:
         type: object
         title: Execution Timings
         description: |-
@@ -1322,6 +1400,12 @@ components:
             x-has-example: true
             example: Fetch
           '#stats':
+            $ref: "#/components/schemas/ResponseProfileTimingStats"
+          '~child':
+            type: object
+            description: Further nested operators, each with their own execution timings.
+
+  ResponseProfileTimingStats:
             type: object
             title: Statistics
             description: Statistics collected for the operator.
@@ -1362,14 +1446,11 @@ components:
                 description: |-
                   Time spent waiting for another service, such as index or data.
 
-                  For index scan, it is time spent waiting for GSI/indexer.
+                  For index scan, it's time spent waiting for GSI/indexer.
 
-                  For fetch, it is time spent waiting on the KV store.
+                  For fetch, it's time spent waiting on the KV store.
                 x-has-example: true
                 example: "1.590934ms"
-          '~child':
-            type: object
-            description: Further nested operators, each with their own execution timings.
 
  securitySchemes:
   Header:

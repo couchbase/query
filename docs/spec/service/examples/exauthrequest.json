@@ -1,0 +1,13 @@
+{
+  "statement": "SELECT hotel.name, airport.airportname FROM `travel-sample`.inventory.hotel JOIN `travel-sample`.inventory.airport ON hotel.city = airport.city LIMIT 1",
+  "creds": [
+    {
+      "user": "local:User",
+      "pass": "password"
+    },
+    {
+      "user": "admin:Administrator",
+      "pass": "password"
+    }
+  ]
+}
