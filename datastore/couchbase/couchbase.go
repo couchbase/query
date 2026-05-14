@@ -2271,7 +2271,7 @@ func (s *store) NamespaceUpdateCallback(externalCatalogsManifestUid uint64, msgP
 	}
 
 	if currentUid == 0 {
-		logging.Infof("%s received external catalogs manifest id %v", externalCatalogsManifestUid)
+		logging.Infof("%s received external catalogs manifest id %v", msgPrefix, externalCatalogsManifestUid)
 	} else {
 		logging.Infof("%s switching external catalogs manifest id from %v to %v", msgPrefix,
 			currentUid, externalCatalogsManifestUid)
