@@ -58,6 +58,7 @@ func setLogger() {
 	}
 	logging.SetLogger(logger)
 	logging.SetLevel(logging.INFO)
+	logging.RedirectStdlibLog()
 }
 
 // to keep the maintenance overhead as low as possible, we just use the JSON directly rather than building and populating

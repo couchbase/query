@@ -289,6 +289,8 @@ func main() {
 		logging.SetDebugFilter(filter)
 	}
 
+	logging.RedirectStdlibLog()
+
 	resolver.SetDeploymentModel(*DATASTORE, *DEPLOYMENT_MODEL)
 	// default until settings adjust
 	util.SetTemp(os.TempDir(), 0)

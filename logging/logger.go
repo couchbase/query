@@ -821,7 +821,11 @@ func (this *wrapper) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func init() {
+// RedirectStdlibLog redirects the stdlib log package output to the query logger.
+// This must be called explicitly by the query server main after the logger is initialized.
+// It is intentionally NOT called from init() so that other processes that import query
+// (e.g. indexer) are not affected.
+func RedirectStdlibLog() {
 	log.Default().SetOutput(_wrapper)
 	log.Default().SetPrefix("")
 	log.Default().SetFlags(0)

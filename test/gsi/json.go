@@ -77,6 +77,7 @@ func init() {
 
 	logger, _ := log_resolver.NewLogger("golog")
 	logging.SetLogger(logger)
+	logging.RedirectStdlibLog()
 }
 
 type RunResult struct {

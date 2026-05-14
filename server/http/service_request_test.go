@@ -64,6 +64,7 @@ func init() {
 		os.Exit(1)
 	}
 	logging.SetLogger(logger)
+	logging.RedirectStdlibLog()
 	server.RequestsInit(1000, 4000, 10000)
 	prepareds.PreparedsInit(1024)
 	test_server = newTestServer()

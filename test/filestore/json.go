@@ -49,6 +49,7 @@ var Namespace_FS = "dimestore"
 func init() {
 	logger, _ := log_resolver.NewLogger("golog")
 	logging.SetLogger(logger)
+	logging.RedirectStdlibLog()
 	runtime.GOMAXPROCS(1)
 }
 

@@ -44,6 +44,7 @@ func TestServer(t *testing.T) {
 	}
 
 	logging.SetLogger(logger)
+	logging.RedirectStdlibLog()
 
 	site, err := NewDatastore(TEST_URL)
 	if err != nil {
