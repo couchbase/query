@@ -148,6 +148,8 @@ const (
 
 	TRANSACTIONS
 
+	CHATS
+
 	INDEX_SCANS
 	PRIMARY_SCANS
 	INDEX_SCANS_GSI
@@ -253,6 +255,8 @@ const (
 
 	_TRANSACTIONS = "transactions"
 
+	_CHATS = "chats"
+
 	_INDEX_SCANS       = "index_scans"
 	_PRIMARY_SCANS     = "primary_scans"
 	_INDEX_SCANS_GSI   = "index_scans_gsi"
@@ -357,6 +361,8 @@ var metricNames = []string{
 	_DELETES,
 
 	_TRANSACTIONS,
+
+	_CHATS,
 
 	_INDEX_SCANS,
 	_PRIMARY_SCANS,
@@ -517,7 +523,7 @@ func RegisterMetrics(acctStore AccountingStore) {
 // Record request metrics
 func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 	result_count, result_size, error_count, warn_count int,
-	errs errors.Errors, stmt string,
+	errs errors.Errors, stmtType string,
 	prepared, cancelled bool,
 	natural bool, naturaloutput string,
 	index_scans, primary_scans, index_scans_gsi, primary_scans_gsi, index_scans_fts,
@@ -624,8 +630,7 @@ func RecordMetrics(request_time, service_time, transaction_time time.Duration,
 	}
 
 	if error_count == 0 {
-		// record the type of request if 0 errors
-		if t := requestType(stmt); t != UNKNOWN {
+		if t := requestType(stmtType); t != UNKNOWN {
 			counters[t].Inc(1)
 		}
 	} else {
@@ -666,6 +671,8 @@ func requestType(stmt string) CounterId {
 		return DELETES
 	case "START_TRANSACTION":
 		return TRANSACTIONS
+	case "BEGIN_CHAT":
+		return CHATS
 	}
 	return UNKNOWN
 }

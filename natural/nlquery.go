@@ -1756,3 +1756,20 @@ func GetChatDataFromObjectValue(val value.Value) ([]byte, errors.Error) {
 	}
 	return b, nil
 }
+
+const (
+	T_BEGINCHAT  = "BEGIN_CHAT"
+	T_ENDCHAT    = "END_CHAT"
+	T_PAUSECHAT  = "PAUSE_CHAT"
+	T_RESUMECHAT = "RESUME_CHAT"
+	T_ALTERCHAT  = "ALTER_CHAT"
+)
+
+func IsNaturalLanguageChatStatement(stmtType string) bool {
+	switch stmtType {
+	case T_BEGINCHAT, T_ENDCHAT, T_PAUSECHAT, T_RESUMECHAT, T_ALTERCHAT:
+		return true
+	default:
+		return false
+	}
+}

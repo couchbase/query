@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/natural"
 	"github.com/couchbase/query/sanitizer"
 	"github.com/couchbase/query/tenant"
 	"github.com/couchbase/query/util"
@@ -97,9 +98,12 @@ type RequestLogEntry struct {
 	SessionMemory            uint64
 	Analysis                 []interface{}
 	SqlID                    string
-	NaturalLanguage          string
+	NaturalPrompt            string
 	NaturalOutput            string
+	NaturalContext           string
+	NaturalHint              string
 	NaturalTime              time.Duration
+	NaturalChatId            string
 	LogContent               []interface{}
 }
 
@@ -602,6 +606,8 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		Tenant:          tenant.Bucket(request.TenantCtx()),
 		SessionMemory:   request.SessionMemory(),
 		SqlID:           sqlID,
+		NaturalChatId:   request.NaturalChatId(),
+		NaturalContext:  request.NaturalContext(),
 		LogContent:      request.GetLogContent(),
 	}
 	errs := request.Errors()
@@ -691,9 +697,10 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	}
 
 	if natural := request.Natural(); natural != "" {
-		re.NaturalLanguage = natural
+		re.NaturalPrompt = natural
 		re.NaturalOutput = request.NaturalOutput()
 		re.NaturalTime = request.NaturalTime()
+		re.NaturalHint = request.NaturalHint()
 	}
 
 	clientId := request.ClientID().String()
@@ -755,18 +762,30 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	if request.QueryContext != "" {
 		reqMap["queryContext"] = request.QueryContext
 	}
-	if request.NaturalLanguage != "" {
-		reqMap["naturalLanguagePrompt"] = util.Redacted(request.NaturalLanguage, redact)
+	if request.NaturalPrompt != "" {
+		reqMap["naturalLanguagePrompt"] = util.Redacted(request.NaturalPrompt, redact)
+		// include natural language context only for non-chat USING AI requests(one shot requests)
+		if request.NaturalChatId == "" && request.NaturalContext != "" {
+			reqMap["naturalLanguageContext"] = util.Redacted(request.NaturalContext, redact)
+		}
+		if request.NaturalHint != "" {
+			reqMap["naturalLanguageHint"] = util.Redacted(request.NaturalHint, redact)
+		}
 	}
+
 	if request.Statement != "" {
 		if !redact {
 			reqMap["statement"] = request.Statement
 		} else {
-			sanstmt, _, err := sanitizer.SanitizeStatement(request.Statement, "", request.QueryContext, request.TxId != "", false)
-			if err == nil {
-				reqMap["sanitized_statement"] = sanstmt
-			} else {
+			if natural.IsNaturalLanguageChatStatement(request.StatementType) {
 				reqMap["statement"] = util.Redacted(request.Statement, true)
+			} else {
+				sanstmt, _, err := sanitizer.SanitizeStatement(request.Statement, "", request.QueryContext, request.TxId != "", false)
+				if err == nil {
+					reqMap["sanitized_statement"] = sanstmt
+				} else {
+					reqMap["statement"] = util.Redacted(request.Statement, true)
+				}
 			}
 		}
 	}
@@ -791,6 +810,14 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	}
 	if request.TransactionRemainingTime > 0 {
 		reqMap["transactionRemainingTime"] = util.FormatDuration(request.TransactionRemainingTime, durStyle)
+	}
+
+	if request.NaturalChatId != "" {
+		reqMap["chatId"] = request.NaturalChatId
+		// record the natural context for the chat that is being created but not for subsequent statements in the chat
+		if request.StatementType == natural.T_BEGINCHAT && request.NaturalContext != "" {
+			reqMap["naturalLanguageContext"] = util.Redacted(request.NaturalContext, redact)
+		}
 	}
 	if request.NaturalTime != 0 {
 		reqMap["naturalLanguageProcessingTime"] = util.FormatDuration(request.NaturalTime, durStyle)

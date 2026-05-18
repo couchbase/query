@@ -77,6 +77,11 @@
 		"help": "Count of CAS mismatch errors",
 		"added": "7.2.4"
 	},
+	"n1ql_chats": {
+		"type": "counter",
+		"help": "Total number of natural language chats.",
+		"added": "8.1.0"
+	},
 	"n1ql_deletes": {
 		"type": "counter",
 		"help": "Total number of DELETE operations.",

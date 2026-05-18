@@ -1893,12 +1893,16 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 		if !redact {
 			item["statement"] = this.RedactedStatement()
 		} else {
-			sanstmt, _, err := sanitizer.SanitizeStatement(stmt, this.Namespace(), this.QueryContext(),
-				this.executionContext != nil && this.executionContext.TxContext() != nil, false)
-			if err == nil {
-				item["sanitized_statement"] = sanstmt
-			} else {
+			if natural.IsNaturalLanguageChatStatement(this.Type()) {
 				item["statement"] = util.Redacted(this.RedactedStatement(), true)
+			} else {
+				sanstmt, _, err := sanitizer.SanitizeStatement(stmt, this.Namespace(), this.QueryContext(),
+					this.executionContext != nil && this.executionContext.TxContext() != nil, false)
+				if err == nil {
+					item["sanitized_statement"] = sanstmt
+				} else {
+					item["statement"] = util.Redacted(this.RedactedStatement(), true)
+				}
 			}
 		}
 	}
@@ -2003,6 +2007,23 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 		if nt := this.NaturalTime(); nt != 0 {
 			item["naturalLanguageProcessingTime"] = util.FormatDuration(nt, durStyle)
 		}
+
+		// include natural language context only for non-chat USING AI requests(one shot requests)
+		if this.NaturalChatId() == "" && this.naturalContext != "" {
+			item["naturalLanguageContext"] = util.Redacted(this.naturalContext, redact)
+		}
+
+		if this.naturalHint != "" {
+			item["naturalLanguageHint"] = util.Redacted(this.naturalHint, redact)
+		}
+	}
+
+	if this.NaturalChatId() != "" {
+		item["chatId"] = this.NaturalChatId()
+		// record the natural context for the chat that is being created but not for subsequent statements in the chat
+		if this.Type() == natural.T_BEGINCHAT && this.naturalContext != "" {
+			item["naturalLanguageContext"] = util.Redacted(this.naturalContext, redact)
+		}
 	}
 
 	return item
@@ -2066,31 +2087,31 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 	case strings.HasPrefix(matchString, "begin"):
 		this.SetNaturalBeginChat(true)
 		this.SetNatural("")
-		this.SetStatement("")
+		this.SetType(natural.T_BEGINCHAT)
 		return this.processNaturalBeginChat(s[m[1]:])
 
 	case strings.HasPrefix(matchString, "end"):
 		this.SetNaturalEndChat(true)
 		this.SetNatural("")
-		this.SetStatement("")
+		this.SetType(natural.T_ENDCHAT)
 		return this.processNaturalEndChat(s[m[1]:])
 
 	case strings.HasPrefix(matchString, "pause"):
 		this.SetNaturalPauseChat(true)
 		this.SetNatural("")
-		this.SetStatement("")
+		this.SetType(natural.T_PAUSECHAT)
 		return this.processNaturalPauseChat(s[m[1]:])
 
 	case strings.HasPrefix(matchString, "resume"):
 		this.SetNaturalResumeChat(true)
 		this.SetNatural("")
-		this.SetStatement("")
+		this.SetType(natural.T_RESUMECHAT)
 		return this.processNaturalResumeChat(s[m[1]:])
 
 	case strings.HasPrefix(matchString, "alter"):
 		this.SetNaturalAlterChat(true)
 		this.SetNatural("")
-		this.SetStatement("")
+		this.SetType(natural.T_ALTERCHAT)
 		return this.processNaturalAlterChat(s[m[1]:])
 
 	default:
