@@ -752,9 +752,11 @@ type exprToPaths struct {
 }
 
 func (this *exprToPaths) finshPath() bool {
-	if this.alias == "" || this.alias == this.curAlias {
-		if this.curAlias != "" {
+	if this.curAlias != "" {
+		if this.alias == "" || this.alias == this.curAlias {
 			if this.curPath.Len() == 0 {
+				this.curAlias = ""
+				this.curPath.Reset()
 				return true // keyspace
 			}
 			paths, ok := this.aliasPaths[this.curAlias]
@@ -766,9 +768,11 @@ func (this *exprToPaths) finshPath() bool {
 			if ok, _ := paths[s]; !ok {
 				paths[s] = true
 			}
-			this.curAlias = ""
-			this.curPath.Reset()
 		}
+		// Always reset, even when alias doesn't match, to prevent dirty state
+		// from one child expression leaking into the next sibling.
+		this.curAlias = ""
+		this.curPath.Reset()
 	}
 	return false
 }
