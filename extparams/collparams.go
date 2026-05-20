@@ -9,6 +9,7 @@
 package extparams
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"reflect"
@@ -167,4 +168,56 @@ type ExternalCollectionEntry struct {
 	DecimalToDouble   bool   `json:"decimal-to-double,omitempty"`
 	Uid               uint64
 	CatalogInfo       *CatalogEntry `json:"-"`
+}
+
+// UnmarshalJSON handles ns_server storing int/bool fields as JSON strings
+// (e.g. parallelScans:"2" instead of parallelScans:2) due to form-encoding.
+func (e *ExternalCollectionEntry) UnmarshalJSON(data []byte) error {
+	type Alias ExternalCollectionEntry
+	aux := &struct {
+		ParallelScans   json.RawMessage `json:"parallelScans,omitempty"`
+		DecimalToDouble json.RawMessage `json:"decimal-to-double,omitempty"`
+		*Alias
+	}{
+		Alias: (*Alias)(e),
+	}
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+	if len(aux.ParallelScans) > 0 {
+		var n int
+		if err := json.Unmarshal(aux.ParallelScans, &n); err == nil {
+			e.ParallelScans = n
+		} else {
+			var s string
+			if err := json.Unmarshal(aux.ParallelScans, &s); err != nil {
+				return fmt.Errorf("invalid parallelScans: %s", aux.ParallelScans)
+			}
+			n, err := strconv.Atoi(s)
+			if err != nil {
+				return fmt.Errorf("invalid parallelScans value %q: %v", s, err)
+			}
+			e.ParallelScans = n
+		}
+	}
+	if len(aux.DecimalToDouble) > 0 {
+		var b bool
+		if err := json.Unmarshal(aux.DecimalToDouble, &b); err == nil {
+			e.DecimalToDouble = b
+		} else {
+			var s string
+			if err := json.Unmarshal(aux.DecimalToDouble, &s); err != nil {
+				return fmt.Errorf("invalid decimal-to-double: %s", aux.DecimalToDouble)
+			}
+			switch s {
+			case "true":
+				e.DecimalToDouble = true
+			case "false":
+				e.DecimalToDouble = false
+			default:
+				return fmt.Errorf("invalid decimal-to-double value %q", s)
+			}
+		}
+	}
+	return nil
 }
