@@ -290,6 +290,14 @@ func getValType(v any) string {
 		if vsf, ok := v.(float64); ok && vsf == float64(int64(vsf)) {
 			return "int"
 		}
+	case string:
+		// Form-encoded params arrive as strings; accept integer-looking strings as "int"
+		// so that params like parallelScans=2 pass type validation.
+		if svs, ok := v.(string); ok {
+			if _, err := strconv.ParseInt(svs, 10, 64); err == nil {
+				return "int"
+			}
+		}
 	}
 	return reflect.TypeOf(v).String()
 }
