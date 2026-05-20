@@ -291,11 +291,14 @@ func getValType(v any) string {
 			return "int"
 		}
 	case string:
-		// Form-encoded params arrive as strings; accept integer-looking strings as "int"
-		// so that params like parallelScans=2 pass type validation.
+		// Form-encoded params arrive as strings; coerce to the right type name
+		// so that parallelScans="2" and decimal-to-double="true" pass validation.
 		if svs, ok := v.(string); ok {
 			if _, err := strconv.ParseInt(svs, 10, 64); err == nil {
 				return "int"
+			}
+			if svs == "true" || svs == "false" {
+				return "bool"
 			}
 		}
 	}
