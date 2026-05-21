@@ -1423,6 +1423,12 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 				return false
 			}
+			if this.scan.encryptionKey != nil {
+				logging.Debugf("Sequential scan: %s key scan spill file created, encrypted with keyId: %s", this,
+					this.scan.encryptionKey.Id, this.scan.log)
+			} else {
+				logging.Debugf("Sequential scan: %s key scan spill file created", this, this.scan.log)
+			}
 		}
 
 		if this.scan.encryptionKey != nil {
@@ -1561,6 +1567,12 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 			if err != nil {
 				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 				return false
+			}
+			if this.scan.encryptionKey != nil {
+				logging.Debugf("Sequential scan: %s document scan spill file created, encrypted with keyId: %s", this,
+					this.scan.encryptionKey.Id, this.scan.log)
+			} else {
+				logging.Debugf("Sequential scan: %s document scan spill file created", this, this.scan.log)
 			}
 		}
 
