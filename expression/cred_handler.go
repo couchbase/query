@@ -459,7 +459,7 @@ func applyAWSPayload(cred *cbauth.Credential, context Context) (http.Client, htt
 		base:            client.Transport,
 		accessKeyID:     p.AccessKeyID,
 		secretAccessKey: p.SecretAccessKey,
-		sessionToken:    p.SessionToken,
+		sessionToken:    strings.TrimSpace(p.SessionToken),
 		region:          p.Region,
 		endpoint:        endpointURL,
 	}

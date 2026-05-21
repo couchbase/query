@@ -130,6 +130,10 @@ func NewAWSConfig(accessKeyID, secretAccessKey, sessionToken, region string) (*a
 		return nil, fmt.Errorf("access key ID and secret access key are required")
 	}
 
+	// Trim whitespace to prevent "invalid header field value" errors from
+	// tokens that contain trailing newlines (common with copy-paste input).
+	sessionToken = strings.TrimSpace(sessionToken)
+
 	cfgProvider := credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, sessionToken)
 
 	var cfg aws.Config
@@ -416,8 +420,8 @@ func buildRESTStorageProps(cred *cbauth.Credential) (iceberg.Properties, error) 
 			_s3AccessKeyID:     c.AccessKeyID,
 			_s3SecretAccessKey: c.SecretAccessKey,
 		}
-		if c.SessionToken != "" {
-			props[_s3SessionToken] = c.SessionToken
+		if tok := strings.TrimSpace(c.SessionToken); tok != "" {
+			props[_s3SessionToken] = tok
 		}
 		if c.Region != "" {
 			props[_s3Region] = c.Region
