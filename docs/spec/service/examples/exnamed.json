@@ -1,25 +1,5 @@
 {
-  "requestID": "81aceab8-7f7a-4d00-b741-00385740329a",
-  "signature": {
-    "airline": "json"
-  },
-  "results": [
-    {
-      "airline": "B6"
-    },
-    {
-      "airline": "EK"
-    },
-    {
-      "airline": "SV"
-    }
-  ],
-  "status": "success",
-  "metrics": {
-    "elapsedTime": "72.886709ms",
-    "executionTime": "72.765333ms",
-    "resultCount": 3,
-    "resultSize": 48,
-    "serviceLoad": 12
-  }
+  "statement": "SELECT airline FROM `travel-sample`.inventory.route WHERE sourceairport = $aval AND distance > $dval",
+  "$aval": "LAX",
+  "$dval": 13000
 }

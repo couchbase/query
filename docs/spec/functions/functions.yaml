@@ -3,7 +3,7 @@ info:
   title: Query Functions REST API
   version: '8.0'
   description: |-
-    The Query Functions REST API is a secondary API provided by the Query service.
+    The Query Functions REST API is a secondary API provided by the Query Service.
     This API enables you to manage the JavaScript libraries and objects that are used to create SQL++ user-defined functions.
 
 servers:
@@ -61,6 +61,17 @@ paths:
       security:
         - Global: []
         - Scope: []
+      x-codeSamples:
+        - lang: Shell
+          label: All
+          description: Fetch all defined libraries.
+          source:
+            $ref: 'examples/get_collection_all.sh'
+        - lang: Shell
+          label: Scoped
+          description: Fetch all defined libraries in the specified scope.
+          source:
+            $ref: 'examples/get_collection_scope.sh'
       responses:
         "200":
           description: An array of objects, each giving information about a single library.
@@ -97,6 +108,17 @@ paths:
       security:
         - Global: []
         - Scope: []
+      x-codeSamples:
+        - lang: Shell
+          label: Global
+          description: Get all functions in the specified global library.
+          source:
+            $ref: 'examples/get_library_global.sh'
+        - lang: Shell
+          label: Scoped
+          description: Get all functions in the specified scoped library.
+          source:
+            $ref: 'examples/get_library_scope.sh'
       responses:
         "200":
           description: An object with a single property, giving information about the specified library.
@@ -132,8 +154,37 @@ paths:
           application/json:
             schema:
               type: string
-              example: function f2c(f) { return (5/9)*(f-32); }
-              x-has-example: true
+            example: function f2c(f) { return (5/9)*(f-32); }
+      x-codeSamples:
+        - lang: Shell
+          label: Global
+          description: |-
+            Create or update a global library called `math`.
+            The library contains two functions, `add` and `sub`.
+          source:
+            $ref: 'examples/post_library_global_create.sh'
+        - lang: Shell
+          label: Add
+          description: Add a function called `mul` to the global library, leaving the other functions unchanged.
+          source:
+            $ref: 'examples/post_library_global_add.sh'
+        - lang: Shell
+          label: Edit
+          description: Edit the function called sub to use a helper function called `helper`, leaving the other functions unchanged.
+          source:
+            $ref: 'examples/post_library_global_edit.sh'
+        - lang: Shell
+          label: Delete
+          description: Remove the function called `sub` and the helper function called `helper`, leaving the other functions unchanged.
+          source:
+            $ref: 'examples/post_library_global_delete.sh'
+        - lang: Shell
+          label: Scoped
+          description: |-
+            Create or update a scoped library called `science`.
+            The library contains one function, `f2c`.
+          source:
+            $ref: 'examples/post_library_scope.sh'
       security:
         - Global: []
         - Scope: []
@@ -157,6 +208,17 @@ paths:
       security:
         - Global: []
         - Scope: []
+      x-codeSamples:
+        - lang: Shell
+          label: Global
+          description: Delete a global library entirely.
+          source:
+            $ref: 'examples/delete_library_global.sh'
+        - lang: Shell
+          label: Scoped
+          description: Delete a scoped library entirely.
+          source:
+            $ref: 'examples/delete_library_scope.sh'
       responses:
         "200":
           $ref: "#/components/responses/OK"

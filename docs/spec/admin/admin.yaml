@@ -3,8 +3,8 @@ info:
   title: Query Admin REST API
   version: '8.0'
   description: |-
-    The Query Admin REST API is a secondary API provided by the Query service.
-    This API enables you to retrieve statistics about the clusters and nodes running the Query service; view or specify node-level settings; and view or delete requests.
+    The Query Admin REST API is a secondary API provided by the Query Service.
+    This API enables you to retrieve statistics about the clusters and nodes running the Query Service; view or specify node-level settings; and view or delete requests.
 
 servers:
   - url: '{scheme}://{host}:{port}'
@@ -142,7 +142,7 @@ paths:
     get:
       operationId: get_config
       summary: Read Configuration
-      description: Returns the configuration of the query service on the cluster.
+      description: Returns the configuration of the Query Service on the cluster.
       tags:
         - configuration
       security:
@@ -494,7 +494,7 @@ paths:
       summary: Retrieve Vitals
       description: |-
         Returns data about the running state and health of the query engine.
-        This information can be very useful to assess the current workload and performance characteristics of a query engine, and hence load-balance the requests being sent to various query engines.
+        This information can be useful to assess the current workload and performance characteristics of a query engine, and hence load-balance the requests being sent to various query engines.
       tags:
         - statistics
       security:
@@ -664,7 +664,7 @@ components:
         description: |-
           The opaque ID or context provided by the client.
         x-desc-more: |-
-          Refer to the [request-level][client_context_id] `client_context_id` parameter for more information.
+          For more information, see the [request-level][client_context_id] `client_context_id` parameter..
 
           [client_context_id]: ../n1ql-rest-query/index.html#client_context_id
         x-desc-refs: |-
@@ -790,7 +790,7 @@ components:
         description: |-
           The state of the query execution, such as `completed`, `running`, `cancelled`.
 
-          Note that the `completed` state means that the request was started and completed by the Query service, but it does not mean that it was necessarily successful.
+          The `completed` state means that the request was started and completed by the Query Service, but it does not mean that it was necessarily successful.
           The request could have been successful, or completed with errors.
 
           To find requests that were successful, use this field in conjunction with the `errorCount` field: search for requests whose state is `completed` and whose error count is `0`.
@@ -850,12 +850,12 @@ components:
         type: integer
         description: |-
           This property is provided for technical support only.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
       indexApiVersion:
         type: integer
         description: |-
           This property is provided for technical support only.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
       name:
         type: string
         description: |-
@@ -884,7 +884,7 @@ components:
           It includes the time taken by the service to schedule the request.
 
           This property is only returned when the prepared statement has been executed.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
       avgServiceTime:
         type: string
         format: duration
@@ -892,7 +892,7 @@ components:
           The mean amount of calendar time taken to complete the execution of the prepared statement.
 
           This property is only returned when the prepared statement has been executed.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
       lastUse:
         type: string
         format: date-time
@@ -908,7 +908,7 @@ components:
           It includes the time taken by the service to schedule the request.
 
           This property is only returned when the prepared statement has been executed.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
       maxServiceTime:
         type: string
         format: duration
@@ -916,7 +916,7 @@ components:
           The maximum amount of calendar time taken to complete the execution of the prepared statement.
 
           This property is only returned when the prepared statement has been executed.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
       minElapsedTime:
         type: string
         format: duration
@@ -925,7 +925,7 @@ components:
           It includes the time taken by the service to schedule the request.
 
           This property is only returned when the prepared statement has been executed.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
       minServiceTime:
         type: string
         format: duration
@@ -933,7 +933,7 @@ components:
           The minimum amount of calendar time taken to complete the execution of the prepared statement.
 
           This property is only returned when the prepared statement has been executed.
-          It is only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+          It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
 
   Vitals:
     type: object
@@ -1128,12 +1128,12 @@ components:
         type: integer
         description: |-
           High water mark for temp space use directly by query.
-          (Doesn't include use by the GSI and Search clients.)
+          (Does not include use by the GSI and Search clients.)
       temp.usage:
         type: integer
         description: |-
           Current Query temp space use.
-          (Doesn't include use by the GSI and Search clients.)
+          (Does not include use by the GSI and Search clients.)
 
   Statistics:
     type: object
@@ -1245,7 +1245,7 @@ components:
         type: number
         description: |-
           Number of query requests processed per second.
-          Mean rate since the query service started.
+          Mean rate since the Query Service started.
       request_timer.median:
         type: number
         description: |-
@@ -1266,16 +1266,16 @@ components:
         description: Total number of query requests.
       requests_1000ms.count:
         type: integer
-        description: Number of queries that take longer than 1000ms.
+        description: Number of queries that take longer than 1000&nbsp;ms.
       requests_250ms.count:
         type: integer
-        description: Number of queries that take longer than 250ms.
+        description: Number of queries that take longer than 250&nbsp;ms.
       requests_5000ms.count:
         type: integer
-        description: Number of queries that take longer than 5000ms.
+        description: Number of queries that take longer than 5000&nbsp;ms.
       requests_500ms.count:
         type: integer
-        description: Number of queries that take longer than 500ms.
+        description: Number of queries that take longer than 500&nbsp;ms.
       result_count.count:
         type: integer
         description: Total number of results (documents) returned by the query engine.
@@ -1319,7 +1319,7 @@ components:
         description: 5-minute exponentially weighted moving average.
       mean.rate:
         type: number
-        description: Mean rate since the query service started.
+        description: Mean rate since the Query Service started.
       max:
         type: integer
         description: The maximum value.
@@ -1385,7 +1385,7 @@ components:
         description: |-
           Specifies whether the query engine should create a prepared statement every time a SQL++ request is submitted, whether the PREPARE statement is included or not.
 
-          Refer to [Auto-Prepare][auto-prepare] for more information.
+          For more information, see [Auto-Prepare][auto-prepare].
 
           [auto-prepare]: ../n1ql/n1ql-language-reference/prepare.html#auto-prepare
         x-desc-refs: |-
@@ -1398,7 +1398,7 @@ components:
         x-has-example: true
         x-desc-name: cleanupclientattempts
         description: |-
-          When enabled, the Query service preferentially aims to clean up just transactions that it has created, leaving transactions for the distributed cleanup process only when it is forced to.
+          When enabled, the Query Service preferentially aims to clean up just transactions that it has created, leaving transactions for the distributed cleanup process only when it's forced to.
         x-desc-more: |-
           The [cluster-level][queryCleanupClientAttempts] `queryCleanupClientAttempts` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1414,7 +1414,7 @@ components:
         x-has-example: true
         x-desc-name: cleanuplostattempts
         description: |-
-          When enabled, the Query service takes part in the distributed cleanup process, and cleans up expired transactions created by any client.
+          When enabled, the Query Service takes part in the distributed cleanup process, and cleans up expired transactions created by any client.
         x-desc-more: |-
           The [cluster-level][queryCleanupLostAttempts] `queryCleanupLostAttempts` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1431,7 +1431,7 @@ components:
         x-has-example: true
         x-desc-name: cleanupwindow
         description: |-
-          Specifies how frequently the Query service checks its subset of [active transaction records][additional-storage-use] for cleanup.
+          Specifies how frequently the Query Service checks its subset of [active transaction records][additional-storage-use] for cleanup.
           Decreasing this setting causes expiration transactions to be found more swiftly, with the tradeoff of increasing the number of reads per second used for the scanning process.
 
           The value for this setting is a string.
@@ -1463,7 +1463,7 @@ components:
           A nested object that sets the parameters for the completed requests catalog.
           All completed requests that match these parameters are tracked in the completed requests catalog.
 
-          Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
+          For more information and examples, see [Configure Completed Requests][sys-completed-config].
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-refs: |-
@@ -1492,7 +1492,7 @@ components:
               The opaque ID or context provided by the client.
               If specified, all completed requests with this client context ID are logged.
             x-desc-more: |-
-              Refer to the [request-level][client_context_id] `client_context_id` parameter for more information.
+              For more information, see the [request-level][client_context_id] `client_context_id` parameter.
 
               [client_context_id]: ../n1ql-rest-query/index.html#client_context_id
             x-desc-refs: |-
@@ -1517,7 +1517,7 @@ components:
             description: |-
               A unique string which tags a set of qualifiers.
 
-              Refer to [Configure Completed Requests][sys-completed-config] for more information.
+              For more information, see [Configure Completed Requests][sys-completed-config].
 
               [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
             x-desc-refs: |-
@@ -1577,7 +1577,7 @@ components:
 
           Increase this when the completed request keyspace is not big enough to track the slow requests, such as when you want a larger sample of slow requests.
 
-          Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
+          For more information and examples, see [Configure Completed Requests][sys-completed-config].
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
@@ -1603,7 +1603,7 @@ components:
           Queries with plans larger than this are not logged.
           You must obtain execution plans for such queries via profiling or using the EXPLAIN statement.
 
-          Refer to [Configure Completed Requests][sys-completed-config] for more information.
+          For more information, see [Configure Completed Requests][sys-completed-config].
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
@@ -1627,7 +1627,9 @@ components:
 
           Specify `0` (the default) to disable completed request streaming.
 
-          Refer to [Stream Completed Requests][sys-history] for more information and examples.
+          Completed request streaming is available in Couchbase Server 7.6.4 and later.
+
+          For more information and examples, see [Stream Completed Requests][sys-history].
 
           [sys-history]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
         x-desc-refs: |-
@@ -1647,7 +1649,7 @@ components:
           Specify `0` to track all requests, independent of duration.
           Specify any negative number to track none.
 
-          Refer to [Configure Completed Requests][sys-completed-config] for more information and examples.
+          For more information and examples, see [Configure Completed Requests][sys-completed-config].
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
@@ -1711,7 +1713,7 @@ components:
         x-desc-name: distribute
         description: |-
           This field is only available with the POST method.
-          When specified alongside other settings, this field instructs the node that is processing the request to cascade those settings to all other query nodes.
+          When specified alongside other settings, this field instructs the node that's processing the request to cascade those settings to all other query nodes.
           The actual value of this field is ignored.
       functions-limit:
         type: integer
@@ -1762,7 +1764,7 @@ components:
           * `SEVERE` &mdash; For admin.
           Major items, like crashes.
 
-          * `NONE` &mdash; Doesn't write anything.
+          * `NONE` &mdash; Does not write anything.
         x-desc-more: |-
           The [cluster-level][queryLogLevel] `queryLogLevel` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -1792,9 +1794,9 @@ components:
           Similarly, if the value is greater than the number of allowed cores, the maximum parallelism is restricted to the number of allowed cores.
 
           (The number of allowed cores is the same as the number of logical CPUs.
-          In Community Edition, the number of allowed cores cannot be greater than 4.
-          In Enterprise Edition, there is no limit to the number of allowed cores.)
-          Refer to [Max Parallelism][max-parallelism] for more information.
+          In Couchbase Server Community Edition, the number of allowed cores cannot be greater than 4.
+          In Couchbase Server Enterprise Edition, there is no limit to the number of allowed cores.)
+          For more information, see [Max Parallelism][max-parallelism].
 
           [max-parallelism]: ../n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
         x-desc-more: |-
@@ -1893,12 +1895,12 @@ components:
         x-has-default: true
         x-desc-name: node-quota
         description: |-
-          Sets the soft memory limit for the Query service on this node, in MB.
+          Sets the soft memory limit for the Query Service on this node, in MB.
           The garbage collector tries to keep below this target.
-          It is not a hard, absolute limit, and memory usage may exceed this value.
+          It's not a hard, absolute limit, and memory usage may exceed this value.
 
-          When set to `0` (the default), the Query service sets a default soft memory limit for the node.
-          To do this, the Query service calculates the difference between the total system RAM and 90% of the total system RAM:
+          When set to `0` (the default), the Query Service sets a default soft memory limit for the node.
+          To do this, the Query Service calculates the difference between the total system RAM and 90% of the total system RAM:
 
           `Total System RAM - (0.9 * Total System RAM)`
 
@@ -1921,7 +1923,7 @@ components:
         x-has-default: true
         x-desc-name: node-quota-val-percent
         description: |-
-          The percentage of the `node-quota` that is dedicated to tracked value content memory across all active requests on this node.
+          The percentage of the `node-quota` that's dedicated to tracked value content memory across all active requests on this node.
           (The `memory-quota` setting specifies the maximum amount of document memory an individual request may use on this node.)
         x-desc-more: |-
           The [cluster-level][queryNodeQuotaValPercent] `queryNodeQuotaValPercent` setting specifies this property for the whole cluster.
@@ -1937,14 +1939,14 @@ components:
         x-has-default: true
         x-desc-name: num-cpus
         description: |-
-          The number of CPUs the Query service can use on this node.
-          Note that this setting requires a restart of the Query service to take effect.
+          The number of CPUs the Query Service can use on this node.
+          This setting requires a restart of the Query Service to take effect.
 
-          When set to `0` (the default), the Query service can use all available CPUs, up to the limits described below.
+          When set to `0` (the default), the Query Service can use all available CPUs, up to the limits described below.
 
           The number of CPUs can never be greater than the number of logical CPUs.
-          In Community Edition, the number of allowed CPUs cannot be greater than 4.
-          In Enterprise Edition, there is no limit to the number of allowed CPUs.
+          In Couchbase Server Community Edition, the number of allowed CPUs cannot be greater than 4.
+          In Couchbase Server Enterprise Edition, there is no limit to the number of allowed CPUs.
         x-desc-more: |-
           The [cluster-level][queryNumCpus] `queryNumCpus` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -2075,7 +2077,7 @@ components:
 
           NOTE: If `profile` is not set as one of the above values, then the profile setting does not change.
 
-          Refer to [Monitoring and Profiling Details][monitor-profile-details] for more information and examples.
+          For more information and examples, see [Monitoring and Profiling Details][monitor-profile-details].
 
           [monitor-profile-details]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#monitor-profile-details
         x-desc-more: |-
@@ -2104,7 +2106,7 @@ components:
         x-has-example: true
         x-desc-name: scan-cap-srv
         description: |-
-          Maximum buffered channel size between the indexer client and the query service for index scans.
+          Maximum buffered channel size between the indexer client and the Query Service for index scans.
           This parameter controls when to use scan backfill.
 
           Use `0` or a negative number to disable.
@@ -2171,7 +2173,7 @@ components:
         description: |-
           Maximum time to spend on a transaction before timing out (ns).
           This setting only applies to requests containing the `BEGIN TRANSACTION` statement, or to requests where the [tximplicit][tximplicit] parameter is set.
-          For all other requests, it is ignored.
+          For all other requests, it's ignored.
 
           The value for this setting is an integer, representing a duration in nanoseconds.
           It must not be delimited by quotes, and must not include a unit.
@@ -2237,7 +2239,7 @@ components:
 
           Reading from replica is only possible if the cluster uses Couchbase Server 7.6.0 or later.
 
-          Note that KV range scans cannot currently be started on a replica vBucket.
+          You cannot currently start KV range scans on a replica vBucket.
           If a query uses sequential scan and a data node becomes unavailable, the query might return an error, even if read from replica is enabled for the request.
         x-desc-more: |-
           The [cluster-level][queryUseReplica] `queryUseReplica` setting specifies the default for this property for the whole cluster.

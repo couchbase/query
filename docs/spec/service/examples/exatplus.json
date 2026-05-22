@@ -1,0 +1,14 @@
+{
+  "statement": "SELECT name FROM `travel-sample`.inventory.hotel LIMIT 1;",
+  "scan_consistency": "at_plus",
+  "scan_vector": {
+    "5": [
+      5409393,
+      "VB5ID"
+    ],
+    "19": [
+      47574574,
+      "VB19ID"
+    ]
+  }
+}
