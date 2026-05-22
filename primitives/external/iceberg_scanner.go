@@ -902,15 +902,25 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 			logging.Debugf("createCatalog: NESSIE using no authentication (public server)")
 		}
 
+		// Forward storage credentials as iceberg-go FileIO props so that
+		// scan.PlanFiles can read manifest files from S3/GCS/ADLS without
+		// falling back to the EC2 IMDS credential chain. Nessie does not vend
+		// credentials in LoadTableResponse, so they must be provided here.
+		if opts.CollectionCred != nil {
+			props, err := buildRESTStorageProps(opts.CollectionCred)
+			if err != nil {
+				return nil, fmt.Errorf("NESSIE storage credential error: %w", err)
+			}
+			if len(props) > 0 {
+				restOpts = append(restOpts, rest.WithAdditionalProps(props))
+			}
+		}
+
 		if opts.Warehouse != "" {
 			restOpts = append(restOpts, rest.WithWarehouseLocation(opts.Warehouse))
 		}
 
-		logging.Debugf("createCatalog: creating NESSIE catalog, uri=%s, warehouse=%s, hasCredential=%v", opts.URI, opts.Warehouse, opts.Credential != "")
-		logging.Debugf("createCatalog: NESSIE restOpts count=%d", len(restOpts))
-		for i, opt := range restOpts {
-			logging.Debugf("createCatalog: NESSIE restOpt[%d]: %T", i, opt)
-		}
+		logging.Debugf("createCatalog: creating NESSIE catalog, uri=%s, warehouse=%s", opts.URI, opts.Warehouse)
 
 		// Add panic recovery in case there's a panic in rest.NewCatalog
 		var cat catalog.Catalog
