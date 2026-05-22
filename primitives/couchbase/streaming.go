@@ -232,8 +232,10 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) boo
 					p := b.pool
 					b.Close()
 					p.Lock()
-					p.BucketMap[name] = nil
-					delete(p.BucketMap, name)
+					if _, ok := p.BucketMap[name]; ok {
+						p.BucketMap[name] = nil
+						delete(p.BucketMap, name)
+					}
 					p.Unlock()
 				}
 				if err.Code() != errors.E_BUCKET_UPDATER_EP_NOT_FOUND {
