@@ -1545,8 +1545,8 @@ func (p *Pool) refresh() (err error) {
 		return err
 	}
 
-	p.RLock()
-	defer p.RUnlock()
+	p.Lock()
+	defer p.Unlock()
 	p.BucketMap = make(map[string]*Bucket)
 	for i, _ := range buckets {
 		b := new(Bucket)

@@ -3,7 +3,7 @@ info:
   title: Query Settings REST API
   version: '8.0'
   description: |-
-    The Query Settings REST API is provided by the Query service.
+    The Query Settings REST API is provided by the Query Service.
     This API enables you to view or specify cluster-level Query settings.
 
 servers:
@@ -27,7 +27,7 @@ servers:
           The Cluster administration REST port.
           Use `18091` for secure access.
 
-          Note that the port numbers for this REST API are different to the port numbers used by the other Query REST APIs.
+          The port numbers for this REST API are different to the port numbers used by the other Query REST APIs.
         enum:
           - "8091"
           - "18091"
@@ -37,9 +37,14 @@ paths:
     get:
       operationId: get_settings
       summary: Retrieve Cluster-Level Query Settings
-      description: Returns all cluster-level query settings, including the CURL access settings.
+      description: Returns all cluster-level query settings, including the curl access settings.
       security:
         - Default: []
+      x-codeSamples:
+        - lang: Shell
+          description: This example gets the current cluster-level curl query settings.
+          source:
+            $ref: 'examples/query-settings-get-settings.sh'
       responses:
         200:
           description: An object giving cluster-level query settings.
@@ -52,7 +57,7 @@ paths:
     post:
       operationId: post_settings
       summary: Update Cluster-Level Query Settings
-      description: Updates cluster-level query settings, including the CURL access settings.
+      description: Updates cluster-level query settings, including the curl access settings.
       security:
         - Default: []
       requestBody:
@@ -71,6 +76,11 @@ paths:
           application/x-www-form-urlencoded:
             schema:
               $ref: "#/components/schemas/Settings"
+      x-codeSamples:
+        - lang: Shell
+          description: This example changes the temp file directory to `/tmp` and the temp file size to 2048 MB.
+          source:
+            $ref: 'examples/query-settings-post-settings.sh'
       responses:
         200:
           description: An object giving cluster-level query settings, including the latest changes.
@@ -90,10 +100,15 @@ paths:
   /settings/querySettings/curlWhitelist:
     get:
       operationId: get_access
-      summary: Retrieve CURL Access List
-      description: Returns the cluster-level CURL access settings only.
+      summary: Retrieve curl Access List
+      description: Returns the cluster-level curl access settings only.
       security:
         - Default: []
+      x-codeSamples:
+        - lang: Shell
+          description: This example gets the current cluster-level curl access settings.
+          source:
+            $ref: 'examples/query-settings-get-access.sh'
       responses:
         200:
           description: An object determining which URLs may be accessed by the `CURL()` function.
@@ -105,8 +120,8 @@ paths:
                 $ref: 'examples/query-settings-get-access.json'
     post:
       operationId: post_access
-      summary: Update CURL Access List
-      description: Updates the cluster-level CURL access settings only.
+      summary: Update curl Access List
+      description: Updates the cluster-level curl access settings only.
       security:
         - Default: []
       requestBody:
@@ -120,6 +135,11 @@ paths:
           application/x-www-form-urlencoded:
             schema:
               $ref: "#/components/schemas/Access"
+      x-codeSamples:
+        - lang: Shell
+          description: This example specifies that `https://company1.com` is allowed, and `https://company2.com` is disallowed.
+          source:
+            $ref: 'examples/query-settings-post-access.sh'
       responses:
         200:
           description: An object determining which URLs may be accessed by the `CURL()` function, including the latest changes.
@@ -163,7 +183,7 @@ components:
         x-has-example: true
         x-desc-name: queryCleanupClientAttempts
         description: |-
-          When enabled, the Query service preferentially aims to clean up just transactions that it has created, leaving transactions for the distributed cleanup process only when it is forced to.
+          When enabled, the Query Service preferentially aims to clean up just transactions that it has created, leaving transactions for the distributed cleanup process only when it's forced to.
         x-desc-more: |-
           The [node-level][cleanupclientattempts] `cleanupclientattempts` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -179,7 +199,7 @@ components:
         x-has-example: true
         x-desc-name: queryCleanupLostAttempts
         description: |-
-          When enabled, the Query service takes part in the distributed cleanup process, and cleans up expired transactions created by any client.
+          When enabled, the Query Service takes part in the distributed cleanup process, and cleans up expired transactions created by any client.
         x-desc-more: |-
           The [node-level][cleanuplostattempts] `cleanuplostattempts` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -196,7 +216,7 @@ components:
         x-has-example: true
         x-desc-name: queryCleanupWindow
         description: |-
-          Specifies how frequently the Query service checks its subset of [active transaction records][additional-storage-use] for cleanup.
+          Specifies how frequently the Query Service checks its subset of [active transaction records][additional-storage-use] for cleanup.
           Decreasing this setting causes expiration transactions to be found more swiftly, with the tradeoff of increasing the number of reads per second used for the scanning process.
 
           The value for this setting is a string.
@@ -232,7 +252,7 @@ components:
 
           Increase this when the completed request keyspace is not big enough to track the slow requests, such as when you want a larger sample of slow requests.
 
-          Refer to [Configure the Completed Requests][sys-completed-config] for more information and examples.
+          For more information and examples, see [Configure the Completed Requests][sys-completed-config].
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
@@ -258,7 +278,7 @@ components:
           Queries with plans larger than this are not logged.
           You must obtain execution plans for such queries via profiling or using the EXPLAIN statement.
 
-          Refer to [Configure the Completed Requests][sys-completed-config] for more information.
+          For more information, see [Configure the Completed Requests][sys-completed-config].
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
@@ -284,7 +304,7 @@ components:
           Specify `0` to track all requests, independent of duration.
           Specify any negative number to track none.
 
-          Refer to [Configure the Completed Requests][sys-completed-config] for more information and examples.
+          For more information and examples, see [Configure the Completed Requests][sys-completed-config].
 
           [sys-completed-config]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-completed-config
         x-desc-more: |-
@@ -326,7 +346,7 @@ components:
           * `SEVERE` &mdash; For admin.
           Major items, like crashes.
 
-          * `NONE` &mdash; Doesn't write anything.
+          * `NONE` &mdash; Does not write anything.
         x-desc-more: |-
           The [node-level][loglevel] `loglevel` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -349,10 +369,10 @@ components:
           Similarly, if the value is greater than the number of allowed cores, the maximum parallelism is restricted to the number of allowed cores.
 
           (The number of allowed cores is the same as the number of logical CPUs.
-          In Community Edition, the number of allowed cores cannot be greater than 4.
-          In Enterprise Edition, there is no limit to the number of allowed cores.)
+          In Couchbase Server Community Edition, the number of allowed cores cannot be greater than 4.
+          In Couchbase Server Enterprise Edition, there is no limit to the number of allowed cores.)
 
-          Refer to [Max Parallelism][max-parallelism] for more information.
+          For more information, see [Max Parallelism][max-parallelism].
 
           [max-parallelism]: ../n1ql/n1ql-language-reference/index-partitioning.html#max-parallelism
         x-desc-more: |-
@@ -419,12 +439,12 @@ components:
         x-has-default: true
         x-desc-name: queryNodeQuota
         description: |-
-          Sets the soft memory limit for the Query service on every Query node in the cluster, in MB.
+          Sets the soft memory limit for the Query Service on every Query node in the cluster, in MB.
           The garbage collector tries to keep below this target.
-          It is not a hard, absolute limit, and memory usage may exceed this value.
+          It's not a hard, absolute limit, and memory usage may exceed this value.
 
-          When set to `0` (the default), the Query service sets a default soft memory limit for every node.
-          To do this, the Query service calculates the difference between the total system RAM and 90% of the total system RAM:
+          When set to `0` (the default), the Query Service sets a default soft memory limit for every node.
+          To do this, the Query Service calculates the difference between the total system RAM and 90% of the total system RAM:
 
           `Total System RAM - (0.9 * Total System RAM)`
 
@@ -447,7 +467,7 @@ components:
         x-has-default: true
         x-desc-name: queryNodeQuotaValPercent
         description: |-
-          The percentage of the `queryNodeQuota` that is dedicated to tracked value content memory across all active requests for every Query node in the cluster.
+          The percentage of the `queryNodeQuota` that's dedicated to tracked value content memory across all active requests for every Query node in the cluster.
           (The `queryMemoryQuota` setting specifies the maximum amount of document memory an individual request may use on any Query node in the cluster.)
         x-desc-more: |-
           The [node-level][node-quota-val-percent] `node-quota-val-percent` setting specifies this property for a single node.
@@ -484,14 +504,14 @@ components:
         x-has-default: true
         x-desc-name: queryNumCpus
         description: |-
-          The number of CPUs the Query service can use on any Query node in the cluster.
-          Note that this setting requires a restart of the Query service to take effect.
+          The number of CPUs the Query Service can use on any Query node in the cluster.
+          This setting requires a restart of the Query Service to take effect.
 
-          When set to `0` (the default), the Query service can use all available CPUs, up to the limits described below.
+          When set to `0` (the default), the Query Service can use all available CPUs, up to the limits described below.
 
           The number of CPUs can never be greater than the number of logical CPUs.
-          In Community Edition, the number of allowed CPUs cannot be greater than 4.
-          In Enterprise Edition, there is no limit to the number of allowed CPUs.
+          In Couchbase Server Community Edition, the number of allowed CPUs cannot be greater than 4.
+          In Couchbase Server Enterprise Edition, there is no limit to the number of allowed CPUs.
         x-desc-more: |-
           The [node-level][num-cpus] `num-cpus` setting specifies this property for a single node.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -570,7 +590,7 @@ components:
         x-has-example: true
         x-desc-name: queryScanCap
         description: |-
-          Maximum buffered channel size between the indexer client and the query service for index scans.
+          Maximum buffered channel size between the indexer client and the Query Service for index scans.
           This parameter controls when to use scan backfill.
 
           Use `0` or a negative number to disable.
@@ -626,7 +646,7 @@ components:
         description: |-
           Maximum time to spend on a transaction before timing out.
           This setting only applies to requests containing the `BEGIN TRANSACTION` statement, or to requests where the [tximplicit][tximplicit] parameter is set.
-          For all other requests, it is ignored.
+          For all other requests, it's ignored.
 
           The value for this setting is a string.
           Its format includes an amount and a mandatory unit, e.g. `10ms` (10 milliseconds) or `0.5s` (half a second).
@@ -728,7 +748,7 @@ components:
 
           Reading from replica is only possible if the cluster uses Couchbase Server 7.6.0 or later.
 
-          Note that KV range scans cannot currently be started on a replica vBucket.
+          You cannot currently start KV range scans on a replica vBucket.
           If a query uses sequential scan and a data node becomes unavailable, the query might return an error, even if read from replica is enabled for the request.
         x-desc-more: |-
           The [node-level][use-replica-srv] `use-replica` setting specifies this property for a single node.
@@ -771,7 +791,7 @@ components:
           For example, if you wish to allow access to all Google APIs, add the URL `https://maps.googleapis.com` to the array.
           To allow complete access to `localhost`, use `http://localhost`.
 
-          Note that each URL must include the port, protocol, and all other components of the URL.
+          Each URL must include the port, protocol, and all other components of the URL.
         default: []
         items:
           type: string
@@ -784,7 +804,7 @@ components:
 
           If both `allowed_urls` and `disallowed_urls` fields are populated, the `disallowed_urls` field takes precedence over `allowed_urls`.
 
-          Note that each URL must include the port, protocol, and all other components of the URL.
+          Each URL must include the port, protocol, and all other components of the URL.
         default: []
         items:
           type: string
