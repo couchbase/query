@@ -448,10 +448,9 @@ func main() {
 	settings.InitSettings()
 	server_package.InitAWR() // start before endpoints but after server init
 
-	// check for migration complete (functions storage and CBO stats), such that
-	// if no migration is needed, we mark migration as complete before we accept connections
-	udfComplete := storage.MigrationCheck()
-	cbostatsComplete := server_package.MigrationCheck()
+	// perform migration before accepting connections
+	storage.Migrate()
+	server_package.MigrateDictionary()
 
 	// Create http endpoint (but don't start it yet)
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
@@ -507,14 +506,6 @@ func main() {
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsFromPersisted()
 	prepareds.PreparedsRemotePrime()
-
-	// migrations (functions storage and CBO stats) last
-	if !udfComplete {
-		storage.Migrate()
-	}
-	if !cbostatsComplete {
-		server_package.MigrateDictionary()
-	}
 
 	// Initialize configurations for AUS
 	aus.InitAus(server)

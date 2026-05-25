@@ -76,14 +76,6 @@ var migrationStartLock sync.Mutex
 var migrationStartCond *sync.Cond
 var migrationStartWait bool
 
-func MigrationCheck() bool {
-	if checkSetComplete() {
-		logging.Infof("UDF migration: Already done")
-		return true
-	}
-	return false
-}
-
 func Migrate() {
 
 	// no migration needed if serverless

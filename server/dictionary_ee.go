@@ -18,10 +18,6 @@ func InitDictionaryCache(dictCacheLimit int) {
 	dictionary.DictionaryCacheInit(dictCacheLimit)
 }
 
-func MigrationCheck() bool {
-	return dictionary.MigrationCheck()
-}
-
 func MigrateDictionary() {
 	dictionary.Migrate()
 }
