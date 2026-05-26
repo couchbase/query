@@ -28,6 +28,7 @@ import (
 
 	"github.com/couchbase/gomemcached"
 	memcached "github.com/couchbase/gomemcached/client"
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/encryption"
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
@@ -362,6 +363,7 @@ type seqScan struct {
 	timedout      bool
 	withDocs      bool
 	encryptionKey *encryption.EaRKey
+	spilled       atomic.Bool
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
@@ -1429,6 +1431,10 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 			} else {
 				logging.Debugf("Sequential scan: %s key scan spill file created", this, this.scan.log)
 			}
+
+			if this.scan.spilled.CompareAndSwap(false, true) {
+				accounting.UpdateCounter(accounting.SPILLS_SEQ_SCAN)
+			}
 		}
 
 		if this.scan.encryptionKey != nil {
@@ -1573,6 +1579,10 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 					this.scan.encryptionKey.Id, this.scan.log)
 			} else {
 				logging.Debugf("Sequential scan: %s document scan spill file created", this, this.scan.log)
+			}
+
+			if this.scan.spilled.CompareAndSwap(false, true) {
+				accounting.UpdateCounter(accounting.SPILLS_SEQ_SCAN)
 			}
 		}
 

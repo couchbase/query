@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -33,9 +34,18 @@ type Merge struct {
 	inserts  *value.AnnotatedArray
 	children []Operator
 	inputs   []*Channel
+	spilled  bool
 }
 
 func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operator) (*Merge, error) {
+
+	rv := &Merge{
+		plan:   plan,
+		update: update,
+		delete: delete,
+		insert: insert,
+	}
+
 	var updates, deletes, inserts *value.AnnotatedArray
 
 	if context.IsFeatureEnabled(util.N1QL_NEW_MERGE) {
@@ -61,7 +71,12 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 					} else if f > 0.7 {
 						f = 0.7
 					}
-					return context.CurrentQuotaUsage() > f
+					res := context.CurrentQuotaUsage() > f
+					if res && !rv.spilled {
+						rv.spilled = true
+						accounting.UpdateCounter(accounting.SPILLS_MERGE)
+					}
+					return res
 				}
 			} else {
 				maxSize := context.AvailableMemory()
@@ -72,7 +87,12 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 					maxSize = _MIN_SIZE
 				}
 				shouldSpill = func(c uint64, n uint64) bool {
-					return (c + n) > maxSize
+					res := (c + n) > maxSize
+					if res && !rv.spilled {
+						rv.spilled = true
+						accounting.UpdateCounter(accounting.SPILLS_MERGE)
+					}
+					return res
 				}
 			}
 		}
@@ -108,15 +128,9 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 		}
 	}
 
-	rv := &Merge{
-		plan:    plan,
-		update:  update,
-		delete:  delete,
-		insert:  insert,
-		updates: updates,
-		deletes: deletes,
-		inserts: inserts,
-	}
+	rv.updates = updates
+	rv.deletes = deletes
+	rv.inserts = inserts
 
 	newBase(&rv.base, context)
 	rv.trackChildren(3)
@@ -693,6 +707,7 @@ func (this *Merge) reopen(context *Context) bool {
 		}
 		rv = this.insert.reopen(context)
 	}
+	this.spilled = false
 	return rv
 }
 

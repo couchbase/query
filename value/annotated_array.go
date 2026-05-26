@@ -258,7 +258,11 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 	if this.shouldSpill != nil {
 		sz = v.Size()
 		if this.memSize > 0 && this.shouldSpill(this.memSize, sz) {
-			logging.Debugf("[%p] need to spill: %v+%v, heapSize: %v", this, this.memSize, sz, this.heapSize)
+			if this.encryptionKey != nil {
+				logging.Debugf("[%p] need to spill: %v+%v, heapSize: %v encryption keyId: %+q", this, this.memSize, sz, this.heapSize, this.encryptionKey.Id)
+			} else {
+				logging.Debugf("[%p] need to spill: %v+%v, heapSize: %v", this, this.memSize, sz, this.heapSize)
+			}
 			err := this.spillToDisk()
 			if err != nil {
 				return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)

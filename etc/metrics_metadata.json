@@ -522,6 +522,21 @@
 		"help": "Number of order by operations that have spilled to disk.",
 		"added": "8.0.0"
 	},
+	"n1ql_spills_merge": {
+		"type": "counter",
+		"help": "Number of merge operations that have spilled to disk.",
+		"added": "8.1.0"
+	},
+	"n1ql_spills_update_statistics": {
+		"type": "counter",
+		"help": "Number of statistics update operations that have spilled to disk.",
+		"added": "8.1.0"
+	},
+	"n1ql_spills_seq_scan": {
+		"type": "counter",
+		"help": "Number of sequential scans that have spilled to disk.",
+		"added": "8.1.0"
+	},
 	"n1ql_ffdc_memory_threshold": {
 		"type": "counter",
 		"added": "7.6.6",
