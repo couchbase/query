@@ -365,30 +365,26 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	isExternalCollection := keyspace != nil && keyspace.IsExternalCollection()
 	if isExternalCollection {
 		if node.Keys() != nil {
-			return nil, errors.NewPlanError(nil, "USE KEYS is not supported on external collections")
+			return nil, errors.NewExternalCollectionError("USE KEYS is not supported on external collections")
 		}
 		// Validate snapshot expressions are static (compile-time constants)
 		if node.SnapshotIdExpr() != nil && node.SnapshotIdExpr().Static() == nil {
-			return nil, errors.NewPlanError(nil, "SNAPSHOT expression must be a static value")
+			return nil, errors.NewExternalCollectionError("SNAPSHOT expression must be a static value")
 		}
 		if node.SnapshotTimestampExpr() != nil && node.SnapshotTimestampExpr().Static() == nil {
-			return nil, errors.NewPlanError(nil, "TIMESTAMP expression must be a static value")
+			return nil, errors.NewExternalCollectionError("TIMESTAMP expression must be a static value")
 		}
 		addExternalPrivilages(node, keyspace, "SELECT")
 	} else if node.HasSnapshotOption() {
 		// Snapshot options are only valid for external collections
-		return nil, errors.NewPlanError(nil, "Snapshot options are only supported on external collections")
-	}
-
-	if !isExternalCollection && node.HasSnapshotOption() {
-		return nil, errors.NewPlanError(nil, "Snapshot options are only supported on external collections")
+		return nil, errors.NewExternalCollectionError("Snapshot options are only supported on external collections")
 	}
 
 	var inCorrSubq bool
 	if this.subquery && this.correlated {
 		// External collections are not supported in correlated subqueries
 		if isExternalCollection {
-			return nil, errors.NewPlanError(nil, "External collections are not supported in correlated subqueries")
+			return nil, errors.NewExternalCollectionError("External collections are not supported in correlated subqueries")
 		}
 		node.SetInCorrSubq()
 		baseKeyspace.SetInCorrSubq()
@@ -777,7 +773,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	}
 
 	if keyspace != nil && keyspace.IsExternalCollection() {
-		return nil, errors.NewPlanError(nil, "ON KEYS is not supported on external collections")
+		return nil, errors.NewExternalCollectionError("ON KEYS is not supported on external collections")
 	}
 
 	subPaths, err := this.GetSubPaths(right, right.Alias())
@@ -838,7 +834,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 	}
 
 	if keyspace != nil && keyspace.IsExternalCollection() {
-		return nil, errors.NewPlanError(nil, "ON KEY is not supported on external collections")
+		return nil, errors.NewExternalCollectionError("ON KEY is not supported on external collections")
 	}
 
 	err = this.markJoinIndexAllHint(right.Alias())
@@ -926,7 +922,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	}
 
 	if keyspace != nil && keyspace.IsExternalCollection() {
-		return nil, errors.NewPlanError(nil, "ON KEYS is not supported on external collections")
+		return nil, errors.NewExternalCollectionError("ON KEYS is not supported on external collections")
 	}
 
 	subPaths, err := this.GetSubPaths(right, right.Alias())
@@ -983,7 +979,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 	}
 
 	if keyspace != nil && keyspace.IsExternalCollection() {
-		return nil, errors.NewPlanError(nil, "ON KEY is not supported on external collections")
+		return nil, errors.NewExternalCollectionError("ON KEY is not supported on external collections")
 	}
 
 	nest, err := this.buildIndexNest(keyspace, node)

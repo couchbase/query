@@ -108,7 +108,7 @@ func (this *builder) VisitAlterCollection(stmt *algebra.AlterCollection) (any, e
 		return nil, err1
 	}
 	if keyspace != nil && !keyspace.IsExternalCollection() {
-		return nil, errors.NewPlanInternalError(fmt.Sprintf("%s is not supported on non-external collections",
+		return nil, errors.NewExternalCollectionError(fmt.Sprintf("%s is not supported on non-external collections",
 			strings.ReplaceAll(stmt.Type(), "_", " ")))
 	}
 	return plan.NewQueryPlan(plan.NewAlterCollection(scope, stmt)), nil

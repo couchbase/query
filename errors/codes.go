@@ -192,6 +192,7 @@ const (
 	E_VECTOR_DISTINCT_ARRAY_KEY                  ErrorCode = 3407
 	E_VECTOR_CONSTANT_INDEX_KEY                  ErrorCode = 3408
 	E_EMPTY_REQUIRED_FIELD                       ErrorCode = 3500
+	E_EXTERNAL_COLLECTION                        ErrorCode = 3510
 	E_PLAN                                       ErrorCode = 4000
 	E_REPREPARE                                  ErrorCode = 4001
 	W_PLAN_VERSION_MISMATCH                      ErrorCode = 4002

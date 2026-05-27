@@ -2601,6 +2601,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_EXTERNAL_COLLECTION, // 3510
+		symbol:      "E_EXTERNAL_COLLECTION",
+		Description: "Error with External Collection: <<msg>>",
+		Reason: []string{
+			"An error occurred with external collection usage",
+		},
+		Action: []string{
+			"Correct the error and resubmit the request.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PLAN, // 4000
 		symbol:      "E_PLAN",
 		Description: "A planning error occurred.",

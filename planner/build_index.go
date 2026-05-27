@@ -202,7 +202,7 @@ func (this *builder) getNameKeyspace(ks *algebra.KeyspaceRef, dynamic, checkExt 
 		this.setKeyspaceFound()
 	}
 	if checkExt && keyspace != nil && keyspace.IsExternalCollection() {
-		return nil, errors.NewPlanInternalError(fmt.Sprintf("%s is not supported on external collections",
+		return nil, errors.NewExternalCollectionError(fmt.Sprintf("%s is not supported on external collections",
 			strings.ReplaceAll(source, "_", " ")))
 	}
 

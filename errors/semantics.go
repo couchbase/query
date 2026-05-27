@@ -277,6 +277,11 @@ func NewFieldEmpty(stmtType, fieldName string) Error {
 		InternalCaller: CallerN(1)}
 }
 
+func NewExternalCollectionError(msg string) Error {
+	return &err{level: EXCEPTION, ICode: E_EXTERNAL_COLLECTION, IKey: "semantics_external_collection",
+		InternalMsg: fmt.Sprintf("Error with External Collection: %s", msg), InternalCaller: CallerN(1)}
+}
+
 /*
 ---- BEGIN MOVED error numbers ----
 
