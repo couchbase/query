@@ -719,7 +719,7 @@ func (this *builder) addSubqCoveringInfo(node *algebra.Subselect, op plan.Operat
 		} else if len(subqTerms) != len(info.SubqueryTerms()) {
 			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible nested SubqueryTerms")
 		} else if len(aggs) != len(info.Aggregates()) {
-			return errors.NewPlanInternalError("addSubqCOveringInfo: incompatible aggregates")
+			return errors.NewPlanInternalError("addSubqCoveringInfo: incompatible aggregates")
 		}
 	} else {
 		this.subqCoveringInfo[node] = &coveringSubqInfo{
