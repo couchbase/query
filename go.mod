@@ -49,7 +49,7 @@ require (
 	github.com/couchbase/gocbcore/v10 v10.5.2
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.3.4
-	github.com/couchbase/goutils v0.1.2
+	github.com/couchbase/goutils v0.3.0
 	github.com/couchbase/indexing v0.0.0-20220923223016-071e9308c875
 	github.com/couchbase/n1fty v0.0.0-00010101000000-000000000000
 	github.com/couchbase/query-ee v0.0.0-00010101000000-000000000000
