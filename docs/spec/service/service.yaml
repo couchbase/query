@@ -1521,6 +1521,40 @@ components:
           }
       executionTimings:
         $ref: "#/components/schemas/ResponseProfileTiming"
+      ioTime:
+        type: string
+        format: duration
+        description: |
+          The total sum of [servTime](#serv_time) across all operators.
+        x-has-example: true
+        example: "752.858519ms"
+      waitTime:
+        type: string
+        format: duration
+        description: |
+          The total sum of [kernTime](#kern_time) across all operators.
+        x-has-example: true
+        example: "1.201307s"
+      cpuTime:
+        type: string
+        format: duration
+        description: |
+          The total sum of [execTime](#exec_time) across all operators.
+        x-has-example: true
+        example: "90.734075ms"
+      ~analysis:
+          type: array
+          items:
+            type: string
+          description: |
+            An array of text phrases that provide a basic analysis of the request execution.
+            These phrases highlight notable aspects of the execution, such as high document counts during primary scans or warnings related to memory and resource usages.
+          x-has-example: true
+          example:
+              [
+                "High IO time",
+                "High primary scan document count"
+              ]
 
   ResponseProfileTiming:
         type: object
@@ -1593,40 +1627,6 @@ components:
                   For fetch, it's time spent waiting on the KV store.
                 x-has-example: true
                 example: "1.590934ms"
-      ioTime:
-        type: string
-        format: duration
-        description: |
-          The total sum of [servTime](#serv_time) across all operators.
-        x-has-example: true
-        example: "752.858519ms"
-      waitTime:
-        type: string
-        format: duration
-        description: |
-          The total sum of [kernTime](#kern_time) across all operators.
-        x-has-example: true
-        example: "1.201307s"
-      cpuTime:
-        type: string
-        format: duration
-        description: |
-          The total sum of [execTime](#exec_time) across all operators.
-        x-has-example: true
-        example: "90.734075ms"
-      ~analysis:
-          type: array
-          items:
-            type: string
-          description: |
-            An array of text phrases that provide a basic analysis of the request execution.
-            These phrases highlight notable aspects of the execution, such as high document counts during primary scans or warnings related to memory and resource usages.
-          x-has-example: true
-          example:
-              [
-                "High IO time",
-                "High primary scan document count"
-              ]
 
  securitySchemes:
   Header:
