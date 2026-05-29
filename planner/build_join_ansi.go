@@ -109,7 +109,9 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 	var leftBaseKeyspace *base.BaseKeyspace
 	var joinHint algebra.JoinHint
 	var preferHash, preferNL, inferJoinHint bool
+	var isExternal, leftIsExternal bool
 	baseKeyspace, _ := this.baseKeyspaces[alias]
+	isExternal = baseKeyspace.IsExternalCollection()
 	if !joinEnum {
 		joinHint = baseKeyspace.JoinHint()
 		preferHash = algebra.PreferHash(joinHint)
@@ -118,10 +120,11 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			preferHash = true
 		}
 
-		if node.Right().HasInferJoinHint() {
-			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+		if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+			leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
+			leftIsExternal = leftBaseKeyspace.IsExternalCollection()
+			if node.Right().HasInferJoinHint() {
 				inferJoinHint = true
-				leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
 				joinHint = leftBaseKeyspace.JoinHint()
 				preferHash = algebra.PreferHash(joinHint)
 				preferNL = algebra.PreferNL(joinHint)
@@ -249,9 +252,10 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 					}
 					return hjoin, nil
 				}
-			} else if useKeys && hjoin != nil && !preferNL {
+			} else if (useKeys || isExternal || leftIsExternal) && hjoin != nil && !preferNL {
 				// if USE KEYS is specified on right-hand side, since we have to do
 				// Fetch, try to use hash join if possible
+				// if either side is an external collection, use hash join
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hjOnclause)
 				if hjIndexHintError {
@@ -483,7 +487,9 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 	var leftBaseKeyspace *base.BaseKeyspace
 	var joinHint algebra.JoinHint
 	var preferHash, preferNL, inferJoinHint bool
+	var isExternal, leftIsExternal bool
 	baseKeyspace, _ := this.baseKeyspaces[alias]
+	isExternal = baseKeyspace.IsExternalCollection()
 	if !joinEnum {
 		joinHint = baseKeyspace.JoinHint()
 		preferHash = algebra.PreferHash(joinHint)
@@ -492,10 +498,11 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			preferHash = true
 		}
 
-		if node.Right().HasInferJoinHint() {
-			if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+		if leftTerm, ok := node.Left().(algebra.SimpleFromTerm); ok {
+			leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
+			leftIsExternal = leftBaseKeyspace.IsExternalCollection()
+			if node.Right().HasInferJoinHint() {
 				inferJoinHint = true
-				leftBaseKeyspace, _ = this.baseKeyspaces[leftTerm.Alias()]
 				joinHint = leftBaseKeyspace.JoinHint()
 				preferHash = algebra.PreferHash(joinHint)
 				preferNL = algebra.PreferNL(joinHint)
@@ -605,9 +612,10 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 					this.resetOrder()
 				}
 				return hnest, nil
-			} else if useKeys && hnest != nil && !preferNL {
+			} else if (useKeys || isExternal || leftIsExternal) && hnest != nil && !preferNL {
 				// if USE KEYS is specified on right-hand side, since we have to do
 				// Fetch, try to use hash nest if possible
+				// if either side is an external collection, use hash nest
 				this.restoreJoinPlannerState(hjps)
 				node.SetOnclause(hnOnclause)
 				if hjIndexHintError {

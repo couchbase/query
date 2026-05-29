@@ -20,20 +20,21 @@ import (
 )
 
 const (
-	KS_PLAN_DONE            = 1 << iota // planning is done for this keyspace
-	KS_ONCLAUSE_ONLY                    // use ON-clause only for planning
-	KS_IS_UNNEST                        // unnest alias
-	KS_IN_CORR_SUBQ                     // in correlated subquery
-	KS_HAS_DOC_COUNT                    // docCount retrieved for keyspace
-	KS_PRIMARY_TERM                     // primary term
-	KS_OUTER_FILTERS                    // OUTER filters have been classified
-	KS_INDEX_HINT_ERROR                 // index hint error
-	KS_JOIN_HINT_ERROR                  // join hint error
-	KS_JOIN_FLTR_HINT_ERROR             // join filter hint error
-	KS_IS_SYSTEM                        // system keyspace
-	KS_IS_KEYSPACETERM                  // KeyspaceTerm
-	KS_IS_EXPRTERM                      // ExprTerm
-	KS_IS_SUBQTERM                      // SubqTerm
+	KS_PLAN_DONE              = 1 << iota // planning is done for this keyspace
+	KS_ONCLAUSE_ONLY                      // use ON-clause only for planning
+	KS_IS_UNNEST                          // unnest alias
+	KS_IN_CORR_SUBQ                       // in correlated subquery
+	KS_HAS_DOC_COUNT                      // docCount retrieved for keyspace
+	KS_PRIMARY_TERM                       // primary term
+	KS_OUTER_FILTERS                      // OUTER filters have been classified
+	KS_INDEX_HINT_ERROR                   // index hint error
+	KS_JOIN_HINT_ERROR                    // join hint error
+	KS_JOIN_FLTR_HINT_ERROR               // join filter hint error
+	KS_IS_SYSTEM                          // system keyspace
+	KS_IS_KEYSPACETERM                    // KeyspaceTerm
+	KS_IS_EXPRTERM                        // ExprTerm
+	KS_IS_SUBQTERM                        // SubqTerm
+	KS_IS_EXTERNAL_COLLECTION             // external collection
 )
 
 type BaseKeyspace struct {
@@ -75,19 +76,18 @@ func NewBaseKeyspace(name string, path *algebra.Path, node algebra.SimpleFromTer
 		// we use the full name, except for buckets, where we look for the underlying default collection
 		// this has to be done for CBO, so that we can use the same distributions for buckets and
 		// default collections, when explicitly referenced
-		if path.IsCollection() {
-			keyspace = path.SimpleString()
-		} else {
-			start := util.Now()
-			ks, _ := datastore.GetKeyspace(path.Parts()...)
-			duration = util.Since(start)
+		start := util.Now()
+		ks, _ := datastore.GetKeyspace(path.Parts()...)
+		duration = util.Since(start)
 
-			// if we can't find it, we use a token full name
-			if ks != nil {
-				keyspace = ks.QualifiedName()
-			} else {
-				keyspace = path.SimpleString()
+		// if we can't find it, we use a token full name
+		if ks != nil {
+			keyspace = ks.QualifiedName()
+			if ks.IsExternalCollection() {
+				ksFlags |= KS_IS_EXTERNAL_COLLECTION
 			}
+		} else {
+			keyspace = path.SimpleString()
 		}
 		if path.IsSystem() {
 			ksFlags |= KS_IS_SYSTEM
@@ -193,6 +193,10 @@ func (this *BaseKeyspace) IsExpressionTerm() bool {
 
 func (this *BaseKeyspace) IsSubqueryTerm() bool {
 	return (this.ksFlags & KS_IS_SUBQTERM) != 0
+}
+
+func (this *BaseKeyspace) IsExternalCollection() bool {
+	return (this.ksFlags & KS_IS_EXTERNAL_COLLECTION) != 0
 }
 
 func (this *BaseKeyspace) IsAnsiJoin() bool {
