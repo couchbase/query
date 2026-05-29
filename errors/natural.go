@@ -11,42 +11,52 @@ package errors
 import "fmt"
 
 const (
-	SESSIONS_IKEY       = "sessions_req"
-	PROMPT_IKEY         = "prompt"
-	CHATCOMPLTIONS_IKEY = "chatcompletions_req"
-	NLPARAM_IKEY        = "missing_parameters"
-	FAIL_IKEY           = "failed_to_generated_stmt"
-	NLCONTEXT_IKEY      = "natural_context"
-	RATE_LIMIT          = "rate_limit"
-	SERVE_NATURAL       = "service_natural_request"
+	SESSIONS_IKEY          = "sessions_req"
+	PROMPT_IKEY            = "prompt"
+	CHATCOMPLTIONS_IKEY    = "chatcompletions_req"
+	NLPARAM_IKEY           = "missing_parameters"
+	FAIL_IKEY              = "failed_to_generated_stmt"
+	NLCONTEXT_IKEY         = "natural_context"
+	RATE_LIMIT             = "rate_limit"
+	SERVE_NATURAL          = "service_natural_request"
+	V2_API_REQUEST         = "v2_api_request"
+	MODEL_PROVIDERS_IKEY   = "model_providers_req"
+	VENDOR_VALIDATION_IKEY = "vendor_validation"
 )
 
 var naturalErrMap = map[ErrorCode][2]string{
 
-	E_NL_CREATE_SESSIONS_REQ:              {SESSIONS_IKEY, "Failed to create a new request to %v"},
-	E_NL_SEND_SESSIONS_REQ:                {SESSIONS_IKEY, "Failed to send the request to %v to get JWT"},
-	E_NL_SESSIONS_AUTH:                    {SESSIONS_IKEY, "Authorization failed when establishing natural language session"},
-	E_NL_SESSIONS_RESP_READ:               {SESSIONS_IKEY, "Error reading the response from %v"},
-	E_NL_SESSIONS_RESP_UNMARSHAL:          {SESSIONS_IKEY, "Unmarshalling response from %v failed: "},
-	E_NL_SESSIONS_PARSE_EXPIRE_TIME:       {SESSIONS_IKEY, "Error parsing \"expiresAt\": %v "},
-	E_NL_PROMPT_SCHEMA_MARSHAL:            {PROMPT_IKEY, "Error marshalling schema information for prompt:"},
-	E_NL_PROMPT_INFER:                     {PROMPT_IKEY, "Schema inferring failed for keyspace %v"},
-	E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL:   {CHATCOMPLTIONS_IKEY, "Error marshalling prompt for chat completions API request"},
-	E_NL_SEND_CHATCOMPLETIONS_REQ:         {CHATCOMPLTIONS_IKEY, "Couldn't send chat completions request to %v"},
-	E_NL_CHATCOMPLETIONS_REQ_FAILED:       {CHATCOMPLTIONS_IKEY, "Chat completions request failed with status %v"},
-	E_NL_CHATCOMPLETIONS_READ_RESP_STREAM: {CHATCOMPLTIONS_IKEY, "Error reading response stream from chat completion API %v"},
-	E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL:   {CHATCOMPLTIONS_IKEY, "Error unmarshalling chat completions response"},
-	E_NL_ERR_CHATCOMPLETIONS_RESP:         {CHATCOMPLTIONS_IKEY, "LLM processing failed"},
-	E_NL_MISSING_NL_PARAM:                 {NLPARAM_IKEY, "Natural Language request expects %s request parameter to be set"},
-	E_NL_FAIL_GENERATED_STMT:              {FAIL_IKEY, "Statement generation failed: %v"},
-	E_NL_CONTEXT:                          {NLCONTEXT_IKEY, "Error in keyspace list provided for natural language processing"},
-	E_NL_ORG_NOT_FOUND:                    {CHATCOMPLTIONS_IKEY, "Organization \"%v\" not found"},
+	E_NL_CREATE_SESSIONS_REQ:            {SESSIONS_IKEY, "Failed to create a new request to %v"},
+	E_NL_SEND_SESSIONS_REQ:              {SESSIONS_IKEY, "Failed to send the request to %v to get JWT"},
+	E_NL_SESSIONS_AUTH:                  {SESSIONS_IKEY, "Authorization failed when establishing natural language session"},
+	E_NL_SESSIONS_RESP_READ:             {SESSIONS_IKEY, "Error reading the response from %v"},
+	E_NL_SESSIONS_RESP_UNMARSHAL:        {SESSIONS_IKEY, "Unmarshalling response from %v failed: "},
+	E_NL_SESSIONS_PARSE_EXPIRE_TIME:     {SESSIONS_IKEY, "Error parsing \"expiresAt\": %v "},
+	E_NL_PROMPT_SCHEMA_MARSHAL:          {PROMPT_IKEY, "Error marshalling schema information for prompt:"},
+	E_NL_PROMPT_INFER:                   {PROMPT_IKEY, "Schema inferring failed for keyspace %v"},
+	E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL: {CHATCOMPLTIONS_IKEY, "Error marshalling prompt for chat completions API request"},
+	E_NL_CHATCOMPLETIONS_REQ_FAILED:     {CHATCOMPLTIONS_IKEY, "Chat completions request failed with status %v"},
+	E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL: {CHATCOMPLTIONS_IKEY, "Error unmarshalling chat completions response"},
+	E_NL_ERR_CHATCOMPLETIONS_RESP:       {CHATCOMPLTIONS_IKEY, "LLM processing failed"},
+	E_NL_MISSING_NL_PARAM:               {NLPARAM_IKEY, "Natural Language request expects %s request parameter to be set"},
+	E_NL_FAIL_GENERATED_STMT:            {FAIL_IKEY, "Statement generation failed: %v"},
+	E_NL_CONTEXT:                        {NLCONTEXT_IKEY, "Error in keyspace list provided for natural language processing"},
+	E_NL_ORG_NOT_FOUND:                  {CHATCOMPLTIONS_IKEY, "Organization \"%v\" not found"},
 	E_NL_ORG_UNAUTH: {CHATCOMPLTIONS_IKEY, "Access to organisation '%v' is not authorized " +
 		"or collison in JWT refresh with an external client"},
-	E_NL_CREATE_CHATCOMPLETIONS_REQ: {CHATCOMPLTIONS_IKEY, "Failed to create a new request to \"%v\""},
-	E_NL_TOO_MANY_WAITERS:           {RATE_LIMIT, "Too many waiters, dropping the request"},
-	E_NL_TIMEOUT:                    {RATE_LIMIT, "Timed out waiting to be processed."},
-	E_NL_REQ_FEAT_DISABLED:          {SERVE_NATURAL, "Natural language request processing is disabled."},
+	E_NL_TOO_MANY_WAITERS:               {RATE_LIMIT, "Too many waiters, dropping the request"},
+	E_NL_TIMEOUT:                        {RATE_LIMIT, "Timed out waiting to be processed."},
+	E_NL_REQ_FEAT_DISABLED:              {SERVE_NATURAL, "Natural language request processing is disabled."},
+	E_NL_MODEL_WITHOUT_VENDOR:           {VENDOR_VALIDATION_IKEY, "Natural language \"model\" option requires \"vendor\" to also be set"},
+	E_NL_VENDOR_NOT_ENABLED:             {VENDOR_VALIDATION_IKEY, "Vendor \"%v\" is not enabled for this organization"},
+	E_NL_VENDOR_NOT_SUPPORTED:           {VENDOR_VALIDATION_IKEY, "Vendor \"%v\" is not supported"},
+	E_NL_NO_VENDORS_AVAILABLE:           {VENDOR_VALIDATION_IKEY, "No model providers are available for this organization"},
+	E_NL_V2_CREATE_REQ:                  {V2_API_REQUEST, "Failed to create v2 API request to %v"},
+	E_NL_V2_SEND_REQ:                    {V2_API_REQUEST, "Failed to send v2 API request to %v"},
+	E_NL_MODEL_PROVIDERS_REQ_FAILED:     {MODEL_PROVIDERS_IKEY, "Model providers request failed with status %v"},
+	E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL: {MODEL_PROVIDERS_IKEY, "Error unmarshalling model providers response from %v"},
+	E_NL_NO_DEFAULT_MODEL_FOR_VENDOR:    {VENDOR_VALIDATION_IKEY, "No default model configured and no models available for vendor \"%v\""},
+	E_NL_NO_VENDORS_ENABLED:             {VENDOR_VALIDATION_IKEY, "No model providers are enabled for this organization"},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {
@@ -63,6 +73,8 @@ func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {
 		case Error:
 			e.cause = a
 		case error:
+			e.cause = a
+		case map[string]interface{}:
 			e.cause = a
 		case nil:
 			// ignore

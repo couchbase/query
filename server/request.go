@@ -88,6 +88,10 @@ type Request interface {
 	NaturalShowOnly() bool
 	SetNaturalOutput(n string)
 	NaturalOutput() string
+	SetNaturalVendor(vendor string)
+	NaturalVendor() string
+	SetNaturalModel(model string)
+	NaturalModel() string
 	SetNaturalAdvise(adv bool)
 	NaturalAdvise() bool
 	SetNaturalExplain(exp bool)
@@ -440,6 +444,8 @@ type BaseRequest struct {
 	naturalCred          string
 	naturalOrgId         string
 	naturalContext       string
+	naturalVendor        string
+	naturalModel         string
 	nlStatement          algebra.Statement
 	nlShowOnly           bool
 	nloutput             string
@@ -1742,6 +1748,22 @@ func (this *BaseRequest) NaturalOutput() string {
 	return this.nloutput
 }
 
+func (this *BaseRequest) SetNaturalVendor(vendor string) {
+	this.naturalVendor = vendor
+}
+
+func (this *BaseRequest) NaturalVendor() string {
+	return this.naturalVendor
+}
+
+func (this *BaseRequest) SetNaturalModel(model string) {
+	this.naturalModel = model
+}
+
+func (this *BaseRequest) NaturalModel() string {
+	return this.naturalModel
+}
+
 func (this *BaseRequest) SetNaturalAdvise(adv bool) {
 	this.nladvise = adv
 }
@@ -2045,9 +2067,24 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
+		case "vendor":
+			if s, ok := v.(string); ok {
+				this.SetNaturalVendor(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		case "model":
+			if s, ok := v.(string); ok {
+				this.SetNaturalModel(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
 		default:
 			return errors.NewAdminUnknownSettingError(k)
 		}
+	}
+	if this.NaturalModel() != "" && this.NaturalVendor() == "" {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
 	}
 	s = s[d.InputOffset():]
 	this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
