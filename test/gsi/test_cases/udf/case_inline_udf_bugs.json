@@ -452,7 +452,7 @@
         "description": "MB-67389 - EXECUTE FUNCTION (user with query_external_access role)",
         "statements": "execute function i1()",
         "userArgs": {
-            "Administrator": "password"
+            "testAdmin": "testAdminpass"
         },
         "results": [
             1000

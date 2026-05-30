@@ -49,7 +49,7 @@
 	"testcase": "Check on-disk entry",
         "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
         "userArgs": {
-                "Administrator": "password"
+                "testAdmin": "testAdminpass"
         },
         "results": [
             {
@@ -101,7 +101,7 @@
 	"testcase": "Check on-disk entry",
         "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
         "userArgs": {
-                "Administrator": "password"
+                "testAdmin": "testAdminpass"
         },
         "results": [
             {
@@ -143,7 +143,7 @@
 	"testcase": "Check on-disk entry",
         "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
         "userArgs": {
-                "Administrator": "password"
+                "testAdmin": "testAdminpass"
         },
         "results": [
             {
@@ -194,7 +194,7 @@
 	"testcase": "Check on-disk entry",
         "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
         "userArgs": {
-                "Administrator": "password"
+                "testAdmin": "testAdminpass"
         },
         "results": [
             {
@@ -206,7 +206,7 @@
 	"testcase": "Check on-disk entry with ad_hoc",
         "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE \"ppn::%\" AND ad_hoc = true",
         "userArgs": {
-                "Administrator": "password"
+                "testAdmin": "testAdminpass"
         },
         "results": [
             {
@@ -224,7 +224,7 @@
 	"testcase": "Check on-disk entry",
         "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
         "userArgs": {
-                "Administrator": "password"
+                "testAdmin": "testAdminpass"
         },
         "results": [
             {

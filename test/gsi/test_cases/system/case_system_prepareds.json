@@ -12,7 +12,7 @@
 			"users"
 		],
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": [
 			{
@@ -107,7 +107,7 @@
 			"users"
 		],
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": [
 			{
@@ -192,7 +192,7 @@
 	{
 		"statements": "select name, statement, uses from system:prepareds",
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": [
 			{
@@ -205,7 +205,7 @@
 	{
 		"statements": "execute test",
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": [
 			{
@@ -218,14 +218,14 @@
 	{
 		"statements": "delete from system:prepareds",
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": []
 	},
 	{
 		"statements": "select name, statement, uses from system:prepareds",
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": []
 	},
@@ -243,7 +243,7 @@
 			"users"
 		],
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": [
 			{
@@ -337,7 +337,7 @@
 			"users"
 		],
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": [
 			{
@@ -420,7 +420,7 @@
 	{
 		"statements": "select statement, uses from system:prepareds",
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": [
 			{
@@ -432,14 +432,14 @@
 	{
 		"statements": "delete from system:prepareds",
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": []
 	},
 	{
 		"statements": "select name, statement, uses from system:prepareds",
 		"userArgs": {
-			"Administrator": "password"
+			"testAdmin": "testAdminpass"
 		},
 		"results": []
 	}

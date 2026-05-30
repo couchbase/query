@@ -3,7 +3,7 @@
     "statements": "advise select * from shellTest12345 where test_id = \"advise\" limit 2",
     "advise": true,
     "userArgs": {
-      "Administrator": "password"
+      "testAdmin": "testAdminpass"
     },
     "results": [
       {
@@ -30,7 +30,7 @@
     "statements": "ADVISE SELECT t_1.int_field1, t_1.primary_key_id FROM bucket_01 t_1 INNER JOIN bucket_04 t_4 ON (t_1.primary_key_id = t_4.primary_key_id) INNER JOIN bucket_04 t_5 ON (t_1.primary_key_id = t_5.primary_key_id)",
     "advise": true,
     "userArgs": {
-      "Administrator": "password"
+      "testAdmin": "testAdminpass"
     },
     "results": [
       {

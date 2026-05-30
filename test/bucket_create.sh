@@ -64,5 +64,4 @@ done
 
 curl --silent -X PUT $UsersSite/testAdmin -d name=QueryTestAdmin -d roles=admin -d password=testAdminpass -u $Auth > /dev/null
 
-
-
+curl --silent -X PUT $UsersSite/userAdminLocal -d name=QueryUserAdminLocal -d roles=user_admin_local -d password=userAdminLocalpass -u $Auth > /dev/null
