@@ -26,6 +26,7 @@ import (
 
 	"github.com/couchbase/gomemcached"
 	memcached "github.com/couchbase/gomemcached/client"
+	"github.com/couchbase/query/accounting"
 	qerrors "github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/sort"
@@ -303,6 +304,7 @@ type seqScan struct {
 	sampleSize   int
 	useReplica   bool
 	skipKey      func(string) bool
+	spilled      atomic.Bool
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
@@ -1224,6 +1226,10 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 		if err != nil {
 			this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 			return false
+		}
+
+		if this.scan.spilled.CompareAndSwap(false, true) {
+			accounting.UpdateCounter(accounting.SPILLS_SEQ_SCAN)
 		}
 	}
 	if this.keys == nil {

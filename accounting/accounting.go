@@ -210,6 +210,10 @@ const (
 	CURL_CALLS
 	CURL_CALL_ERRORS
 
+	SPILLS_MERGE
+	SPILLS_UPDATE_STATISTICS
+	SPILLS_SEQ_SCAN
+
 	FFDC_RQF
 	FFDC_PQF
 	FFDC_SQP
@@ -289,6 +293,10 @@ const (
 	_CURL_CALLS       = "curl_calls"
 	_CURL_CALL_ERRORS = "curl_call_errors"
 
+	SPILLS_MERGE_STR             = "spills_merge"
+	SPILLS_UPDATE_STATISTICS_STR = "spills_update_statistics"
+	SPILLS_SEQ_SCAN_STR          = "spills_seq_scan"
+
 	FFDC_RQF_COUNT   = "ffdc_request_queue_full"
 	FFDC_PQF_COUNT   = "ffdc_plus_queue_full"
 	FFDC_SQP_COUNT   = "ffdc_stalled_queue"
@@ -360,6 +368,10 @@ var metricNames = []string{
 
 	_CURL_CALLS,
 	_CURL_CALL_ERRORS,
+
+	SPILLS_MERGE_STR,
+	SPILLS_UPDATE_STATISTICS_STR,
+	SPILLS_SEQ_SCAN_STR,
 
 	FFDC_RQF_COUNT,
 	FFDC_PQF_COUNT,

@@ -92,6 +92,9 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 	runtime.ReadMemStats(&mem)
 	request_timer := g.registry.Timer(accounting.REQUEST_TIMER)
 	prepared := g.registry.Counter(accounting.PREPAREDS)
+	spillsMerge := g.registry.Counter(accounting.SPILLS_MERGE_STR)
+	spillsUpdateStatistics := g.registry.Counter(accounting.SPILLS_UPDATE_STATISTICS_STR)
+	spillsSeqScan := g.registry.Counter(accounting.SPILLS_SEQ_SCAN_STR)
 
 	now := time.Now()
 	newUtime, newStime := util.CpuTimes()
@@ -142,6 +145,9 @@ func (g *gometricsAccountingStore) Vitals(style util.DurationStyle) (map[string]
 		"request_time.95percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.95)), style),
 		"request_time.99percentile": util.FormatDuration(time.Duration(request_timer.Percentile(.99)), style),
 		"request.prepared.percent":  util.RoundPlaces(prepPercent, 4),
+		"spills.merge":              spillsMerge.Count(),
+		"spills.update_statistics":  spillsUpdateStatistics.Count(),
+		"spills.seq_scan":           spillsSeqScan.Count(),
 	}
 	g.Lock()
 	_, rss, total, free, _, err := system.GetSystemStats(g.stats, false, true)

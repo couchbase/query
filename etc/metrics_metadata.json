@@ -492,6 +492,21 @@
 		"added": "7.6.2",
 		"help": "The number of CURL() calls made by statements that failed (returned an error)."
 	},
+	"n1ql_spills_merge": {
+		"type": "counter",
+		"help": "Number of merge operations that have spilled to disk.",
+		"added": "7.6.12"
+	},
+	"n1ql_spills_update_statistics": {
+		"type": "counter",
+		"help": "Number of statistics update operations that have spilled to disk.",
+		"added": "7.6.12"
+	},
+	"n1ql_spills_seq_scan": {
+		"type": "counter",
+		"help": "Number of sequential scans that have spilled to disk.",
+		"added": "7.6.12"
+	},
 	"n1ql_ffdc_memory_threshold": {
 		"type": "counter",
 		"added": "7.6.6",
