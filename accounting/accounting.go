@@ -197,6 +197,9 @@ const (
 	SYSTEM_ERROR_COUNT
 
 	SPILLS_ORDER
+	SPILLS_MERGE
+	SPILLS_UPDATE_STATISTICS
+	SPILLS_SEQ_SCAN
 
 	FFDC_RQF
 	FFDC_PQF
@@ -304,7 +307,10 @@ const (
 	_USER_ERROR_COUNT   = "user_error_count"
 	_SYSTEM_ERROR_COUNT = "engine_error_count"
 
-	SPILLS_ORDER_STR = "spills_order"
+	SPILLS_ORDER_STR             = "spills_order"
+	SPILLS_MERGE_STR             = "spills_merge"
+	SPILLS_UPDATE_STATISTICS_STR = "spills_update_statistics"
+	SPILLS_SEQ_SCAN_STR          = "spills_seq_scan"
 
 	FFDC_RQF_COUNT   = "ffdc_request_queue_full"
 	FFDC_PQF_COUNT   = "ffdc_plus_queue_full"
@@ -403,6 +409,9 @@ var metricNames = []string{
 	_SYSTEM_ERROR_COUNT,
 
 	SPILLS_ORDER_STR,
+	SPILLS_MERGE_STR,
+	SPILLS_UPDATE_STATISTICS_STR,
+	SPILLS_SEQ_SCAN_STR,
 
 	FFDC_RQF_COUNT,
 	FFDC_PQF_COUNT,

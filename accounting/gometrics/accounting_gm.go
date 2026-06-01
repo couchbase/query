@@ -89,6 +89,9 @@ func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyl
 	prepared := g.registry.Counter(accounting.PREPAREDS)
 	used_memory_hwm := g.registry.Gauge(accounting.USED_MEMORY_HWM)
 	spillsOrder := g.registry.Counter(accounting.SPILLS_ORDER_STR)
+	spillsMerge := g.registry.Counter(accounting.SPILLS_MERGE_STR)
+	spillsUpdateStatistics := g.registry.Counter(accounting.SPILLS_UPDATE_STATISTICS_STR)
+	spillsSeqScan := g.registry.Counter(accounting.SPILLS_SEQ_SCAN_STR)
 
 	now := time.Now()
 	newUtime, newStime := util.CpuTimes()
@@ -132,6 +135,9 @@ func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyl
 		"request.quota.used.hwm":   used_memory_hwm.Value(),
 		"request.prepared.percent": util.RoundPlaces(prepPercent, 4),
 		"spills.order":             spillsOrder.Count(),
+		"spills.merge":             spillsMerge.Count(),
+		"spills.update_statistics": spillsUpdateStatistics.Count(),
+		"spills.seq_scan":          spillsSeqScan.Count(),
 	}
 	if backward {
 		rv["request.completed.count"] = totCount
