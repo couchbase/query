@@ -515,7 +515,7 @@
 	"n1ql_spills_order": {
 		"type": "counter",
 		"help": "Number of order by operations that have spilled to disk.",
-		"added": "8.0.0"
+		"added": "7.6.12"
 	},
 	"n1ql_spills_merge": {
 		"type": "counter",
