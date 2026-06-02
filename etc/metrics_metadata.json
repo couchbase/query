@@ -492,6 +492,11 @@
 		"added": "7.6.2",
 		"help": "The number of CURL() calls made by statements that failed (returned an error)."
 	},
+	"n1ql_spills_order": {
+		"type": "counter",
+		"help": "Number of order by operations that have spilled to disk.",
+		"added": "7.6.12"
+	},
 	"n1ql_spills_merge": {
 		"type": "counter",
 		"help": "Number of merge operations that have spilled to disk.",

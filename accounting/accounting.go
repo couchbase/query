@@ -210,6 +210,7 @@ const (
 	CURL_CALLS
 	CURL_CALL_ERRORS
 
+	SPILLS_ORDER
 	SPILLS_MERGE
 	SPILLS_UPDATE_STATISTICS
 	SPILLS_SEQ_SCAN
@@ -293,6 +294,7 @@ const (
 	_CURL_CALLS       = "curl_calls"
 	_CURL_CALL_ERRORS = "curl_call_errors"
 
+	SPILLS_ORDER_STR             = "spills_order"
 	SPILLS_MERGE_STR             = "spills_merge"
 	SPILLS_UPDATE_STATISTICS_STR = "spills_update_statistics"
 	SPILLS_SEQ_SCAN_STR          = "spills_seq_scan"
@@ -369,6 +371,7 @@ var metricNames = []string{
 	_CURL_CALLS,
 	_CURL_CALL_ERRORS,
 
+	SPILLS_ORDER_STR,
 	SPILLS_MERGE_STR,
 	SPILLS_UPDATE_STATISTICS_STR,
 	SPILLS_SEQ_SCAN_STR,

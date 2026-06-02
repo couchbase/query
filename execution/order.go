@@ -11,6 +11,7 @@ package execution
 import (
 	"encoding/json"
 
+	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/system"
@@ -26,9 +27,10 @@ type orderTerm struct {
 
 type Order struct {
 	base
-	plan   *plan.Order
-	values *value.AnnotatedArray
-	terms  []orderTerm
+	plan    *plan.Order
+	values  *value.AnnotatedArray
+	terms   []orderTerm
+	spilled bool
 }
 
 const _ORDER_CAP = 1024
@@ -54,7 +56,12 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 				} else if f > 0.7 {
 					f = 0.7
 				}
-				return context.CurrentQuotaUsage() > f
+				res := context.CurrentQuotaUsage() > f
+				if res && !rv.spilled {
+					rv.spilled = true
+					accounting.UpdateCounter(accounting.SPILLS_ORDER)
+				}
+				return res
 			}
 		} else {
 			maxSize := context.AvailableMemory()
@@ -65,7 +72,12 @@ func NewOrder(plan *plan.Order, context *Context) *Order {
 				maxSize = _MIN_SIZE
 			}
 			shouldSpill = func(c uint64, n uint64) bool {
-				return (c + n) > maxSize
+				res := (c + n) > maxSize
+				if res && !rv.spilled {
+					rv.spilled = true
+					accounting.UpdateCounter(accounting.SPILLS_ORDER)
+				}
+				return res
 			}
 		}
 	}
@@ -276,5 +288,6 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 
 func (this *Order) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
+	this.spilled = false
 	return rv
 }
