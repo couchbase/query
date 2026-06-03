@@ -143,22 +143,27 @@ var _EMPTY_EXTERNAL_MANIFEST *ExternalManifest = &ExternalManifest{Uid: 0, Scope
 func (b *Bucket) GetExternalCollectionsManifest() (*ExternalManifest, error) {
 	b.RLock()
 	client := b.pool.client
+	uid := b.ExternalCollectionsManifestUid
 	b.RUnlock()
+
+	if uid == "" {
+		return _EMPTY_EXTERNAL_MANIFEST, nil
+	}
 
 	var im InputExternalManifest
 	target := fmt.Sprintf(_MANIFEST_EXTERNAL_COLLECTION_PATH, uriAdj(b.Name))
 	err := client.parseURLResponse(target, nil, &im)
 	if err != nil {
-		if strings.Contains(err.Error(), HTTP_404) {
+		if strings.Contains(err.Error(), HTTP_404) || strings.Contains(err.Error(), HTTP_400) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	uid, err := strconv.ParseUint(im.Uid, 16, 64)
+	maniUid, err := strconv.ParseUint(im.Uid, 16, 64)
 	if err != nil {
 		return nil, err
 	}
-	mani := &ExternalManifest{Uid: uid, Scopes: make(map[string]*ExternalScope, len(im.Scopes))}
+	mani := &ExternalManifest{Uid: maniUid, Scopes: make(map[string]*ExternalScope, len(im.Scopes))}
 	for _, iscope := range im.Scopes {
 		scope_uid, err := strconv.ParseUint(iscope.Uid, 16, 64)
 		if err != nil {

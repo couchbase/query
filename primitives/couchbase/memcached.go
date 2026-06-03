@@ -126,6 +126,7 @@ type doDescriptor struct {
 
 const BUCKET_UUID_MISMATCH = "Bucket uuid does not match the requested"
 const BUCKET_NOT_FOUND = "Bucket not found"
+const HTTP_400 = "HTTP error 400"
 const HTTP_404 = "HTTP error 404"
 
 // Given a vbucket number, returns a memcached connection to it.
