@@ -242,21 +242,26 @@ type Pool struct {
 func (p *Pool) GetExternalCatalogs() (map[string]*extparams.CatalogEntry, uint64, error) {
 	p.RLock()
 	client := p.client
+	uid := p.ExternalCatalogsManifestUid
 	p.RUnlock()
+
+	if uid == 0 {
+		return nil, 0, nil
+	}
 
 	ret, err := client.getCatalogsRaw(nil)
 	if err != nil {
-		if strings.Contains(err.Error(), HTTP_404) {
+		if strings.Contains(err.Error(), HTTP_404) || strings.Contains(err.Error(), HTTP_400) {
 			return nil, 0, nil
 		}
 		return nil, 0, err
 	}
 
-	var uid uint64
+	var maniUid uint64
 	rv := make(map[string]*extparams.CatalogEntry, len(ret))
 	for n, v := range ret {
 		if n == "uid" {
-			json.Unmarshal(v, &uid)
+			json.Unmarshal(v, &maniUid)
 			continue
 		}
 		var vm map[string]any
@@ -270,7 +275,7 @@ func (p *Pool) GetExternalCatalogs() (map[string]*extparams.CatalogEntry, uint64
 		}
 		rv[n] = entry
 	}
-	return rv, uid, nil
+	return rv, maniUid, nil
 }
 
 // VBucketServerMap is the a mapping of vbuckets to nodes.
