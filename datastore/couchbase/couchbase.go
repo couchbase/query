@@ -40,6 +40,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/couchbase/gcagent"
 	"github.com/couchbase/query/datastore/virtual"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/extparams"
@@ -119,6 +120,9 @@ func init() {
 	// MB-27415 have a larger overflow pool and close overflow connections asynchronously
 	cb.SetConnectionPoolParams(_DEFAULT_CONN, _OVERFLOW_CONN)
 	cb.EnableAsynchronousCloser(true, _DEFAULT_TIMEOUT)
+	cb.ExternalCollectionsCapable = func() bool {
+		return distributed.RemoteAccess().Enabled(distributed.EXTERNAL_COLLECTIONS)
+	}
 
 	val, err := strconv.ParseBool(os.Getenv("REQUIRE_CBAUTH"))
 	if err != nil {
@@ -1615,8 +1619,12 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 
 						// another manifest arrived in the interim, and we've loaded the old one
 						// try again
+						var externalManiUid uint64
+						if externalMani != nil {
+							externalManiUid = externalMani.Uid
+						}
 						if mani.Uid < keyspace.newCollectionsManifestUid ||
-							externalMani.Uid < keyspace.newExternalCollectionsManifestUid {
+							externalManiUid < keyspace.newExternalCollectionsManifestUid {
 							keyspace.Unlock()
 							continue
 						}
@@ -1625,12 +1633,12 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 						if keyspace.flags&_CATALOG_MANIFEST_CHANGED != 0 ||
 							mani.Uid > keyspace.collectionsManifestUid ||
 							keyspace.collectionsManifestUid == _INVALID_MANIFEST_UID ||
-							externalMani.Uid > keyspace.externalCollectionsManifestUid ||
+							externalManiUid > keyspace.externalCollectionsManifestUid ||
 							keyspace.externalCollectionsManifestUid == _INVALID_MANIFEST_UID {
 							keyspace.collectionsManifestUid = mani.Uid
-							keyspace.externalCollectionsManifestUid = externalMani.Uid
+							keyspace.externalCollectionsManifestUid = externalManiUid
 							keyspace.scopes = scopes
-							logging.Infof("Refreshed manifest for bucket %v id %v (external %v)", name, mani.Uid, externalMani.Uid)
+							logging.Infof("Refreshed manifest for bucket %v id %v (external %v)", name, mani.Uid, externalManiUid)
 
 							// if there's no scopes fall back to bucket access
 							if len(scopes) == 0 {
@@ -2097,9 +2105,11 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 	externalMani, eErr := cbbucket.GetExternalCollectionsManifest()
 	if err == nil && eErr == nil {
 		rv.collectionsManifestUid = mani.Uid
-		rv.externalCollectionsManifestUid = externalMani.Uid
+		if externalMani != nil {
+			rv.externalCollectionsManifestUid = externalMani.Uid
+		}
 		rv.scopes, rv.defaultCollection = buildScopesAndCollections(mani, externalMani, rv)
-		logging.Infof("Loaded manifest for bucket %v id %v external(%v)", name, mani.Uid, externalMani.Uid)
+		logging.Infof("Loaded manifest for bucket %v id %v external(%v)", name, mani.Uid, rv.externalCollectionsManifestUid)
 	} else {
 		level := logging.INFO
 		// if we're a bit early and the data service is still starting up we may key a KEY_NOENT result here

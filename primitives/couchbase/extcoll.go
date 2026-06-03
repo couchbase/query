@@ -104,7 +104,7 @@ func (b *Bucket) GetExternalCollectionObj(scope, name string) (map[string]any, e
 func (b *Bucket) GetExternalCollectionEntry(scope, name string) (*extparams.ExternalCollectionEntry, error) {
 
 	mani, err := b.GetExternalCollectionsManifest()
-	if err != nil || len(mani.Scopes) == 0 {
+	if err != nil || mani == nil || len(mani.Scopes) == 0 {
 		return nil, err
 	}
 	sc, sok := mani.Scopes[scope]
@@ -140,15 +140,17 @@ type ExternalScope struct {
 
 var _EMPTY_EXTERNAL_MANIFEST *ExternalManifest = &ExternalManifest{Uid: 0, Scopes: map[string]*ExternalScope{}}
 
+// ExternalCollectionsCapable is set at startup by higher-level packages to gate
+// external collections support based on cluster capability negotiation.
+var ExternalCollectionsCapable = func() bool { return true }
+
 func (b *Bucket) GetExternalCollectionsManifest() (*ExternalManifest, error) {
+	if !ExternalCollectionsCapable() {
+		return nil, nil
+	}
 	b.RLock()
 	client := b.pool.client
-	uid := b.ExternalCollectionsManifestUid
 	b.RUnlock()
-
-	if uid == "" {
-		return _EMPTY_EXTERNAL_MANIFEST, nil
-	}
 
 	var im InputExternalManifest
 	target := fmt.Sprintf(_MANIFEST_EXTERNAL_COLLECTION_PATH, uriAdj(b.Name))
@@ -159,11 +161,11 @@ func (b *Bucket) GetExternalCollectionsManifest() (*ExternalManifest, error) {
 		}
 		return nil, err
 	}
-	maniUid, err := strconv.ParseUint(im.Uid, 16, 64)
+	uid, err := strconv.ParseUint(im.Uid, 16, 64)
 	if err != nil {
 		return nil, err
 	}
-	mani := &ExternalManifest{Uid: maniUid, Scopes: make(map[string]*ExternalScope, len(im.Scopes))}
+	mani := &ExternalManifest{Uid: uid, Scopes: make(map[string]*ExternalScope, len(im.Scopes))}
 	for _, iscope := range im.Scopes {
 		scope_uid, err := strconv.ParseUint(iscope.Uid, 16, 64)
 		if err != nil {
