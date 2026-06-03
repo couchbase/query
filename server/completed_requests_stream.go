@@ -82,7 +82,7 @@ const (
 	_ACTIVE_FILES                              = uint64(16)
 	_SWEEP_INTERVAL                            = time.Second * 30
 	_CRS_CLEANUP_INTERVAL                      = 15 * time.Minute
-	_MAX_RAW_SIZE                              = util.KiB * 10    // maximum raw size before closing (size when cached for reading)
+	_MAX_RAW_SIZE                              = util.MiB * 100   // maximum raw size before closing (size when cached for reading)
 	_MIN_RAW_SIZE                              = util.KiB * 256   // minimum raw size before being considered for initial idle flushing
 	_MAX_IDLE_1                                = time.Minute * 10 // idle stream files with at least _MIN_RAW_SIZE closed after this interval
 	_MAX_IDLE_2                                = time.Minute * 60 // idle stream files closed after this interval
