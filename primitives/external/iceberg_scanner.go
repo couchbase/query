@@ -2757,6 +2757,7 @@ func LoadCatalogMetadata(ctx go_context.Context, entry *extparams.CatalogEntry, 
 		SigV4SigningRegion: entry.SigV4SigningRegion,
 		SigV4SigningName:   entry.SigV4SigningName,
 		QuotaProjectID:     entry.QuotaProjectID,
+		Branch:             entry.Branch,
 		CatalogCred:        cred,
 		CollectionCred:     cred,
 	}

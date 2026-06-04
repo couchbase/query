@@ -59,13 +59,14 @@ const (
 	_catalogParamSigV4SigningRegion = "sigv4SigningRegion"
 	_catalogParamQuotaProjectID     = "quotaProjectId"
 	_catalogParamSQLDialect         = "sqlDialect"
+	_catalogParamBranch             = "branch"
 	CatalogRevison                  = "rev"
 )
 
 var catalogParamsTypes = map[string]any{_catalogName: "", _catalogType: "", _catalogSource: "", _catalogCredentialId: "",
 	CatalogRevison: 1, _catalogUid: "", _catalogParamURI: "", _catalogParamWarehouse: "", _catalogParamSigV4SigningName: "",
 	_catalogParamSigV4SigningRegion: "", _catalogParamQuotaProjectID: "", _catalogCompatVersion: 1,
-	_catalogParamSQLDialect: ""}
+	_catalogParamSQLDialect: "", _catalogParamBranch: ""}
 
 var catalogMandatoryTypeParams = map[string][]string{
 	CatalogTypeIceberg: {_catalogName, _catalogType, _catalogSource},
@@ -98,8 +99,9 @@ var catalogSourceTypeParams = map[string][]string{
 // whose username and password are injected into the DSN at connect time,
 // keeping the URI itself credential-free.
 var catalogSourceOptionalParams = map[string][]string{
+	CatalogSourceNessie:       {_catalogParamBranch},
 	CatalogSourceRest:         {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
-	CatalogSourceNessieRest:   {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
+	CatalogSourceNessieRest:   {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID, _catalogParamBranch},
 	CatalogSourceUnityCatalog: {_catalogParamWarehouse, _catalogParamSigV4SigningRegion, _catalogParamSigV4SigningName, _catalogParamQuotaProjectID},
 	CatalogSourceSQL:          {_catalogCredentialId, _catalogParamSQLDialect},
 }
@@ -228,6 +230,7 @@ type CatalogEntry struct {
 	SigV4SigningRegion string `json:"sigv4SigningRegion,omitempty"`
 	QuotaProjectID     string `json:"quotaProjectId,omitempty"`
 	SQLDialect         string `json:"sqlDialect,omitempty"`
+	Branch             string `json:"branch,omitempty"`
 	SUid               string `json:"uid"`
 	Uid                uint64
 }
