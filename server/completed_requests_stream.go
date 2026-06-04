@@ -269,8 +269,10 @@ func requestMetadataFileName(num uint64) string {
 	return fmt.Sprintf("%s/%s%d", ffdc.GetPath(), _REQUEST_LOG_STREAM_METADATA_FILE, num)
 }
 
-func requestLogStreamTransformFileName(num uint64) string {
-	return fmt.Sprintf("%s/%s%d", ffdc.GetPath(), _STREAM_REENCRYPT_ARCHIVE_FILE_NAME_PREFIX, num)
+// Pass a unique UUID to embed in the staging file name so that a new transformation attempt on the same archive file does not
+// reuse the exact same path and get accidentally deleted by the background orphan file cleanup routine
+func requestLogStreamTransformFileName(num uint64, id string) string {
+	return fmt.Sprintf("%s/%s%d.%s", ffdc.GetPath(), _STREAM_REENCRYPT_ARCHIVE_FILE_NAME_PREFIX, num, id)
 }
 
 func logFilePath(fileName string) string {
@@ -1575,9 +1577,8 @@ func (this *requestLogStream) periodicCRSCleanup() {
 	}
 }
 
-func (fi *fileInfo) encryptUnencryptedFile(activeKey *encryption.EaRKey) error {
+func (fi *fileInfo) encryptUnencryptedFile(activeKey *encryption.EaRKey, encPath string) error {
 	origPath := requestLogStreamFileName(fi.num)
-	encPath := requestLogStreamTransformFileName(fi.num)
 	metaPath := requestMetadataFileName(fi.num)
 
 	f, err := os.Open(origPath)
@@ -1648,10 +1649,9 @@ func (fi *fileInfo) encryptUnencryptedFile(activeKey *encryption.EaRKey) error {
 	return nil
 }
 
-func (fi *fileInfo) reencryptEncryptedFile(encProvider encryption.EncryptionProvider, activeKey *encryption.EaRKey) error {
+func (fi *fileInfo) reencryptEncryptedFile(encProvider encryption.EncryptionProvider, activeKey *encryption.EaRKey, encPath string) error {
 
 	origPath := requestLogStreamFileName(fi.num)
-	encPath := requestLogStreamTransformFileName(fi.num)
 
 	src, err := os.Open(origPath)
 	if err != nil {
@@ -1682,10 +1682,9 @@ func (fi *fileInfo) reencryptEncryptedFile(encProvider encryption.EncryptionProv
 	return nil
 }
 
-func (fi *fileInfo) decryptEncryptedFile(encProvider encryption.EncryptionProvider) error {
+func (fi *fileInfo) decryptEncryptedFile(encProvider encryption.EncryptionProvider, decPath string) error {
 	origPath := requestLogStreamFileName(fi.num)
 	metaPath := requestMetadataFileName(fi.num)
-	decPath := requestLogStreamTransformFileName(fi.num)
 
 	src, err := os.Open(origPath)
 	if err != nil {
@@ -1741,25 +1740,26 @@ func (this *fileInfo) transformForKeyDrop(keyIdToDrop string, activeKey *encrypt
 
 	targetKeyID := _STREAM_UNSET_KEY_ID
 
+	transformID, _ := util.UUIDV4()
+	origPath := requestLogStreamFileName(this.num)
+	transformPath := requestLogStreamTransformFileName(this.num, transformID)
+
 	// Step 1: create transformed file
 	var transformErr error
 	// unencrypted -> encrypted (active key)
 	if keyIdToDrop == encryption.UNENCRYPTED_KEY_ID {
 		targetKeyID = activeKey.Id
 		this.setTargetKeyID(true, targetKeyID)
-		transformErr = this.encryptUnencryptedFile(activeKey)
+		transformErr = this.encryptUnencryptedFile(activeKey, transformPath)
 	} else if activeKey == nil { // encrypted -> unencrypted
 		targetKeyID = encryption.UNENCRYPTED_KEY_ID
 		this.setTargetKeyID(true, targetKeyID)
-		transformErr = this.decryptEncryptedFile(encProvider)
+		transformErr = this.decryptEncryptedFile(encProvider, transformPath)
 	} else { // encrypted (old key) -> encrypted (active key)
 		targetKeyID = activeKey.Id
 		this.setTargetKeyID(true, targetKeyID)
-		transformErr = this.reencryptEncryptedFile(encProvider, activeKey)
+		transformErr = this.reencryptEncryptedFile(encProvider, activeKey, transformPath)
 	}
-
-	origPath := requestLogStreamFileName(this.num)
-	transformPath := requestLogStreamTransformFileName(this.num)
 
 	cleanup := func() {
 		// Delete the transform file

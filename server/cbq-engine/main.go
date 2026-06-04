@@ -666,9 +666,8 @@ func primeEncryptionManager(encryptionMgr keymgmt.EncryptionManager, ds datastor
 }
 
 func setupEncryptionManager(encryptors []keymgmt.TrackedEncryptor) (keymgmt.EncryptionManager, error) {
-	trackedTypes := make([]encryption.KeyDataType, 2)
+	trackedTypes := make([]encryption.KeyDataType, 1)
 	trackedTypes[0] = encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
-	trackedTypes[1] = encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE}
 
 	encryptionMgr := keymgmt.NewEncryptionManager(trackedTypes, encryptors)
 	err := encryptionMgr.RegisterCbauthEncryptionCallbacks()

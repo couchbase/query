@@ -22,6 +22,7 @@ import (
 	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 )
 
 type ffdcFile struct {
@@ -123,9 +124,17 @@ func (this *ffdcFile) transformFile(targetKeyID string, stagingEncrypted bool,
 	originalName, sensitive, currentKeyId, _ := this.AllFields(false)
 	this.lock.Unlock()
 
+	uid, _ := util.UUIDV4()
 	ffdcPath := path.Join(GetPath(), originalName)
-	tmpName := getStagingFileName(originalName, stagingEncrypted)
+	tmpName := getStagingFileName(originalName, stagingEncrypted, uid)
 	tmpPath := path.Join(GetPath(), tmpName)
+
+	var finalName string
+	if stagingEncrypted {
+		finalName = strings.TrimSuffix(originalName, unencryptedFileExtension)
+	} else {
+		finalName = strings.TrimSuffix(originalName, unencryptedFileExtension) + unencryptedFileExtension
+	}
 
 	wait := 100 * time.Millisecond
 	maxAttempts := 5
@@ -172,7 +181,6 @@ func (this *ffdcFile) transformFile(targetKeyID string, stagingEncrypted bool,
 	dst.Close()
 	src.Close()
 
-	finalName := strings.TrimPrefix(tmpName, reencryptPrefix)
 	var renameErr error
 	if transformErr == nil {
 		var oldPath string
@@ -345,13 +353,17 @@ func genFfdcFile(fileName string) (*ffdcFile, bool, error) {
 
 }
 
-func getStagingFileName(fileName string, isStagingEncrypted bool) string {
+// Pass a unique UUID to embed in the staging file name so that a new transformation attempt on the same FFDC file does not reuse
+// the exact same path and get accidentally deleted by the background orphan file cleanup routine
+func getStagingFileName(fileName string, isStagingEncrypted bool, uid string) string {
 	fileName = strings.TrimSuffix(fileName[len(fileNamePrefix)+1:], unencryptedFileExtension)
 
 	var sb strings.Builder
 	sb.WriteString(reencryptFileNamePrefix)
 	sb.WriteString("_")
 	sb.WriteString(fileName)
+	sb.WriteString(".")
+	sb.WriteString(uid)
 
 	if isStagingEncrypted {
 		return sb.String()
