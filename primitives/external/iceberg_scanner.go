@@ -442,6 +442,9 @@ func buildRESTStorageProps(cred *cbauth.Credential) (iceberg.Properties, error) 
 			props[_gcsEndpoint] = cred.GCP.Endpoint
 		}
 		return props, nil
+	case "http", "couchbase":
+		// Auth-only credential types — not used for storage; return nothing rather than erroring.
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("credential type %q is not a recognized storage credential", cred.Type)
 	}
@@ -916,7 +919,11 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 			}
 		}
 
-		if opts.Warehouse != "" {
+		// Nessie manages warehouse locations server-side. Forwarding an S3 URI as
+		// the warehouse parameter causes Nessie to return "Warehouse '...' is not known".
+		// Only pass a warehouse value when it is a Nessie-registered warehouse name
+		// (i.e. it does not look like a URI scheme).
+		if opts.Warehouse != "" && !strings.Contains(opts.Warehouse, "://") {
 			restOpts = append(restOpts, rest.WithWarehouseLocation(opts.Warehouse))
 		}
 
@@ -2729,7 +2736,11 @@ func LoadCatalogMetadata(ctx go_context.Context, entry *extparams.CatalogEntry, 
 		return nil, err
 	}
 
-	// Create catalog options
+	// Create catalog options.
+	// CollectionCred mirrors CatalogCred so that catalogs like Nessie, which do
+	// not vend storage credentials in LoadTableResponse, still get S3/GCS/ADLS
+	// props for reading manifest files. buildRESTStorageProps returns nil cleanly
+	// for auth-only types (http, couchbase), so this is safe for all credential types.
 	opts := ScanOptions{
 		SourceType:         entry.Source,
 		URI:                entry.URI,
@@ -2738,6 +2749,7 @@ func LoadCatalogMetadata(ctx go_context.Context, entry *extparams.CatalogEntry, 
 		SigV4SigningName:   entry.SigV4SigningName,
 		QuotaProjectID:     entry.QuotaProjectID,
 		CatalogCred:        cred,
+		CollectionCred:     cred,
 	}
 
 	// Create the appropriate catalog
