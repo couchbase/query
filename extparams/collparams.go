@@ -25,6 +25,7 @@ const (
 	_collectionTableName         = "tableName"
 	_collectionSnapshotId        = "snapshotId"
 	_collectionSnapshotTimestamp = "snapshotTimestamp"
+	_collectionBranch            = "branch"
 	_collectionParallelScans     = "parallelScans"
 	_collectionDecimalToDouble   = "decimal-to-double"
 	_collectionUid               = "uid"
@@ -36,9 +37,9 @@ const (
 )
 
 var collectionParamsTypes = map[string]any{CollectionRevison: "", _collectionFormat: "", _collectionNamespace: "",
-	_collectionTableName: "", _collectionSnapshotId: "", _collectionSnapshotTimestamp: "", _collectionParallelScans: 1,
-	_collectionDecimalToDouble: false,
-	_collectionCatalog:         "", _collectionCatalogType: "", _collectionCredentialId: "",
+	_collectionTableName: "", _collectionSnapshotId: "", _collectionSnapshotTimestamp: "", _collectionBranch: "",
+	_collectionParallelScans: 1, _collectionDecimalToDouble: false,
+	_collectionCatalog: "", _collectionCatalogType: "", _collectionCredentialId: "",
 	_collectionUid: "", _collectionBucket: "", _collectionScope: "", _collectionName: "", _collectionCompatVersion: 1}
 
 // Valid parameters for each catalog type
@@ -47,8 +48,8 @@ var collectionMandatoryTypeParams = map[string][]string{
 }
 
 var collectionOptinalTypeParams = map[string][]string{
-	CatalogTypeIceberg: {CollectionRevison, _collectionSnapshotId, _collectionSnapshotTimestamp, _collectionParallelScans,
-		_collectionDecimalToDouble,
+	CatalogTypeIceberg: {CollectionRevison, _collectionSnapshotId, _collectionSnapshotTimestamp, _collectionBranch,
+		_collectionParallelScans, _collectionDecimalToDouble,
 		_collectionFormat, _collectionUid, _collectionBucket, _collectionScope, _collectionName, _collectionCompatVersion},
 }
 
@@ -164,6 +165,7 @@ type ExternalCollectionEntry struct {
 	TableName         string `json:"tableName"`
 	SnapshotId        string `json:"snapshotId,omitempty"`
 	SnapshotTimestamp string `json:"snapshotTimestamp,omitempty"`
+	Branch            string `json:"branch,omitempty"`
 	ParallelScans     int    `json:"parallelScans,omitempty"`
 	DecimalToDouble   bool   `json:"decimal-to-double,omitempty"`
 	Uid               uint64

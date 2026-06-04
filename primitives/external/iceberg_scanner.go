@@ -121,6 +121,7 @@ type ScanOptions struct {
 	ParallelScans      int  // Scan parallelism override (defaults to 1 if not set)
 	DecimalToDouble    bool // When true, Decimal128/256 columns are converted to float64 instead of string
 	SQLDialect         string
+	Branch             string // Nessie branch/ref; maps to rest.WithPrefix for NESSIE/NESSIE_REST
 }
 
 // NewAWSConfig creates an AWS config from credentials and region
@@ -924,7 +925,11 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		// by pre-registered names, not by URI, and rejects unknown values with
 		// "IllegalStateException: Warehouse '<uri>' is not known".
 
-		logging.Debugf("createCatalog: creating NESSIE catalog, uri=%s, warehouse=%s", opts.URI, opts.Warehouse)
+		if opts.Branch != "" {
+			restOpts = append(restOpts, rest.WithPrefix(opts.Branch))
+		}
+
+		logging.Debugf("createCatalog: creating NESSIE catalog, uri=%s, warehouse=%s, branch=%s", opts.URI, opts.Warehouse, opts.Branch)
 
 		// Add panic recovery in case there's a panic in rest.NewCatalog
 		var cat catalog.Catalog
@@ -1000,6 +1005,10 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		// forwarded — Nessie's /v1/config endpoint rejects S3 URIs as warehouse values.
 		if opts.Warehouse != "" && sourceType != "NESSIE_REST" {
 			restOpts = append(restOpts, rest.WithWarehouseLocation(opts.Warehouse))
+		}
+
+		if opts.Branch != "" && (sourceType == "NESSIE_REST") {
+			restOpts = append(restOpts, rest.WithPrefix(opts.Branch))
 		}
 
 		// The catalog name is just a label iceberg-go uses for logging; preserve

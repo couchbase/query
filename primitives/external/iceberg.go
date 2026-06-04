@@ -361,6 +361,7 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 			ParallelScans:      parallelScans,
 			DecimalToDouble:    externalEntry.DecimalToDouble,
 			SQLDialect:         catalogInfo.SQLDialect,
+			Branch:             externalEntry.Branch,
 		}
 		params.ScanOptions = opts
 	}
