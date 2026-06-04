@@ -919,13 +919,10 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 			}
 		}
 
-		// Nessie manages warehouse locations server-side. Forwarding an S3 URI as
-		// the warehouse parameter causes Nessie to return "Warehouse '...' is not known".
-		// Only pass a warehouse value when it is a Nessie-registered warehouse name
-		// (i.e. it does not look like a URI scheme).
-		if opts.Warehouse != "" && !strings.Contains(opts.Warehouse, "://") {
-			restOpts = append(restOpts, rest.WithWarehouseLocation(opts.Warehouse))
-		}
+		// Warehouse is stored in the catalog definition (S3/GCS/ADLS storage root) but
+		// must not be forwarded to Nessie's /v1/config endpoint — Nessie looks up warehouses
+		// by pre-registered names, not by URI, and rejects unknown values with
+		// "IllegalStateException: Warehouse '<uri>' is not known".
 
 		logging.Debugf("createCatalog: creating NESSIE catalog, uri=%s, warehouse=%s", opts.URI, opts.Warehouse)
 
@@ -998,7 +995,10 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 			}
 		}
 
-		if opts.Warehouse != "" {
+		// For pure REST and non-Nessie endpoints pass the warehouse through; for
+		// NESSIE_REST the warehouse is stored in the catalog definition but must not be
+		// forwarded — Nessie's /v1/config endpoint rejects S3 URIs as warehouse values.
+		if opts.Warehouse != "" && sourceType != "NESSIE_REST" {
 			restOpts = append(restOpts, rest.WithWarehouseLocation(opts.Warehouse))
 		}
 
