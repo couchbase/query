@@ -21,6 +21,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -75,7 +76,8 @@ func init() {
 
 func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
-	serverless bool, useReplica bool, skipKey func(string) bool, encryptionKey *encryption.EaRKey) (interface{}, qerrors.Error) {
+	serverless bool, useReplica bool, skipKey func(string) bool, encryptionKey *encryption.EaRKey,
+	snapshotReqs map[uint16]*memcached.SnapshotRequirements) (interface{}, qerrors.Error) {
 	if log == nil {
 		log = logging.NULL_LOG
 	}
@@ -89,12 +91,130 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 	}
 
 	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica, skipKey,
-		encryptionKey)
+		encryptionKey, snapshotReqs)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
 
 	return scan, nil
+}
+
+// failoverLogConnSeq makes the DCP producer connection name used for failover-log retrieval
+// unique across concurrent GetSeqnosForConsistency calls, so KV does not disconnect a
+// same-named producer.
+var failoverLogConnSeq uint64
+
+// GetSeqnosForConsistency fetches the current high-seqno and VbUUID for every active vbucket
+// across all servers, used to build snapshot_requirements for REQUEST_PLUS range scans.
+//
+// A snapshot requirement without a VbUUID is invalid: KV uses the VbUUID to bind the seqno to a
+// failover branch, and a CREATE_RANGE_SCAN carrying a seqno but no vb_uuid is rejected by closing
+// the connection (surfaces as an EOF on scan creation). Both the seqno and the failover-log
+// retrieval are therefore treated as fatal here rather than silently degraded - we never emit a
+// requirement with an empty VbUUID and never silently drop a server's vbuckets.
+func (b *Bucket) GetSeqnosForConsistency(collId uint32, timeoutMs uint64) (
+	map[uint16]*memcached.SnapshotRequirements, error) {
+
+	pools := b.getConnPools(false)
+	vbActive := memcached.VbActive
+	ctx := &memcached.ClientContext{CollId: collId, VbState: &vbActive}
+
+	dl := time.Duration(timeoutMs) * time.Millisecond
+	if dl == 0 {
+		dl = DefaultTimeout
+	}
+
+	type vbInfo struct {
+		seqno  uint64
+		vbUUID string
+	}
+	combined := make(map[uint16]vbInfo)
+
+	for _, pool := range pools {
+		conn, err := pool.Get()
+		if err != nil {
+			return nil, fmt.Errorf("snapshot requirements: failed to get connection: %v", err)
+		}
+
+		// The general connection pools are shared with scan cancel goroutines which call
+		// SetDeadline before each cancel op and don't clear it when returning the connection.
+		// Always set a fresh deadline here so a stale expired deadline doesn't cause an
+		// immediate i/o timeout on the Transmit inside GetAllVbSeqnos.
+		if dl > 0 {
+			conn.SetDeadline(time.Now().Add(dl))
+		}
+		serverSeqnos, err := conn.GetAllVbSeqnos(nil, ctx)
+		if err != nil {
+			conn.SetDeadline(time.Time{})
+			// GetAllVbSeqnos is an ordinary op; the connection is still clean to reuse.
+			pool.Return(conn)
+			return nil, fmt.Errorf("snapshot requirements: GetAllVbSeqnos failed: %v", err)
+		}
+
+		vbList := make([]uint16, 0, len(serverSeqnos))
+		for vb := range serverSeqnos {
+			vbList = append(vbList, vb)
+		}
+
+		failoverLogs, ferr := getFailoverLogsViaDCP(pool, conn, vbList, b.Name, dl)
+		if ferr != nil {
+			return nil, fmt.Errorf("snapshot requirements: %v", ferr)
+		}
+
+		for vb, seqno := range serverSeqnos {
+			log, ok := failoverLogs[vb]
+			if !ok || log == nil || len(*log) == 0 {
+				return nil, fmt.Errorf("snapshot requirements: no failover log entry for vb %d", vb)
+			}
+			combined[vb] = vbInfo{seqno: seqno, vbUUID: strconv.FormatUint((*log)[0][0], 10)}
+		}
+	}
+
+	reqs := make(map[uint16]*memcached.SnapshotRequirements, len(combined))
+	for vb, info := range combined {
+		reqs[vb] = &memcached.SnapshotRequirements{
+			Seqno:     info.seqno,
+			VbUUID:    info.vbUUID,
+			TimeoutMs: uint64(dl.Milliseconds()),
+		}
+	}
+	return reqs, nil
+}
+
+// getFailoverLogsViaDCP upgrades conn to a DCP producer and returns the failover log for vbList.
+//
+// UPR_FAILOVERLOG is a DCP command; modern KV rejects it with EINVAL ("The command can only be sent
+// on a DCP connection") unless the connection has first completed a UPR_OPEN producer handshake, so
+// conn is opened as a DCP producer before the log is requested. The producer name must be unique so
+// KV does not disconnect a concurrently-open producer of the same name; no DCP features are needed
+// since we only read the failover log.
+//
+// Once conn has spoken UPR_OPEN it must never be reused as a general op (or upr data) connection, so
+// it is always handed back to the pool via Discard - on success and on failure alike. Discard (not a
+// bare Close) releases the pool's createsem slot; a bare Close leaks the slot and eventually drains
+// the pool's connection-create capacity.
+func getFailoverLogsViaDCP(pool *connectionPool, conn *memcached.Client, vbList []uint16, bucketName string,
+	dl time.Duration) (map[uint16]*memcached.FailoverLog, error) {
+
+	if dl > 0 {
+		conn.SetDeadline(time.Now().Add(dl))
+	}
+
+	var noFeatures memcached.UprFeatures
+	connName := fmt.Sprintf("query-failoverlog-%s-%d", bucketName, atomic.AddUint64(&failoverLogConnSeq, 1))
+	if oerr := conn.UprOpen(connName, 0, noFeatures); oerr != nil {
+		conn.SetDeadline(time.Time{})
+		pool.Discard(conn)
+		return nil, fmt.Errorf("UprOpen failed for %d vbuckets: %v", len(vbList), oerr)
+	}
+
+	failoverLogs, ferr := conn.UprGetFailoverLog(vbList)
+	conn.SetDeadline(time.Time{})
+	pool.Discard(conn)
+	if ferr != nil {
+		return nil, fmt.Errorf("UprGetFailoverLog failed for %d vbuckets: %v", len(vbList), ferr)
+	}
+	return failoverLogs, nil
 }
 
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
@@ -363,11 +483,13 @@ type seqScan struct {
 	timedout      bool
 	withDocs      bool
 	encryptionKey *encryption.EaRKey
+	snapshotReqs  map[uint16]*memcached.SnapshotRequirements
 	spilled       atomic.Bool
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool, encryptionKey *encryption.EaRKey) *seqScan {
+	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool, encryptionKey *encryption.EaRKey,
+	snapshotReqs map[uint16]*memcached.SnapshotRequirements) *seqScan {
 
 	scan := &seqScan{
 		scanNum:       atomic.AddUint64(&scanNum, 1),
@@ -383,6 +505,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 		useReplica:    useReplica,
 		skipKey:       skipKey,
 		encryptionKey: encryptionKey,
+		snapshotReqs:  snapshotReqs,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -1804,7 +1927,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 		}
 	}()
 
-	if this.singleKey && !conn.Replica() {
+	if this.singleKey && !conn.Replica() && this.scan.snapshotReqs == nil {
 		return this.validateSingleKey(conn)
 	}
 
@@ -1824,6 +1947,9 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 
 	createScan := func() (bool, bool) {
 		cc := &memcached.ClientContext{CollId: this.scan.collId, IncludeXATTRs: this.scan.xattrs}
+		if this.scan.snapshotReqs != nil {
+			cc.SeqScanSnapshotReqs = this.scan.snapshotReqs[this.vb]
+		}
 		if this.sampleSize != 0 {
 			fetchLimit = uint32(this.sampleSize)
 			if this.sampleSize == math.MaxInt {

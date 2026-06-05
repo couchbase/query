@@ -26,6 +26,7 @@ import (
 	"github.com/couchbase/query/extparams"
 	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/primitives/external"
+	"github.com/couchbase/query/timestamp"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -619,7 +620,7 @@ func (coll *collection) ExternalEntry() *extparams.ExternalCollectionEntry {
 
 func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange,
 	offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool,
-	skipKey func(string) bool) (
+	skipKey func(string) bool, cons datastore.ScanConsistency, vector timestamp.Vector) (
 	interface{}, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
@@ -633,8 +634,19 @@ func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*d
 	if err != nil {
 		return nil, err
 	}
+
+	t := timeout
+	if t == 0 {
+		t = cb.DefaultTimeout
+	}
+	timeoutMs := uint64(t.Milliseconds())
+	snapshotReqs, err := buildSnapshotReqs(cons, vector, timeoutMs, coll.uid, coll.bucket.cbbucket)
+	if err != nil {
+		return nil, err
+	}
+
 	return coll.bucket.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
-		pipelineSize, serverless, context.UseReplica(), skipKey, encryptionKey)
+		pipelineSize, serverless, context.UseReplica(), skipKey, encryptionKey, snapshotReqs)
 }
 
 func (coll *collection) StopScan(scan interface{}) (uint64, errors.Error) {

@@ -428,7 +428,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 		sk = conn.SkipKey
 	}
 
-	ss, err = scanner.StartKeyScan(qctx, ranges, offset, limit, ordered, tout, conn.Sender().Capacity(), tenant.IsServerless(), sk)
+	ss, err = scanner.StartKeyScan(qctx, ranges, offset, limit, ordered, tout, conn.Sender().Capacity(), tenant.IsServerless(), sk, cons, vector)
 	if err != nil {
 		conn.Error(qe.NewSSError(qe.E_SS_FAILED, err))
 		return
