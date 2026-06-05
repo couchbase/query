@@ -1027,6 +1027,8 @@ const ( // Request argument names
 	NATURAL_OUTPUT     = "natural_output"
 	NATURAL_EXECUTE    = "natural_execute"
 	NATURAL_CHATID     = "natural_chatid"
+	NATURAL_VENDOR     = "natural_vendor"
+	NATURAL_MODEL      = "natural_model"
 )
 
 type argHandler struct {
@@ -1096,6 +1098,8 @@ var _PARAMETERS = map[string]*argHandler{
 	NATURAL_OUTPUT:  {handleNaturalOutput, false},
 	NATURAL_EXECUTE: {handleNaturalExecute, false},
 	NATURAL_CHATID:  {handleNaturalChatId, false},
+	NATURAL_VENDOR:  {handleNaturalVendor, false},
+	NATURAL_MODEL:   {handleNaturalModel, false},
 }
 
 // common storage for the httpArgs implementations
@@ -2569,6 +2573,22 @@ func handleNaturalChatId(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	naturalChatId, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalChatId(naturalChatId)
+	}
+	return err
+}
+
+func handleNaturalVendor(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalVendor, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetNaturalVendor(naturalVendor)
+	}
+	return err
+}
+
+func handleNaturalModel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalModel, err := httpArgs.getStringVal(parm, val)
+	if err == nil {
+		rv.SetNaturalModel(naturalModel)
 	}
 	return err
 }

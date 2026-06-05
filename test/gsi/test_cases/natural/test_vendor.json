@@ -1,0 +1,12 @@
+[
+    {
+        "testcase": "Model specfied without vendor",
+        "statements": "USING AI WITH {\"model\":\"gpt-3.5-turbo\", \"keyspaces\":\"orders\"} Show few documents",
+        "errorCode": 19226
+    },
+    {
+        "testcase": "unsupported vendor specified; openai and bedrock are the only supported vendors at the time of this commit.",
+        "statements": "USING AI WITH {\"vendor\":\"not a real vendor\", \"keyspaces\":\"orders\"} Show few documents",
+        "errorCode": 19228
+    }
+]

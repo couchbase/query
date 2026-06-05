@@ -505,4 +505,8 @@ var _FUNCTIONS = map[string]Function{
 	"vector_normalize":       &NormalizeVector{},
 	"vector_normalise":       &NormalizeVector{},
 	"reciprocal_fusion":      &ReciprocalFusion{},
+
+	// related to Natural Language / AI Query
+	"natural_model_providers": &ModelProviders{},
+	"model_providers":         &ModelProviders{},
 }

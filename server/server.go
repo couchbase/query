@@ -853,7 +853,9 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 
 	if request.NaturalPauseChat() {
 		err := natural.ProcessPauseChat(chatId, request.Id().String(), datastore.CredsString(request.Credentials()),
-			request.NaturalOrganizationId(), request.NaturalCred(), request.NaturalSummarize(), request.Output().AddPhaseTime)
+			request.NaturalOrganizationId(), request.NaturalCred(),
+			request.NaturalSummarize(), request.NaturalVendor(), request.NaturalModel(),
+			request.Output().AddPhaseTime)
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
@@ -930,13 +932,21 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 
 	var nlAlgebraStmt algebra.Statement
 	var stmt string
+	if request.NaturalModel() != "" && request.NaturalVendor() == "" {
+		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR))
+		request.Failed(this)
+		return true, false
+	}
+
 	if chatId != "" {
 		user := datastore.CredsString(request.Credentials())
 		stmt, nlAlgebraStmt, err = natural.ProcessConversationalRequest(request.NaturalCred(), request.NaturalOrganizationId(),
+			request.NaturalVendor(), request.NaturalModel(),
 			nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), user,
 			request.ExecutionContext(), request.Output().AddPhaseTime)
 	} else {
 		stmt, nlAlgebraStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
+			request.NaturalVendor(), request.NaturalModel(),
 			nlquery, request.NaturalHint(), elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
 			request.ExecutionContext(), request.Output().AddPhaseTime)
 	}

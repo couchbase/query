@@ -8244,14 +8244,6 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_SEND_CHATCOMPLETIONS_REQ, // 19208
-		symbol:      "E_NL_SEND_CHATCOMPLETIONS_REQ",
-		Description: "Couldn't send chat completions request to «chat completions api»",
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
 		Code:        E_NL_CHATCOMPLETIONS_REQ_FAILED, // 19209
 		symbol:      "E_NL_CHATCOMPLETIONS_REQ_FAILED",
 		Description: "Chat completions request failed with status «http-status-code»",
@@ -8264,14 +8256,6 @@ var errData = []ErrData{
 			"Status 429: Retry later.",
 			"Status 404: Verify the credentials provided for natural language processing.",
 		},
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
-		Code:        E_NL_CHATCOMPLETIONS_READ_RESP_STREAM, // 19210
-		symbol:      "E_NL_CHATCOMPLETIONS_READ_RESP_STREAM",
-		Description: "Error reading response stream from chat completion API «url»",
 		AppliesTo: []string{
 			"Server",
 		},
@@ -8395,14 +8379,6 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CREATE_CHATCOMPLETIONS_REQ, // 19219
-		symbol:      "E_NL_CREATE_CHATCOMPLETIONS_REQ",
-		Description: "Failed to create a new request to «chat completions api»",
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
 		Code:        E_NL_TOO_MANY_WAITERS, // 19220
 		symbol:      "E_NL_TOO_MANY_WAITERS",
 		Description: "Too many waiters, dropping the request",
@@ -8445,7 +8421,141 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_UNRECOGNIZED_STATEMENT, // 19224
+		Code:        E_NL_V2_CREATE_REQ, // 19224
+		symbol:      "E_NL_V2_CREATE_REQ",
+		Description: "Failed to create v2 API request.",
+		Reason: []string{
+			"An HTTP request object could not be created for the v2 API endpoint.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_V2_SEND_REQ, // 19225
+		symbol:      "E_NL_V2_SEND_REQ",
+		Description: "Failed to send v2 API request.",
+		Reason: []string{
+			"The HTTP request to the v2 API endpoint could not be sent.",
+		},
+		Action: []string{
+			"Check network connectivity to the Capella control plane.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MODEL_WITHOUT_VENDOR, // 19226
+		symbol:      "E_NL_MODEL_WITHOUT_VENDOR",
+		Description: "Natural language \"model\" option requires \"vendor\" to also be set.",
+		Reason: []string{
+			"A model was specified in the WITH clause or as a request parameter without specifying a vendor.",
+		},
+		Action: []string{
+			"Set the \"vendor\" option alongside \"model\".",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_VENDOR_NOT_ENABLED, // 19227
+		symbol:      "E_NL_VENDOR_NOT_ENABLED",
+		Description: "The specified vendor is not enabled for this organization.",
+		Reason: []string{
+			"The vendor specified in the WITH clause or as a request parameter exists but is not in the list of enabled model providers for the organization.",
+		},
+		Action: []string{
+			"Enable the vendor for the organization, or omit the vendor to let the server select one automatically.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_VENDOR_NOT_SUPPORTED, // 19228
+		symbol:      "E_NL_VENDOR_NOT_SUPPORTED",
+		Description: "The specified vendor is not supported.",
+		Reason: []string{
+			"The vendor specified in the WITH clause or as a request parameter is not a recognized vendor.",
+		},
+		Action: []string{
+			"Use a supported vendor such as \"openai\" or \"bedrock\".",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_NO_VENDORS_AVAILABLE, // 19229
+		symbol:      "E_NL_NO_VENDORS_AVAILABLE",
+		Description: "No model providers are available for this organization.",
+		Reason: []string{
+			"The model providers API returned an empty list — no providers are configured for the organization.",
+		},
+		Action: []string{
+			"Configure and enable at least one model provider for the organization in Capella.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_NO_VENDORS_ENABLED, // 19230
+		symbol:      "E_NL_NO_VENDORS_ENABLED",
+		Description: "No model providers are enabled for this organization.",
+		Reason: []string{
+			"The model providers API returned providers for the organization but none have been enabled.",
+		},
+		Action: []string{
+			"Enable at least one model provider for the organization in Capella.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MODEL_PROVIDERS_REQ_FAILED, // 19231
+		symbol:      "E_NL_MODEL_PROVIDERS_REQ_FAILED",
+		Description: "Model providers request failed with a non-200 status.",
+		Reason: []string{
+			"The model providers API returned an unsuccessful HTTP status code.",
+		},
+		Action: []string{
+			"Verify the organization ID and that the Capella control plane is reachable.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL, // 19232
+		symbol:      "E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL",
+		Description: "Failed to unmarshal the model providers API response.",
+		Reason: []string{
+			"The response body from the model providers API could not be decoded as JSON.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_NO_DEFAULT_MODEL_FOR_VENDOR, // 19233
+		symbol:      "E_NL_NO_DEFAULT_MODEL_FOR_VENDOR",
+		Description: "No default model configured and no models available for the selected vendor.",
+		Reason: []string{
+			"No hardcoded default model is configured for the vendor, and the model providers API returned an empty models list — there is no default to use and no fallback to pick from.",
+		},
+		Action: []string{
+			"Specify a model explicitly using the \"model\" option, or contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_UNRECOGNIZED_STATEMENT, // 19234
 		symbol:      "E_NL_UNRECOGNIZED_STATEMENT",
 		Description: "Unrecognized natural language statement received",
 		IsUser:      YES,
@@ -8454,7 +8564,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_MISSING_CHAT_ID, // 19225
+		Code:        E_NL_MISSING_CHAT_ID, // 19235
 		symbol:      "E_NL_MISSING_CHAT_ID",
 		Description: "missing \"natural_chatid\" parameter for further processing of the request.",
 		IsUser:      YES,
@@ -8471,7 +8581,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_NO_SUCH_CHAT, // 19226
+		Code:        E_NL_NO_SUCH_CHAT, // 19236
 		symbol:      "E_NL_NO_SUCH_CHAT",
 		Description: "no chat found with chatid: «chatid»",
 		IsUser:      YES,
@@ -8489,7 +8599,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CHAT_FAIL, // 19227
+		Code:        E_NL_CHAT_FAIL, // 19237
 		symbol:      "E_NL_CHAT_FAIL",
 		Description: "Error processing chat request: «failure»",
 		IsUser:      MAYBE,
@@ -8498,7 +8608,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_BEGIN_CHAT_FAIL, // 19228
+		Code:        E_NL_BEGIN_CHAT_FAIL, // 19238
 		symbol:      "E_NL_BEGIN_CHAT_FAIL",
 		Description: "Cannot start a new chat session in between the current session: «failure»",
 		IsUser:      YES,
@@ -8515,7 +8625,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CHAT_PROMPT_TOO_LARGE, // 19229
+		Code:        E_NL_CHAT_PROMPT_TOO_LARGE, // 19239
 		symbol:      "E_NL_CHAT_PROMPT_TOO_LARGE",
 		Description: "The size of the prompt for the chat has out grown the threshold of: «threshold» < «size of the prompt»",
 		IsUser:      YES,
@@ -8527,7 +8637,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CHAT_CACHE_FULL, // 19230
+		Code:        E_NL_CHAT_CACHE_FULL, // 19240
 		symbol:      "E_NL_CHAT_CACHE_FULL",
 		Description: "The cache for active chat sessions is full, cannot start a new chat session at the moment",
 		IsUser:      YES,
@@ -8540,7 +8650,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CHAT_WRONG_USER, // 19231
+		Code:        E_NL_CHAT_WRONG_USER, // 19241
 		symbol:      "E_NL_CHAT_WRONG_USER",
 		Description: "The user associated with the chat session does not match the user making the request.",
 		IsUser:      YES,
@@ -8552,7 +8662,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CHAT_PAUSE_FAILED, // 19232
+		Code:        E_NL_CHAT_PAUSE_FAILED, // 19242
 		symbol:      "E_NL_CHAT_PAUSE_FAILED",
 		Description: "Pause failed: «failure»",
 		IsUser:      MAYBE,
@@ -8568,7 +8678,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CHAT_RESUME_FAILED, // 19233
+		Code:        E_NL_CHAT_RESUME_FAILED, // 19243
 		symbol:      "E_NL_CHAT_RESUME_FAILED",
 		Description: "Resume failed: «failure»",
 		Reason: []string{
@@ -8584,7 +8694,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_CHAT_SUMMARIZE_FAILED, // 19234
+		Code:        E_NL_CHAT_SUMMARIZE_FAILED, // 19244
 		symbol:      "E_NL_CHAT_SUMMARIZE_FAILED",
 		Description: "Summarize failed: «failure»",
 		IsUser:      MAYBE,
@@ -8596,7 +8706,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_UNEXPECTED_CHAT_DOC, // 19235
+		Code:        E_NL_UNEXPECTED_CHAT_DOC, // 19245
 		symbol:      "E_NL_UNEXPECTED_CHAT_DOC",
 		Description: "unexpected chat document received: «failure»",
 		IsUser:      MAYBE,
@@ -8612,7 +8722,7 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_INVALID_CHAT_TIMEOUT, // 19236
+		Code:        E_NL_INVALID_CHAT_TIMEOUT, // 19246
 		symbol:      "E_NL_INVALID_CHAT_TIMEOUT",
 		Description: "invalid chat timeout value",
 		IsUser:      YES,

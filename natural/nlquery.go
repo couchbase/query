@@ -27,12 +27,17 @@ import (
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/execution"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+func init() {
+	expression.GetModelProvidersFunc = GetModelProviders
+}
 
 const (
 	// APIs
@@ -43,8 +48,14 @@ const (
 )
 
 func getCompletionsApi(orgid string) string {
-
 	return fmt.Sprintf("%v/v2/organizations/%v/integrations/iq/openai/chat/completions", CP_URL, orgid)
+}
+
+func getModelProvidersApi(orgid string, enabledOnly bool) string {
+	if enabledOnly {
+		return fmt.Sprintf("%v/v2/organizations/%v/iq/modelProviders?enabled=true", CP_URL, orgid)
+	}
+	return fmt.Sprintf("%v/v2/organizations/%v/iq/modelProviders", CP_URL, orgid)
 }
 
 const _CACHE_LIMIT = 65536
@@ -54,10 +65,236 @@ const _COMPLETIONS_REQ_RETRY = 5
 
 var _CHAT_LIMIT int
 
+const naturalClientTimeout = 2 * time.Minute
+
+var naturalClient = &http.Client{
+	Timeout: naturalClientTimeout,
+}
+
 const (
 	// Models
-	GPT4o_2024_05_13 = "gpt-4o-2024-05-13"
+	GPT4o_2024_05_13          = "gpt-4o-2024-05-13"
+	BEDROCK_CLAUDE_SONNET_4_5 = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 )
+
+const (
+	// Vendors
+	VENDOR_OPENAI  = "openai"
+	VENDOR_BEDROCK = "bedrock"
+)
+
+var defaultVendorModels = map[string]string{
+	VENDOR_OPENAI:  GPT4o_2024_05_13,
+	VENDOR_BEDROCK: BEDROCK_CLAUDE_SONNET_4_5,
+}
+
+func resolveModel(vendor string, availableModels []string) (string, errors.Error) {
+	if model := defaultVendorModels[vendor]; model != "" {
+		return model, nil
+	}
+	if len(availableModels) > 0 {
+		return availableModels[0], nil
+	}
+	return "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_DEFAULT_MODEL_FOR_VENDOR, vendor)
+}
+
+type modelProvider struct {
+	ID      string   `json:"id"`
+	Name    string   `json:"name"`
+	Models  []string `json:"models"`
+	Enabled bool     `json:"enabled"`
+}
+
+// errCauseFromBody reads the response body and returns a cause error populated
+// with the backend message. If the body is valid JSON it is formatted as a map;
+// otherwise the raw text is used. Returns nil when the body is empty.
+func v2errCauseFromBody(body []byte) error {
+	if len(body) == 0 {
+		return nil
+	}
+	var errRes map[string]interface{}
+	if json.Unmarshal(body, &errRes) == nil {
+		return fmt.Errorf("%v", errRes)
+	}
+	return fmt.Errorf("%s", body)
+}
+
+func makeV2Request(method, url string, payload []byte, jwt string) (*http.Response, errors.Error) {
+	var body io.Reader
+	if len(payload) > 0 {
+		body = bytes.NewBuffer(payload)
+	}
+	req, e := http.NewRequest(method, url, body)
+	if e != nil {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_V2_CREATE_REQ, url, e)
+	}
+	if len(payload) > 0 {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	req.Header.Set("Authorization", jwt)
+	resp, e := naturalClient.Do(req)
+	if e != nil {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_V2_SEND_REQ, url, e)
+	}
+	return resp, nil
+}
+
+// doV2Request makes an authenticated request to a v2 API endpoint. On a 401 it
+// refreshes the JWT and retries with exponential backoff. Returns the response so
+// the caller can read and close the body; connection-level errors are the only
+// non-nil errors returned.
+func doV2Request(method, url string, payload []byte, nlCred, jwt string) (*http.Response, errors.Error) {
+
+	resp, err := makeV2Request(method, url, payload, jwt)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		return resp, nil
+	}
+
+	// JWT may have been refreshed by an external client; retry with backoff.
+	resp.Body.Close()
+	backoff := _COMPLETIONS_REQ_BACKOFF_INIT
+	for retries := 0; retries < _COMPLETIONS_REQ_RETRY; retries++ {
+		time.Sleep(backoff)
+		var nlErr errors.Error
+		jwt, nlErr = getJWTFromSessionsApi(nlCred, true)
+		if nlErr != nil {
+			return nil, nlErr
+		}
+		resp, err = makeV2Request(method, url, payload, jwt)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode == http.StatusOK {
+			break
+		}
+		resp.Body.Close()
+		backoff *= 2
+	}
+	return resp, nil
+}
+
+// GetModelProviders fetches the list of enabled model providers for the given
+// organization. It handles JWT acquisition and returns the result as a value
+// ready for use in query results.
+func GetModelProviders(nlCred, nlOrganizationId string, enabledOnly bool) (interface{}, errors.Error) {
+	jwt, err := getJWTFromSessionsApi(nlCred, false)
+	if err != nil {
+		return nil, err
+	}
+	providers, err := getModelProviders(nlOrganizationId, nlCred, jwt, enabledOnly)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]interface{}, len(providers))
+	for i, p := range providers {
+		models := make([]interface{}, len(p.Models))
+		for j, m := range p.Models {
+			models[j] = m
+		}
+		result[i] = map[string]interface{}{
+			"id":      p.ID,
+			"name":    p.Name,
+			"models":  models,
+			"enabled": p.Enabled,
+		}
+	}
+	return result, nil
+}
+
+func getModelProviders(nlOrganizationId, nlCred, jwt string, enabledOnly bool) ([]modelProvider, errors.Error) {
+	url := getModelProvidersApi(nlOrganizationId, enabledOnly)
+	resp, err := doV2Request("GET", url, nil, nlCred, jwt)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_PROVIDERS_REQ_FAILED, resp.StatusCode, v2errCauseFromBody(body))
+	}
+	var providers []modelProvider
+	if e := json.NewDecoder(resp.Body).Decode(&providers); e != nil {
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL, url, e)
+	}
+	return providers, nil
+}
+
+// resolveVendorAndModel determines the vendor and model to use for the request.
+// It validates vendor availability via the modelProviders API and enforces:
+//   - model without vendor → error
+//   - unknown/disabled vendor → error
+//   - no vendors enabled → error
+//   - no vendor specified → prefer openai; fall back to the only enabled vendor
+//   - no model specified → use the default model if defined, else use the first model listed by the API for the vendor
+func resolveVendorAndModel(nlVendor, nlModel, nlOrganizationId, nlCred, jwt string) (vendor, model string, err errors.Error) {
+	if nlModel != "" && nlVendor == "" {
+		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
+	}
+
+	allProviders, err := getModelProviders(nlOrganizationId, nlCred, jwt, false)
+	if err != nil {
+		return "", "", err
+	}
+
+	if len(allProviders) == 0 {
+		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_AVAILABLE)
+	}
+
+	if nlVendor != "" {
+		for i := range allProviders {
+			// IDs are lowercase per the api.
+			if allProviders[i].ID == strings.ToLower(nlVendor) {
+				if allProviders[i].Enabled {
+					vendor = allProviders[i].ID
+					if nlModel != "" {
+						model = strings.ToLower(nlModel)
+					} else {
+						var resolveErr errors.Error
+						model, resolveErr = resolveModel(vendor, allProviders[i].Models)
+						if resolveErr != nil {
+							return "", "", resolveErr
+						}
+					}
+					return vendor, model, nil
+				} else {
+					return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_ENABLED, nlVendor)
+				}
+			}
+		}
+		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_SUPPORTED, nlVendor)
+	}
+	// No vendor specified: prefer openai, else use the first available vendor.
+	var fallbackvendor, fallbackmodel string
+	var modelErr errors.Error
+	for i := range allProviders {
+		if allProviders[i].ID == VENDOR_OPENAI && allProviders[i].Enabled {
+			model, modelErr = resolveModel(VENDOR_OPENAI, allProviders[i].Models)
+			if modelErr != nil {
+				return "", "", modelErr
+			}
+			return VENDOR_OPENAI, model, nil
+		}
+
+		if fallbackvendor == "" && allProviders[i].Enabled {
+			fallbackvendor = allProviders[i].ID
+			fallbackmodel, modelErr = resolveModel(fallbackvendor, allProviders[i].Models)
+			if modelErr != nil {
+				return "", "", modelErr
+			}
+		}
+	}
+
+	if fallbackvendor == "" {
+		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_ENABLED)
+	}
+
+	return fallbackvendor, fallbackmodel, nil
+}
 
 const (
 	maxconcurrency       = 4
@@ -359,9 +596,8 @@ func getJWTFromSessionsApi(nlCred string, refresh bool) (string, errors.Error) {
 
 	encodedCredentials := base64.StdEncoding.EncodeToString([]byte(nlCred))
 	reqJwt.Header.Set("Authorization", "Basic "+encodedCredentials)
-	client := http.Client{}
 
-	resp, err := client.Do(reqJwt)
+	resp, err := naturalClient.Do(reqJwt)
 	if err != nil {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SEND_SESSIONS_REQ, _SESSIONS_API, err)
 	}
@@ -371,13 +607,8 @@ func getJWTFromSessionsApi(nlCred string, refresh bool) (string, errors.Error) {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SESSIONS_AUTH)
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SESSIONS_RESP_READ, _SESSIONS_API, err)
-	}
-
 	var result jwtResponse
-	if err := json.Unmarshal(body, &result); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SESSIONS_RESP_UNMARSHAL, _SESSIONS_API, err)
 	}
 
@@ -413,6 +644,7 @@ type completionSettings struct {
 type prompt struct {
 	InitMessages       []message          `json:"initMessages"`
 	CompletionSettings completionSettings `json:"completionSettings"`
+	Vendor             string             `json:"vendor"`
 	Messages           []message          `json:"messages"`
 	Size               int                `json:"size"`
 }
@@ -420,7 +652,8 @@ type prompt struct {
 const _INIT_SIZE = 250
 const _MAX_PROMPT_SIZE = util.MiB
 
-func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string, forfts bool) (*prompt, errors.Error) {
+func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string, forfts bool,
+	vendor string, model string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -430,9 +663,10 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, h
 					"\n\nApproach this task step-by-step and take your time.",
 			},
 		},
+		Vendor: vendor,
 		CompletionSettings: completionSettings{
-			Model:       GPT4o_2024_05_13,
-			Temperature: 0,
+			Model:       model,
+			Temperature: getTemperatureForModel(vendor, model),
 			Seed:        1,
 			Stream:      false,
 		},
@@ -487,7 +721,7 @@ func newSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, h
 	return rv, nil
 }
 
-func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string) (*prompt, errors.Error) {
+func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string, vendor string, model string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -496,9 +730,11 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary,
 					" based on the provided information." +
 					"\n\nApproach this task step-by-step and take your time.",
 			},
-		}, CompletionSettings: completionSettings{
-			Model:       GPT4o_2024_05_13,
-			Temperature: 0,
+		},
+		Vendor: vendor,
+		CompletionSettings: completionSettings{
+			Model:       model,
+			Temperature: getTemperatureForModel(vendor, model),
 			Seed:        1,
 			Stream:      false,
 		},
@@ -562,9 +798,17 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary,
 	return rv, nil
 }
 
-func newSQLIterativePrompt(chat *prompt, naturalPrompt string, forfts bool) *prompt {
+func newSQLIterativePrompt(chat *prompt, naturalPrompt string, forfts bool, vendor, model string) *prompt {
 	var userMessage string
 	var userMessageBuf strings.Builder
+
+	if vendor != "" {
+		chat.Vendor = vendor
+	}
+	if model != "" {
+		chat.CompletionSettings.Model = model
+		chat.CompletionSettings.Temperature = getTemperatureForModel(vendor, model)
+	}
 
 	userMessageBuf.WriteString("Your goal is to iterate on the previouly generated query by modifying it's code,")
 	userMessageBuf.WriteString(" based on this prompt:")
@@ -598,10 +842,17 @@ func newSQLIterativePrompt(chat *prompt, naturalPrompt string, forfts bool) *pro
 	return chat
 }
 
-func newJSUDFIterativePrompt(chat *prompt, naturalPrompt string) *prompt {
+func newJSUDFIterativePrompt(chat *prompt, naturalPrompt string, vendor, model string) *prompt {
 	var userMessage string
 	var userMessageBuf strings.Builder
 
+	if vendor != "" {
+		chat.Vendor = vendor
+	}
+	if model != "" {
+		chat.CompletionSettings.Model = model
+		chat.CompletionSettings.Temperature = getTemperatureForModel(vendor, model)
+	}
 	userMessageBuf.WriteString("Your goal is to iterate on the previouly generated query by modifying it's code,")
 	userMessageBuf.WriteString(" based on this prompt:")
 	userMessageBuf.WriteString("\"")
@@ -649,93 +900,54 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 	type ResultMessage struct {
 		Content string `json:"content"`
 	}
-
 	type Choice struct {
 		Message ResultMessage `json:"message"`
 	}
+	type APIError struct {
+		Message string `json:"message"`
+		Type    string `json:"type"`
+		Code    string `json:"code"`
+	}
 	type ChatCompletionResponse struct {
-		Choices []Choice `json:"choices"`
+		Error   map[string]interface{} `json:"error"`
+		Choices []Choice               `json:"choices"`
 	}
 
-	chatCompletionsUrl := getCompletionsApi(nlOrganizationId)
+	url := getCompletionsApi(nlOrganizationId)
 
-	client := http.Client{}
 	payload, perr := json.Marshal(prompt)
 	if perr != nil {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL, perr)
 	}
-	chatReq, perr := http.NewRequest("POST", chatCompletionsUrl, bytes.NewBuffer(payload))
-	if perr != nil {
-		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CREATE_CHATCOMPLETIONS_REQ, chatCompletionsUrl)
+
+	resp, err := doV2Request("POST", url, payload, nlCred, jwt)
+	if err != nil {
+		return "", err
 	}
+	defer resp.Body.Close()
 
-	chatReq.Header.Set("Content-Type", "application/json")
-	chatReq.Header.Set("Authorization", jwt)
-	chatRes, perr := client.Do(chatReq)
-	if perr != nil {
-		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SEND_CHATCOMPLETIONS_REQ, chatCompletionsUrl, perr)
-	}
-
-	if statusCode := chatRes.StatusCode; statusCode != http.StatusOK {
-
-		if statusCode == http.StatusNotFound {
-			chatRes.Body.Close()
-			return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ORG_NOT_FOUND, nlOrganizationId)
-		} else if statusCode == http.StatusUnauthorized {
-
-			// possible ways a request was unauthorized
-			// 1. user doesn't have access to the organization
-			// 2. JWT was refreshed by an external client
-
-			//  no way to know which one is the cause, so we'll retry until we give up
-			chatRes.Body.Close()
-			backoff := _COMPLETIONS_REQ_BACKOFF_INIT
-			for retries := 0; retries < _COMPLETIONS_REQ_RETRY; retries++ {
-				time.Sleep(backoff)
-
-				var err errors.Error
-				jwt, err = getJWTFromSessionsApi(nlCred, true)
-				if err != nil {
-					return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_REQ_FAILED,
-						chatRes.StatusCode, err)
-				}
-
-				chatReq, perr = http.NewRequest("POST", chatCompletionsUrl, bytes.NewBuffer(payload))
-				if perr != nil {
-					return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CREATE_CHATCOMPLETIONS_REQ,
-						chatCompletionsUrl)
-				}
-
-				chatReq.Header.Set("Content-Type", "application/json")
-				chatReq.Header.Set("Authorization", jwt)
-				chatRes, perr = client.Do(chatReq)
-				if perr != nil {
-					return "", errors.NewNaturalLanguageRequestError(errors.E_NL_SEND_CHATCOMPLETIONS_REQ,
-						chatCompletionsUrl, perr)
-				}
-
-				if chatRes.StatusCode == http.StatusOK {
-					break
-				}
-
-				chatRes.Body.Close()
-				backoff *= 2
-			}
-			if chatRes.StatusCode == http.StatusUnauthorized {
-				return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ORG_UNAUTH)
-			} else if chatRes.StatusCode != http.StatusOK {
-				return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_REQ_FAILED, chatRes.StatusCode)
-			}
-		} else {
-			return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_REQ_FAILED, chatRes.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		cause := v2errCauseFromBody(body)
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ORG_NOT_FOUND, nlOrganizationId, cause)
+		case http.StatusUnauthorized:
+			return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ORG_UNAUTH, cause)
+		default:
+			return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_REQ_FAILED, resp.StatusCode, cause)
 		}
 	}
 
-	defer chatRes.Body.Close()
-	decoder := json.NewDecoder(chatRes.Body)
-	chatComplRes := ChatCompletionResponse{}
-	if perr = decoder.Decode(&chatComplRes); perr != nil {
+	var chatComplRes ChatCompletionResponse
+	if perr = json.NewDecoder(resp.Body).Decode(&chatComplRes); perr != nil {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL, perr)
+	}
+	if chatComplRes.Error != nil {
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, chatComplRes.Error)
+	}
+	if len(chatComplRes.Choices) == 0 {
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, fmt.Errorf("no message in response"))
 	}
 
 	return chatComplRes.Choices[0].Message.Content, nil
@@ -746,6 +958,20 @@ func isErrorResponse(content string) bool {
 		return true
 	}
 	return false
+}
+
+func getTemperatureForModel(vendor, model string) float64 {
+	switch vendor {
+	case VENDOR_OPENAI:
+		if strings.HasPrefix(model, "gpt-5") {
+			return 1
+		}
+		return 0
+	case VENDOR_BEDROCK:
+		return 0
+	default:
+		return 0
+	}
 }
 
 func collectSchemaForPromptFromInfer(schema map[string]string, inferSchema value.Value) map[string]string {
@@ -872,7 +1098,7 @@ func throttleRequest() errors.Error {
 	}
 }
 
-func ProcessRequest(nlCred, nlOrgId, nlquery, nlHint string, elems []*algebra.Path, nloutputOpt naturalOutput,
+func ProcessRequest(nlCred, nlOrgId, nlVendor, nlModel, nlquery, nlHint string, elems []*algebra.Path, nloutputOpt naturalOutput,
 	explain, advise bool,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
@@ -890,6 +1116,11 @@ func ProcessRequest(nlCred, nlOrgId, nlquery, nlHint string, elems []*algebra.Pa
 		return "", nil, err
 	}
 
+	vendor, model, err := resolveVendorAndModel(nlVendor, nlModel, nlOrgId, nlCred, jwt)
+	if err != nil {
+		return "", nil, err
+	}
+
 	keyspaceInfo := make(map[string]interface{}, len(elems))
 	inferschema := util.Now()
 	keyspaceInfo, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context)
@@ -901,11 +1132,12 @@ func ProcessRequest(nlCred, nlOrgId, nlquery, nlHint string, elems []*algebra.Pa
 	var prompt *prompt
 	switch nloutputOpt {
 	case SQL:
-		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", nlHint, false)
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", nlHint, false, vendor, model)
 	case JSUDF:
-		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, "", nlHint)
+		prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, "", nlHint, vendor, model)
 	case FTSSQL:
-		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", nlHint, true)
+		prompt, err = newSQLPrompt(keyspaceInfo, nlquery, "", nlHint, true, vendor, model)
+
 	default:
 		err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 	}
@@ -944,18 +1176,18 @@ func ProcessRequest(nlCred, nlOrgId, nlquery, nlHint string, elems []*algebra.Pa
 	if parseErr != nil {
 		retrytime := util.Now()
 		prompt = buildRetryPrompt(prompt, content, parseErr.Error())
-		orgContent := content
-		for i := 1; i < maxCorrectionRetries; i++ {
-			content, stmt, nlAlgebraStmt, parseErr = retryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
-			if parseErr == nil {
+		var retryErr error
+		for i := 0; i < maxCorrectionRetries; i++ {
+			content, stmt, nlAlgebraStmt, retryErr = retryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
+			if retryErr == nil {
 				record(execution.NLRETRY, util.Since(retrytime))
 				return stmt, nlAlgebraStmt, nil
 			} else {
-				prompt = buildRetryPrompt(prompt, content, parseErr.Error())
+				prompt = buildRetryPrompt(prompt, content, retryErr.Error())
 			}
 		}
 		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
-			fmt.Sprintf("failed to parse generated statement- %v", orgContent), parseErr)
+			content, retryErr)
 	}
 
 	return stmt, nlAlgebraStmt, nil
@@ -1031,8 +1263,8 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 	return content, stmt, nlAlgebraStmt, parseErr
 }
 
-func ProcessConversationalRequest(nlCred, nlOrgId, nlquery, nlHint string, chatId string, nloutputOpt naturalOutput,
-	explain, advise bool,
+func ProcessConversationalRequest(nlCred, nlOrgId, nlVendor, nlModel, nlquery, nlHint string, chatId string,
+	nloutputOpt naturalOutput, explain, advise bool,
 	user string,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
@@ -1072,6 +1304,12 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery, nlHint string, chatI
 	if ce.User != user {
 		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
 	}
+
+	vendor, model, err := resolveVendorAndModel(nlVendor, nlModel, nlOrgId, nlCred, jwt)
+	if err != nil {
+		return "", nil, err
+	}
+
 	var prompt *prompt
 	if ce.prompt == nil {
 		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
@@ -1084,11 +1322,11 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery, nlHint string, chatI
 
 		switch nloutputOpt {
 		case SQL:
-			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint, false)
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint, false, vendor, model)
 		case JSUDF:
-			prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint)
+			prompt, err = newJSUDFPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint, vendor, model)
 		case FTSSQL:
-			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint, true)
+			prompt, err = newSQLPrompt(keyspaceInfo, nlquery, ce.Summary, nlHint, true, vendor, model)
 		default:
 			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 		}
@@ -1099,11 +1337,11 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery, nlHint string, chatI
 	} else {
 		switch nloutputOpt {
 		case SQL:
-			prompt = newSQLIterativePrompt(ce.prompt, nlquery, false)
+			prompt = newSQLIterativePrompt(ce.prompt, nlquery, false, vendor, model)
 		case JSUDF:
-			prompt = newJSUDFIterativePrompt(ce.prompt, nlquery)
+			prompt = newJSUDFIterativePrompt(ce.prompt, nlquery, vendor, model)
 		case FTSSQL:
-			prompt = newSQLIterativePrompt(ce.prompt, nlquery, true)
+			prompt = newSQLIterativePrompt(ce.prompt, nlquery, true, vendor, model)
 		default:
 			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 		}
@@ -1148,20 +1386,20 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlquery, nlHint string, chatI
 	if parseErr != nil {
 		retrytime := util.Now()
 		prompt = buildRetryPrompt(prompt, content, parseErr.Error())
-		orgContent := content
-		for i := 1; i < maxCorrectionRetries; i++ {
-			content, stmt, nlAlgebraStmt, parseErr = retryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
-			if parseErr == nil {
+		var retryErr error
+		for i := 0; i < maxCorrectionRetries; i++ {
+			content, stmt, nlAlgebraStmt, retryErr = retryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
+			if retryErr == nil {
 				completeConversationPromptLocked(content, ce, prompt)
 				record(execution.NLRETRY, util.Since(retrytime))
 				return stmt, nlAlgebraStmt, nil
-			} else {
+			} else if i < maxCorrectionRetries-1 {
 				prompt = buildRetryPrompt(prompt, content, parseErr.Error())
 			}
 		}
 		completeConversationPromptLocked(content, ce, prompt)
 		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
-			fmt.Sprintf("failed to parse generated statement- %v", orgContent), parseErr)
+			content, retryErr)
 	}
 
 	completeConversationPromptLocked(content, ce, prompt)
@@ -1282,7 +1520,7 @@ const (
 
 func ProcessPauseChat(chatId, requestId, datastorecreds string,
 	nlOrgId, nlCred string,
-	summarize value.Tristate,
+	summarize value.Tristate, nlvendor, nlmodel string,
 	record func(execution.Phases, time.Duration)) errors.Error {
 	if chatId == "" {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID)
@@ -1317,9 +1555,21 @@ func ProcessPauseChat(chatId, requestId, datastorecreds string,
 		if len(missingnlparams) > 0 {
 			return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, strings.Join(missingnlparams, ","))
 		}
-		err := summarizePrompt(ce, nlOrgId, nlCred, record)
+
+		getJwt := util.Now()
+		jwt, err := getJWTFromSessionsApi(nlCred, false)
+		record(execution.GETJWT, util.Since(getJwt))
 		if err != nil {
-			return err
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, "failed to get JWT", err)
+		}
+		vendor, model, err := resolveVendorAndModel(nlvendor, nlmodel, nlOrgId, nlCred, jwt)
+		if err != nil {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, "failed to resolve vendor and model", err)
+		}
+
+		err = summarizePrompt(ce, nlOrgId, nlCred, vendor, model, jwt, record)
+		if err != nil {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, err)
 		}
 	}
 
@@ -1379,7 +1629,7 @@ func ProcessPauseChat(chatId, requestId, datastorecreds string,
 	return nil
 }
 
-func summarizePrompt(ce *ChatEntry, nlorgid, nlcred string, record func(execution.Phases, time.Duration)) errors.Error {
+func summarizePrompt(ce *ChatEntry, nlorgid, nlcred, vendor, model, jwt string, record func(execution.Phases, time.Duration)) errors.Error {
 	if ce.prompt == nil || len(ce.prompt.Messages) <= 1 {
 		return nil
 	}
@@ -1415,27 +1665,21 @@ func summarizePrompt(ce *ChatEntry, nlorgid, nlcred string, record func(executio
 				Content: promptBuf.String(),
 			},
 		},
+		Vendor: vendor,
 		CompletionSettings: completionSettings{
-			Model:       GPT4o_2024_05_13,
-			Temperature: 0,
+			Model:       model,
+			Temperature: getTemperatureForModel(vendor, model),
 			Seed:        1,
 			Stream:      false,
 		},
 		Size: len(promptBuf.String()),
 	}
 
-	getJwt := util.Now()
-	jwt, err := getJWTFromSessionsApi(nlcred, false)
-	record(execution.GETJWT, util.Since(getJwt))
-	if err != nil {
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, err)
-	}
-
 	chatcompletions := util.Now()
 	content, err := doChatCompletionsReq(pmt, nlorgid, jwt, nlcred)
 	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletions))
 	if err != nil {
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, err)
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, "chat completions request failed", err)
 	}
 	ce.Summary = content
 	ce.prompt = nil
