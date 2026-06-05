@@ -197,6 +197,22 @@ func GetAWSConfig(source string, cred *cbauth.Credential, sigV4SigningRegion str
 	return NewAWSConfig(awsCreds.AccessKeyID, awsCreds.SecretAccessKey, awsCreds.SessionToken, region)
 }
 
+// GetStorageAWSConfig builds an AWS config from the collection (storage) credential.
+// Unlike GetAWSConfig it does not gate on IsAWSSource, so it works for any catalog
+// source (NESSIE, REST, …) whose underlying storage is S3.
+// Returns nil if the credential is not AWS type.
+func GetStorageAWSConfig(cred *cbauth.Credential, sigV4SigningRegion string) (*aws.Config, error) {
+	if cred == nil || cred.Type != "aws" || cred.AWS == nil {
+		return nil, nil
+	}
+	c := cred.AWS
+	region := sigV4SigningRegion
+	if region == "" {
+		region = c.Region
+	}
+	return NewAWSConfig(c.AccessKeyID, c.SecretAccessKey, c.SessionToken, region)
+}
+
 // biglakeTransport handles BigLake Metastore specifics:
 //  1. Uses Google ADC or a provided token source for proper OAuth2 authentication
 //  2. Injects X-Goog-User-Project header for GCP quota billing

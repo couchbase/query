@@ -292,6 +292,17 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 		if err != nil {
 			return errors.NewDatastoreExternalCollectionError(nil, err.Error(), params.ErrTemplate)
 		}
+		// For non-AWS-native catalog sources (NESSIE, REST, …) GetAWSConfig returns nil because
+		// IsAWSSource() is false. Without an explicit aws.Config in the context iceberg-go falls
+		// back to the ambient credential chain (env vars, ~/.aws, IMDS) for S3 FileIO. Inject the
+		// collection credential — the storage credential — so the correct token is used.
+		if awsCfg == nil {
+			awsCfg, err = GetStorageAWSConfig(params.CollectionCred, catalogInfo.SigV4SigningRegion)
+			if err != nil {
+				return errors.NewDatastoreExternalCollectionError(nil,
+					"Failed to build AWS config from collection credential: "+err.Error(), params.ErrTemplate)
+			}
+		}
 
 		var snapshotId *int64
 		snapshot_id := externalEntry.SnapshotId
