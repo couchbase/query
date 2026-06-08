@@ -953,11 +953,11 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 	return chatComplRes.Choices[0].Message.Content, nil
 }
 
-func isErrorResponse(content string) bool {
+func CheckAndReturnErrorResponse(content string) error {
 	if n := strings.Index(content, "#ERR"); n != -1 {
-		return true
+		return fmt.Errorf("%s", strings.TrimRight(content[n+6:], "\n `"))
 	}
-	return false
+	return nil
 }
 
 func getTemperatureForModel(vendor, model string) float64 {
@@ -1151,8 +1151,8 @@ func ProcessRequest(nlCred, nlOrgId, nlVendor, nlModel, nlquery, nlHint string, 
 	if err != nil {
 		return "", nil, err
 	}
-	if isErrorResponse(content) {
-		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, content)
+	if err := CheckAndReturnErrorResponse(content); err != nil {
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, err)
 	}
 
 	parse := util.Now()
@@ -1204,6 +1204,7 @@ func buildRetryPrompt(pmt *prompt, assistantContent string, reason string) *prom
 	parseErrorMessage.WriteString("The previous response errored out with: ")
 	parseErrorMessage.WriteString(reason)
 	parseErrorMessage.WriteString(".\nCan you correct the previous response?")
+	pmt.Size += parseErrorMessage.Len()
 
 	pmt.Messages = append(pmt.Messages, message{
 		Role:    "user",
@@ -1237,8 +1238,8 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 	if err != nil {
 		return "", "", nil, err
 	}
-	if isErrorResponse(content) {
-		return "", "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, content)
+	if err := CheckAndReturnErrorResponse(content); err != nil {
+		return "", "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, err)
 	}
 
 	parse := util.Now()
@@ -1361,8 +1362,9 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlVendor, nlModel, nlquery, n
 	if err != nil {
 		return "", nil, err
 	}
-	if isErrorResponse(content) {
-		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, content)
+	if err := CheckAndReturnErrorResponse(content); err != nil {
+		completeConversationPromptLocked(content, ce, prompt)
+		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, err)
 	}
 
 	parse := util.Now()
@@ -1414,7 +1416,7 @@ func completeConversationPromptLocked(content string, ce *ChatEntry, prompt *pro
 			Content: content,
 		}
 		prompt.Messages = append(prompt.Messages, assistantmessage)
-
+		prompt.Size += len(content)
 		ce.prompt = prompt
 		ce.resetInactivityTimerLocked()
 		naturalchatHistory.Add(ce, ce.Id, nil)
