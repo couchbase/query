@@ -391,7 +391,6 @@ func (this *AggregateInfo) setAiRerank(context *opContext, parent value.Value) e
 		query:     queryVal.ToString(),
 		batchSize: -1, // rerank always operates on the full partition
 	}
-	this.aiValues = make(value.Values, 0, _WINDOW_CAP)
 
 	// Validate and store URI (mandatory).
 	v, ok := optionsVal.Field("uri")
@@ -770,17 +769,38 @@ func (this *AggregateInfo) aiRerankEvaluate(val value.Value, op *WindowAggregate
 	}
 
 	this.aiValues = make(value.Values, len(docs))
-
-	var response struct {
-		Results []map[string]interface{} `json:"results"`
+	for i := range this.aiValues {
+		this.aiValues[i] = value.NULL_VALUE
 	}
-	if err = json.Unmarshal(body, &response); err != nil {
+
+	var rawResponse map[string]interface{}
+	if err = json.Unmarshal(body, &rawResponse); err != nil {
 		return err
 	}
 
-	for _, respDoc := range response.Results {
+	// Accept either "results" or "data" as the top-level array key.
+	var resultList []interface{}
+	for _, key := range []string{"results", "data"} {
+		if v, ok := rawResponse[key]; ok {
+			if arr, ok := v.([]interface{}); ok {
+				resultList = arr
+				break
+			}
+		}
+	}
+	if resultList == nil {
+		return fmt.Errorf("AI_RERANK: API response does not match expected format: missing required top-level array field \"results\" or \"data\"")
+	}
+
+	for _, entry := range resultList {
+		respDoc, ok := entry.(map[string]interface{})
+		if !ok {
+			op.operatorCtx.Warning(errors.NewAiRerankResponseWarning("entry is not a JSON object"))
+			continue
+		}
 		idx, ok := respDoc["index"].(float64)
 		if !ok {
+			op.operatorCtx.Warning(errors.NewAiRerankResponseWarning(`"index" field is missing or not a number`))
 			continue
 		}
 		if int(idx) < 0 || int(idx) >= len(this.aiValues) {

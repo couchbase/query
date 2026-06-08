@@ -4602,6 +4602,22 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        W_AI_RERANK_MALFORMED_RESPONSE, // 5435
+		symbol:      "W_AI_RERANK_MALFORMED_RESPONSE",
+		Description: "AI_RERANK skipped a malformed entry in the API response: <<msg>>.",
+		Reason: []string{
+			"The rerank API returned a response array entry that was not a valid object, or had a missing or non-numeric \"index\" field.",
+		},
+		Action: []string{
+			"Check the rerank API response format. Each entry must be a JSON object with a numeric \"index\" and a \"relevance_score\" field.",
+		},
+		IsUser:    YES,
+		IsWarning: true,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MEMORY_QUOTA_EXCEEDED, // 5500
 		symbol:      "E_MEMORY_QUOTA_EXCEEDED",
 		Description: "Request has exceeded memory quota.",

@@ -341,6 +341,7 @@ const (
 	E_INVALID_RERANK                             ErrorCode = 5432
 	E_MAXHEAP_SIZE_EXCEEDED                      ErrorCode = 5433
 	E_INVALID_TOPNSCAN                           ErrorCode = 5434
+	W_AI_RERANK_MALFORMED_RESPONSE               ErrorCode = 5435
 	E_MEMORY_QUOTA_EXCEEDED                      ErrorCode = 5500
 	E_NIL_EVALUATE_PARAM                         ErrorCode = 5501
 	E_BUCKET_ACTION                              ErrorCode = 5502

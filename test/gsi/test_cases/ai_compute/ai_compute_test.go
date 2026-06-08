@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/couchbase/query/errors"
 	gsi "github.com/couchbase/query/test/gsi"
 	"github.com/couchbase/query/value"
 )
@@ -379,5 +380,204 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	rrMissing := runStmt(qc, missingScoreQ)
 	if rrMissing.Err == nil {
 		t.Errorf("AI_RERANK missing relevance_score: expected an error, got none")
+	}
+
+	// --- Partial response: API omits some document positions ----------------
+	// The mock returns scores for only the first document, leaving the remaining
+	// positions unmapped.  Before the NULL_VALUE initialisation fix, those slots
+	// were bare Go nil interfaces, causing AggregateBase.evaluate to produce a
+	// misleading "Aggregate … not found" (5010) error.  After the fix, unmapped
+	// positions default to NULL_VALUE and the query succeeds — returning null
+	// scores for the skipped documents instead of an error.
+	partialServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Documents []interface{} `json:"documents"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		// Only return a score for the first document, omit the rest.
+		results := []map[string]interface{}{
+			{"index": 0, "relevance_score": 0.9},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+	}))
+	defer partialServer.Close()
+
+	partialQ := fmt.Sprintf(
+		`SELECT AI_RERANK(d.text, {'uri':'%s'}, 'database technology') `+
+			`OVER() AS score `+
+			`FROM orders AS d WHERE d.test_id = 'ai_rerank'`,
+		partialServer.URL+"/rerank",
+	)
+	rrPartial := runStmt(qc, partialQ)
+	if rrPartial.Err != nil {
+		t.Errorf("AI_RERANK partial response: expected no error (unmapped positions should be null), got: %v", rrPartial.Err)
+	}
+	// Every row must have a "score" key; unmapped ones should be null (nil in Go).
+	for i, row := range rrPartial.Results {
+		m, ok := row.(map[string]interface{})
+		if !ok {
+			t.Errorf("AI_RERANK partial response result %d: expected map, got %T", i, row)
+			continue
+		}
+		if _, exists := m["score"]; !exists {
+			t.Errorf("AI_RERANK partial response result %d: missing 'score' key", i)
+		}
+	}
+
+	// --- "data" key instead of "results" in API response -------------------
+	// Some rerank APIs (e.g. Cohere) wrap their results array under "data"
+	// rather than "results".  After the raw-map parsing fix, both keys are
+	// accepted.  This test verifies that a response using "data" produces the
+	// same successful outcome as one using "results".
+	dataKeyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Documents []interface{} `json:"documents"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		scores := []float64{0.9, 0.5, 0.1}
+		results := make([]map[string]interface{}, len(req.Documents))
+		for i := range req.Documents {
+			score := 0.0
+			if i < len(scores) {
+				score = scores[i]
+			}
+			results[i] = map[string]interface{}{
+				"index":           i,
+				"relevance_score": score,
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		// Use "data" instead of "results" as the top-level key.
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"data": results})
+	}))
+	defer dataKeyServer.Close()
+
+	dataKeyQ := fmt.Sprintf(
+		`SELECT AI_RERANK(d.text, {'uri':'%s'}, 'database technology') `+
+			`OVER(PARTITION BY d.category) AS score `+
+			`FROM orders AS d WHERE d.test_id = 'ai_rerank'`,
+		dataKeyServer.URL+"/rerank",
+	)
+	rrDataKey := runStmt(qc, dataKeyQ)
+	if rrDataKey.Err != nil {
+		t.Errorf("AI_RERANK 'data' key response: unexpected error: %v", rrDataKey.Err)
+	}
+	for i, row := range rrDataKey.Results {
+		m, ok := row.(map[string]interface{})
+		if !ok {
+			t.Errorf("AI_RERANK 'data' key result %d: expected map, got %T", i, row)
+			continue
+		}
+		score, exists := m["score"]
+		if !exists {
+			t.Errorf("AI_RERANK 'data' key result %d: missing 'score' field", i)
+			continue
+		}
+		if _, isNum := score.(float64); !isNum {
+			t.Errorf("AI_RERANK 'data' key result %d: expected float64 score, got %T (%v)", i, score, score)
+		}
+	}
+
+	// --- API response missing both "results" and "data" keys ----------------
+	// The mock returns a valid JSON object but with neither the "results" nor
+	// "data" top-level array keys.  aiRerankEvaluate must return an error
+	// describing the unexpected format rather than silently succeeding with no
+	// scores.
+	noKeyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Valid JSON, but the result array is under an unrecognised key.
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"scores": []float64{0.9, 0.5}})
+	}))
+	defer noKeyServer.Close()
+
+	noKeyQ := fmt.Sprintf(
+		`SELECT AI_RERANK(d.text, {'uri':'%s'}, 'database technology') `+
+			`OVER() AS score `+
+			`FROM orders AS d WHERE d.test_id = 'ai_rerank'`,
+		noKeyServer.URL+"/rerank",
+	)
+	rrNoKey := runStmt(qc, noKeyQ)
+	if rrNoKey.Err == nil {
+		t.Errorf("AI_RERANK missing results/data key: expected an error about unexpected API response format, got none")
+	}
+
+	// --- Malformed response: entry is not a JSON object ---------------------
+	// The mock returns an array where one entry is a bare string instead of an
+	// object.  aiRerankEvaluate must skip it with a W_AI_RERANK_MALFORMED_RESPONSE
+	// warning rather than panicking or returning a hard error.
+	nonObjServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Mix a valid entry with a bare string — the string must be warned and skipped.
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"results": []interface{}{
+				map[string]interface{}{"index": 0, "relevance_score": 0.9},
+				"not-an-object",
+			},
+		})
+	}))
+	defer nonObjServer.Close()
+
+	nonObjQ := fmt.Sprintf(
+		`SELECT AI_RERANK(d.text, {'uri':'%s'}, 'database technology') `+
+			`OVER() AS score `+
+			`FROM orders AS d WHERE d.test_id = 'ai_rerank'`,
+		nonObjServer.URL+"/rerank",
+	)
+	rrNonObj := runStmt(qc, nonObjQ)
+	if rrNonObj.Err != nil {
+		t.Errorf("AI_RERANK non-object entry: expected no error, got: %v", rrNonObj.Err)
+	}
+	hasNonObjWarn := false
+	for _, w := range rrNonObj.Warnings {
+		if w.Code() == errors.W_AI_RERANK_MALFORMED_RESPONSE {
+			hasNonObjWarn = true
+			break
+		}
+	}
+	if !hasNonObjWarn {
+		t.Errorf("AI_RERANK non-object entry: expected a W_AI_RERANK_MALFORMED_RESPONSE warning, got none")
+	}
+
+	// --- Malformed response: "index" field is a string, not a number --------
+	// Some buggy APIs return {"index": "0", ...} with a quoted index.
+	// aiRerankEvaluate must skip the entry with a warning rather than silently
+	// leaving all positions as NULL_VALUE with no indication of the problem.
+	strIdxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// "index" is a string — the float64 type assertion will fail.
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"results": []interface{}{
+				map[string]interface{}{"index": "0", "relevance_score": 0.9},
+			},
+		})
+	}))
+	defer strIdxServer.Close()
+
+	strIdxQ := fmt.Sprintf(
+		`SELECT AI_RERANK(d.text, {'uri':'%s'}, 'database technology') `+
+			`OVER() AS score `+
+			`FROM orders AS d WHERE d.test_id = 'ai_rerank'`,
+		strIdxServer.URL+"/rerank",
+	)
+	rrStrIdx := runStmt(qc, strIdxQ)
+	if rrStrIdx.Err != nil {
+		t.Errorf("AI_RERANK string index: expected no error, got: %v", rrStrIdx.Err)
+	}
+	hasStrIdxWarn := false
+	for _, w := range rrStrIdx.Warnings {
+		if w.Code() == errors.W_AI_RERANK_MALFORMED_RESPONSE {
+			hasStrIdxWarn = true
+			break
+		}
+	}
+	if !hasStrIdxWarn {
+		t.Errorf("AI_RERANK string index: expected a W_AI_RERANK_MALFORMED_RESPONSE warning, got none")
 	}
 }

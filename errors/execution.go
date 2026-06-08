@@ -751,3 +751,8 @@ func NewInvalidDocumentKeyTypeWarning(v interface{}, t string) Error {
 	return &err{level: WARNING, ICode: W_DOCUMENT_KEY_TYPE, IKey: "execution.document_key.type", cause: c,
 		InternalMsg: fmt.Sprintf("Document key must be a string: %v", v), InternalCaller: CallerN(1)}
 }
+
+func NewAiRerankResponseWarning(msg string) Error {
+	return &err{level: WARNING, ICode: W_AI_RERANK_MALFORMED_RESPONSE, IKey: "execution.ai_rerank.response",
+		InternalMsg: fmt.Sprintf("AI_RERANK: skipped malformed response entry: %s", msg), InternalCaller: CallerN(1)}
+}
