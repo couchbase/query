@@ -867,6 +867,14 @@ func NewExprToPaths(alias string, caseSenstive bool) *exprToPaths {
 				if err != nil {
 					return expr, fmt.Errorf("not path")
 				}
+				// Flush after each child so sibling expressions don't corrupt
+				// each other's curAlias/curPath state. Without this, the second
+				// child's Identifier overwrites the first child's curAlias before
+				// finshPath is called, silently dropping the first path.
+				// e.g. EQ(t.address.city, r.city) — r.city clobbers "t"/"address.city".
+				if rv.finshPath() {
+					return expr, fmt.Errorf("not path")
+				}
 			}
 
 		}
