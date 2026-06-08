@@ -174,8 +174,9 @@ func (b *functionsKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.E
 	body, err := functionsStorage.Get(key)
 
 	// get does not return is not found, but nil, nil instead
+	// a missing key means the function was concurrently dropped; skip it gracefully
 	if err == nil && body == nil {
-		return nil, errors.NewSystemDatastoreError(nil, "Key Not Found "+key)
+		return nil, nil
 	}
 	if err != nil {
 		return nil, errors.NewStorageAccessError("Fetch", err)
