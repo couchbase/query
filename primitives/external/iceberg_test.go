@@ -24,6 +24,8 @@ import (
 	"github.com/apache/iceberg-go/catalog"
 	"github.com/apache/iceberg-go/table"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/value"
 )
 
 // stubCatalog satisfies catalog.Catalog for tests that only need a Scanner
@@ -111,45 +113,6 @@ func ExampleNewAWSConfig() {
 	_ = config
 }
 
-func ExampleCreateEqualFilter() {
-	filter := CreateEqualFilter("status", "active")
-	_ = filter
-}
-
-func ExampleCreateAndFilter() {
-	filter := CreateAndFilter(
-		CreateEqualFilter("status", "active"),
-		CreateEqualFilter("age", 30),
-	)
-	_ = filter
-}
-
-func ExampleCreateOrFilter() {
-	filter := CreateOrFilter(
-		CreateEqualFilter("status", "active"),
-		CreateEqualFilter("status", "pending"),
-	)
-	_ = filter
-}
-
-func ExampleCreateRangeFilter() {
-	minAge := 25
-	maxAge := 35
-
-	filters, err := CreateRangeFilter("age", minAge, maxAge)
-	if err != nil {
-		_ = err
-		return
-	}
-
-	_ = filters
-}
-
-func ExampleCreateInFilter() {
-	inFilter := CreateInFilter("category", "electronics", "books", "home")
-	_ = inFilter
-}
-
 func TestParseS3URI(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -213,112 +176,6 @@ func TestParseS3URI(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestFilterCreation(t *testing.T) {
-	t.Run("EqualFilter", func(t *testing.T) {
-		filter := CreateEqualFilter("field1", "value1")
-		if filter.Op != "=" {
-			t.Errorf("filter.Op = %v, want =", filter.Op)
-		}
-		if filter.Field != "field1" {
-			t.Errorf("filter.Field = %v, want field1", filter.Field)
-		}
-		if filter.Value != "value1" {
-			t.Errorf("filter.Value = %v, want value1", filter.Value)
-		}
-	})
-
-	t.Run("AndFilter", func(t *testing.T) {
-		filter := CreateAndFilter(
-			CreateEqualFilter("f1", "v1"),
-			CreateEqualFilter("f2", "v2"),
-		)
-		if filter.Op != "and" {
-			t.Errorf("filter.Op = %v, want and", filter.Op)
-		}
-		if len(filter.Children) != 2 {
-			t.Errorf("len(filter.Children) = %v, want 2", len(filter.Children))
-		}
-	})
-
-	t.Run("OrFilter", func(t *testing.T) {
-		filter := CreateOrFilter(
-			CreateEqualFilter("f1", "v1"),
-			CreateEqualFilter("f2", "v2"),
-		)
-		if filter.Op != "or" {
-			t.Errorf("filter.Op = %v, want or", filter.Op)
-		}
-		if len(filter.Children) != 2 {
-			t.Errorf("len(filter.Children) = %v, want 2", len(filter.Children))
-		}
-	})
-
-	t.Run("InFilter", func(t *testing.T) {
-		filter := CreateInFilter("category", "a", "b", "c")
-		if filter.Op != "in" {
-			t.Errorf("filter.Op = %v, want in", filter.Op)
-		}
-		values, ok := filter.Value.([]interface{})
-		if !ok {
-			t.Errorf("filter.Value is not a slice")
-		}
-		if len(values) != 3 {
-			t.Errorf("len(filter.Value) = %v, want 3", len(values))
-		}
-	})
-}
-
-func TestCreateRangeFilter(t *testing.T) {
-	t.Run("ValidRange", func(t *testing.T) {
-		filters, err := CreateRangeFilter("age", 25, 35)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if len(filters) != 2 {
-			t.Errorf("len(filters) = %v, want 2", len(filters))
-		}
-		if filters[0].Op != ">=" {
-			t.Errorf("filters[0].Op = %v, want >=", filters[0].Op)
-		}
-		if filters[1].Op != "<=" {
-			t.Errorf("filters[1].Op = %v, want <=", filters[1].Op)
-		}
-	})
-
-	t.Run("MinOnly", func(t *testing.T) {
-		filters, err := CreateRangeFilter("age", 25, nil)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if len(filters) != 1 {
-			t.Errorf("len(filters) = %v, want 1", len(filters))
-		}
-		if filters[0].Op != ">=" {
-			t.Errorf("filters[0].Op = %v, want >=", filters[0].Op)
-		}
-	})
-
-	t.Run("MaxOnly", func(t *testing.T) {
-		filters, err := CreateRangeFilter("age", nil, 35)
-		if err != nil {
-			t.Errorf("unexpected error: %v", err)
-		}
-		if len(filters) != 1 {
-			t.Errorf("len(filters) = %v, want 1", len(filters))
-		}
-		if filters[0].Op != "<=" {
-			t.Errorf("filters[0].Op = %v, want <=", filters[0].Op)
-		}
-	})
-
-	t.Run("InvalidRange", func(t *testing.T) {
-		_, err := CreateRangeFilter("age", nil, nil)
-		if err == nil {
-			t.Errorf("expected error but got none")
-		}
-	})
 }
 
 // TestScanOptionsSourceTypes validates that ScanOptions accepts all supported source types
@@ -1058,167 +915,6 @@ func isJSON(s string) bool {
 	return len(s) > 0 && (strings.HasPrefix(s, "{") || strings.HasPrefix(s, "["))
 }
 
-// TestFilterPushdown tests filter expression creation
-func TestFilterPushdown(t *testing.T) {
-	ctx := go_context.Background()
-
-	// Create mock AWS config (won't be used for this test)
-	awsConfig := &aws.Config{
-		Region: "us-east-1",
-	}
-
-	// Create scanner options
-	opts := ScanOptions{
-		Database:      "test_db",
-		Table:         "test_table",
-		CaseSensitive: true,
-		AwsConfig:     awsConfig,
-	}
-
-	scanner, err := NewScanner(ctx, opts, nil)
-	if err != nil {
-		t.Fatalf("Failed to create scanner: %v", err)
-	}
-	defer scanner.Close()
-
-	// Test filter pushdown
-	filterPushdown := NewFilterPushdown(nil, true)
-	if filterPushdown == nil {
-		t.Fatal("Failed to create filter pushdown")
-	}
-
-	// Test creating various filters
-	tests := []struct {
-		name     string
-		filter   IcebergFilter
-		notEmpty bool
-	}{
-		{
-			name: "EqualFilter",
-			filter: IcebergFilter{
-				Op:    "=",
-				Field: "status",
-				Value: "active",
-			},
-			notEmpty: true,
-		},
-		{
-			name: "GreaterThanFilter",
-			filter: IcebergFilter{
-				Op:    ">",
-				Field: "age",
-				Value: 30,
-			},
-			notEmpty: true,
-		},
-		{
-			name: "AndFilter",
-			filter: CreateAndFilter(
-				CreateEqualFilter("status", "active"),
-				CreateEqualFilter("age", 30),
-			),
-			notEmpty: true,
-		},
-		{
-			name: "OrFilter",
-			filter: CreateOrFilter(
-				CreateEqualFilter("status", "active"),
-				CreateEqualFilter("status", "pending"),
-			),
-			notEmpty: true,
-		},
-		{
-			name:     "InFilter",
-			filter:   CreateInFilter("category", "electronics", "books", "home"),
-			notEmpty: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			expr, err := filterPushdown.ConvertFilter(tt.filter)
-			if err != nil {
-				t.Errorf("Failed to convert filter: %v", err)
-				return
-			}
-
-			if expr == nil && tt.notEmpty {
-				t.Error("Expression is nil when it shouldn't be")
-			}
-
-			if expr != nil {
-				t.Logf("Created expression: %v", expr)
-			}
-		})
-	}
-
-	// Test ApplyFilters
-	filters := []IcebergFilter{
-		CreateEqualFilter("status", "active"),
-		CreateEqualFilter("age", 30),
-	}
-
-	if err := filterPushdown.ApplyFilters(filters); err != nil {
-		t.Errorf("Failed to apply filters: %v", err)
-	}
-
-	expr := filterPushdown.GetExpression()
-	if expr == nil {
-		t.Error("GetExpression returned nil")
-	} else {
-		t.Logf("Combined expression: %v", expr)
-	}
-}
-
-// TestScannerFilterLifecycle tests the full filter lifecycle
-func TestScannerFilterLifecycle(t *testing.T) {
-	ctx := go_context.Background()
-
-	// Create mock AWS config
-	awsConfig := &aws.Config{
-		Region: "us-east-1",
-	}
-
-	// Create scanner
-	opts := ScanOptions{
-		Database:      "test_db",
-		Table:         "test_table",
-		CaseSensitive: true,
-		AwsConfig:     awsConfig,
-	}
-
-	scanner, err := NewScanner(ctx, opts, nil)
-	if err != nil {
-		t.Fatalf("Failed to create scanner: %v", err)
-	}
-	defer scanner.Close()
-
-	// Test that filter pushdown is initialized when filters are provided
-	filters := []IcebergFilter{
-		CreateEqualFilter("status", "active"),
-	}
-
-	optsWithFilters := ScanOptions{
-		Database:      "test_db",
-		Table:         "test_table",
-		CaseSensitive: true,
-		AwsConfig:     awsConfig,
-		Filters:       filters,
-	}
-
-	scannerWithFilters, err := NewScanner(ctx, optsWithFilters, nil)
-	if err != nil {
-		t.Fatalf("Failed to create scanner with filters: %v", err)
-	}
-	defer scannerWithFilters.Close()
-
-	if scannerWithFilters.filterPushdown == nil {
-		t.Error("Filter pushdown not initialized when filters provided")
-	}
-
-	t.Logf("Scanner with filters created successfully")
-}
-
 // TestNESSIESourceTypeRouting validates that NESSIE source types are correctly identified
 func TestNESSIESourceTypeRouting(t *testing.T) {
 	ctx := go_context.Background()
@@ -1680,3 +1376,360 @@ func processRecordBatch(batch arrow.RecordBatch, arrowUtil *ArrowUtility) {
 }
 
 */
+
+// fieldExpr builds t.<name> (or just <name> when alias is "").
+func fieldExpr(alias, name string) expression.Expression {
+	if alias == "" {
+		return expression.NewIdentifier(name)
+	}
+	return expression.NewField(expression.NewIdentifier(alias), expression.NewFieldName(name, false))
+}
+
+// nestedFieldExpr builds t.<parent>.<child>.
+func nestedFieldExpr(alias, parent, child string) expression.Expression {
+	base := expression.NewField(expression.NewIdentifier(alias), expression.NewFieldName(parent, false))
+	return expression.NewField(base, expression.NewFieldName(child, false))
+}
+
+func constStr(s string) expression.Expression  { return expression.NewConstant(value.NewValue(s)) }
+func constNum(n float64) expression.Expression { return expression.NewConstant(value.NewValue(n)) }
+
+// TestN1QLToIcebergExpr covers the direct N1QL → iceberg.BooleanExpression converter.
+func TestN1QLToIcebergExpr(t *testing.T) {
+	alias := "t"
+
+	t.Run("nil returns nil", func(t *testing.T) {
+		if got := n1qlToIcebergExpr(nil, alias, nil); got != nil {
+			t.Errorf("expected nil, got %v", got)
+		}
+	})
+
+	t.Run("equality", func(t *testing.T) {
+		expr := expression.NewEq(fieldExpr(alias, "status"), constStr("active"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "status") {
+			t.Errorf("expected 'status' in expression, got %v", got)
+		}
+	})
+
+	t.Run("less than", func(t *testing.T) {
+		expr := expression.NewLT(fieldExpr(alias, "age"), constNum(30))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "LessThan") {
+			t.Errorf("expected LessThan, got %v", got)
+		}
+	})
+
+	t.Run("inverted less than becomes greater than", func(t *testing.T) {
+		// 30 < age  →  age > 30
+		expr := expression.NewLT(constNum(30), fieldExpr(alias, "age"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "GreaterThan") {
+			t.Errorf("expected GreaterThan, got %v", got)
+		}
+	})
+
+	t.Run("AND keeps convertible children", func(t *testing.T) {
+		// AND(status = 'active', age < 30)
+		expr := expression.NewAnd(
+			expression.NewEq(fieldExpr(alias, "status"), constStr("active")),
+			expression.NewLT(fieldExpr(alias, "age"), constNum(30)),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "And") {
+			t.Errorf("expected And, got %v", got)
+		}
+	})
+
+	t.Run("AND drops non-convertible child", func(t *testing.T) {
+		// AND(status = 'active', field+field) — second is un-pushable
+		expr := expression.NewAnd(
+			expression.NewEq(fieldExpr(alias, "status"), constStr("active")),
+			expression.NewEq(expression.NewAdd(fieldExpr(alias, "a"), fieldExpr(alias, "b")), constNum(1)),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		// Should still get the first child, not nil
+		if got == nil {
+			t.Fatal("expected non-nil (partial AND)")
+		}
+		if strings.Contains(got.String(), "And") {
+			t.Errorf("expected single predicate (no And), got %v", got)
+		}
+	})
+
+	t.Run("OR returns nil if any child fails", func(t *testing.T) {
+		expr := expression.NewOr(
+			expression.NewEq(fieldExpr(alias, "status"), constStr("active")),
+			expression.NewEq(expression.NewAdd(fieldExpr(alias, "a"), fieldExpr(alias, "b")), constNum(1)),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got != nil {
+			t.Errorf("expected nil for partial-convertible OR, got %v", got)
+		}
+	})
+
+	t.Run("NOT equal", func(t *testing.T) {
+		expr := expression.NewNot(expression.NewEq(fieldExpr(alias, "status"), constStr("active")))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "NotEqual") {
+			t.Errorf("expected NotEqual, got %v", got)
+		}
+	})
+
+	t.Run("NOT LT becomes GTE", func(t *testing.T) {
+		expr := expression.NewNot(expression.NewLT(fieldExpr(alias, "age"), constNum(18)))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "GreaterThanEqual") {
+			t.Errorf("expected GreaterThanEqual, got %v", got)
+		}
+	})
+
+	t.Run("IN", func(t *testing.T) {
+		arr := expression.NewArrayConstruct(constStr("a"), constStr("b"), constStr("c"))
+		expr := expression.NewIn(fieldExpr(alias, "category"), arr)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		t.Logf("IN expression: %v", got)
+	})
+
+	t.Run("NOT IN", func(t *testing.T) {
+		arr := expression.NewArrayConstruct(constStr("x"), constStr("y"), constStr("z"))
+		expr := expression.NewNot(expression.NewIn(fieldExpr(alias, "category"), arr))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		s := got.String()
+		if !strings.Contains(s, "NotIn") {
+			t.Errorf("expected native NotIn predicate, got %v", got)
+		}
+		t.Logf("NOT IN expression: %v", got)
+	})
+
+	t.Run("BETWEEN", func(t *testing.T) {
+		expr := expression.NewBetween(fieldExpr(alias, "score"), constNum(10), constNum(99))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		s := got.String()
+		if !strings.Contains(s, "GreaterThanEqual") || !strings.Contains(s, "LessThanEqual") {
+			t.Errorf("expected GreaterThanEqual and LessThanEqual in BETWEEN, got %v", got)
+		}
+	})
+
+	t.Run("IS NULL", func(t *testing.T) {
+		expr := expression.NewIsNull(fieldExpr(alias, "name"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "IsNull") {
+			t.Errorf("expected IsNull, got %v", got)
+		}
+	})
+
+	t.Run("IS NOT NULL", func(t *testing.T) {
+		expr := expression.NewIsNotNull(fieldExpr(alias, "name"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "NotNull") {
+			t.Errorf("expected NotNull, got %v", got)
+		}
+	})
+
+	t.Run("LIKE prefix", func(t *testing.T) {
+		expr := expression.NewLike(fieldExpr(alias, "name"), constStr("Bob%"), constStr("\\"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "StartsWith") {
+			t.Errorf("expected StartsWith, got %v", got)
+		}
+	})
+
+	t.Run("LIKE with interior wildcard returns nil", func(t *testing.T) {
+		expr := expression.NewLike(fieldExpr(alias, "name"), constStr("%Bob%"), constStr("\\"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got != nil {
+			t.Errorf("expected nil for non-prefix LIKE, got %v", got)
+		}
+	})
+
+	t.Run("nested field path", func(t *testing.T) {
+		// t.address.city = 'SF'  →  Reference("address.city") = "SF"
+		expr := expression.NewEq(nestedFieldExpr(alias, "address", "city"), constStr("SF"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "address.city") {
+			t.Errorf("expected nested 'address.city' reference, got %v", got)
+		}
+	})
+
+	t.Run("correlated ref from different alias returns nil", func(t *testing.T) {
+		expr := expression.NewEq(fieldExpr("other", "status"), constStr("active"))
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got != nil {
+			t.Errorf("expected nil for cross-alias reference, got %v", got)
+		}
+	})
+}
+
+// TestScannerFilterExpr tests that ScanOptions.FilterExpr is propagated to Scanner.filterExpr.
+func TestScannerFilterExpr(t *testing.T) {
+	ctx := go_context.Background()
+	awsConfig := &aws.Config{Region: "us-east-1"}
+
+	filterExpr := iceberg.EqualTo(iceberg.Reference("status"), "active")
+
+	opts := ScanOptions{
+		Database:      "test_db",
+		Table:         "test_table",
+		CaseSensitive: true,
+		AwsConfig:     awsConfig,
+		FilterExpr:    filterExpr,
+	}
+
+	scanner, err := NewScanner(ctx, opts, nil)
+	if err != nil {
+		t.Fatalf("NewScanner: %v", err)
+	}
+	defer scanner.Close()
+
+	if scanner.filterExpr == nil {
+		t.Error("filterExpr not set on scanner")
+	}
+	if scanner.filterExpr.String() != filterExpr.String() {
+		t.Errorf("filterExpr mismatch: got %v, want %v", scanner.filterExpr, filterExpr)
+	}
+}
+
+// TestScannerNoFilter tests that a scanner without FilterExpr has nil filterExpr.
+func TestScannerNoFilter(t *testing.T) {
+	ctx := go_context.Background()
+	awsConfig := &aws.Config{Region: "us-east-1"}
+
+	opts := ScanOptions{
+		Database:  "test_db",
+		Table:     "test_table",
+		AwsConfig: awsConfig,
+	}
+
+	scanner, err := NewScanner(ctx, opts, nil)
+	if err != nil {
+		t.Fatalf("NewScanner: %v", err)
+	}
+	defer scanner.Close()
+
+	if scanner.filterExpr != nil {
+		t.Errorf("expected nil filterExpr, got %v", scanner.filterExpr)
+	}
+}
+
+// TestStripInvalidPredicates verifies that stripInvalidPredicates correctly
+// handles predicates referencing columns absent from the schema.
+func TestStripInvalidPredicates(t *testing.T) {
+	// Build a minimal Iceberg schema with one field: "name" (string, id=1)
+	schema := iceberg.NewSchema(0,
+		iceberg.NestedField{ID: 1, Name: "name", Type: iceberg.PrimitiveTypes.String, Required: false},
+	)
+
+	t.Run("valid predicate kept", func(t *testing.T) {
+		expr := iceberg.EqualTo(iceberg.Reference("name"), "Bob")
+		got := stripInvalidPredicates(schema, expr, true)
+		if _, isTrue := got.(iceberg.AlwaysTrue); isTrue {
+			t.Error("valid predicate was stripped")
+		}
+		if !strings.Contains(got.String(), "name") {
+			t.Errorf("expected 'name' in result, got %v", got)
+		}
+	})
+
+	t.Run("unknown column replaced with AlwaysTrue", func(t *testing.T) {
+		expr := iceberg.EqualTo(iceberg.Reference("city"), "SF")
+		got := stripInvalidPredicates(schema, expr, true)
+		if _, isTrue := got.(iceberg.AlwaysTrue); !isTrue {
+			t.Errorf("expected AlwaysTrue for unknown column, got %v", got)
+		}
+	})
+
+	t.Run("AND keeps valid, drops unknown", func(t *testing.T) {
+		// AND(name = "Bob", city = "SF")  →  name = "Bob"
+		expr := iceberg.NewAnd(
+			iceberg.EqualTo(iceberg.Reference("name"), "Bob"),
+			iceberg.EqualTo(iceberg.Reference("city"), "SF"),
+		)
+		got := stripInvalidPredicates(schema, expr, true)
+		if _, isTrue := got.(iceberg.AlwaysTrue); isTrue {
+			t.Error("expected partial AND, not AlwaysTrue")
+		}
+		if strings.Contains(got.String(), "And") {
+			t.Errorf("expected single predicate after strip, got %v", got)
+		}
+		if !strings.Contains(got.String(), "name") {
+			t.Errorf("expected valid 'name' predicate, got %v", got)
+		}
+	})
+
+	t.Run("OR with unknown column becomes AlwaysTrue", func(t *testing.T) {
+		// OR(name = "Bob", city = "SF")  →  AlwaysTrue (can't prune)
+		expr := iceberg.NewOr(
+			iceberg.EqualTo(iceberg.Reference("name"), "Bob"),
+			iceberg.EqualTo(iceberg.Reference("city"), "SF"),
+		)
+		got := stripInvalidPredicates(schema, expr, true)
+		if _, isTrue := got.(iceberg.AlwaysTrue); !isTrue {
+			t.Errorf("expected AlwaysTrue for OR with unknown column, got %v", got)
+		}
+	})
+
+	t.Run("NOT of unknown column is AlwaysTrue not AlwaysFalse", func(t *testing.T) {
+		// NOT(city IS NULL) where city doesn't exist.
+		// Without the fix this would become NOT(AlwaysTrue) = AlwaysFalse,
+		// which incorrectly eliminates all rows.
+		expr := iceberg.NewNot(iceberg.IsNull(iceberg.Reference("city")))
+		got := stripInvalidPredicates(schema, expr, true)
+		if _, isFalse := got.(iceberg.AlwaysFalse); isFalse {
+			t.Error("NOT of unknown column must not produce AlwaysFalse — would eliminate all rows")
+		}
+		if _, isTrue := got.(iceberg.AlwaysTrue); !isTrue {
+			t.Errorf("expected AlwaysTrue for NOT(unknown), got %v", got)
+		}
+	})
+
+	t.Run("NOT of valid predicate kept", func(t *testing.T) {
+		expr := iceberg.NewNot(iceberg.IsNull(iceberg.Reference("name")))
+		got := stripInvalidPredicates(schema, expr, true)
+		if _, isTrue := got.(iceberg.AlwaysTrue); isTrue {
+			t.Error("NOT of valid predicate was incorrectly stripped")
+		}
+		if !strings.Contains(got.String(), "Not") {
+			t.Errorf("expected Not in result, got %v", got)
+		}
+	})
+}

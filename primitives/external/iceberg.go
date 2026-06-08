@@ -10,10 +10,12 @@ package external
 
 import (
 	go_context "context"
+	"math"
 	"strconv"
 	"strings"
 	"time"
 
+	iceberg "github.com/apache/iceberg-go"
 	"github.com/apache/iceberg-go/catalog"
 	icebergutils "github.com/apache/iceberg-go/utils"
 	"github.com/couchbase/query/datastore"
@@ -27,224 +29,285 @@ import (
 
 const IcebergScanTimeout = 2 * time.Minute
 
-// convertN1QLToIcebergFilter converts N1QL expression to iceberg filter
-// Returns nil filter if conversion fails (instead of error)
-func convertN1QLToIcebergFilter(expr expression.Expression, alias string, parent value.Value) IcebergFilter {
+// n1qlToIcebergExpr converts a N1QL WHERE-clause expression directly to an
+// iceberg-go BooleanExpression for filter pushdown.
+// Returns nil when the expression cannot be represented as an Iceberg predicate.
+// For AND, convertible children are kept and non-convertible ones are dropped
+// (a partial pushdown that only widens the scan is safe).
+// For OR, all children must convert; if any fail the whole OR is dropped
+// (dropping part of an OR would incorrectly exclude rows that match the failed branch).
+func n1qlToIcebergExpr(expr expression.Expression, alias string, parent value.Value) iceberg.BooleanExpression {
 	if expr == nil {
-		return IcebergFilter{}
+		return nil
 	}
-
-	// Process the expression directly and handle alias in field extraction
 	switch e := expr.(type) {
 	case *expression.Eq:
-		// equality comparison (commutative)
-		field, val, _, valid := extractComparison(e.First(), e.Second(), alias, parent)
-		if !valid {
-			return IcebergFilter{} // conversion failed
-		}
-		return IcebergFilter{Op: "=", Field: field, Value: val}
+		return n1qlCompareExpr(iceberg.OpEQ, e.First(), e.Second(), alias, parent)
 
 	case *expression.LT:
-		// less than
-		field, val, inverted, valid := extractComparison(e.First(), e.Second(), alias, parent)
-		if !valid {
-			return IcebergFilter{} // conversion failed
-		}
-		// If operands are inverted (constant < field), change to field > constant
-		if inverted {
-			return IcebergFilter{Op: ">", Field: field, Value: val}
-		}
-		return IcebergFilter{Op: "<", Field: field, Value: val}
+		// LT(field, const) → field < const; LT(const, field) → field > const
+		return n1qlCompareExpr(iceberg.OpLT, e.First(), e.Second(), alias, parent)
 
 	case *expression.LE:
-		// less than or equal
-		field, val, inverted, valid := extractComparison(e.First(), e.Second(), alias, parent)
-		if !valid {
-			return IcebergFilter{} // conversion failed
-		}
-		// If operands are inverted (constant <= field), change to field >= constant
-		if inverted {
-			return IcebergFilter{Op: ">=", Field: field, Value: val}
-		}
-		return IcebergFilter{Op: "<=", Field: field, Value: val}
+		return n1qlCompareExpr(iceberg.OpLTEQ, e.First(), e.Second(), alias, parent)
 
 	case *expression.And:
-		// logical AND
-		filters := make([]IcebergFilter, 0, len(e.Operands()))
+		var children []iceberg.BooleanExpression
 		for _, op := range e.Operands() {
-			f := convertN1QLToIcebergFilter(op, alias, parent)
-			if f.Op != "" || len(f.Children) > 0 {
-				filters = append(filters, f)
+			if child := n1qlToIcebergExpr(op, alias, parent); child != nil {
+				children = append(children, child)
 			}
 		}
-		if len(filters) == 0 {
-			return IcebergFilter{} // conversion failed for all children
+		if len(children) == 0 {
+			return nil
 		}
-		return IcebergFilter{Op: "and", Children: filters}
+		result := children[0]
+		for _, c := range children[1:] {
+			result = iceberg.NewAnd(result, c)
+		}
+		return result
 
 	case *expression.Or:
-		// logical OR
-		filters := make([]IcebergFilter, 0, len(e.Operands()))
+		children := make([]iceberg.BooleanExpression, 0, len(e.Operands()))
 		for _, op := range e.Operands() {
-			f := convertN1QLToIcebergFilter(op, alias, parent)
-			if f.Op != "" || len(f.Children) > 0 {
-				filters = append(filters, f)
+			child := n1qlToIcebergExpr(op, alias, parent)
+			if child == nil {
+				return nil // any missing branch makes the OR un-pushable
 			}
+			children = append(children, child)
 		}
-		if len(filters) == 0 {
-			return IcebergFilter{} // conversion failed for all children
+		if len(children) == 0 {
+			return nil
 		}
-		return IcebergFilter{Op: "or", Children: filters}
+		result := children[0]
+		for _, c := range children[1:] {
+			result = iceberg.NewOr(result, c)
+		}
+		return result
 
 	case *expression.Not:
-		// logical NOT or inverted comparison
-		// Check if the operand is a comparison operator and invert it
-		if op, ok := e.Operand().(*expression.Eq); ok {
-			// NOT(Eq(a, b)) -> NE(a, b)
-			field, val, _, valid := extractComparison(op.First(), op.Second(), alias, parent)
-			if !valid {
-				return IcebergFilter{}
+		// Fold NOT into comparison operators where possible for cleaner predicates.
+		switch inner := e.Operand().(type) {
+		case *expression.Eq:
+			return n1qlCompareExpr(iceberg.OpNEQ, inner.First(), inner.Second(), alias, parent)
+		case *expression.LT:
+			// NOT(a < b)  →  a >= b
+			return n1qlCompareExpr(iceberg.OpGTEQ, inner.First(), inner.Second(), alias, parent)
+		case *expression.LE:
+			// NOT(a <= b) →  a > b
+			return n1qlCompareExpr(iceberg.OpGT, inner.First(), inner.Second(), alias, parent)
+		case *expression.In:
+			// NOT(field IN (...))  →  native OpNotIn predicate
+			field, ok := n1qlFieldPath(inner.First(), alias)
+			if !ok {
+				return nil
 			}
-			return IcebergFilter{Op: "!=", Field: field, Value: val}
+			vals := n1qlArrayValues(inner.Second(), parent)
+			if len(vals) == 0 {
+				return nil
+			}
+			ref := iceberg.Reference(field)
+			lits := make([]iceberg.Literal, 0, len(vals))
+			for _, v := range vals {
+				lit := n1qlValueToLiteral(v)
+				if lit == nil {
+					continue
+				}
+				lits = append(lits, lit)
+			}
+			if len(lits) == 0 {
+				return nil
+			}
+			if len(lits) > 200 {
+				logging.Warnf("Iceberg filter pushdown: NOT IN predicate on %q has %d values (>200); partition pruning disabled for this filter", field, len(lits))
+			}
+			return iceberg.SetPredicate(iceberg.OpNotIn, ref, lits)
 		}
-		if op, ok := e.Operand().(*expression.LT); ok {
-			// NOT(LT(a, b)) -> GE(a, b)
-			field, val, inverted, valid := extractComparison(op.First(), op.Second(), alias, parent)
-			if !valid {
-				return IcebergFilter{}
-			}
-			// NOT(LT(field, const)) -> GE(field, const)
-			// NOT(LT(const, field)) -> NOT(GT(field, const)) -> LE(field, const)
-			if inverted {
-				return IcebergFilter{Op: "<=", Field: field, Value: val}
-			}
-			return IcebergFilter{Op: ">=", Field: field, Value: val}
+		if child := n1qlToIcebergExpr(e.Operand(), alias, parent); child != nil {
+			return iceberg.NewNot(child)
 		}
-		if op, ok := e.Operand().(*expression.LE); ok {
-			// NOT(LE(a, b)) -> GT(a, b)
-			field, val, inverted, valid := extractComparison(op.First(), op.Second(), alias, parent)
-			if !valid {
-				return IcebergFilter{}
-			}
-			// NOT(LE(field, const)) -> GT(field, const)
-			// NOT(LE(const, field)) -> NOT(GE(field, const)) -> LT(field, const)
-			if inverted {
-				return IcebergFilter{Op: "<", Field: field, Value: val}
-			}
-			return IcebergFilter{Op: ">", Field: field, Value: val}
-		}
-		// For other NOT cases, handle as logical NOT
-		f := convertN1QLToIcebergFilter(e.Operand(), alias, parent)
-		if f.Op != "" || len(f.Children) > 0 {
-			return IcebergFilter{Op: "not", Children: []IcebergFilter{f}}
-		}
-		return IcebergFilter{} // conversion failed
+		return nil
 
 	case *expression.In:
-		// IN operator
-		field, valid := extractFieldName(e.First(), alias, parent)
-		if !valid {
-			return IcebergFilter{} // conversion failed
+		field, ok := n1qlFieldPath(e.First(), alias)
+		if !ok {
+			return nil
 		}
-		vals := extractArrayValues(e.Second(), parent)
-		if vals == nil {
-			return IcebergFilter{} // conversion failed
+		vals := n1qlArrayValues(e.Second(), parent)
+		if len(vals) == 0 {
+			return nil
 		}
-		return IcebergFilter{Op: "in", Field: field, Value: vals}
+		ref := iceberg.Reference(field)
+		lits := make([]iceberg.Literal, 0, len(vals))
+		for _, v := range vals {
+			lit := n1qlValueToLiteral(v)
+			if lit == nil {
+				continue
+			}
+			lits = append(lits, lit)
+		}
+		if len(lits) == 0 {
+			return nil
+		}
+		if len(lits) > 200 {
+			logging.Warnf("Iceberg filter pushdown: IN predicate on %q has %d values (>200); partition pruning disabled for this filter", field, len(lits))
+		}
+		// SetPredicate(OpIn) is iceberg-go's native IN. When len > 200 the manifest
+		// evaluator skips pruning (returns rowsMightMatch) rather than erroring — safe.
+		return iceberg.SetPredicate(iceberg.OpIn, ref, lits)
+
+	case *expression.Between:
+		// item BETWEEN low AND high  →  item >= low AND item <= high
+		ops := e.Operands()
+		if len(ops) != 3 {
+			return nil
+		}
+		field, ok := n1qlFieldPath(ops[0], alias)
+		if !ok {
+			return nil
+		}
+		ref := iceberg.Reference(field)
+		lowVal := n1qlExtractValue(ops[1], parent)
+		highVal := n1qlExtractValue(ops[2], parent)
+		if lowVal == nil || highVal == nil {
+			return nil
+		}
+		lowLit := n1qlValueToLiteral(lowVal)
+		highLit := n1qlValueToLiteral(highVal)
+		if lowLit == nil || highLit == nil {
+			return nil
+		}
+		return iceberg.NewAnd(
+			iceberg.LiteralPredicate(iceberg.OpGTEQ, ref, lowLit),
+			iceberg.LiteralPredicate(iceberg.OpLTEQ, ref, highLit),
+		)
 
 	case *expression.IsNull:
-		// IS NULL check
-		field, valid := extractFieldName(e.Operand(), alias, parent)
-		if !valid {
-			return IcebergFilter{} // conversion failed
+		field, ok := n1qlFieldPath(e.Operand(), alias)
+		if !ok {
+			return nil
 		}
-		return IcebergFilter{Op: "is_null", Field: field, Value: nil}
+		return iceberg.IsNull(iceberg.Reference(field))
 
 	case *expression.IsNotNull:
-		// IS NOT NULL check
-		field, valid := extractFieldName(e.Operand(), alias, parent)
-		if !valid {
-			return IcebergFilter{} // conversion failed
+		field, ok := n1qlFieldPath(e.Operand(), alias)
+		if !ok {
+			return nil
 		}
-		return IcebergFilter{Op: "is_not_null", Field: field, Value: nil}
+		return iceberg.NotNull(iceberg.Reference(field))
 
 	case *expression.Like:
-		// LIKE operator
-		field, valid := extractFieldName(e.First(), alias, parent)
-		if !valid {
-			return IcebergFilter{} // conversion failed
+		field, ok := n1qlFieldPath(e.First(), alias)
+		if !ok {
+			return nil
 		}
-		val := extractValue(e.Second(), parent)
-		if strVal, ok := val.(string); ok {
-			return IcebergFilter{Op: "like", Field: field, Value: strVal}
+		val := n1qlExtractValue(e.Second(), parent)
+		pattern, ok := val.(string)
+		if !ok {
+			return nil
 		}
-		return IcebergFilter{} // conversion failed
+		ref := iceberg.Reference(field)
+		// Pure prefix pattern "abc%" — no wildcards before the trailing %
+		if strings.HasSuffix(pattern, "%") && !strings.ContainsAny(pattern[:len(pattern)-1], "%_") {
+			return iceberg.StartsWith(ref, pattern[:len(pattern)-1])
+		}
+		// Exact string (no wildcards)
+		if !strings.ContainsAny(pattern, "%_") {
+			return iceberg.EqualTo(ref, pattern)
+		}
+		return nil
+	}
+	return nil
+}
 
+// n1qlCompareExpr builds an Iceberg comparison predicate from a N1QL binary comparison.
+// When first is the field and second is the constant, the op is used as-is.
+// When first is the constant and second is the field, the op is flipped (e.g. LT → GT).
+func n1qlCompareExpr(op iceberg.Operation, first, second expression.Expression, alias string, parent value.Value) iceberg.BooleanExpression {
+	firstVal := n1qlExtractValue(first, parent)
+	secondVal := n1qlExtractValue(second, parent)
+
+	var field string
+	var val interface{}
+	var flip bool
+
+	switch {
+	case firstVal == nil && secondVal != nil:
+		// field OP const
+		var ok bool
+		field, ok = n1qlFieldPath(first, alias)
+		if !ok {
+			return nil
+		}
+		val = secondVal
+	case firstVal != nil && secondVal == nil:
+		// const OP field  →  field flipped-OP const
+		var ok bool
+		field, ok = n1qlFieldPath(second, alias)
+		if !ok {
+			return nil
+		}
+		val = firstVal
+		flip = true
 	default:
-		// Unsupported expression type
-		return IcebergFilter{} // conversion failed
+		return nil
+	}
+
+	if flip {
+		op = flipOp(op)
+	}
+
+	ref := iceberg.Reference(field)
+	lit := n1qlValueToLiteral(val)
+	if lit == nil {
+		return nil
+	}
+	return iceberg.LiteralPredicate(op, ref, lit)
+}
+
+// flipOp reverses the direction of a comparison operator (swapping operands).
+func flipOp(op iceberg.Operation) iceberg.Operation {
+	switch op {
+	case iceberg.OpLT:
+		return iceberg.OpGT
+	case iceberg.OpLTEQ:
+		return iceberg.OpGTEQ
+	case iceberg.OpGT:
+		return iceberg.OpLT
+	case iceberg.OpGTEQ:
+		return iceberg.OpLTEQ
+	default:
+		return op // EQ, NEQ are symmetric
 	}
 }
 
-// extractFieldName extracts a field name from a simple path expression.
-// Returns (fieldName, valid).
-// Only a single-segment path is accepted: t.col or bare col.
-// Multi-segment paths (t.a.b), compound expressions (t.c1+t.c2), and
-// correlated references from a different alias are all rejected.
-func extractFieldName(expr expression.Expression, alias string, parent value.Value) (path string, valid bool) {
+// n1qlFieldPath extracts a dot-separated field path from a N1QL identifier expression.
+// Supports both top-level fields (t.name → "name") and nested fields
+// (t.address.city → "address.city") using Iceberg's dot-notation for nested access.
+// Correlated references from a different alias are rejected.
+func n1qlFieldPath(expr expression.Expression, alias string) (string, bool) {
 	exprAlias, field, err := expression.PathString(expr)
 	if err != nil || field == "" {
 		return "", false
 	}
-	// Reject expressions that belong to a different scope (correlated outer reference).
 	if alias != "" && exprAlias != "" && exprAlias != alias {
 		return "", false
 	}
-	// PathString wraps each segment in backticks: `a`.`b`.`c`
-	// Remove all backticks so Iceberg receives the plain field name.
+	// PathString wraps each segment in backticks: `address`.`city`
+	// Strip backticks; keep "." as the Iceberg nested-field separator.
 	field = strings.ReplaceAll(field, "`", "")
-	// Reject multi-segment paths such as address.city — must be a single field name.
-	if strings.Contains(field, ".") {
-		return "", false
-	}
 	return field, true
 }
 
-// extractComparison extracts field and value from a binary comparison expression
-// Returns (field, value, inverted, valid)
-// - field: the field name
-// - value: the constant value (or parent-evaluated value)
-// - inverted: true if we need to invert the operator due to operand swap
-// - valid: true if extraction succeeded
-func extractComparison(first, second expression.Expression, alias string, parent value.Value) (path string, val interface{}, inverted bool, valid bool) {
-	firstVal := extractValue(first, parent)
-	secondVal := extractValue(second, parent)
-
-	// Case 1: field = constant/parent-value
-	if firstVal == nil && secondVal != nil {
-		path, ok := extractFieldName(first, alias, parent)
-		if !ok || path == "" {
-			return "", nil, false, false
-		}
-		return path, secondVal, false, true
-	}
-
-	// Case 2: constant/parent-value = field - need to invert operator
-	if firstVal != nil && secondVal == nil {
-		path, ok := extractFieldName(second, alias, parent)
-		if !ok || path == "" {
-			return "", nil, false, false
-		}
-		return path, firstVal, true, true
-	}
-
-	return "", nil, false, false
-}
-
-// extractValue extracts a value from an expression — constant first, then evaluated against parent.
-func extractValue(expr expression.Expression, parent value.Value) interface{} {
+// n1qlExtractValue returns the constant value of a N1QL expression as a plain Go value,
+// or nil if the expression is not a constant (or evaluates to NULL/MISSING).
+func n1qlExtractValue(expr expression.Expression, parent value.Value) interface{} {
 	if v := expr.Value(); v != nil {
-		return v.Actual()
+		act := v.Actual()
+		if act == nil {
+			return nil // NULL
+		}
+		return act
 	}
 	if parent != nil {
 		if v, err := expr.Evaluate(parent, nil); err == nil && v != nil &&
@@ -255,25 +318,47 @@ func extractValue(expr expression.Expression, parent value.Value) interface{} {
 	return nil
 }
 
-// extractArrayValues extracts values from an array expression, using parent for non-constant elements.
-func extractArrayValues(expr expression.Expression, parent value.Value) []interface{} {
-	if arrConstruct, ok := expr.(*expression.ArrayConstruct); ok {
-		result := make([]interface{}, 0, len(arrConstruct.Operands()))
-		for _, op := range arrConstruct.Operands() {
-			val := extractValue(op, parent)
-			if val != nil {
-				result = append(result, val)
+// n1qlArrayValues collects constant values from an array expression.
+func n1qlArrayValues(expr expression.Expression, parent value.Value) []interface{} {
+	if arr, ok := expr.(*expression.ArrayConstruct); ok {
+		result := make([]interface{}, 0, len(arr.Operands()))
+		for _, op := range arr.Operands() {
+			if v := n1qlExtractValue(op, parent); v != nil {
+				result = append(result, v)
 			}
 		}
 		return result
 	}
-	// Fall back to evaluating the whole expression against parent (e.g. a parameter array).
 	if parent != nil {
 		if v, err := expr.Evaluate(parent, nil); err == nil && v != nil && v.Type() != value.MISSING {
 			if arr, ok := v.Actual().([]interface{}); ok {
 				return arr
 			}
 		}
+	}
+	return nil
+}
+
+// n1qlValueToLiteral converts a plain Go value (from value.Actual()) to an iceberg.Literal.
+// N1QL stores all JSON numbers as float64; whole-number floats are converted to int64
+// so that iceberg can coerce them to the column's actual integer type during binding.
+func n1qlValueToLiteral(val interface{}) iceberg.Literal {
+	switch v := val.(type) {
+	case string:
+		return iceberg.StringLiteral(v)
+	case bool:
+		return iceberg.BoolLiteral(v)
+	case float64:
+		if v == float64(int64(v)) && v >= math.MinInt64 && v <= math.MaxInt64 {
+			return iceberg.Int64Literal(int64(v))
+		}
+		return iceberg.Float64Literal(v)
+	case int32:
+		return iceberg.Int32Literal(v)
+	case int64:
+		return iceberg.Int64Literal(v)
+	case float32:
+		return iceberg.Float32Literal(v)
 	}
 	return nil
 }
@@ -377,12 +462,11 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 		params.ScanOptions = opts
 	}
 
-	opts.Filters = nil
+	opts.FilterExpr = nil
 	if params.Filter != nil {
-		icebergFilter := convertN1QLToIcebergFilter(params.Filter, params.Alias, params.Parent)
-		if icebergFilter.Op != "" || len(icebergFilter.Children) > 0 {
-			opts.Filters = []IcebergFilter{icebergFilter}
-			logging.Infof("scanIcebergCatalog: Applied filter pushdown: op=%s, field=%s", icebergFilter.Op, icebergFilter.Field)
+		if expr := n1qlToIcebergExpr(params.Filter, params.Alias, params.Parent); expr != nil {
+			opts.FilterExpr = expr
+			logging.Infof("scanIcebergCatalog: Applied filter pushdown: %v", expr)
 		}
 	}
 

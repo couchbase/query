@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -91,7 +90,7 @@ type Scanner struct {
 	snapshotAsOf    *int64
 	selectedFields  []string
 	limit           int64
-	filterPushdown  *FilterPushdown
+	filterExpr      iceberg.BooleanExpression
 	awsConfig       *aws.Config
 	sourceType      string             // Track which catalog source type we're using
 	parallelScans   int                // Scan parallelism override (0 = use default 1)
@@ -108,7 +107,7 @@ type ScanOptions struct {
 	CaseSensitive      bool
 	Limit              int64
 	AwsConfig          *aws.Config
-	Filters            []IcebergFilter
+	FilterExpr         iceberg.BooleanExpression
 	SourceType         string
 	URI                string
 	Warehouse          string
@@ -761,18 +760,9 @@ func NewScanner(ctx go_context.Context, opts ScanOptions, cat catalog.Catalog) (
 	}
 	scanner.catalog = cat
 
-	if len(opts.Filters) > 0 {
-		scanner.filterPushdown = &FilterPushdown{
-			icebergFilters: make([]iceberg.BooleanExpression, 0),
-			caseSensitive:  opts.CaseSensitive,
-		}
-		logging.Debugf("Iceberg Scanner: applying %d filter(s) for pushdown", len(opts.Filters))
-		if err := scanner.filterPushdown.ApplyFilters(opts.Filters); err != nil {
-			logging.Warnf("Iceberg Scanner: failed to apply filters: %v. Filters will be ignored.", err)
-			scanner.filterPushdown = nil
-		} else {
-			logging.Debugf("Iceberg Scanner: filters applied successfully to pushdown")
-		}
+	if opts.FilterExpr != nil {
+		scanner.filterExpr = opts.FilterExpr
+		logging.Debugf("Iceberg Scanner: using filter expression for pushdown")
 	}
 
 	return scanner, nil
@@ -1135,14 +1125,13 @@ func (s *Scanner) Scan(ctx go_context.Context) (*table.Scan, error) {
 
 	logging.Debugf("Iceberg scan options - Database: %s, Table: %s", s.databaseName, s.tableName)
 
-	if s.filterPushdown != nil {
-		// Get the combined filter expression for pushdown
-		filterExpr := s.filterPushdown.GetExpression()
-		if filterExpr != nil {
-			logging.Debugf("Iceberg scan: applying row filter pushdown: %T", filterExpr)
-			opts = append(opts, table.WithRowFilter(filterExpr))
+	if s.filterExpr != nil {
+		safeExpr := stripInvalidPredicates(s.table.Schema(), s.filterExpr, true)
+		if _, isTrue := safeExpr.(iceberg.AlwaysTrue); !isTrue {
+			logging.Debugf("Iceberg scan: applying row filter pushdown: %v", safeExpr)
+			opts = append(opts, table.WithRowFilter(safeExpr))
 		} else {
-			logging.Warnf("Iceberg scan: filterPushdown defined but no filter expression found")
+			logging.Debugf("Iceberg scan: all filters reference unknown schema fields, skipping pushdown")
 		}
 	}
 
@@ -1313,6 +1302,65 @@ func (s *Scanner) CreateReader(ctx go_context.Context) (*Reader, error) {
 	return reader, nil
 }
 
+// schemaStripVisitor rewrites a filter expression by replacing each leaf predicate
+// that references a column absent from the Iceberg schema with AlwaysTrue.
+// Valid predicates are kept unchanged; AND/OR/NOT structure is preserved.
+type schemaStripVisitor struct {
+	schema        *iceberg.Schema
+	caseSensitive bool
+}
+
+func (v *schemaStripVisitor) VisitTrue() iceberg.BooleanExpression  { return iceberg.AlwaysTrue{} }
+func (v *schemaStripVisitor) VisitFalse() iceberg.BooleanExpression { return iceberg.AlwaysFalse{} }
+func (v *schemaStripVisitor) VisitNot(child iceberg.BooleanExpression) iceberg.BooleanExpression {
+	// AlwaysTrue means the child predicate was stripped (unknown column).
+	// NOT(AlwaysTrue) via iceberg.NewNot would return AlwaysFalse, which would
+	// incorrectly eliminate every row. Return AlwaysTrue so no pruning occurs.
+	if _, ok := child.(iceberg.AlwaysTrue); ok {
+		return iceberg.AlwaysTrue{}
+	}
+	return iceberg.NewNot(child)
+}
+func (v *schemaStripVisitor) VisitAnd(left, right iceberg.BooleanExpression) iceberg.BooleanExpression {
+	return iceberg.NewAnd(left, right)
+}
+func (v *schemaStripVisitor) VisitOr(left, right iceberg.BooleanExpression) iceberg.BooleanExpression {
+	return iceberg.NewOr(left, right)
+}
+func (v *schemaStripVisitor) VisitUnbound(pred iceberg.UnboundPredicate) iceberg.BooleanExpression {
+	if _, err := iceberg.BindExpr(v.schema, pred, v.caseSensitive); err != nil {
+		logging.Warnf("Iceberg scan: dropping filter %v — column not in schema: %v", pred, err)
+		return iceberg.AlwaysTrue{}
+	}
+	return pred
+}
+func (v *schemaStripVisitor) VisitBound(pred iceberg.BoundPredicate) iceberg.BooleanExpression {
+	return pred
+}
+
+// stripInvalidPredicates returns a copy of expr with any leaf predicates that
+// reference schema-unknown columns replaced by AlwaysTrue.
+func stripInvalidPredicates(schema *iceberg.Schema, expr iceberg.BooleanExpression, caseSensitive bool) iceberg.BooleanExpression {
+	result, err := iceberg.VisitExpr(expr, &schemaStripVisitor{schema: schema, caseSensitive: caseSensitive})
+	if err != nil {
+		logging.Warnf("Iceberg scan: error stripping invalid predicates: %v, skipping pushdown", err)
+		return iceberg.AlwaysTrue{}
+	}
+	return result
+}
+
+// planFilesWithRecovery calls scan.PlanFiles catching any panic from iceberg-go (e.g. when a
+// filter references a column that is not in the partition spec).
+func planFilesWithRecovery(scan *table.Scan, ctx go_context.Context) (fileTasks []table.FileScanTask, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("iceberg PlanFiles panic: %v", r)
+		}
+	}()
+	fileTasks, err = scan.PlanFiles(ctx)
+	return
+}
+
 // ScanAndConvertWithPlanFiles reads data using PlanFiles approach to avoid NESSIE context cancellation
 func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan map[string]interface{}, <-chan error) {
 	logging.Debugf("Iceberg ScanAndConvertWithPlanFiles: starting NESSIE multi-file scan for %s.%s", s.databaseName, s.tableName)
@@ -1329,7 +1377,7 @@ func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan ma
 	}
 
 	// Get all data files for this table
-	fileTasks, err := scan.PlanFiles(ctx)
+	fileTasks, err := planFilesWithRecovery(scan, ctx)
 	if err != nil {
 		logging.Errorf("Iceberg ScanAndConvertWithPlanFiles: failed to plan files: %v", err)
 		resultChan := make(chan map[string]interface{})
@@ -1476,7 +1524,7 @@ func (s *Scanner) ScanAndConvertStream(ctx go_context.Context) (<-chan map[strin
 			return resultChan, errorChan
 		}
 
-		fileTasks, err := scan.PlanFiles(ctx)
+		fileTasks, err := planFilesWithRecovery(scan, ctx)
 		if err != nil {
 			logging.Warnf("Iceberg ScanAndConvertStream: failed to plan files for %s, falling back to standard approach: %v",
 				s.sourceType, err)
@@ -1767,6 +1815,11 @@ func (s *Scanner) ScanAndConvertParallelFiles(ctx go_context.Context) (<-chan ma
 	go func() {
 		defer close(errorChan)
 		defer close(resultChan)
+		defer func() {
+			if r := recover(); r != nil {
+				errorChan <- fmt.Errorf("iceberg scan panic: %v", r)
+			}
+		}()
 
 		scan, err := s.Scan(ctx)
 		if err != nil {
@@ -1774,7 +1827,7 @@ func (s *Scanner) ScanAndConvertParallelFiles(ctx go_context.Context) (<-chan ma
 			return
 		}
 
-		fileTasks, err := scan.PlanFiles(ctx)
+		fileTasks, err := planFilesWithRecovery(scan, ctx)
 		if err != nil {
 			errorChan <- fmt.Errorf("failed to plan files: %w", err)
 			return
@@ -2137,558 +2190,6 @@ func ParseS3URI(uri string) (bucket, key string, err error) {
 	}
 
 	return bucket, key, nil
-}
-
-// Filter represents a filter expression with operator and operands
-type IcebergFilter struct {
-	Op       string          `json:"op"`       // "=", ">", "<", ">=", "<=", "!=", "and", "or", "not", "in", "not_in", "like"
-	Field    string          `json:"field"`    // field name for simple comparisons
-	Value    interface{}     `json:"value"`    // value for comparison
-	Children []IcebergFilter `json:"children"` // child filters for logical operators
-}
-
-// FilterPushdown handles filter pushdown for Iceberg scans
-type FilterPushdown struct {
-	icebergFilters []iceberg.BooleanExpression
-	schema         interface{}
-	caseSensitive  bool
-}
-
-// NewFilterPushdown creates a new filter pushdown handler
-func NewFilterPushdown(schema interface{}, caseSensitive bool) *FilterPushdown {
-	return &FilterPushdown{
-		schema:         schema,
-		caseSensitive:  caseSensitive,
-		icebergFilters: make([]iceberg.BooleanExpression, 0),
-	}
-}
-
-// ConvertFilter converts generic filters to Iceberg expressions
-func (fp *FilterPushdown) ConvertFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	switch strings.ToLower(filter.Op) {
-	case "=":
-		return fp.createEqualFilter(filter)
-	case "!=", "<>":
-		return fp.createNotEqualFilter(filter)
-	case ">":
-		return fp.createGreaterThanFilter(filter)
-	case "<":
-		return fp.createLessThanFilter(filter)
-	case ">=":
-		return fp.createGreaterThanOrEqualFilter(filter)
-	case "<=":
-		return fp.createLessThanOrEqualFilter(filter)
-	case "and":
-		return fp.createAndFilter(filter)
-	case "or":
-		return fp.createOrFilter(filter)
-	case "not":
-		return fp.createNotFilter(filter)
-	case "in":
-		return fp.createInFilter(filter)
-	case "not_in":
-		return fp.createNotInFilter(filter)
-	case "is_null":
-		return fp.createIsNullFilter(filter)
-	case "is_not_null":
-		return fp.createIsNotNullFilter(filter)
-	case "like", "contains":
-		return fp.createLikeFilter(filter)
-	case "starts_with":
-		return fp.createStartsWithFilter(filter)
-	case "ends_with":
-		return fp.createEndsWithFilter(filter)
-	default:
-		return nil, fmt.Errorf("unsupported filter operator: %s", filter.Op)
-	}
-}
-
-// createEqualFilter creates an equality expression
-func (fp *FilterPushdown) createEqualFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for equality filter")
-	}
-	return fp.createLiteralPredicate(iceberg.OpEQ, filter.Field, filter.Value)
-}
-
-// createNotEqualFilter creates a not-equal expression
-func (fp *FilterPushdown) createNotEqualFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for not-equal filter")
-	}
-	return fp.createLiteralPredicate(iceberg.OpNEQ, filter.Field, filter.Value)
-}
-
-// createGreaterThanFilter creates a greater-than expression
-func (fp *FilterPushdown) createGreaterThanFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for greater-than filter")
-	}
-	return fp.createLiteralPredicate(iceberg.OpGT, filter.Field, filter.Value)
-}
-
-// createLessThanFilter creates a less-than expression
-func (fp *FilterPushdown) createLessThanFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for less-than filter")
-	}
-	return fp.createLiteralPredicate(iceberg.OpLT, filter.Field, filter.Value)
-}
-
-// createGreaterThanOrEqualFilter creates a greater-than-or-equal expression
-func (fp *FilterPushdown) createGreaterThanOrEqualFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for greater-than-or-equal filter")
-	}
-	return fp.createLiteralPredicate(iceberg.OpGTEQ, filter.Field, filter.Value)
-}
-
-// createLessThanOrEqualFilter creates a less-than-or-equal expression
-func (fp *FilterPushdown) createLessThanOrEqualFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for less-than-or-equal filter")
-	}
-	return fp.createLiteralPredicate(iceberg.OpLTEQ, filter.Field, filter.Value)
-}
-
-// createLiteralPredicate creates a literal predicate expression
-func (fp *FilterPushdown) createLiteralPredicate(op iceberg.Operation, field string, value interface{}) (iceberg.BooleanExpression, error) {
-	// Strip backticks from field name (N1QL quotes identifiers with backticks)
-	field = strings.Trim(field, "`")
-
-	if field == "" {
-		logging.Errorf("FilterPushdown: empty field name after stripping backticks for op=%d, value=%v", op, value)
-		return nil, fmt.Errorf("field name is empty after stripping backticks")
-	}
-
-	ref := iceberg.Reference(field)
-	logging.Debugf("FilterPushdown: creating literal predicate - field='%s', op=%d, value=%v (type=%T)", field, op, value, value)
-
-	// Create literal based on value type
-	var lit iceberg.Literal
-	switch v := value.(type) {
-	case string:
-		lit = iceberg.StringLiteral(v)
-	case int:
-		lit = iceberg.Int32Literal(int32(v))
-	case int8:
-		lit = iceberg.Int32Literal(int32(v))
-	case int16:
-		lit = iceberg.Int32Literal(int32(v))
-	case int32:
-		lit = iceberg.Int32Literal(v)
-	case int64:
-		lit = iceberg.Int64Literal(v)
-	case uint:
-		// Convert unsigned to signed int64
-		lit = iceberg.Int64Literal(int64(v))
-	case uint8:
-		lit = iceberg.Int32Literal(int32(v))
-	case uint16:
-		lit = iceberg.Int32Literal(int32(v))
-	case uint32:
-		lit = iceberg.Int64Literal(int64(v))
-	case uint64:
-		// Convert unsigned to signed int64
-		lit = iceberg.Int64Literal(int64(v))
-	case float32:
-		lit = iceberg.Float32Literal(v)
-	case float64:
-		// Check if it's a whole number float that can be converted to int
-		if v == float64(int64(v)) && v >= math.MinInt64 && v <= math.MaxInt64 {
-			lit = iceberg.Int64Literal(int64(v))
-			logging.Debugf("FilterPushdown: converted float64 %v to int64 for field '%s'", v, field)
-		} else {
-			lit = iceberg.Float64Literal(v)
-		}
-	case bool:
-		lit = iceberg.BoolLiteral(v)
-	default:
-		// For unsupported types, convert to string
-		strVal := fmt.Sprintf("%v", v)
-		logging.Warnf("FilterPushdown: unsupported value type %T for field '%s', converting to string: %s", v, field, strVal)
-		lit = iceberg.StringLiteral(strVal)
-	}
-
-	return iceberg.LiteralPredicate(op, ref, lit), nil
-}
-
-// createAndFilter creates an AND expression
-func (fp *FilterPushdown) createAndFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if len(filter.Children) < 2 {
-		return nil, fmt.Errorf("AND filter requires at least 2 child filters")
-	}
-
-	exprs := make([]iceberg.BooleanExpression, len(filter.Children))
-	for i, child := range filter.Children {
-		expr, err := fp.ConvertFilter(child)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert child filter %d in AND: %w", i, err)
-		}
-		exprs[i] = expr
-	}
-
-	return iceberg.NewAnd(exprs[0], exprs[1], exprs[2:]...), nil
-}
-
-// createOrFilter creates an OR expression
-func (fp *FilterPushdown) createOrFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if len(filter.Children) < 2 {
-		return nil, fmt.Errorf("OR filter requires at least 2 child filters")
-	}
-
-	exprs := make([]iceberg.BooleanExpression, len(filter.Children))
-	for i, child := range filter.Children {
-		expr, err := fp.ConvertFilter(child)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert child filter %d in OR: %w", i, err)
-		}
-		exprs[i] = expr
-	}
-
-	return iceberg.NewOr(exprs[0], exprs[1], exprs[2:]...), nil
-}
-
-// createNotFilter creates a NOT expression
-func (fp *FilterPushdown) createNotFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if len(filter.Children) != 1 {
-		return nil, fmt.Errorf("NOT filter requires exactly 1 child filter")
-	}
-
-	expr, err := fp.ConvertFilter(filter.Children[0])
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert child filter in NOT: %w", err)
-	}
-
-	return iceberg.NewNot(expr), nil
-}
-
-// createInFilter creates an IN expression
-func (fp *FilterPushdown) createInFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for IN filter")
-	}
-
-	// Strip backticks from field name
-	field := strings.Trim(filter.Field, "`")
-	ref := iceberg.Reference(field)
-	logging.Debugf("FilterPushdown: creating IN predicate - field='%s', values count=%d", field, len(filter.Value.([]interface{})))
-
-	values, ok := filter.Value.([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("value must be a slice for IN filter")
-	}
-
-	literals := make([]iceberg.Literal, len(values))
-	for i, v := range values {
-		// Convert values to literals with the same type handling as createLiteralPredicate
-		var lit iceberg.Literal
-		switch val := v.(type) {
-		case string:
-			lit = iceberg.StringLiteral(val)
-		case int:
-			lit = iceberg.Int32Literal(int32(val))
-		case int8:
-			lit = iceberg.Int32Literal(int32(val))
-		case int16:
-			lit = iceberg.Int32Literal(int32(val))
-		case int32:
-			lit = iceberg.Int32Literal(val)
-		case int64:
-			lit = iceberg.Int64Literal(val)
-		case uint:
-			lit = iceberg.Int64Literal(int64(val))
-		case uint8:
-			lit = iceberg.Int32Literal(int32(val))
-		case uint16:
-			lit = iceberg.Int32Literal(int32(val))
-		case uint32:
-			lit = iceberg.Int64Literal(int64(val))
-		case uint64:
-			lit = iceberg.Int64Literal(int64(val))
-		case float32:
-			lit = iceberg.Float32Literal(val)
-		case float64:
-			// Check if it's a whole number float that can be converted to int
-			if val == float64(int64(val)) && val >= math.MinInt64 && val <= math.MaxInt64 {
-				lit = iceberg.Int64Literal(int64(val))
-				logging.Debugf("FilterPushdown: [IN] converted float64 %v to int64 for field '%s'", val, field)
-			} else {
-				lit = iceberg.Float64Literal(val)
-			}
-		case bool:
-			lit = iceberg.BoolLiteral(val)
-		default:
-			// For unsupported types, convert to string
-			logging.Warnf("FilterPushdown: [IN] unsupported value type %T for field '%s', converting to string", val, field)
-			lit = iceberg.StringLiteral(fmt.Sprintf("%v", val))
-		}
-		literals[i] = lit
-	}
-
-	return iceberg.SetPredicate(iceberg.OpIn, ref, literals), nil
-}
-
-// createNotInFilter creates a NOT IN expression
-func (fp *FilterPushdown) createNotInFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	inExpr, err := fp.createInFilter(filter)
-	if err != nil {
-		return nil, err
-	}
-	return iceberg.NewNot(inExpr), nil
-}
-
-// createIsNullFilter creates an IS NULL expression
-func (fp *FilterPushdown) createIsNullFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for IS NULL filter")
-	}
-
-	// Strip backticks from field name
-	field := strings.Trim(filter.Field, "`")
-	ref := iceberg.Reference(field)
-	logging.Debugf("FilterPushdown: created IS NULL predicate - field='%s'", field)
-	return iceberg.UnaryPredicate(iceberg.OpIsNull, ref), nil
-}
-
-// createIsNotNullFilter creates an IS NOT NULL expression
-func (fp *FilterPushdown) createIsNotNullFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for IS NOT NULL filter")
-	}
-
-	// Strip backticks from field name
-	field := strings.Trim(filter.Field, "`")
-	ref := iceberg.Reference(field)
-	logging.Debugf("FilterPushdown: created IS NOT NULL predicate - field='%s'", field)
-	return iceberg.UnaryPredicate(iceberg.OpNotNull, ref), nil
-}
-
-// createLikeFilter creates a LIKE expression
-func (fp *FilterPushdown) createLikeFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for LIKE filter")
-	}
-
-	// Strip backticks from field name
-	field := strings.Trim(filter.Field, "`")
-
-	pattern, ok := filter.Value.(string)
-	if !ok {
-		return nil, fmt.Errorf("value must be a string for LIKE filter")
-	}
-
-	logging.Debugf("FilterPushdown: creating LIKE predicate - field='%s', pattern='%s'", field, pattern)
-
-	// Iceberg-go support for LIKE - convert to Iceberg-compatible expressions
-	if strings.Contains(pattern, "%") {
-		// Convert SQL LIKE to Iceberg-compatible expressions
-		if strings.HasPrefix(pattern, "%") && strings.HasSuffix(pattern, "%") {
-			// "%pattern%" -> Contains - but Iceberg doesn't have Contains
-			// Use StartsWith with the full pattern
-			searchPattern := strings.Trim(pattern, "%")
-			if searchPattern != "" {
-				return fp.createStartsWithFilter(IcebergFilter{Op: "starts_with", Field: field, Value: searchPattern})
-			}
-		} else if strings.HasPrefix(pattern, "%") {
-			// "%pattern" -> EndsWith - Iceberg uses NotStartsWith
-			searchPattern := strings.TrimPrefix(pattern, "%")
-			if searchPattern != "" {
-				return fp.createEndsWithFilter(IcebergFilter{Op: "ends_with", Field: field, Value: searchPattern})
-			}
-		} else if strings.HasSuffix(pattern, "%") {
-			// "pattern%" -> StartsWith
-			searchPattern := strings.TrimSuffix(pattern, "%")
-			return fp.createStartsWithFilter(IcebergFilter{Op: "starts_with", Field: field, Value: searchPattern})
-		}
-	}
-
-	// Exact match without wildcards
-	return fp.createEqualFilter(IcebergFilter{Op: "=", Field: field, Value: pattern})
-}
-
-// createStartsWithFilter creates a starts-with expression
-func (fp *FilterPushdown) createStartsWithFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for starts-with filter")
-	}
-
-	// Strip backticks from field name
-	field := strings.Trim(filter.Field, "`")
-
-	prefix, ok := filter.Value.(string)
-	if !ok {
-		return nil, fmt.Errorf("value must be a string for starts-with filter")
-	}
-
-	ref := iceberg.Reference(field)
-	lit := iceberg.StringLiteral(prefix)
-	logging.Debugf("FilterPushdown: created STARTS_WITH predicate - field='%s', prefix='%s'", field, prefix)
-	return iceberg.LiteralPredicate(iceberg.OpStartsWith, ref, lit), nil
-}
-
-// createEndsWithFilter creates an ends-with expression
-func (fp *FilterPushdown) createEndsWithFilter(filter IcebergFilter) (iceberg.BooleanExpression, error) {
-	if filter.Field == "" {
-		return nil, fmt.Errorf("field is required for ends-with filter")
-	}
-
-	// Strip backticks from field name
-	field := strings.Trim(filter.Field, "`")
-
-	suffix, ok := filter.Value.(string)
-	if !ok {
-		return nil, fmt.Errorf("value must be a string for ends-with filter")
-	}
-
-	// Iceberg supports NotStartsWith, but not EndsWith
-	// For now, we'll use StartsWith as a fallback (not perfect but functional)
-	ref := iceberg.Reference(field)
-	lit := iceberg.StringLiteral(suffix)
-	logging.Debugf("FilterPushdown: created ENDS_WITH predicate (fallback) - field='%s', suffix='%s'", field, suffix)
-	return iceberg.LiteralPredicate(iceberg.OpStartsWith, ref, lit), nil
-}
-
-// ApplyFilters applies filters to create a combined iceberg expression
-func (fp *FilterPushdown) ApplyFilters(filters []IcebergFilter) error {
-	if len(filters) == 0 {
-		return nil
-	}
-
-	logging.Debugf("FilterPushdown: applying %d filter(s)", len(filters))
-
-	icebergExprs := make([]iceberg.BooleanExpression, len(filters))
-	var errorList []error
-
-	for i, filter := range filters {
-		logging.Debugf("FilterPushdown: converting filter %d (op=%s, field=%s, value=%v)",
-			i, filter.Op, filter.Field, filter.Value)
-
-		expr, err := fp.ConvertFilter(filter)
-		if err != nil {
-			logging.Warnf("FilterPushdown: failed to convert filter %d (op=%s, field=%s): %v",
-				i, filter.Op, filter.Field, err)
-			errorList = append(errorList, fmt.Errorf("filter %d: %w", i, err))
-			continue
-		}
-		logging.Debugf("FilterPushdown: successfully converted filter %d to iceberg expression (type=%T)", i, expr)
-		icebergExprs[i] = expr
-	}
-
-	if len(errorList) > 0 {
-		// Return combined error
-		msg := "failed to convert filters:\n"
-		for _, err := range errorList {
-			msg += "  - " + err.Error() + "\n"
-		}
-		return fmt.Errorf("%s", msg)
-	}
-
-	// Combine all filters with AND
-	var finalExpr iceberg.BooleanExpression
-	if len(icebergExprs) == 1 {
-		finalExpr = icebergExprs[0]
-		logging.Debugf("FilterPushdown: single filter, using expression directly (type=%T)", finalExpr)
-	} else {
-		finalExpr = iceberg.NewAnd(icebergExprs[0], icebergExprs[1], icebergExprs[2:]...)
-		logging.Debugf("FilterPushdown: combined %d filters with AND (result type=%T)", len(icebergExprs), finalExpr)
-	}
-
-	fp.icebergFilters = append(fp.icebergFilters, finalExpr)
-
-	return nil
-}
-
-// GetExpression returns the combined filter expression
-func (fp *FilterPushdown) GetExpression() iceberg.BooleanExpression {
-	if len(fp.icebergFilters) == 0 {
-		return iceberg.AlwaysTrue{}
-	}
-	if len(fp.icebergFilters) == 1 {
-		return fp.icebergFilters[0]
-	}
-	return iceberg.NewAnd(fp.icebergFilters[0], fp.icebergFilters[1], fp.icebergFilters[2:]...)
-}
-
-// GetIcebergFilters returns all converted Iceberg filter expressions
-func (fp *FilterPushdown) GetIcebergFilters() []iceberg.BooleanExpression {
-	return fp.icebergFilters
-}
-
-// ParseFilterJSON parses a JSON string into Filter structure
-func ParseFilterJSON(jsonStr string) ([]IcebergFilter, error) {
-	if jsonStr == "" {
-		return nil, nil
-	}
-
-	var filters []IcebergFilter
-	err := json.Unmarshal([]byte(jsonStr), &filters)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse filter JSON: %w", err)
-	}
-
-	return filters, nil
-}
-
-// CreateEqualFilter creates a simple equality filter
-func CreateEqualFilter(field string, value interface{}) IcebergFilter {
-	return IcebergFilter{
-		Op:    "=",
-		Field: field,
-		Value: value,
-	}
-}
-
-// CreateRangeFilter creates a range filter (inclusive)
-func CreateRangeFilter(field string, min, max interface{}) ([]IcebergFilter, error) {
-	if min == nil && max == nil {
-		return nil, fmt.Errorf("at least one of min or max must be specified for range filter")
-	}
-
-	var filters []IcebergFilter
-
-	if min != nil {
-		filters = append(filters, IcebergFilter{
-			Op:    ">=",
-			Field: field,
-			Value: min,
-		})
-	}
-
-	if max != nil {
-		filters = append(filters, IcebergFilter{
-			Op:    "<=",
-			Field: field,
-			Value: max,
-		})
-	}
-
-	return filters, nil
-}
-
-// CreateAndFilter creates an AND filter combining multiple filters
-func CreateAndFilter(filters ...IcebergFilter) IcebergFilter {
-	return IcebergFilter{
-		Op:       "and",
-		Children: filters,
-	}
-}
-
-// CreateOrFilter creates an OR filter combining multiple filters
-func CreateOrFilter(filters ...IcebergFilter) IcebergFilter {
-	return IcebergFilter{
-		Op:       "or",
-		Children: filters,
-	}
-}
-
-// CreateInFilter creates an IN filter
-func CreateInFilter(field string, values ...interface{}) IcebergFilter {
-	return IcebergFilter{
-		Op:    "in",
-		Field: field,
-		Value: values,
-	}
 }
 
 // CatalogMetadata represents the metadata for an Iceberg catalog
