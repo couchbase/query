@@ -10,6 +10,7 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
@@ -17,6 +18,8 @@ import (
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
+
+const _MAX_EXTERNAL_VALUES_LEN = 1024
 
 type HashJoin struct {
 	base
@@ -93,6 +96,22 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		this.ansiFlags |= ANSI_ONCLAUSE_TRUE
 	}
 
+	var externalValArray [][]interface{}
+	var probeAlias string
+	if this.plan.HasExternal() {
+		probeAliases := this.plan.ProbeAliases()
+		if len(probeAliases) != 1 {
+			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("Hash join probe with external collection: len(probeAliases) = %d",
+				len(probeAliases))))
+			return false
+		}
+		probeAlias = probeAliases[0]
+		externalValArray = make([][]interface{}, len(this.plan.ProbeExprs()))
+		for i := range externalValArray {
+			externalValArray[i] = make([]interface{}, 0, _MAX_EXTERNAL_VALUES_LEN)
+		}
+	}
+
 	filter := this.plan.Filter()
 	if filter != nil {
 		filter.EnableInlistHash(&this.operatorCtx)
@@ -111,8 +130,8 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 
 	this.fork(this.child, context, parent)
 
-	ok := buildHashTab(&(this.base), this.child, this.hashTab,
-		this.plan.BuildExprs(), this.buildVals, &this.operatorCtx)
+	ok := buildHashTab(&(this.base), this.child, this.hashTab, this.plan.BuildExprs(),
+		this.buildVals, this.plan.HasExternal(), externalValArray, &this.operatorCtx)
 	if !ok {
 		return false
 	}
@@ -123,11 +142,21 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		return false
 	}
 
+	if externalValArray != nil && probeAlias != "" {
+		probeExprs := this.plan.ProbeExprs()
+		for i := range externalValArray {
+			if externalValArray[i] != nil {
+				context.setExternalFilter(probeAlias, probeExprs[i], len(externalValArray), externalValArray[i])
+			}
+		}
+	}
+
 	return true
 }
 
-func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable,
-	buildExprs expression.Expressions, buildVals []interface{}, context *opContext) bool {
+func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable, buildExprs expression.Expressions,
+	buildVals []interface{}, external bool, externalValArray [][]interface{}, context *opContext) bool {
+
 	var err error
 	stopped := false
 	n := 1
@@ -150,11 +179,21 @@ loop:
 		if cont {
 			if build_item != nil {
 				for i, be := range buildExprs {
-					buildVals[i], err = be.Evaluate(build_item, context)
+					var buildValue value.Value
+					buildValue, err = be.Evaluate(build_item, context)
 					if err != nil {
 						context.Error(errors.NewEvaluationError(err, "Hash Table Build Expression"))
 						return false
 					}
+					if external && externalValArray[i] != nil &&
+						buildValue.Type() != value.MISSING && buildValue.Type() != value.NULL {
+						if len(externalValArray[i]) < _MAX_EXTERNAL_VALUES_LEN {
+							externalValArray[i] = append(externalValArray[i], buildVals[i])
+						} else {
+							externalValArray[i] = nil
+						}
+					}
+					buildVals[i] = buildValue
 				}
 
 				var buildVal interface{}

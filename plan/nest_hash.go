@@ -20,26 +20,30 @@ import (
 type HashNest struct {
 	readonly
 	optEstimate
-	outer      bool
-	onclause   expression.Expression
-	child      Operator
-	buildExprs expression.Expressions
-	probeExprs expression.Expressions
-	buildAlias string
-	filter     expression.Expression
+	outer        bool
+	external     bool
+	onclause     expression.Expression
+	child        Operator
+	buildExprs   expression.Expressions
+	probeExprs   expression.Expressions
+	buildAlias   string
+	probeAliases []string
+	filter       expression.Expression
 }
 
 func NewHashNest(nest *algebra.AnsiNest, child Operator, buildExprs, probeExprs expression.Expressions,
-	buildAlias string, filter expression.Expression, cost, cardinality float64,
+	buildAlias string, probeAliases []string, filter expression.Expression, external bool, cost, cardinality float64,
 	size int64, frCost float64) *HashNest {
 	rv := &HashNest{
-		outer:      nest.Outer(),
-		onclause:   nest.Onclause(),
-		child:      child,
-		buildExprs: buildExprs,
-		probeExprs: probeExprs,
-		buildAlias: buildAlias,
-		filter:     filter,
+		outer:        nest.Outer(),
+		external:     external,
+		onclause:     nest.Onclause(),
+		child:        child,
+		buildExprs:   buildExprs,
+		probeExprs:   probeExprs,
+		buildAlias:   buildAlias,
+		probeAliases: probeAliases,
+		filter:       filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -89,12 +93,20 @@ func (this *HashNest) BuildAlias() string {
 	return this.buildAlias
 }
 
+func (this *HashNest) ProbeAliases() []string {
+	return this.probeAliases
+}
+
 func (this *HashNest) Filter() expression.Expression {
 	return this.filter
 }
 
 func (this *HashNest) SetFilter(filter expression.Expression) {
 	this.filter = filter
+}
+
+func (this *HashNest) HasExternal() bool {
+	return this.external
 }
 
 func (this *HashNest) SetCardinality(cardinality float64) {
@@ -126,9 +138,14 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 	r["probe_exprs"] = probeList
 
 	r["build_alias"] = this.buildAlias
+	r["probe_aliases"] = this.probeAliases
 
 	if this.filter != nil {
 		r["filter"] = this.filter.String()
+	}
+
+	if this.external {
+		r["has_external"] = this.external
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -145,15 +162,17 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *HashNest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Onclause    string                 `json:"on_clause"`
-		Outer       bool                   `json:"outer"`
-		BuildExprs  []string               `json:"build_exprs"`
-		ProbeExprs  []string               `json:"probe_exprs"`
-		BuildAlias  string                 `json:"build_alias"`
-		Filter      string                 `json:"filter"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		Child       json.RawMessage        `json:"~child"`
+		_            string                 `json:"#operator"`
+		Onclause     string                 `json:"on_clause"`
+		Outer        bool                   `json:"outer"`
+		External     bool                   `json:"has_external"`
+		BuildExprs   []string               `json:"build_exprs"`
+		ProbeExprs   []string               `json:"probe_exprs"`
+		BuildAlias   string                 `json:"build_alias"`
+		ProbeAliases []string               `json:"probe_aliases"`
+		Filter       string                 `json:"filter"`
+		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		Child        json.RawMessage        `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -169,6 +188,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 	}
 
 	this.outer = _unmarshalled.Outer
+	this.external = _unmarshalled.External
 
 	this.buildExprs = make(expression.Expressions, len(_unmarshalled.BuildExprs))
 	for i, build := range _unmarshalled.BuildExprs {
@@ -189,6 +209,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 	}
 
 	this.buildAlias = _unmarshalled.BuildAlias
+	this.probeAliases = _unmarshalled.ProbeAliases
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)

@@ -10,6 +10,7 @@ package execution
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
@@ -94,6 +95,22 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 		filter.EnableInlistHash(&this.operatorCtx)
 	}
 
+	var externalValArray [][]interface{}
+	var probeAlias string
+	if this.plan.HasExternal() {
+		probeAliases := this.plan.ProbeAliases()
+		if len(probeAliases) != 1 {
+			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("Hash nest probe with external collection: len(probeAliases) = %d",
+				len(probeAliases))))
+			return false
+		}
+		probeAlias = probeAliases[0]
+		externalValArray = make([][]interface{}, len(this.plan.ProbeExprs()))
+		for i := range externalValArray {
+			externalValArray[i] = make([]interface{}, 0, _MAX_EXTERNAL_VALUES_LEN)
+		}
+	}
+
 	// build hash table
 	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN, this.child.PlanOp().Cardinality(), len(this.plan.BuildExprs()))
 
@@ -107,8 +124,22 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 
 	this.fork(this.child, context, parent)
 
-	return buildHashTab(&(this.base), this.child, this.hashTab,
-		this.plan.BuildExprs(), this.buildVals, &this.operatorCtx)
+	ok := buildHashTab(&(this.base), this.child, this.hashTab, this.plan.BuildExprs(),
+		this.buildVals, this.plan.HasExternal(), externalValArray, &this.operatorCtx)
+	if !ok {
+		return false
+	}
+
+	if externalValArray != nil && probeAlias != "" {
+		probeExprs := this.plan.ProbeExprs()
+		for i := range externalValArray {
+			if externalValArray[i] != nil {
+				context.setExternalFilter(probeAlias, probeExprs[i], len(externalValArray), externalValArray[i])
+			}
+		}
+	}
+
+	return true
 }
 
 func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) bool {

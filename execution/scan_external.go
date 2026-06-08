@@ -91,7 +91,7 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 		defer this.conn.SendStop() // Notify index that I have stopped
 
 		// Replace named/positional parameters in filter if present
-		var filter expression.Expression
+		var filter, externalFilter expression.Expression
 		if this.plan.Filter() != nil {
 			filter = this.plan.Filter()
 			if len(context.namedArgs) > 0 || len(context.positionalArgs) > 0 {
@@ -107,6 +107,15 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 			defer filter.ResetMemory(&this.operatorCtx)
 		}
 		alias := this.plan.Term().Alias()
+		externalFilter = context.getExternalFilters(alias)
+		if externalFilter != nil {
+			defer context.clearExternalFilters(alias)
+			if filter == nil {
+				filter = externalFilter
+			} else {
+				filter = expression.NewAnd(filter, externalFilter)
+			}
+		}
 		util.Fork(scanExternalFork, externalScanDesc{this, context, filter, parent})
 
 		ok := true

@@ -999,7 +999,7 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 
 func (this *builder) buildHashJoin(node *algebra.AnsiJoin, filter expression.Expression, selec float64,
 	qPlan, subPlan []plan.Operator, coveringOps []plan.CoveringOperator) (*plan.HashJoin, bool, error) {
-	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err :=
+	child, buildExprs, probeExprs, buildAliases, probeAliases, newOnclause, newFilter, buildRight, external, cost, cardinality, size, frCost, err :=
 		this.buildHashJoinOp(node.Right(), node.Left(), node.Outer(), node.Onclause(), filter, "join", qPlan, subPlan, coveringOps)
 	if err != nil || child == nil {
 		// cannot do hash join
@@ -1014,20 +1014,20 @@ func (this *builder) buildHashJoin(node *algebra.AnsiJoin, filter expression.Exp
 	if newOnclause != nil {
 		node.SetOnclause(newOnclause)
 	}
-	return plan.NewHashJoin(node, child, buildExprs, probeExprs, aliases, newFilter, cost, cardinality, size, frCost),
+	return plan.NewHashJoin(node, child, buildExprs, probeExprs, buildAliases, probeAliases, newFilter, external, cost, cardinality, size, frCost),
 		buildRight, nil
 }
 
 func (this *builder) buildHashNest(node *algebra.AnsiNest, filter expression.Expression, selec float64,
 	qPlan, subPlan []plan.Operator, coveringOps []plan.CoveringOperator) (*plan.HashNest, bool, error) {
-	child, buildExprs, probeExprs, aliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, err :=
+	child, buildExprs, probeExprs, buildAliases, probeAliases, newOnclause, newFilter, buildRight, external, cost, cardinality, size, frCost, err :=
 		this.buildHashJoinOp(node.Right(), node.Left(), node.Outer(), node.Onclause(), nil, "nest", qPlan, subPlan, coveringOps)
 	if err != nil || child == nil {
 		// cannot do hash nest
 		return nil, false, err
 	}
-	if len(aliases) != 1 {
-		return nil, false, errors.NewPlanInternalError(fmt.Sprintf("buildHashNest: multiple (%d) build aliases", len(aliases)))
+	if len(buildAliases) != 1 {
+		return nil, false, errors.NewPlanInternalError(fmt.Sprintf("buildHashNest: multiple (%d) build aliases", len(buildAliases)))
 	}
 	if this.useCBO && (cost > 0.0) && (cardinality > 0.0) && (selec > 0.0) && (filter != nil) &&
 		(size > 0) && (frCost > 0.0) {
@@ -1038,20 +1038,21 @@ func (this *builder) buildHashNest(node *algebra.AnsiNest, filter expression.Exp
 	if newOnclause != nil {
 		node.SetOnclause(newOnclause)
 	}
-	return plan.NewHashNest(node, child, buildExprs, probeExprs, aliases[0], newFilter, cost, cardinality, size, frCost),
+	return plan.NewHashNest(node, child, buildExprs, probeExprs, buildAliases[0], probeAliases, newFilter, external, cost, cardinality, size, frCost),
 		buildRight, nil
 }
 
 func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.FromTerm, outer bool,
 	onclause, filter expression.Expression, op string, qPlan, subPlan []plan.Operator,
 	coveringOps []plan.CoveringOperator) (child plan.Operator, buildExprs expression.Expressions,
-	probeExprs expression.Expressions, buildAliases []string,
-	newOnclause, newFilter expression.Expression, buildRight bool,
+	probeExprs expression.Expressions, buildAliases, probeAliases []string,
+	newOnclause, newFilter expression.Expression, buildRight, hasExternal bool,
 	cost, cardinality float64, size int64, frCost float64, err error) {
 
 	var ksterm *algebra.KeyspaceTerm
 	var keyspace string
 	var defaultBuildRight bool
+	var external bool
 	isNest := op == "nest"
 
 	if ksterm = algebra.GetKeyspaceTerm(right); ksterm != nil {
@@ -1067,7 +1068,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		// expressions does not reference any keyspaces, otherwise hash join cannot be
 		// used.
 		if right.IsLateralJoin() {
-			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+			return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 				OPT_COST_NOT_AVAIL, nil
 		}
 		useCBO = useCBO && this.keyspaceUseCBO(alias)
@@ -1075,7 +1076,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	case *algebra.ExpressionTerm:
 		// hash join cannot handle expression term with any LATERAL correlated references
 		if right.IsLateralJoin() {
-			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+			return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 				OPT_COST_NOT_AVAIL, nil
 		}
 
@@ -1083,26 +1084,29 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	case *algebra.SubqueryTerm:
 		// hash join cannot handle subquery with any LATERAL correlated references
 		if right.IsLateralJoin() {
-			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+			return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 				OPT_COST_NOT_AVAIL, nil
 		}
 
 		defaultBuildRight = true
 	default:
-		return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+		return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 			OPT_COST_NOT_AVAIL, errors.NewPlanInternalError(fmt.Sprintf("buildHashJoinOp: unexpected right-hand side node type"))
 	}
 
 	joinEnum := this.joinEnum()
 	autoJoinFilter := joinEnum && this.hasBuilderFlag(BUILDER_DO_JOIN_FILTER)
 	baseKeyspace, _ := this.baseKeyspaces[alias]
+	isExternal := baseKeyspace.IsExternalCollection()
+	leftIsExternal := false
 	force := true
 	inferJoinFilterHint := false
 	joinHint := baseKeyspace.JoinHint()
-	if right.HasInferJoinHint() ||
-		(joinEnum && joinHint != algebra.USE_HASH_BUILD && joinHint != algebra.USE_HASH_PROBE) {
-		if leftTerm, ok := left.(algebra.SimpleFromTerm); ok {
-			leftBaseKeyspace, _ := this.baseKeyspaces[leftTerm.Alias()]
+	if leftTerm, ok := left.(algebra.SimpleFromTerm); ok {
+		leftBaseKeyspace, _ := this.baseKeyspaces[leftTerm.Alias()]
+		leftIsExternal = leftBaseKeyspace.IsExternalCollection()
+		if right.HasInferJoinHint() ||
+			(joinEnum && joinHint != algebra.USE_HASH_BUILD && joinHint != algebra.USE_HASH_PROBE) {
 			leftJoinHint := leftBaseKeyspace.JoinHint()
 			switch leftJoinHint {
 			case algebra.USE_HASH_BUILD:
@@ -1133,7 +1137,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		// in case of outer join, cannot build on dominant side
 		// also in case of nest, can only build on right-hand-side
 		if outer || isNest {
-			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+			return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 				OPT_COST_NOT_AVAIL, nil
 		}
 	} else if outer || isNest {
@@ -1144,6 +1148,12 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		buildRight = true
 	} else if inferJoinFilterHint {
 		buildRight = true
+	} else if leftIsExternal || isExternal {
+		if leftIsExternal && isExternal {
+			force = false
+		} else if leftIsExternal {
+			buildRight = true
+		} // else isExternal == true, buildRight remains false
 	} else if !baseKeyspace.HasJoinFilterHint() {
 		if defaultBuildRight {
 			// for expression term and subquery term, if no USE HASH hint is
@@ -1208,7 +1218,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	}
 
 	if len(leftExprs) == 0 || len(rightExprs) == 0 {
-		return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+		return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 			OPT_COST_NOT_AVAIL, nil
 	}
 
@@ -1250,13 +1260,13 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 			this.lastOp = qPlan[len(qPlan)-1]
 		} else {
 			/* should not come here */
-			return nil, nil, nil, nil, nil, nil, false,
+			return nil, nil, nil, nil, nil, nil, nil, false, false,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
 				errors.NewPlanInternalError("buildHashjoinOp: no plan for inner side")
 		}
 		_, _, err := this.getFilter(alias, true, true, nil)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, false,
+			return nil, nil, nil, nil, nil, nil, nil, false, false,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 		// no need to do cover transformation (will be done at the end when the final
@@ -1285,7 +1295,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		_, err = right.Accept(this)
 		this.unsetBuilderFlag(BUILDER_UNDER_HASH)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, false,
+			return nil, nil, nil, nil, nil, nil, nil, false, false,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 		}
 
@@ -1309,7 +1319,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 
 		// if no plan generated, bail out
 		if len(this.children) == 0 {
-			return nil, nil, nil, nil, nil, nil, false,
+			return nil, nil, nil, nil, nil, nil, nil, false, false,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 
@@ -1318,7 +1328,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 			newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
 				this.coveringScans, filter, onclause, nil, leftExprs, rightExprs, false)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, false,
+				return nil, nil, nil, nil, nil, nil, nil, false, false,
 					OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 			}
 		}
@@ -1340,7 +1350,6 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		}
 	}
 
-	var probeAliases []string
 	leftAliases := make([]string, 0, len(this.baseKeyspaces))
 	for _, kspace := range this.baseKeyspaces {
 		if kspace.PlanDone() && kspace.Name() != alias {
@@ -1370,7 +1379,9 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		this.lastOp = this.children[len(this.children)-1]
 	}
 
-	if !outer && !isNest {
+	if isExternal || leftIsExternal {
+		external = true
+	} else if !outer && !isNest {
 		var auto, found bool
 		if joinEnum {
 			auto = autoJoinFilter
@@ -1384,7 +1395,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		}
 		err = getBuildBFInfo(buildInfosMap, buildAliases, child)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+			return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 				OPT_COST_NOT_AVAIL, err
 		}
 		for _, a := range buildAliases {
@@ -1396,14 +1407,14 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		found, err = setProbeBitFilters(this.baseKeyspaces, probeAliases, buildAliases,
 			buildInfosMap, auto, joinEnum, filters, this.children...)
 		if err != nil {
-			return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+			return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 				OPT_COST_NOT_AVAIL, err
 		}
 		if found {
 			err = setBuildBitFilters(this.baseKeyspaces, buildAliases, probeAliases,
 				buildInfosMap, joinEnum, child)
 			if err != nil {
-				return nil, nil, nil, nil, nil, nil, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
+				return nil, nil, nil, nil, nil, nil, nil, false, false, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL,
 					OPT_COST_NOT_AVAIL, err
 			}
 		}
@@ -1419,7 +1430,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 		}
 	}
 
-	return child, buildExprs, probeExprs, buildAliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, nil
+	return child, buildExprs, probeExprs, buildAliases, probeAliases, newOnclause, newFilter, buildRight, external, cost, cardinality, size, frCost, nil
 }
 
 func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression,

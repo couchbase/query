@@ -370,6 +370,8 @@ type Context struct {
 	tracked                   bool
 	bitFilterMap              map[string]*BitFilterTerm
 	bitFilterLock             sync.RWMutex
+	externalFilterMap         map[string]*ExternalFilterTerms
+	externalFilterLock        sync.RWMutex
 	tenantCtx                 tenant.Context
 	memorySession             memory.MemorySession
 	keysToSkip                *sync.Map
@@ -2233,6 +2235,58 @@ func (this *Context) clearBitFilter(alias, idxId string) {
 		delete(this.bitFilterMap, alias)
 		this.bitFilterLock.Unlock()
 	}
+}
+
+func (this *Context) getExternalFilters(alias string) expression.Expression {
+	if len(this.externalFilterMap) == 0 {
+		return nil
+	}
+	this.externalFilterLock.RLock()
+	eft := this.externalFilterMap[alias]
+	this.externalFilterLock.RUnlock()
+	if eft == nil {
+		return nil
+	}
+	return eft.getExternalFilters()
+}
+
+func (this *Context) setExternalFilter(alias string, term expression.Expression, nTerms int, vals []interface{}) {
+	if this.externalFilterMap == nil {
+		this.externalFilterLock.Lock()
+		if this.externalFilterMap == nil {
+			this.externalFilterMap = make(map[string]*ExternalFilterTerms, nTerms)
+		}
+		this.externalFilterLock.Unlock()
+	}
+	this.externalFilterLock.RLock()
+	eft := this.externalFilterMap[alias]
+	this.externalFilterLock.RUnlock()
+	if eft == nil {
+		this.externalFilterLock.Lock()
+		eft = this.externalFilterMap[alias]
+		if eft == nil {
+			eft = newExternalFilterTerms(nTerms)
+			this.externalFilterMap[alias] = eft
+		}
+		this.externalFilterLock.Unlock()
+	}
+	eft.addTermValues(term, vals)
+}
+
+func (this *Context) clearExternalFilters(alias string) {
+	if len(this.externalFilterMap) == 0 {
+		return
+	}
+	this.externalFilterLock.RLock()
+	eft := this.externalFilterMap[alias]
+	this.externalFilterLock.RUnlock()
+	if eft == nil {
+		return
+	}
+	eft.clearExternalFilters()
+	this.externalFilterLock.Lock()
+	delete(this.externalFilterMap, alias)
+	this.externalFilterLock.Unlock()
 }
 
 // the problem with this is it is effectively a limit on the size of an INSERT operation...

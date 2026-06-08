@@ -21,24 +21,28 @@ type HashJoin struct {
 	readonly
 	optEstimate
 	outer        bool
+	external     bool
 	onclause     expression.Expression
 	child        Operator
 	buildExprs   expression.Expressions
 	probeExprs   expression.Expressions
 	buildAliases []string
+	probeAliases []string
 	filter       expression.Expression
 }
 
 func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs expression.Expressions,
-	buildAliases []string, filter expression.Expression, cost, cardinality float64,
+	buildAliases, probeAliases []string, filter expression.Expression, external bool, cost, cardinality float64,
 	size int64, frCost float64) *HashJoin {
 	rv := &HashJoin{
 		outer:        join.Outer(),
+		external:     external,
 		onclause:     join.Onclause(),
 		child:        child,
 		buildExprs:   buildExprs,
 		probeExprs:   probeExprs,
 		buildAliases: buildAliases,
+		probeAliases: probeAliases,
 		filter:       filter,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
@@ -89,12 +93,20 @@ func (this *HashJoin) BuildAliases() []string {
 	return this.buildAliases
 }
 
+func (this *HashJoin) ProbeAliases() []string {
+	return this.probeAliases
+}
+
 func (this *HashJoin) Filter() expression.Expression {
 	return this.filter
 }
 
 func (this *HashJoin) SetFilter(filter expression.Expression) {
 	this.filter = filter
+}
+
+func (this *HashJoin) HasExternal() bool {
+	return this.external
 }
 
 func (this *HashJoin) SetCardinality(cardinality float64) {
@@ -128,9 +140,14 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 	r["probe_exprs"] = probeList
 
 	r["build_aliases"] = this.buildAliases
+	r["probe_aliases"] = this.probeAliases
 
 	if this.filter != nil {
 		r["filter"] = this.filter.String()
+	}
+
+	if this.external {
+		r["has_external"] = this.external
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -150,9 +167,11 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 		_            string                 `json:"#operator"`
 		Onclause     string                 `json:"on_clause"`
 		Outer        bool                   `json:"outer"`
+		External     bool                   `json:"has_external"`
 		BuildExprs   []string               `json:"build_exprs"`
 		ProbeExprs   []string               `json:"probe_exprs"`
 		BuildAliases []string               `json:"build_aliases"`
+		ProbeAliases []string               `json:"probe_aliases"`
 		Filter       string                 `json:"filter"`
 		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
 		Child        json.RawMessage        `json:"~child"`
@@ -171,6 +190,7 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 	}
 
 	this.outer = _unmarshalled.Outer
+	this.external = _unmarshalled.External
 
 	this.buildExprs = make(expression.Expressions, len(_unmarshalled.BuildExprs))
 	for i, build := range _unmarshalled.BuildExprs {
@@ -191,6 +211,7 @@ func (this *HashJoin) UnmarshalJSON(body []byte) error {
 	}
 
 	this.buildAliases = _unmarshalled.BuildAliases
+	this.probeAliases = _unmarshalled.ProbeAliases
 
 	if _unmarshalled.Filter != "" {
 		this.filter, err = parser.Parse(_unmarshalled.Filter)
