@@ -401,7 +401,31 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			return nil, filterErr
 		}
 		extFilter = filter
-		names := this.node.Expressions().GetPathsForAlias(node.Alias(), false)
+		// Use FieldNames (not GetPathsForAlias) to collect top-level field names
+		// referenced by the alias across ALL expressions — including JOIN ON clauses.
+		// GetPathsForAlias has a shared-state bug in compound expressions (e.g.
+		// EQ(t.address.city, r.city)) where the last-seen alias overwrites the
+		// accumulated path, causing nested join fields to be silently dropped.
+		// FieldNames matches the base identifier independently at each Field node
+		// and always returns the correct top-level field (address, not address.city),
+		// which is what we project — the engine navigates into nested fields in memory.
+		ident := expression.NewIdentifier(node.Alias())
+		nameMap := make(map[string]bool)
+		allFields := false
+		for _, expr := range this.node.Expressions() {
+			if expr.EquivalentTo(ident) {
+				allFields = true
+				break
+			}
+			expr.FieldNames(ident, nameMap)
+		}
+		var names []string
+		if !allFields && len(nameMap) > 0 {
+			names = make([]string, 0, len(nameMap))
+			for n := range nameMap {
+				names = append(names, n)
+			}
+		}
 		externalScan := plan.NewExternalScan(keyspace, node, nil, filter,
 			node.SnapshotIdExpr(), node.SnapshotTimestampExpr(),
 			OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
