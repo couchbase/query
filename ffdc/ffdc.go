@@ -613,11 +613,22 @@ func (this *reason) processForKeyDrop(keyIdToDrop string, ffdcMgr *ffdcManager) 
 				continue
 			}
 
+			var targetKeyId string
+			if activeKey != nil {
+				targetKeyId = activeKey.Id
+			}
+
 			dropErr = ffdc.transformForKeyDrop(keyIdToDrop, activeKey, ffdcMgr)
 			if dropErr != nil {
-				logging.Errorf("FFDC: [%#x] Failed to transform file %v: %v", occ.id, name, dropErr)
-				dropErr = fmt.Errorf("Failed to transform file %v in occurrence %v: %v", name, occ.id, dropErr)
+				logging.Errorf("FFDC: [%#x] Failed to transform file %v to drop key id %+q and encrypt with key id %+q: %v",
+					occ.id, name, keyIdToDrop, targetKeyId, dropErr)
+				dropErr = fmt.Errorf(
+					"Failed to transform file %v in occurrence %v to drop key id %+q and encrypt with key id %+q: %v",
+					name, occ.id, keyIdToDrop, targetKeyId, dropErr)
 				continue
+			} else {
+				logging.Infof("FFDC: [%#x] Successfully transformed file %v to drop key id %+q and encrypt with key id %+q",
+					occ.id, name, keyIdToDrop, targetKeyId)
 			}
 		}
 

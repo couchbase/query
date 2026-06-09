@@ -132,7 +132,17 @@ func (this *NodeEncryptionManager) GetInUseKeysCallback(dt cbauth.KeyDataType) (
 }
 
 func (this *NodeEncryptionManager) GetAllInUseKeys() (map[encryption.KeyDataType][]string, error) {
-	allKeys := make(map[encryption.KeyDataType][]string, len(this.trackedDatatypes))
+	activeKeys := this.keyStore.GetAllStoredActiveKeyIds(this.trackedDatatypes)
+	allKeys := make(map[encryption.KeyDataType][]string, len(this.trackedDatatypes)+len(activeKeys))
+
+	for dt, keyId := range activeKeys {
+		// Return active key ID only if encryption at rest is enabled for the data type
+		if keyId == encryption.UNENCRYPTED_KEY_ID {
+			allKeys[dt] = []string{}
+		} else {
+			allKeys[dt] = []string{keyId}
+		}
+	}
 
 	for dt := range this.trackedDatatypes {
 		keys, err := this.getInUseKeys(dt)

@@ -1473,9 +1473,20 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 		transformErr := archive.transformForKeyDrop(keyIdToDrop, activeKey, this.encryptionProvider, this)
 		postOp()
 
+		var targetKeyId string
+		if activeKey != nil {
+			targetKeyId = activeKey.Id
+		}
+
 		if transformErr != nil {
-			return fmt.Errorf("Transformation of archive file %v failed with error: %v", requestLogStreamFileName(archive.num),
-				transformErr)
+			errStr := fmt.Sprintf("Failed to transform file %v to drop key id %+q and encrypt with key id %+q: %v",
+				requestLogStreamFileName(archive.num), keyIdToDrop, targetKeyId, transformErr)
+
+			logging.Errorf(_MSG_PREFIX + errStr)
+			return fmt.Errorf(errStr)
+		} else {
+			logging.Infof(_MSG_PREFIX+"Successfully transformed file %v to drop key id %+q and encrypt with key id %+q",
+				requestLogStreamFileName(archive.num), keyIdToDrop, targetKeyId)
 		}
 	}
 
@@ -1497,6 +1508,7 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 		// would be unset by said procedure
 		if a.getCurrKeyID(true) == keyIdToDrop {
 			this.filesLock.Unlock()
+
 			return fmt.Errorf("Key is still in use by archived file %v", requestLogStreamFileName(a.num))
 		}
 	}

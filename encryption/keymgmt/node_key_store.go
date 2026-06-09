@@ -191,6 +191,22 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 	return nil, activeKeyRotation
 }
 
+func (this *nodeKeyStore) GetAllStoredActiveKeyIds(exclude map[encryption.KeyDataType]bool) map[encryption.KeyDataType]string {
+	activeKeyIds := make(map[encryption.KeyDataType]string, len(this.encrKeysInfo))
+
+	this.lock.RLock()
+	defer this.lock.RUnlock()
+
+	for dt, keyInfo := range this.encrKeysInfo {
+		if keyInfo != nil {
+			if _, ok := exclude[dt]; !ok {
+				activeKeyIds[dt] = keyInfo.ActiveKeyId
+			}
+		}
+	}
+	return activeKeyIds
+}
+
 func (this *nodeKeyStore) GetActiveKey(dt encryption.KeyDataType) (*encryption.EaRKey, errors.Error) {
 	return this.getKeyHelper(dt, true, "")
 }
