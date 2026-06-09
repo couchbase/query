@@ -319,6 +319,12 @@ func n1qlExtractValue(expr expression.Expression, parent value.Value) interface{
 }
 
 // n1qlArrayValues collects constant values from an array expression.
+// Handles three shapes:
+//   - *expression.ArrayConstruct: e.g. literal [1, 2, 3] in the source query
+//   - any expression whose Value() returns a pre-computed array — including
+//     *expression.Constant, which is how the join-driven runtime filter
+//     (execution/external_filter.go) wraps the IN-list values
+//   - falls back to evaluating against parent for correlated references
 func n1qlArrayValues(expr expression.Expression, parent value.Value) []interface{} {
 	if arr, ok := expr.(*expression.ArrayConstruct); ok {
 		result := make([]interface{}, 0, len(arr.Operands()))
@@ -328,6 +334,11 @@ func n1qlArrayValues(expr expression.Expression, parent value.Value) []interface
 			}
 		}
 		return result
+	}
+	if v := expr.Value(); v != nil {
+		if arr, ok := v.Actual().([]interface{}); ok {
+			return arr
+		}
 	}
 	if parent != nil {
 		if v, err := expr.Evaluate(parent, nil); err == nil && v != nil && v.Type() != value.MISSING {
