@@ -91,6 +91,7 @@ type Scanner struct {
 	selectedFields  []string
 	limit           int64
 	filterExpr      iceberg.BooleanExpression
+	rowMatcher      rowMatcher // Per-row filter evaluator for the parallel-files path
 	awsConfig       *aws.Config
 	sourceType      string             // Track which catalog source type we're using
 	parallelScans   int                // Scan parallelism override (0 = use default 1)
@@ -1349,6 +1350,39 @@ func stripInvalidPredicates(schema *iceberg.Schema, expr iceberg.BooleanExpressi
 	return result
 }
 
+// ensureRowMatcher builds the per-row filter evaluator used by the parallel-files
+// scan path. The parallel-files path reads raw data files directly and bypasses
+// iceberg-go's ToArrowRecords() filtering, so without this evaluator pushed-down
+// filters only prune files/row-groups — every surviving row is emitted unfiltered.
+// Idempotent; safe to call after the table is loaded.
+func (s *Scanner) ensureRowMatcher() {
+	if s.rowMatcher != nil || s.filterExpr == nil || s.table == nil {
+		return
+	}
+	safe := stripInvalidPredicates(s.table.Schema(), s.filterExpr, true)
+	matcher, err := buildRowMatcher(s.table.Schema(), safe)
+	if err != nil {
+		logging.Warnf("Iceberg scan: could not build row matcher, parallel-files path will skip row filtering: %v", err)
+		return
+	}
+	s.rowMatcher = matcher
+}
+
+// emitRow applies the per-row filter (if any) and sends the row to resultChan.
+// Returns false if the context was cancelled. The parallel-files stream functions
+// use this to enforce filter pushdown that iceberg-go would apply via ToArrowRecords.
+func (s *Scanner) emitRow(ctx go_context.Context, resultChan chan<- map[string]interface{}, row map[string]interface{}) bool {
+	if s.rowMatcher != nil && !s.rowMatcher(row) {
+		return true
+	}
+	select {
+	case resultChan <- row:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
 // planFilesWithRecovery calls scan.PlanFiles catching any panic from iceberg-go (e.g. when a
 // filter references a column that is not in the partition spec).
 func planFilesWithRecovery(scan *table.Scan, ctx go_context.Context) (fileTasks []table.FileScanTask, err error) {
@@ -1827,6 +1861,12 @@ func (s *Scanner) ScanAndConvertParallelFiles(ctx go_context.Context) (<-chan ma
 			return
 		}
 
+		// Build the per-row matcher up front so all workers share one evaluator.
+		// Required: WithRowFilter applies only file/row-group pruning here; row-level
+		// filtering would normally happen inside iceberg-go's ToArrowRecords, which
+		// this path bypasses by reading raw data files directly.
+		s.ensureRowMatcher()
+
 		fileTasks, err := planFilesWithRecovery(scan, ctx)
 		if err != nil {
 			errorChan <- fmt.Errorf("failed to plan files: %w", err)
@@ -1949,9 +1989,7 @@ func (s *Scanner) streamParquetFile(ctx go_context.Context, data []byte, resultC
 					row[field.Name] = helper.getColumnValue(col, rowIdx)
 				}
 			}
-			select {
-			case resultChan <- row:
-			case <-ctx.Done():
+			if !s.emitRow(ctx, resultChan, row) {
 				rec.Release()
 				return ctx.Err()
 			}
@@ -1988,9 +2026,7 @@ func (s *Scanner) streamArrowIPCFile(ctx go_context.Context, data []byte, result
 					row[field.Name] = helper.getColumnValue(col, rowIdx)
 				}
 			}
-			select {
-			case resultChan <- row:
-			case <-ctx.Done():
+			if !s.emitRow(ctx, resultChan, row) {
 				return ctx.Err()
 			}
 		}
@@ -2034,9 +2070,7 @@ func (s *Scanner) streamAvroFile(ctx go_context.Context, data []byte, resultChan
 			row = filtered
 		}
 
-		select {
-		case resultChan <- row:
-		case <-ctx.Done():
+		if !s.emitRow(ctx, resultChan, row) {
 			return ctx.Err()
 		}
 	}
@@ -2112,9 +2146,7 @@ func (s *Scanner) streamOrcFile(ctx go_context.Context, data []byte, resultChan 
 				row[f] = vals[i]
 			}
 		}
-		select {
-		case resultChan <- row:
-		case <-ctx.Done():
+		if !s.emitRow(ctx, resultChan, row) {
 			return ctx.Err()
 		}
 	}
