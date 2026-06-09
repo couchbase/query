@@ -188,7 +188,7 @@ loop:
 					if external && externalValArray[i] != nil &&
 						buildValue.Type() != value.MISSING && buildValue.Type() != value.NULL {
 						if len(externalValArray[i]) < _MAX_EXTERNAL_VALUES_LEN {
-							externalValArray[i] = append(externalValArray[i], buildVals[i])
+							externalValArray[i] = append(externalValArray[i], buildValue)
 						} else {
 							externalValArray[i] = nil
 						}
