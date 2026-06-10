@@ -171,9 +171,10 @@ require (
 	github.com/couchbase/gometa v0.0.0-20220803182802-05cb6b2e299f // indirect
 	github.com/couchbase/goprotostellar v1.0.6-0.20260407143512-d7af25156dcc // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
-	github.com/couchbase/logstats v1.0.0 // indirect
+	github.com/couchbase/logstats v1.1.1 // indirect
 	github.com/couchbase/moss v0.3.0 // indirect
 	github.com/couchbase/tools-common/cloud/v8 v8.1.3 // indirect
+	github.com/couchbase/tools-common/couchbase/v4 v4.1.0 // indirect
 	github.com/couchbase/tools-common/fs v1.0.3 // indirect
 	github.com/couchbase/tools-common/strings v1.0.0 // indirect
 	github.com/couchbase/tools-common/sync/v2 v2.0.2 // indirect
@@ -184,6 +185,7 @@ require (
 	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0 // indirect
 	github.com/creasty/defaults v1.8.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.36.0 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.3.0 // indirect
