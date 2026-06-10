@@ -10,8 +10,10 @@ package expression
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -50,8 +52,9 @@ func (this *Concat) Type() value.Type { return value.STRING }
 
 func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var buf bytes.Buffer
+	var size uint64
 	null := false
-
+	fallbackLimit := uint64(20 * util.MiB) // The limit set for the concatenated string when quota is not set
 	for _, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
 		if err != nil {
@@ -59,8 +62,15 @@ func (this *Concat) Evaluate(item value.Value, context Context) (value.Value, er
 		}
 		switch arg.Type() {
 		case value.STRING:
+			s := arg.ToString()
+			size += uint64(len(s))
+			err := checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, 0, 0, size, fallbackLimit)
+			if err != nil {
+				return nil, err
+			}
+
 			if !null {
-				buf.WriteString(arg.ToString())
+				buf.WriteString(s)
 			}
 		case value.MISSING:
 			return value.MISSING_VALUE, nil
@@ -136,7 +146,8 @@ func (this *Concat2) Evaluate(item value.Value, context Context) (value.Value, e
 	var sp string
 	null := false
 	addSp := false
-
+	size := uint64(0)
+	fallbackLimit := uint64(20 * util.MiB) // The limit set for the concatenated string when quota is not set
 	for i, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
 		if err != nil {
@@ -152,9 +163,23 @@ func (this *Concat2) Evaluate(item value.Value, context Context) (value.Value, e
 					sp = arg.ToString()
 				} else if !null {
 					if addSp && sp != "" {
+						size += uint64(len(sp))
+						err := checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, 0, 0, size, fallbackLimit)
+						if err != nil {
+							return nil, err
+						}
+
 						buf.WriteString(sp)
 					}
-					buf.WriteString(arg.ToString())
+
+					s := arg.ToString()
+					size += uint64(len(s))
+					err := checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, 0, 0, size, fallbackLimit)
+					if err != nil {
+						return nil, err
+					}
+
+					buf.WriteString(s)
 					addSp = true
 				}
 			} else if arg.Type() == value.ARRAY {
@@ -166,9 +191,23 @@ func (this *Concat2) Evaluate(item value.Value, context Context) (value.Value, e
 						null = true
 					} else if !null {
 						if addSp && sp != "" {
+							size += uint64(len(sp))
+							err := checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, 0, 0, size, fallbackLimit)
+							if err != nil {
+								return nil, err
+							}
+
 							buf.WriteString(sp)
 						}
-						buf.WriteString(ael.ToString())
+
+						aelStr := ael.ToString()
+						size += uint64(len(aelStr))
+						err := checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, 0, 0, size, fallbackLimit)
+						if err != nil {
+							return nil, err
+						}
+
+						buf.WriteString(aelStr)
 						addSp = true
 					}
 				}
