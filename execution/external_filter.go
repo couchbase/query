@@ -48,9 +48,7 @@ func (this *ExternalFilterTerms) getExternalFilters() expression.Expression {
 	this.RLock()
 	filters := make(expression.Expressions, 0, len(this.terms))
 	for _, curTerm := range this.terms {
-		// dedup and sort first
-		vals := expression.SortValArr(curTerm.values)
-		newFilter := expression.NewIn(curTerm.term, expression.NewConstant(vals))
+		newFilter := expression.NewIn(curTerm.term, expression.NewConstant(curTerm.values))
 		filters = append(filters, newFilter)
 	}
 	this.RUnlock()

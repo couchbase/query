@@ -105,7 +105,7 @@ func (this *HashNest) SetFilter(filter expression.Expression) {
 	this.filter = filter
 }
 
-func (this *HashNest) HasExternal() bool {
+func (this *HashNest) HashExternalFilter() bool {
 	return this.external
 }
 
@@ -145,7 +145,7 @@ func (this *HashNest) MarshalBase(f func(map[string]interface{})) map[string]int
 	}
 
 	if this.external {
-		r["has_external"] = this.external
+		r["hash_external_filter"] = this.external
 	}
 
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -165,7 +165,7 @@ func (this *HashNest) UnmarshalJSON(body []byte) error {
 		_            string                 `json:"#operator"`
 		Onclause     string                 `json:"on_clause"`
 		Outer        bool                   `json:"outer"`
-		External     bool                   `json:"has_external"`
+		External     bool                   `json:"hash_external_filter"`
 		BuildExprs   []string               `json:"build_exprs"`
 		ProbeExprs   []string               `json:"probe_exprs"`
 		BuildAlias   string                 `json:"build_alias"`

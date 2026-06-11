@@ -1380,7 +1380,9 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	}
 
 	if isExternal || leftIsExternal {
-		external = true
+		if (!buildRight && isExternal) || (buildRight && leftIsExternal) {
+			external = true
+		}
 	} else if !outer && !isNest {
 		var auto, found bool
 		if joinEnum {

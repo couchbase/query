@@ -96,9 +96,9 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		this.ansiFlags |= ANSI_ONCLAUSE_TRUE
 	}
 
-	var externalValArray [][]interface{}
+	var externalValSet []*value.Set
 	var probeAlias string
-	if this.plan.HasExternal() {
+	if this.plan.HashExternalFilter() {
 		probeAliases := this.plan.ProbeAliases()
 		if len(probeAliases) != 1 {
 			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("Hash join probe with external collection: len(probeAliases) = %d",
@@ -106,9 +106,9 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 			return false
 		}
 		probeAlias = probeAliases[0]
-		externalValArray = make([][]interface{}, len(this.plan.ProbeExprs()))
-		for i := range externalValArray {
-			externalValArray[i] = make([]interface{}, 0, _MAX_EXTERNAL_VALUES_LEN)
+		externalValSet = make([]*value.Set, len(this.plan.BuildExprs()))
+		for i := range externalValSet {
+			externalValSet[i] = value.NewSet(_MAX_EXTERNAL_VALUES_LEN, true, false)
 		}
 	}
 
@@ -131,7 +131,7 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 	this.fork(this.child, context, parent)
 
 	ok := buildHashTab(&(this.base), this.child, this.hashTab, this.plan.BuildExprs(),
-		this.buildVals, this.plan.HasExternal(), externalValArray, &this.operatorCtx)
+		this.buildVals, this.plan.HashExternalFilter(), externalValSet, &this.operatorCtx)
 	if !ok {
 		return false
 	}
@@ -142,11 +142,11 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 		return false
 	}
 
-	if externalValArray != nil && probeAlias != "" {
+	if externalValSet != nil && probeAlias != "" {
 		probeExprs := this.plan.ProbeExprs()
-		for i := range externalValArray {
-			if externalValArray[i] != nil {
-				context.setExternalFilter(probeAlias, probeExprs[i], len(externalValArray), externalValArray[i])
+		for i := range externalValSet {
+			if externalValSet[i] != nil {
+				context.setExternalFilter(probeAlias, probeExprs[i], len(externalValSet), externalValSet[i].Actuals())
 			}
 		}
 	}
@@ -155,7 +155,7 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable, buildExprs expression.Expressions,
-	buildVals []interface{}, external bool, externalValArray [][]interface{}, context *opContext) bool {
+	buildVals []interface{}, external bool, externalValSet []*value.Set, context *opContext) bool {
 
 	var err error
 	stopped := false
@@ -185,12 +185,12 @@ loop:
 						context.Error(errors.NewEvaluationError(err, "Hash Table Build Expression"))
 						return false
 					}
-					if external && externalValArray[i] != nil &&
+					if external && externalValSet[i] != nil &&
 						buildValue.Type() != value.MISSING && buildValue.Type() != value.NULL {
-						if len(externalValArray[i]) < _MAX_EXTERNAL_VALUES_LEN {
-							externalValArray[i] = append(externalValArray[i], buildValue)
-						} else {
-							externalValArray[i] = nil
+						externalValSet[i].Add(buildValue)
+						if externalValSet[i].Len() > _MAX_EXTERNAL_VALUES_LEN {
+							externalValSet[i].Clear()
+							externalValSet[i] = nil
 						}
 					}
 					buildVals[i] = buildValue

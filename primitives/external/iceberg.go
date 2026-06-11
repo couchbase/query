@@ -354,6 +354,9 @@ func n1qlArrayValues(expr expression.Expression, parent value.Value) []interface
 // N1QL stores all JSON numbers as float64; whole-number floats are converted to int64
 // so that iceberg can coerce them to the column's actual integer type during binding.
 func n1qlValueToLiteral(val interface{}) iceberg.Literal {
+	if v, ok := val.(value.Value); ok {
+		val = v.Actual()
+	}
 	switch v := val.(type) {
 	case string:
 		return iceberg.StringLiteral(v)

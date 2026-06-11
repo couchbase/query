@@ -95,9 +95,9 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 		filter.EnableInlistHash(&this.operatorCtx)
 	}
 
-	var externalValArray [][]interface{}
+	var externalValSet []*value.Set
 	var probeAlias string
-	if this.plan.HasExternal() {
+	if this.plan.HashExternalFilter() {
 		probeAliases := this.plan.ProbeAliases()
 		if len(probeAliases) != 1 {
 			context.Error(errors.NewExecutionInternalError(fmt.Sprintf("Hash nest probe with external collection: len(probeAliases) = %d",
@@ -105,9 +105,9 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 			return false
 		}
 		probeAlias = probeAliases[0]
-		externalValArray = make([][]interface{}, len(this.plan.ProbeExprs()))
-		for i := range externalValArray {
-			externalValArray[i] = make([]interface{}, 0, _MAX_EXTERNAL_VALUES_LEN)
+		externalValSet = make([]*value.Set, len(this.plan.BuildExprs()))
+		for i := range externalValSet {
+			externalValSet[i] = value.NewSet(_MAX_EXTERNAL_VALUES_LEN, true, false)
 		}
 	}
 
@@ -125,16 +125,16 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 	this.fork(this.child, context, parent)
 
 	ok := buildHashTab(&(this.base), this.child, this.hashTab, this.plan.BuildExprs(),
-		this.buildVals, this.plan.HasExternal(), externalValArray, &this.operatorCtx)
+		this.buildVals, this.plan.HashExternalFilter(), externalValSet, &this.operatorCtx)
 	if !ok {
 		return false
 	}
 
-	if externalValArray != nil && probeAlias != "" {
+	if externalValSet != nil && probeAlias != "" {
 		probeExprs := this.plan.ProbeExprs()
-		for i := range externalValArray {
-			if externalValArray[i] != nil {
-				context.setExternalFilter(probeAlias, probeExprs[i], len(externalValArray), externalValArray[i])
+		for i := range externalValSet {
+			if externalValSet[i] != nil {
+				context.setExternalFilter(probeAlias, probeExprs[i], len(externalValSet), externalValSet[i].Actuals())
 			}
 		}
 	}
