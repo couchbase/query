@@ -1483,7 +1483,7 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 				requestLogStreamFileName(archive.num), keyIdToDrop, targetKeyId, transformErr)
 
 			logging.Errorf(_MSG_PREFIX + errStr)
-			return fmt.Errorf(errStr)
+			return fmt.Errorf("%s", errStr)
 		} else {
 			logging.Infof(_MSG_PREFIX+"Successfully transformed file %v to drop key id %+q and encrypt with key id %+q",
 				requestLogStreamFileName(archive.num), keyIdToDrop, targetKeyId)
