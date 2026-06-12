@@ -1536,9 +1536,19 @@ func (s *Scanner) ScanAndConvertStream(ctx go_context.Context) (<-chan map[strin
 
 	// If collection credential is set (AWS or GCP), use direct parallel file reading path.
 	// Catalog credential is used for PlanFiles; collection credential reads the actual data files.
-	if s.collectionCred != nil && isStorageCredential(s.collectionCred) {
+	// AWS_GLUE_REST is also routed here when awsConfig is available: the same AWS credential that
+	// authenticates the REST catalog can read the S3 data files, and buildFileDownloader already
+	// handles the no-collectionCred S3 case via awsConfig. This avoids scan.ToArrowRecords() which
+	// fails for nested array<struct<...>> columns because the Glue REST schema omits field IDs for
+	// struct fields nested inside list types.
+	if (s.collectionCred != nil && isStorageCredential(s.collectionCred)) ||
+		(s.sourceType == "AWS_GLUE_REST" && s.awsConfig != nil) {
+		credType := "awsConfig"
+		if s.collectionCred != nil {
+			credType = string(s.collectionCred.Type)
+		}
 		logging.Debugf("Iceberg ScanAndConvertStream: using parallel file read path (type=%s, parallelScans=%d)",
-			s.collectionCred.Type, s.parallelScans)
+			credType, s.parallelScans)
 		return s.ScanAndConvertParallelFiles(ctx)
 	}
 
