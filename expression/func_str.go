@@ -1771,11 +1771,37 @@ func (this *Uncompress) Evaluate(item value.Value, context Context) (value.Value
 			return value.NewValue(arg.ToString()), nil
 		}
 	}
-	text, err := io.ReadAll(w)
+
 	if err != nil {
 		return value.NULL_VALUE, nil
 	}
-	return value.NewValue(string(text)), nil
+
+	buf := make([]byte, 512)
+	text := bytes.NewBuffer(make([]byte, 0, 512))
+	var size uint64
+	for {
+		n, rerr := w.Read(buf)
+		if rerr != nil && rerr != io.EOF {
+			return nil, errors.NewEvaluationError(rerr, fmt.Sprintf("%s()", this.name))
+		}
+
+		size += uint64(n)
+		err := checkSizeWithinLimit(fmt.Sprintf("%s()", this.name), context, 0, 0, size, 20*util.MiB)
+		if err != nil {
+			return nil, err
+		}
+
+		_, werr := text.Write(buf[:n])
+		if werr != nil {
+			return nil, errors.NewEvaluationError(werr, fmt.Sprintf("%s()", this.name))
+		}
+
+		if rerr == io.EOF {
+			break
+		}
+	}
+
+	return value.NewValue(text.String()), nil
 }
 
 func (this *Uncompress) Constructor() FunctionConstructor {
