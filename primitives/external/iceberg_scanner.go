@@ -788,11 +788,26 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		if region == "" {
 			region = awsCfg.Region
 		}
-		logging.Debugf("createCatalog: creating AWS_GLUE_REST catalog, uri=%s, region=%s", opts.URI, region)
-		cat, err := rest.NewCatalog(ctx, "glue-rest", opts.URI,
+		var glueRestOpts []rest.Option
+		glueRestOpts = append(glueRestOpts,
 			rest.WithAwsConfig(awsCfg),
 			rest.WithSigV4RegionSvc(region, "glue"),
 		)
+		// Forward storage credentials as iceberg-go FileIO props so that
+		// scan.PlanFiles can read manifest files from S3 without falling back
+		// to the EC2 IMDS credential chain. AWS Glue REST does not vend storage
+		// credentials in LoadTableResponse, so they must be provided here.
+		if opts.CollectionCred != nil {
+			props, err := buildRESTStorageProps(opts.CollectionCred)
+			if err != nil {
+				return nil, fmt.Errorf("AWS_GLUE_REST storage credential error: %w", err)
+			}
+			if len(props) > 0 {
+				glueRestOpts = append(glueRestOpts, rest.WithAdditionalProps(props))
+			}
+		}
+		logging.Debugf("createCatalog: creating AWS_GLUE_REST catalog, uri=%s, region=%s", opts.URI, region)
+		cat, err := rest.NewCatalog(ctx, "glue-rest", opts.URI, glueRestOpts...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create AWS_GLUE_REST catalog: %w", err)
 		}
