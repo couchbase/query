@@ -28,10 +28,11 @@ type ExternalScan struct {
 	filter         expression.Expression
 	snapshotIdExpr expression.Expression
 	snapshotTsExpr expression.Expression
+	nested_loop    bool
 }
 
 func NewExternalScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
-	filter, snapshotIdExpr, snapshotTsExpr expression.Expression,
+	filter, snapshotIdExpr, snapshotTsExpr expression.Expression, nested_loop bool,
 	cost, cardinality float64, size int64, frCost float64) *ExternalScan {
 	rv := &ExternalScan{
 		keyspace:       keyspace,
@@ -40,6 +41,7 @@ func NewExternalScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, su
 		filter:         filter,
 		snapshotIdExpr: snapshotIdExpr,
 		snapshotTsExpr: snapshotTsExpr,
+		nested_loop:    nested_loop,
 	}
 	setOptEstimate(&rv.optEstimate, cost, cardinality, size, frCost)
 	return rv
@@ -89,6 +91,10 @@ func (this *ExternalScan) SnapshotTimestampExpr() expression.Expression {
 	return this.snapshotTsExpr
 }
 
+func (this *ExternalScan) IsUnderNL() bool {
+	return this.nested_loop
+}
+
 func (this *ExternalScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -114,6 +120,9 @@ func (this *ExternalScan) MarshalBase(f func(map[string]interface{})) map[string
 	if this.snapshotTsExpr != nil {
 		r["snapshot_timestamp"] = this.snapshotTsExpr.String()
 	}
+	if this.nested_loop {
+		r["nested_loop"] = this.nested_loop
+	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -136,6 +145,7 @@ func (this *ExternalScan) UnmarshalJSON(body []byte) error {
 		Filter            string                 `json:"filter"`
 		SnapshotId        string                 `json:"snapshot_id"`
 		SnapshotTimestamp string                 `json:"snapshot_timestamp"`
+		NestedLoop        bool                   `json:"nested_loop"`
 		OptEstimate       map[string]interface{} `json:"optimizer_estimates"`
 	}
 
@@ -146,6 +156,7 @@ func (this *ExternalScan) UnmarshalJSON(body []byte) error {
 
 	this.subPaths = _unmarshalled.SubPaths
 	this.projection = _unmarshalled.Projection
+	this.nested_loop = _unmarshalled.NestedLoop
 
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)

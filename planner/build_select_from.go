@@ -396,6 +396,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	// External collections don't support index scans, use ExternalScan
 	if isExternalCollection {
 		// Get the filter for external collection
+		// "join" is passed as "false" to ensure only filters for the external collection are included
 		filter, _, filterErr := this.getFilter(node.Alias(), false, false, nil)
 		if filterErr != nil {
 			return nil, filterErr
@@ -427,7 +428,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 			}
 		}
 		externalScan := plan.NewExternalScan(keyspace, node, nil, filter,
-			node.SnapshotIdExpr(), node.SnapshotTimestampExpr(),
+			node.SnapshotIdExpr(), node.SnapshotTimestampExpr(), this.hasBuilderFlag(BUILDER_NL_INNER),
 			OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)
 		if len(names) > 0 {
 			externalScan.SetEarlyProjection(names)
@@ -461,9 +462,6 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		}
 	}
 	this.addChildren(scan)
-	if isExternalCollection && extFilter != nil {
-		this.addSubChildren(plan.NewFilter(extFilter, node.Alias(), float64(0), float64(0), int64(0), float64(0)))
-	}
 
 	useCBO := this.useCBO && this.keyspaceUseCBO(node.Alias()) && !isExternalCollection
 
@@ -474,9 +472,13 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		}
 	}
 
-	// For external collections, ExternalScan handles fetching, subPaths, projection, and filter
-	// So skip Fetch operator creation
-	if !isExternalCollection && len(this.coveringScans) == 0 && this.countScan == nil {
+	if isExternalCollection {
+		// For external collections, ExternalScan handles fetching, subPaths, projection, and filter
+		// So skip Fetch operator creation
+		if extFilter != nil {
+			this.addSubChildren(plan.NewFilter(extFilter, node.Alias(), float64(0), float64(0), int64(0), float64(0)))
+		}
+	} else if len(this.coveringScans) == 0 && this.countScan == nil {
 		err := this.checkEarlyProjection(this.initialProjection)
 		if err != nil {
 			return nil, err
@@ -584,7 +586,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 				this.addSubChildren(plan.NewFilter(filter, node.Alias(), cost, cardinality, size, frCost))
 			}
 		}
-	} else if !isExternalCollection && this.countScan == nil && len(this.coveringScans) > 0 &&
+	} else if this.countScan == nil && len(this.coveringScans) > 0 &&
 		(inCorrSubq || this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY)) {
 
 		// if we have a covering index scan on primary index

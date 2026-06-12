@@ -20,6 +20,16 @@ import (
 	"github.com/couchbase/query/value"
 )
 
+var _EXTERNALSCAN_OP_POOL util.FastPool
+
+func init() {
+	util.NewFastPool(&_EXTERNALSCAN_OP_POOL, func() interface{} {
+		return &ExternalScan{}
+	})
+}
+
+const _DEF_RESULT_CACHE_SIZE = 64
+
 // ExternalScan scans external collections (e.g., Iceberg tables).
 type ExternalScan struct {
 	base
@@ -27,6 +37,7 @@ type ExternalScan struct {
 	conn       *datastore.IndexConnection
 	scanReport *datastore.IndexScanReport
 	params     *datastore.ExternalScanParams // nil until first scan; shared via Copy()
+	results    []interface{}
 }
 
 type externalScanDesc struct {
@@ -39,14 +50,6 @@ type externalScanDesc struct {
 func scanExternalFork(p interface{}) {
 	d := p.(externalScanDesc)
 	d.scan.scan(d.inlineFilter, d.context, d.parent, d.scan.conn)
-}
-
-var _EXTERNALSCAN_OP_POOL util.FastPool
-
-func init() {
-	util.NewFastPool(&_EXTERNALSCAN_OP_POOL, func() interface{} {
-		return &ExternalScan{}
-	})
 }
 
 func NewExternalScan(plan *plan.ExternalScan, context *Context) *ExternalScan {
@@ -90,6 +93,33 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 		defer this.conn.WaitScanReport(context.ScanReportWait())
 		defer this.conn.SendStop() // Notify index that I have stopped
 
+		useCache := this.plan.IsUnderNL()
+		alias := this.plan.Term().Alias()
+
+		// use cached results if available
+		if useCache && this.results != nil {
+			for _, act := range this.results {
+				actv := value.NewScopeValue(make(map[string]interface{}), parent)
+				actv.SetField(alias, act)
+				av := value.NewAnnotatedValue(actv)
+				av.SetId("")
+
+				if context.UseRequestQuota() {
+					err := context.TrackValueSize(av.Size())
+					if err != nil {
+						context.Error(err)
+						av.Recycle()
+						return
+					}
+				}
+				if !this.sendItem(av) {
+					av.Recycle()
+					break
+				}
+			}
+			return
+		}
+
 		// Replace named/positional parameters in filter if present
 		var filter, externalFilter expression.Expression
 		if this.plan.Filter() != nil {
@@ -106,7 +136,6 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 			filter.EnableInlistHash(&this.operatorCtx)
 			defer filter.ResetMemory(&this.operatorCtx)
 		}
-		alias := this.plan.Term().Alias()
 		externalFilter = context.getExternalFilters(alias)
 		if externalFilter != nil {
 			defer context.clearExternalFilters(alias)
@@ -128,13 +157,24 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 		}
 		defer countDocs()
 
+		var results []interface{}
+		if useCache {
+			this.results = nil
+			results = make([]interface{}, 0, _DEF_RESULT_CACHE_SIZE)
+		}
 		for ok {
 			entry, cont := this.getItemEntry(this.conn)
 			if cont {
 				if entry != nil {
 					this.addInDocs(1)
-					av := this.newEmptyDocumentWithKey(entry.PrimaryKey, parent, context)
-					av.SetField(alias, entry.EntryKey[0])
+					act := entry.EntryKey[0]
+					actv := value.NewScopeValue(make(map[string]interface{}), parent)
+					actv.SetField(alias, act)
+					av := value.NewAnnotatedValue(actv)
+					av.SetId(entry.PrimaryKey)
+					if useCache {
+						results = append(results, act)
+					}
 					if context.UseRequestQuota() {
 						err := context.TrackValueSize(av.Size())
 						if err != nil {
@@ -156,10 +196,11 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 					ok = false
 				}
 			} else {
-				return
+				break
 			}
 
 		}
+		this.results, results = results, nil
 	})
 }
 
