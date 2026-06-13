@@ -1424,6 +1424,7 @@ func (this *builder) getFilter(alias string, join, allowNow bool, onclause expre
 		return nil, OPT_SELEC_NOT_AVAIL, nil
 	}
 
+	external := baseKeyspace.IsExternalCollection()
 	filters := baseKeyspace.Filters()
 	terms := make(expression.Expressions, 0, len(filters))
 	selec := OPT_SELEC_NOT_AVAIL
@@ -1446,6 +1447,10 @@ func (this *builder) getFilter(alias string, join, allowNow bool, onclause expre
 
 		if join {
 			if !fl.IsPostjoinFilter(onclause, outer) {
+				continue
+			} else if external && fl.IsJoin() {
+				// this should not be necessary (join set to false for external collections)
+				// but should be safe to do
 				continue
 			}
 		} else {
