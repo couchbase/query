@@ -207,11 +207,15 @@ func objectPopulateRecursive(template, values, result map[string]interface{}) {
 			if actualValue, exists := values[lookupKey]; exists {
 				result[key] = actualValue
 			} else {
-				// If direct lookup fails, try nested lookup using dotted path
-				if nestedValue := GetNestedValue(values, lookupKey); nestedValue != nil {
+				// If direct lookup fails, try nested lookup using dotted path.
+				// Use the existence flag (not value != nil) so a path that exists
+				// with a null value (e.g. a null nested column in a fixed-schema
+				// source like Iceberg) is kept as null -> N1QL NULL, rather than
+				// dropped -> MISSING. The key is removed only when the path is
+				// genuinely absent from the values structure.
+				if nestedValue, exists := GetNestedValueExists(values, lookupKey); exists {
 					result[key] = nestedValue
 				}
-				// If neither lookup succeeds, the key is removed entirely
 			}
 		}
 		// Non-string leaf values are removed entirely
@@ -221,30 +225,44 @@ func objectPopulateRecursive(template, values, result map[string]interface{}) {
 // GetNestedValue extracts a value from a nested map using a dotted path.
 // For example, GetNestedValue(map, "x.y.z") will return map["x"]["y"]["z"]
 // Returns nil if any part of the path doesn't exist or if a non-map value is encountered
-// before reaching the final segment.
+// before reaching the final segment. Note that a nil return is ambiguous: it cannot
+// distinguish "path absent" from "path present with a null value" - callers that need
+// that distinction should use GetNestedValueExists.
 func GetNestedValue(m map[string]interface{}, path string) interface{} {
+	v, _ := GetNestedValueExists(m, path)
+	return v
+}
+
+// GetNestedValueExists extracts a value from a nested map using a dotted path,
+// reporting whether the path exists. The second result is true when every segment
+// of the path is present (the final segment's value may still be nil, i.e. a null
+// column in a fixed-schema source), and false when any segment is absent or an
+// intermediate segment is not a map. This lets callers keep present-but-null values
+// (-> N1QL NULL) distinct from absent paths (-> N1QL MISSING).
+func GetNestedValueExists(m map[string]interface{}, path string) (interface{}, bool) {
 	segments := parseDottedPath(path)
 	if len(segments) == 0 {
-		return nil
+		return nil, false
 	}
 
 	current := m
 	for i := 0; i < len(segments)-1; i++ {
 		segment := segments[i]
 		if current == nil {
-			return nil
+			return nil, false
 		}
 		nestedMap, ok := current[segment].(map[string]interface{})
 		if !ok {
-			return nil
+			return nil, false
 		}
 		current = nestedMap
 	}
 
 	if current == nil {
-		return nil
+		return nil, false
 	}
-	return current[segments[len(segments)-1]]
+	v, ok := current[segments[len(segments)-1]]
+	return v, ok
 }
 
 func ObjectToValue(row, resultObject map[string]interface{}) (Value, error) {

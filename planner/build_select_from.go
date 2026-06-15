@@ -410,21 +410,33 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		// FieldNames matches the base identifier independently at each Field node
 		// and always returns the correct top-level field (address, not address.city),
 		// which is what we project — the engine navigates into nested fields in memory.
-		ident := expression.NewIdentifier(node.Alias())
-		nameMap := make(map[string]bool)
-		allFields := false
-		for _, expr := range this.node.Expressions() {
-			if expr.EquivalentTo(ident) {
-				allFields = true
-				break
-			}
-			expr.FieldNames(ident, nameMap)
-		}
+		//
+		// CheckEarlyProjection guards against projecting only a subset of fields when
+		// the whole document is required: an unprefixed star (SELECT *), a prefixed
+		// star (SELECT d.*), or projecting the entire keyspace (SELECT d). In those
+		// cases the projection expr is expression.SELF (or the bare keyspace alias),
+		// which the field-name collection below would otherwise miss — leaving only
+		// the fields referenced by WHERE/JOIN clauses and dropping everything else.
+		//
+		// A nil initialProjection means we cannot prove the query needs only a subset,
+		// so we must NOT prune: leave names empty and read all columns.
 		var names []string
-		if !allFields && len(nameMap) > 0 {
-			names = make([]string, 0, len(nameMap))
-			for n := range nameMap {
-				names = append(names, n)
+		if this.initialProjection != nil && this.initialProjection.CheckEarlyProjection(node.Alias()) {
+			ident := expression.NewIdentifier(node.Alias())
+			nameMap := make(map[string]bool)
+			allFields := false
+			for _, expr := range this.node.Expressions() {
+				if expr.EquivalentTo(ident) {
+					allFields = true
+					break
+				}
+				expr.FieldNames(ident, nameMap)
+			}
+			if !allFields && len(nameMap) > 0 {
+				names = make([]string, 0, len(nameMap))
+				for n := range nameMap {
+					names = append(names, n)
+				}
 			}
 		}
 		externalScan := plan.NewExternalScan(keyspace, node, nil, filter,

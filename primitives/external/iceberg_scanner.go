@@ -260,6 +260,7 @@ const (
 	_s3SessionToken           = "s3.session-token"
 	_s3Region                 = "s3.region"
 	_s3EndpointURL            = "s3.endpoint"
+	_s3ForceVirtualAddressing = "s3.force-virtual-addressing"
 	_gcsJSONKey               = "gcs.jsonkey"
 	_gcsEndpoint              = "gcs.endpoint"
 	_azureTokenFetchTimeout   = 30 * time.Second
@@ -797,15 +798,25 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		// scan.PlanFiles can read manifest files from S3 without falling back
 		// to the EC2 IMDS credential chain. AWS Glue REST does not vend storage
 		// credentials in LoadTableResponse, so they must be provided here.
+		var storageProps iceberg.Properties
 		if opts.CollectionCred != nil {
 			props, err := buildRESTStorageProps(opts.CollectionCred)
 			if err != nil {
 				return nil, fmt.Errorf("AWS_GLUE_REST storage credential error: %w", err)
 			}
-			if len(props) > 0 {
-				glueRestOpts = append(glueRestOpts, rest.WithAdditionalProps(props))
-			}
+			storageProps = props
 		}
+		// Force virtual-hosted-style S3 addressing. iceberg-go's S3 FileIO defaults
+		// to path-style (s3.<region>.amazonaws.com/<bucket>/<key>), which AWS S3
+		// answers with HTTP 301 PermanentRedirect on GetObject for manifest reads.
+		// Virtual-hosted style (<bucket>.s3.<region>.amazonaws.com/<key>) is what
+		// AWS expects. This prop is honored even when credentials come from the
+		// context, since createS3Bucket reads addressing style from props.
+		if storageProps == nil {
+			storageProps = iceberg.Properties{}
+		}
+		storageProps[_s3ForceVirtualAddressing] = "true"
+		glueRestOpts = append(glueRestOpts, rest.WithAdditionalProps(storageProps))
 		logging.Debugf("createCatalog: creating AWS_GLUE_REST catalog, uri=%s, region=%s", opts.URI, region)
 		cat, err := rest.NewCatalog(ctx, "glue-rest", opts.URI, glueRestOpts...)
 		if err != nil {

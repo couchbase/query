@@ -394,3 +394,46 @@ func TestObjectPopulateNestedValues(t *testing.T) {
 		t.Errorf("ObjectPopulate with nested values = %v, want %v", result, expected)
 	}
 }
+
+// A null column value in a fixed-schema source (e.g. an Iceberg table) must be
+// kept as a present null (-> N1QL NULL), distinct from a genuinely absent path
+// (-> N1QL MISSING). This applies whether the null value is top-level or nested.
+func TestObjectPopulateNullVsMissing(t *testing.T) {
+	template := map[string]interface{}{
+		"country": "country",
+		"address": map[string]interface{}{
+			"city": "address.city",
+			"zip":  "address.zip",
+		},
+	}
+
+	// country: present, null. address.city: present, null.
+	// address.zip: absent from the values structure entirely.
+	values := map[string]interface{}{
+		"country": nil,
+		"address": map[string]interface{}{
+			"city": nil,
+		},
+	}
+
+	expected := map[string]interface{}{
+		"country": nil, // present-but-null -> kept -> NULL
+		"address": map[string]interface{}{
+			"city": nil, // present-but-null nested -> kept -> NULL
+			// zip is absent from values -> dropped -> MISSING
+		},
+	}
+
+	result := ObjectPopulate(template, values)
+	if !mapsEqual(result, expected) {
+		t.Errorf("ObjectPopulate null-vs-missing = %v, want %v", result, expected)
+	}
+
+	// Verify GetNestedValueExists distinguishes present-null from absent.
+	if v, ok := GetNestedValueExists(values, "address.city"); !ok || v != nil {
+		t.Errorf("GetNestedValueExists(address.city) = (%v, %v), want (nil, true)", v, ok)
+	}
+	if v, ok := GetNestedValueExists(values, "address.zip"); ok || v != nil {
+		t.Errorf("GetNestedValueExists(address.zip) = (%v, %v), want (nil, false)", v, ok)
+	}
+}
