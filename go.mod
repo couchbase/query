@@ -105,7 +105,7 @@ require (
 	github.com/blevesearch/zapx/v14 v14.3.10 // indirect
 	github.com/blevesearch/zapx/v15 v15.3.16 // indirect
 	github.com/blevesearch/zapx/v16 v16.1.9-0.20260325143815-36fc676c3ece // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudfoundry/gosigar v1.3.4 // indirect
 	github.com/couchbase/blance v0.1.6 // indirect
@@ -117,7 +117,7 @@ require (
 	github.com/couchbase/gometa v0.0.0-20220803182802-05cb6b2e299f // indirect
 	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/moss v0.3.0 // indirect
-	github.com/couchbase/tools-common/cloud/v8 v8.1.3 // indirect
+	github.com/couchbase/tools-common/cloud/v8 v8.1.4 // indirect
 	github.com/couchbase/tools-common/fs v1.0.3 // indirect
 	github.com/couchbase/tools-common/strings v1.0.0 // indirect
 	github.com/couchbase/tools-common/sync/v2 v2.0.2 // indirect
@@ -148,7 +148,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93 // indirect
