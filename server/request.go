@@ -2141,6 +2141,15 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 	}
 }
 
+func decodeJSONOpts(s string) (map[string]interface{}, errors.Error) {
+	d := sys_json.NewDecoder(strings.NewReader(s))
+	var opts map[string]interface{}
+	if e := d.Decode(&opts); e != nil {
+		return nil, errors.NewAdminEncodingError(e)
+	}
+	return opts, nil
+}
+
 func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 
 	if m == nil || len(m) < 2 {
@@ -2152,7 +2161,7 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 		spref := s[:m[0]]
 		sp := prefixuai.FindString(spref)
 		if sp == "" {
-			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for USING AI: %v", spref))
+			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for USING AI: %s", truncateTo(spref, 20)))
 		}
 		if sp = strings.TrimSpace(strings.ToLower(sp)); sp == "advise" {
 			this.SetNaturalAdvise(true)
@@ -2174,8 +2183,8 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 	if m[0] != 0 {
 		spref := s[:m[0]]
 		if !forfts.MatchString(spref) {
-			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for WITH: %v",
-				spref))
+			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for WITH: %s",
+				truncateTo(spref, 20)))
 		}
 		this.SetNaturalOutput("ftssql")
 	}
@@ -2183,8 +2192,7 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 
 	d := sys_json.NewDecoder(strings.NewReader(s))
 	var opts map[string]interface{}
-	e := d.Decode(&opts)
-	if e != nil {
+	if e := d.Decode(&opts); e != nil {
 		return errors.NewAdminEncodingError(e)
 	}
 
@@ -2212,32 +2220,8 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
 		case "creds":
-			if m, ok := v.(map[string]interface{}); ok {
-				var u, p string
-				for k, v := range m {
-					switch k {
-					case "user":
-						if s, ok := v.(string); ok {
-							u = s
-						} else {
-							return errors.NewAdminSettingTypeError(k, v)
-						}
-					case "pass":
-						if s, ok := v.(string); ok {
-							p = s
-						} else {
-							return errors.NewAdminSettingTypeError(k, v)
-						}
-					default:
-						return errors.NewAdminUnknownSettingError(k)
-					}
-				}
-				this.SetNaturalCred(fmt.Sprintf("%s:%s", u, p))
-				logging.Debugf("natural_creds:%s:%s", u, p)
-			} else if s, ok := v.(string); ok {
-				this.SetNaturalCred(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
+			if err := this.parseNaturalCredsOpt(k, v); err != nil {
+				return err
 			}
 		case "orgId":
 			if s, ok := v.(string); ok {
@@ -2293,18 +2277,81 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 	return nil
 }
 
+func truncateTo(s string, n int) string {
+	if len(s) > n {
+		return s[:n] + "..."
+	}
+	return s
+}
+
+// parseChatWithClause parses the tail of a CHAT statement for a WITH clause.
+// Returns the JSON string starting at '{' and nil error, ("", nil) if s is empty
+// after trimming, or ("", error) on invalid input.
+func parseChatWithClause(s, stmt string) (string, errors.Error) {
+	s = strings.TrimSpace(strings.TrimSuffix(s, ";"))
+	if s == "" {
+		return "", nil
+	}
+	m1 := with.FindStringIndex(s)
+	if m1 == nil || len(m1) < 2 {
+		return "", errors.NewParseInvalidInput(fmt.Sprintf("invalid input after %s: '%s', expected WITH clause",
+			stmt, truncateTo(s, 20)))
+	}
+	if m1[0] != 0 {
+		return "", errors.NewParseInvalidInput(fmt.Sprintf("prefix for WITH not supported: %s",
+			truncateTo(s[:m1[0]], 20)))
+	}
+	return s[m1[1]-1:], nil
+}
+
+func (this *BaseRequest) parseNaturalCredsOpt(k string, v interface{}) errors.Error {
+	if m, ok := v.(map[string]interface{}); ok {
+		var u, p string
+		for mk, mv := range m {
+			switch mk {
+			case "user":
+				if s, ok := mv.(string); ok {
+					u = s
+				} else {
+					return errors.NewAdminSettingTypeError(mk, mv)
+				}
+			case "pass":
+				if s, ok := mv.(string); ok {
+					p = s
+				} else {
+					return errors.NewAdminSettingTypeError(mk, mv)
+				}
+			default:
+				return errors.NewAdminUnknownSettingError(mk)
+			}
+		}
+		if u == "" {
+			return errors.NewMissingAttributesError("user")
+		}
+		if p == "" {
+			return errors.NewMissingAttributesError("pass")
+		}
+		this.SetNaturalCred(fmt.Sprintf("%s:%s", u, p))
+	} else if s, ok := v.(string); ok {
+		if s == "" || !strings.Contains(s, ":") {
+			return errors.NewParseInvalidInput("invalid creds format: expected user:pass")
+		}
+		this.SetNaturalCred(s)
+	} else {
+		return errors.NewAdminSettingTypeError(k, v)
+	}
+	return nil
+}
+
 func (this *BaseRequest) processNaturalBeginChat(s string) errors.Error {
 
-	m1 := with.FindString(s)
-	if m1 == "" {
-		return nil
+	jsonStr, err := parseChatWithClause(s, "BEGIN CHAT")
+	if err != nil || jsonStr == "" {
+		return err
 	}
-	s = s[len(m1)-1:]
-	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
-	e := d.Decode(&opts)
+	opts, e := decodeJSONOpts(jsonStr)
 	if e != nil {
-		return errors.NewAdminEncodingError(e)
+		return e
 	}
 
 	for k, v := range opts {
@@ -2323,10 +2370,8 @@ func (this *BaseRequest) processNaturalBeginChat(s string) errors.Error {
 					}
 				}
 				this.SetNaturalContext(sb.String())
-				logging.Debugf("natural_context: %s", sb.String())
 			} else if s, ok := v.(string); ok {
 				this.SetNaturalContext(s)
-				logging.Debugf("natural_context: %s", s)
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
@@ -2345,16 +2390,13 @@ func (this *BaseRequest) processNaturalBeginChat(s string) errors.Error {
 
 func (this *BaseRequest) processNaturalEndChat(s string) errors.Error {
 
-	m1 := with.FindString(s)
-	if m1 == "" {
-		return nil
+	jsonStr, err := parseChatWithClause(s, "END CHAT")
+	if err != nil || jsonStr == "" {
+		return err
 	}
-	s = s[len(m1)-1:]
-	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
-	e := d.Decode(&opts)
+	opts, e := decodeJSONOpts(jsonStr)
 	if e != nil {
-		return errors.NewAdminEncodingError(e)
+		return e
 	}
 
 	for k, v := range opts {
@@ -2374,16 +2416,13 @@ func (this *BaseRequest) processNaturalEndChat(s string) errors.Error {
 
 func (this *BaseRequest) processNaturalPauseChat(s string) errors.Error {
 
-	m1 := with.FindString(s)
-	if m1 == "" {
-		return nil
+	jsonStr, err := parseChatWithClause(s, "PAUSE CHAT")
+	if err != nil || jsonStr == "" {
+		return err
 	}
-	s = s[len(m1)-1:]
-	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
-	e := d.Decode(&opts)
+	opts, e := decodeJSONOpts(jsonStr)
 	if e != nil {
-		return errors.NewAdminEncodingError(e)
+		return e
 	}
 
 	for k, v := range opts {
@@ -2412,6 +2451,16 @@ func (this *BaseRequest) processNaturalPauseChat(s string) errors.Error {
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
+		case "creds":
+			if err := this.parseNaturalCredsOpt(k, v); err != nil {
+				return err
+			}
+		case "orgId":
+			if s, ok := v.(string); ok {
+				this.SetNaturalOrganizationId(s)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
 		default:
 			return errors.NewAdminUnknownSettingError(k)
 		}
@@ -2424,16 +2473,13 @@ func (this *BaseRequest) processNaturalPauseChat(s string) errors.Error {
 
 func (this *BaseRequest) processNaturalResumeChat(s string) errors.Error {
 
-	m1 := with.FindString(s)
-	if m1 == "" {
-		return nil
+	jsonStr, err := parseChatWithClause(s, "RESUME CHAT")
+	if err != nil || jsonStr == "" {
+		return err
 	}
-	s = s[len(m1)-1:]
-	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
-	e := d.Decode(&opts)
+	opts, e := decodeJSONOpts(jsonStr)
 	if e != nil {
-		return errors.NewAdminEncodingError(e)
+		return e
 	}
 
 	for k, v := range opts {
@@ -2453,16 +2499,16 @@ func (this *BaseRequest) processNaturalResumeChat(s string) errors.Error {
 
 func (this *BaseRequest) processNaturalAlterChat(s string) errors.Error {
 
-	m1 := with.FindString(s)
-	if m1 == "" {
+	jsonStr, err := parseChatWithClause(s, "ALTER CHAT")
+	if err != nil {
+		return err
+	}
+	if jsonStr == "" {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "timeout")
 	}
-	s = s[len(m1)-1:]
-	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
-	e := d.Decode(&opts)
+	opts, e := decodeJSONOpts(jsonStr)
 	if e != nil {
-		return errors.NewAdminEncodingError(e)
+		return e
 	}
 
 	for k, v := range opts {
