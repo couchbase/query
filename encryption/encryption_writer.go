@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/util"
@@ -212,6 +213,10 @@ func NewCBEFWriterSize(w io.Writer, key *EaRKey, compression CompressionType, bu
 
 	if key == nil {
 		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Key is nil"))
+	}
+
+	if !strings.EqualFold(key.Cipher, AES_256_GCM_CIPHER) {
+		return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_WRITER_CREATE, fmt.Errorf("Unsupported cipher: %s", key.Cipher))
 	}
 
 	if bufferSize <= 0 {

@@ -22,6 +22,7 @@ var (
 	LOG_KEY_DATATYPE    = "log"
 	OTHER_KEY_DATATYPE  = "other"
 	UNENCRYPTED_KEY_ID  = ""
+	AES_256_GCM_CIPHER  = "AES-256-GCM"
 )
 
 type KeyDataType struct {

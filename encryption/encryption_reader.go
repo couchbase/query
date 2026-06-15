@@ -17,6 +17,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/couchbase/query/errors"
 )
@@ -479,6 +480,10 @@ func cbefDecryptorForReader(r io.Reader, getEncryptionKey func(keyId string) (*E
 		return nil, nil, kerr
 	} else if key == nil {
 		return nil, nil, fmt.Errorf("Key not found for key ID: %s", keyID)
+	}
+
+	if !strings.EqualFold(key.Cipher, AES_256_GCM_CIPHER) {
+		return nil, nil, fmt.Errorf("Unsupported cipher: %s", key.Cipher)
 	}
 
 	// Derive the key
