@@ -32,6 +32,9 @@ type PlanCache interface {
 
 	// Predefined prepare name
 	IsPredefinedPrepareName(name string) bool
+
+	// handle missing QUERY_METADATA bucket
+	HandleMissingQueryMetadata()
 }
 
 var planCache PlanCache

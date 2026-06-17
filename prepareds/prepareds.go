@@ -76,6 +76,7 @@ func PreparedsInit(limit int) {
 	prepareds.cache = util.NewGenCache(limit)
 	planner.SetPlanCache(prepareds)
 	settings.SetPlanCache(prepareds)
+	planStabilityInit()
 	predefinedPrepareStatements = map[string]string{
 		"__get": "PREPARE __get FROM SELECT META(d).id, META(d).cas, TO_STR(META(d).cas) AS scas, META(d).txnMeta, d AS doc " +
 			"FROM $1 AS d USE KEYS $2;",
@@ -461,24 +462,18 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	return prep
 }
 
-func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) bool {
+func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) (bool, errors.Error) {
 
 	// certain statements we don't cache anyway
 	switch stmt.Type() {
-	case "EXPLAIN":
-		return false
-	case "EXECUTE":
-		return false
-	case "PREPARE":
-		return false
-	case "":
-		return false
+	case "EXPLAIN", "EXECUTE", "PREPARE", "":
+		return false, nil
 	}
 
 	// we also don't cache anything that might depend on placeholders
 	// (you should be using prepared statements for that anyway!)
 	if stmt.ParamsCount() > 0 {
-		return false
+		return false, nil
 	}
 
 	fullName := encodeName(prepared.Name(), prepared.QueryContext())
@@ -492,13 +487,13 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planSta
 	prepareds.add(prepared, false, true, func(ce *CacheEntry) bool {
 		added = ce.Prepared.Text() == prepared.Text()
 		if !added {
-			logging.Infof("%s found mismatching name and statement %v %v %v", featureName,
+			logging.Errorf("%s found mismatching name and statement %v %v %v", featureName,
 				fullName, prepared.Text(), ce.Prepared.Text())
 		}
 		return added
 	})
 	if !added {
-		return false
+		return false, nil
 	}
 
 	if planStabilityAdHoc {
@@ -506,13 +501,13 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planSta
 		if err != nil {
 			logging.Errorf("Plan Stability (AD_HOC) encounters error while trying to persist plan (%v) for statement %v, error %v",
 				fullName, prepared.Text(), err)
-			return false
+			return false, err
 		}
 
 		distributePrepared(fullName, prepared.EncodedPlan())
 	}
 
-	return true
+	return true, nil
 }
 
 const _INLINE_UDF_NAME_PREFIX = "__INLINE_UDF__"

@@ -11,11 +11,35 @@
 package prepareds
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/settings"
 )
+
+type queryMetadataCleanupState int
+
+const (
+	_QUERY_METADATA_CLEANUP_INACTIVE = queryMetadataCleanupState(iota)
+	_QUERY_METADATA_CLEANUP_ACTIVE
+)
+
+type queryMetadataCleanup struct {
+	sync.Mutex
+	state queryMetadataCleanupState
+}
+
+var queryMetadataCleanupCtrl *queryMetadataCleanup
+
+func planStabilityInit() {
+	queryMetadataCleanupCtrl = &queryMetadataCleanup{
+		state: _QUERY_METADATA_CLEANUP_INACTIVE,
+	}
+}
 
 func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	cacheFull := this.cache.Size() >= this.cache.Limit()
@@ -82,17 +106,21 @@ func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) 
  */
 func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) errors.Error {
 	var err errors.Error
+	missingQueryMetadata := false
 	names := make([]string, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
 		if !prepared.Persist() {
-			var err1 error
+			var err1 errors.Error
 			fullName := encodeName(prepared.Name(), prepared.QueryContext())
 			if newMode == settings.PS_MODE_OFF ||
 				(prepared.AdHoc() && newMode == settings.PS_MODE_PREPARED_ONLY) {
 				// delete the saved query plan
 				err1 = dictionary.DeletePrepared(fullName)
 				if err1 != nil {
+					if err1.Code() == errors.E_MISSING_QUERY_METADATA {
+						missingQueryMetadata = true
+					}
 					err = errors.NewPreparedDeletePlanError(fullName, err1)
 					return false
 				}
@@ -107,6 +135,9 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) err
 		return true
 	}, nil)
 	if err != nil {
+		if missingQueryMetadata {
+			prepareds.HandleMissingQueryMetadata()
+		}
 		return err
 	}
 
@@ -151,10 +182,13 @@ func persistPrepared(prepared *plan.Prepared) errors.Error {
 			text = fullText[:_TEXT_SIZE] + "..."
 		}
 	}
-	err1 = dictionary.PersistPrepared(fullName, encoded_plan, text,
+	err := dictionary.PersistPrepared(fullName, encoded_plan, text,
 		prepared.Persist(), prepared.AdHoc(), prepared.IsInlineUdf(), prepared.GetKeyspaceReferences())
-	if err1 != nil {
-		return errors.NewPreparedSavePlanError(fullName, err1)
+	if err != nil {
+		if err.Code() == errors.E_MISSING_QUERY_METADATA {
+			prepareds.HandleMissingQueryMetadata()
+		}
+		return errors.NewPreparedSavePlanError(fullName, err)
 	}
 	return nil
 }
@@ -162,7 +196,66 @@ func persistPrepared(prepared *plan.Prepared) errors.Error {
 func deletePrepared(name string) errors.Error {
 	err := dictionary.DeletePrepared(name)
 	if err != nil {
+		if err.Code() == errors.E_MISSING_QUERY_METADATA {
+			prepareds.HandleMissingQueryMetadata()
+		}
 		return errors.NewPreparedDeletePlanError(name, err)
 	}
 	return nil
+}
+
+// when the QUERY_METADATA bucket is removed unexpected, do:
+//   - reset plan stability to DEFAULT state (mode: OFF, error_policy: MODERATE)
+//   - remove AD_HOC and INLINE_UDF entries from the prepared cache
+//   - remove the SAVE marker from prepared statements (treat as regular prepared statement)
+func (this *preparedCache) HandleMissingQueryMetadata() {
+	ongoing := false
+	queryMetadataCleanupCtrl.Lock()
+	if queryMetadataCleanupCtrl.state == _QUERY_METADATA_CLEANUP_ACTIVE {
+		ongoing = true
+	} else {
+		queryMetadataCleanupCtrl.state = _QUERY_METADATA_CLEANUP_ACTIVE
+	}
+	queryMetadataCleanupCtrl.Unlock()
+	if ongoing {
+		return
+	}
+
+	// do the cleanup in separate go routine
+	go doQueryMetadataCleanup()
+}
+
+func doQueryMetadataCleanup() {
+
+	logging.Infof("QUERY_METADATA bucket is missing, reset plan_stability to DEFAULT setting")
+	err := settings.SetDefaultPlanStabilitySetting(true)
+	if err != nil {
+		logging.Severef("Setting plan_stability to DEFAULT setting failed with error %v", err)
+		panic(fmt.Sprintf("Error setting plan_stability to DEFAULT setting: %v", err))
+	}
+
+	names := make([]string, 0, 128)
+	PreparedsForeach(func(name string, ce *CacheEntry) bool {
+		prepared := ce.Prepared
+		fullName := encodeName(prepared.Name(), prepared.QueryContext())
+		if prepared.Persist() {
+			logging.Warnf(fmt.Sprintf("QUERY_METADATA bucket is missing, reset SAVE option for prepared statement '%s'", fullName))
+			prepared.SetPersist(false)
+		} else if prepared.AdHoc() || prepared.IsInlineUdf() {
+			names = append(names, fullName)
+		}
+		return true
+	}, nil)
+
+	for i := range names {
+		logging.Warnf(fmt.Sprintf("QUERY_METADATA bucket is missing, removing prepared statement '%s'", names[i]))
+		err := deletePreparedFromCache(names[i])
+		if err != nil {
+			logging.Errorf(fmt.Sprintf("Error encountered while removing prepared statement '%s': %v", names[i], err))
+		}
+	}
+
+	queryMetadataCleanupCtrl.Lock()
+	queryMetadataCleanupCtrl.state = _QUERY_METADATA_CLEANUP_INACTIVE
+	queryMetadataCleanupCtrl.Unlock()
 }

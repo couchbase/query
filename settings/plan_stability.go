@@ -136,6 +136,14 @@ func SetPlanStabilitySetting(psSetting map[string]interface{}) {
 	globalSettings.setSetting(PLAN_STABILITY, psSetting)
 }
 
+func SetDefaultPlanStabilitySetting(persist bool) errors.Error {
+	globalSettings.setSetting(PLAN_STABILITY, defaultPlanStabilitySettings())
+	if persist {
+		return PersistSettings()
+	}
+	return nil
+}
+
 func GetPlanStabilityMode() PlanStabilityMode {
 	mode := PS_MODE_DEFAULT
 	globalSettings.RLock()

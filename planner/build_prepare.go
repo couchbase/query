@@ -103,6 +103,7 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 		if err1 != nil {
 			return nil, err1
 		} else if !hasMetadata {
+			planCache.HandleMissingQueryMetadata()
 			return nil, errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
 		}
 	}

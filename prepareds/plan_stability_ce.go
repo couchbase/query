@@ -16,6 +16,10 @@ import (
 	"github.com/couchbase/query/settings"
 )
 
+func planStabilityInit() {
+	// no-op
+}
+
 func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.update_plan_stability_mode")
 }
@@ -26,4 +30,8 @@ func persistPrepared(prepared *plan.Prepared) errors.Error {
 
 func deletePrepared(name string) errors.Error {
 	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.delete_prepared")
+}
+
+func (this *preparedCache) HandleMissingQueryMetadata() {
+	// no-op
 }
