@@ -798,7 +798,7 @@ func newJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary,
 	return rv, nil
 }
 
-func newSQLIterativePrompt(chat *prompt, naturalPrompt string, forfts bool, vendor, model string) *prompt {
+func newSQLIterativePrompt(chat *prompt, naturalPrompt string, hint string, forfts bool, vendor, model string) *prompt {
 	var userMessage string
 	var userMessageBuf strings.Builder
 
@@ -815,7 +815,12 @@ func newSQLIterativePrompt(chat *prompt, naturalPrompt string, forfts bool, vend
 	userMessageBuf.WriteString("\"")
 	userMessageBuf.WriteString(naturalPrompt)
 	userMessageBuf.WriteString("\".")
-	userMessageBuf.WriteString("Respond only with code and no explanation." +
+	if hint != "" {
+		userMessageBuf.WriteString("\n\nHint: \"")
+		userMessageBuf.WriteString(hint)
+		userMessageBuf.WriteString("\"")
+	}
+	userMessageBuf.WriteString("\n\nRespond only with code and no explanation." +
 		"\n\nNote query context is unset." +
 		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
 		"\n\nAlias is for ease of use." +
@@ -842,7 +847,7 @@ func newSQLIterativePrompt(chat *prompt, naturalPrompt string, forfts bool, vend
 	return chat
 }
 
-func newJSUDFIterativePrompt(chat *prompt, naturalPrompt string, vendor, model string) *prompt {
+func newJSUDFIterativePrompt(chat *prompt, naturalPrompt string, hint string, vendor, model string) *prompt {
 	var userMessage string
 	var userMessageBuf strings.Builder
 
@@ -858,6 +863,11 @@ func newJSUDFIterativePrompt(chat *prompt, naturalPrompt string, vendor, model s
 	userMessageBuf.WriteString("\"")
 	userMessageBuf.WriteString(naturalPrompt)
 	userMessageBuf.WriteString("\".")
+	if hint != "" {
+		userMessageBuf.WriteString("\n\nHint: \"")
+		userMessageBuf.WriteString(hint)
+		userMessageBuf.WriteString("\"")
+	}
 	userMessageBuf.WriteString("\"\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
 		" no explanation that implements the request in the Prompt." +
 		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
@@ -1338,11 +1348,11 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlVendor, nlModel, nlquery, n
 	} else {
 		switch nloutputOpt {
 		case SQL:
-			prompt = newSQLIterativePrompt(ce.prompt, nlquery, false, vendor, model)
+			prompt = newSQLIterativePrompt(ce.prompt, nlquery, nlHint, false, vendor, model)
 		case JSUDF:
-			prompt = newJSUDFIterativePrompt(ce.prompt, nlquery, vendor, model)
+			prompt = newJSUDFIterativePrompt(ce.prompt, nlquery, nlHint, vendor, model)
 		case FTSSQL:
-			prompt = newSQLIterativePrompt(ce.prompt, nlquery, true, vendor, model)
+			prompt = newSQLIterativePrompt(ce.prompt, nlquery, nlHint, true, vendor, model)
 		default:
 			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 		}
