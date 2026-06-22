@@ -327,7 +327,7 @@ func (this *occurrence) capture(event string, what string) {
 				} else {
 					msg := fmt.Sprintf("FFDC: [%#x] Captured: %v", this.id, path.Base(name))
 					if encrypt {
-						msg += fmt.Sprintf(" encrypted with keyId: %v", encryptionKey.Id)
+						msg += fmt.Sprintf(" encrypted with key id %+q", encryptionKey.Id)
 					}
 					logging.Infof(msg)
 				}

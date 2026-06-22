@@ -57,6 +57,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -89,8 +90,11 @@ const (
 	_STREAM_MAGIC                              = 0x4352534D       // "CRSM"
 	_MAX_CACHE                                 = 5                // maximum number of cached files (materialised) for reading
 	_RLS_TIMEOUT                               = time.Second * 10 // maximum time to wait writing to the stop channel
-	_STREAM_UNSET_KEY_ID                       = "UNSET"          // indicates that the stream file is not encrypted; this is used to avoid unnecessary calls to the encryption provider when encryption is disabled
 	_STREAM_REENCRYPT_ARCHIVE_FILE_NAME_PREFIX = "reencrypt_" + _REQUEST_LOG_STREAM_FILE
+
+	// indicates that the stream file is not encrypted;
+	// this is used to avoid unnecessary calls to the encryption provider when encryption is disabled
+	_STREAM_UNSET_KEY_ID = "UNSET"
 )
 
 var crsKeyDataType = encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
@@ -192,8 +196,11 @@ func (this *requestStreamFile) create() error {
 			return err
 		}
 		this.keyID = encryptionKey.Id
+		logging.Debugf(_MSG_PREFIX+"Create active file %v encrypted with key id %+q",
+			requestLogStreamActiveFileBaseName(this.index), this.keyID)
 	} else {
 		this.keyID = encryption.UNENCRYPTED_KEY_ID
+		logging.Debugf(_MSG_PREFIX+"Create active file %v", requestLogStreamActiveFileBaseName(this.index))
 		this.w = bufio.NewWriterSize(this.f, _STREAM_BUF_SIZE)
 		this.z = gzip.NewWriter(this.w)
 	}
@@ -279,6 +286,26 @@ func logFilePath(fileName string) string {
 	return fmt.Sprintf("%s/%s", ffdc.GetPath(), fileName)
 }
 
+func requestLogStreamFileBaseName(num uint64) string {
+	return fmt.Sprintf("%s%d", _REQUEST_LOG_STREAM_FILE, num)
+}
+
+func requestLogStreamActiveFileBaseName(num uint64) string {
+	return fmt.Sprintf("%s%d", _REQUEST_LOG_STREAM_ACTIVE_FILE, num)
+}
+
+func requestMetadataFileBaseName(num uint64) string {
+	return fmt.Sprintf("%s%d", _REQUEST_LOG_STREAM_METADATA_FILE, num)
+}
+
+func requestMetadataActiveFileBaseName(num uint64) string {
+	return fmt.Sprintf("%s%d", _REQUEST_LOG_STREAM_ACTIVE_METADATA_FILE, num)
+}
+
+func crsFileBaseName(path string) string {
+	return filepath.Base(path)
+}
+
 // Will acquire the requestLogStream's orphanLock for tracking files that failed to be removed. Will unlock after
 func removeArchiveFiles(num uint64, stream *requestLogStream) {
 	removeCRSFile(requestLogStreamFileName(num), stream)
@@ -321,8 +348,8 @@ func removeCRSFile(path string, stream *requestLogStream) {
 	}
 
 	stream.orphanFiles = append(stream.orphanFiles, crsOrphanFile{keyID: keyid, path: path})
-	logging.Warnf(_MSG_PREFIX+"Failed to remove file %v encrypted with key id %+q: %v. Tracking as orphan file.", path, keyid,
-		err)
+	logging.Warnf(_MSG_PREFIX+"Failed to remove file %v encrypted with key id %+q: %v. Tracking as orphan file.",
+		crsFileBaseName(path), keyid, err)
 	stream.orphanLock.Unlock()
 }
 
@@ -699,7 +726,7 @@ func (this *requestLogStream) loadFiles() {
 			f, err := os.Open(activeFile)
 			if err != nil {
 				logging.Warnf(_MSG_PREFIX+"Failed to find/open past active file %v file during loading: %v. Skipping file.",
-					acts[i], err)
+					requestLogStreamActiveFileBaseName(acts[i]), err)
 				removeActiveFiles(acts[i], this)
 				continue
 			}
@@ -713,7 +740,7 @@ func (this *requestLogStream) loadFiles() {
 				if err != nil {
 					f.Close()
 					logging.Warnf(_MSG_PREFIX+"Failed to find/open past active metadata file %v during loading. Skipping file.",
-						acts[i])
+						requestMetadataActiveFileBaseName(acts[i]))
 					removeActiveFiles(acts[i], this)
 					continue
 				}
@@ -745,13 +772,15 @@ func (this *requestLogStream) loadFiles() {
 			metadataFile.Close()
 
 			if !validMagic {
-				logging.Warnf(_MSG_PREFIX+"No valid metadata found for past active file %v during loading. Skipping file.", acts[i])
+				logging.Warnf(_MSG_PREFIX+"No valid metadata found for past active file %v during loading. Skipping file.",
+					requestLogStreamActiveFileBaseName(acts[i]))
 				removeActiveFiles(acts[i], this)
 				continue
 			}
 
 			if e := os.Rename(activeFile, requestLogStreamFileName(num)); e != nil {
-				logging.Warnf(_MSG_PREFIX+"Failed to rename past active file %v to archive file %v. Skipping file.", acts[i], num)
+				logging.Warnf(_MSG_PREFIX+"Failed to rename past active file %v to archive file %v. Skipping file.",
+					requestLogStreamActiveFileBaseName(acts[i]), requestLogStreamFileBaseName(num))
 				removeActiveFiles(acts[i], this)
 				continue
 			}
@@ -760,7 +789,7 @@ func (this *requestLogStream) loadFiles() {
 				if e := os.Rename(requestMetadataActiveFileName(acts[i]), requestMetadataFileName(num)); e != nil {
 					logging.Warnf(_MSG_PREFIX+
 						"Failed to rename past metadata active file %v to metadata archive file %v (%v). Skipping file.",
-						acts[i], num, e)
+						requestMetadataActiveFileBaseName(acts[i]), requestMetadataFileBaseName(num), e)
 					removeActiveFiles(acts[i], this)
 					continue
 				}
@@ -822,7 +851,8 @@ func (this *requestLogStream) archive(file *requestStreamFile, lockFilesList boo
 	var renameErr error
 	renameErr = os.Rename(requestLogStreamActiveFileName(file.index), requestLogStreamFileName(archive.num))
 	if renameErr != nil {
-		logging.Warnf(_MSG_PREFIX+"Failed to rename active file %v to archive file %v (%v).", file.index, archive.num, renameErr)
+		logging.Warnf(_MSG_PREFIX+"Failed to rename active file %v to archive file %v (%v).",
+			requestLogStreamActiveFileBaseName(file.index), requestLogStreamFileBaseName(archive.num), renameErr)
 		file.Unlock()
 		return
 	}
@@ -830,8 +860,8 @@ func (this *requestLogStream) archive(file *requestStreamFile, lockFilesList boo
 	// The file's keyID will either be a keyID or the unencrypted value
 	if file.keyID != encryption.UNENCRYPTED_KEY_ID {
 		if e := os.Rename(requestMetadataActiveFileName(file.index), requestMetadataFileName(archive.num)); e != nil {
-			logging.Warnf(_MSG_PREFIX+"Failed to rename metadata active file %v to metadata archive file %v (%v)", file.index,
-				archive.num, e)
+			logging.Warnf(_MSG_PREFIX+"Failed to rename metadata active file %v to metadata archive file %v (%v)",
+				requestMetadataActiveFileBaseName(file.index), requestMetadataFileBaseName(archive.num), e)
 		}
 	}
 
@@ -839,6 +869,13 @@ func (this *requestLogStream) archive(file *requestStreamFile, lockFilesList boo
 	file.mtime = time.Time{}
 
 	archive.currKeyID = file.keyID
+	if archive.currKeyID != encryption.UNENCRYPTED_KEY_ID {
+		logging.Infof(_MSG_PREFIX+"Archived %v as %v encrypted with key id %+q", requestLogStreamActiveFileBaseName(file.index),
+			requestLogStreamFileBaseName(archive.num), archive.currKeyID)
+	} else {
+		logging.Infof(_MSG_PREFIX+"Archived %v as %v", requestLogStreamActiveFileBaseName(file.index),
+			requestLogStreamFileBaseName(archive.num))
+	}
 
 	// Reset the keyID since there is no physical file associated with the file object anymore
 	file.keyID = _STREAM_UNSET_KEY_ID
@@ -1455,7 +1492,7 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 			_, err := this.load(archive.num, true)
 			if err != nil {
 				postOp()
-				return fmt.Errorf("Error loading archive file %s: %v", requestLogStreamFileName(archive.num), err)
+				return fmt.Errorf("Error loading archive file %s: %v", requestLogStreamFileBaseName(archive.num), err)
 			}
 		}
 
@@ -1480,13 +1517,13 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 
 		if transformErr != nil {
 			errStr := fmt.Sprintf("Failed to transform file %v to drop key id %+q and encrypt with key id %+q: %v",
-				requestLogStreamFileName(archive.num), keyIdToDrop, targetKeyId, transformErr)
+				requestLogStreamFileBaseName(archive.num), keyIdToDrop, targetKeyId, transformErr)
 
 			logging.Errorf(_MSG_PREFIX + errStr)
 			return fmt.Errorf("%s", errStr)
 		} else {
 			logging.Infof(_MSG_PREFIX+"Successfully transformed file %v to drop key id %+q and encrypt with key id %+q",
-				requestLogStreamFileName(archive.num), keyIdToDrop, targetKeyId)
+				requestLogStreamFileBaseName(archive.num), keyIdToDrop, targetKeyId)
 		}
 	}
 
@@ -1497,7 +1534,7 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 		if active.keyID == keyIdToDrop {
 			active.Unlock()
 			this.filesLock.Unlock()
-			return fmt.Errorf("Key is still in use by active file %v", requestLogStreamActiveFileName(active.index))
+			return fmt.Errorf("Key is still in use by active file %v", requestLogStreamActiveFileBaseName(active.index))
 		}
 		active.Unlock()
 	}
@@ -1509,7 +1546,7 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 		if a.getCurrKeyID(true) == keyIdToDrop {
 			this.filesLock.Unlock()
 
-			return fmt.Errorf("Key is still in use by archived file %v", requestLogStreamFileName(a.num))
+			return fmt.Errorf("Key is still in use by archive file %v", requestLogStreamFileBaseName(a.num))
 		}
 	}
 	this.filesLock.Unlock()
@@ -1521,7 +1558,7 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 	for _, o := range this.orphanFiles {
 		if o.keyID == keyIdToDrop {
 			this.orphanLock.RUnlock()
-			return fmt.Errorf("Key is still in use by orphan file %v", o.path)
+			return fmt.Errorf("Key is still in use by orphan file %v", crsFileBaseName(o.path))
 		}
 	}
 	this.orphanLock.RUnlock()
@@ -1538,6 +1575,7 @@ func (this *requestLogStream) ActiveKeyRotated(dt encryption.KeyDataType) {
 	// Close and archive all active stream files so that new writes create new active files that use the new active key
 	// This prevents any further data from being written with the old key
 	this.Lock()
+	logging.Infof(_MSG_PREFIX + "Active key rotated. Archiving appropriate active stream files if any")
 	for _, active := range this.streamFiles {
 		active.Lock()
 		if active.keyID != _STREAM_UNSET_KEY_ID {
@@ -1563,11 +1601,11 @@ func (this *requestLogStream) cleanupOrphanFiles() {
 		}
 
 		if err != nil && !os.IsNotExist(err) {
-			logging.Warnf(_MSG_PREFIX+"Failed to remove orphan file %v: %v", o.path, err)
+			logging.Warnf(_MSG_PREFIX+"Failed to remove orphan file %v: %v", crsFileBaseName(o.path), err)
 			continue
 		}
 
-		logging.Infof(_MSG_PREFIX+"Removed orphan file %v", o.path)
+		logging.Infof(_MSG_PREFIX+"Removed orphan file %v", crsFileBaseName(o.path))
 		copy(this.orphanFiles[i:], this.orphanFiles[i+1:])
 		this.orphanFiles = this.orphanFiles[:len(this.orphanFiles)-1]
 	}

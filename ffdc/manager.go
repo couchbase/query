@@ -213,8 +213,13 @@ func (this *ffdcManager) ActiveKeyRotated(dt encryption.KeyDataType) {
 }
 
 func (this *ffdcManager) trackOrphanFile(file *ffdcFile) {
+	if file == nil {
+		return
+	}
+
 	this.Lock()
 	this.orphanFiles = append(this.orphanFiles, file)
+	logging.Infof("FFDC: Tracking orphan file %v encrypted with key id %+q", file.name, file.currentKeyId)
 	this.Unlock()
 }
 
