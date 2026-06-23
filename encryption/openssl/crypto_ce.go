@@ -19,4 +19,12 @@ func Init() {
 	encryption.KBKDFDeriveKey = func(masterKey, label, context, derivedKey []byte, digest string) ([]byte, error) {
 		return nil, errors.NewEnterpriseFeature("Encryption at rest", "encryption.kbkdf_derive_key")
 	}
+
+	encryption.AES256GCMEncrypt = func(key, nonce, ad, plaintext, dst []byte, authTagLen int) ([]byte, error) {
+		return nil, errors.NewEnterpriseFeature("Encryption at rest", "encryption.encrypt")
+	}
+
+	encryption.AES256GCMDecrypt = func(key, nonce, ad, ciphertext, dst []byte, authTagLen int) ([]byte, error) {
+		return nil, errors.NewEnterpriseFeature("Encryption at rest", "encryption.decrypt")
+	}
 }

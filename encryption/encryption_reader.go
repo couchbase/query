@@ -12,8 +12,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"crypto/aes"
-	"crypto/cipher"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -119,10 +117,10 @@ func (this *CBEFReader) setupWrapper(compression CompressionType) error {
 type cbefDecryptor struct {
 	closed      bool
 	r           io.Reader
+	key         []byte
 	chunkHeader []byte
 	nonce       []byte
 	AD          []byte
-	gcm         cipher.AEAD
 	fileOffset  uint64
 
 	// Buffer for decryption operations
@@ -147,20 +145,9 @@ func newCbefDecryptor(r io.Reader, key []byte, header []byte, chunkOpsOnly bool)
 
 	decryptor := &cbefDecryptor{
 		r:            r,
+		key:          key,
 		fileOffset:   _CBEF_HEADER_LENGTH,
 		chunkOpsOnly: chunkOpsOnly,
-	}
-
-	// Set up AES-GCM
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if aesgcm, err := cipher.NewGCM(block); err != nil {
-		return nil, err
-	} else {
-		decryptor.gcm = aesgcm
 	}
 
 	// Setup the AD
@@ -266,9 +253,10 @@ func (this *cbefDecryptor) readAndDecrypt() error {
 	binary.BigEndian.PutUint64(this.AD[_CBEF_HEADER_LENGTH:], this.fileOffset)
 
 	// Decrypt
-	plaintext, err := this.gcm.Open(this.buffer[:0], this.nonce, this.buffer, this.AD)
+	plaintext, err := AES256GCMDecrypt(this.key, this.nonce, this.AD, this.buffer, this.buffer,
+		_CBEF_AUTHENTICATION_TAG_LENGTH)
 	if err != nil {
-		return fmt.Errorf("Failed to decrypt ciphertext: %w", err)
+		return fmt.Errorf("Decryption failed: %w", err)
 	}
 
 	// Update the file offset
@@ -294,6 +282,7 @@ func (this *cbefDecryptor) Close() error {
 	this.nonce = nil
 	this.buffer = nil
 	this.chunkHeader = nil
+	this.key = nil
 	return nil
 }
 

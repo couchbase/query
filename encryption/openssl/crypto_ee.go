@@ -19,6 +19,16 @@ func kBKDFDeriveKey(masterKey []byte, label []byte, context []byte, derivedKey [
 	return gocbcrypto.OpenSSLKBKDFDeriveKey(masterKey, label, context, derivedKey, digest, "")
 }
 
+func aES256GCMEncrypt(key, nonce, ad, plaintext, dst []byte, authTagLen int) ([]byte, error) {
+	return gocbcrypto.OpenSSLAes256GCMEncrypt(key, nonce, ad, plaintext, dst, authTagLen, "")
+}
+
+func aES256GCMDecrypt(key, nonce, ad, ciphertext, dst []byte, authTagLen int) ([]byte, error) {
+	return gocbcrypto.OpenSSLAes256GCMDecrypt(key, nonce, ad, ciphertext, dst, authTagLen, "")
+}
+
 func Init() {
 	encryption.KBKDFDeriveKey = kBKDFDeriveKey
+	encryption.AES256GCMEncrypt = aES256GCMEncrypt
+	encryption.AES256GCMDecrypt = aES256GCMDecrypt
 }

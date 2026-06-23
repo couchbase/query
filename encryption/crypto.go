@@ -17,3 +17,11 @@ import (
 var KBKDFDeriveKey = func(masterKey []byte, label []byte, context []byte, derivedKey []byte, digest string) ([]byte, error) {
 	return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, fmt.Errorf("Key derivation function not initialized"))
 }
+
+var AES256GCMEncrypt = func(key, nonce, ad, plaintext, dst []byte, authTagLen int) ([]byte, error) {
+	return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, fmt.Errorf("Encryption function not initialized"))
+}
+
+var AES256GCMDecrypt = func(key, nonce, ad, ciphertext, dst []byte, authTagLen int) ([]byte, error) {
+	return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, fmt.Errorf("Decryption function not initialized"))
+}

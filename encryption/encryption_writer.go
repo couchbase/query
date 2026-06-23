@@ -11,8 +11,6 @@ package encryption
 import (
 	"compress/gzip"
 	"compress/zlib"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
@@ -345,9 +343,9 @@ func (this *CBEFWriter) setupOuterWriter(compression CompressionType) error {
 type cbefEncryptor struct {
 	closed      bool
 	w           io.Writer
+	key         []byte
 	AD          []byte
 	chunkHeader []byte
-	gcm         cipher.AEAD
 	fileOffset  uint64
 
 	nonce []byte
@@ -389,7 +387,7 @@ func newBufferedCbefEncryptor(w io.Writer, key []byte, header []byte, bufferSize
 	}
 
 	// Setup the buffer
-	encryptor.buffer = make([]byte, bufferSize+encryptor.gcm.Overhead())
+	encryptor.buffer = make([]byte, bufferSize+_CBEF_AUTHENTICATION_TAG_LENGTH)
 	encryptor.plaintextLimit = bufferSize
 	encryptor.buffered = true
 
@@ -412,19 +410,8 @@ func initCbefEncryptor(w io.Writer, key []byte, header []byte) (*cbefEncryptor, 
 
 	encryptor := &cbefEncryptor{
 		w:          w,
+		key:        key,
 		fileOffset: _CBEF_HEADER_LENGTH,
-	}
-
-	// Set up AES-GCM
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if aesgcm, err := cipher.NewGCM(block); err != nil {
-		return nil, err
-	} else {
-		encryptor.gcm = aesgcm
 	}
 
 	// Setup the AD
@@ -458,7 +445,7 @@ func (this *cbefEncryptor) WriteChunk(data []byte) error {
 		return fmt.Errorf("Data length exceeds maximum plaintext limit per chunk")
 	}
 
-	cipherTextLen := len(data) + this.gcm.Overhead()
+	cipherTextLen := len(data) + _CBEF_AUTHENTICATION_TAG_LENGTH
 
 	if cap(this.buffer) < cipherTextLen {
 		this.buffer = make([]byte, cipherTextLen)
@@ -553,6 +540,7 @@ func (this *cbefEncryptor) Close() error {
 	this.nonce = nil
 	this.buffer = nil
 	this.chunkHeader = nil
+	this.key = nil
 
 	return err
 }
@@ -589,7 +577,11 @@ func (this *cbefEncryptor) encryptAndWrite() error {
 	binary.BigEndian.PutUint64(this.AD[_CBEF_HEADER_LENGTH:], this.fileOffset)
 
 	// Encrypt the data
-	ciphertext := this.gcm.Seal(this.buffer[:0], this.nonce, this.buffer[:this.writePos], this.AD)
+	ciphertext, err := AES256GCMEncrypt(this.key, this.nonce, this.AD, this.buffer[:this.writePos],
+		this.buffer[:this.writePos+_CBEF_AUTHENTICATION_TAG_LENGTH], _CBEF_AUTHENTICATION_TAG_LENGTH)
+	if err != nil {
+		return fmt.Errorf("Encryption failed: %v", err)
+	}
 
 	// Reset buffer variables
 	this.writePos = 0
