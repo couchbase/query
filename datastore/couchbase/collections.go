@@ -635,12 +635,7 @@ func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*d
 		return nil, err
 	}
 
-	t := timeout
-	if t == 0 {
-		t = cb.DefaultTimeout
-	}
-	timeoutMs := uint64(t.Milliseconds())
-	snapshotReqs, err := buildSnapshotReqs(cons, vector, timeoutMs, coll.uid, coll.bucket.cbbucket)
+	snapshotReqs, err := buildSnapshotReqs(cons, vector, timeout, coll.uid, coll.bucket.cbbucket)
 	if err != nil {
 		return nil, err
 	}

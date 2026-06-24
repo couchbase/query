@@ -3663,8 +3663,14 @@ func (ks *keyspace) getDefaultCid() (uint32, bool) {
 	return cid, ok
 }
 
-func buildSnapshotReqs(cons datastore.ScanConsistency, vector timestamp.Vector, timeoutMs uint64,
+func buildSnapshotReqs(cons datastore.ScanConsistency, vector timestamp.Vector, timeout time.Duration,
 	cid uint32, cbbucket *cb.Bucket) (map[uint16]*memcached.SnapshotRequirements, errors.Error) {
+
+	t := timeout
+	if t == 0 {
+		t = cb.DefaultTimeout
+	}
+	timeoutMs := uint64(t.Milliseconds())
 
 	var snapshotReqs map[uint16]*memcached.SnapshotRequirements
 	switch cons {
@@ -3705,19 +3711,13 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		return nil, err
 	}
 
-	t := timeout
-	if t == 0 {
-		t = cb.DefaultTimeout
-	}
-	timeoutMs := uint64(t.Milliseconds())
-
 	var cid uint32
 	var hasCid bool
 	if id, ok := ks.getDefaultCid(); ok {
 		cid = id
 		hasCid = true
 	}
-	snapshotReqs, err := buildSnapshotReqs(cons, vector, timeoutMs, cid, ks.cbbucket)
+	snapshotReqs, err := buildSnapshotReqs(cons, vector, timeout, cid, ks.cbbucket)
 	if err != nil {
 		return nil, err
 	}

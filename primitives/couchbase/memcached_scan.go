@@ -99,19 +99,14 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 	return scan, nil
 }
 
-// failoverLogConnSeq makes the DCP producer connection name used for failover-log retrieval
-// unique across concurrent GetSeqnosForConsistency calls, so KV does not disconnect a
-// same-named producer.
-var failoverLogConnSeq uint64
-
-// GetSeqnosForConsistency fetches the current high-seqno and VbUUID for every active vbucket
-// across all servers, used to build snapshot_requirements for REQUEST_PLUS range scans.
+// GetSeqnosForConsistency builds per-vbucket snapshot_requirements for REQUEST_PLUS range scans:
+// the high-seqno from GetAllVbSeqnos (collection-scoped) and the VbUUID from the "failovers" stat.
+// Both are ordinary ops on the same connection, so it returns to the pool normally (no DCP
+// UPR_OPEN, no connection burn).
 //
-// A snapshot requirement without a VbUUID is invalid: KV uses the VbUUID to bind the seqno to a
-// failover branch, and a CREATE_RANGE_SCAN carrying a seqno but no vb_uuid is rejected by closing
-// the connection (surfaces as an EOF on scan creation). Both the seqno and the failover-log
-// retrieval are therefore treated as fatal here rather than silently degraded - we never emit a
-// requirement with an empty VbUUID and never silently drop a server's vbuckets.
+// The VbUUID is mandatory: KV uses it to bind the seqno to a failover branch and rejects a
+// CREATE_RANGE_SCAN that has a seqno but no vb_uuid (closes the connection -> EOF on scan create).
+// So failing to obtain any seqno or VbUUID is fatal rather than silently degraded.
 func (b *Bucket) GetSeqnosForConsistency(collId uint32, timeoutMs uint64) (
 	map[uint16]*memcached.SnapshotRequirements, error) {
 
@@ -136,37 +131,36 @@ func (b *Bucket) GetSeqnosForConsistency(collId uint32, timeoutMs uint64) (
 			return nil, fmt.Errorf("snapshot requirements: failed to get connection: %v", err)
 		}
 
-		// The general connection pools are shared with scan cancel goroutines which call
-		// SetDeadline before each cancel op and don't clear it when returning the connection.
-		// Always set a fresh deadline here so a stale expired deadline doesn't cause an
-		// immediate i/o timeout on the Transmit inside GetAllVbSeqnos.
+		// Scan-cancel goroutines share these pools and can leave stale deadlines; set a fresh
+		// deadline before each op and clear it before returning the connection.
 		if dl > 0 {
 			conn.SetDeadline(time.Now().Add(dl))
 		}
 		serverSeqnos, err := conn.GetAllVbSeqnos(nil, ctx)
 		if err != nil {
 			conn.SetDeadline(time.Time{})
-			// GetAllVbSeqnos is an ordinary op; the connection is still clean to reuse.
 			pool.Return(conn)
 			return nil, fmt.Errorf("snapshot requirements: GetAllVbSeqnos failed: %v", err)
 		}
 
-		vbList := make([]uint16, 0, len(serverSeqnos))
-		for vb := range serverSeqnos {
-			vbList = append(vbList, vb)
+		if dl > 0 {
+			conn.SetDeadline(time.Now().Add(dl))
 		}
-
-		failoverLogs, ferr := getFailoverLogsViaDCP(pool, conn, vbList, b.Name, dl)
-		if ferr != nil {
-			return nil, fmt.Errorf("snapshot requirements: %v", ferr)
+		stats, serr := conn.StatsMap("failovers")
+		conn.SetDeadline(time.Time{})
+		// GetAllVbSeqnos and the failovers STATS are both ordinary ops, so the connection is clean to reuse.
+		pool.Return(conn)
+		if serr != nil {
+			return nil, fmt.Errorf("snapshot requirements: failovers stats failed: %v", serr)
 		}
+		uuids := parseFailoverUUIDs(stats)
 
 		for vb, seqno := range serverSeqnos {
-			log, ok := failoverLogs[vb]
-			if !ok || log == nil || len(*log) == 0 {
-				return nil, fmt.Errorf("snapshot requirements: no failover log entry for vb %d", vb)
+			vbUUID, ok := uuids[vb]
+			if !ok || vbUUID == "" {
+				return nil, fmt.Errorf("snapshot requirements: no failover uuid for vb %d", vb)
 			}
-			combined[vb] = vbInfo{seqno: seqno, vbUUID: strconv.FormatUint((*log)[0][0], 10)}
+			combined[vb] = vbInfo{seqno: seqno, vbUUID: vbUUID}
 		}
 	}
 
@@ -181,40 +175,23 @@ func (b *Bucket) GetSeqnosForConsistency(collId uint32, timeoutMs uint64) (
 	return reqs, nil
 }
 
-// getFailoverLogsViaDCP upgrades conn to a DCP producer and returns the failover log for vbList.
-//
-// UPR_FAILOVERLOG is a DCP command; modern KV rejects it with EINVAL ("The command can only be sent
-// on a DCP connection") unless the connection has first completed a UPR_OPEN producer handshake, so
-// conn is opened as a DCP producer before the log is requested. The producer name must be unique so
-// KV does not disconnect a concurrently-open producer of the same name; no DCP features are needed
-// since we only read the failover log.
-//
-// Once conn has spoken UPR_OPEN it must never be reused as a general op (or upr data) connection, so
-// it is always handed back to the pool via Discard - on success and on failure alike. Discard (not a
-// bare Close) releases the pool's createsem slot; a bare Close leaks the slot and eventually drains
-// the pool's connection-create capacity.
-func getFailoverLogsViaDCP(pool *connectionPool, conn *memcached.Client, vbList []uint16, bucketName string,
-	dl time.Duration) (map[uint16]*memcached.FailoverLog, error) {
-
-	if dl > 0 {
-		conn.SetDeadline(time.Now().Add(dl))
+// parseFailoverUUIDs reads the current VbUUID per vbucket from the "failovers" stat, whose
+// "vb_<vbid>:0:id" keys hold the most-recent failover-log entry's id (== UprGetFailoverLog[0][0]).
+func parseFailoverUUIDs(stats map[string]string) map[uint16]string {
+	const prefix = "vb_"
+	const suffix = ":0:id"
+	uuids := make(map[uint16]string, len(stats))
+	for k, v := range stats {
+		if !strings.HasPrefix(k, prefix) || !strings.HasSuffix(k, suffix) {
+			continue
+		}
+		vb, err := strconv.Atoi(k[len(prefix) : len(k)-len(suffix)])
+		if err != nil {
+			continue
+		}
+		uuids[uint16(vb)] = strings.TrimSpace(v)
 	}
-
-	var noFeatures memcached.UprFeatures
-	connName := fmt.Sprintf("query-failoverlog-%s-%d", bucketName, atomic.AddUint64(&failoverLogConnSeq, 1))
-	if oerr := conn.UprOpen(connName, 0, noFeatures); oerr != nil {
-		conn.SetDeadline(time.Time{})
-		pool.Discard(conn)
-		return nil, fmt.Errorf("UprOpen failed for %d vbuckets: %v", len(vbList), oerr)
-	}
-
-	failoverLogs, ferr := conn.UprGetFailoverLog(vbList)
-	conn.SetDeadline(time.Time{})
-	pool.Discard(conn)
-	if ferr != nil {
-		return nil, fmt.Errorf("UprGetFailoverLog failed for %d vbuckets: %v", len(vbList), ferr)
-	}
-	return failoverLogs, nil
+	return uuids
 }
 
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
@@ -1927,7 +1904,9 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 		}
 	}()
 
-	if this.singleKey && !conn.Replica() && this.scan.snapshotReqs == nil {
+	// validateSingleKey ignores snapshot requirements, so skip the fast path when this vbucket
+	// has one (nil-map index is safe; AT_PLUS leaves unmentioned vbuckets free to use it).
+	if this.singleKey && !conn.Replica() && this.scan.snapshotReqs[this.vb] == nil {
 		return this.validateSingleKey(conn)
 	}
 
