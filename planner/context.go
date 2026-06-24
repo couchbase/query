@@ -28,6 +28,7 @@ type PrepareContext struct {
 	deltaKeyspaces  map[string]bool
 	dsContext       datastore.QueryContext
 	isPrepare       bool
+	scanConsistency datastore.ScanConsistency
 
 	planStabilityMode        settings.PlanStabilityMode
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy
@@ -37,7 +38,8 @@ func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	namedArgs map[string]value.Value, positionalArgs value.Values,
 	indexApiVersion int, featureControls uint64, useFts, useCBO bool, optimizer Optimizer,
 	deltaKeyspaces map[string]bool, dsContext datastore.QueryContext, isPrepare bool,
-	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) {
+	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
+	scanConsistency datastore.ScanConsistency) {
 	rv.requestId = requestId
 	rv.queryContext = queryContext
 	rv.namedArgs = namedArgs
@@ -52,6 +54,7 @@ func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
 	rv.isPrepare = isPrepare
 	rv.planStabilityMode = planStabilityMode
 	rv.planStabilityErrorPolicy = planStabilityErrorPolicy
+	rv.scanConsistency = scanConsistency
 	return
 }
 
@@ -101,6 +104,14 @@ func (this *PrepareContext) SetNamedArgs(na map[string]value.Value) {
 
 func (this *PrepareContext) SetPositionalArgs(pa value.Values) {
 	this.positionalArgs = pa
+}
+
+func (this *PrepareContext) ScanConsistency() datastore.ScanConsistency {
+	return this.scanConsistency
+}
+
+func (this *PrepareContext) SetScanConsistency(cons datastore.ScanConsistency) {
+	this.scanConsistency = cons
 }
 
 func (this *PrepareContext) DeltaKeyspaces() map[string]bool {

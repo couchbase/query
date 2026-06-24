@@ -309,7 +309,8 @@ func encodeName(name string, queryContext string) string {
 
 func (this *preparedCache) GetPlan(name, text, namespace string, context *planner.PrepareContext) (*plan.Prepared, errors.Error) {
 	prep, err := getPrepared(name, context.QueryContext(), context.DeltaKeyspaces(), OPT_VERIFY, nil,
-		context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context.Context())
+		context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context.Context(),
+		context.ScanConsistency())
 	if err != nil {
 		if err.Code() == errors.E_NO_SUCH_PREPARED {
 			return nil, nil
@@ -442,7 +443,7 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 		options |= OPT_METACHECK
 	}
 	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), options, nil, context.GetPlanStabilityMode(),
-		context.GetPlanStabilityErrorPolicy(), context.Context())
+		context.GetPlanStabilityErrorPolicy(), context.Context(), context.ScanConsistency())
 	if err != nil {
 		if err.Code() != errors.E_NO_SUCH_PREPARED {
 			logging.Infof("Auto Prepare plan fetching failed with %v", err)
@@ -661,26 +662,27 @@ func GetPrepared(fullName string, deltaKeyspaces map[string]bool, planStabilityM
 	if len(args) > 0 {
 		l = args[0]
 	}
-	return getPrepared(fullName, "", deltaKeyspaces, 0, nil, planStabilityMode, planStabilityErrorPolicy, l)
+	return getPrepared(fullName, "", deltaKeyspaces, 0, nil, planStabilityMode, planStabilityErrorPolicy, l, datastore.UNBOUNDED)
 }
 
 func GetPreparedWithContext(preparedName string, queryContext string, deltaKeyspaces map[string]bool,
 	options uint32, phaseTime *time.Duration, planStabilityMode settings.PlanStabilityMode,
-	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, args ...logging.Log) (*plan.Prepared, errors.Error) {
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, scanConsistency datastore.ScanConsistency,
+	args ...logging.Log) (*plan.Prepared, errors.Error) {
 
 	var l logging.Log
 	if len(args) > 0 {
 		l = args[0]
 	}
-	return getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, planStabilityMode, planStabilityErrorPolicy, l)
+	return getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, planStabilityMode, planStabilityErrorPolicy, l, scanConsistency)
 }
 
 func getPrepared(preparedName string, queryContext string, deltaKeyspaces map[string]bool, options uint32,
 	phaseTime *time.Duration, planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
-	log logging.Log) (prepared *plan.Prepared, err errors.Error) {
+	log logging.Log, scanConsistency datastore.ScanConsistency) (prepared *plan.Prepared, err errors.Error) {
 
 	prepared, err = prepareds.getPrepared(preparedName, queryContext, options, phaseTime,
-		planStabilityMode, planStabilityErrorPolicy, log)
+		planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
 	if err == nil {
 		if len(deltaKeyspaces) > 0 || (deltaKeyspaces != nil && prepared.Type() == "DELETE") {
 			prepared, err = getTxPrepared(prepared, deltaKeyspaces, phaseTime,
@@ -692,7 +694,7 @@ func getPrepared(preparedName string, queryContext string, deltaKeyspaces map[st
 
 func (prepareds *preparedCache) getPrepared(preparedName string, queryContext string, options uint32, phaseTime *time.Duration,
 	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
-	log logging.Log) (*plan.Prepared, errors.Error) {
+	log logging.Log, scanConsistency datastore.ScanConsistency) (*plan.Prepared, errors.Error) {
 
 	var err errors.Error
 	var prepared *plan.Prepared
@@ -738,59 +740,69 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			},
 			func(warn errors.Error) {
 			}, distributed.NO_CREDS, "", nil)
-	} else if prepared != nil && verify {
-		var good bool
-
-		// things have already been set up
-		// take the short way home
-		if ce.populated {
-
-			// note that it's fine to check and repopulate without a lock
-			// since the structure of the plan tree won't change, nor the
-			// keyspaces and indexers, the worse that is going to happen is
-			// two requests amending the same counter
-			good = prepared.MetadataCheck()
-
-			// counters have changed. fetch new values
-			if !good && !metaCheck {
-				good = prepared.Verify() == nil
+	} else if prepared != nil {
+		if scanConsistency != datastore.UNBOUNDED && scanConsistency != datastore.NOT_SET &&
+			scanConsistency != "" && prepared.HasCountScan() {
+			var newPrepared *plan.Prepared
+			newPrepared, _, err = reprepare(prepared, nil, phaseTime, planStability,
+				planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
+			if err == nil {
+				prepared = newPrepared
 			}
-		} else {
+		} else if verify {
+			var good bool
 
-			// we have to proceed under a lock to avoid multiple
-			// requests populating metadata counters at the same time
-			ce.Lock()
-
-			// check again, somebody might have done it in the interim
+			// things have already been set up
+			// take the short way home
 			if ce.populated {
-				good = true
+
+				// note that it's fine to check and repopulate without a lock
+				// since the structure of the plan tree won't change, nor the
+				// keyspaces and indexers, the worse that is going to happen is
+				// two requests amending the same counter
+				good = prepared.MetadataCheck()
+
+				// counters have changed. fetch new values
+				if !good && !metaCheck {
+					good = prepared.Verify() == nil
+				}
 			} else {
 
-				// nada - have to go the long way
-				good = prepared.Verify() == nil
-				if good {
-					ce.populated = true
-				}
-			}
-			ce.Unlock()
-		}
+				// we have to proceed under a lock to avoid multiple
+				// requests populating metadata counters at the same time
+				ce.Lock()
 
-		// after all this, it did not work out!
-		// here we are going to accept multiple requests creating a new
-		// plan concurrently as we don't have a good way to serialize
-		// without blocking the whole prepared cacheline
-		// locking will occur at adding time: both requests will insert,
-		// the last wins
-		if metaCheck {
-			if !good {
-				prepared = nil
+				// check again, somebody might have done it in the interim
+				if ce.populated {
+					good = true
+				} else {
+
+					// nada - have to go the long way
+					good = prepared.Verify() == nil
+					if good {
+						ce.populated = true
+					}
+				}
+				ce.Unlock()
 			}
-		} else if !good || prepared.PreparedTime().IsZero() {
-			var replace bool
-			prepared, replace, err = reprepare(prepared, nil, phaseTime, planStability,
-				planStabilityMode, planStabilityErrorPolicy, log)
-			if err == nil && replace {
-				err = AddPrepared(prepared, planStability)
+
+			// after all this, it did not work out!
+			// here we are going to accept multiple requests creating a new
+			// plan concurrently as we don't have a good way to serialize
+			// without blocking the whole prepared cacheline
+			// locking will occur at adding time: both requests will insert,
+			// the last wins
+			if metaCheck {
+				if !good {
+					prepared = nil
+				}
+			} else if !good || prepared.PreparedTime().IsZero() {
+				var replace bool
+				prepared, replace, err = reprepare(prepared, nil, phaseTime, planStability,
+					planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
+				if err == nil && replace {
+					err = AddPrepared(prepared, planStability)
+				}
 			}
 		}
 	}
@@ -888,7 +900,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 		verifyErr = prepared.Verify()
 		if verifyErr != nil {
 			newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability,
-				planStabilityMode, planStabilityErrorPolicy, log)
+				planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 			if prepErr == nil {
 				prepared = newPrepared
 				add = replace
@@ -951,7 +963,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planSta
 				if err1 == nil {
 					prepared.SetText(stmt)
 					pl, _, _ := reprepare(prepared, nil, phaseTime, planStability,
-						planStabilityMode, planStabilityErrorPolicy, log)
+						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 					if pl != nil {
 						return pl, nil, err
 					}
@@ -964,7 +976,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planSta
 	} else if reprep && (prepared.PlanVersion() > util.PLAN_VERSION) {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
-		pl, _, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log)
+		pl, _, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -986,7 +998,8 @@ func distributePrepared(name, plan string) {
 
 func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
 	planStability bool, planStabilityMode settings.PlanStabilityMode,
-	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (*plan.Prepared, bool, errors.Error) {
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log,
+	scanConsistency datastore.ScanConsistency) (*plan.Prepared, bool, errors.Error) {
 
 	replace := true
 	if planStability {
@@ -1028,7 +1041,8 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, prepared.QueryContext(), nil, nil,
 		prepared.IndexApiVersion(), prepared.FeatureControls(), prepared.UseFts(), prepared.UseCBO(),
-		optimizer, deltaKeyspaces, nil, true, planStabilityMode, planStabilityErrorPolicy)
+		optimizer, deltaKeyspaces, nil, true, planStabilityMode, planStabilityErrorPolicy,
+		scanConsistency)
 
 	statement := stmt
 	if prepStmt, ok := stmt.(*algebra.Prepare); ok {
@@ -1091,7 +1105,8 @@ func predefinedPrepareStatement(name, statement, queryContext, namespace string,
 	var prepContext planner.PrepareContext
 	planner.NewPrepareContext(&prepContext, requestId, queryContext, nil, nil,
 		util.GetMaxIndexAPI(), util.GetN1qlFeatureControl(), false, useCBO, optimizer, nil, nil, true,
-		settings.GetPlanStabilityMode(), settings.GetPlanStabilityErrorPolicy())
+		settings.GetPlanStabilityMode(), settings.GetPlanStabilityErrorPolicy(),
+		datastore.UNBOUNDED)
 
 	stmt, err := n1ql.ParseStatement2(statement, namespace, queryContext, log)
 	if err != nil {
@@ -1150,7 +1165,7 @@ func getTxPrepared(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phas
 		return
 	}
 	txPrepared, _, err = reprepare(prepared, deltaKeyspaces, phaseTime, (planStabilityMode != settings.PS_MODE_OFF),
-		planStabilityMode, planStabilityErrorPolicy, log)
+		planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 	if err == nil {
 		prepared.SetTxPrepared(txPrepared, hashCode)
 	}

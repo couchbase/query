@@ -316,7 +316,8 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 	}
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs,
 		positionalArgs, this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
-		this.deltaKeyspaces, this, false, this.planStabilityMode, this.planStabilityErrorPolicy)
+		this.deltaKeyspaces, this, false, this.planStabilityMode, this.planStabilityErrorPolicy,
+		this.ScanConsistency())
 
 	if autoPrepare {
 		name = prepareds.GetAutoPrepareName(statement, &prepContext)
@@ -422,7 +423,8 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 		exec, _ := stmt.(*algebra.Execute)
 		prepared, err = prepareds.GetPreparedWithContext(exec.Prepared(), this.queryContext,
 			this.deltaKeyspaces, prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-			&reprepTime, this.planStabilityMode, this.planStabilityErrorPolicy, this)
+			&reprepTime, this.planStabilityMode, this.planStabilityErrorPolicy,
+			this.ScanConsistency(), this)
 		//  monitoring code TBD
 		if err != nil {
 			return nil, prepared, isPrepared, err
@@ -1113,7 +1115,7 @@ func (this *Context) ExplainStatement(statement string, namedArgs map[string]val
 
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs, positionalArgs, this.indexApiVersion,
 		this.featureControls, this.useFts, this.useCBO, this.optimizer, this.deltaKeyspaces, this, false,
-		this.planStabilityMode, this.planStabilityErrorPolicy)
+		this.planStabilityMode, this.planStabilityErrorPolicy, this.ScanConsistency())
 
 	stmt, err := n1ql.ParseStatement2(statement, this.namespace, this.queryContext, this)
 

@@ -1961,7 +1961,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), nil, nil,
 			request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
 			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, true,
-			context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy())
+			context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(),
+			request.ScanConsistency())
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
@@ -2055,7 +2056,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 		planner.NewPrepareContext(&prepContext, request.Id().String(), request.QueryContext(), namedArgs,
 			positionalArgs, request.IndexApiVersion(), request.FeatureControls(), request.UseFts(),
 			request.UseCBO(), context.Optimizer(), context.DeltaKeyspaces(), dsContext, isPrepare,
-			context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy())
+			context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(),
+			request.ScanConsistency())
 		if stmt, ok := stmt.(*algebra.Advise); ok {
 			stmt.SetContext(execution.NewOpContext(context))
 		}
@@ -2279,7 +2281,8 @@ func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepa
 
 			prepared, er = prepareds.GetPreparedWithContext(name, request.QueryContext(),
 				context.DeltaKeyspaces(), prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY,
-				&reprepTime, context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context)
+				&reprepTime, context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(),
+				context.ScanConsistency(), context)
 			if reprepTime > 0 {
 				request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 			}
@@ -2309,7 +2312,8 @@ func (this *Server) getPreparedByName(prepareName string, request Request, conte
 	}
 	prepared, err := prepareds.GetPreparedWithContext(prepareName, request.QueryContext(),
 		context.DeltaKeyspaces(), options,
-		&reprepTime, context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context)
+		&reprepTime, context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(),
+		context.ScanConsistency(), context)
 	if reprepTime > 0 {
 		request.Output().AddPhaseTime(execution.REPREPARE, reprepTime)
 	}

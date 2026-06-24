@@ -70,6 +70,7 @@ type Prepared struct {
 	users      string
 	remoteAddr string
 	reprepared bool
+	countScan  bool
 	sync.RWMutex
 }
 
@@ -92,7 +93,7 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 		// only set planVersion if a valid plan is provided
 		planVersion = util.PLAN_VERSION
 	}
-	return &Prepared{
+	p := &Prepared{
 		Operator:           operator,
 		signature:          signature,
 		optimHints:         optimHints,
@@ -100,6 +101,8 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 		planVersion:        planVersion,
 		subqueryPlans:      subqueryPlans,
 	}
+	p.countScan = p.hasCountScan()
+	return p
 }
 
 func NewPreparedFromEncodedPlan(prepared_stmt string) (*Prepared, []byte, errors.Error) {
@@ -349,6 +352,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		}
 	}
 
+	this.countScan = this.hasCountScan()
 	return nil
 }
 
@@ -626,6 +630,70 @@ func (this *Prepared) Verify() errors.Error {
 		}
 	}
 	return err
+}
+
+func (this *Prepared) HasCountScan() bool {
+	return this.countScan
+}
+
+func (this *Prepared) hasCountScan() bool {
+	if operatorHasCountScan(this.Operator) {
+		return true
+	}
+	subqueryPlans := this.GetSubqueryPlans(false)
+	if subqueryPlans != nil {
+		found := false
+		subqueryPlans.ForEach(nil, uint32(0), true, func(key *algebra.Select, options uint32, plan, isk interface{}) (errors.Error, bool) {
+			if qp, ok := plan.(*QueryPlan); ok && operatorHasCountScan(qp.PlanOp()) {
+				found = true
+			}
+			return nil, false
+		})
+		if found {
+			return true
+		}
+	}
+	return false
+}
+
+func operatorHasCountScan(op Operator) bool {
+	switch o := op.(type) {
+	case *CountScan:
+		return true
+	case *Sequence:
+		for _, child := range o.children {
+			if operatorHasCountScan(child) {
+				return true
+			}
+		}
+	case *Authorize:
+		return operatorHasCountScan(o.child)
+	case *Parallel:
+		return operatorHasCountScan(o.child)
+	case *With:
+		return operatorHasCountScan(o.child)
+	case *UnionAll:
+		for _, child := range o.children {
+			if operatorHasCountScan(child) {
+				return true
+			}
+		}
+	case *ExceptAll:
+		return operatorHasCountScan(o.first) || operatorHasCountScan(o.second)
+	case *IntersectAll:
+		return operatorHasCountScan(o.first) || operatorHasCountScan(o.second)
+	case *NLJoin:
+		return operatorHasCountScan(o.child)
+	case *NLNest:
+		return operatorHasCountScan(o.child)
+	case *HashJoin:
+		return operatorHasCountScan(o.child)
+	case *HashNest:
+		return operatorHasCountScan(o.child)
+	case *Merge:
+		return operatorHasCountScan(o.update) || operatorHasCountScan(o.delete) || operatorHasCountScan(o.insert)
+	}
+	return false
 }
 
 func isFatalVerificationError(err errors.Error) bool {

@@ -1331,7 +1331,8 @@ func (this *opContext) SubqueryPlan(node *algebra.Select, mutex *sync.RWMutex, d
 	}
 	planner.NewPrepareContext(&prepContext, this.requestId, this.queryContext, namedArgs, positionalArgs,
 		this.indexApiVersion, this.featureControls, this.useFts, this.useCBO, optimizer,
-		deltaKeyspaces, this, false, this.planStabilityMode, this.planStabilityErrorPolicy)
+		deltaKeyspaces, this, false, this.planStabilityMode, this.planStabilityErrorPolicy,
+		this.ScanConsistency())
 	qp, subplanIsks, err, _ := planner.Build(node, this.datastore, this.systemstore, this.namespace,
 		true, false, false, &prepContext)
 	if err != nil {

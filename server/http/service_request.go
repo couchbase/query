@@ -325,7 +325,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	planStabilityMode := settings.GetPlanStabilityMode()
 	planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
 	prepared_name, prepared, err := getPrepared(httpArgs, rv.QueryContext(), parm, val, &phaseTime,
-		planStabilityMode, planStabilityErrorPolicy, log)
+		planStabilityMode, planStabilityErrorPolicy, rv.ScanConsistency(), log)
 
 	// MB-18841 (encoded_plan processing affects latency)
 	// MB-19509 (encoded_plan may corrupt cache)
@@ -542,7 +542,16 @@ func handleCreds(rv *httpRequest, httpArgs httpRequestArgs, parm string, val int
 
 func handleConsistency(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
 	rv.consCnt++
-	return httpArgs.storeDirect(_SCAN_CONSISTENCY, parm, val)
+	err := httpArgs.storeDirect(_SCAN_CONSISTENCY, parm, val)
+	if err == nil {
+		if s, serr := httpArgs.getString(_SCAN_CONSISTENCY, "NOT_SET"); serr == nil {
+			if level := newScanConsistency(s); level != server.UNDEFINED_CONSISTENCY {
+				rv.consistency.scan_level = level
+				rv.SetScanConfiguration(&rv.consistency)
+			}
+		}
+	}
+	return err
 }
 
 func handleScanWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
@@ -1049,7 +1058,7 @@ var _PARAMETERS = map[string]*argHandler{
 	CREDS:             {handleCreds, false},
 	ARGS:              {handlePositionalArgs, false},
 	TIMEOUT:           {handleTimeout, false},
-	SCAN_CONSISTENCY:  {handleConsistency, false},
+	SCAN_CONSISTENCY:  {handleConsistency, true},
 	SCAN_WAIT:         {handleScanWait, false},
 	SCAN_VECTOR:       {handleScanVector, false},
 	SCAN_VECTORS:      {handleScanVectors, false},
@@ -1168,8 +1177,8 @@ func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, 
 
 func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{},
 	phaseTime *time.Duration, planStabilityMode settings.PlanStabilityMode,
-	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (
-	string, *plan.Prepared, errors.Error) {
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, scanConsistency datastore.ScanConsistency,
+	log logging.Log) (string, *plan.Prepared, errors.Error) {
 
 	prepared_name, err := a.getPreparedName(parm, val)
 	if err != nil || prepared_name == "" {
@@ -1180,7 +1189,7 @@ func getPrepared(a httpRequestArgs, queryContext string, parm string, val interf
 	// Monitoring API: track prepared statement access
 	prepared, err := prepareds.GetPreparedWithContext(prepared_name, queryContext, nil,
 		prepareds.OPT_TRACK|prepareds.OPT_REMOTE|prepareds.OPT_VERIFY, phaseTime,
-		planStabilityMode, planStabilityErrorPolicy, log)
+		planStabilityMode, planStabilityErrorPolicy, scanConsistency, log)
 	if err != nil || prepared == nil {
 		log.Debugf("%v %v", prepared_name, err)
 		return prepared_name, nil, err

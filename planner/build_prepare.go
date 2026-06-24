@@ -10,6 +10,7 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/util"
@@ -61,8 +62,11 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
 
 	dks := this.context.DeltaKeyspaces()
 	this.context.SetDeltaKeyspaces(nil)
+	cons := this.context.ScanConsistency()
+	this.context.SetScanConsistency(datastore.UNBOUNDED)
 	prep, err, _ = BuildPrepared(stmt.Statement(), this.datastore, this.systemstore, this.namespace,
 		false, true, persist || planStability, this.context)
+	this.context.SetScanConsistency(cons)
 	this.context.SetDeltaKeyspaces(dks)
 
 	if err != nil {

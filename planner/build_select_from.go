@@ -1176,6 +1176,10 @@ func getUnnestIndexInfo(baseKeyspace *base.BaseKeyspace, alias string) *base.Unn
 }
 
 func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
+	cons := this.context.ScanConsistency()
+	if cons != "" && cons != datastore.UNBOUNDED && cons != datastore.NOT_SET {
+		return false, nil
+	}
 	if node.From() == nil ||
 		(node.Where() != nil && (node.Where().Value() == nil || !node.Where().Value().Truth())) ||
 		node.Group() != nil {
