@@ -148,8 +148,8 @@ github.com/bits-and-blooms/bitset v1.24.2 h1:M7/NzVbsytmtfHbumG+K2bremQPMJuqv1JD
 github.com/bits-and-blooms/bitset v1.24.2/go.mod h1:7hO7Gc7Pp1vODcmWvKMRA9BNmbv6a/7QIWpPxHddWR8=
 github.com/blevesearch/bleve-mapping-ui v0.7.0 h1:gcrRWX5vjie2JEu5lgnn6tcwagcDEbD6d9XFkevt4fY=
 github.com/blevesearch/bleve-mapping-ui v0.7.0/go.mod h1:HeY/8LvxDgT8Qt7iqfw0dodA3Z8wAbr1hPgCnQIL5Ec=
-github.com/blevesearch/bleve/v2 v2.6.1-0.20260618145229-1e80991633fc h1:5doU7AeIw/biqn0NpvFu+p6x211NugLbdQCEu/ayOFM=
-github.com/blevesearch/bleve/v2 v2.6.1-0.20260618145229-1e80991633fc/go.mod h1:YPumDKWWzvayWgkih9LOKCZtX8yv+N9syAlfnbFZIw8=
+github.com/blevesearch/bleve/v2 v2.6.1-0.20260623124904-7d9c36969c3b h1:LR+g1ubBqtSG9/ZbU/01oAXiIJlmak2W80DX1afKZOM=
+github.com/blevesearch/bleve/v2 v2.6.1-0.20260623124904-7d9c36969c3b/go.mod h1:7Vh7wjY3e61t8iEZaLIiGd+C2vdgSwyDc/qLftJhNMs=
 github.com/blevesearch/bleve_index_api v1.3.12 h1:MirVNltwGq8z0PhOgiQp+bKL5qq8OvCxEwOOC7NnHNE=
 github.com/blevesearch/bleve_index_api v1.3.12/go.mod h1:xvd48t5XMeeioWQ5/jZvgLrV98flT2rdvEJ3l/ki4Ko=
 github.com/blevesearch/geo v0.2.5 h1:yJg9FX1oRwLnjXSXF+ECHfXFTF4diF02Ca/qUGVjJhE=
@@ -191,8 +191,8 @@ github.com/blevesearch/zapx/v15 v15.4.3 h1:iJiMJOHrz216jyO6lS0m9RTCEkprUnzvqAI2l
 github.com/blevesearch/zapx/v15 v15.4.3/go.mod h1:1pssev/59FsuWcgSnTa0OeEpOzmhtmr/0/11H0Z8+Nw=
 github.com/blevesearch/zapx/v16 v16.3.4 h1:hDAqA8qusZTNbPEL7//w5P65UZ2de6yhSeUaTbp0Po0=
 github.com/blevesearch/zapx/v16 v16.3.4/go.mod h1:zqkPPqs9GS9FzVWzCO3Wf1X044yWAV17+4zb+FTiEHg=
-github.com/blevesearch/zapx/v17 v17.1.7 h1:Q9odfVYk17mljPf8C28QPFeC3iGJ03MJ9Ic8ak/QZkA=
-github.com/blevesearch/zapx/v17 v17.1.7/go.mod h1:34TIaJmdo5hMh2IBLoE4Day65j7DJ++8s5trz1yrsGY=
+github.com/blevesearch/zapx/v17 v17.1.8 h1:RhlEYVsjJuXbPaIHdKi3qbKpc8HLIToiTYf7A8CVkoo=
+github.com/blevesearch/zapx/v17 v17.1.8/go.mod h1:34TIaJmdo5hMh2IBLoE4Day65j7DJ++8s5trz1yrsGY=
 github.com/buger/goterm v1.0.4 h1:Z9YvGmOih81P0FbVtEYTFF6YsSgxSUKEhf/f9bTMXbY=
 github.com/buger/goterm v1.0.4/go.mod h1:HiFWV3xnkolgrBV3mY8m0X0Pumt4zg4QhbdOzQtB8tE=
 github.com/buger/jsonparser v1.1.2 h1:frqHqw7otoVbk5M8LlE/L7HTnIq2v9RX6EJ48i9AxJk=
@@ -252,8 +252,8 @@ github.com/couchbase/logstats v1.1.1 h1:mI0yMYud42CwJdTdkxRHk0NwobMHNAGv5s2azEMn
 github.com/couchbase/logstats v1.1.1/go.mod h1:S+drFV9YF6dSqFaj54vmsNqe3xvelFwz7EVw0vPSfR4=
 github.com/couchbase/moss v0.3.0 h1:7NCCtyk6iGCr0egU6mxnx5wLqDSlRKkJJXOJp3seHMI=
 github.com/couchbase/moss v0.3.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
-github.com/couchbase/tools-common/cloud/v8 v8.1.3 h1:+fH2+3E8KV8xyXXzbEJNhosMqh08ahauZWlu0m5qtJA=
-github.com/couchbase/tools-common/cloud/v8 v8.1.3/go.mod h1:5wEMtM4rX92Zl9ylQKEJFgmYNUyFVoWzXCvo31YNO+U=
+github.com/couchbase/tools-common/cloud/v8 v8.1.4 h1:+TzKykVvCtXNOiPZKwvWcVas4bBSbTGQwVLu8GerR5w=
+github.com/couchbase/tools-common/cloud/v8 v8.1.4/go.mod h1:5wEMtM4rX92Zl9ylQKEJFgmYNUyFVoWzXCvo31YNO+U=
 github.com/couchbase/tools-common/couchbase/v4 v4.1.0 h1:sMqMeqMyfdp0aWts81g7mezkuW/2ytk31d+bxbvnF4Q=
 github.com/couchbase/tools-common/couchbase/v4 v4.1.0/go.mod h1:/2b9sgrIEyaa9HNC6RkVUanD7O3lIfb5JkjH0iDmtIw=
 github.com/couchbase/tools-common/errors v1.1.0 h1:ruGRk4YX7UBiqBGmMgl5QaLXbH6L33lD4zxgoGE4/OY=
