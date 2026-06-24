@@ -19,6 +19,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -65,7 +66,8 @@ func init() {
 
 func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
-	serverless bool, useReplica bool, skipKey func(string) bool) (interface{}, qerrors.Error) {
+	serverless bool, useReplica bool, skipKey func(string) bool,
+	snapshotReqs map[uint16]*memcached.SnapshotRequirements) (interface{}, qerrors.Error) {
 
 	if log == nil {
 		log = logging.NULL_LOG
@@ -79,12 +81,108 @@ func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, 
 		}
 	}
 
-	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica, skipKey)
+	scan := NewSeqScan(requestId, log, collId, ranges, offset, limit, ordered, pipelineSize, serverless, useReplica, skipKey,
+		snapshotReqs)
 
 	logging.Debuga(func() string { return scan.String() }, log)
 	go scan.coordinator(b, timeout)
 
 	return scan, nil
+}
+
+// GetSeqnosForConsistency builds per-vbucket snapshot_requirements for REQUEST_PLUS range scans:
+// the high-seqno from GetAllVbSeqnos (collection-scoped) and the VbUUID from the "failovers" stat.
+// Both are ordinary ops on the same connection, so it returns to the pool normally (no DCP
+// UPR_OPEN, no connection burn).
+//
+// The VbUUID is mandatory: KV uses it to bind the seqno to a failover branch and rejects a
+// CREATE_RANGE_SCAN that has a seqno but no vb_uuid (closes the connection -> EOF on scan create).
+// So failing to obtain any seqno or VbUUID is fatal rather than silently degraded.
+func (b *Bucket) GetSeqnosForConsistency(collId uint32, timeoutMs uint64) (
+	map[uint16]*memcached.SnapshotRequirements, error) {
+
+	pools := b.getConnPools(false)
+	vbActive := memcached.VbActive
+	ctx := &memcached.ClientContext{CollId: collId, VbState: &vbActive}
+
+	dl := time.Duration(timeoutMs) * time.Millisecond
+	if dl == 0 {
+		dl = DefaultTimeout
+	}
+
+	type vbInfo struct {
+		seqno  uint64
+		vbUUID string
+	}
+	combined := make(map[uint16]vbInfo)
+
+	for _, pool := range pools {
+		conn, err := pool.Get()
+		if err != nil {
+			return nil, fmt.Errorf("snapshot requirements: failed to get connection: %v", err)
+		}
+
+		// Scan-cancel goroutines share these pools and can leave stale deadlines; set a fresh
+		// deadline before each op and clear it before returning the connection.
+		if dl > 0 {
+			conn.SetDeadline(time.Now().Add(dl))
+		}
+		serverSeqnos, err := conn.GetAllVbSeqnos(nil, ctx)
+		if err != nil {
+			conn.SetDeadline(time.Time{})
+			pool.Return(conn)
+			return nil, fmt.Errorf("snapshot requirements: GetAllVbSeqnos failed: %v", err)
+		}
+
+		if dl > 0 {
+			conn.SetDeadline(time.Now().Add(dl))
+		}
+		stats, serr := conn.StatsMap("failovers")
+		conn.SetDeadline(time.Time{})
+		// GetAllVbSeqnos and the failovers STATS are both ordinary ops, so the connection is clean to reuse.
+		pool.Return(conn)
+		if serr != nil {
+			return nil, fmt.Errorf("snapshot requirements: failovers stats failed: %v", serr)
+		}
+		uuids := parseFailoverUUIDs(stats)
+
+		for vb, seqno := range serverSeqnos {
+			vbUUID, ok := uuids[vb]
+			if !ok || vbUUID == "" {
+				return nil, fmt.Errorf("snapshot requirements: no failover uuid for vb %d", vb)
+			}
+			combined[vb] = vbInfo{seqno: seqno, vbUUID: vbUUID}
+		}
+	}
+
+	reqs := make(map[uint16]*memcached.SnapshotRequirements, len(combined))
+	for vb, info := range combined {
+		reqs[vb] = &memcached.SnapshotRequirements{
+			Seqno:     info.seqno,
+			VbUUID:    info.vbUUID,
+			TimeoutMs: uint64(dl.Milliseconds()),
+		}
+	}
+	return reqs, nil
+}
+
+// parseFailoverUUIDs reads the current VbUUID per vbucket from the "failovers" stat, whose
+// "vb_<vbid>:0:id" keys hold the most-recent failover-log entry's id (== UprGetFailoverLog[0][0]).
+func parseFailoverUUIDs(stats map[string]string) map[uint16]string {
+	const prefix = "vb_"
+	const suffix = ":0:id"
+	uuids := make(map[uint16]string, len(stats))
+	for k, v := range stats {
+		if !strings.HasPrefix(k, prefix) || !strings.HasSuffix(k, suffix) {
+			continue
+		}
+		vb, err := strconv.Atoi(k[len(prefix) : len(k)-len(suffix)])
+		if err != nil {
+			continue
+		}
+		uuids[uint16(vb)] = strings.TrimSpace(v)
+	}
+	return uuids
 }
 
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
@@ -304,11 +402,13 @@ type seqScan struct {
 	sampleSize   int
 	useReplica   bool
 	skipKey      func(string) bool
+	snapshotReqs map[uint16]*memcached.SnapshotRequirements
 	spilled      atomic.Bool
 }
 
 func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqScanRange, offset int64, limit int64, ordered bool,
-	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool) *seqScan {
+	pipelineSize int, serverless bool, useReplica bool, skipKey func(string) bool,
+	snapshotReqs map[uint16]*memcached.SnapshotRequirements) *seqScan {
 
 	scan := &seqScan{
 		scanNum:      atomic.AddUint64(&scanNum, 1),
@@ -323,6 +423,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 		serverless:   serverless,
 		useReplica:   useReplica,
 		skipKey:      skipKey,
+		snapshotReqs: snapshotReqs,
 	}
 	scan.ch = make(chan interface{}, 1)
 	scan.abortch = make(chan bool, 1)
@@ -1349,7 +1450,9 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 		}
 	}()
 
-	if this.singleKey && !conn.Replica() {
+	// validateSingleKey ignores snapshot requirements, so skip the fast path when this vbucket
+	// has one (nil-map index is safe; AT_PLUS leaves unmentioned vbuckets free to use it).
+	if this.singleKey && !conn.Replica() && this.scan.snapshotReqs[this.vb] == nil {
 		return this.validateSingleKey(conn)
 	}
 
@@ -1368,6 +1471,10 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 	}
 
 	createScan := func() (bool, bool) {
+		var cc *memcached.ClientContext
+		if this.scan.snapshotReqs != nil {
+			cc = &memcached.ClientContext{CollId: this.scan.collId, SeqScanSnapshotReqs: this.scan.snapshotReqs[this.vb]}
+		}
 		if this.sampleSize != 0 {
 			fetchLimit = uint32(this.sampleSize)
 			if this.sampleSize == math.MaxInt {
@@ -1381,7 +1488,11 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 			start, exclStart = this.startFrom()
 			end, exclEnd := this.endWith()
 			logging.Debugf("%s creating scan from: %v (excl:%v)", this, start, exclStart, this.scan.log)
-			response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd, false)
+			if cc != nil {
+				response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd, false, cc)
+			} else {
+				response, err = conn.CreateRangeScan(this.vbucket(), this.scan.collId, start, exclStart, end, exclEnd, false)
+			}
 		}
 		if err != nil || len(response.Body) < 16 {
 			resp, ok := err.(*gomemcached.MCResponse)
