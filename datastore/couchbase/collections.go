@@ -22,6 +22,7 @@ import (
 	ftsclient "github.com/couchbase/n1fty"
 	"github.com/couchbase/query/aus"
 	cb "github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/timestamp"
 
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
@@ -459,7 +460,7 @@ func (coll *collection) IsSystemCollection() bool {
 
 func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange,
 	offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool,
-	skipKey func(string) bool) (
+	skipKey func(string) bool, cons datastore.ScanConsistency, vector timestamp.Vector) (
 	interface{}, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
@@ -468,8 +469,13 @@ func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*d
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
+	snapshotReqs, err := buildSnapshotReqs(cons, vector, timeout, coll.uid, coll.bucket.cbbucket)
+	if err != nil {
+		return nil, err
+	}
+
 	return coll.bucket.cbbucket.StartKeyScan(context.RequestId(), context, coll.uid, "", "", r, offset, limit, ordered, timeout,
-		pipelineSize, serverless, context.UseReplica(), skipKey)
+		pipelineSize, serverless, context.UseReplica(), skipKey, snapshotReqs)
 }
 
 func (coll *collection) StopScan(scan interface{}) (uint64, errors.Error) {

@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/tenant"
+	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -367,7 +368,8 @@ func (this *SeqScanRange) String() string {
 
 type SeqScanner interface {
 	StartKeyScan(context QueryContext, ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration,
-		pipelineSize int, serverless bool, skipKey func(string) bool) (interface{}, errors.Error)
+		pipelineSize int, serverless bool, skipKey func(string) bool, cons ScanConsistency,
+		vector timestamp.Vector) (interface{}, errors.Error)
 	StopScan(interface{}) (uint64, errors.Error)
 	FetchKeys(interface{}, time.Duration) ([]string, errors.Error, bool)
 }

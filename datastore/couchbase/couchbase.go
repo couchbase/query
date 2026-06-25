@@ -46,6 +46,7 @@ import (
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/tenant"
+	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/transactions"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -3340,9 +3341,41 @@ func (ks *keyspace) getDefaultCid() (uint32, bool) {
 	return cid, ok
 }
 
+func buildSnapshotReqs(cons datastore.ScanConsistency, vector timestamp.Vector, timeout time.Duration,
+	cid uint32, cbbucket *cb.Bucket) (map[uint16]*memcached.SnapshotRequirements, errors.Error) {
+
+	t := timeout
+	if t == 0 {
+		t = cb.DefaultTimeout
+	}
+	timeoutMs := uint64(t.Milliseconds())
+
+	var snapshotReqs map[uint16]*memcached.SnapshotRequirements
+	switch cons {
+	case datastore.AT_PLUS:
+		if vector != nil {
+			snapshotReqs = make(map[uint16]*memcached.SnapshotRequirements, len(vector.Entries()))
+			for _, e := range vector.Entries() {
+				snapshotReqs[uint16(e.Position())] = &memcached.SnapshotRequirements{
+					Seqno:     e.Value(),
+					VbUUID:    e.Guard(),
+					TimeoutMs: timeoutMs,
+				}
+			}
+		}
+	case datastore.SCAN_PLUS:
+		reqs, err := cbbucket.GetSeqnosForConsistency(cid, timeoutMs)
+		if err != nil {
+			return nil, errors.NewSSError(errors.E_SS_CREATE, err)
+		}
+		snapshotReqs = reqs
+	}
+	return snapshotReqs, nil
+}
+
 func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange, offset int64,
-	limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool, skipKey func(string) bool) (
-	interface{}, errors.Error) {
+	limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool, skipKey func(string) bool,
+	cons datastore.ScanConsistency, vector timestamp.Vector) (interface{}, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
 	for i := range ranges {
@@ -3350,12 +3383,23 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		r[i].Init(ranges[i].Start, ranges[i].ExcludeStart, ranges[i].End, ranges[i].ExcludeEnd)
 	}
 
-	if cid, ok := ks.getDefaultCid(); ok {
+	var cid uint32
+	var hasCid bool
+	if id, ok := ks.getDefaultCid(); ok {
+		cid = id
+		hasCid = true
+	}
+	snapshotReqs, err := buildSnapshotReqs(cons, vector, timeout, cid, ks.cbbucket)
+	if err != nil {
+		return nil, err
+	}
+
+	if hasCid {
 		return ks.cbbucket.StartKeyScan(context.RequestId(), context, cid, "", "", r, offset, limit, ordered, timeout,
-			pipelineSize, serverless, context.UseReplica(), skipKey)
+			pipelineSize, serverless, context.UseReplica(), skipKey, snapshotReqs)
 	}
 	return ks.cbbucket.StartKeyScan(context.RequestId(), context, 0, "_default", "_default", r, offset, limit, ordered, timeout,
-		pipelineSize, serverless, context.UseReplica(), skipKey)
+		pipelineSize, serverless, context.UseReplica(), skipKey, snapshotReqs)
 }
 
 func (ks *keyspace) StopScan(scan interface{}) (uint64, errors.Error) {
