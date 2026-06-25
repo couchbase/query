@@ -609,6 +609,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/Settings"
 
+  /admin/encryption_at_rest:
+    get:
+      operationId: get_encryption_at_rest
+      summary: Retrieve Encryption-At-Rest Information
+      description: |-
+        Get information about encryption-at-rest on the Query Service.
+      tags:
+        - default
+      security:
+        - Default: []
+      responses:
+        200:
+          description: An object containing information about encryption-at-rest on the Query Service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EncryptionAtRest"
+              example:
+                $ref: 'examples/get_encryption_at_rest.json'
+
 components:
  schemas:
   Clusters:
@@ -2311,6 +2331,32 @@ components:
     required:
       - freed
       - status
+
+  EncryptionAtRest:
+    type: object
+    title: Encryption-At-Rest Information
+    required:
+      - keys.in_use
+    properties:
+      keys.in_use:
+        $ref: "#/components/schemas/EncryptionKeys"
+
+  EncryptionKeys:
+        title: Keys in Use
+        type: object
+        description: |-
+          An object containing the data encryption keys (DEKs) currently in use, grouped by encryption type.
+          Each field name is an encryption type, and its value is an array of DEK IDs being used to encrypt data of that type.
+          The array may include the special DEK ID `""` (an empty string), indicating the presence of unencrypted data on disk.
+          When encryption-at-rest is enabled for an encryption type, the array always includes the current active key's ID.
+        additionalProperties:
+          x-additionalPropertiesName: encryption type
+          type: array
+          description: |-
+            An array of DEK IDs currently in use for this encryption type.
+            A DEK ID may be an empty string, indicating the presence of unencrypted data on disk.
+          items:
+            type: string
 
  parameters:
   PathStat:
