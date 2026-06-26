@@ -81,6 +81,12 @@ type Request interface {
 	SetNatural(natural string)
 	SetNaturalContext(s string)
 	NaturalContext() string
+	SetNaturalConfig(v value.Value)
+	NaturalConfig() value.Value
+	SetNaturalRequestTokens(prompt, completion, total int)
+	SetNaturalChatTokens(prompt, completion, total int)
+	FmtNaturalRequestTokens() map[string]interface{}
+	FmtNaturalChatTokens() map[string]interface{}
 	SetNaturalCred(cred string)
 	NaturalCred() string
 	SetNaturalOrganizationId(orgId string)
@@ -466,6 +472,9 @@ type BaseRequest struct {
 	natural              string
 	naturalCred          string
 	naturalOrgId         string
+	naturalConfig        value.Value
+	naturalTokens        [3]int // this request's own LLM usage: prompt, completion, total
+	naturalChatTokens    [3]int // running conversation total (chat only): prompt, completion, total
 	naturalContext       string
 	naturalHint          string
 	naturalVendor        string
@@ -1764,6 +1773,57 @@ func (this *BaseRequest) NaturalContext() string {
 	return this.naturalContext
 }
 
+func (this *BaseRequest) SetNaturalConfig(v value.Value) {
+	this.naturalConfig = v
+}
+
+func (this *BaseRequest) NaturalConfig() value.Value {
+	return this.naturalConfig
+}
+
+// SetNaturalRequestTokens records this request's own LLM token usage (the
+// generation for a single request/turn, or a pause's summarization call).
+func (this *BaseRequest) SetNaturalRequestTokens(prompt, completion, total int) {
+	this.naturalTokens[0] = prompt
+	this.naturalTokens[1] = completion
+	this.naturalTokens[2] = total
+}
+
+// SetNaturalChatTokens records the running conversation total, surfaced only for
+// chat requests (conversational turns and lifecycle commands).
+func (this *BaseRequest) SetNaturalChatTokens(prompt, completion, total int) {
+	this.naturalChatTokens[0] = prompt
+	this.naturalChatTokens[1] = completion
+	this.naturalChatTokens[2] = total
+}
+
+// fmtTokenTriple renders a prompt/completion/total triple, or nil when all three
+// are zero, so an unused field is omitted from the response.
+func fmtTokenTriple(t [3]int) map[string]interface{} {
+	if t[0] == 0 && t[1] == 0 && t[2] == 0 {
+		return nil
+	}
+	return map[string]interface{}{
+		"promptTokens":     t[0],
+		"completionTokens": t[1],
+		"totalTokens":      t[2],
+	}
+}
+
+// FmtNaturalRequestTokens returns this request's own LLM token usage, or nil when
+// none was spent (e.g. a non-natural request, a Capella-path request, or a
+// lifecycle command that made no LLM call), so the field is omitted.
+func (this *BaseRequest) FmtNaturalRequestTokens() map[string]interface{} {
+	return fmtTokenTriple(this.naturalTokens)
+}
+
+// FmtNaturalChatTokens returns the running conversation total, or nil when there
+// is no chat total to report (a non-chat request, or a Capella-path chat that
+// never accumulates usage), so the field is omitted.
+func (this *BaseRequest) FmtNaturalChatTokens() map[string]interface{} {
+	return fmtTokenTriple(this.naturalChatTokens)
+}
+
 func (this *BaseRequest) SetNaturalHint(hint string) {
 	this.naturalHint = hint
 }
@@ -2150,53 +2210,39 @@ func decodeJSONOpts(s string) (map[string]interface{}, errors.Error) {
 	return opts, nil
 }
 
-func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
-
-	if m == nil || len(m) < 2 {
-		return nil
+// natural WITH-clause option sets: each natural language statement accepts only
+// the keys listed here. A key outside a statement's set is rejected by
+// applyNaturalWithOpts with E_NL_OPTION_NOT_ALLOWED. The provider/credential
+// keys appear only on the two statements that invoke an LLM: USING AI
+// (generation) and PAUSE CHAT (summarization).
+var (
+	usingAiWithOpts = map[string]bool{
+		"keyspaces": true, "creds": true, "orgId": true, "execute": true,
+		"output": true, "chatId": true, "hint": true, "vendor": true,
+		"model": true, "config": true,
 	}
-
-	if m[0] != 0 {
-
-		spref := s[:m[0]]
-		sp := prefixuai.FindString(spref)
-		if sp == "" {
-			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for USING AI: %s", truncateTo(spref, 20)))
-		}
-		if sp = strings.TrimSpace(strings.ToLower(sp)); sp == "advise" {
-			this.SetNaturalAdvise(true)
-		} else if sp == "explain" {
-			this.SetNaturalExplain(true)
-		}
+	beginChatWithOpts = map[string]bool{"keyspaces": true, "timeout": true}
+	pauseChatWithOpts = map[string]bool{
+		"chatId": true, "summarize": true, "vendor": true, "model": true,
+		"creds": true, "orgId": true, "config": true,
 	}
-	s = s[m[1]:]
+	endChatWithOpts    = map[string]bool{"chatId": true}
+	resumeChatWithOpts = map[string]bool{"chatId": true}
+	alterChatWithOpts  = map[string]bool{"chatId": true, "timeout": true}
+)
 
-	m = with.FindStringIndex(s)
-	if m == nil || len(m) < 2 {
-		if m = forfts.FindStringIndex(s); m != nil && len(m) == 2 {
-			this.SetNaturalOutput("ftssql")
-			s = s[m[1]-1:]
-		}
-		this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
-		return nil
-	}
-	if m[0] != 0 {
-		spref := s[:m[0]]
-		if !forfts.MatchString(spref) {
-			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for WITH: %s",
-				truncateTo(spref, 20)))
-		}
-		this.SetNaturalOutput("ftssql")
-	}
-	s = s[m[1]-1:]
-
-	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
-	if e := d.Decode(&opts); e != nil {
-		return errors.NewAdminEncodingError(e)
-	}
+// applyNaturalWithOpts applies each option in opts to the request. A key that is
+// not in allowed (the calling statement's permitted set) is rejected with
+// E_NL_OPTION_NOT_ALLOWED; stmt is the statement label used in that error.
+// Statement-specific post-validation (e.g. model-without-vendor, mandatory
+// timeout) remains with each caller.
+func (this *BaseRequest) applyNaturalWithOpts(opts map[string]interface{},
+	allowed map[string]bool, stmt string) errors.Error {
 
 	for k, v := range opts {
+		if !allowed[k] {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_OPTION_NOT_ALLOWED, k, stmt)
+		}
 		switch k {
 		case "keyspaces":
 			if a, ok := v.([]interface{}); ok {
@@ -2265,9 +2311,76 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
+		case "config":
+			if _, ok := v.(map[string]interface{}); !ok {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+			this.SetNaturalConfig(value.NewValue(v))
+		case "summarize":
+			if b, ok := v.(bool); ok {
+				this.SetNaturalSummarize(value.ToTristate(b))
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		case "timeout":
+			if d, err := natural.ParseChatTimeout(v); err == nil {
+				this.SetNaturalChatTimeout(d)
+			} else {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, err)
+			}
 		}
+	}
+	return nil
+}
+
+func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
+
+	if m == nil || len(m) < 2 {
+		return nil
+	}
+
+	if m[0] != 0 {
+
+		spref := s[:m[0]]
+		sp := prefixuai.FindString(spref)
+		if sp == "" {
+			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for USING AI: %s", truncateTo(spref, 20)))
+		}
+		if sp = strings.TrimSpace(strings.ToLower(sp)); sp == "advise" {
+			this.SetNaturalAdvise(true)
+		} else if sp == "explain" {
+			this.SetNaturalExplain(true)
+		}
+	}
+	s = s[m[1]:]
+
+	m = with.FindStringIndex(s)
+	if m == nil || len(m) < 2 {
+		if m = forfts.FindStringIndex(s); m != nil && len(m) == 2 {
+			this.SetNaturalOutput("ftssql")
+			s = s[m[1]-1:]
+		}
+		this.SetNatural(strings.TrimSpace(strings.TrimSuffix(s, ";")))
+		return nil
+	}
+	if m[0] != 0 {
+		spref := s[:m[0]]
+		if !forfts.MatchString(spref) {
+			return errors.NewParseInvalidInput(fmt.Sprintf("Invalid prefix for WITH: %s",
+				truncateTo(spref, 20)))
+		}
+		this.SetNaturalOutput("ftssql")
+	}
+	s = s[m[1]-1:]
+
+	d := sys_json.NewDecoder(strings.NewReader(s))
+	var opts map[string]interface{}
+	if e := d.Decode(&opts); e != nil {
+		return errors.NewAdminEncodingError(e)
+	}
+
+	if err := this.applyNaturalWithOpts(opts, usingAiWithOpts, "USING AI"); err != nil {
+		return err
 	}
 	if this.NaturalModel() != "" && this.NaturalVendor() == "" {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
@@ -2354,36 +2467,8 @@ func (this *BaseRequest) processNaturalBeginChat(s string) errors.Error {
 		return e
 	}
 
-	for k, v := range opts {
-		switch k {
-		case "keyspaces":
-			if a, ok := v.([]interface{}); ok {
-				sb := strings.Builder{}
-				for i := range a {
-					if s, ok := a[i].(string); ok {
-						if i > 0 {
-							sb.WriteRune(',')
-						}
-						sb.WriteString(s)
-					} else {
-						return errors.NewAdminSettingTypeError(k, v)
-					}
-				}
-				this.SetNaturalContext(sb.String())
-			} else if s, ok := v.(string); ok {
-				this.SetNaturalContext(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "timeout":
-			if d, err := natural.ParseChatTimeout(v); err == nil {
-				this.SetNaturalChatTimeout(d)
-			} else {
-				return errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, err)
-			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
-		}
+	if err := this.applyNaturalWithOpts(opts, beginChatWithOpts, "BEGIN CHAT"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -2399,17 +2484,8 @@ func (this *BaseRequest) processNaturalEndChat(s string) errors.Error {
 		return e
 	}
 
-	for k, v := range opts {
-		switch k {
-		case "chatId":
-			if s, ok := v.(string); ok {
-				this.SetNaturalChatId(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
-		}
+	if err := this.applyNaturalWithOpts(opts, endChatWithOpts, "END CHAT"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -2425,45 +2501,8 @@ func (this *BaseRequest) processNaturalPauseChat(s string) errors.Error {
 		return e
 	}
 
-	for k, v := range opts {
-		switch k {
-		case "chatId":
-			if s, ok := v.(string); ok {
-				this.SetNaturalChatId(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "summarize":
-			if s, ok := v.(bool); ok {
-				this.SetNaturalSummarize(value.ToTristate(s))
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "vendor":
-			if s, ok := v.(string); ok {
-				this.SetNaturalVendor(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "model":
-			if s, ok := v.(string); ok {
-				this.SetNaturalModel(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "creds":
-			if err := this.parseNaturalCredsOpt(k, v); err != nil {
-				return err
-			}
-		case "orgId":
-			if s, ok := v.(string); ok {
-				this.SetNaturalOrganizationId(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
-		}
+	if err := this.applyNaturalWithOpts(opts, pauseChatWithOpts, "PAUSE CHAT"); err != nil {
+		return err
 	}
 	if this.NaturalModel() != "" && this.NaturalVendor() == "" {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
@@ -2482,17 +2521,8 @@ func (this *BaseRequest) processNaturalResumeChat(s string) errors.Error {
 		return e
 	}
 
-	for k, v := range opts {
-		switch k {
-		case "chatId":
-			if s, ok := v.(string); ok {
-				this.SetNaturalChatId(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
-		}
+	if err := this.applyNaturalWithOpts(opts, resumeChatWithOpts, "RESUME CHAT"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -2511,23 +2541,8 @@ func (this *BaseRequest) processNaturalAlterChat(s string) errors.Error {
 		return e
 	}
 
-	for k, v := range opts {
-		switch k {
-		case "chatId":
-			if s, ok := v.(string); ok {
-				this.SetNaturalChatId(s)
-			} else {
-				return errors.NewAdminSettingTypeError(k, v)
-			}
-		case "timeout":
-			if d, err := natural.ParseChatTimeout(v); err == nil {
-				this.SetNaturalChatTimeout(d)
-			} else {
-				return errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, err)
-			}
-		default:
-			return errors.NewAdminUnknownSettingError(k)
-		}
+	if err := this.applyNaturalWithOpts(opts, alterChatWithOpts, "ALTER CHAT"); err != nil {
+		return err
 	}
 	if this.NaturalChatTimeout() == 0 {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "timeout")

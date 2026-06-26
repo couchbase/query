@@ -185,6 +185,8 @@ func (this *httpRequest) completedNaturalRequestXML(srvr *server.Server) {
 	this.writeStateXML(this.State(), prefix)
 	this.writeGeneratedStatementXML(prefix, indent)
 
+	this.writeNaturalTokensXML(prefix, indent)
+
 	this.writeNaturalChatIdXML(prefix, indent)
 
 	this.markTimeOfCompletion(time.Now())
@@ -208,6 +210,8 @@ func (this *httpRequest) completedNaturalRequestJSON(srvr *server.Server) {
 	this.writeState(this.State(), prefix)
 
 	this.writeGeneratedStatement(prefix, indent)
+
+	this.writeNaturalTokens(prefix, indent)
 
 	this.writeNaturalChatId(prefix, indent)
 
@@ -370,6 +374,7 @@ func (this *httpRequest) writePrefix(srvr *server.Server, signature value.Value,
 		this.writeClientContextID(prefix) &&
 		this.writePrepared(prefix, indent) &&
 		this.writeGeneratedStatement(prefix, indent) &&
+		this.writeNaturalTokens(prefix, indent) &&
 		this.writeSignature(srvr.Signature(), signature, prefix, indent) &&
 		this.writeString(",\n") &&
 		this.writeString(prefix) &&
@@ -382,6 +387,7 @@ func (this *httpRequest) writePrefixXML(srvr *server.Server, signature value.Val
 		this.writeClientContextIDXML(prefix) &&
 		this.writePreparedXML(prefix, indent) &&
 		this.writeGeneratedStatementXML(prefix, indent) &&
+		this.writeNaturalTokensXML(prefix, indent) &&
 		this.writeSignatureXML(srvr.Signature(), signature, prefix, indent) &&
 		this.writeString("\n") &&
 		this.writeString(prefix) &&
@@ -518,6 +524,48 @@ func (this *httpRequest) writeGeneratedStatementXML(prefix, indent string) bool 
 
 	return this.writeString("<generated_statement>") && this.writeString(html.EscapeString(this.Statement())) &&
 		this.writeString("</generated_statement>")
+}
+
+// writeNaturalTokens emits the "requestTokens" (this request's own LLM usage) and
+// "chatTokens" (running conversation total) fields. Each is written only when
+// non-nil, so an unused field is omitted; when both are nil nothing is written.
+func (this *httpRequest) writeNaturalTokens(prefix, indent string) bool {
+	return this.writeNaturalTokensField("requestTokens", this.FmtNaturalRequestTokens(), prefix) &&
+		this.writeNaturalTokensField("chatTokens", this.FmtNaturalChatTokens(), prefix)
+}
+
+func (this *httpRequest) writeNaturalTokensField(name string, tokens map[string]interface{}, prefix string) bool {
+	if tokens == nil {
+		return true
+	}
+	e, err := json.Marshal(tokens)
+	if err != nil || !(this.writeString(",\n") && this.writeString(prefix) &&
+		this.writeString("\""+name+"\": ") && this.writeString(string(e))) {
+		logging.Infof("Error writing %s: %v", name, err)
+		return false
+	}
+	return true
+}
+
+func (this *httpRequest) writeNaturalTokensXML(prefix, indent string) bool {
+	return this.writeNaturalTokensFieldXML("requestTokens", this.FmtNaturalRequestTokens(), prefix) &&
+		this.writeNaturalTokensFieldXML("chatTokens", this.FmtNaturalChatTokens(), prefix)
+}
+
+func (this *httpRequest) writeNaturalTokensFieldXML(name string, tokens map[string]interface{}, prefix string) bool {
+	if tokens == nil {
+		return true
+	}
+	if prefix != "" {
+		if !this.writeString("\n") || !this.writeString(prefix) {
+			return false
+		}
+	}
+	return this.writeString("<"+name+">") &&
+		this.writeString(fmt.Sprintf("<promptTokens>%v</promptTokens>"+
+			"<completionTokens>%v</completionTokens><totalTokens>%v</totalTokens>",
+			tokens["promptTokens"], tokens["completionTokens"], tokens["totalTokens"])) &&
+		this.writeString("</"+name+">")
 }
 
 func (this *httpRequest) writeNaturalChatId(prefix, indent string) bool {

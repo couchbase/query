@@ -685,6 +685,14 @@ const (
 	E_NL_CHAT_SUMMARIZE_FAILED                   ErrorCode = 19244
 	E_NL_UNEXPECTED_CHAT_DOC                     ErrorCode = 19245
 	E_NL_INVALID_CHAT_TIMEOUT                    ErrorCode = 19246
+	E_NL_INVALID_NATURAL_CONFIG                  ErrorCode = 19247
+	E_NL_CRED_RESOLUTION_FAILED                  ErrorCode = 19248
+	E_NL_MODERATION_FLAGGED                      ErrorCode = 19249
+	E_NL_URL_NOT_ALLOWED                         ErrorCode = 19250
+	E_NL_MODERATION_UNAVAILABLE                  ErrorCode = 19251
+	E_NL_DIRECT_CREATE_REQ                       ErrorCode = 19252
+	E_NL_DIRECT_SEND_REQ                         ErrorCode = 19253
+	E_NL_OPTION_NOT_ALLOWED                      ErrorCode = 19254
 	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
 	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
 	E_NO_ENCRYPTION_MANAGER                      ErrorCode = 19302

@@ -86,6 +86,19 @@ type RunResult struct {
 	Err                errors.Error
 	SortCount          int
 	GeneratedStatement bool
+	// ChatId is the natural-language conversation id associated with the
+	// request. For a BEGIN CHAT request it carries the server-minted id back to
+	// the caller; empty otherwise.
+	ChatId string
+	// RequestTokens is this request's own LLM token usage
+	// (promptTokens/completionTokens/totalTokens), mirroring the "requestTokens"
+	// response field. Nil when none was spent (non-natural request, Capella path,
+	// or a lifecycle command that made no LLM call), matching FmtNaturalRequestTokens.
+	RequestTokens map[string]interface{}
+	// ChatTokens is the running conversation total, mirroring the "chatTokens"
+	// response field. Nil for a non-chat request or a Capella-path chat, matching
+	// FmtNaturalChatTokens.
+	ChatTokens map[string]interface{}
 }
 
 type MockQuery struct {
@@ -360,7 +373,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if prepare {
 		prepared, err := PrepareStmt(mockServer, queryParams, namespace, q)
 		if err != nil {
-			return &RunResult{nil, nil, err, -1, false}
+			return &RunResult{nil, nil, err, -1, false, "", nil, nil}
 		}
 		query.SetPrepared(prepared)
 		query.SetType(prepared.Type())
@@ -448,9 +461,26 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 		}
 	}
 
+	// natural_chatid identifies an existing conversation. When set, a natural
+	// language request follows the conversational path instead of a one-shot
+	// generation, mirroring the REST "natural_chatid" request parameter.
+	if nlchat, ok := queryParams["natural_chatid"]; ok {
+		if nlchat, ok := nlchat.(string); ok {
+			query.SetNaturalChatId(nlchat)
+		}
+	}
+
+	// natural_config carries the LLM provider/model/credentials/endpoint for a
+	// natural language request. It is a JSON object, mirroring the REST
+	// "natural_config" request parameter, and is validated by the natural
+	// package once the request is processed.
+	if nlcfg, ok := queryParams["natural_config"]; ok && nlcfg != nil {
+		query.SetNaturalConfig(value.NewValue(nlcfg))
+	}
+
 	err := query.ProcessNatural()
 	if err != nil {
-		return &RunResult{nil, nil, err, -1, false}
+		return &RunResult{nil, nil, err, -1, false, "", nil, nil}
 	}
 
 	if userArgs == nil {
@@ -475,7 +505,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 
 	if !ret {
 		mockServer.saveTxId(gv, query.Type(), nil)
-		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1, false}
+		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1, false, "", nil, nil}
 	}
 
 	// wait till all the results are ready
@@ -489,7 +519,8 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 			mr.err = errs[0]
 		}
 	}
-	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount, mr.generatedStmt}
+	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount, mr.generatedStmt, query.NaturalChatId(),
+		query.FmtNaturalRequestTokens(), query.FmtNaturalChatTokens()}
 }
 
 /*
@@ -722,13 +753,19 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			}
 		}
 
-		if naturalCred := os.Getenv("natural_cred"); naturalCred != "" {
+		// natural_cred/natural_orgid select the legacy Capella (iQ) path
+		// (IsCapellaPath is true when either is set). Do NOT inject them into a
+		// case that carries its own natural_config: such a case is exercising the
+		// direct ai_gateway path and must keep using natural_config, not be forced
+		// onto the Capella path just because creds happen to be exported.
+		_, hasNaturalConfig := queryParams["natural_config"]
+		if naturalCred := os.Getenv("natural_cred"); naturalCred != "" && !hasNaturalConfig {
 			if queryParams == nil {
 				queryParams = map[string]interface{}{}
 			}
 			queryParams["natural_cred"] = naturalCred
 		}
-		if naturalOrgID := os.Getenv("natural_orgid"); naturalOrgID != "" {
+		if naturalOrgID := os.Getenv("natural_orgid"); naturalOrgID != "" && !hasNaturalConfig {
 			if queryParams == nil {
 				queryParams = map[string]interface{}{}
 			}

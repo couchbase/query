@@ -87,6 +87,60 @@ func HandleCred(urlObj *url.URL, credId string, context Context) (http.Client, h
 	return client, header, nil
 }
 
+// AWSCredential carries the static AWS key material resolved from the
+// credstore, for SDK-based consumers (e.g. Bedrock Converse) that take a
+// credentials provider directly rather than a SigV4-signing http.Client.
+type AWSCredential struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	SessionToken    string
+	Region          string
+	Endpoint        string
+}
+
+// ResolveAWSCredential fetches an "aws" credential from the credstore and
+// returns its static key material.  Unlike HandleCred (which builds a SigV4
+// http.Client for the CURL/HTTP path), this is for AWS SDK clients that accept
+// a credentials provider directly and perform their own request signing.
+//
+// Per-request URL guardrails are NOT evaluated here: SDK consumers derive their
+// own service endpoint, so there is no request URL to check at resolution time.
+// Callers remain responsible for enforcing the cluster allowlist on the
+// effective endpoint (see IsUrlAllowedInCluster).  The credential's own
+// Endpoint, when set, is validated against the restricted-URL list here,
+// mirroring applyAWSPayload.
+func ResolveAWSCredential(credId string, context Context) (*AWSCredential, error) {
+	cred, err := fetchCred(credId, context)
+	if err != nil {
+		return nil, err
+	}
+	if cred.AWS == nil {
+		return nil, fmt.Errorf("credential %q is not an AWS credential", credId)
+	}
+	p := cred.AWS
+	if p.AccessKeyID == "" || p.SecretAccessKey == "" {
+		return nil, fmt.Errorf(
+			"AWS credential %q: accessKeyId and secretAccessKey are required", credId)
+	}
+	if p.Endpoint != "" {
+		endpointURL, err := util.ParseAndValidateURL(p.Endpoint)
+		if err != nil {
+			return nil, fmt.Errorf("AWS credential %q: invalid endpoint %q: %v", credId, p.Endpoint, err)
+		}
+		if util.IsRestrictedURL(endpointURL) {
+			return nil, fmt.Errorf("AWS credential %q: service endpoint blocked - access restricted: %v",
+				credId, endpointURL.String())
+		}
+	}
+	return &AWSCredential{
+		AccessKeyID:     p.AccessKeyID,
+		SecretAccessKey: p.SecretAccessKey,
+		SessionToken:    strings.TrimSpace(p.SessionToken),
+		Region:          p.Region,
+		Endpoint:        p.Endpoint,
+	}, nil
+}
+
 // ─── Credential fetch & URL guardrail ────────────────────────────────────────
 
 // fetchCred retrieves any credential type from the credstore.

@@ -595,6 +595,49 @@ components:
 
           To use this parameter, you must also specify the `natural`, `natural_cred`, and `natural_context` parameters.
           If you don't specify all four parameters, the Query Service returns an error.
+      natural_config:
+        type: object
+        x-desc-name: natural_config
+        x-desc-status: Couchbase Server 8.1
+        description: |-
+          The configuration for a natural language request that talks directly to an LLM provider, instead of using the Couchbase Capella iQ service.
+          It selects the LLM provider that generates the SQL++ statement and supplies its credentials and options.
+
+          Supply either `cred_id` or `api_key`, unless the provider authenticates from the node's ambient environment (for example, Amazon Bedrock via the AWS default credential chain) or a custom `endpoint` is supplied.
+
+          This is an alternative to the Capella `natural_cred`/`natural_orgid` parameters. If either `natural_cred` or `natural_orgid` is present, the request is served by the Capella iQ path (and both parameters are then required); `natural_config` is used only when neither is present. To use this parameter, you must also specify the `natural` and `natural_context` parameters.
+        properties:
+          provider:
+            type: string
+            description: The LLM provider. Supported values are `openai`, `bedrock`, `gemini`, and `slm`. Defaults to `openai`. The `slm` provider is for a self-hosted model and always requires `endpoint`.
+          model:
+            type: string
+            description: The provider-specific model identifier. Defaults to the provider's default model.
+          cred_id:
+            type: string
+            description: A reference to a stored credential. Supply either `cred_id` or `api_key`.
+          api_key:
+            type: string
+            format: password
+            description: An API key for inline authentication. Supply either `api_key` or `cred_id`. Do not expose it in logs.
+          endpoint:
+            type: string
+            description: A custom endpoint URL for a self-hosted or proxied deployment. Must be permitted by the cluster's URL allow list.
+          region:
+            type: string
+            description: The provider region. For Amazon Bedrock, this is the AWS region.
+          output_token_limit:
+            type: integer
+            format: int32
+            description: Caps the number of tokens the provider may generate. If omitted, the provider's default applies.
+          moderation:
+            type: boolean
+            description: Whether to run content moderation on the request before generating the statement. Defaults to `true`. Set to `false` for OpenAI-compatible endpoints that do not implement a moderations API (for example, Amazon Bedrock's OpenAI-compatible surface).
+        x-has-example: true
+        example:
+          provider: openai
+          model: gpt-4o
+          cred_id: my-openai-cred
       natural_context:
         type: string
         x-desc-name: natural_context

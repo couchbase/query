@@ -8756,6 +8756,120 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_INVALID_NATURAL_CONFIG, // 19247
+		symbol:      "E_NL_INVALID_NATURAL_CONFIG",
+		Description: "Invalid \"natural_config\" configuration",
+		IsUser:      YES,
+		Reason: []string{
+			"The \"natural_config\" request parameter is not an object, or one of its fields is invalid for the selected provider.",
+		},
+		Action: []string{
+			"Correct the \"natural_config\" object per the error detail.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_CRED_RESOLUTION_FAILED, // 19248
+		symbol:      "E_NL_CRED_RESOLUTION_FAILED",
+		Description: "Failed to resolve LLM credential",
+		Reason: []string{
+			"The credential referenced by \"cred_id\" could not be resolved from the credential store, or is not of the expected type.",
+		},
+		Action: []string{
+			"Verify the \"cred_id\" refers to an existing credential of the correct type for the provider.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MODERATION_FLAGGED, // 19249
+		symbol:      "E_NL_MODERATION_FLAGGED",
+		Description: "Content was flagged by the moderation check",
+		IsUser:      YES,
+		Reason: []string{
+			"The provider's moderation endpoint flagged the request content.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_URL_NOT_ALLOWED, // 19250
+		symbol:      "E_NL_URL_NOT_ALLOWED",
+		Description: "LLM endpoint URL is not permitted",
+		IsUser:      YES,
+		Reason: []string{
+			"The effective LLM endpoint URL is not permitted by the cluster URL allowlist.",
+		},
+		Action: []string{
+			"Add the endpoint to the cluster URL allowlist, or use a permitted endpoint.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MODERATION_UNAVAILABLE, // 19251
+		symbol:      "E_NL_MODERATION_UNAVAILABLE",
+		Description: "Moderation could not be completed at the configured endpoint",
+		IsUser:      YES,
+		Reason: []string{
+			"The configured endpoint did not service the moderation request (for example an OpenAI-compatible endpoint that does not implement the /moderations API).",
+		},
+		Action: []string{
+			"Set \"moderation\":false in \"natural_config\" to skip moderation for endpoints that do not implement it.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_DIRECT_CREATE_REQ, // 19252
+		symbol:      "E_NL_DIRECT_CREATE_REQ",
+		Description: "Failed to create direct LLM request.",
+		Reason: []string{
+			"An HTTP request object could not be created for the configured LLM provider endpoint.",
+		},
+		Action: []string{
+			"Check that the configured \"endpoint\" in \"natural_config\" is a valid URL.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_DIRECT_SEND_REQ, // 19253
+		symbol:      "E_NL_DIRECT_SEND_REQ",
+		Description: "Failed to send direct LLM request.",
+		Reason: []string{
+			"The HTTP request to the configured LLM provider endpoint could not be sent.",
+		},
+		Action: []string{
+			"Check network connectivity to the configured LLM provider endpoint.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_OPTION_NOT_ALLOWED, // 19254
+		symbol:      "E_NL_OPTION_NOT_ALLOWED",
+		Description: "Unsupported option in natural language WITH clause",
+		IsUser:      YES,
+		Reason: []string{
+			"The WITH clause of the natural language statement contains an option that the statement does not support.",
+		},
+		Action: []string{
+			"Remove the unsupported option, or move it to a statement that accepts it.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCRYPTION_READER_CREATE, // 19300
 		symbol:      "E_ENCRYPTION_READER_CREATE",
 		Description: "Failed to create encryption reader",

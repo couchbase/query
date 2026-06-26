@@ -1,0 +1,26 @@
+[
+    {
+        "testcase": "unsupported provider specified in natural_config",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": {"provider": "not a real provider", "api_key": "k"}},
+        "errorCode": 19228
+    },
+    {
+        "testcase": "openai on its built-in host requires a credential: neither cred_id, api_key nor endpoint supplied",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": {"provider": "openai"}},
+        "errorCode": 19247
+    },
+    {
+        "testcase": "slm has no built-in host, so an endpoint is required even when a credential is supplied",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": {"provider": "slm", "api_key": "k"}},
+        "errorCode": 19247
+    },
+    {
+        "testcase": "natural_config must be an object",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": "not-an-object"},
+        "errorCode": 19247
+    }
+]

@@ -166,17 +166,31 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 			if rv.Natural() == "" {
 				err = errors.NewServiceErrorMissingValue("statement or prepared")
 			} else if rv.Natural() != "" {
+				// natural_context is always required. Beyond that the request
+				// picks a path by which credentials it carries: the Capella iQ
+				// path (natural_cred and natural_orgid, both required together)
+				// or the direct path (natural_config). If neither path's params
+				// are present, fail here.
 				missingForNatural := []string{}
 				if rv.NaturalContext() == "" {
 					missingForNatural = append(missingForNatural, "\"natural_context\"")
 				}
 
-				if rv.NaturalCred() == "" {
-					missingForNatural = append(missingForNatural, "\"natural_cred\"")
-				}
-
-				if rv.NaturalOrganizationId() == "" {
-					missingForNatural = append(missingForNatural, "\"natural_orgid\"")
+				hasCred := rv.NaturalCred() != ""
+				hasOrgId := rv.NaturalOrganizationId() != ""
+				if hasCred || hasOrgId {
+					// Capella iQ path intended. Both credentials are mandatory;
+					// name whichever is missing so the caller gets a clear error
+					// here rather than a confusing failure deep inside iQ.
+					if !hasCred {
+						missingForNatural = append(missingForNatural, "\"natural_cred\"")
+					}
+					if !hasOrgId {
+						missingForNatural = append(missingForNatural, "\"natural_orgid\"")
+					}
+				} else if rv.NaturalConfig() == nil {
+					missingForNatural = append(missingForNatural,
+						"\"natural_cred\" and \"natural_orgid\", or \"natural_config\"")
 				}
 				if len(missingForNatural) > 0 {
 					missingParams := strings.Join(missingForNatural, ",")
@@ -1038,6 +1052,7 @@ const ( // Request argument names
 	NATURAL_CHATID     = "natural_chatid"
 	NATURAL_VENDOR     = "natural_vendor"
 	NATURAL_MODEL      = "natural_model"
+	NATURAL_CONFIG     = "natural_config"
 )
 
 type argHandler struct {
@@ -1109,6 +1124,7 @@ var _PARAMETERS = map[string]*argHandler{
 	NATURAL_CHATID:  {handleNaturalChatId, false},
 	NATURAL_VENDOR:  {handleNaturalVendor, false},
 	NATURAL_MODEL:   {handleNaturalModel, false},
+	NATURAL_CONFIG:  {handleNaturalConfig, false},
 }
 
 // common storage for the httpArgs implementations
@@ -1378,6 +1394,7 @@ type httpRequestArgs interface {
 	getInt64Val(field string, v interface{}) (int64, errors.Error)
 	getUint64Val(field string, v interface{}) (uint64, errors.Error)
 	getStringVal(field string, v interface{}) (string, errors.Error)
+	getValue(parm string, val interface{}) (value.Value, errors.Error)
 	getTristateVal(field string, v interface{}) (value.Tristate, errors.Error)
 	getPreparedName(field string, v interface{}) (string, errors.Error)
 	getNamedArgs() map[string]value.Value
@@ -1703,6 +1720,19 @@ func (this *urlArgs) getStringVal(field string, v interface{}) (string, errors.E
 	default:
 		return "", errors.NewServiceErrorMultipleValues(field)
 	}
+}
+
+// getValue returns a JSON-object request parameter as a value.Value. The form
+// value is a JSON text which is parsed; an empty value yields (nil, nil).
+func (this *urlArgs) getValue(parm string, val interface{}) (value.Value, errors.Error) {
+	s, err := this.getStringVal(parm, val)
+	if err != nil {
+		return nil, err
+	}
+	if s == "" {
+		return nil, nil
+	}
+	return value.NewValue([]byte(s)), nil
 }
 
 func (this *urlArgs) getString(f int, dflt string) (string, errors.Error) {
@@ -2108,6 +2138,15 @@ func (this *jsonArgs) getStringVal(field string, v interface{}) (string, errors.
 		return value, errors.NewServiceErrorTypeMismatch(field, "string")
 	}
 	return value, nil
+}
+
+// getValue returns a JSON-object request parameter as a value.Value. The body
+// value is already decoded, so it is wrapped directly; nil yields (nil, nil).
+func (this *jsonArgs) getValue(parm string, val interface{}) (value.Value, errors.Error) {
+	if val == nil {
+		return nil, nil
+	}
+	return value.NewValue(val), nil
 }
 
 // helper function to get a string type argument
@@ -2582,6 +2621,14 @@ func handleNaturalChatId(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	naturalChatId, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalChatId(naturalChatId)
+	}
+	return err
+}
+
+func handleNaturalConfig(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+	naturalConfig, err := httpArgs.getValue(parm, val)
+	if err == nil {
+		rv.SetNaturalConfig(naturalConfig)
 	}
 	return err
 }

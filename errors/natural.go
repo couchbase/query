@@ -73,6 +73,14 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_CHAT_SUMMARIZE_FAILED:          {SERVE_NATURAL_CHAT, "Summarize failed: %s"},
 	E_NL_UNEXPECTED_CHAT_DOC:            {SERVE_NATURAL_CHAT, "unexpected chat document received: %s"},
 	E_NL_INVALID_CHAT_TIMEOUT:           {SERVE_NATURAL_CHAT, "invalid chat timeout value"},
+	E_NL_INVALID_NATURAL_CONFIG:         {CHATCOMPLTIONS_IKEY, "Invalid \"natural_config\" configuration: %v"},
+	E_NL_CRED_RESOLUTION_FAILED:         {CHATCOMPLTIONS_IKEY, "Failed to resolve LLM credential"},
+	E_NL_MODERATION_FLAGGED:             {CHATCOMPLTIONS_IKEY, "Content was flagged by the moderation check"},
+	E_NL_URL_NOT_ALLOWED:                {CHATCOMPLTIONS_IKEY, "LLM endpoint URL is not permitted: %v"},
+	E_NL_MODERATION_UNAVAILABLE:         {CHATCOMPLTIONS_IKEY, "Moderation could not be completed at the configured endpoint (%v); if this endpoint does not implement content moderation, set \"moderation\":false in \"natural_config\" to skip it"},
+	E_NL_DIRECT_CREATE_REQ:              {CHATCOMPLTIONS_IKEY, "Failed to create direct LLM request to %v"},
+	E_NL_DIRECT_SEND_REQ:                {CHATCOMPLTIONS_IKEY, "Failed to send direct LLM request to %v"},
+	E_NL_OPTION_NOT_ALLOWED:             {SERVE_NATURAL, "Option \"%s\" is not supported for %s"},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {

@@ -812,12 +812,14 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			return true, false
 		}
 
-		err := natural.ProcessEndChat(chatId, datastore.NonAdminUsers(request.Credentials()))
+		var nlChatTokens natural.LLMTokenUsage
+		err := natural.ProcessEndChat(chatId, datastore.NonAdminUsers(request.Credentials()), &nlChatTokens)
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
 			return true, false
 		}
+		request.SetNaturalChatTokens(nlChatTokens.Prompt, nlChatTokens.Completion, nlChatTokens.Total)
 		request.SetNaturalChatId(chatId)
 		request.CompletedNaturalRequest(this)
 		return true, false
@@ -854,27 +856,65 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	if request.NaturalPauseChat() {
-		err := natural.ProcessPauseChat(chatId, request.Id().String(), datastore.NonAdminUsers(request.Credentials()),
-			request.NaturalOrganizationId(), request.NaturalCred(),
-			request.NaturalSummarize(), request.NaturalVendor(), request.NaturalModel(),
-			request.Output().AddPhaseTime)
+		if natural.IsCapellaPath(request.NaturalCred(), request.NaturalOrganizationId()) {
+			// Capella (iQ) path: credentials/vendor/model are validated
+			// inside the natural package.
+			err := natural.ProcessCapellaPauseChat(chatId, request.Id().String(),
+				datastore.NonAdminUsers(request.Credentials()),
+				request.NaturalOrganizationId(), request.NaturalCred(),
+				request.NaturalSummarize(), request.NaturalVendor(), request.NaturalModel(),
+				request.Output().AddPhaseTime)
+			if err != nil {
+				request.Fail(err)
+				request.Failed(this)
+				return true, false
+			}
+			request.SetNaturalChatId(chatId)
+			request.CompletedNaturalRequest(this)
+			return true, false
+		}
+		// Direct ai_gateway path. natural_config is only required if the
+		// conversation actually needs summarizing. If it is provided but
+		// malformed, fail early with the real parse error rather than a
+		// misleading "missing parameter" later.
+		var cfg *natural.NaturalConfig
+		if nc := request.NaturalConfig(); nc != nil {
+			var cfgErr errors.Error
+			cfg, cfgErr = natural.ParseNaturalConfig(nc)
+			if cfgErr != nil {
+				request.Fail(cfgErr)
+				request.Failed(this)
+				return true, false
+			}
+		}
+		if !this.setupRequestContext(request) {
+			request.Failed(this)
+			return true, false
+		}
+		var nlReqTokens, nlChatTokens natural.LLMTokenUsage
+		err := natural.ProcessDirectPauseChat(chatId, request.Id().String(), datastore.NonAdminUsers(request.Credentials()),
+			request.NaturalSummarize(), cfg, request.ExecutionContext(), request.Output().AddPhaseTime, &nlReqTokens, &nlChatTokens)
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
 			return true, false
 		}
+		request.SetNaturalRequestTokens(nlReqTokens.Prompt, nlReqTokens.Completion, nlReqTokens.Total)
+		request.SetNaturalChatTokens(nlChatTokens.Prompt, nlChatTokens.Completion, nlChatTokens.Total)
 		request.SetNaturalChatId(chatId)
 		request.CompletedNaturalRequest(this)
 		return true, false
 	}
 
 	if request.NaturalResumeChat() {
-		err := natural.ProcessResumeChat(chatId, request.Id().String(), datastore.NonAdminUsers(request.Credentials()))
+		var nlChatTokens natural.LLMTokenUsage
+		err := natural.ProcessResumeChat(chatId, request.Id().String(), datastore.NonAdminUsers(request.Credentials()), &nlChatTokens)
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
 			return true, false
 		}
+		request.SetNaturalChatTokens(nlChatTokens.Prompt, nlChatTokens.Completion, nlChatTokens.Total)
 		request.SetNaturalChatId(chatId)
 		request.CompletedNaturalRequest(this)
 		return true, false
@@ -934,23 +974,54 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 
 	var nlAlgebraStmt algebra.Statement
 	var stmt string
-	if request.NaturalModel() != "" && request.NaturalVendor() == "" {
-		request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR))
-		request.Failed(this)
-		return true, false
-	}
 
-	if chatId != "" {
-		stmt, nlAlgebraStmt, err = natural.ProcessConversationalRequest(request.NaturalCred(), request.NaturalOrganizationId(),
-			request.NaturalVendor(), request.NaturalModel(),
-			nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
-			datastore.NonAdminUsers(request.Credentials()),
-			request.ExecutionContext(), request.Output().AddPhaseTime)
+	if natural.IsCapellaPath(request.NaturalCred(), request.NaturalOrganizationId()) {
+		// Capella (iQ) path. Vendor/model validation and provider
+		// resolution happen inside the natural package.
+		if request.NaturalModel() != "" && request.NaturalVendor() == "" {
+			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR))
+			request.Failed(this)
+			return true, false
+		}
+		if chatId != "" {
+			users := datastore.NonAdminUsers(request.Credentials())
+			stmt, nlAlgebraStmt, err = natural.ProcessCapellaConversationalRequest(request.NaturalCred(),
+				request.NaturalOrganizationId(), request.NaturalVendor(), request.NaturalModel(),
+				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), users,
+				request.ExecutionContext(), request.Output().AddPhaseTime)
+		} else {
+			stmt, nlAlgebraStmt, err = natural.ProcessCapellaRequest(request.NaturalCred(),
+				request.NaturalOrganizationId(), request.NaturalVendor(), request.NaturalModel(),
+				nlquery, request.NaturalHint(), elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+				request.ExecutionContext(), request.Output().AddPhaseTime)
+		}
 	} else {
-		stmt, nlAlgebraStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),
-			request.NaturalVendor(), request.NaturalModel(),
-			nlquery, request.NaturalHint(), elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
-			request.ExecutionContext(), request.Output().AddPhaseTime)
+		// Direct ai_gateway path keyed on natural_config.
+		cfg, cfgErr := natural.ParseNaturalConfig(request.NaturalConfig())
+		if cfgErr != nil {
+			request.Fail(cfgErr)
+			request.Failed(this)
+			return true, false
+		}
+
+		// nlReqTokens accumulates this request's own token usage from the gateway's
+		// common response across all completions it makes (initial + any correction
+		// retries). On a conversational turn nlChatTokens additionally receives the
+		// running conversation total; on an independent request there is no chat, so
+		// it stays zero and is suppressed.
+		var nlReqTokens, nlChatTokens natural.LLMTokenUsage
+		if chatId != "" {
+			users := datastore.NonAdminUsers(request.Credentials())
+			stmt, nlAlgebraStmt, err = natural.ProcessDirectConversationalRequest(cfg,
+				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), users,
+				request.ExecutionContext(), request.Output().AddPhaseTime, &nlReqTokens, &nlChatTokens)
+			request.SetNaturalChatTokens(nlChatTokens.Prompt, nlChatTokens.Completion, nlChatTokens.Total)
+		} else {
+			stmt, nlAlgebraStmt, err = natural.ProcessDirectRequest(cfg,
+				nlquery, request.NaturalHint(), elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+				request.ExecutionContext(), request.Output().AddPhaseTime, &nlReqTokens)
+		}
+		request.SetNaturalRequestTokens(nlReqTokens.Prompt, nlReqTokens.Completion, nlReqTokens.Total)
 	}
 
 	if err != nil {
