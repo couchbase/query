@@ -518,7 +518,10 @@ func (b *keyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 }
 
 func (b *keyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
-	path := filepath.Join(b.path(), key+".json")
+	path, e := b.keyPath(key)
+	if e != nil {
+		return nil, e
+	}
 	item, e := fetch(path)
 	if e != nil {
 		item = nil
@@ -567,7 +570,11 @@ func (b *keyspace) performOp(op int, kvPairs value.Pairs, preserveMutations bool
 
 		key := kv.Name
 		value, _ := json.Marshal(kv.Value.Actual())
-		filename := filepath.Join(b.path(), key+".json")
+		filename, kerr := b.keyPath(key)
+		if kerr != nil {
+			errs = append(errs, kerr)
+			continue
+		}
 
 		switch op {
 
@@ -642,7 +649,11 @@ func (b *keyspace) Delete(deletes value.Pairs, context datastore.QueryContext, p
 
 	for _, pair := range deletes {
 		key := pair.Name
-		filename := filepath.Join(b.path(), key+".json")
+		filename, kerr := b.keyPath(key)
+		if kerr != nil {
+			fileError = append(fileError, kerr.Error())
+			continue
+		}
 		if err := os.Remove(filename); err != nil {
 			if !os.IsNotExist(err) {
 				fileError = append(fileError, err.Error())
@@ -702,6 +713,21 @@ func (b *keyspace) ExternalScan(params *datastore.ExternalScanParams, context da
 
 func (b *keyspace) path() string {
 	return filepath.Join(b.namespace.path(), b.name)
+}
+
+// keyPath maps a document key to its backing file path, rejecting keys that
+// would escape the keyspace directory. Each key becomes "<key>.json" under the
+// keyspace path; without this guard a crafted key (e.g. "../../etc/passwd")
+// would let filepath.Join resolve outside the keyspace and read/write/delete
+// arbitrary *.json files (path-traversal / file-inclusion).
+func (b *keyspace) keyPath(key string) (string, errors.Error) {
+	base := b.path()
+	path := filepath.Join(base, key+".json")
+	rel, err := filepath.Rel(base, path)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", errors.NewFileDatastoreError(nil, "Invalid key "+key)
+	}
+	return path, nil
 }
 
 // newKeyspace creates a new keyspace.
