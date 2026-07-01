@@ -93,7 +93,7 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 	}
 	var oldMode PlanStabilityMode
 	if oldModeVal, ok := planStability["mode"]; ok {
-		oldMode = oldModeVal.(PlanStabilityMode)
+		oldMode = getPlanStabilityModeValue(oldModeVal)
 	}
 
 	for kk, vv := range psMap {

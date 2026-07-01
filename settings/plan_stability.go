@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/value"
 )
 
 /*
@@ -150,10 +151,25 @@ func GetPlanStabilityMode() PlanStabilityMode {
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
 		if ps_mode_val, ok := ps_setting["mode"]; ok {
-			mode = ps_mode_val.(PlanStabilityMode)
+			mode = getPlanStabilityModeValue(ps_mode_val)
 		}
 	}
 	globalSettings.RUnlock()
+	return mode
+}
+
+func getPlanStabilityModeValue(val interface{}) PlanStabilityMode {
+	mode := PS_MODE_DEFAULT
+	switch val := val.(type) {
+	case float64:
+		if value.IsInt(val) {
+			mode = PlanStabilityMode(int64(val))
+		}
+	case int64:
+		mode = PlanStabilityMode(val)
+	case PlanStabilityMode:
+		mode = val
+	}
 	return mode
 }
 
@@ -188,10 +204,25 @@ func GetPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
 		if ps_error_policy_val, ok := ps_setting["error_policy"]; ok {
-			error_policy = ps_error_policy_val.(PlanStabilityErrorPolicy)
+			error_policy = getPlanStabilityErrorPolicyValue(ps_error_policy_val)
 		}
 	}
 	globalSettings.RUnlock()
+	return error_policy
+}
+
+func getPlanStabilityErrorPolicyValue(val interface{}) PlanStabilityErrorPolicy {
+	error_policy := PS_ERROR_DEFAULT
+	switch val := val.(type) {
+	case float64:
+		if value.IsInt(val) {
+			error_policy = PlanStabilityErrorPolicy(int64(val))
+		}
+	case int64:
+		error_policy = PlanStabilityErrorPolicy(val)
+	case PlanStabilityErrorPolicy:
+		error_policy = val
+	}
 	return error_policy
 }
 
