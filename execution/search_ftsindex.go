@@ -181,9 +181,6 @@ func (this *IndexFtsSearch) search(context *Context, conn *datastore.IndexConnec
 	}
 
 	consistency := context.ScanConsistency()
-	if consistency == datastore.SCAN_PLUS && context.txContext != nil {
-		consistency = datastore.UNBOUNDED
-	}
 
 	index.Search(context.RequestId(), indexSearchInfo, consistency, scanVector, conn)
 }
