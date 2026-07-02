@@ -253,6 +253,11 @@ func (this *HttpEndpoint) ListenTLS() error {
 		MinVersion:               cbauthTLSsettings.MinVersion,
 		CipherSuites:             cbauthTLSsettings.CipherSuites,
 		PreferServerCipherSuites: cbauthTLSsettings.PreferServerCipherSuites,
+		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+			// Verify the client certificate against the client auth CRL policy
+			// Use the client auth CRL policy as Query has received an inbound connection from a client
+			return cbauth.CRLsValidate(rawCerts, verifiedChains, cbauth.CRLScopeClientAuth)
+		},
 	}
 
 	if cbauthTLSsettings.ClientAuthType != tls.NoClientCert {

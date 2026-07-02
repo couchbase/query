@@ -88,7 +88,14 @@ func (this *systemRemoteHttp) SetConnectionSecurityConfig(caFile string, certFil
 		}
 		caPool := x509.NewCertPool()
 		caPool.AppendCertsFromPEM(serverCert)
-		tlsConfig := &tls.Config{RootCAs: caPool}
+		tlsConfig := &tls.Config{
+			RootCAs: caPool,
+			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				// Verify the server certificate against the node-to-node CRL policy
+				// Use the node-to-node CRL policy as Query is making an outbound connection to another node in the cluster
+				return cbauth.CRLsValidate(rawCerts, verifiedChains, cbauth.CRLScopeNodeToNode)
+			},
+		}
 
 		// Include the internal client cert if n2n encryption is enabled
 		// and client certificate authentication is set to Mandatory or Hybrid
