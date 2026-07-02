@@ -88,13 +88,24 @@ func (s *store) StartTransaction(stmtAtomicity bool, context datastore.QueryCont
 			return CollectionAgentProvider(bucketName, "_default", "_default", oboUser)
 		}
 
+		/*
+			MB-72654: This closure is assigned to gocbcore's ResourceUnitCallback on gocbcore's Transaction structure.
+			and then propagated to gocbcore's TransactionAttempt structure as its RecordResourceUnit callback.
+			gocbcore cleanup may retain TransactionAttempt, and therefore this closure, well after
+			commit or rollback completes. If the closure captures the execution context, that context
+			will also be retained in memory. Because the execution context can be quite large, this can create high memory usage.
+			Note for future implemenations: Keep this closure free of execution-context references.
+		*/
 		txUnitHandler := func(result *gocbcore.ResourceUnitResult) {
-			if result.ReadUnits > 0 {
-				context.RecordKvRU(tenant.Unit(result.ReadUnits))
-			}
-			if result.WriteUnits > 0 {
-				context.RecordKvWU(tenant.Unit(result.WriteUnits))
-			}
+			// MB-72654: Commenting this out. This code is not needed anymore as it is related to serverless
+			/*
+				if result.ReadUnits > 0 {
+					context.RecordKvRU(tenant.Unit(result.ReadUnits))
+				}
+				if result.WriteUnits > 0 {
+					context.RecordKvWU(tenant.Unit(result.WriteUnits))
+				}
+			*/
 		}
 		if resume {
 			atrCollectionName := txContext.AtrCollection()
