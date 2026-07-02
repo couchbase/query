@@ -461,8 +461,13 @@ func cbPreAuthorize(privileges *auth.Privileges) {
 // Generates a generic Authorization failure error with code E_ACCESS_DENIED in serverless environments for non-admin users
 func maskAuthError(target string, priv auth.Privilege, creds *auth.Credentials) errors.Error {
 
-	// Do not return generic error since the target will be the full path of the function and not a keyspace name
-	if priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS || priv == auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL {
+	// Do not return generic error since the target is not a keyspace name for these privileges:
+	// PRIV_QUERY_MANAGE_FUNCTIONS(_EXTERNAL) targets are the full path of the function; the
+	// credential store and catalog privileges target a credential/catalog id, not a bucket path.
+	switch priv {
+	case auth.PRIV_QUERY_MANAGE_FUNCTIONS, auth.PRIV_QUERY_MANAGE_FUNCTIONS_EXTERNAL,
+		auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME,
+		auth.PRIV_CATALOG_SELECT, auth.PRIV_CATALOG_UPDATE, auth.PRIV_CATALOG_INSERT, auth.PRIV_CATALOG_DELETE:
 		return nil
 	}
 
