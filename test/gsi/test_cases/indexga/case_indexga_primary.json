@@ -9,8 +9,9 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'CountScan%' END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'CountScan' END"
         },
+        "queryParams": {"scan_consistency": "unbounded"},
         "statements": "SELECT COUNT(1) AS cnt FROM orders",
         "results": [
             {
@@ -28,8 +29,9 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'CountScan%' END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'CountScan' END"
         },
+        "queryParams": {"scan_consistency": "unbounded"},
         "statements": "SELECT COUNT(*) AS cnt FROM orders",
         "results": [
             {
@@ -113,7 +115,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_order IS MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' AND v.index_order IS MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
         },
         "ordered": false,
         "statements": "SELECT META().id,x1 FROM orders LIMIT 10 OFFSET 20",
@@ -160,7 +162,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
         },
         "ordered": true,
         "statements": "SELECT META().id,x1 FROM orders ORDER BY META().id LIMIT 10 OFFSET 20",
@@ -207,7 +209,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.index_order IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`offset` IS NOT MISSING END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'PrimaryScan%' AND v.index_order IS NOT MISSING AND v.`limit` IS MISSING AND v.`offset` IS MISSING END"
         },
         "ordered": true,
         "statements": "SELECT META().id,x1 FROM orders WHERE xx IS MISSING ORDER BY META().id LIMIT 10 OFFSET 20",

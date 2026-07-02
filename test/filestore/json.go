@@ -45,6 +45,7 @@ import (
 )
 
 var Namespace_FS = "dimestore"
+var Consistency_parameter = datastore.SCAN_PLUS
 
 func init() {
 	logger, _ := log_resolver.NewLogger("golog")
@@ -174,10 +175,11 @@ func (this *MockResponse) NoMoreResults() {
 }
 
 type scanConfigImpl struct {
+	scan_level datastore.ScanConsistency
 }
 
 func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
-	return datastore.SCAN_PLUS
+	return this.scan_level
 }
 
 func (this *scanConfigImpl) ScanWait() time.Duration {
@@ -200,9 +202,19 @@ var _ALL_USERS = auth.NewCredentials("dummy", "dummy")
 
 func Run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value,
 	namespace string) *RunResult {
+	return run(mockServer, p, q, namedArgs, positionalArgs, namespace, Consistency_parameter)
+}
+
+func RunUnbounded(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value,
+	namespace string) *RunResult {
+	return run(mockServer, p, q, namedArgs, positionalArgs, namespace, datastore.UNBOUNDED)
+}
+
+func run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Value, positionalArgs []value.Value,
+	namespace string, scan_level datastore.ScanConsistency) *RunResult {
 
 	var metrics value.Tristate
-	scanConfiguration := &scanConfigImpl{}
+	scanConfiguration := &scanConfigImpl{scan_level: scan_level}
 
 	pretty := value.TRUE
 	if !p {
@@ -398,6 +410,12 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 			}
 		}
 
+		unbounded := false
+		if ub, ok3 := c["unbounded"]; ok3 {
+			if ubv, ok4 := ub.(bool); ok4 {
+				unbounded = ubv
+			}
+		}
 		/* Handles all queries to be run against CBServer and Datastore */
 		v, ok = c["statements"]
 		if !ok || v == nil {
@@ -407,7 +425,12 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		statements := v.(string)
 		//t.Logf("  %d: %v\n", i, statements)
 		fin_stmt = strconv.Itoa(i) + ": " + statements
-		rr := Run(qc, true, statements, namedArgs, positionalArgs, namespace)
+		var rr *RunResult
+		if unbounded {
+			rr = RunUnbounded(qc, true, statements, namedArgs, positionalArgs, namespace)
+		} else {
+			rr = Run(qc, true, statements, namedArgs, positionalArgs, namespace)
+		}
 
 		errCodeExpected := int(0)
 		errExpected := ""

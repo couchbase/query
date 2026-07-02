@@ -97,8 +97,9 @@ func run_test(qc *gsi.MockServer, t *testing.T, prepare bool) {
 	run_testcase(primary, prepare, qc, t, testcases)
 
 	// Run positive pushdowns on primary index
-	primary, testcases = buildtestcase(cases, indexes, 3, 0, 1)
-	run_testcase(primary, prepare, qc, t, testcases)
+	// for this test only (since it only uses primary index), allow explain on primary index
+	_, testcases = buildtestcase(cases, indexes, 3, 0, 1)
+	run_testcase(0, prepare, qc, t, testcases)
 
 	// Run negative pushdowns on Union Scan
 	runStmt(qc, indexes[8])

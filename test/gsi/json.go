@@ -331,7 +331,22 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	positionalArgs value.Values, userArgs map[string]string, prepare bool) *RunResult {
 
 	var metrics value.Tristate
-	consistency := &scanConfigImpl{scan_level: Consistency_parameter}
+	scan_consistency := Consistency_parameter
+
+	if sc, ok := queryParams["scan_consistency"]; ok {
+		if scv, ok := sc.(string); ok {
+			switch scv {
+			case "unbounded":
+				scan_consistency = datastore.UNBOUNDED
+			case "scan_plus":
+				scan_consistency = datastore.SCAN_PLUS
+			case "at_plus":
+				scan_consistency = datastore.AT_PLUS
+			}
+		}
+	}
+
+	consistency := &scanConfigImpl{scan_level: scan_consistency}
 
 	mr := &MockResponse{
 		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),

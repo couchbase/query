@@ -296,6 +296,7 @@
    {
         "description": "query with only COUNT(*) should perform fast count",
         "statements": "EXPLAIN SELECT COUNT(*) as c FROM default:game",
+        "unbounded": true,
         "results": [
         {
         "plan": {
