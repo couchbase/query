@@ -513,7 +513,10 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 			switch dnfExpr.(type) {
 			case *expression.ApproxVectorDistance:
 				filter.SetVectorFunc()
-				baseKspace.AddVectorFilter(filter)
+				added := baseKspace.AddVectorFilter(filter)
+				if !added {
+					dnfExpr.SetExprFlag(expression.EXPR_VECTOR_REDUNDANT)
+				}
 			default:
 				baseKspace.AddFilter(filter)
 			}
