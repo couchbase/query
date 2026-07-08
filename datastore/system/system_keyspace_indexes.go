@@ -224,11 +224,17 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 
 	namespace, err := b.store.NamespaceById(namespaceId)
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		return err
 	}
 
 	keyspace, err := namespace.KeyspaceById(keyspaceId)
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		return err
 	}
 
@@ -238,6 +244,9 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 
 	indexers, err := keyspace.Indexers()
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		logging.Infof("Indexer returned error %v", err)
 		return err
 	}
@@ -250,6 +259,9 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 
 		state, msg, err := index.State()
 		if err != nil {
+			if errors.IsNotFoundError("", err) {
+				continue
+			}
 			return err
 		}
 		doc := value.NewAnnotatedValue(map[string]interface{}{
@@ -310,18 +322,30 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 
 	namespace, err := b.store.NamespaceById(namespaceId)
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		return err
 	}
 	bucket, err := namespace.BucketById(bucketId)
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		return err
 	}
 	scope, err := bucket.ScopeById(scopeId)
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		return err
 	}
 	keyspace, err := scope.KeyspaceById(keyspaceId)
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		return err
 	}
 	if keyspace.IsExternalCollection() {
@@ -330,6 +354,9 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 
 	indexers, err := keyspace.Indexers()
 	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil
+		}
 		logging.Infof("Indexer returned error %v", err)
 		return err
 	}
@@ -342,6 +369,9 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 
 		state, msg, err := index.State()
 		if err != nil {
+			if errors.IsNotFoundError("", err) {
+				continue
+			}
 			return err
 		}
 		doc := value.NewAnnotatedValue(map[string]interface{}{

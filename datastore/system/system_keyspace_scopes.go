@@ -174,8 +174,14 @@ func (b *scopeKeyspace) fetchOne(ns, bn, sn string) (value.AnnotatedValue, error
 			}
 		}
 		if err != nil {
+			if errors.IsNotFoundError("", err) {
+				return nil, nil
+			}
 			return nil, err
 		}
+	}
+	if err != nil && errors.IsNotFoundError("", err) {
+		return nil, nil
 	}
 	return nil, err
 }

@@ -239,8 +239,14 @@ func (b *keyspaceKeyspace) fetchOne(ns string, ks string, context datastore.Quer
 			return doc, nil
 		}
 		if err != nil {
+			if errors.IsNotFoundError("", err) {
+				return nil, nil
+			}
 			return nil, err
 		}
+	}
+	if err != nil && errors.IsNotFoundError("", err) {
+		return nil, nil
 	}
 	return nil, err
 }
@@ -318,8 +324,14 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context dat
 			}
 		}
 		if err != nil {
+			if errors.IsNotFoundError("", err) {
+				return nil, nil
+			}
 			return nil, err
 		}
+	}
+	if err != nil && errors.IsNotFoundError("", err) {
+		return nil, nil
 	}
 	return nil, err
 }

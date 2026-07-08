@@ -159,8 +159,14 @@ func (b *bucketKeyspace) fetchOne(ns string, bn string) (value.AnnotatedValue, e
 			return doc, nil
 		}
 		if err != nil {
+			if errors.IsNotFoundError("", err) {
+				return nil, nil
+			}
 			return nil, err
 		}
+	}
+	if err != nil && errors.IsNotFoundError("", err) {
+		return nil, nil
 	}
 	return nil, err
 }
