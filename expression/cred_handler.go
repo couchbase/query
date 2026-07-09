@@ -319,10 +319,7 @@ func applyHTTPPayload(cred *cbauth.Credential, context Context) (http.Client, ht
 		if p.Token == "" {
 			return http.Client{}, http.Header{}, fmt.Errorf("HTTP credential: token required for bearer authScheme")
 		}
-		if p.HeaderName == "" {
-			return http.Client{}, http.Header{}, fmt.Errorf("HTTP credential: headerName required for bearer authScheme")
-		}
-		if p.HeaderName == "Authorization" {
+		if p.HeaderName == "" || strings.ToLower(p.HeaderName) == "authorization" {
 			header.Set("Authorization", "Bearer "+p.Token)
 		} else {
 			header.Set(p.HeaderName, p.Token)

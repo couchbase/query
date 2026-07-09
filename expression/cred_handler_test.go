@@ -1300,6 +1300,25 @@ func TestHandleCred_HTTP_Bearer_CustomHeader_HappyPath(t *testing.T) {
 	}
 }
 
+func TestHandleCred_HTTP_Bearer_AuthorizationCaseInsensitive(t *testing.T) {
+	cred := allAccessCred("http-bearer")
+	cred.HTTP = &cbauthimpl.HTTPPayload{
+		AuthScheme: "bearer",
+		Token:      "my-jwt-token",
+		HeaderName: "authorization", // lowercase must still get the Bearer scheme
+	}
+	ctx := &mockCurlContext{mockCredContext: mockCredContext{cred: cred}}
+	u := mustParseURL(t, "http://example.com/api")
+
+	_, header, err := HandleCred(u, "http-bearer", ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := header.Get("Authorization"); got != "Bearer my-jwt-token" {
+		t.Errorf("Authorization = %q, want %q", got, "Bearer my-jwt-token")
+	}
+}
+
 func TestHandleCred_HTTP_Bearer_MissingToken(t *testing.T) {
 	cred := allAccessCred("http-bearer")
 	cred.HTTP = &cbauthimpl.HTTPPayload{
@@ -1319,22 +1338,22 @@ func TestHandleCred_HTTP_Bearer_MissingToken(t *testing.T) {
 	}
 }
 
-func TestHandleCred_HTTP_Bearer_MissingHeaderName(t *testing.T) {
+func TestHandleCred_HTTP_Bearer_MissingHeaderName_DefaultsToAuthorization(t *testing.T) {
 	cred := allAccessCred("http-bearer")
 	cred.HTTP = &cbauthimpl.HTTPPayload{
 		AuthScheme: "bearer",
 		Token:      "my-token",
-		// HeaderName absent
+		// HeaderName absent — defaults to the Authorization header (RFC 6750).
 	}
 	ctx := &mockCurlContext{mockCredContext: mockCredContext{cred: cred}}
 	u := mustParseURL(t, "http://example.com/api")
 
-	_, _, err := HandleCred(u, "http-bearer", ctx)
-	if err == nil {
-		t.Fatal("expected error for bearer auth without headerName")
+	_, header, err := HandleCred(u, "http-bearer", ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(err.Error(), "headerName required") {
-		t.Errorf("unexpected error: %v", err)
+	if got := header.Get("Authorization"); got != "Bearer my-token" {
+		t.Errorf("Authorization = %q, want %q", got, "Bearer my-token")
 	}
 }
 
