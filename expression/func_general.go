@@ -993,6 +993,100 @@ func (this *ExtractDDL) MaxArgs() int {
 	return 2
 }
 
+// IndexInfo
+
+type IndexInfo struct {
+	FunctionBase
+}
+
+func NewIndexInfo(operands ...Expression) Function {
+	rv := &IndexInfo{}
+	rv.Init("indexinfo", operands...)
+
+	rv.expr = rv
+	rv.setVolatile()
+	return rv
+}
+
+func (this *IndexInfo) Accept(visitor Visitor) (interface{}, error) {
+	return visitor.VisitFunction(this)
+}
+
+func (this *IndexInfo) Type() value.Type { return value.ARRAY }
+
+// Arguments are (index, bucket[, scope[, collection]]) -- scope and collection default to
+// "_default" when omitted.
+//
+// This relies entirely on the system catalogue permissions to enforce what can and can't be seen: if the
+// caller cannot see the index via system:indexes, they cannot see it via this function either.
+func (this *IndexInfo) Evaluate(item value.Value, context Context) (value.Value, error) {
+	args := make(value.Values, len(this.operands))
+	missing := false
+	null := false
+
+	for i, op := range this.operands {
+		arg, err := op.Evaluate(item, context)
+		if err != nil {
+			return nil, err
+		} else if arg.Type() == value.MISSING {
+			missing = true
+		} else if arg.Type() != value.STRING {
+			null = true
+		} else {
+			args[i] = arg
+		}
+	}
+
+	if missing {
+		return value.MISSING_VALUE, nil
+	} else if null {
+		return value.NULL_VALUE, nil
+	}
+
+	ic, ok := context.(interface {
+		IndexInfo(bucket, scope, collection, index string) (value.Value, error)
+	})
+	if !ok {
+		return value.NULL_VALUE, nil
+	}
+
+	scope := "_default"
+	if len(args) > 2 {
+		scope = args[2].ToString()
+	}
+	collection := "_default"
+	if len(args) > 3 {
+		collection = args[3].ToString()
+	}
+
+	res, err := ic.IndexInfo(args[1].ToString(), scope, collection, args[0].ToString())
+	if err != nil {
+		return nil, err
+	} else if res == nil {
+		return value.NULL_VALUE, nil
+	}
+
+	return res, nil
+}
+
+func (this *IndexInfo) Constructor() FunctionConstructor {
+	return NewIndexInfo
+}
+
+func (this *IndexInfo) Indexable() bool {
+	return false
+}
+
+// No Privileges() override: PRIV_QUERY_LIST_INDEX/PRIV_QUERY_SELECT always need a concrete
+// bucket/scope/collection target to produce a valid permission check, which isn't known
+// statically here. The actual authorization happens at Evaluate() time in
+// execution.Context.IndexInfo, once the resolved path is known -- mirroring how
+// system:indexes' canRead/canListIndexes authorize each row.
+
+func (this *IndexInfo) MinArgs() int { return 2 }
+
+func (this *IndexInfo) MaxArgs() int { return 4 }
+
 type SanitizeStatement struct {
 	FunctionBase
 }

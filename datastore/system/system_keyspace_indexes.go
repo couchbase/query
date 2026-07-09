@@ -9,9 +9,7 @@
 package system
 
 import (
-	"encoding/json"
 	"strings"
-	"time"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -21,7 +19,6 @@ import (
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/timestamp"
-	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -257,53 +254,17 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			continue
 		}
 
-		state, msg, err := index.State()
+		fields, err := datastore.IndexInfoDoc(index, keyspace.Id(), "", "", namespace.Name(), namespace.Id(), b.store.URL())
 		if err != nil {
 			if errors.IsNotFoundError("", err) {
 				continue
 			}
 			return err
 		}
-		doc := value.NewAnnotatedValue(map[string]interface{}{
-			"id":           index.Id(),
-			"name":         index.Name(),
-			"keyspace_id":  keyspace.Id(),
-			"namespace":    namespace.Name(),
-			"namespace_id": namespace.Id(),
-			"datastore_id": b.store.URL(),
-			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index)),
-			"using":        datastoreObjectToJSONSafe(index.Type()),
-			"state":        string(state),
-		})
 
+		doc := value.NewAnnotatedValue(fields)
 		doc.SetMetaField(value.META_KEYSPACE, b.fullName)
 		doc.SetId(key)
-
-		partition := indexPartitionToString(index)
-		if partition != "" {
-			doc.SetField("partition", partition)
-		}
-
-		if msg != "" {
-			doc.SetField("message", msg)
-		}
-
-		cond := index.Condition()
-		if cond != nil {
-			doc.SetField("condition", cond.String())
-		}
-
-		if index.IsPrimary() {
-			doc.SetField("is_primary", true)
-		}
-
-		if ixm, ok := index.(interface{ IndexMetadata() map[string]interface{} }); ok {
-			doc.SetField("metadata", processStats(datastoreObjectToJSONSafe(ixm.IndexMetadata()).(map[string]interface{})))
-		}
-
-		if ixw, ok := index.(interface{ With() map[string]interface{} }); ok {
-			doc.SetField("with", datastoreObjectToJSONSafe(ixw.With()).(map[string]interface{}))
-		}
 
 		keysMap[key] = doc
 	}
@@ -367,125 +328,22 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 			continue
 		}
 
-		state, msg, err := index.State()
+		fields, err := datastore.IndexInfoDoc(index, keyspace.Id(), scope.Id(), bucket.Id(), namespace.Name(), namespace.Id(), b.store.URL())
 		if err != nil {
 			if errors.IsNotFoundError("", err) {
 				continue
 			}
 			return err
 		}
-		doc := value.NewAnnotatedValue(map[string]interface{}{
-			"id":           index.Id(),
-			"name":         index.Name(),
-			"keyspace_id":  keyspace.Id(),
-			"scope_id":     scope.Id(),
-			"bucket_id":    bucket.Id(),
-			"namespace":    namespace.Name(),
-			"namespace_id": namespace.Id(),
-			"datastore_id": b.store.URL(),
-			"index_key":    datastoreObjectToJSONSafe(indexKeyToIndexKeyStringArray(index)),
-			"using":        datastoreObjectToJSONSafe(index.Type()),
-			"state":        string(state),
-		})
 
+		doc := value.NewAnnotatedValue(fields)
 		doc.SetMetaField(value.META_KEYSPACE, b.fullName)
 		doc.SetId(key)
-
-		partition := indexPartitionToString(index)
-		if partition != "" {
-			doc.SetField("partition", partition)
-		}
-
-		if msg != "" {
-			doc.SetField("message", msg)
-		}
-
-		cond := index.Condition()
-		if cond != nil {
-			doc.SetField("condition", cond.String())
-		}
-
-		if index.IsPrimary() {
-			doc.SetField("is_primary", true)
-		}
-
-		if ixm, ok := index.(interface{ IndexMetadata() map[string]interface{} }); ok {
-			doc.SetField("metadata", processStats(datastoreObjectToJSONSafe(ixm.IndexMetadata()).(map[string]interface{})))
-		}
-
-		if ixw, ok := index.(interface{ With() map[string]interface{} }); ok {
-			doc.SetField("with", datastoreObjectToJSONSafe(ixw.With()).(map[string]interface{}))
-		}
 
 		keysMap[key] = doc
 	}
 
 	return nil
-}
-
-func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
-	if index2, ok2 := index.(datastore.Index2); ok2 {
-		keys := index2.RangeKey2()
-		rv = make([]string, len(keys))
-		for i, kp := range keys {
-			stringer := expression.NewStringer()
-			stringer.VisitShared(kp.Expr)
-			if i == 0 && kp.HasAttribute(datastore.IK_MISSING) {
-				stringer.WriteString(" INCLUDE MISSING")
-			}
-			if kp.HasAttribute(datastore.IK_DESC) {
-				stringer.WriteString(" DESC")
-			}
-
-			if kp.HasAttribute(datastore.IK_DENSE_VECTOR) {
-				stringer.WriteString(" DENSE VECTOR")
-			} else if kp.HasAttribute(datastore.IK_SPARSE_VECTOR) {
-				stringer.WriteString(" SPARSE VECTOR")
-			} else if kp.HasAttribute(datastore.IK_MULTI_VECTOR) {
-				stringer.WriteString(" MULTI VECTOR")
-			}
-			rv[i] = stringer.String()
-		}
-
-	} else {
-		rv = make([]string, len(index.RangeKey()))
-		for i, kp := range index.RangeKey() {
-			rv[i] = kp.String()
-		}
-	}
-	return
-}
-
-func indexPartitionToString(index datastore.Index) string {
-	index3, ok3 := index.(datastore.Index3)
-	if !ok3 {
-		return ""
-	}
-	partition, _ := index3.PartitionKeys()
-	if partition == nil || partition.Strategy == datastore.NO_PARTITION {
-		return ""
-	}
-
-	stringer := expression.NewStringer()
-	stringer.WriteString(string(partition.Strategy))
-	stringer.WriteString("(")
-	for i, expr := range partition.Exprs {
-		if i > 0 {
-			stringer.WriteString(",")
-		}
-		stringer.VisitShared(expr)
-	}
-	stringer.WriteString(")")
-	return stringer.String()
-}
-
-func datastoreObjectToJSONSafe(catobj interface{}) interface{} {
-	var rv interface{}
-	bytes, err := json.Marshal(catobj)
-	if err == nil {
-		json.Unmarshal(bytes, &rv)
-	}
-	return rv
 }
 
 func newIndexesKeyspace(p *namespace, store datastore.Datastore, name string, skipSystem bool) (*indexKeyspace, errors.Error) {
@@ -761,22 +619,4 @@ func (pi *indexIndex) scanEntries(requestId string, spanEvaluator compiledSpans,
 			}
 		}
 	}
-}
-
-func processStats(m map[string]interface{}) map[string]interface{} {
-	if _, ok := m["last_scan_time"]; !ok {
-		m["last_scan_time"] = nil
-		if s, ok := m["stats"]; ok {
-			if sm, ok := s.(map[string]interface{}); ok {
-				if lkst, ok := sm["last_known_scan_time"]; ok {
-					if v, ok := lkst.(float64); ok {
-						if v != 0 {
-							m["last_scan_time"] = time.UnixMicro(int64(v) / 1000).Format(util.DEFAULT_FORMAT)
-						}
-					}
-				}
-			}
-		}
-	}
-	return m
 }

@@ -476,6 +476,7 @@ var _FUNCTIONS = map[string]Function{
 	"evaluate":           &Evaluate{},
 	"extractddl":         &ExtractDDL{},
 	"finderr":            &Finderr{},
+	"indexinfo":          &IndexInfo{},
 	"len":                &Len{},
 	"mb_len":             &MBLen{},
 	"sanitize":           &SanitizeStatement{},
