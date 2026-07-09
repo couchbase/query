@@ -54,7 +54,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.6
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.0
-	github.com/couchbase/cbauth v0.1.18
+	github.com/couchbase/cbauth v0.1.20
 	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
@@ -134,7 +134,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.24.5 // indirect
 	github.com/blevesearch/bleve-mapping-ui v0.7.0 // indirect
-	github.com/blevesearch/bleve/v2 v2.6.1-0.20260709083555-97dec85e72a4 // indirect
+	github.com/blevesearch/bleve/v2 v2.6.1-0.20260709151816-8fb0f1b6835b // indirect
 	github.com/blevesearch/bleve_index_api v1.4.0 // indirect
 	github.com/blevesearch/geo v0.2.5 // indirect
 	github.com/blevesearch/go-faiss v1.1.5 // indirect
