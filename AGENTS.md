@@ -80,7 +80,7 @@ Text Query
 | `execution/` | Running instances of plan operators. Mirrors `plan/`. Go channels are used extensively for streaming and stop signaling. |
 | `planner/` + `plannerbase/` | Converts algebra to plans; selects indexes; cost-based optimization. |
 | `datastore/` | Interface to storage. Implementations: `datastore/couchbase/` (production), `datastore/file/` (tests), `datastore/mock/` (tests), `datastore/system/` (system catalog). All `Keyspace` mutation/scan methods (`Fetch`, `Insert`, `Update`, `Delete`, `Count`, `Stats`, `ExternalScan`) and `Datastore` transaction methods take a `QueryContext`. `QueryContext` carries credentials, transaction state, durability, RU/WU accounting, error reporting, request deadline, and logging. Use `datastore.NULL_QUERY_CONTEXT` or `datastore.MAJORITY_QUERY_CONTEXT` when no real request context is available. |
-| `datastore/couchbase/iceberg/` | Apache Iceberg external collections via AWS Glue Catalog; supports Parquet/Avro/ORC/Arrow/CSV with filter pushdown. |
+| `primitives/external/` | Apache Iceberg external collections (AWS Glue, AWS Glue REST, Nessie, S3 Tables, BigLake catalogs); supports Parquet/Avro/ORC/Arrow/CSV with filter pushdown. |
 | `server/` | HTTP server and request handling. Entry point: `server/cbq-engine/main.go`. REST endpoints in `server/http/`. |
 | `errors/` | All user-visible error codes and messages (SQL-style codes). All errors must come through this package. |
 | `functions/` | User-defined function (UDF) support. |
