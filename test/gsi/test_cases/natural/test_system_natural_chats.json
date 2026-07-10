@@ -1,0 +1,56 @@
+[
+    {
+        "statements": "BEGIN CHAT WITH {\"keyspaces\": [\"orders\"]}",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        }
+    },
+    {
+        "statements": "BEGIN CHAT WITH {\"keyspaces\": [\"review\"]}",
+        "userArgs": {
+            "reviewowner": "reviewpass"
+        }
+    },
+    {
+        "testcase": "check system:natural_chats using OwnerOfreview",
+        "statements": "SELECT COUNT(*) AS cnt FROM system:natural_chats",
+        "userArgs": {
+            "reviewowner": "reviewpass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+        "testcase": "check system:natural_chats using OwnerOforders",
+        "statements": "SELECT COUNT(*) AS cnt FROM system:natural_chats",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+        "testcase": "check system:natural_chats using testAdmin",
+        "statements": "SELECT COUNT(*) AS cnt FROM system:natural_chats",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+        "statements":"DELETE FROM system:natural_chats",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        }
+    }
+]

@@ -8668,10 +8668,13 @@ var errData = []ErrData{
 	{
 		Code:        E_NL_CHAT_WRONG_USER, // 19241
 		symbol:      "E_NL_CHAT_WRONG_USER",
-		Description: "The user associated with the chat session does not match the user making the request.",
+		Description: "The non-admin user(s) provided in the request are not part of the chat session",
 		IsUser:      YES,
 		Reason: []string{
 			"The user that created the chat session is different from the user of the current request.",
+		},
+		Action: []string{
+			"Use an admin user to access the chat session or use the same user(s) that created the chat session.",
 		},
 		AppliesTo: []string{
 			"Server",

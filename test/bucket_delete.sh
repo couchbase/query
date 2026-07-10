@@ -25,8 +25,10 @@ UserSite=http://localhost:8091/settings/rbac/users/local/
 for i in "${bucket[@]}"
 do
 Id=${i}owner
-curl --silent -X DELETE -u $Auth $UserSite$Id > /dev/null 
+curl --silent -X DELETE -u $Auth $UserSite$Id > /dev/null
 done
 
-curl --silent -X DELETE -u $Auth $UserSite/testAdmin > /dev/null 
+curl --silent -X DELETE -u $Auth $UserSite/testAdmin > /dev/null
+
+curl --silent -X DELETE -u $Auth $UserSite/userAdminLocal > /dev/null
 

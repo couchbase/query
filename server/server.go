@@ -812,7 +812,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			return true, false
 		}
 
-		err := natural.ProcessEndChat(chatId, datastore.CredsString(request.Credentials()))
+		err := natural.ProcessEndChat(chatId, datastore.NonAdminUsers(request.Credentials()))
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
@@ -839,7 +839,9 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			return true, false
 		}
 
-		newchatid, err := natural.ProcessBeginChat(naturalcontext, datastore.CredsString(request.Credentials()),
+		newchatid, err := natural.ProcessBeginChat(naturalcontext,
+			/* deliberately not calling NonAdminUsers() here, that way the chat is populated with the correct users even for an admin */
+			datastore.CredsArray(request.Credentials()),
 			elems, request.NaturalChatTimeout())
 		if err != nil {
 			request.Fail(err)
@@ -852,7 +854,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	if request.NaturalPauseChat() {
-		err := natural.ProcessPauseChat(chatId, request.Id().String(), datastore.CredsString(request.Credentials()),
+		err := natural.ProcessPauseChat(chatId, request.Id().String(), datastore.NonAdminUsers(request.Credentials()),
 			request.NaturalOrganizationId(), request.NaturalCred(),
 			request.NaturalSummarize(), request.NaturalVendor(), request.NaturalModel(),
 			request.Output().AddPhaseTime)
@@ -867,7 +869,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	if request.NaturalResumeChat() {
-		err := natural.ProcessResumeChat(chatId, request.Id().String(), datastore.CredsString(request.Credentials()))
+		err := natural.ProcessResumeChat(chatId, request.Id().String(), datastore.NonAdminUsers(request.Credentials()))
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
@@ -879,7 +881,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	if request.NaturalAlterChat() {
-		err := natural.ProcessAlterChat(chatId, datastore.CredsString(request.Credentials()), request.NaturalChatTimeout())
+		err := natural.ProcessAlterChat(chatId, datastore.NonAdminUsers(request.Credentials()), request.NaturalChatTimeout())
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
@@ -939,10 +941,10 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	if chatId != "" {
-		user := datastore.CredsString(request.Credentials())
 		stmt, nlAlgebraStmt, err = natural.ProcessConversationalRequest(request.NaturalCred(), request.NaturalOrganizationId(),
 			request.NaturalVendor(), request.NaturalModel(),
-			nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), user,
+			nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+			datastore.NonAdminUsers(request.Credentials()),
 			request.ExecutionContext(), request.Output().AddPhaseTime)
 	} else {
 		stmt, nlAlgebraStmt, err = natural.ProcessRequest(request.NaturalCred(), request.NaturalOrganizationId(),

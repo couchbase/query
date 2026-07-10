@@ -10,6 +10,8 @@ package system
 
 import (
 	"encoding/json"
+	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/couchbase/query/datastore"
@@ -27,10 +29,39 @@ type naturalchatsKeyspace struct {
 	indexer datastore.Indexer
 }
 
+// hasChatAccess reports whether one of users is listed in item's "users" field.
+// An empty users list means the requester is an admin, who always has access.
+// A missing or malformed "users" field denies access rather than allowing it.
+func hasChatAccess(item value.Value, users []string) bool {
+	if len(users) == 0 {
+		return true
+	}
+	val, ok := item.Field("users")
+	if !ok {
+		return false
+	}
+	userlist, ok := val.Actual().([]interface{})
+	if !ok {
+		return false
+	}
+	for _, u := range userlist {
+		if ustr, ok := u.(string); ok && slices.Contains(users, ustr) {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *naturalchatsKeyspace) Count(context datastore.QueryContext) (int64, errors.Error) {
+	// only local active chats + paused chats
 	var count int64
+
+	users := datastore.NonAdminUsers(context.Credentials())
+
 	natural.ForEachConversation(func(chatId string, entry *natural.ChatEntry) bool {
-		count++
+		if entry.CheckUser(users) == nil {
+			count++
+		}
 		return true
 	}, nil)
 
@@ -38,19 +69,56 @@ func (b *naturalchatsKeyspace) Count(context datastore.QueryContext) (int64, err
 	if store == nil {
 		context.Warning(errors.NewNoDatastoreError())
 	} else {
-		err := natural.ScanQueryMetadataForNLChat(nil,
-			func(key string, keyspace datastore.Keyspace) errors.Error {
+		keys := []string{}
+		var handler func(key string, keyspace datastore.Keyspace) errors.Error
+		if users != nil && len(users) > 0 {
+			handler = func(key string, keyspace datastore.Keyspace) errors.Error {
+				if strings.HasPrefix(key, natural.CHAT_DOC_PREFIX) {
+					keys = append(keys, key)
+				}
+				return nil
+			}
+		} else {
+			handler = func(key string, keyspace datastore.Keyspace) errors.Error {
 				if strings.HasPrefix(key, natural.CHAT_DOC_PREFIX) {
 					count++
 				}
 				return nil
-			},
+			}
+		}
+		err := natural.ScanQueryMetadataForNLChat(nil,
+			handler,
 			nil)
 		if err != nil {
 			if err.Code() == errors.E_ENTERPRISE_FEATURE {
 				return count, nil
 			}
 			context.Warning(err)
+		}
+
+		if len(keys) > 0 {
+			queryMetadata, err := store.GetQueryMetadata()
+			if err != nil {
+				context.Warning(err)
+			} else {
+				fetchMap := make(map[string]value.AnnotatedValue, len(keys))
+				queryMetadata.Fetch(keys, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+				for _, key := range keys {
+					if val, ok := fetchMap[key]; ok {
+						b, err := natural.GetChatDataFromObjectValue(val)
+						if err != nil {
+							context.Warning(errors.NewQueryMetadataError("unexpected document for key "+key, err))
+							continue
+						}
+						if b != nil {
+							item := value.NewAnnotatedValue(b)
+							if hasChatAccess(item, users) {
+								count++
+							}
+						}
+					}
+				}
+			}
 		}
 	}
 	return count, nil
@@ -61,11 +129,12 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 
 	var creds distributed.Creds
 
-	userName := datastore.CredsString(context.Credentials())
-	if userName == "" {
+	users := datastore.NonAdminUsers(context.Credentials())
+
+	if len(users) == 0 {
 		creds = distributed.NO_CREDS
 	} else {
-		creds = distributed.Creds(userName)
+		creds = distributed.Creds(users[0])
 	}
 
 	whoamI := distributed.RemoteAccess().WhoAmI()
@@ -85,8 +154,7 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 				continue // no such chat, possibly removed
 			}
 			ce := rv.(*natural.ChatEntry)
-			// not his chat
-			if userName != "" && ce.User != userName {
+			if err := ce.CheckUser(users); err != nil {
 				continue
 			}
 			itemMap := natural.FormatChatEntry(ce)
@@ -138,10 +206,8 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 					}
 					if b != nil {
 						item := value.NewAnnotatedValue(b)
-						if userval, ok := item.Field("user"); ok {
-							if userName != "" && userval.Actual() != userName {
-								continue
-							}
+						if !hasChatAccess(item, users) {
+							continue
 						}
 						chatId := strings.TrimPrefix(key, natural.CHAT_DOC_PREFIX)
 						item.SetId(key)
@@ -161,11 +227,12 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 
 	var creds distributed.Creds
 
-	userName := datastore.CredsString(context.Credentials())
-	if userName == "" {
+	users := datastore.NonAdminUsers(context.Credentials())
+
+	if len(users) == 0 {
 		creds = distributed.NO_CREDS
 	} else {
-		creds = distributed.Creds(userName)
+		creds = distributed.Creds(users[0])
 	}
 
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -173,6 +240,7 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 	diskPairs := []value.Pair{}
 	deletedCount := 0
 	deleted := []value.Pair{}
+
 	for _, pair := range deletes {
 		name := pair.Name
 		prefixlen := len(natural.CHAT_DOC_PREFIX)
@@ -185,19 +253,18 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 			c := natural.GetConversation(localKey)
 			if c != nil {
 				if ce, ok := c.(*natural.ChatEntry); ok {
-					if userName != "" && ce.User != userName {
-						continue
-					}
-					ce.Lock()
-					if ce.Removed || ce.Paused {
-						// already removed, possibly by another routine.
+					if err = ce.CheckUser(users); err == nil {
+						ce.Lock()
+						if ce.Removed || ce.Paused {
+							// already removed, possibly by another routine.
+							ce.Unlock()
+							continue
+						}
+						natural.DeleteConversation(localKey)
+						ce.Removed = true
 						ce.Unlock()
-						continue
+						deletedCount++
 					}
-					natural.DeleteConversation(localKey)
-					ce.Removed = true
-					ce.Unlock()
-					deletedCount++
 				}
 			} else {
 				err = errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, localKey)
@@ -231,8 +298,11 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 	var errs errors.Errors
 	var diskdeletes []value.Pair
 	var dCount int
+	var derrs errors.Errors
 	if len(diskPairs) > 0 {
 		store := context.Datastore()
+		nilValueKeys := []string{}
+		allowedpairs := []value.Pair{}
 		if store == nil {
 			errs = []errors.Error{errors.NewNoDatastoreError()}
 			if preserveMutations {
@@ -250,10 +320,50 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 					return deletedCount, nil, errs
 				}
 			}
-			dCount, diskdeletes, errs = queryMetadata.Delete(diskPairs, datastore.NULL_QUERY_CONTEXT, preserveMutations)
-			deletedCount += dCount
-			if preserveMutations {
-				deleted = append(deleted, diskdeletes...)
+
+			for _, pair := range diskPairs {
+				if pair.Value == nil {
+					// nil value could be from dummy fetch (USE KEYS clause), try fetching again
+					nilValueKeys = append(nilValueKeys, pair.Name)
+				} else if hasChatAccess(pair.Value, users) {
+					allowedpairs = append(allowedpairs, pair)
+				} else {
+					errs = append(errs, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER,
+						map[string]interface{}{"key": pair.Name}))
+				}
+			}
+
+			if len(nilValueKeys) > 0 {
+				fetchMap := make(map[string]value.AnnotatedValue, len(nilValueKeys))
+				errs = queryMetadata.Fetch(nilValueKeys, fetchMap, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+				for _, key := range nilValueKeys {
+					if val, ok := fetchMap[key]; ok {
+						b, err := natural.GetChatDataFromObjectValue(val)
+						if err != nil {
+							context.Warning(errors.NewQueryMetadataError("unexpected document for key "+key, err))
+							continue
+						}
+						if b != nil {
+							item := value.NewAnnotatedValue(b)
+							if !hasChatAccess(item, users) {
+								errs = append(errs, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER,
+									map[string]interface{}{"key": key}))
+								continue
+							}
+							allowedpairs = append(allowedpairs, value.Pair{Name: key, Value: item})
+						}
+					}
+				}
+			}
+			if len(allowedpairs) > 0 {
+				dCount, diskdeletes, derrs = queryMetadata.Delete(allowedpairs, context, preserveMutations)
+				if preserveMutations {
+					deletedCount += dCount
+					deleted = append(deleted, diskdeletes...)
+				}
+				if len(derrs) > 0 {
+					errs = append(errs, derrs...)
+				}
 			}
 		}
 	}
@@ -271,11 +381,12 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 	var errs errors.Errors
 	var creds distributed.Creds
 
-	userName := datastore.CredsString(context.Credentials())
-	if userName == "" {
+	users := datastore.NonAdminUsers(context.Credentials())
+
+	if len(users) == 0 {
 		creds = distributed.NO_CREDS
 	} else {
-		creds = distributed.Creds(userName)
+		creds = distributed.Creds(users[0])
 	}
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	updatedCount := 0
@@ -288,7 +399,7 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 		// paused (on-disk) chats cannot be updated
 		prefixlen := len(natural.CHAT_DOC_PREFIX)
 		if len(name) > prefixlen && name[:prefixlen] == natural.CHAT_DOC_PREFIX {
-			err = errors.NewSystemNotSupportedError(nil, "UPDATE not supported for paused chats in system:natural_chats")
+			err = errors.NewSystemNotSupportedError(nil, fmt.Sprintf("UPDATE not supported for paused chats in system:natural_chats, chatid: %s", name[prefixlen:]))
 		} else {
 			node, localKey := distributed.RemoteAccess().SplitKey(name)
 
@@ -296,9 +407,7 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 				rv := natural.GetConversation(localKey)
 				if rv != nil {
 					ce := rv.(*natural.ChatEntry)
-					if userName != "" && ce.User != userName {
-						err = errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
-					} else {
+					if err = ce.CheckUser(users); err == nil {
 						item := natural.FormatChatEntry(ce)
 						for field, v := range pair.Value.Fields() {
 							if field == "node" || field == "inactivityTimeout" {
@@ -323,12 +432,11 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 							if perr != nil {
 								err = errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, perr)
 							} else {
-								err = ce.AlterTimeout(userName, timeout)
+								err = ce.AlterTimeout(users, timeout)
 							}
 						} else {
 							err = errors.NewUpdateInvalidField(name, "inactivityTimeout", true)
 						}
-
 					}
 				} else {
 					err = errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, localKey)
@@ -355,14 +463,11 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 
 		if err != nil {
 			errs = append(errs, err)
+		} else {
+			updatedCount++
 			if preserveMutations {
-				return updatedCount, updated, errs
+				updated = append(updated, pair)
 			}
-			return updatedCount, nil, errs
-		}
-		updatedCount++
-		if preserveMutations {
-			updated = append(updated, pair)
 		}
 	}
 

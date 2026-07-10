@@ -25,7 +25,9 @@ func TestNatural(t *testing.T) {
 	runMatch("insert.json", false, false, qc, t)
 	runMatch("testcases.json", false, false, qc, t)
 
-	// for vendor validation tests
 	runMatch("test_vendor.json", false, false, qc, t)
+
+	runMatch("test_system_natural_chats.json", false, false, qc, t)
+
 	runStmt(qc, "DELETE FROM orders")
 }

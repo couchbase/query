@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -393,7 +394,7 @@ type ChatEntry struct {
 	prompt            *prompt
 	Keyspaces         []*algebra.Path
 	Removed           bool
-	User              string
+	users             []string
 	Paused            bool
 	Summary           string
 	timer             *time.Timer
@@ -402,14 +403,28 @@ type ChatEntry struct {
 	sync.Mutex
 }
 
-func (ce *ChatEntry) AlterTimeout(datastorecreds string, timeout time.Duration) errors.Error {
+// checkUser returns E_NL_CHAT_WRONG_USER if datastorecreds doesn't include any of the chat users.
+// NOTE: nil datastorecreds represents admin access
+func (ce *ChatEntry) CheckUser(datastorecreds []string) errors.Error {
+	if datastorecreds != nil {
+		for _, user := range datastorecreds {
+			if slices.Contains(ce.users, user) {
+				return nil
+			}
+		}
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+	}
+	return nil
+}
+
+func (ce *ChatEntry) AlterTimeout(datastorecreds []string, timeout time.Duration) errors.Error {
 	ce.Lock()
 	defer ce.Unlock()
 	if ce.Removed || ce.Paused {
 		return nil
 	}
-	if datastorecreds != "" && ce.User != datastorecreds {
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+	if err := ce.CheckUser(datastorecreds); err != nil {
+		return err
 	}
 	ce.inactivityTimeout = timeout
 	ce.resetInactivityTimerLocked()
@@ -496,8 +511,12 @@ func FormatChatEntry(ce *ChatEntry) map[string]interface{} {
 	if pmpt := ce.prompt; pmpt != nil {
 		item["prompt"] = value.NewMarshalledValue(pmpt)
 	}
-	if user := ce.User; user != "" {
-		item["user"] = user
+	if users := ce.users; users != nil {
+		users := make([]interface{}, len(ce.users))
+		for i, u := range ce.users {
+			users[i] = u
+		}
+		item["users"] = users
 	}
 	if summary := ce.Summary; summary != "" {
 		item["summary"] = summary
@@ -1276,7 +1295,7 @@ func retryRequest(nlCred, nlOrgId string, prompt *prompt,
 
 func ProcessConversationalRequest(nlCred, nlOrgId, nlVendor, nlModel, nlquery, nlHint string, chatId string,
 	nloutputOpt naturalOutput, explain, advise bool,
-	user string,
+	users []string,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
 	waitTime := util.Now()
@@ -1312,8 +1331,8 @@ func ProcessConversationalRequest(nlCred, nlOrgId, nlVendor, nlModel, nlquery, n
 			fmt.Sprintf("conversation with \"natural_chatid\":%s was paused", chatId))
 	}
 
-	if ce.User != user {
-		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+	if err := ce.CheckUser(users); err != nil {
+		return "", nil, err
 	}
 
 	vendor, model, err := resolveVendorAndModel(nlVendor, nlModel, nlOrgId, nlCred, jwt)
@@ -1433,7 +1452,7 @@ func completeConversationPromptLocked(content string, ce *ChatEntry, prompt *pro
 	}
 }
 
-func ProcessBeginChat(naturalcontext, datastorecreds string, keyspaces []*algebra.Path, timeout time.Duration) (string, errors.Error) {
+func ProcessBeginChat(naturalcontext string, datastorecreds []string, keyspaces []*algebra.Path, timeout time.Duration) (string, errors.Error) {
 
 	if IsChatCacheFull() {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_CACHE_FULL)
@@ -1447,7 +1466,7 @@ func ProcessBeginChat(naturalcontext, datastorecreds string, keyspaces []*algebr
 	ce := &ChatEntry{
 		Id:                chatId,
 		Keyspaces:         keyspaces,
-		User:              datastorecreds,
+		users:             datastorecreds,
 		inactivityTimeout: timeout,
 	}
 	ce.resetInactivityTimerLocked()
@@ -1455,7 +1474,7 @@ func ProcessBeginChat(naturalcontext, datastorecreds string, keyspaces []*algebr
 	return chatId, nil
 }
 
-func ProcessEndChat(chatId, datastorecreds string) errors.Error {
+func ProcessEndChat(chatId string, datastorecreds []string) errors.Error {
 
 	rv := GetConversation(chatId)
 	if rv == nil {
@@ -1466,9 +1485,9 @@ func ProcessEndChat(chatId, datastorecreds string) errors.Error {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_FAIL, "failed to cast cache entry")
 	}
 	ce.Lock()
-	if ce.User != datastorecreds {
+	if err := ce.CheckUser(datastorecreds); err != nil {
 		ce.Unlock()
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+		return err
 	}
 	ce.stopInactivityTimer()
 	DeleteConversation(chatId)
@@ -1502,7 +1521,8 @@ func ParseChatTimeout(v interface{}) (time.Duration, error) {
 	return timeout, nil
 }
 
-func ProcessAlterChat(chatId, datastorecreds string, timeout time.Duration) errors.Error {
+// use nil datastorecreds for admin access
+func ProcessAlterChat(chatId string, datastorecreds []string, timeout time.Duration) errors.Error {
 	if chatId == "" {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID)
 	}
@@ -1530,7 +1550,8 @@ const (
 	interval = 100 * time.Millisecond
 )
 
-func ProcessPauseChat(chatId, requestId, datastorecreds string,
+func ProcessPauseChat(chatId, requestId string,
+	datastorecreds []string,
 	nlOrgId, nlCred string,
 	summarize value.Tristate, nlvendor, nlmodel string,
 	record func(execution.Phases, time.Duration)) errors.Error {
@@ -1548,8 +1569,9 @@ func ProcessPauseChat(chatId, requestId, datastorecreds string,
 	}
 	ce.Lock()
 	defer ce.Unlock()
-	if ce.User != datastorecreds {
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+
+	if err := ce.CheckUser(datastorecreds); err != nil {
+		return err
 	}
 
 	shouldSummarize := ce.prompt != nil &&
@@ -1702,7 +1724,7 @@ const _BATCH_SIZE = 64
 
 var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)
 
-func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
+func ProcessResumeChat(chatId, requestId string, datastorecreds []string) errors.Error {
 	if chatId == "" {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID)
 	}
@@ -1794,8 +1816,13 @@ func ProcessResumeChat(chatId, requestId, datastorecreds string) errors.Error {
 			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED, "unmarshalling decoded chat failed", uerr)
 		}
 
-		if ce.User != datastorecreds {
-			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+		if ce.users == nil || len(ce.users) == 0 {
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_UNEXPECTED_CHAT_DOC,
+				"\"users\" field is not found in the chat document")
+		}
+
+		if err := ce.CheckUser(datastorecreds); err != nil {
+			return err
 		}
 
 		udpairs := make([]value.Pair, 1)
@@ -1922,8 +1949,8 @@ const CHAT_DOC_PREFIX = "aichat::"
 
 func (ce *ChatEntry) MarshalJSON() ([]byte, error) {
 	rv := map[string]interface{}{}
-	if user := ce.User; user != "" {
-		rv["user"] = user
+	if users := ce.users; users != nil {
+		rv["users"] = users
 	}
 	keyspaces := make([]string, len(ce.Keyspaces))
 	for i, k := range ce.Keyspaces {
@@ -1946,7 +1973,7 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 	var unmarshalledStruct struct {
 		Keyspaces []string `json:"keyspaces"`
 		Prompt    *prompt  `json:"prompt"`
-		User      string   `json:"user"`
+		Users     []string `json:"users"`
 		Summary   string   `json:"summary"`
 		Timeout   string   `json:"inactivity_timeout"`
 	}
@@ -1956,8 +1983,8 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 		return err
 	}
 
-	if user := unmarshalledStruct.User; user != "" {
-		ce.User = user
+	if users := unmarshalledStruct.Users; users != nil {
+		ce.users = users
 	}
 	if keyspaces := unmarshalledStruct.Keyspaces; keyspaces != nil {
 		keyspacelist := strings.Join(keyspaces, ",")
@@ -1985,7 +2012,7 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 
 func (ce *ChatEntry) Reset() {
 	ce.stopInactivityTimer()
-	ce.User = ""
+	ce.users = nil
 	ce.Keyspaces = nil
 	ce.prompt = nil
 	ce.Id = ""

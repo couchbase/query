@@ -69,6 +69,22 @@ func IsAdmin(creds *auth.Credentials) bool {
 	return false
 }
 
+// NonAdminUsers returns nil for an Administrator (callers that treat a nil user list as an
+// access-check bypass rely on this), otherwise a non-nil (possibly empty) slice of
+// authenticated users. CredsArray itself may return a nil slice for non-admin credentials
+// with no authenticated users, which callers must not conflate with the admin-bypass case -
+// this normalizes that so nil unambiguously means "admin".
+func NonAdminUsers(creds *auth.Credentials) []string {
+	if IsAdmin(creds) {
+		return nil
+	}
+	users := CredsArray(creds)
+	if users == nil {
+		users = []string{}
+	}
+	return users
+}
+
 func AdminCreds(node string) (*auth.Credentials, error) {
 	if _DATASTORE == nil {
 		return nil, fmt.Errorf("datastore not initialized")

@@ -3279,6 +3279,7 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	}
 
 	if req.Method == "GET" {
+		// "" impersonate indicates an admin request
 		impersonate, err1 := endpoint.getImpersonate(req)
 		if err1 != nil {
 			return nil, err1
@@ -3286,8 +3287,11 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		c := natural.GetConversation(chatId)
 		if c != nil {
 			if ce, ok := c.(*natural.ChatEntry); ok {
-				if impersonate != "" && ce.User != impersonate {
-					return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+				if impersonate != "" {
+					err := ce.CheckUser([]string{impersonate})
+					if err != nil {
+						return nil, err
+					}
 				}
 				return natural.FormatChatEntry(ce), nil
 			}
@@ -3302,8 +3306,11 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		c := natural.GetConversation(chatId)
 		if c != nil {
 			if ce, ok := c.(*natural.ChatEntry); ok && ce != nil {
-				if impersonate != "" && ce.User != impersonate {
-					return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER)
+				if impersonate != "" {
+					err := ce.CheckUser([]string{impersonate})
+					if err != nil {
+						return nil, err
+					}
 				}
 				ce.Lock()
 				if ce.Removed || ce.Paused {
@@ -3341,7 +3348,11 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			if timeout, err := natural.ParseChatTimeout(t); err != nil {
 				return false, errors.NewServiceErrorBadValue(err, "invalid inactivityTimeout value")
 			} else {
-				err := natural.ProcessAlterChat(chatId, impersonate, timeout)
+				var dscreds []string
+				if impersonate != "" {
+					dscreds = []string{impersonate}
+				}
+				err := natural.ProcessAlterChat(chatId, dscreds, timeout)
 				if err != nil {
 					return false, err
 				}

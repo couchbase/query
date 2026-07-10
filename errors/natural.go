@@ -67,7 +67,7 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_BEGIN_CHAT_FAIL:                {SERVE_NATURAL_CHAT, "Cannot start a new chat session in between the current session: %s"},
 	E_NL_CHAT_PROMPT_TOO_LARGE:          {SERVE_NATURAL_CHAT, "The size of the prompt for the chat has out grown the threshold of: %s < %s"},
 	E_NL_CHAT_CACHE_FULL:                {SERVE_NATURAL_CHAT, "The cache for active chat sessions is full, cannot start a new chat session at the moment"},
-	E_NL_CHAT_WRONG_USER:                {SERVE_NATURAL_CHAT, "The user associated with the chat session does not match the user making the request."},
+	E_NL_CHAT_WRONG_USER:                {SERVE_NATURAL_CHAT, "The non-admin user(s) provided in the request are not part of the chat session"},
 	E_NL_CHAT_PAUSE_FAILED:              {SERVE_NATURAL_CHAT, "Pause failed: %s"},
 	E_NL_CHAT_RESUME_FAILED:             {SERVE_NATURAL_CHAT, "Resume failed: %s"},
 	E_NL_CHAT_SUMMARIZE_FAILED:          {SERVE_NATURAL_CHAT, "Summarize failed: %s"},
