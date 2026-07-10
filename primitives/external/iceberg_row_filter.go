@@ -320,40 +320,47 @@ func compareToLiteral(rowVal interface{}, lit iceberg.Literal) (int, bool) {
 			return bytes.Compare([]byte(rv), lv), true
 		}
 	case int32, int64, int16, int8, uint8, uint16, uint32, uint64:
-		ri, riOK := toInt64(rowVal)
 		li, _ := toInt64(lv)
-		if riOK {
-			switch {
-			case ri < li:
-				return -1, true
-			case ri > li:
-				return 1, true
-			default:
-				return 0, true
-			}
-		}
-		if rf, rfOK := toFloat64(rowVal); rfOK {
-			lf := float64(li)
-			switch {
-			case rf < lf:
-				return -1, true
-			case rf > lf:
-				return 1, true
-			default:
-				return 0, true
-			}
-		}
+		return compareRowValToInt64(rowVal, li)
+	case iceberg.Date:
+		return compareRowValToInt64(rowVal, int64(lv))
+	case iceberg.Time:
+		return compareRowValToInt64(rowVal, int64(lv))
+	case iceberg.Timestamp:
+		return compareRowValToInt64(rowVal, int64(lv))
 	case float32, float64:
 		lf, _ := toFloat64(lv)
-		if rf, ok := toFloat64(rowVal); ok {
-			switch {
-			case rf < lf:
-				return -1, true
-			case rf > lf:
-				return 1, true
-			default:
-				return 0, true
-			}
+		return compareRowValToFloat64(rowVal, lf)
+	}
+	return 0, false
+}
+
+// compareRowValToInt64 compares a row value against an int64-valued literal,
+// falling back to a float comparison if the row value isn't itself integral.
+func compareRowValToInt64(rowVal interface{}, li int64) (int, bool) {
+	if ri, ok := toInt64(rowVal); ok {
+		switch {
+		case ri < li:
+			return -1, true
+		case ri > li:
+			return 1, true
+		default:
+			return 0, true
+		}
+	}
+	return compareRowValToFloat64(rowVal, float64(li))
+}
+
+// compareRowValToFloat64 compares a row value against a float64-valued literal.
+func compareRowValToFloat64(rowVal interface{}, lf float64) (int, bool) {
+	if rf, ok := toFloat64(rowVal); ok {
+		switch {
+		case rf < lf:
+			return -1, true
+		case rf > lf:
+			return 1, true
+		default:
+			return 0, true
 		}
 	}
 	return 0, false
