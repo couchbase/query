@@ -503,10 +503,11 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 	}
 
 	opts.FilterExpr = nil
+	var filterDesc string
 	if params.Filter != nil {
 		if expr := n1qlToIcebergExpr(params.Filter, params.Alias, params.Parent); expr != nil {
 			opts.FilterExpr = expr
-			logging.Infof("scanIcebergCatalog (requestId=%s): Applied filter pushdown: %v", queryContext.RequestId(), expr)
+			filterDesc = fmt.Sprintf(", filter pushdown: %v", expr)
 		}
 	}
 
@@ -560,6 +561,11 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 
 	for {
 		if conn.Sender().IsStopped() || !queryContext.IsActive() {
+			logging.Infof("Iceberg scan stopped (requestId=%s): %d rows sent, %d rows received, "+
+				"%d files scanned, %s%s%s",
+				queryContext.RequestId(), rowsSent, rowsReceived,
+				scanner.FilesScanned(), formatBytesRead(scanner.BytesRead(), scanner.BytesPlanned()),
+				formatPruningStats(scanner), filterDesc)
 			cancel()
 			return nil
 		}
@@ -590,10 +596,10 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 					}
 				}
 				logging.Infof("Iceberg scan completed (requestId=%s): %d rows sent, %d rows received, %d rows skipped, %d conversion errors (offsetApplied=%d), "+
-					"%d files scanned, %s%s",
+					"%d files scanned, %s%s%s",
 					queryContext.RequestId(), rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied,
 					scanner.FilesScanned(), formatBytesRead(scanner.BytesRead(), scanner.BytesPlanned()),
-					formatPruningStats(scanner))
+					formatPruningStats(scanner), filterDesc)
 				return nil
 			}
 			return errors.NewDatastoreExternalCollectionError(err,
@@ -602,10 +608,10 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 		case row, ok := <-resultChan:
 			if !ok {
 				logging.Infof("Iceberg scan completed (requestId=%s): %d rows sent, %d rows received, %d rows skipped, %d conversion errors (offsetApplied=%d), "+
-					"%d files scanned, %s%s",
+					"%d files scanned, %s%s%s",
 					queryContext.RequestId(), rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied,
 					scanner.FilesScanned(), formatBytesRead(scanner.BytesRead(), scanner.BytesPlanned()),
-					formatPruningStats(scanner))
+					formatPruningStats(scanner), filterDesc)
 				return nil
 			}
 
@@ -618,7 +624,11 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 			}
 
 			if params.Limit > 0 && rowsSent >= params.Limit {
-				logging.Infof("Iceberg scan limit reached: %d rows sent, %d rows received total", rowsSent, rowsReceived)
+				logging.Infof("Iceberg scan limit reached (requestId=%s): %d rows sent, %d rows received, "+
+					"%d files scanned, %s%s%s",
+					queryContext.RequestId(), rowsSent, rowsReceived,
+					scanner.FilesScanned(), formatBytesRead(scanner.BytesRead(), scanner.BytesPlanned()),
+					formatPruningStats(scanner), filterDesc)
 				cancel()
 				return nil
 			}
