@@ -74,7 +74,17 @@ func HandleCred(urlObj *url.URL, credId string, context Context) (http.Client, h
 		return http.Client{}, http.Header{}, err
 	}
 
-	return applyCredential(cred, urlObj, context)
+	client, header, err := applyCredential(cred, urlObj, context)
+	if err != nil {
+		return client, header, err
+	}
+
+	// Disable redirects so an allowed host cannot 3xx-redirect to an internal
+	// target and bypass the allowlist (parity with GetDefaultHttpClient / CURL()).
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	return client, header, nil
 }
 
 // ─── Credential fetch & URL guardrail ────────────────────────────────────────
