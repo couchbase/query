@@ -250,6 +250,40 @@ func (t *basicAuthTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return t.base.RoundTrip(req)
 }
 
+// noRedirectTransport blocks HTTP redirects on Iceberg REST catalog requests.
+// The catalog URI is checked once against the cluster URL allowlist before the
+// catalog client is created (see LoadCatalogMetadata); if the client then
+// followed a 3xx response, a malicious or compromised catalog server could
+// redirect subsequent requests to a host outside that allowlist, bypassing
+// the check entirely. iceberg-go's rest.Catalog builds its own *http.Client
+// internally and does not expose http.Client.CheckRedirect, so redirects are
+// blocked here instead: any 3xx response is turned into an error before it
+// can reach the client's built-in redirect-following logic.
+type noRedirectTransport struct {
+	base http.RoundTripper
+}
+
+func (t *noRedirectTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.base.RoundTrip(req)
+	if err != nil || resp == nil || resp.StatusCode < 300 || resp.StatusCode >= 400 {
+		return resp, err
+	}
+	loc := resp.Header.Get("Location")
+	resp.Body.Close()
+	return nil, fmt.Errorf("iceberg REST catalog request to %s was redirected (HTTP %d, Location=%q); redirects are blocked to prevent bypassing the URL allowlist", req.URL, resp.StatusCode, loc)
+}
+
+// restNoRedirect wraps base (or the shared iceberg HTTP transport, if base is
+// nil) with noRedirectTransport and returns it as a rest.Option. Every
+// rest.NewCatalog call site should include this so REST catalog clients never
+// silently follow a redirect.
+func restNoRedirect(base http.RoundTripper) rest.Option {
+	if base == nil {
+		base = icebergTransport()
+	}
+	return rest.WithCustomTransport(&noRedirectTransport{base: base})
+}
+
 // iceberg-go FileIO property keys for each storage backend.
 const (
 	_adlsSharedKeyAccountName = "adls.auth.shared-key.account.name"
@@ -285,7 +319,7 @@ type restAuthExtras struct {
 // storage-protocol credentials and are not valid for REST catalog authentication.
 func buildRESTCatalogAuthOpts(ctx go_context.Context, cred *cbauth.Credential, uri string, extra restAuthExtras) ([]rest.Option, error) {
 	if cred == nil {
-		return nil, nil
+		return []rest.Option{restNoRedirect(nil)}, nil
 	}
 	switch cred.Type {
 	case "http":
@@ -309,7 +343,7 @@ func buildRESTCatalogAuthOpts(ctx go_context.Context, cred *cbauth.Credential, u
 			return nil, err
 		}
 		logging.Debugf("buildRESTCatalogAuthOpts: Azure AD OAuth bearer (scope=%s)", scope)
-		return []rest.Option{rest.WithOAuthToken(token)}, nil
+		return []rest.Option{rest.WithOAuthToken(token), restNoRedirect(nil)}, nil
 
 	case "azureManaged":
 		if cred.AzureManaged == nil {
@@ -326,7 +360,7 @@ func buildRESTCatalogAuthOpts(ctx go_context.Context, cred *cbauth.Credential, u
 			return nil, err
 		}
 		logging.Debugf("buildRESTCatalogAuthOpts: Azure Managed Identity bearer (resource=%s)", resource)
-		return []rest.Option{rest.WithOAuthToken(token)}, nil
+		return []rest.Option{rest.WithOAuthToken(token), restNoRedirect(nil)}, nil
 
 	case "aws":
 		if cred.AWS == nil {
@@ -347,10 +381,10 @@ func buildRESTCatalogAuthOpts(ctx go_context.Context, cred *cbauth.Credential, u
 		// signing endpoints.
 		if extra.SigV4SigningName != "" {
 			logging.Debugf("buildRESTCatalogAuthOpts: AWS SigV4 (region=%s, service=%s)", region, extra.SigV4SigningName)
-			return []rest.Option{rest.WithSigV4RegionSvc(region, extra.SigV4SigningName), rest.WithAwsConfig(*cfg)}, nil
+			return []rest.Option{rest.WithSigV4RegionSvc(region, extra.SigV4SigningName), rest.WithAwsConfig(*cfg), restNoRedirect(nil)}, nil
 		}
 		logging.Debugf("buildRESTCatalogAuthOpts: AWS SigV4 (region=%s)", region)
-		return []rest.Option{rest.WithSigV4(), rest.WithAwsConfig(*cfg)}, nil
+		return []rest.Option{rest.WithSigV4(), rest.WithAwsConfig(*cfg), restNoRedirect(nil)}, nil
 
 	case "gcp":
 		if cred.GCP == nil {
@@ -380,7 +414,7 @@ func buildRESTCatalogAuthOpts(ctx go_context.Context, cred *cbauth.Credential, u
 		// Use a transport that refreshes the bearer token on each request rather
 		// than capturing a single static token (which would expire mid-scan).
 		// QuotaProjectID injects X-Goog-User-Project for BigLake-style quota routing.
-		return []rest.Option{rest.WithCustomTransport(&biglakeTransport{
+		return []rest.Option{restNoRedirect(&biglakeTransport{
 			base:        icebergTransport(),
 			projectID:   extra.QuotaProjectID,
 			tokenSource: ts,
@@ -630,7 +664,7 @@ func injectSQLCredentials(dsn string, cred *cbauth.Credential) (string, error) {
 // Supported auth schemes: "bearer", "basic", "mtls".
 func buildNessieHTTPAuthOpts(cred *cbauth.Credential) ([]rest.Option, error) {
 	if cred == nil || cred.Type != "http" || cred.HTTP == nil {
-		return nil, nil
+		return []rest.Option{restNoRedirect(nil)}, nil
 	}
 	h := cred.HTTP
 	switch strings.ToLower(h.AuthScheme) {
@@ -639,14 +673,14 @@ func buildNessieHTTPAuthOpts(cred *cbauth.Credential) ([]rest.Option, error) {
 			return nil, fmt.Errorf("bearer auth scheme requires a non-empty token")
 		}
 		logging.Debugf("buildNessieHTTPAuthOpts: using bearer token authentication")
-		return []rest.Option{rest.WithOAuthToken(h.Token)}, nil
+		return []rest.Option{rest.WithOAuthToken(h.Token), restNoRedirect(nil)}, nil
 
 	case "basic":
 		if h.Username == "" {
 			return nil, fmt.Errorf("basic auth scheme requires a non-empty username")
 		}
 		logging.Debugf("buildNessieHTTPAuthOpts: using basic authentication (user=%s)", h.Username)
-		return []rest.Option{rest.WithCustomTransport(&basicAuthTransport{
+		return []rest.Option{restNoRedirect(&basicAuthTransport{
 			base:     icebergTransport(),
 			username: h.Username,
 			password: h.Password,
@@ -658,11 +692,17 @@ func buildNessieHTTPAuthOpts(cred *cbauth.Credential) ([]rest.Option, error) {
 			return nil, fmt.Errorf("failed to build mTLS config: %w", err)
 		}
 		logging.Debugf("buildNessieHTTPAuthOpts: using mTLS authentication")
-		return []rest.Option{rest.WithTLSConfig(tlsCfg)}, nil
+		// WithCustomTransport (which restNoRedirect uses) replaces the whole
+		// transport, so the TLS config must be built into it directly rather
+		// than via rest.WithTLSConfig (NewCatalog rejects setting both).
+		return []rest.Option{restNoRedirect(&http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: tlsCfg,
+		})}, nil
 
 	default:
 		logging.Warnf("buildNessieHTTPAuthOpts: unknown auth scheme '%s', using no authentication", h.AuthScheme)
-		return nil, nil
+		return []rest.Option{restNoRedirect(nil)}, nil
 	}
 }
 
@@ -793,6 +833,7 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		glueRestOpts = append(glueRestOpts,
 			rest.WithAwsConfig(awsCfg),
 			rest.WithSigV4RegionSvc(region, "glue"),
+			restNoRedirect(nil),
 		)
 		// Forward storage credentials as iceberg-go FileIO props so that
 		// scan.PlanFiles can read manifest files from S3 without falling back
@@ -842,6 +883,7 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		restOpts = append(restOpts,
 			rest.WithAwsConfig(awsCfg),
 			rest.WithSigV4RegionSvc(region, signingName),
+			restNoRedirect(nil),
 		)
 		if opts.Warehouse != "" {
 			restOpts = append(restOpts, rest.WithWarehouseLocation(opts.Warehouse))
@@ -900,7 +942,7 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		// bearer token; do NOT also pass rest.WithOAuthToken because
 		// sessionTransport.RoundTrip adds its default headers *before* calling our
 		// transport, which would result in two Authorization headers being sent.
-		restOpts = append(restOpts, rest.WithCustomTransport(&biglakeTransport{
+		restOpts = append(restOpts, restNoRedirect(&biglakeTransport{
 			base:        icebergTransport(),
 			projectID:   opts.QuotaProjectID,
 			tokenSource: ts,
@@ -929,15 +971,14 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		}
 
 		var restOpts []rest.Option
+		if opts.CatalogCred == nil {
+			logging.Debugf("createCatalog: NESSIE using no authentication (public server)")
+		}
 		authOpts, authErr := buildNessieHTTPAuthOpts(opts.CatalogCred)
 		if authErr != nil {
 			return nil, fmt.Errorf("NESSIE catalog credential error: %w", authErr)
 		}
-		if authOpts != nil {
-			restOpts = append(restOpts, authOpts...)
-		} else {
-			logging.Debugf("createCatalog: NESSIE using no authentication (public server)")
-		}
+		restOpts = append(restOpts, authOpts...)
 
 		// Forward storage credentials as iceberg-go FileIO props so that
 		// scan.PlanFiles can read manifest files from S3/GCS/ADLS without

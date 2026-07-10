@@ -1733,3 +1733,49 @@ func TestStripInvalidPredicates(t *testing.T) {
 		}
 	})
 }
+
+// TestNoRedirectTransportBlocksRedirect verifies that a REST catalog server
+// issuing a 3xx redirect (e.g. to a host outside the cluster allowlist) is
+// rejected instead of silently followed, since iceberg-go's REST catalog
+// client doesn't expose http.Client.CheckRedirect for us to disable this the
+// same way CURL()'s client does.
+func TestNoRedirectTransportBlocksRedirect(t *testing.T) {
+	internal := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer internal.Close()
+
+	redirecting := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, internal.URL, http.StatusFound)
+	}))
+	defer redirecting.Close()
+
+	client := &http.Client{Transport: &noRedirectTransport{base: http.DefaultTransport}}
+
+	resp, err := client.Get(redirecting.URL)
+	if err == nil {
+		resp.Body.Close()
+		t.Fatal("expected redirect to be blocked, got a response instead")
+	}
+	if !strings.Contains(err.Error(), "redirect") {
+		t.Errorf("expected error to mention redirect blocking, got: %v", err)
+	}
+}
+
+func TestNoRedirectTransportAllowsNonRedirect(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	client := &http.Client{Transport: &noRedirectTransport{base: http.DefaultTransport}}
+
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error for non-redirecting request: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
