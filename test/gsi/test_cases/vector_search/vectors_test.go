@@ -46,6 +46,8 @@ func TestVectors(t *testing.T) {
 
 	runMatch("case_single_key.json", false, true, qc, t)
 
+	runMatch("case_single_key_bugs.json", false, true, qc, t)
+
 	runStmt(qc, "DROP INDEX idx_vec1 on product._default.vectors")
 
 	fmt.Println("Vector index with leading scalar keys and vector key")

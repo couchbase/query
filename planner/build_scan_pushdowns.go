@@ -129,6 +129,9 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 				entry.SetFlags(IE_VECTOR_KEY_SKIP_ORDER, true)
 				if isPushDownProperty(pushDownProperty, _PUSHDOWN_ORDER) {
 					pushDownProperty &^= _PUSHDOWN_ORDER
+				} else if isPushDownProperty(pushDownProperty, _PUSHDOWN_PARTIAL_ORDER) {
+					pushDownProperty &^= _PUSHDOWN_PARTIAL_ORDER
+					entry.partialSortTermCount = 0
 				}
 				_, _, partSortCount := this.useIndexOrder(entry, idxKeys, nil, pushDownProperty)
 				if partSortCount > 0 {

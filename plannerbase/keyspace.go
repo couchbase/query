@@ -358,8 +358,13 @@ func (this *BaseKeyspace) AddJoinFilter(joinfilter *Filter) {
 	}
 }
 
-func (this *BaseKeyspace) AddVectorFilter(vectorfilter *Filter) {
-	this.vectorfilters = append(this.vectorfilters, vectorfilter)
+func (this *BaseKeyspace) AddVectorFilter(vectorfilter *Filter) (added bool) {
+	// for each keyspace only add the first vector filter
+	if len(this.vectorfilters) == 0 {
+		this.vectorfilters = append(this.vectorfilters, vectorfilter)
+		added = true
+	}
+	return
 }
 
 func (this *BaseKeyspace) AddFilters(filters Filters) {

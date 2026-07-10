@@ -43,7 +43,8 @@ const (
 	EXPR_IS_GROUP_COVER
 	EXPR_IS_AGG_COVER
 	EXPR_NULLS_POSITION
-	EXPR_NOW_VOLATILE // for DATE functions that starts with NOW
+	EXPR_NOW_VOLATILE     // for DATE functions that starts with NOW
+	EXPR_VECTOR_REDUNDANT // multiple ApproxVectorDistance functions specified
 )
 
 /*
