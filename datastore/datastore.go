@@ -360,9 +360,14 @@ type ExternalScanParams struct {
 	Projection        []string
 	ResultObject      map[string]any
 	ErrTemplate       map[string]any
-	CatalogCred       *cbauth.Credential
-	CollectionCred    *cbauth.Credential
-	Parent            value.Value
+	// CountOnly requests just the total row count (SELECT COUNT(*), no predicate),
+	// letting the datastore answer from catalog/file metadata rather than reading
+	// and converting every row. When true, ExternalScan sends exactly one entry
+	// whose value is the count.
+	CountOnly      bool
+	CatalogCred    *cbauth.Credential
+	CollectionCred *cbauth.Credential
+	Parent         value.Value
 	// ScanCatalog holds the live catalog.Catalog client. Type is any to avoid import cycle.
 	ScanCatalog any
 	// ExternalEntry caches the collection metadata pointer. Type is any to avoid import cycle.

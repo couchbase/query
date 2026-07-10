@@ -513,6 +513,16 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 			"Failed to load Iceberg table", params.ErrTemplate)
 	}
 
+	if params.CountOnly {
+		count, countErr := scanner.CountRows(ctx)
+		if countErr != nil {
+			return errors.NewDatastoreExternalCollectionError(countErr,
+				"Failed to count Iceberg table rows", params.ErrTemplate)
+		}
+		conn.Sender().SendEntry(&datastore.IndexEntry{EntryKey: []value.Value{value.NewValue(count)}})
+		return nil
+	}
+
 	// Stream scan results and send to index connection
 	resultChan, errorChan := scanner.ScanAndConvertStream(ctx)
 

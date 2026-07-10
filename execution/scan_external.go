@@ -96,6 +96,31 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 		useCache := this.plan.IsUnderNL()
 		alias := this.plan.Term().Alias()
 
+		if this.plan.CountOnly() {
+			util.Fork(scanExternalFork, externalScanDesc{this, context, nil, parent})
+
+			// The datastore sends exactly one entry carrying the total count
+			// (see ExternalScanParams.CountOnly); there are no per-row results
+			// to iterate or wrap with the keyspace alias.
+			var count value.Value = value.ZERO_VALUE
+			if entry, cont := this.getItemEntry(this.conn); cont && entry != nil {
+				count = entry.EntryKey[0]
+			}
+
+			cv := value.NewScopeValue(nil, parent)
+			av := value.NewAnnotatedValue(cv)
+			av.SetAttachment(value.ATT_COUNT, count)
+			if context.UseRequestQuota() {
+				if err := context.TrackValueSize(av.Size()); err != nil {
+					context.Error(err)
+					av.Recycle()
+					return
+				}
+			}
+			this.sendItem(av)
+			return
+		}
+
 		// use cached results if available
 		if useCache && this.results != nil {
 			for _, act := range this.results {
@@ -266,6 +291,7 @@ func (this *ExternalScan) scan(filter expression.Expression, context *Context, p
 			Projection:        projection,
 			ResultObject:      resultObject,
 			ErrTemplate:       make(map[string]any),
+			CountOnly:         this.plan.CountOnly(),
 		}
 	}
 

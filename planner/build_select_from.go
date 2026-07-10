@@ -1176,10 +1176,6 @@ func getUnnestIndexInfo(baseKeyspace *base.BaseKeyspace, alias string) *base.Unn
 }
 
 func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
-	cons := this.context.ScanConsistency()
-	if cons != "" && cons != datastore.UNBOUNDED && cons != datastore.NOT_SET {
-		return false, nil
-	}
 	if node.From() == nil ||
 		(node.Where() != nil && (node.Where().Value() == nil || !node.Where().Value().Truth())) ||
 		node.Group() != nil {
@@ -1210,8 +1206,14 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 		return false, err
 	}
 
-	if keyspace != nil && keyspace.IsExternalCollection() {
-		return false, nil
+	// Scan consistency (e.g. REQUEST_PLUS) only pertains to KV/index consistency;
+	// external collections have no index to be consistent with, so it doesn't
+	// disqualify them from the fast count-only path.
+	if keyspace == nil || !keyspace.IsExternalCollection() {
+		cons := this.context.ScanConsistency()
+		if cons != "" && cons != datastore.UNBOUNDED && cons != datastore.NOT_SET {
+			return false, nil
+		}
 	}
 
 	for _, term := range node.Projection().Terms() {
@@ -1241,6 +1243,28 @@ func (this *builder) fastCount(node *algebra.Subselect) (bool, error) {
 	if this.useCBO && this.keyspaceUseCBO(from.Alias()) {
 		cost, cardinality, size, frCost = getCountScanCost()
 	}
+
+	if keyspace != nil && keyspace.IsExternalCollection() {
+		// Correlated subqueries and non-static snapshot expressions are hard errors
+		// for external collections; fall back so VisitKeyspaceTerm reports them the
+		// same way it would for the general (non-fast-count) plan.
+		if (this.subquery && this.correlated) ||
+			(from.SnapshotIdExpr() != nil && from.SnapshotIdExpr().Static() == nil) ||
+			(from.SnapshotTimestampExpr() != nil && from.SnapshotTimestampExpr().Static() == nil) {
+			return false, nil
+		}
+		addExternalPrivilages(from, keyspace, "SELECT")
+		// No predicate reached this far (fastCount already rejected any WHERE clause
+		// above), so the datastore can answer COUNT(*) from catalog/manifest metadata
+		// instead of reading and converting every row.
+		externalScan := plan.NewExternalScan(keyspace, from, nil, nil,
+			from.SnapshotIdExpr(), from.SnapshotTimestampExpr(), false,
+			cost, cardinality, size, frCost)
+		externalScan.SetCountOnly(true)
+		this.addChildren(externalScan)
+		return true, nil
+	}
+
 	this.addChildren(plan.NewCountScan(keyspace, from, cost, cardinality, size, frCost))
 	return true, nil
 }

@@ -40,6 +40,7 @@ import (
 	icesql "github.com/apache/iceberg-go/catalog/sql"
 	iceio "github.com/apache/iceberg-go/io"
 	"github.com/apache/iceberg-go/table"
+	icebergutils "github.com/apache/iceberg-go/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -1462,6 +1463,31 @@ func planFilesWithRecovery(scan *table.Scan, ctx go_context.Context) (fileTasks 
 	return
 }
 
+// CountRows answers COUNT(*) from manifest metadata alone: PlanFiles reads only the
+// manifest list/manifests for the snapshot, not any Parquet/Avro/ORC data, and each
+// planned file's record count comes straight from its manifest entry.
+//
+// This is summed unconditionally, including files with associated delete entries,
+// which matches the current row-streaming scan path: neither applies
+// position/equality deletes today (see FileScanTask.DeleteFiles), so this stays
+// consistent with what SELECT * currently returns. If delete-file support is added
+// to the streaming path, this must be updated in tandem or it will overcount.
+func (s *Scanner) CountRows(ctx go_context.Context) (int64, error) {
+	scan, err := s.Scan(ctx)
+	if err != nil {
+		return 0, err
+	}
+	tasks, err := planFilesWithRecovery(scan, ctx)
+	if err != nil {
+		return 0, err
+	}
+	var total int64
+	for _, task := range tasks {
+		total += task.File.Count()
+	}
+	return total, nil
+}
+
 // ScanAndConvertWithPlanFiles reads data using PlanFiles approach to avoid NESSIE context cancellation
 func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan map[string]interface{}, <-chan error) {
 	logging.Debugf("Iceberg ScanAndConvertWithPlanFiles: starting NESSIE multi-file scan for %s.%s", s.databaseName, s.tableName)
@@ -2304,12 +2330,25 @@ func ParseS3URI(uri string) (bucket, key string, err error) {
 // CatalogMetadata represents the metadata for an Iceberg catalog
 type CatalogMetadata struct {
 	Namespaces []NamespaceInfo `json:"namespaces,omitempty"`
+	// RowCount sums TableInfo.RowCount across all namespaces; only meaningful
+	// (non-zero) when infoFlags requested file info (_CatalogInfoFiles).
+	RowCount int64 `json:"row_count,omitempty"`
 }
 
 // NamespaceInfo represents information about a namespace (database)
 type NamespaceInfo struct {
 	Name   string      `json:"name"`
 	Tables []TableInfo `json:"tables,omitempty"`
+	// RowCount sums TableInfo.RowCount across this namespace's tables; only
+	// meaningful (non-zero) when infoFlags requested file info (_CatalogInfoFiles).
+	RowCount int64 `json:"row_count,omitempty"`
+}
+
+// FileInfo represents a single data file backing a table snapshot, with its
+// record count taken directly from manifest metadata (see LoadCatalogMetadata).
+type FileInfo struct {
+	Path        string `json:"path"`
+	RecordCount int64  `json:"record_count"`
 }
 
 const _ICEBERG_MAX_SNAPSHOTS = 8
@@ -2340,10 +2379,15 @@ type TableInfo struct {
 	Name          string         `json:"name"`
 	Location      string         `json:"location,omitempty"`
 	Format        string         `json:"format,omitempty"`
-	Files         []string       `json:"files,omitempty"`
+	Files         []FileInfo     `json:"files,omitempty"`
 	CurrentSchema int            `json:"current_schema,omitempty"`
 	Schema        []ColumnInfo   `json:"schema,omitempty"`
 	Snapshots     []SnapshotInfo `json:"snapshots,omitempty"`
+	// RowCount sums each file's record count for the current snapshot; only
+	// populated when infoFlags requested file info (_CatalogInfoFiles). Summed
+	// unconditionally, including files with delete entries, matching the same
+	// non-delete-aware behavior as Scanner.CountRows and the current scan path.
+	RowCount int64 `json:"row_count,omitempty"`
 }
 
 // LoadCatalogMetadata loads metadata (namespaces, tables) from an Iceberg catalog.
@@ -2370,6 +2414,16 @@ func LoadCatalogMetadata(ctx go_context.Context, entry *extparams.CatalogEntry, 
 	if err != nil {
 		return nil, err
 	}
+	// For non-AWS-native catalog sources (NESSIE, REST, …) GetAWSConfig returns nil
+	// because IsAWSSource() is false; fall back to the collection credential so
+	// scan.PlanFiles below still has S3/GCS/ADLS props to read manifest files
+	// (mirrors ScanIcebergCatalog).
+	if awsCfg == nil {
+		awsCfg, err = GetStorageAWSConfig(cred, entry.SigV4SigningRegion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build AWS config from credential: %w", err)
+		}
+	}
 
 	// Create catalog options.
 	// CollectionCred mirrors CatalogCred so that catalogs like Nessie, which do
@@ -2392,6 +2446,10 @@ func LoadCatalogMetadata(ctx go_context.Context, entry *extparams.CatalogEntry, 
 	var awsCfgVal aws.Config
 	if awsCfg != nil {
 		awsCfgVal = *awsCfg
+		// scan.PlanFiles (used below for _CatalogInfoFiles) resolves its S3/GCS/ADLS
+		// file IO from the context passed at scan time, not from the catalog client's
+		// own config, so it must be injected here too (mirrors ScanIcebergCatalog).
+		ctx = icebergutils.WithAwsConfig(ctx, awsCfg)
 	}
 	cat, err := createCatalog(ctx, opts, awsCfgVal)
 	if err != nil {
@@ -2469,14 +2527,31 @@ func LoadCatalogMetadata(ctx go_context.Context, entry *extparams.CatalogEntry, 
 								})
 							}
 						}
+						if infoFlags&_CatalogInfoFiles != 0 {
+							if tasks, planErr := planFilesWithRecovery(tbl.Scan(), ctx); planErr == nil {
+								tblInfo.Files = make([]FileInfo, 0, len(tasks))
+								for _, task := range tasks {
+									count := task.File.Count()
+									tblInfo.Files = append(tblInfo.Files, FileInfo{
+										Path:        task.File.FilePath(),
+										RecordCount: count,
+									})
+									tblInfo.RowCount += count
+								}
+							} else {
+								logging.Warnf("LoadCatalogMetadata: failed to plan files for table %s: %v", tblName, planErr)
+							}
+						}
 					}
 				}
 			}
 
 			nsInfo.Tables = append(nsInfo.Tables, tblInfo)
+			nsInfo.RowCount += tblInfo.RowCount
 		}
 
 		metadata.Namespaces = append(metadata.Namespaces, nsInfo)
+		metadata.RowCount += nsInfo.RowCount
 	}
 
 	return metadata, nil

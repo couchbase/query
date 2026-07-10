@@ -29,6 +29,7 @@ type ExternalScan struct {
 	snapshotIdExpr expression.Expression
 	snapshotTsExpr expression.Expression
 	nested_loop    bool
+	countOnly      bool
 }
 
 func NewExternalScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths []string,
@@ -95,6 +96,17 @@ func (this *ExternalScan) IsUnderNL() bool {
 	return this.nested_loop
 }
 
+// CountOnly reports whether this scan only needs to produce the total row
+// count (SELECT COUNT(*) with no predicate), letting the datastore answer
+// from catalog/file metadata instead of reading and converting every row.
+func (this *ExternalScan) CountOnly() bool {
+	return this.countOnly
+}
+
+func (this *ExternalScan) SetCountOnly(countOnly bool) {
+	this.countOnly = countOnly
+}
+
 func (this *ExternalScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
@@ -123,6 +135,9 @@ func (this *ExternalScan) MarshalBase(f func(map[string]interface{})) map[string
 	if this.nested_loop {
 		r["nested_loop"] = this.nested_loop
 	}
+	if this.countOnly {
+		r["count_only"] = this.countOnly
+	}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -146,6 +161,7 @@ func (this *ExternalScan) UnmarshalJSON(body []byte) error {
 		SnapshotId        string                 `json:"snapshot_id"`
 		SnapshotTimestamp string                 `json:"snapshot_timestamp"`
 		NestedLoop        bool                   `json:"nested_loop"`
+		CountOnly         bool                   `json:"count_only"`
 		OptEstimate       map[string]interface{} `json:"optimizer_estimates"`
 	}
 
@@ -157,6 +173,7 @@ func (this *ExternalScan) UnmarshalJSON(body []byte) error {
 	this.subPaths = _unmarshalled.SubPaths
 	this.projection = _unmarshalled.Projection
 	this.nested_loop = _unmarshalled.NestedLoop
+	this.countOnly = _unmarshalled.CountOnly
 
 	this.term = algebra.NewKeyspaceTermFromPath(algebra.NewPathShortOrLong(_unmarshalled.Namespace, _unmarshalled.Bucket,
 		_unmarshalled.Scope, _unmarshalled.Keyspace), _unmarshalled.As, nil, nil)

@@ -99,8 +99,10 @@ func (b *catalogsInfoKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *catalogsInfoKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
-	// Load schema and snapshot info; file listing is omitted for system keyspace reads.
-	sliceOfCatalogs, err := getCatalogList(context, b.namespace.store, "", datastore.CatalogInfoSchema|datastore.CatalogInfoSnapshots)
+	// Files carries per-file record counts (see LoadCatalogMetadata), which requires a
+	// live PlanFiles metadata call per table, on top of schema/snapshot info.
+	sliceOfCatalogs, err := getCatalogList(context, b.namespace.store, "",
+		datastore.CatalogInfoSchema|datastore.CatalogInfoSnapshots|datastore.CatalogInfoFiles)
 	if err != nil {
 		return []errors.Error{err}
 	}
