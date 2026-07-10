@@ -10,6 +10,7 @@ package external
 
 import (
 	go_context "context"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -28,6 +29,31 @@ import (
 )
 
 const IcebergScanTimeout = 2 * time.Minute
+
+// formatBytesRead reports how much of the touched files' on-disk size was actually
+// fetched. Range-read scans (column/row-group pruning) fetch less than the full file,
+// in which case this reports "read of planned"; a plain whole-file read reports just
+// the bytes read since read == planned.
+func formatBytesRead(bytesRead, bytesPlanned int64) string {
+	if bytesPlanned > bytesRead {
+		return fmt.Sprintf("%s of %s read", logging.HumanReadableSize(bytesRead, false),
+			logging.HumanReadableSize(bytesPlanned, false))
+	}
+	return logging.HumanReadableSize(bytesRead, false) + " read"
+}
+
+// formatPruningStats summarizes row-group and column pruning across every parquet
+// file touched by the scan (row groups summed across files; columns are scan-wide,
+// not per-file). Returns "" when no parquet files with these stats were read (e.g.
+// Avro/ORC-only scans, or a scan path that doesn't do row-group/column pruning).
+func formatPruningStats(scanner *Scanner) string {
+	keptRG, totalRG := scanner.RowGroupStats()
+	selectedCols, totalCols := scanner.ColumnStats()
+	if totalRG == 0 && totalCols == 0 {
+		return ""
+	}
+	return fmt.Sprintf(", %d/%d row groups kept, %d/%d columns selected", keptRG, totalRG, selectedCols, totalCols)
+}
 
 // n1qlToIcebergExpr converts a N1QL WHERE-clause expression directly to an
 // iceberg-go BooleanExpression for filter pushdown.
@@ -480,7 +506,7 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 	if params.Filter != nil {
 		if expr := n1qlToIcebergExpr(params.Filter, params.Alias, params.Parent); expr != nil {
 			opts.FilterExpr = expr
-			logging.Infof("scanIcebergCatalog: Applied filter pushdown: %v", expr)
+			logging.Infof("scanIcebergCatalog (requestId=%s): Applied filter pushdown: %v", queryContext.RequestId(), expr)
 		}
 	}
 
@@ -563,8 +589,11 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 						rowsSent++
 					}
 				}
-				logging.Infof("Iceberg scan completed: %d rows sent, %d rows received, %d rows skipped, %d conversion errors (offsetApplied=%d)",
-					rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied)
+				logging.Infof("Iceberg scan completed (requestId=%s): %d rows sent, %d rows received, %d rows skipped, %d conversion errors (offsetApplied=%d), "+
+					"%d files scanned, %s%s",
+					queryContext.RequestId(), rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied,
+					scanner.FilesScanned(), formatBytesRead(scanner.BytesRead(), scanner.BytesPlanned()),
+					formatPruningStats(scanner))
 				return nil
 			}
 			return errors.NewDatastoreExternalCollectionError(err,
@@ -572,8 +601,11 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 
 		case row, ok := <-resultChan:
 			if !ok {
-				logging.Infof("Iceberg scan completed: %d rows sent, %d rows received, %d rows skipped, %d conversion errors (offsetApplied=%d)",
-					rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied)
+				logging.Infof("Iceberg scan completed (requestId=%s): %d rows sent, %d rows received, %d rows skipped, %d conversion errors (offsetApplied=%d), "+
+					"%d files scanned, %s%s",
+					queryContext.RequestId(), rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied,
+					scanner.FilesScanned(), formatBytesRead(scanner.BytesRead(), scanner.BytesPlanned()),
+					formatPruningStats(scanner))
 				return nil
 			}
 

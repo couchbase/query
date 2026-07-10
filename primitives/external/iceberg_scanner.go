@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -30,6 +31,7 @@ import (
 	"github.com/apache/arrow-go/v18/arrow/array"
 	"github.com/apache/arrow-go/v18/arrow/ipc"
 	"github.com/apache/arrow-go/v18/arrow/memory"
+	"github.com/apache/arrow-go/v18/parquet"
 	pqfile "github.com/apache/arrow-go/v18/parquet/file"
 	"github.com/apache/arrow-go/v18/parquet/pqarrow"
 	"github.com/apache/iceberg-go"
@@ -68,14 +70,27 @@ var (
 	_icebergHTTPTransport *http.Transport
 )
 
+// _icebergIdleConnTimeout controls how long pooled connections to a given
+// host (Glue, S3, GCS) are kept alive between queries before being closed,
+// so back-to-back queries can reuse a warm connection instead of paying a
+// fresh DNS+TCP+TLS handshake. Decoupled from IcebergScanTimeout, which
+// governs the per-scan deadline and must not change.
+const _icebergIdleConnTimeout = 30 * time.Minute
+
 // icebergTransport returns a shared *http.Transport for all iceberg HTTP calls
 // (REST catalogs, S3, GCS). Cloned from http.DefaultTransport with MaxIdleConnsPerHost
 // set to 4*NumCPU so concurrent file downloads share idle sockets per endpoint.
+// MaxIdleConns (the global cap across all hosts) is uncapped: this pool serves
+// several distinct hosts at once (catalog, S3, GCS, ...), each already bounded
+// by MaxIdleConnsPerHost, so a global ceiling inherited from
+// http.DefaultTransport (100) would just silently clamp the per-host tuning
+// above once a handful of hosts are active concurrently, with no benefit.
 func icebergTransport() *http.Transport {
 	_icebergTransportOnce.Do(func() {
 		t := http.DefaultTransport.(*http.Transport).Clone()
 		t.MaxIdleConnsPerHost = _ICEBERG_IDLE_CONNS_PER_HOST_CPUS * util.NumCPU()
-		t.IdleConnTimeout = IcebergScanTimeout
+		t.MaxIdleConns = 0
+		t.IdleConnTimeout = _icebergIdleConnTimeout
 		_icebergHTTPTransport = t
 	})
 	return _icebergHTTPTransport
@@ -98,6 +113,46 @@ type Scanner struct {
 	parallelScans   int                // Scan parallelism override (0 = use default 1)
 	collectionCred  *cbauth.Credential // Credential for reading data files
 	decimalToDouble bool               // When true, decimal columns are converted to float64
+
+	filesScanned int64 // Number of data files touched by the scan (atomic)
+	bytesRead    int64 // Actual bytes read from storage across all files (atomic); for
+	// range-read scans this reflects only the footer + pruned column chunks fetched,
+	// not the full file size.
+	bytesPlanned int64 // Sum of the touched files' on-disk size (atomic), i.e. what a
+	// whole-file read would have transferred. Lets callers report "read X of Y" when
+	// range-read pruning fetched less than the full file.
+
+	totalRowGroups int64 // Sum, across all parquet files touched, of each file's row-group count (atomic)
+	keptRowGroups  int64 // Sum, across all parquet files touched, of row groups NOT pruned (atomic)
+	totalCols      int64 // Leaf column count of the file schema (atomic store; same for every file in a scan)
+	selectedCols   int64 // Leaf column count actually projected (atomic store; same for every file in a scan)
+}
+
+// FilesScanned returns the number of data files touched by the most recent scan.
+func (s *Scanner) FilesScanned() int64 { return atomic.LoadInt64(&s.filesScanned) }
+
+// BytesRead returns the actual bytes read from storage across all files touched by
+// the most recent scan. For range-read (column/row-group pruned) scans this is the
+// footer + pruned column chunks actually fetched, which can be much smaller than the
+// files' total size on disk.
+func (s *Scanner) BytesRead() int64 { return atomic.LoadInt64(&s.bytesRead) }
+
+// BytesPlanned returns the total on-disk size of the files touched by the most recent
+// scan, i.e. what a whole-file read would have transferred. Compare against BytesRead
+// to see how much a range-read scan pruned away.
+func (s *Scanner) BytesPlanned() int64 { return atomic.LoadInt64(&s.bytesPlanned) }
+
+// RowGroupStats returns how many of the parquet row groups touched by the most recent
+// scan were kept vs. the total across all files (summed), i.e. what row-group pruning
+// eliminated. Zero/zero when no parquet files with row-group stats were read.
+func (s *Scanner) RowGroupStats() (kept, total int64) {
+	return atomic.LoadInt64(&s.keptRowGroups), atomic.LoadInt64(&s.totalRowGroups)
+}
+
+// ColumnStats returns how many leaf columns were projected vs. the file schema's total,
+// i.e. what column-projection pruning eliminated. Zero/zero when no parquet files were read.
+func (s *Scanner) ColumnStats() (selected, total int64) {
+	return atomic.LoadInt64(&s.selectedCols), atomic.LoadInt64(&s.totalCols)
 }
 
 type ScanOptions struct {
@@ -1336,6 +1391,20 @@ func (s *Scanner) CreateReader(ctx go_context.Context) (*Reader, error) {
 		return nil, err
 	}
 
+	// Record planned file count/size for observability. This path reads whole files
+	// via ToArrowRecords (no range-read pruning), so planned size approximates actual
+	// bytes read. Best-effort: a planning failure here doesn't block the actual scan.
+	if fileTasks, ferr := planFilesWithRecovery(scan, ctx); ferr == nil {
+		atomic.AddInt64(&s.filesScanned, int64(len(fileTasks)))
+		for _, task := range fileTasks {
+			sz := task.File.FileSizeBytes()
+			atomic.AddInt64(&s.bytesRead, sz)
+			atomic.AddInt64(&s.bytesPlanned, sz)
+		}
+	} else {
+		logging.Debugf("Iceberg CreateReader: failed to plan files for stats: %v", ferr)
+	}
+
 	reader, err := NewReader(ctx, scan)
 	if err != nil {
 		return nil, err
@@ -1516,6 +1585,15 @@ func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan ma
 	}
 
 	logging.Debugf("Iceberg ScanAndConvertWithPlanFiles: NESSIE catalog planned %d data files", len(fileTasks))
+
+	// This path reads each planned file in full via ToArrowRecords (no range-read
+	// pruning), so the planned file sizes are the actual bytes read.
+	atomic.AddInt64(&s.filesScanned, int64(len(fileTasks)))
+	for _, task := range fileTasks {
+		sz := task.File.FileSizeBytes()
+		atomic.AddInt64(&s.bytesRead, sz)
+		atomic.AddInt64(&s.bytesPlanned, sz)
+	}
 
 	resultChan := make(chan map[string]interface{}, 100)
 	errorChan := make(chan error, 1)
@@ -1772,6 +1850,32 @@ type fileDownloader interface {
 	download(ctx go_context.Context, uri string) ([]byte, error)
 }
 
+// rangeReaderDownloader is implemented by downloaders that can serve random-access,
+// ranged reads. Parquet's footer-first layout means a parquet.ReaderAtSeeker backed
+// by ranged GETs lets pqfile.NewParquetReader fetch only the footer plus the column
+// chunks resolveColumnIndices selects, instead of downloading and buffering the
+// entire (often GB-sized) object. The returned io.Closer must be closed by the
+// caller once the parquet reader built on top of it is done.
+type rangeReaderDownloader interface {
+	openRangeReader(ctx go_context.Context, uri string) (parquet.ReaderAtSeeker, io.Closer, error)
+}
+
+// countingReaderAt wraps a parquet.ReaderAtSeeker and accumulates the bytes actually
+// fetched via ReadAt into counter, so a range-read scan (footer + pruned column chunks
+// only) reports real bytes transferred rather than the full file size.
+type countingReaderAt struct {
+	parquet.ReaderAtSeeker
+	counter *int64
+}
+
+func (c *countingReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	n, err := c.ReaderAtSeeker.ReadAt(p, off)
+	if n > 0 {
+		atomic.AddInt64(c.counter, int64(n))
+	}
+	return n, err
+}
+
 // s3Downloader downloads files from AWS S3 (or S3-compatible, e.g. s3a://).
 type s3Downloader struct{ client *s3.Client }
 
@@ -1793,6 +1897,73 @@ func (d *s3Downloader) download(ctx go_context.Context, uri string) ([]byte, err
 	return io.ReadAll(result.Body)
 }
 
+func (d *s3Downloader) openRangeReader(ctx go_context.Context, uri string) (parquet.ReaderAtSeeker, io.Closer, error) {
+	uri = strings.Replace(uri, "s3a://", "s3://", 1)
+	bucket, key, err := ParseS3URI(uri)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid S3 URI %s: %w", uri, err)
+	}
+	head, err := d.client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: aws.String(bucket), Key: aws.String(key)})
+	if err != nil {
+		return nil, nil, fmt.Errorf("S3 HeadObject s3://%s/%s: %w", bucket, key, err)
+	}
+	var size int64
+	if head.ContentLength != nil {
+		size = *head.ContentLength
+	}
+	r := &s3RangeReaderAt{ctx: ctx, client: d.client, bucket: bucket, key: key, size: size}
+	return r, r, nil
+}
+
+// s3RangeReaderAt implements parquet.ReaderAtSeeker via ranged S3 GetObject calls
+// (bytes=start-end). Seek only needs to support io.SeekEnd correctly: parquet's
+// file reader calls it once at open time to learn the file size; all later reads
+// go through ReadAt, which is stateless.
+type s3RangeReaderAt struct {
+	ctx    go_context.Context
+	client *s3.Client
+	bucket string
+	key    string
+	size   int64
+}
+
+func (r *s3RangeReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	end := off + int64(len(p)) - 1
+	if end >= r.size {
+		end = r.size - 1
+	}
+	if off > end {
+		return 0, io.EOF
+	}
+	rng := fmt.Sprintf("bytes=%d-%d", off, end)
+	result, err := r.client.GetObject(r.ctx, &s3.GetObjectInput{
+		Bucket: aws.String(r.bucket),
+		Key:    aws.String(r.key),
+		Range:  aws.String(rng),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("S3 ranged GetObject s3://%s/%s [%s]: %w", r.bucket, r.key, rng, err)
+	}
+	defer result.Body.Close()
+	return io.ReadFull(result.Body, p[:end-off+1])
+}
+
+func (r *s3RangeReaderAt) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	case io.SeekStart:
+		return offset, nil
+	case io.SeekEnd:
+		return r.size + offset, nil
+	default:
+		return 0, fmt.Errorf("s3RangeReaderAt: unsupported whence %d", whence)
+	}
+}
+
+func (r *s3RangeReaderAt) Close() error { return nil }
+
 // gcsDownloader downloads files from Google Cloud Storage (gs://).
 type gcsDownloader struct{ client *storage.Client }
 
@@ -1808,6 +1979,60 @@ func (d *gcsDownloader) download(ctx go_context.Context, uri string) ([]byte, er
 	defer rc.Close()
 	return io.ReadAll(rc)
 }
+
+func (d *gcsDownloader) openRangeReader(ctx go_context.Context, uri string) (parquet.ReaderAtSeeker, io.Closer, error) {
+	bucket, object, err := ParseGCSURI(uri)
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid GCS URI %s: %w", uri, err)
+	}
+	obj := d.client.Bucket(bucket).Object(object)
+	attrs, err := obj.Attrs(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("GCS Attrs gs://%s/%s: %w", bucket, object, err)
+	}
+	r := &gcsRangeReaderAt{ctx: ctx, obj: obj, size: attrs.Size}
+	return r, r, nil
+}
+
+// gcsRangeReaderAt implements parquet.ReaderAtSeeker via GCS ranged reads
+// (Object.NewRangeReader). See s3RangeReaderAt for the Seek/ReadAt contract.
+type gcsRangeReaderAt struct {
+	ctx  go_context.Context
+	obj  *storage.ObjectHandle
+	size int64
+}
+
+func (r *gcsRangeReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	length := int64(len(p))
+	if off+length > r.size {
+		length = r.size - off
+	}
+	if length <= 0 {
+		return 0, io.EOF
+	}
+	rc, err := r.obj.NewRangeReader(r.ctx, off, length)
+	if err != nil {
+		return 0, fmt.Errorf("GCS NewRangeReader offset=%d length=%d: %w", off, length, err)
+	}
+	defer rc.Close()
+	return io.ReadFull(rc, p[:length])
+}
+
+func (r *gcsRangeReaderAt) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	case io.SeekStart:
+		return offset, nil
+	case io.SeekEnd:
+		return r.size + offset, nil
+	default:
+		return 0, fmt.Errorf("gcsRangeReaderAt: unsupported whence %d", whence)
+	}
+}
+
+func (r *gcsRangeReaderAt) Close() error { return nil }
 
 // adlsDownloader downloads files from Azure Data Lake Storage / Blob Storage
 // (abfs://, abfss://, wasb://, wasbs://) using iceberg-go's FileIO. The props
@@ -1831,6 +2056,21 @@ func (d *adlsDownloader) download(ctx go_context.Context, uri string) ([]byte, e
 	}
 	defer f.Close()
 	return io.ReadAll(f)
+}
+
+// openRangeReader returns the iceio.File directly: it already implements
+// io.ReaderAt and io.Seeker (see iceberg-go's io.File interface), so no
+// separate range-reader wrapper is needed the way S3/GCS require one.
+func (d *adlsDownloader) openRangeReader(ctx go_context.Context, uri string) (parquet.ReaderAtSeeker, io.Closer, error) {
+	fs, err := iceio.LoadFS(ctx, d.props, uri)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ADLS LoadFS for %s: %w", uri, err)
+	}
+	f, err := fs.Open(uri)
+	if err != nil {
+		return nil, nil, fmt.Errorf("ADLS open %s: %w", uri, err)
+	}
+	return f, f, nil
 }
 
 // ParseGCSURI splits a gs://bucket/object URI into its parts.
@@ -2043,14 +2283,36 @@ func (s *Scanner) streamFileTask(ctx go_context.Context, dl fileDownloader, task
 	logging.Debugf("ScanAndConvertParallelFiles: reading file %s (format=%s, records=%d)",
 		filePath, format, task.File.Count())
 
+	// Only worth the extra round trips when there's a column projection
+	// (resolveColumnIndices can skip column chunks) or a filter (selectRowGroups
+	// can skip row groups) to exploit; for a full unfiltered scan a single bulk
+	// download is simpler and has fewer requests.
+	if format == iceberg.ParquetFile && (s.projectionFieldSet() != nil || s.filterExpr != nil) {
+		if rrd, ok := dl.(rangeReaderDownloader); ok {
+			r, closer, err := rrd.openRangeReader(ctx, filePath)
+			if err == nil {
+				defer closer.Close()
+				atomic.AddInt64(&s.filesScanned, 1)
+				atomic.AddInt64(&s.bytesPlanned, task.File.FileSizeBytes())
+				cr := &countingReaderAt{ReaderAtSeeker: r, counter: &s.bytesRead}
+				return s.streamParquetFile(ctx, cr, resultChan)
+			}
+			logging.Warnf("ScanAndConvertParallelFiles: range-read open failed for %s, falling back to whole-file download: %v",
+				filePath, err)
+		}
+	}
+
 	fileData, err := dl.download(ctx, filePath)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}
+	atomic.AddInt64(&s.filesScanned, 1)
+	atomic.AddInt64(&s.bytesRead, int64(len(fileData)))
+	atomic.AddInt64(&s.bytesPlanned, task.File.FileSizeBytes())
 
 	switch format {
 	case iceberg.ParquetFile:
-		return s.streamParquetFile(ctx, fileData, resultChan)
+		return s.streamParquetFile(ctx, bytes.NewReader(fileData), resultChan)
 	case iceberg.AvroFile:
 		return s.streamAvroFile(ctx, fileData, resultChan)
 	case iceberg.OrcFile:
@@ -2061,10 +2323,12 @@ func (s *Scanner) streamFileTask(ctx go_context.Context, dl fileDownloader, task
 	}
 }
 
-// streamParquetFile reads a parquet file and sends rows to resultChan.
-func (s *Scanner) streamParquetFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]interface{}) error {
-	r := bytes.NewReader(data)
-
+// streamParquetFile reads a parquet file and sends rows to resultChan. r may be a
+// bytes.NewReader over a fully-downloaded file, or a ranged reader (see
+// rangeReaderDownloader) that fetches only the footer and the column chunks
+// resolveColumnIndices selects.
+func (s *Scanner) streamParquetFile(ctx go_context.Context, r parquet.ReaderAtSeeker,
+	resultChan chan<- map[string]interface{}) error {
 	pqReader, err := pqfile.NewParquetReader(r)
 	if err != nil {
 		return fmt.Errorf("failed to open parquet reader: %w", err)
@@ -2076,14 +2340,35 @@ func (s *Scanner) streamParquetFile(ctx go_context.Context, data []byte, resultC
 		return fmt.Errorf("failed to create arrow/parquet reader: %w", err)
 	}
 
-	rr, err := arrowReader.GetRecordReader(ctx, nil, nil)
+	fieldSet := s.projectionFieldSet()
+	colIndices := resolveColumnIndices(arrowReader.Manifest, fieldSet)
+	rowGroups := s.selectRowGroups(pqReader, arrowReader.Manifest)
+
+	totalRowGroups := pqReader.NumRowGroups()
+	keptRowGroups := totalRowGroups
+	if rowGroups != nil {
+		keptRowGroups = len(rowGroups)
+	}
+	atomic.AddInt64(&s.totalRowGroups, int64(totalRowGroups))
+	atomic.AddInt64(&s.keptRowGroups, int64(keptRowGroups))
+
+	totalCols := countLeafColumns(arrowReader.Manifest)
+	selectedCols := totalCols
+	if colIndices != nil {
+		selectedCols = len(colIndices)
+	}
+	// Same for every file in a scan (schema/projection don't vary per file); plain
+	// store rather than accumulate.
+	atomic.StoreInt64(&s.totalCols, int64(totalCols))
+	atomic.StoreInt64(&s.selectedCols, int64(selectedCols))
+
+	rr, err := arrowReader.GetRecordReader(ctx, colIndices, rowGroups)
 	if err != nil {
 		return fmt.Errorf("failed to get parquet record reader: %w", err)
 	}
 	defer rr.Release()
 
 	helper := &Reader{decimalToDouble: s.decimalToDouble}
-	fieldSet := s.projectionFieldSet()
 
 	for rr.Next() {
 		rec := rr.Record()
@@ -2091,9 +2376,6 @@ func (s *Scanner) streamParquetFile(ctx go_context.Context, data []byte, resultC
 		for rowIdx := 0; rowIdx < int(rec.NumRows()); rowIdx++ {
 			row := make(map[string]interface{}, schema.NumFields())
 			for colIdx, field := range schema.Fields() {
-				if fieldSet != nil && !fieldSet[field.Name] {
-					continue
-				}
 				col := rec.Column(colIdx)
 				if col.IsNull(rowIdx) {
 					row[field.Name] = nil
@@ -2196,7 +2478,7 @@ func (s *Scanner) streamFileByExtension(ctx go_context.Context, data []byte, fil
 	lower := strings.ToLower(filePath)
 	switch {
 	case strings.HasSuffix(lower, ".parquet"):
-		return s.streamParquetFile(ctx, data, resultChan)
+		return s.streamParquetFile(ctx, bytes.NewReader(data), resultChan)
 	case strings.HasSuffix(lower, ".arrow") || strings.HasSuffix(lower, ".arrows"):
 		return s.streamArrowIPCFile(ctx, data, resultChan)
 	case strings.HasSuffix(lower, ".avro"):
@@ -2206,7 +2488,7 @@ func (s *Scanner) streamFileByExtension(ctx go_context.Context, data []byte, fil
 	default:
 		// Default assumption for Iceberg is parquet.
 		logging.Warnf("ScanAndConvertParallelFiles: unknown extension in %s, attempting parquet read", filePath)
-		return s.streamParquetFile(ctx, data, resultChan)
+		return s.streamParquetFile(ctx, bytes.NewReader(data), resultChan)
 	}
 }
 
@@ -2280,6 +2562,96 @@ func (s *Scanner) projectionFieldSet() map[string]bool {
 		fieldSet[p] = true
 	}
 	return fieldSet
+}
+
+// resolveColumnIndices maps the top-level field names in fieldSet to the parquet
+// leaf column indices needed to decode them, for pqarrow.FileReader.GetRecordReader.
+// All descendant leaves of a selected nested/struct field are included so the whole
+// field decodes intact. Returns nil (meaning "read every column") when fieldSet is
+// nil or when none of its names match a top-level field in this file's schema.
+func resolveColumnIndices(manifest *pqarrow.SchemaManifest, fieldSet map[string]bool) []int {
+	if fieldSet == nil {
+		return nil
+	}
+	var indices []int
+	var collectLeaves func(f *pqarrow.SchemaField)
+	collectLeaves = func(f *pqarrow.SchemaField) {
+		// SchemaField.IsLeaf() (ColIndex != -1) is unreliable here: group/struct
+		// nodes never have ColIndex explicitly set to -1, so it defaults to 0 and
+		// collides with a genuine leaf whose ColIndex is 0. Matching pqarrow's own
+		// FileReader.getReader, len(Children) == 0 is the correct leaf check.
+		if len(f.Children) == 0 {
+			indices = append(indices, f.ColIndex)
+			return
+		}
+		for i := range f.Children {
+			collectLeaves(&f.Children[i])
+		}
+	}
+	for i := range manifest.Fields {
+		field := &manifest.Fields[i]
+		if field.Field != nil && fieldSet[field.Field.Name] {
+			collectLeaves(field)
+		}
+	}
+	if len(indices) == 0 {
+		return nil
+	}
+	return indices
+}
+
+// countLeafColumns returns the total number of leaf (physical) columns in the
+// file's schema, for reporting how much resolveColumnIndices' projection narrowed
+// the read relative to the file's full column count.
+func countLeafColumns(manifest *pqarrow.SchemaManifest) int {
+	count := 0
+	var walk func(f *pqarrow.SchemaField)
+	walk = func(f *pqarrow.SchemaField) {
+		if len(f.Children) == 0 {
+			count++
+			return
+		}
+		for i := range f.Children {
+			walk(&f.Children[i])
+		}
+	}
+	for i := range manifest.Fields {
+		walk(&manifest.Fields[i])
+	}
+	return count
+}
+
+// selectRowGroups returns which of this file's row groups could contain rows
+// matching s.filterExpr, using only each row group's Parquet column statistics
+// (min/max/null-count) -- no row data is read to decide this. Returns nil
+// ("read every row group") when there's no filter, or when the matcher can't
+// be built (e.g. the filter can't be bound against the table schema).
+func (s *Scanner) selectRowGroups(pqReader *pqfile.Reader, manifest *pqarrow.SchemaManifest) []int {
+	if s.filterExpr == nil || s.table == nil {
+		return nil
+	}
+	schema := s.table.Schema()
+	safe := stripInvalidPredicates(schema, s.filterExpr, true)
+	matcher, err := buildRowGroupMatcher(schema, safe, buildColumnPathIndex(manifest))
+	if err != nil {
+		logging.Debugf("Iceberg scan: could not build row-group matcher, reading all row groups: %v", err)
+		return nil
+	}
+	if matcher == nil {
+		return nil
+	}
+
+	numRowGroups := pqReader.NumRowGroups()
+	kept := make([]int, 0, numRowGroups)
+	for i := 0; i < numRowGroups; i++ {
+		if matcher(pqReader.MetaData().RowGroup(i)) {
+			kept = append(kept, i)
+		}
+	}
+	if len(kept) == numRowGroups {
+		return nil // nothing pruned
+	}
+	return kept
 }
 
 // GetSchema returns the table schema

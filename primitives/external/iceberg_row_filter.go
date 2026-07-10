@@ -14,6 +14,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/apache/arrow-go/v18/parquet/metadata"
+	"github.com/apache/arrow-go/v18/parquet/pqarrow"
 	"github.com/apache/iceberg-go"
 	"github.com/couchbase/query/logging"
 )
@@ -388,6 +390,285 @@ func toInt64(v interface{}) (int64, bool) {
 		return int64(x), true
 	}
 	return 0, false
+}
+
+// rowGroupMatcher reports whether a Parquet row group could contain rows that
+// satisfy the pushed-down filter, using only the row group's column-level
+// statistics (min/max/null-count) from the Parquet footer -- no row data is
+// read to make this decision. A nil rowGroupMatcher means no filter is
+// applied; every row group is kept. It is deliberately conservative: it may
+// return true (keep) in cases a tighter reading of the statistics would allow
+// skipping, but it must never return false for a row group that could
+// actually contain a match.
+type rowGroupMatcher func(rgMeta *metadata.RowGroupMetaData) bool
+
+// buildRowGroupMatcher returns a row-group-level evaluator for an iceberg filter
+// expression, for pruning Parquet row groups via their footer statistics before
+// any column data is downloaded or decoded. colIndexByPath maps each leaf
+// column's dotted schema path (as returned by iceberg.Schema.FindColumnName) to
+// its physical column index in this specific file (see buildColumnPathIndex).
+// Returns (nil, nil) when no filtering is needed.
+func buildRowGroupMatcher(schema *iceberg.Schema, expr iceberg.BooleanExpression,
+	colIndexByPath map[string]int) (rowGroupMatcher, error) {
+
+	if expr == nil {
+		return nil, nil
+	}
+	if _, isTrue := expr.(iceberg.AlwaysTrue); isTrue {
+		return nil, nil
+	}
+	if _, isFalse := expr.(iceberg.AlwaysFalse); isFalse {
+		return func(*metadata.RowGroupMetaData) bool { return false }, nil
+	}
+
+	bound, err := iceberg.BindExpr(schema, expr, true)
+	if err != nil {
+		return nil, err
+	}
+	if _, isTrue := bound.(iceberg.AlwaysTrue); isTrue {
+		return nil, nil
+	}
+	if _, isFalse := bound.(iceberg.AlwaysFalse); isFalse {
+		return func(*metadata.RowGroupMetaData) bool { return false }, nil
+	}
+
+	return func(rgMeta *metadata.RowGroupMetaData) bool {
+		ev := &rowGroupEvaluator{schema: schema, colIndexByPath: colIndexByPath, rgMeta: rgMeta}
+		result, err := iceberg.VisitExpr(bound, ev)
+		if err != nil {
+			logging.Debugf("Iceberg row-group filter: evaluation error, keeping row group: %v", err)
+			return true
+		}
+		return result
+	}, nil
+}
+
+// buildColumnPathIndex maps each leaf column's dotted schema path (matching
+// iceberg.Schema.FindColumnName's output, e.g. "address.city") to its physical
+// leaf column index in this specific parquet file, for row-group statistics
+// lookups. Unlike resolveColumnIndices (which only needs top-level names for
+// column-projection pruning), row-group pruning must resolve filter references
+// at any nesting depth.
+func buildColumnPathIndex(manifest *pqarrow.SchemaManifest) map[string]int {
+	idx := make(map[string]int)
+	var walk func(f *pqarrow.SchemaField, prefix string)
+	walk = func(f *pqarrow.SchemaField, prefix string) {
+		path := f.Field.Name
+		if prefix != "" {
+			path = prefix + "." + path
+		}
+		if len(f.Children) == 0 {
+			idx[path] = f.ColIndex
+			return
+		}
+		for i := range f.Children {
+			walk(&f.Children[i], path)
+		}
+	}
+	for i := range manifest.Fields {
+		walk(&manifest.Fields[i], "")
+	}
+	return idx
+}
+
+// rowGroupEvaluator implements iceberg.BoundBooleanExprVisitor[bool] over a row
+// group's Parquet column statistics instead of a concrete row. Each predicate
+// visit answers "could some row in this row group satisfy this condition?"
+// using only min/max/null-count -- it never inspects actual values, so on any
+// ambiguity (missing stats, an unsupported stat type, or an operator that
+// can't be reasoned about from a range alone, e.g. NOT/STARTS_WITH/IS_NAN) it
+// returns true (keep) rather than risk skipping a row group with a match.
+type rowGroupEvaluator struct {
+	schema         *iceberg.Schema
+	colIndexByPath map[string]int
+	rgMeta         *metadata.RowGroupMetaData
+}
+
+func (e *rowGroupEvaluator) VisitTrue() bool         { return true }
+func (e *rowGroupEvaluator) VisitFalse() bool        { return false }
+func (e *rowGroupEvaluator) VisitNot(bool) bool      { return true } // can't invert a range check safely; keep
+func (e *rowGroupEvaluator) VisitAnd(l, r bool) bool { return l && r }
+func (e *rowGroupEvaluator) VisitOr(l, r bool) bool  { return l || r }
+
+func (e *rowGroupEvaluator) VisitUnbound(iceberg.UnboundPredicate) bool { return true }
+
+func (e *rowGroupEvaluator) VisitBound(pred iceberg.BoundPredicate) bool {
+	return iceberg.VisitBoundPredicate[bool](pred, e)
+}
+
+// colStats holds one column's row-group statistics decoded into the same
+// Go-native types compareToLiteral expects. ok is false when stats couldn't be
+// resolved at all (unmapped column, read error, or an unsupported physical
+// stat type); callers must treat that as "keep, can't prune".
+type colStats struct {
+	min, max     interface{}
+	hasMinMax    bool
+	nullCount    int64
+	hasNullCount bool
+	numValues    int64
+	ok           bool
+}
+
+func (e *rowGroupEvaluator) statsFor(term iceberg.BoundTerm) colStats {
+	fieldID := term.Ref().Field().ID
+	path, ok := e.schema.FindColumnName(fieldID)
+	if !ok {
+		return colStats{}
+	}
+	colIdx, ok := e.colIndexByPath[path]
+	if !ok {
+		return colStats{}
+	}
+	cc, err := e.rgMeta.ColumnChunk(colIdx)
+	if err != nil {
+		return colStats{}
+	}
+	stats, err := cc.Statistics()
+	if err != nil || stats == nil {
+		return colStats{}
+	}
+	cs := colStats{
+		ok:           true,
+		numValues:    stats.NumValues(),
+		hasNullCount: stats.HasNullCount(),
+		nullCount:    stats.NullCount(),
+	}
+	if !stats.HasMinMax() {
+		return cs
+	}
+	switch st := stats.(type) {
+	case *metadata.Int32Statistics:
+		cs.min, cs.max = int64(st.Min()), int64(st.Max())
+	case *metadata.Int64Statistics:
+		cs.min, cs.max = st.Min(), st.Max()
+	case *metadata.Float32Statistics:
+		cs.min, cs.max = float64(st.Min()), float64(st.Max())
+	case *metadata.Float64Statistics:
+		cs.min, cs.max = st.Min(), st.Max()
+	case *metadata.BooleanStatistics:
+		cs.min, cs.max = st.Min(), st.Max()
+	case *metadata.ByteArrayStatistics:
+		cs.min, cs.max = []byte(st.Min()), []byte(st.Max())
+	case *metadata.FixedLenByteArrayStatistics:
+		cs.min, cs.max = []byte(st.Min()), []byte(st.Max())
+	default:
+		// Int96/Float16 or any future stat type: not worth decoding, keep.
+		return cs
+	}
+	cs.hasMinMax = true
+	return cs
+}
+
+func (e *rowGroupEvaluator) VisitIsNull(term iceberg.BoundTerm) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasNullCount {
+		return true
+	}
+	return cs.nullCount > 0
+}
+
+func (e *rowGroupEvaluator) VisitNotNull(term iceberg.BoundTerm) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasNullCount {
+		return true
+	}
+	return cs.nullCount < cs.numValues
+}
+
+func (e *rowGroupEvaluator) VisitIsNan(iceberg.BoundTerm) bool  { return true }
+func (e *rowGroupEvaluator) VisitNotNan(iceberg.BoundTerm) bool { return true }
+
+func (e *rowGroupEvaluator) VisitEqual(term iceberg.BoundTerm, lit iceberg.Literal) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasMinMax {
+		return true
+	}
+	cmin, okMin := compareToLiteral(cs.min, lit)
+	cmax, okMax := compareToLiteral(cs.max, lit)
+	if !okMin || !okMax {
+		return true
+	}
+	return cmin <= 0 && cmax >= 0
+}
+
+func (e *rowGroupEvaluator) VisitNotEqual(term iceberg.BoundTerm, lit iceberg.Literal) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasMinMax {
+		return true
+	}
+	// Only provably impossible when every value in the row group equals lit exactly.
+	cmin, okMin := compareToLiteral(cs.min, lit)
+	cmax, okMax := compareToLiteral(cs.max, lit)
+	if !okMin || !okMax {
+		return true
+	}
+	return !(cmin == 0 && cmax == 0)
+}
+
+func (e *rowGroupEvaluator) VisitGreaterEqual(term iceberg.BoundTerm, lit iceberg.Literal) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasMinMax {
+		return true
+	}
+	c, ok := compareToLiteral(cs.max, lit)
+	return !ok || c >= 0
+}
+
+func (e *rowGroupEvaluator) VisitGreater(term iceberg.BoundTerm, lit iceberg.Literal) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasMinMax {
+		return true
+	}
+	c, ok := compareToLiteral(cs.max, lit)
+	return !ok || c > 0
+}
+
+func (e *rowGroupEvaluator) VisitLessEqual(term iceberg.BoundTerm, lit iceberg.Literal) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasMinMax {
+		return true
+	}
+	c, ok := compareToLiteral(cs.min, lit)
+	return !ok || c <= 0
+}
+
+func (e *rowGroupEvaluator) VisitLess(term iceberg.BoundTerm, lit iceberg.Literal) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasMinMax {
+		return true
+	}
+	c, ok := compareToLiteral(cs.min, lit)
+	return !ok || c < 0
+}
+
+func (e *rowGroupEvaluator) VisitStartsWith(iceberg.BoundTerm, iceberg.Literal) bool {
+	return true // prefix range-pruning against byte min/max not implemented; keep
+}
+
+func (e *rowGroupEvaluator) VisitNotStartsWith(iceberg.BoundTerm, iceberg.Literal) bool {
+	return true
+}
+
+func (e *rowGroupEvaluator) VisitIn(term iceberg.BoundTerm, lits iceberg.Set[iceberg.Literal]) bool {
+	cs := e.statsFor(term)
+	if !cs.ok || !cs.hasMinMax {
+		return true
+	}
+	for _, l := range lits.Members() {
+		cmin, okMin := compareToLiteral(cs.min, l)
+		cmax, okMax := compareToLiteral(cs.max, l)
+		if !okMin || !okMax {
+			return true // can't reason about this literal's type; be safe
+		}
+		if cmin <= 0 && cmax >= 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (e *rowGroupEvaluator) VisitNotIn(iceberg.BoundTerm, iceberg.Set[iceberg.Literal]) bool {
+	return true // could only prune a single-distinct-value row group; not worth the complexity
 }
 
 func toFloat64(v interface{}) (float64, bool) {
