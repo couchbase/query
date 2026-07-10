@@ -2011,8 +2011,17 @@ func (s *Scanner) ScanAndConvertParallelFiles(ctx go_context.Context) (<-chan ma
 						return
 					}
 					if readErr := s.streamFileTask(ctx, downloader, task, resultChan); readErr != nil {
-						logging.Errorf("ScanAndConvertParallelFiles: error reading %s: %v",
-							task.File.FilePath(), readErr)
+						// A canceled context here means the caller (e.g. LIMIT being
+						// satisfied by another worker) stopped the scan early, not that
+						// this file read genuinely failed — don't log it as an error.
+						if errors.Is(readErr, go_context.Canceled) ||
+							strings.Contains(readErr.Error(), "context canceled") {
+							logging.Debugf("ScanAndConvertParallelFiles: read of %s stopped: %v",
+								task.File.FilePath(), readErr)
+						} else {
+							logging.Errorf("ScanAndConvertParallelFiles: error reading %s: %v",
+								task.File.FilePath(), readErr)
+						}
 					}
 				}
 			}()
