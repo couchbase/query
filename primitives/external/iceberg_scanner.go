@@ -41,6 +41,7 @@ import (
 	"github.com/apache/iceberg-go/catalog/rest"
 	icesql "github.com/apache/iceberg-go/catalog/sql"
 	iceio "github.com/apache/iceberg-go/io"
+	_ "github.com/apache/iceberg-go/io/gocloud" // registers s3/gs/abfs FileIO schemes
 	"github.com/apache/iceberg-go/table"
 	icebergutils "github.com/apache/iceberg-go/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"

@@ -58,6 +58,7 @@ func NewExternalScan(plan *plan.ExternalScan, context *Context) *ExternalScan {
 	newRedirectBase(&rv.base, context)
 	rv.phase = EXTERNAL_SCAN
 	rv.output = rv
+	rv.scanReport = datastore.NewIndexScanReport()
 	return rv
 }
 
@@ -69,6 +70,7 @@ func (this *ExternalScan) Copy() Operator {
 	rv := _EXTERNALSCAN_OP_POOL.Get().(*ExternalScan)
 	rv.plan = this.plan
 	rv.params = this.params
+	rv.scanReport = this.scanReport
 	this.base.copy(&rv.base)
 	return rv
 }
@@ -232,6 +234,18 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 func (this *ExternalScan) MarshalJSON() ([]byte, error) {
 	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
+		if this.scanReport != nil {
+			if rv := this.scanReport.GetScanReport(); len(rv) > 0 {
+				stats, ok := r["#stats"].(map[string]interface{})
+				if !ok {
+					stats = make(map[string]interface{}, len(rv))
+					r["#stats"] = stats
+				}
+				for k, v := range rv {
+					stats[k] = v
+				}
+			}
+		}
 	})
 	return json.Marshal(r)
 }
@@ -292,10 +306,36 @@ func (this *ExternalScan) scan(filter expression.Expression, context *Context, p
 			ResultObject:      resultObject,
 			ErrTemplate:       make(map[string]any),
 			CountOnly:         this.plan.CountOnly(),
+			ScanStats:         make(map[string]any),
 		}
 	}
 
 	this.params.Parent = parent
 
 	this.plan.Keyspace().ExternalScan(this.params, &this.operatorCtx, conn)
+
+	if len(this.params.ScanStats) > 0 {
+		conn.AggregateScanReport(aggregateExternalScanStats, this.params.ScanStats)
+		// this.params (and its ScanStats map) is reused across invocations on the same
+		// operator instance (e.g. once per outer row under a nested-loop join when results
+		// aren't cached); clear it so conditionally-set keys from this invocation don't
+		// leak into, or get double-counted on, the next one.
+		clear(this.params.ScanStats)
+	}
+}
+
+// aggregateExternalScanStats merges per-invocation ExternalScanParams.ScanStats into the
+// operator's shared scan report: numeric counters are summed (an operator instance under a
+// nested-loop join may invoke the datastore scan more than once), everything else is
+// overwritten since it's expected to be identical across invocations of the same scan.
+func aggregateExternalScanStats(v1, v2 map[string]interface{}) {
+	for k, v := range v2 {
+		if i2, ok := v.(int64); ok {
+			if i1, ok := v1[k].(int64); ok {
+				v1[k] = i1 + i2
+				continue
+			}
+		}
+		v1[k] = v
+	}
 }

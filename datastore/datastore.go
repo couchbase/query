@@ -374,6 +374,11 @@ type ExternalScanParams struct {
 	ExternalEntry any
 	// ScanOptions holds the scan options built on first scan. Type is any to avoid import cycle.
 	ScanOptions any
+	// ScanStats is populated by the datastore implementation with scan-diagnostic
+	// counters/details (rows sent/received, files scanned, bytes read, pruning stats,
+	// filter pushdown, ...). The caller aggregates it into the operator's scan report
+	// so it surfaces under "#indexStats" in the query profile/EXPLAIN ANALYZE output.
+	ScanStats map[string]any
 }
 
 // sequential scan
