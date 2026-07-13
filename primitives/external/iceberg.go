@@ -545,9 +545,18 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 		}
 	}
 
-	deadline := time.Now().Add(IcebergScanTimeout)
-	if qd := queryContext.GetReqDeadline(); !qd.IsZero() && qd.Before(deadline) {
+	// IcebergScanTimeout only applies when the query itself has no timeout; otherwise the
+	// query's own timeout governs the scan's deadline, whether shorter or longer than it.
+	scanTimeout := IcebergScanTimeout
+	var deadline time.Time
+	if qd := queryContext.GetReqDeadline(); !qd.IsZero() {
 		deadline = qd
+		if scanTimeout = qd.Sub(time.Now()); scanTimeout < 0 {
+			// qd already passed (e.g. slow request setup) — report 0, not a negative duration
+			scanTimeout = 0
+		}
+	} else {
+		deadline = time.Now().Add(scanTimeout)
 	}
 	ctx, cancel := go_context.WithDeadline(go_context.Background(), deadline)
 	defer cancel()
@@ -628,6 +637,10 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 				}
 				reportIcebergScanStats(params, scanner,
 					rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied, filterDesc)
+				if ctx.Err() == go_context.DeadlineExceeded {
+					return errors.NewDatastoreExternalCollectionError(ctx.Err(),
+						fmt.Sprintf("Iceberg scan timed out after %v", scanTimeout), params.ErrTemplate)
+				}
 				return nil
 			}
 			return errors.NewDatastoreExternalCollectionError(err,
@@ -637,6 +650,10 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 			if !ok {
 				reportIcebergScanStats(params, scanner,
 					rowsSent, rowsReceived, rowsSkipped, conversionErrors, offsetApplied, filterDesc)
+				if ctx.Err() == go_context.DeadlineExceeded {
+					return errors.NewDatastoreExternalCollectionError(ctx.Err(),
+						fmt.Sprintf("Iceberg scan timed out after %v", scanTimeout), params.ErrTemplate)
+				}
 				return nil
 			}
 
