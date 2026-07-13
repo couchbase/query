@@ -57,7 +57,7 @@ func (this *DropCredentialStore) Expressions() expression.Expressions {
 
 func (this *DropCredentialStore) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
-	privs.Add("", auth.PRIV_SECURITY_WRITE, auth.PRIV_PROPS_NONE)
+	privs.Add("", auth.PRIV_CREDENTIAL_WRITE, auth.PRIV_PROPS_NONE)
 	return privs, nil
 }
 

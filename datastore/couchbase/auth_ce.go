@@ -151,6 +151,9 @@ func messageForDeniedPrivilege(pair auth.PrivilegePair) (string, string, string)
 	case auth.PRIV_CLUSTER_CREDENTIALSTORE_CONSUME:
 		privilege = "Credential Consumer"
 		base_role = "credential_consumer"
+	case auth.PRIV_CREDENTIAL_WRITE:
+		privilege = "manage cluster credentials"
+		base_role = "credential_admin"
 	case auth.PRIV_CATALOGS_READ:
 		privilege = "Exteranl Catalogs Read Only Admin"
 		base_role = "external_catalog_admin"

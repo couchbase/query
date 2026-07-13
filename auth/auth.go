@@ -74,6 +74,7 @@ const (
 	PRIV_CATALOG_UPDATE                         Privilege = 52 // UPDATE access to catalog
 	PRIV_CATALOG_INSERT                         Privilege = 53 // INSERT access to catalog
 	PRIV_CATALOG_DELETE                         Privilege = 54 // DELETE access to catalog
+	PRIV_CREDENTIAL_WRITE                       Privilege = 55 // Write (CRUD) access to cluster credentials store
 )
 
 type PrivilegePair struct {
