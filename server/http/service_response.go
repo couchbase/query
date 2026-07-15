@@ -489,7 +489,14 @@ func (this *httpRequest) writeGeneratedStatement(prefix, indent string) bool {
 		return true
 	}
 
-	e, err := json.Marshal(this.Statement())
+	// Marshal without HTML-safe escaping so characters such as '<', '>' and '&'
+	// appear literally rather than as their Unicode escapes ("<", etc.),
+	// allowing the generated statement to be copied and run as-is (MB-72778).
+	var bb bytes.Buffer
+	enc := json.NewEncoder(&bb)
+	enc.SetEscapeHTML(false)
+	err := enc.Encode(this.Statement())
+	e := bytes.TrimSuffix(bb.Bytes(), []byte{'\n'})
 
 	if err != nil || !(this.writeString(",\n") && this.writeString(prefix) &&
 		this.writeString("\"generated_statement\": ") && this.writeString(string(e))) {
