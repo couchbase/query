@@ -60,5 +60,14 @@
                 ]
             }
         ]
+    },
+    {
+        "testcase": "MB-65884 invalid format",
+        "statements":"SELECT MILLIS_TO_STR(1463284740000, \"invalid\")",
+        "results": [
+            {
+                "$1": "2016-05-15T09:29:00+05:30"
+            }
+        ]
     }
 ]

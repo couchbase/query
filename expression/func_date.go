@@ -114,9 +114,12 @@ func (this *ClockStr) Evaluate(item value.Value, context Context) (value.Value, 
 		fmt = fv.ToString()
 	}
 
-	rv, err := timeToStr(time.Now(), fmt)
+	rv, err, warn := timeToStr(time.Now(), fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -208,9 +211,12 @@ func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, e
 	// Use the timezone to get corresponding time component.
 	timeVal = timeVal.In(loc)
 
-	rv, err := timeToStr(timeVal, fmt)
+	rv, err, warn := timeToStr(timeVal, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -272,9 +278,12 @@ func (this *ClockUTC) Evaluate(item value.Value, context Context) (value.Value, 
 	// Get current time in UTC
 	t := time.Now().UTC()
 
-	rv, err := timeToStr(t, fmt)
+	rv, err, warn := timeToStr(t, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -477,9 +486,12 @@ func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value
 		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 
-	rv, err := timeToStr(t, fmt)
+	rv, err, warn := timeToStr(t, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -654,15 +666,15 @@ func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	da1 := date1.ToString()
-	t1, err := strToTime(da1, "")
+	t1, err, _ := strToTime(da1, "")
 	if err != nil {
 		return setWarning(context, err)
 	}
 
 	da2 := date2.ToString()
-	t2, err := strToTime(da2, "")
-	if err != nil {
-		return setWarning(context, err)
+	t2, err2, _ := strToTime(da2, "")
+	if err2 != nil {
+		return setWarning(context, err2)
 	}
 
 	pa := part.ToString()
@@ -844,15 +856,15 @@ func (this *DateDiffAbsStr) Evaluate(item value.Value, context Context) (value.V
 	}
 
 	da1 := date1.ToString()
-	t1, err := strToTime(da1, "")
+	t1, err, _ := strToTime(da1, "")
 	if err != nil {
 		return setWarning(context, err)
 	}
 
 	da2 := date2.ToString()
-	t2, err := strToTime(da2, "")
-	if err != nil {
-		return setWarning(context, err)
+	t2, err2, _ := strToTime(da2, "")
+	if err2 != nil {
+		return setWarning(context, err2)
 	}
 
 	pa := part.ToString()
@@ -943,20 +955,27 @@ func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Va
 
 	str := first.ToString()
 	var t time.Time
+	var warn errors.Error
 	if len(this.operands) == 3 {
-		t, err = strToTime(str, second.ToString())
+		t, err, warn = strToTime(str, second.ToString())
 	} else {
-		t, err = strToTime(str, "")
+		t, err, _ = strToTime(str, "")
 	}
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 
 	format := third.ToString()
 
-	rv, err := timeToStr(t, format)
+	rv, err, warn := timeToStr(t, format)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 
@@ -1145,7 +1164,7 @@ func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Valu
 	}
 
 	str := first.ToString()
-	t, err := strToTime(str, "")
+	t, err, _ := strToTime(str, "")
 	if err != nil {
 		return setWarning(context, err)
 	}
@@ -1279,9 +1298,12 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 	//  Return the start date when the step value is 0.
 	var s = int64(step)
 	if s == 0 {
-		ts, err := timeToStr(t1, fmt1)
+		ts, err, warn := timeToStr(t1, fmt1)
 		if err != nil {
 			return setWarning(context, err)
+		}
+		if warn != nil {
+			setWarning(context, warn)
 		}
 		setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgValue(3, n))
 		return value.NewValue([]interface{}{ts}), nil
@@ -1342,9 +1364,12 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 		for (step > 0.0 && timeToMillis(start) < end) ||
 			(step < 0.0 && timeToMillis(start) > end) {
 			// Compute the new time
-			ts, err := timeToStr(start, fmt1)
+			ts, err, warn := timeToStr(start, fmt1)
 			if err != nil {
 				return setWarning(context, err)
+			}
+			if warn != nil {
+				setWarning(context, warn)
 			}
 			rv = append(rv, ts)
 			t, err := dateAdd(start, int(step), partStr)
@@ -1375,9 +1400,12 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 				(step < 0.0 && timeToMillis(t) <= end) {
 				break
 			}
-			ts, err := timeToStr(t, fmt1)
+			ts, err, warn := timeToStr(t, fmt1)
 			if err != nil {
 				return setWarning(context, err)
+			}
+			if warn != nil {
+				setWarning(context, warn)
 			}
 			rv = append(rv, ts)
 		}
@@ -1767,9 +1795,12 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 		format = formatFromStr(str)
 	}
 
-	t, err := strToTime(str, format)
+	t, err, warn := strToTime(str, format)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 
 	t, err = dateTrunc(t, part)
@@ -1777,9 +1808,12 @@ func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Val
 		return nil, err
 	}
 
-	rv, err := timeToStr(t, format)
+	rv, err, warn2 := timeToStr(t, format)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn2 != nil {
+		setWarning(context, warn2)
 	}
 	return value.NewValue(rv), nil
 }
@@ -1857,9 +1891,12 @@ func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Valu
 	if millis < _MIN_MILLIS || millis > _MAX_MILLIS {
 		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
-	rv, err := timeToStr(millisToTime(millis), fmt)
+	rv, err, warn := timeToStr(millisToTime(millis), fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -1940,9 +1977,12 @@ func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Valu
 		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 	t := millisToTime(millis).UTC()
-	rv, err := timeToStr(t, fmt)
+	rv, err, warn := timeToStr(t, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -2039,9 +2079,12 @@ func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value
 	}
 
 	t := millisToTime(millis).In(loc)
-	rv, err := timeToStr(t, fmt)
+	rv, err, warn := timeToStr(t, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -2148,9 +2191,12 @@ func (this *NowStr) Evaluate(item value.Value, context Context) (value.Value, er
 	}
 
 	now := context.Now()
-	rv, err := timeToStr(now, fmt)
+	rv, err, warn := timeToStr(now, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -2244,9 +2290,12 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 	// Use the timezone to get corresponding time component.
 	now = now.In(loc)
 
-	rv, err := timeToStr(now, fmt)
+	rv, err, warn := timeToStr(now, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -2309,9 +2358,12 @@ func (this *NowUTC) Evaluate(item value.Value, context Context) (value.Value, er
 	}
 
 	now := context.Now().UTC()
-	rv, err := timeToStr(now, fmt)
+	rv, err, warn := timeToStr(now, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	return value.NewValue(rv), nil
 }
@@ -2379,9 +2431,13 @@ func (this *StrToMillis) Evaluate(item value.Value, context Context) (value.Valu
 		fmt = arg.ToString()
 	}
 
-	t, err = strToTime(str, fmt)
+	var warn errors.Error
+	t, err, warn = strToTime(str, fmt)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	ms := t.UTC().UnixMilli()
 	if ms < _MIN_MILLIS || ms > _MAX_MILLIS {
@@ -2466,9 +2522,13 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 	} else {
 		outputFormat = formatFromStr(str)
 	}
-	t, err = strToTime(str, format)
+	var warn errors.Error
+	t, err, warn = strToTime(str, format)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 
 	t = t.UTC()
@@ -2477,9 +2537,12 @@ func (this *StrToUTC) Evaluate(item value.Value, context Context) (value.Value, 
 		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 
-	rv, err := timeToStr(t, outputFormat)
+	rv, err, warn2 := timeToStr(t, outputFormat)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn2 != nil {
+		setWarning(context, warn2)
 	}
 	return value.NewValue(rv), nil
 }
@@ -2591,18 +2654,25 @@ func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Va
 		outputFormat = format
 	}
 
-	t, err = strToTime(str, format)
+	var warn errors.Error
+	t, err, warn = strToTime(str, format)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn != nil {
+		setWarning(context, warn)
 	}
 	ms := t.UTC().UnixMilli()
 	if ms < _MIN_MILLIS || ms > _MAX_MILLIS {
 		return setWarning(context, errors.W_DATE_OVERFLOW, nil)
 	}
 
-	rv, err := timeToStr(t.In(loc), outputFormat)
+	rv, err, warn2 := timeToStr(t.In(loc), outputFormat)
 	if err != nil {
 		return setWarning(context, err)
+	}
+	if warn2 != nil {
+		setWarning(context, warn2)
 	}
 	return value.NewValue(rv), nil
 }
@@ -2916,7 +2986,7 @@ func (this *WeekdayStr) Evaluate(item value.Value, context Context) (value.Value
 	}
 
 	str := first.ToString()
-	t, err := strToTime(str, "")
+	t, err, _ := strToTime(str, "")
 	if err != nil {
 		return setWarning(context, err)
 	}
@@ -2948,25 +3018,38 @@ func (this *WeekdayStr) Constructor() FunctionConstructor {
 type formatType int
 
 const (
-	percentFormat formatType = iota // e.g. %Y-%m-%d %H:%M:%S.%N %z
-	commonFormat                    // e.g. YYYY-MM-DD HH:mm:ss.s TZD
-	goFormat                        // e.g. 2006-01-02 15:04:05.999 -0700
-	exampleFormat                   // e.g. 1111-11-11 11:11:11.111 +0000
-	defaultFormat                   // = DEFAULT_FORMAT or try the list of default formats
+	percentFormat  formatType = iota // e.g. %Y-%m-%d %H:%M:%S.%N %z
+	commonFormat                     // e.g. YYYY-MM-DD HH:mm:ss.s TZD
+	goFormat                         // e.g. 2006-01-02 15:04:05.999 -0700
+	exampleFormat                    // e.g. 1111-11-11 11:11:11.111 +0000
+	defaultFormat                    // = DEFAULT_FORMAT or try the list of default formats
+	fallbackFormat                   // unrecognised format — handled as exampleFormat but emits a warning
 )
 
-func strToTime(s string, format string) (time.Time, error) {
+// strToTime parses a date/time string using the given format.
+// The third return value is a non-nil warning when the format was unrecognised and
+// determineFormat() classified it as fallbackFormat. Callers should emit this via setWarning()
+// so users are informed of the fallback (controlled by N1QL_NO_DATE_WARNINGS).
+func strToTime(s string, format string) (time.Time, error, errors.Error) {
 	switch determineFormat(format) {
 	case defaultFormat:
-		return strToTimeTryAllDefaultFormats(s)
+		t, err := strToTimeTryAllDefaultFormats(s)
+		return t, err, nil
 	case percentFormat:
-		return strToTimePercentFormat(s, format)
+		t, err := strToTimePercentFormat(s, format)
+		return t, err, nil
 	case commonFormat:
-		return strToTimeCommonFormat(s, format)
+		t, err := strToTimeCommonFormat(s, format)
+		return t, err, nil
 	case goFormat:
-		return strToTimeGoFormat(s, format)
+		t, err := strToTimeGoFormat(s, format)
+		return t, err, nil
+	case fallbackFormat:
+		t, err := strToTimeExampleFormat(s, format)
+		return t, err, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 	default:
-		return strToTimeExampleFormat(s, format)
+		t, err := strToTimeExampleFormat(s, format)
+		return t, err, nil
 	}
 }
 
@@ -4433,6 +4516,23 @@ func updateCache(fmt string, t formatType) formatType {
 	return t
 }
 
+// determineFormat classifies a date/time format string into one of the supported format types.
+// The classification order matters:
+//
+//  1. empty          → defaultFormat  (use DEFAULT_FORMAT)
+//  2. contains "%"   → percentFormat  (strftime-style: %Y-%m-%d)
+//  3. isCommonFormat  → commonFormat   (well-known formats like RFC3339)
+//  4. isExampleFormat → exampleFormat  (looks like a literal date: "2023-01-15T10:30:00")
+//  5. isGoTimeFormat  → goFormat       (Go reference-time layout: "2006-01-02 -0700")
+//  6. fallback        → fallbackFormat (safe default — invalid/unrecognised strings end up here,
+//     which triggers strToTimeFormatClosest and ultimately
+//     falls back to DEFAULT_FORMAT; a warning is emitted to the user)
+//
+// MB-65884: the old heuristic classified any format starting with a non-digit as goFormat.
+// That caused garbage strings like "invalid" to be passed to Go's time.Format(), which
+// silently treats unrecognised characters as literals and returns the layout string unchanged.
+// The new approach uses isExampleFormat (digit+separator check) and isGoTimeFormat (token-walk)
+// to make an informed decision, with exampleFormat as the safe fallback.
 func determineFormat(fmt string) formatType {
 	dateFormatCache.Lock()
 	if fmt == dateFormatCache.format {
@@ -4447,29 +4547,250 @@ func determineFormat(fmt string) formatType {
 		return updateCache(fmt, percentFormat)
 	} else if isCommonFormat(fmt) {
 		return updateCache(fmt, commonFormat)
-	} else if !unicode.IsDigit(rune(fmt[0])) { // standard formats all start with a digit
+	} else if isExampleFormat(fmt) {
+		return updateCache(fmt, exampleFormat)
+	} else if isGoTimeFormat(fmt) {
 		return updateCache(fmt, goFormat)
 	}
-	i := 0
-	for i = 0; i < len(fmt); i++ {
-		if !unicode.IsDigit(rune(fmt[i])) {
-			break
+
+	// Unrecognised format — fall back to fallbackFormat so that strToTimeFormatClosest
+	// can attempt a best-effort parse, ultimately returning DEFAULT_FORMAT for truly
+	// invalid strings. This is intentionally NOT goFormat to prevent Go's time.Format
+	// from silently echoing the layout string back as output.
+	// fallbackFormat is distinguished from exampleFormat so callers can emit a
+	// W_DATE_INVALID_FORMAT warning for genuinely unrecognised formats.
+	return updateCache(fmt, fallbackFormat)
+}
+
+// isExampleFormat checks whether the layout string looks like a literal date/time example
+// (e.g. "2023-01-15", "1111-11-11T11:11:11"), as opposed to a Go time format or other type.
+//
+// An example format is composed entirely of digits and common date/time separators
+// (. : - + T space), and must contain at least one date separator or time separator
+// to distinguish it from a bare number.
+//
+// The "2006" exclusion: In Go's time package, the year token is always "2006" — it is
+// Go's fixed reference year (Mon Jan 2 15:04:05 MST 2006). No other year has special
+// meaning. If the layout contains "2006", it is almost certainly a Go time format
+// (e.g. "2006-01-02", "2006 -0700"), not a literal date example, so we return false
+// and let isGoTimeFormat handle it. Real dates from the year 2006 that fail
+// isGoTimeFormat will still reach the safe exampleFormat fallback in determineFormat.
+//
+// The minimum length of 8 filters out short strings (e.g. "15:04") that are too
+// ambiguous to classify reliably — these fall through to isGoTimeFormat or the
+// exampleFormat fallback.
+func isExampleFormat(layout string) bool {
+	if len(layout) < 8 {
+		return false
+	}
+
+	// Reject strings containing Go's reference year — these belong in isGoTimeFormat.
+	if strings.Contains(layout, "2006") {
+		return false
+	}
+
+	var hasDateSep, hasTimeSep bool
+
+	for i := 0; i < len(layout); i++ {
+		c := layout[i]
+
+		switch c {
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ':', '-', '+', 'T', 'Z', ' ':
+			if c == ':' {
+				hasTimeSep = true
+			} else if isDateSeparator(rune(c)) {
+				hasDateSep = true
+			}
+		default:
+			// Any letter or unrecognised character means this is not a pure
+			// numeric date example — let isGoTimeFormat or the fallback handle it.
+			return false
 		}
 	}
-	n := fmt[0:i]
-	if n == "2006" {
-		return updateCache(fmt, goFormat)
-	} else if len(n) < 3 {
-		a := make([]rune, 2)
-		a[0] = '0'
-		for i := 1; i < 7; i++ {
-			a[1] = rune('0' + i)
-			if n == string(a) || n == string(a[1:]) {
-				return updateCache(fmt, goFormat)
+
+	return hasTimeSep || hasDateSep
+}
+
+// isGoTimeFormat checks whether the layout string is a valid Go time format by walking
+// it token-by-token, mirroring the logic of Go's internal nextStdChunk() function.
+// Reference: https://cs.opensource.google/go/go/+/refs/tags/go1.24.1:src/time/format.go;l=203
+//
+// Go time formats are defined by a single reference time:
+//
+//	Mon Jan 2 15:04:05 MST 2006  (or equivalently: 01/02 03:04:05PM '06 -0700)
+//
+// Each component (2006=year, 01=month, 02=day, 15=24h-hour, 3=12h-hour, 04=minute,
+// 05=second, Mon/Monday=weekday, Jan/January=month-name, MST=timezone-name,
+// -0700/Z07:00/etc.=UTC-offset, PM/pm=meridiem, .000/.999=fractional-seconds)
+// is a recognised token. Everything else is a literal separator.
+//
+// This function returns true only if EVERY character in the layout is either:
+//   - Part of a recognised Go time token (consumed by the switch cases), or
+//   - A non-alphanumeric literal separator (space, dash, colon, slash, etc.)
+//
+// Any unrecognised letter or digit causes an immediate return false, which prevents
+// garbage strings like "invalid" from being classified as goFormat.
+func isGoTimeFormat(layout string) bool {
+
+	for i := 0; i < len(layout); {
+		switch c := int(layout[i]); c {
+		case 'J': // January, Jan
+			if len(layout) >= i+3 && layout[i:i+3] == "Jan" {
+				if len(layout) >= i+7 && layout[i:i+7] == "January" {
+					i = i + 7
+					continue
+				}
+
+				i = i + 3
+				continue
+			}
+		case 'M': // Monday, Mon, MST
+			if len(layout) >= i+3 {
+				if layout[i:i+3] == "Mon" {
+					if len(layout) >= i+6 && layout[i:i+6] == "Monday" {
+						i = i + 6
+						continue
+					}
+					i = i + 3
+					continue
+				}
+
+				if layout[i:i+3] == "MST" {
+					i = i + 3
+					continue
+				}
+			}
+		case '0': // 01, 02, 03, 04, 05, 06, 002
+			if len(layout) >= i+2 && '1' <= layout[i+1] && layout[i+1] <= '6' {
+				i = i + 2
+				continue
+			}
+			if len(layout) >= i+3 && layout[i+1] == '0' && layout[i+2] == '2' {
+				i = i + 3
+				continue
+			}
+		case '1': // 15, 1
+			if len(layout) >= i+2 && layout[i+1] == '5' {
+				i = i + 2
+				continue
+			}
+			i++
+			continue
+		case '2':
+			if len(layout) >= i+4 && layout[i:i+4] == "2006" {
+				i = i + 4
+				continue
+			}
+			i++
+			continue
+		case '_': // _2, __2:
+			if len(layout) >= i+2 && layout[i+1] == '2' {
+				i = i + 2
+				continue
+			}
+
+			if len(layout) >= i+3 && layout[i+1] == '_' && layout[i+2] == '2' {
+				i = i + 3
+				continue
+			}
+		case '3', '4', '5':
+			i++
+			continue
+		case 'P': // PM
+			if len(layout) >= i+2 && layout[i+1] == 'M' {
+				i = i + 2
+				continue
+			}
+		case 'p': // pm
+			if len(layout) >= i+2 && layout[i+1] == 'm' {
+				i = i + 2
+				continue
+			}
+		case '-': // -070000, -07:00:00, -0700, -07:00, -07
+			if len(layout) >= i+7 && layout[i:i+7] == "-070000" {
+				i = i + 7
+				continue
+			}
+			if len(layout) >= i+9 && layout[i:i+9] == "-07:00:00" {
+				i = i + 9
+				continue
+			}
+			if len(layout) >= i+5 && layout[i:i+5] == "-0700" {
+				i = i + 5
+				continue
+			}
+			if len(layout) >= i+6 && layout[i:i+6] == "-07:00" {
+				i = i + 6
+				continue
+			}
+			if len(layout) >= i+3 && layout[i:i+3] == "-07" {
+				i = i + 3
+				continue
+			}
+		case 'T': // ISO-8601 date/time separator (e.g. "2006-01-02T15:04:05").
+			// 'T' is not a Go time token; it is a literal separator, so skip it.
+			i++
+			continue
+		case 'Z': // Z070000, Z07:00:00, Z0700, Z07:00,
+			if len(layout) >= i+7 && layout[i:i+7] == "Z070000" {
+				i = i + 7
+				continue
+			}
+			if len(layout) >= i+9 && layout[i:i+9] == "Z07:00:00" {
+				i = i + 9
+				continue
+			}
+			if len(layout) >= i+5 && layout[i:i+5] == "Z0700" {
+				i = i + 5
+				continue
+			}
+			if len(layout) >= i+6 && layout[i:i+6] == "Z07:00" {
+				i = i + 6
+				continue
+			}
+			if len(layout) >= i+3 && layout[i:i+3] == "Z07" {
+				i = i + 3
+				continue
+			}
+			// A bare 'Z' that is not part of a Z07... offset token is a literal
+			// separator in Go time layouts (e.g. the trailing UTC 'Z'), so skip it.
+			i++
+			continue
+		case '.', ',': // ,000, or .000, or ,999, or .999 - repeated digits for fractional seconds.
+			if i+1 < len(layout) && (layout[i+1] == '0' || layout[i+1] == '9') {
+				ch := layout[i+1]
+				j := i + 1
+				for j < len(layout) && layout[j] == ch {
+					j++
+				}
+
+				if j == len(layout) {
+					return true
+				}
+
+				if j < len(layout) && !unicode.IsDigit(rune(layout[j])) {
+					i = j
+					continue
+				} else {
+					return false // String of digits must end here
+				}
 			}
 		}
+
+		// If we reach here, the character was not consumed by any token case above.
+		// Non-alphanumeric characters (space, '/', '(', ')' etc.) are valid literal
+		// separators in Go time layouts — skip them. Any unrecognised letter or digit
+		// means this is not a valid Go time format.
+		l := rune(layout[i])
+		if !unicode.IsDigit(l) && !unicode.IsLetter(l) {
+			i++
+			continue
+		}
+
+		return false
 	}
-	return updateCache(fmt, exampleFormat)
+	// Every character was consumed by a recognised token or is a literal separator.
+	return true
 }
 
 func gatherNumber(s string, max int, countLeadingSpaces bool, allowSign bool) (int, int, bool) {
@@ -4777,18 +5098,29 @@ func strToTimeFormatClosest(s string) (time.Time, string, error) {
 }
 
 // Date string formatting: Returns a text representation of the time value formatted according to the format string.
-func timeToStr(t time.Time, format string) (string, error) {
+// The third return value is a non-nil warning when the format was unrecognised and the function fell back to
+// DEFAULT_FORMAT. Callers should emit this via setWarning() so users are informed of the fallback
+// (controlled by N1QL_NO_DATE_WARNINGS).
+func timeToStr(t time.Time, format string) (string, error, errors.Error) {
 	switch determineFormat(format) {
 	case defaultFormat:
-		return timeToStrGoFormat(t, DEFAULT_FORMAT)
+		rv, err := timeToStrGoFormat(t, DEFAULT_FORMAT)
+		return rv, err, nil
 	case percentFormat:
-		return timeToStrPercentFormat(t, format)
+		rv, err := timeToStrPercentFormat(t, format)
+		return rv, err, nil
 	case commonFormat:
-		return timeToStrCommonFormat(t, format)
+		rv, err := timeToStrCommonFormat(t, format)
+		return rv, err, nil
 	case goFormat:
-		return timeToStrGoFormat(t, format)
+		rv, err := timeToStrGoFormat(t, format)
+		return rv, err, nil
+	case fallbackFormat:
+		rv, err := timeToStrExampleFormat(t, format)
+		return rv, err, errors.NewDateWarning(errors.W_DATE_INVALID_FORMAT, format)
 	default:
-		return timeToStrExampleFormat(t, format)
+		rv, err := timeToStrExampleFormat(t, format)
+		return rv, err, nil
 	}
 }
 
