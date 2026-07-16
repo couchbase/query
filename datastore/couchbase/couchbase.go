@@ -762,7 +762,7 @@ func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionS
 	for _, n := range s.namespaceCache {
 
 		// force a full pool refresh
-		n.refreshFully()
+		n.refreshFully(false)
 		n.lock.Lock()
 		for _, k := range n.keyspaceCache {
 			if k.cbKeyspace == nil {
@@ -1406,10 +1406,16 @@ func (p *namespace) refresh() {
 		return
 	}
 	logging.Debugf("Refreshing pool %s", p.name)
-	p.refreshFully()
+	p.refreshFully(true)
 }
 
-func (p *namespace) refreshFully() {
+/*
+optimizedRefresh argument determines when the namespace(s) are reloaded:
+  - true: Only reloads the namespace ( which includes creating new connection pools for buckets )
+    if there have been changes to the buckets
+  - false: Forces a reload of the namespace regardless of whether the buckets have changed.
+*/
+func (p *namespace) refreshFully(optimizedRefresh bool) {
 
 	// trigger refresh of this pool
 	newpool, err := p.store.client.GetPool(p.name)
@@ -1425,7 +1431,7 @@ func (p *namespace) refreshFully() {
 	// MB-36458 do not switch pools as checks are being made
 	p.nslock.RLock()
 	oldpool := p.cbNamespace
-	changed := len(oldpool.BucketMap) != len(newpool.BucketMap)
+	changed := !optimizedRefresh || len(oldpool.BucketMap) != len(newpool.BucketMap)
 	if !changed {
 		for on, ob := range oldpool.BucketMap {
 			nb := newpool.BucketMap[on]
