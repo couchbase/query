@@ -1469,6 +1469,131 @@ func TestN1QLToIcebergExpr(t *testing.T) {
 		}
 	})
 
+	t.Run("AND drops IN redundant with sibling equality", func(t *testing.T) {
+		// AND(symbol = 'ETHUSDT', symbol IN ('ETHUSDT', 'BTCUSDT')) → just the Eq
+		arr := expression.NewArrayConstruct(constStr("ETHUSDT"), constStr("BTCUSDT"))
+		expr := expression.NewAnd(
+			expression.NewEq(fieldExpr(alias, "symbol"), constStr("ETHUSDT")),
+			expression.NewIn(fieldExpr(alias, "symbol"), arr),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		s := got.String()
+		if strings.Contains(s, "And") || strings.Contains(s, "In(") {
+			t.Errorf("expected redundant IN to be dropped, got %v", s)
+		}
+		if !strings.Contains(s, "Equal") {
+			t.Errorf("expected the Eq predicate to survive, got %v", s)
+		}
+	})
+
+	t.Run("AND drops IN redundant with equality buried in left-nested chain", func(t *testing.T) {
+		// Mirrors how N1QL actually parses `symbol = 'ETHUSDT' AND trade_time >= lo
+		// AND trade_time < hi AND symbol IN (...)`: left-nested binary Ands, so the
+		// Eq is 3 levels deep on the left, not a direct sibling of the IN.
+		arr := expression.NewArrayConstruct(constStr("ETHUSDT"), constStr("BTCUSDT"), constStr("SOLUSDT"))
+		expr := expression.NewAnd(
+			expression.NewAnd(
+				expression.NewAnd(
+					expression.NewEq(fieldExpr(alias, "symbol"), constStr("ETHUSDT")),
+					expression.NewGE(fieldExpr(alias, "trade_time"), constNum(1709251200000000)),
+				),
+				expression.NewLT(fieldExpr(alias, "trade_time"), constNum(1709258400000000)),
+			),
+			expression.NewIn(fieldExpr(alias, "symbol"), arr),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		s := got.String()
+		if strings.Contains(s, "In(") {
+			t.Errorf("expected redundant IN to be dropped from left-nested chain, got %v", s)
+		}
+		if !strings.Contains(s, "Equal") || !strings.Contains(s, "GreaterThanEqual") || !strings.Contains(s, "LessThan") {
+			t.Errorf("expected Eq/GTE/LT predicates to survive, got %v", s)
+		}
+	})
+
+	t.Run("AND collapses to AlwaysFalse when equality contradicts the IN set", func(t *testing.T) {
+		// AND(symbol = 'ETHUSDT', symbol IN ('BTCUSDT')) — the intersection is empty,
+		// so no row can ever satisfy both; push AlwaysFalse instead of either predicate.
+		arr := expression.NewArrayConstruct(constStr("BTCUSDT"))
+		expr := expression.NewAnd(
+			expression.NewEq(fieldExpr(alias, "symbol"), constStr("ETHUSDT")),
+			expression.NewIn(fieldExpr(alias, "symbol"), arr),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "AlwaysFalse") {
+			t.Errorf("expected AlwaysFalse, got %v", got)
+		}
+	})
+
+	t.Run("AND intersects two IN predicates on the same field", func(t *testing.T) {
+		// Mirrors a join-pushdown IN (execution/external_filter.go) alongside the query's
+		// own IN on the same field: AND(symbol IN (E,B,S), symbol IN (B,S,X)) →
+		// symbol IN (B,S) — a single, smaller combined predicate.
+		arr1 := expression.NewArrayConstruct(constStr("ETHUSDT"), constStr("BTCUSDT"), constStr("SOLUSDT"))
+		arr2 := expression.NewArrayConstruct(constStr("BTCUSDT"), constStr("SOLUSDT"), constStr("XRPUSDT"))
+		expr := expression.NewAnd(
+			expression.NewIn(fieldExpr(alias, "symbol"), arr1),
+			expression.NewIn(fieldExpr(alias, "symbol"), arr2),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		s := got.String()
+		if strings.Contains(s, "And") {
+			t.Errorf("expected the two INs to collapse into one predicate, got %v", s)
+		}
+		if strings.Contains(s, "ETHUSDT") || strings.Contains(s, "XRPUSDT") {
+			t.Errorf("expected non-overlapping values to be dropped, got %v", s)
+		}
+		if !strings.Contains(s, "BTCUSDT") || !strings.Contains(s, "SOLUSDT") {
+			t.Errorf("expected overlapping values to survive, got %v", s)
+		}
+	})
+
+	t.Run("AND intersects two IN predicates down to a single value", func(t *testing.T) {
+		// AND(symbol IN (E,B), symbol IN (B,S)) → symbol = 'BTCUSDT' (single-value
+		// intersection collapses to an Eq, not a one-element SetPredicate).
+		arr1 := expression.NewArrayConstruct(constStr("ETHUSDT"), constStr("BTCUSDT"))
+		arr2 := expression.NewArrayConstruct(constStr("BTCUSDT"), constStr("SOLUSDT"))
+		expr := expression.NewAnd(
+			expression.NewIn(fieldExpr(alias, "symbol"), arr1),
+			expression.NewIn(fieldExpr(alias, "symbol"), arr2),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		s := got.String()
+		if !strings.Contains(s, "Equal") || strings.Contains(s, "In(") {
+			t.Errorf("expected single-value intersection to collapse to Equal, got %v", s)
+		}
+	})
+
+	t.Run("AND keeps IN redundant on a different field's equality", func(t *testing.T) {
+		arr := expression.NewArrayConstruct(constStr("a"), constStr("b"))
+		expr := expression.NewAnd(
+			expression.NewEq(fieldExpr(alias, "status"), constStr("active")),
+			expression.NewIn(fieldExpr(alias, "category"), arr),
+		)
+		got := n1qlToIcebergExpr(expr, alias, nil)
+		if got == nil {
+			t.Fatal("expected non-nil expression")
+		}
+		if !strings.Contains(got.String(), "And") {
+			t.Errorf("expected both predicates to be kept, got %v", got)
+		}
+	})
+
 	t.Run("OR returns nil if any child fails", func(t *testing.T) {
 		expr := expression.NewOr(
 			expression.NewEq(fieldExpr(alias, "status"), constStr("active")),

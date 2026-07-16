@@ -30,6 +30,11 @@ import (
 
 const IcebergScanTimeout = 2 * time.Minute
 
+// _MAX_ICEBERG_IN_PREDICATE_SIZE is iceberg-go's manifest evaluator threshold above which
+// it skips partition/file pruning for a SetPredicate (IN/NOT IN) and treats every file as
+// a candidate instead — still correct, just no pruning benefit.
+const _MAX_ICEBERG_IN_PREDICATE_SIZE = 200
+
 // formatBytesRead reports how much of the touched files' on-disk size was actually
 // fetched. Range-read scans (column/row-group pruning) fetch less than the full file,
 // in which case this reports "read of planned"; a plain whole-file read reports just
@@ -112,12 +117,90 @@ func n1qlToIcebergExpr(expr expression.Expression, alias string, parent value.Va
 		return n1qlCompareExpr(iceberg.OpLTEQ, e.First(), e.Second(), alias, parent)
 
 	case *expression.And:
+		// N1QL parses `a AND b AND c AND d` as a left-nested binary tree
+		// (And(And(And(a,b),c),d)), so e.Operands() alone would only see 2 children here.
+		// Flatten first so redundancy-detection below sees every conjunct in the chain,
+		// not just the immediate ones.
+		flat, _ := expression.FlattenAndNoDedup(e)
+		ops := flat.Operands()
+
+		// Collect every field=const equality and field IN (...) value set anywhere in this
+		// AND chain. Multiple constraints on the same field — whether both written in the
+		// query, or one is a join-pushdown IN filter collected from the join's build side
+		// (see execution/external_filter.go, which can independently produce a large,
+		// distinct-key IN list) — are equivalent to their intersection. Pushing one
+		// combined predicate instead of each one separately means Iceberg's manifest/file
+		// pruning evaluator only has to reason about a single, never-larger constraint per
+		// field: it can restore pruning that a >200-value IN would otherwise have disabled
+		// (see the IN case below), and an empty intersection means the whole AND can never
+		// match, letting the scan skip every file instead of just narrowing them.
+		fieldSets := make(map[string][][]interface{})
+		fieldIdx := make(map[string][]int)
+		for i, op := range ops {
+			switch o := op.(type) {
+			case *expression.Eq:
+				if field, val, ok := icebergEqFieldValue(o, alias, parent); ok {
+					fieldSets[field] = append(fieldSets[field], []interface{}{val})
+					fieldIdx[field] = append(fieldIdx[field], i)
+				}
+			case *expression.In:
+				if field, ok := n1qlFieldPath(o.First(), alias); ok {
+					if vals := n1qlArrayValues(o.Second(), parent); len(vals) > 0 {
+						fieldSets[field] = append(fieldSets[field], vals)
+						fieldIdx[field] = append(fieldIdx[field], i)
+					}
+				}
+			}
+		}
+
+		// skip marks the operand indices (into ops) that are folded into a combined
+		// predicate below, so the per-operand conversion loop further down doesn't also
+		// push them individually.
+		skip := make(map[int]bool)
+		// combined holds one merged predicate per field that had 2+ constraints —
+		// appended as extra children alongside the individually-converted operands.
+		var combined []iceberg.BooleanExpression
+		for field, sets := range fieldSets {
+			if len(sets) < 2 {
+				continue // only one constraint on this field — nothing to combine
+			}
+			for _, idx := range fieldIdx[field] {
+				skip[idx] = true
+			}
+			ref := iceberg.Reference(field)
+			switch inter := intersectValueSets(sets); len(inter) {
+			case 0:
+				combined = append(combined, iceberg.AlwaysFalse{})
+			case 1:
+				if lit := n1qlValueToLiteral(inter[0]); lit != nil {
+					combined = append(combined, iceberg.LiteralPredicate(iceberg.OpEQ, ref, lit))
+				}
+			default:
+				lits := make([]iceberg.Literal, 0, len(inter))
+				for _, v := range inter {
+					if lit := n1qlValueToLiteral(v); lit != nil {
+						lits = append(lits, lit)
+					}
+				}
+				if len(lits) > 0 {
+					if len(lits) > _MAX_ICEBERG_IN_PREDICATE_SIZE {
+						logging.Warnf("Iceberg filter pushdown: combined IN predicate on %q has %d values (>200); partition pruning disabled for this filter", field, len(lits))
+					}
+					combined = append(combined, iceberg.SetPredicate(iceberg.OpIn, ref, lits))
+				}
+			}
+		}
+
 		var children []iceberg.BooleanExpression
-		for _, op := range e.Operands() {
+		for i, op := range ops {
+			if skip[i] {
+				continue
+			}
 			if child := n1qlToIcebergExpr(op, alias, parent); child != nil {
 				children = append(children, child)
 			}
 		}
+		children = append(children, combined...)
 		if len(children) == 0 {
 			return nil
 		}
@@ -178,7 +261,7 @@ func n1qlToIcebergExpr(expr expression.Expression, alias string, parent value.Va
 			if len(lits) == 0 {
 				return nil
 			}
-			if len(lits) > 200 {
+			if len(lits) > _MAX_ICEBERG_IN_PREDICATE_SIZE {
 				logging.Warnf("Iceberg filter pushdown: NOT IN predicate on %q has %d values (>200); partition pruning disabled for this filter", field, len(lits))
 			}
 			return iceberg.SetPredicate(iceberg.OpNotIn, ref, lits)
@@ -209,7 +292,7 @@ func n1qlToIcebergExpr(expr expression.Expression, alias string, parent value.Va
 		if len(lits) == 0 {
 			return nil
 		}
-		if len(lits) > 200 {
+		if len(lits) > _MAX_ICEBERG_IN_PREDICATE_SIZE {
 			logging.Warnf("Iceberg filter pushdown: IN predicate on %q has %d values (>200); partition pruning disabled for this filter", field, len(lits))
 		}
 		// SetPredicate(OpIn) is iceberg-go's native IN. When len > 200 the manifest
@@ -278,6 +361,72 @@ func n1qlToIcebergExpr(expr expression.Expression, alias string, parent value.Va
 		return nil
 	}
 	return nil
+}
+
+// icebergEqFieldValue returns the (field, constant) pair for a direct `field = const`
+// equality, trying both operand orders. ok is false unless exactly one side is a plain
+// field reference and the other a constant.
+func icebergEqFieldValue(e *expression.Eq, alias string, parent value.Value) (string, interface{}, bool) {
+	firstVal := n1qlExtractValue(e.First(), parent)
+	secondVal := n1qlExtractValue(e.Second(), parent)
+	switch {
+	case firstVal == nil && secondVal != nil:
+		field, ok := n1qlFieldPath(e.First(), alias)
+		return field, secondVal, ok
+	case firstVal != nil && secondVal == nil:
+		field, ok := n1qlFieldPath(e.Second(), alias)
+		return field, firstVal, ok
+	default:
+		return "", nil, false
+	}
+}
+
+// scalarInList reports whether target is present in vals, comparing only the scalar
+// types n1qlValueToLiteral supports (string, float64, bool). Non-scalar or mismatched
+// types compare unequal rather than risking a panic on interface comparison.
+func scalarInList(target interface{}, vals []interface{}) bool {
+	for _, v := range vals {
+		switch tv := target.(type) {
+		case string:
+			if sv, ok := v.(string); ok && sv == tv {
+				return true
+			}
+		case float64:
+			if fv, ok := v.(float64); ok && fv == tv {
+				return true
+			}
+		case bool:
+			if bv, ok := v.(bool); ok && bv == tv {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// intersectValueSets returns the intersection of two or more value sets (order taken
+// from the first set, deduplicated), comparing elements via scalarInList.
+func intersectValueSets(sets [][]interface{}) []interface{} {
+	if len(sets) == 0 {
+		return nil
+	}
+	result := make([]interface{}, 0, len(sets[0]))
+	for _, v := range sets[0] {
+		if scalarInList(v, result) {
+			continue // dedup
+		}
+		inAll := true
+		for _, other := range sets[1:] {
+			if !scalarInList(v, other) {
+				inAll = false
+				break
+			}
+		}
+		if inAll {
+			result = append(result, v)
+		}
+	}
+	return result
 }
 
 // n1qlCompareExpr builds an Iceberg comparison predicate from a N1QL binary comparison.
