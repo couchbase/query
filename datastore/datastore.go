@@ -846,6 +846,10 @@ func IndexerQualifiedKeyspacePath(indexer Indexer) string {
 }
 
 func BackfillEncryptionKey(index Index, context EncryptionContext) (*encryption.EaRKey, errors.Error) {
+	if index == nil {
+		return nil, nil
+	}
+
 	indexer := index.Indexer()
 	// Indexers do not support namespace
 	// The only indexers that need encryption key access is GSI, FTS, SEQ_SCAN which are always under the default namespace.

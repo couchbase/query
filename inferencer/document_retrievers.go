@@ -1137,17 +1137,21 @@ next_index:
 }
 
 func (udr *UnifiedDocumentRetriever) restartScan(offset int64, context datastore.QueryContext) errors.Error {
+	index, ok := udr.indexes[udr.currentIndex].(datastore.Index3)
+	if !ok {
+		return errors.NewInferKeyspaceError(udr.ks.Name(),
+			fmt.Errorf("Index %v does not implement datastore.Index3", udr.indexes[udr.currentIndex].Name()))
+	}
+
 	// Get the encryption key from the richer QueryContext and not from the SystemContext used to create the index connection
-	encryptionKey, err := datastore.BackfillEncryptionKey(udr.ss, context)
+	encryptionKey, err := datastore.BackfillEncryptionKey(index, context)
 	if err != nil {
-		udr.ss = nil
 		return errors.NewEncryptionError(errors.E_ENCRYPTION, err)
 	}
 
 	udr.iconn = datastore.NewIndexConnection(datastore.NewSystemContext())
 	udr.iconn.SetEncryptionKey(encryptionKey)
 	udr.iconn.SetSkipMetering(true)
-	index := udr.indexes[udr.currentIndex].(datastore.Index3)
 	proj := &datastore.IndexProjection{PrimaryKey: true}
 	ss := int64(math.MaxInt64)
 	udr.iconn.SetPrimary() // always set as primary so we can trap timeouts
