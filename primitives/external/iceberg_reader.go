@@ -23,8 +23,11 @@ import (
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/arrow/array"
 	"github.com/apache/arrow-go/v18/arrow/csv"
+	"github.com/apache/arrow-go/v18/arrow/decimal"
+	"github.com/apache/arrow-go/v18/arrow/extensions"
 	"github.com/apache/arrow-go/v18/arrow/ipc"
 	"github.com/apache/arrow-go/v18/arrow/memory"
+	"github.com/apache/arrow-go/v18/parquet/variant"
 	"github.com/apache/iceberg-go/io"
 	"github.com/apache/iceberg-go/table"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -32,6 +35,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/couchbase/query/logging"
+	"github.com/google/uuid"
 )
 
 // Reader handles iteration over Iceberg table scan results using Arrow records
@@ -342,11 +346,78 @@ func (r *Reader) getColumnValue(col arrow.Array, pos int) interface{} {
 		return r.getFixedSizeListValue(arr, pos)
 	case *array.Map:
 		return r.getMapValue(arr, pos)
+	case *extensions.VariantArray:
+		return getVariantValue(arr, pos, r.decimalToDouble)
 	case *array.Null:
 		return nil
 	default:
 		return fmt.Sprintf("%v", arr.GetOneForMarshal(pos))
 	}
+}
+
+// getVariantValue decodes a Parquet Variant (a binary-encoded superset of JSON) into
+// native Go values (map[string]interface{}, []interface{}, string, int64, float64, bool,
+// nil, ...) so it flows through the rest of the pipeline like any other JSON-shaped column.
+func getVariantValue(arr *extensions.VariantArray, pos int, decimalToDouble bool) interface{} {
+	if arr.IsNull(pos) {
+		return nil
+	}
+	vv, err := arr.Value(pos)
+	if err != nil {
+		logging.Warnf("Iceberg getVariantValue: failed to decode variant at row %d: %v", pos, err)
+		return nil
+	}
+	return decodeVariantScalar(vv, decimalToDouble)
+}
+
+// decodeVariantScalar recursively converts a decoded variant.Value into native Go values,
+// mirroring the scalar conventions getColumnValue already uses for the same Arrow/Parquet
+// logical types (timestamps/dates/times as epoch ints, decimals following decimalToDouble)
+// so a value doesn't change shape depending on whether it arrived via a plain column or
+// buried inside a Variant.
+func decodeVariantScalar(vv variant.Value, decimalToDouble bool) interface{} {
+	switch t := vv.Value().(type) {
+	case nil, bool, int8, int16, int32, int64, float32, float64, string:
+		return t
+	case []byte:
+		return t
+	case arrow.Date32:
+		return int32(t)
+	case arrow.Timestamp:
+		return int64(t)
+	case arrow.Time64:
+		return int64(t)
+	case uuid.UUID:
+		return t.String()
+	case variant.DecimalValue[decimal.Decimal32]:
+		return decodeVariantDecimal(t, decimalToDouble)
+	case variant.DecimalValue[decimal.Decimal64]:
+		return decodeVariantDecimal(t, decimalToDouble)
+	case variant.DecimalValue[decimal.Decimal128]:
+		return decodeVariantDecimal(t, decimalToDouble)
+	case variant.ObjectValue:
+		result := make(map[string]interface{}, t.NumElements())
+		for key, fieldVal := range t.Values() {
+			result[key] = decodeVariantScalar(fieldVal, decimalToDouble)
+		}
+		return result
+	case variant.ArrayValue:
+		result := make([]interface{}, 0, t.Len())
+		for elemVal := range t.Values() {
+			result = append(result, decodeVariantScalar(elemVal, decimalToDouble))
+		}
+		return result
+	default:
+		logging.Warnf("Iceberg decodeVariantScalar: unrecognized variant value type %T", t)
+		return fmt.Sprintf("%v", t)
+	}
+}
+
+func decodeVariantDecimal[T decimal.DecimalTypes](d variant.DecimalValue[T], decimalToDouble bool) interface{} {
+	if decimalToDouble {
+		return d.Value.ToFloat64(int32(d.Scale))
+	}
+	return d.Value.ToString(int32(d.Scale))
 }
 
 // getStructValue extracts a struct value

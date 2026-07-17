@@ -29,6 +29,7 @@ import (
 	"database/sql"
 	"github.com/apache/arrow-go/v18/arrow"
 	"github.com/apache/arrow-go/v18/arrow/array"
+	"github.com/apache/arrow-go/v18/arrow/extensions"
 	"github.com/apache/arrow-go/v18/arrow/ipc"
 	"github.com/apache/arrow-go/v18/arrow/memory"
 	"github.com/apache/arrow-go/v18/parquet"
@@ -1696,6 +1697,8 @@ func (s *Scanner) convertArrowValue(column arrow.Array, rowIdx int, fieldType ar
 		return arr.Value(rowIdx), nil
 	case *array.Timestamp:
 		return arr.Value(rowIdx), nil
+	case *extensions.VariantArray:
+		return getVariantValue(arr, rowIdx, s.decimalToDouble), nil
 	default:
 		// For complex types, try to get string representation
 		return fmt.Sprintf("%v", column.GetOneForMarshal(rowIdx)), nil
