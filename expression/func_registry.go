@@ -305,6 +305,7 @@ var _FUNCTIONS = map[string]Function{
 	"array_move":               &ArrayMove{},
 	"array_except":             &ArrayExcept{},
 	"array_binary_search":      &ArrayBinarySearch{},
+	"multikey_objects":         &MultiKeyObjects{},
 
 	// Object
 	"object_add":           &ObjectAdd{},
