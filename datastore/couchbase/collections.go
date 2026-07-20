@@ -891,7 +891,12 @@ func refreshScopesAndCollections(mani *cb.Manifest, externalMani *cb.ExternalMan
 						}
 					}
 
-					DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
+					// during migration, the following call to DropDictionaryEntry()
+					// will block on migration status  and cause a deadlock; skip
+					// and wait till next time cleanup happens
+					if !isMigratingCBOStats() {
+						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
+					}
 					aus.DropCollection(bucket.namespace.name, bucket.name, oldScope.Name(), oldScope.Uid(),
 						c.Name(), c.Uid())
 				}
@@ -932,17 +937,23 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 	if atomic.AddInt32(&s.cleaning, 1) != 1 {
 		return cleanUp
 	}
-	// do not modify s.keyspaces since it may be concurrently used by other callers of refreshScopesAndCollections whilst
-	// this clean-up is still taking place
-	for _, val := range s.keyspaces {
-		if val != nil {
-			DropDictionaryEntry(val.QualifiedName(), isDropBucket, true)
-			// invoke Release(..) on collection for any cleanup
-			val.Release(false)
+	// during migration, the following call to DropDictionaryEntry() will block on migration status
+	// and cause a deadlock; skip and wait till next time cleanup happens
+	if !isMigratingCBOStats() {
+		// do not modify s.keyspaces since it may be concurrently used by other callers of
+		// refreshScopesAndCollections whilst this clean-up is still taking place
+		for _, val := range s.keyspaces {
+			if val != nil {
+				DropDictionaryEntry(val.QualifiedName(), isDropBucket, true)
+				// invoke Release(..) on collection for any cleanup
+				val.Release(false)
+			}
 		}
 	}
 
-	if cleanUp {
+	// during migration, the following call to functionsStorage.DropScope() will block on migration status
+	// and cause a deadlock; skip and wait till next time cleanup happens
+	if cleanUp && !functionsStorage.IsMigratingUDF() {
 		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
 			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
 			aus.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())

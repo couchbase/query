@@ -71,9 +71,15 @@ func (this *Limit) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool {
-	if this.limit > 0 {
+	if this.limit > 1 {
 		this.limit--
 		return this.sendItem(item)
+	} else if this.limit == 1 {
+		// MB-72917 once the last item is processed terminate immediately
+		// instead of waiting for the next (possibly expensive) input item
+		this.limit--
+		this.sendItem(item)
+		return false
 	} else {
 
 		// MB-53235 for serialized operators item management rests with the producer
