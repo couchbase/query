@@ -871,6 +871,13 @@ func UseSystemStorage() bool {
 	return true
 }
 
+func IsMigratingUDF() bool {
+	migratingLock.Lock()
+	migrating := migrating == _MIGRATING
+	migratingLock.Unlock()
+	return migrating
+}
+
 func GetDDLFromDefinition(name string, defn value.Value) string {
 	var b strings.Builder
 	d, ok := defn.Field("definition")

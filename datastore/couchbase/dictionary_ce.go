@@ -104,3 +104,7 @@ func checkIndexCache(keyspace string, indexer datastore.Indexer, dict *chkIndexD
 func SupportedBackupVersion() int {
 	return functionsStorage.SupportedBackupVersion()
 }
+
+func isMigratingCBOStats() bool {
+	return false
+}
