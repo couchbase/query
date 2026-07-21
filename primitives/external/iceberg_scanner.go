@@ -342,6 +342,92 @@ func restNoRedirect(base http.RoundTripper) rest.Option {
 	return rest.WithCustomTransport(&noRedirectTransport{base: base})
 }
 
+// metadataFormatVersionTransport normalizes Iceberg REST LoadTable/CommitTable
+// responses whose metadata declares format-version 2 while also carrying
+// next-row-id, a field the spec reserves for format-version 3. AWS's Iceberg
+// REST implementation — observed via both AWS_GLUE_REST (Glue Data Catalog)
+// and S3_TABLES, which share the same underlying AWS REST catalog service —
+// stamps next-row-id onto tables regardless of the format-version requested
+// at create time, which iceberg-go v0.6.0 correctly rejects as spec-invalid
+// at parse time. Every other field format-version 3 requires
+// (last-sequence-number, sort-orders, partition-specs, last-partition-id,
+// ...) is already present and identical between v2 and v3 metadata, so
+// bumping the declared version in-flight is a safe, lossless correction
+// rather than a workaround. Native AWS_GLUE (glue.NewCatalog, the classic
+// Data Catalog API rather than the Iceberg REST protocol) has not shown this
+// symptom, so it's left unwired here.
+type metadataFormatVersionTransport struct {
+	base http.RoundTripper
+}
+
+func (t *metadataFormatVersionTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := t.base.RoundTrip(req)
+	if err != nil || resp == nil || resp.StatusCode != http.StatusOK || resp.Body == nil {
+		return resp, err
+	}
+
+	body, readErr := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if readErr != nil {
+		return resp, readErr
+	}
+
+	if fixed, changed := upgradeStaleV2Metadata(body); changed {
+		logging.Debugf("iceberg REST %s %s: corrected metadata format-version 2 -> 3 (next-row-id already present)",
+			req.Method, req.URL.Path)
+		body = fixed
+	}
+
+	resp.Body = io.NopCloser(bytes.NewReader(body))
+	resp.ContentLength = int64(len(body))
+	resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
+
+	return resp, nil
+}
+
+// upgradeStaleV2Metadata inspects a LoadTable/CommitTable REST response body
+// for a top-level "metadata" object with format-version 2 and a non-null
+// next-row-id, rewriting format-version to 3 in place. Every other field
+// (including large snapshot-id/sequence-number values) is round-tripped as
+// json.RawMessage rather than decoded through interface{}, so no numeric
+// precision is lost. Any parse failure or shape mismatch leaves body
+// untouched and returns changed=false.
+func upgradeStaleV2Metadata(body []byte) (fixed []byte, changed bool) {
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return body, false
+	}
+	rawMeta, ok := envelope["metadata"]
+	if !ok {
+		return body, false
+	}
+	var meta map[string]json.RawMessage
+	if err := json.Unmarshal(rawMeta, &meta); err != nil {
+		return body, false
+	}
+
+	if fv, ok := meta["format-version"]; !ok || strings.TrimSpace(string(fv)) != "2" {
+		return body, false
+	}
+	nextRowID, present := meta["next-row-id"]
+	if !present || strings.TrimSpace(string(nextRowID)) == "null" {
+		return body, false
+	}
+
+	meta["format-version"] = json.RawMessage("3")
+	newMeta, err := json.Marshal(meta)
+	if err != nil {
+		return body, false
+	}
+	envelope["metadata"] = newMeta
+
+	newBody, err := json.Marshal(envelope)
+	if err != nil {
+		return body, false
+	}
+	return newBody, true
+}
+
 // iceberg-go FileIO property keys for each storage backend.
 const (
 	_adlsSharedKeyAccountName = "adls.auth.shared-key.account.name"
@@ -891,7 +977,7 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		glueRestOpts = append(glueRestOpts,
 			rest.WithAwsConfig(awsCfg),
 			rest.WithSigV4RegionSvc(region, "glue"),
-			restNoRedirect(nil),
+			restNoRedirect(&metadataFormatVersionTransport{base: icebergTransport()}),
 		)
 		// Forward storage credentials as iceberg-go FileIO props so that
 		// scan.PlanFiles can read manifest files from S3 without falling back
@@ -941,7 +1027,7 @@ func createCatalog(ctx go_context.Context, opts ScanOptions, awsCfg aws.Config) 
 		restOpts = append(restOpts,
 			rest.WithAwsConfig(awsCfg),
 			rest.WithSigV4RegionSvc(region, signingName),
-			restNoRedirect(nil),
+			restNoRedirect(&metadataFormatVersionTransport{base: icebergTransport()}),
 		)
 		if opts.Warehouse != "" {
 			restOpts = append(restOpts, rest.WithWarehouseLocation(opts.Warehouse))

@@ -10,7 +10,9 @@ package external
 
 import (
 	go_context "context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"iter"
 	"net/http"
 	"net/http/httptest"
@@ -1902,5 +1904,122 @@ func TestNoRedirectTransportAllowsNonRedirect(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpgradeStaleV2Metadata(t *testing.T) {
+	tests := []struct {
+		name        string
+		body        string
+		wantChanged bool
+		wantFV      string // expected "format-version" raw value in the (possibly rewritten) metadata
+	}{
+		{
+			name:        "v2 with next-row-id gets bumped to v3",
+			body:        `{"metadata-location":"s3://x","metadata":{"format-version":2,"next-row-id":42,"table-uuid":"abc"}}`,
+			wantChanged: true,
+			wantFV:      "3",
+		},
+		{
+			name:        "v2 without next-row-id is untouched",
+			body:        `{"metadata-location":"s3://x","metadata":{"format-version":2,"table-uuid":"abc"}}`,
+			wantChanged: false,
+			wantFV:      "2",
+		},
+		{
+			name:        "next-row-id explicitly null is untouched",
+			body:        `{"metadata-location":"s3://x","metadata":{"format-version":2,"next-row-id":null,"table-uuid":"abc"}}`,
+			wantChanged: false,
+			wantFV:      "2",
+		},
+		{
+			name:        "already v3 is untouched",
+			body:        `{"metadata-location":"s3://x","metadata":{"format-version":3,"next-row-id":42,"table-uuid":"abc"}}`,
+			wantChanged: false,
+			wantFV:      "3",
+		},
+		{
+			name:        "no metadata key is untouched",
+			body:        `{"config":{}}`,
+			wantChanged: false,
+		},
+		{
+			name:        "malformed json is untouched",
+			body:        `not json`,
+			wantChanged: false,
+		},
+		{
+			name: "large snapshot ids survive round-trip without precision loss",
+			body: `{"metadata-location":"s3://x","metadata":{"format-version":2,"next-row-id":42,` +
+				`"current-snapshot-id":9223372036854775807,"table-uuid":"abc"}}`,
+			wantChanged: true,
+			wantFV:      "3",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fixed, changed := upgradeStaleV2Metadata([]byte(tt.body))
+			if changed != tt.wantChanged {
+				t.Fatalf("changed = %v, want %v (body: %s)", changed, tt.wantChanged, fixed)
+			}
+			if !changed {
+				if string(fixed) != tt.body {
+					t.Errorf("unchanged body was rewritten: got %s, want %s", fixed, tt.body)
+				}
+				return
+			}
+
+			var envelope map[string]json.RawMessage
+			if err := json.Unmarshal(fixed, &envelope); err != nil {
+				t.Fatalf("rewritten body is not valid JSON: %v (%s)", err, fixed)
+			}
+			var meta map[string]json.RawMessage
+			if err := json.Unmarshal(envelope["metadata"], &meta); err != nil {
+				t.Fatalf("rewritten metadata is not valid JSON: %v", err)
+			}
+			if got := strings.TrimSpace(string(meta["format-version"])); got != tt.wantFV {
+				t.Errorf("format-version = %s, want %s", got, tt.wantFV)
+			}
+			if strings.Contains(tt.name, "snapshot") {
+				if got := strings.TrimSpace(string(meta["current-snapshot-id"])); got != "9223372036854775807" {
+					t.Errorf("current-snapshot-id lost precision: got %s", got)
+				}
+			}
+		})
+	}
+}
+
+func TestMetadataFormatVersionTransportRewritesBody(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"metadata-location":"s3://x","metadata":{"format-version":2,"next-row-id":42,"table-uuid":"abc"}}`))
+	}))
+	defer srv.Close()
+
+	client := &http.Client{Transport: &metadataFormatVersionTransport{base: http.DefaultTransport}}
+
+	resp, err := client.Get(srv.URL)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		t.Fatalf("response body is not valid JSON: %v (%s)", err, body)
+	}
+	var meta map[string]json.RawMessage
+	if err := json.Unmarshal(envelope["metadata"], &meta); err != nil {
+		t.Fatalf("metadata is not valid JSON: %v", err)
+	}
+	if got := strings.TrimSpace(string(meta["format-version"])); got != "3" {
+		t.Errorf("format-version = %s, want 3", got)
 	}
 }
