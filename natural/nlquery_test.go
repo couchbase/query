@@ -30,7 +30,9 @@ import (
 	"time"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/natural/ai_gateway"
 	"github.com/couchbase/query/value"
 )
@@ -636,6 +638,167 @@ func TestToGatewayRequest_MappingAndCopy(t *testing.T) {
 	}
 }
 
+func TestVectorSearchInstructions(t *testing.T) {
+	sql := vectorSearchInstructions(false)
+	if !strings.Contains(sql, "ORDER BY APPROX_VECTOR_DISTANCE") {
+		t.Error("SQL variant missing APPROX_VECTOR_DISTANCE guidance")
+	}
+	if strings.Contains(sql, "parameter of the generated function") {
+		t.Error("SQL variant should not contain JSUDF-specific guidance")
+	}
+
+	js := vectorSearchInstructions(true)
+	if !strings.Contains(js, "parameter of the generated function") {
+		t.Error("JSUDF variant missing function-parameter guidance")
+	}
+	if !strings.Contains(js, "ORDER BY APPROX_VECTOR_DISTANCE") {
+		t.Error("JSUDF variant missing APPROX_VECTOR_DISTANCE guidance")
+	}
+}
+
+func TestNewDirectSQLPromptIncludesVectorSearchInstructions(t *testing.T) {
+	p, err := newDirectSQLPrompt(testKeyspaceInfo(), testPaths(), "find similar docs", "", "", false,
+		ai_gateway.ProviderOpenAI, "gpt-4")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(p.Messages) != 1 {
+		t.Fatalf("expected 1 user message, got %d", len(p.Messages))
+	}
+	if !strings.Contains(p.Messages[0].Content, vectorSearchInstructions(false)) {
+		t.Error("SQL prompt does not contain vector-search instructions")
+	}
+}
+
+func TestNewDirectJSUDFPromptIncludesVectorSearchInstructions(t *testing.T) {
+	p, err := newDirectJSUDFPrompt(testKeyspaceInfo(), "find similar docs", "", "",
+		ai_gateway.ProviderOpenAI, "gpt-4")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(p.Messages) != 1 {
+		t.Fatalf("expected 1 user message, got %d", len(p.Messages))
+	}
+	if !strings.Contains(p.Messages[0].Content, vectorSearchInstructions(true)) {
+		t.Error("JSUDF prompt does not contain vector-search instructions")
+	}
+}
+
+func TestVectorSearchInstructionsAsksForClarificationOnAmbiguousField(t *testing.T) {
+	for _, forJSUDF := range []bool{false, true} {
+		instr := vectorSearchInstructions(forJSUDF)
+		if !strings.Contains(instr, "#ERR") || !strings.Contains(instr, "more than one") {
+			t.Errorf("forJSUDF=%v: expected guidance to ask for clarification when multiple vector"+
+				" fields/indexes are candidates, got: %s", forJSUDF, instr)
+		}
+	}
+}
+
+type fakeVectorIndex struct {
+	datastore.Index
+	name         string
+	rangeKey     datastore.IndexKeys
+	isVector     bool
+	distanceType datastore.IndexDistanceType
+	dimension    int
+	probes       int
+}
+
+func (f *fakeVectorIndex) Name() string                                    { return f.name }
+func (f *fakeVectorIndex) RangeKey2() datastore.IndexKeys                  { return f.rangeKey }
+func (f *fakeVectorIndex) IsVector() bool                                  { return f.isVector }
+func (f *fakeVectorIndex) VectorDistanceType() datastore.IndexDistanceType { return f.distanceType }
+func (f *fakeVectorIndex) VectorDimension() int                            { return f.dimension }
+func (f *fakeVectorIndex) VectorProbes() int                               { return f.probes }
+
+type notAVectorIndex struct {
+	datastore.Index
+	name string
+}
+
+func (f *notAVectorIndex) Name() string { return f.name }
+
+func TestCollectVectorIndexes(t *testing.T) {
+	vecKey := &datastore.IndexKey{Expr: expression.NewIdentifier("embedding"), Attributes: datastore.IK_DENSE_VECTOR}
+	plainKey := &datastore.IndexKey{Expr: expression.NewIdentifier("name"), Attributes: datastore.IK_NONE}
+
+	vecIdx := &fakeVectorIndex{
+		name:         "idx_vector",
+		rangeKey:     datastore.IndexKeys{plainKey, vecKey},
+		isVector:     true,
+		distanceType: datastore.IX_DIST_COSINE,
+		dimension:    128,
+		probes:       1,
+	}
+	nonVecIdx := &fakeVectorIndex{name: "idx_plain", isVector: false}
+	otherIdx := &notAVectorIndex{name: "idx_other"}
+	nilExprIdx := &fakeVectorIndex{
+		name:         "idx_nil_expr",
+		rangeKey:     datastore.IndexKeys{{Expr: nil, Attributes: datastore.IK_DENSE_VECTOR}},
+		isVector:     true,
+		distanceType: datastore.IX_DIST_COSINE,
+	}
+
+	rv := collectVectorIndexes([]datastore.Index{vecIdx, nonVecIdx, otherIdx, nilExprIdx})
+
+	if len(rv) != 1 {
+		t.Fatalf("expected 1 vector index entry, got %d: %+v", len(rv), rv)
+	}
+	info := rv[0]
+	if info["field"] != "`embedding`" {
+		t.Errorf("expected field '`embedding`', got %v", info["field"])
+	}
+	if info["similarity"] != string(datastore.IX_DIST_COSINE) {
+		t.Errorf("expected similarity 'cosine', got %v", info["similarity"])
+	}
+	if info["indexName"] != "idx_vector" {
+		t.Errorf("expected indexName 'idx_vector', got %v", info["indexName"])
+	}
+	if info["dimension"] != 128 {
+		t.Errorf("expected dimension 128, got %v", info["dimension"])
+	}
+	if info["type"] != datastore.IK_DENSE_VECTOR_NAME {
+		t.Errorf("expected type 'dense', got %v", info["type"])
+	}
+}
+
+func TestCollectVectorIndexesSparse(t *testing.T) {
+	sparseKey := &datastore.IndexKey{Expr: expression.NewIdentifier("sparseVec"), Attributes: datastore.IK_SPARSE_VECTOR}
+
+	vecIdx := &fakeVectorIndex{
+		name:         "idx_sparse_vec",
+		rangeKey:     datastore.IndexKeys{sparseKey},
+		isVector:     true,
+		distanceType: datastore.IX_DIST_DOT,
+		dimension:    128, // should be ignored/omitted for sparse
+		probes:       1,
+	}
+
+	rv := collectVectorIndexes([]datastore.Index{vecIdx})
+	if len(rv) != 1 {
+		t.Fatalf("expected 1 vector index entry, got %d: %+v", len(rv), rv)
+	}
+	info := rv[0]
+	if info["type"] != datastore.IK_SPARSE_VECTOR_NAME {
+		t.Errorf("expected type 'sparse', got %v", info["type"])
+	}
+	if _, ok := info["dimension"]; ok {
+		t.Errorf("expected no 'dimension' entry for a sparse vector index, got %v", info["dimension"])
+	}
+}
+
+func TestVectorFieldInfoNilExpressionDoesNotPanic(t *testing.T) {
+	vi := &fakeVectorIndex{
+		name:         "idx_nil_expr",
+		rangeKey:     datastore.IndexKeys{{Expr: nil, Attributes: datastore.IK_DENSE_VECTOR}},
+		isVector:     true,
+		distanceType: datastore.IX_DIST_COSINE,
+	}
+	if info := vectorFieldInfo(vi); info != nil {
+		t.Errorf("expected nil info when the vector key has a nil expression, got %+v", info)
+	}
+}
+
 type fakeStatement struct {
 	algebra.Statement
 	paramsCount int
@@ -673,8 +836,14 @@ func TestCanServerExecuteGeneratedStatement(t *testing.T) {
 	}
 }
 
-// ─── ambiguous-term / anti-hallucination instruction (MB-72780) ───────────────
+func TestVectorIndexesForPathReturnsNilWithoutPanicking(t *testing.T) {
+	p := algebra.NewPathShort("default", "no-such-keyspace")
+	if rv := vectorIndexesForPath(p); rv != nil {
+		t.Errorf("expected nil for a non-existent keyspace, got %+v", rv)
+	}
+}
 
+// ─── ambiguous-term / anti-hallucination instruction (MB-72780) ───────────────
 func TestAppendSQLUserMessage_IncludesAmbiguousTermInstruction(t *testing.T) {
 	p := &prompt{}
 	if err := appendSQLUserMessage(p, testKeyspaceInfo(), "list hotels", "", "", false); err != nil {

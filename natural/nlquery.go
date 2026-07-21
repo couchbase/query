@@ -1070,6 +1070,77 @@ func inferSchema(schema map[string]*schemaField, p *algebra.Path, context Natura
 	return schema, samples, nil
 }
 
+// vectorIndex is the minimal structural interface needed to read vector-index
+// metadata off a datastore.Index. Kept narrower than datastore.Index6 so tests
+// can fake it without implementing the full Index2-Index6 method stack.
+type vectorIndex interface {
+	Name() string
+	RangeKey2() datastore.IndexKeys
+	IsVector() bool
+	VectorDistanceType() datastore.IndexDistanceType
+	VectorDimension() int
+	VectorProbes() int
+}
+
+func vectorFieldInfo(vi vectorIndex) map[string]interface{} {
+	field := ""
+	vtype := ""
+	for _, k := range vi.RangeKey2() {
+		if vtype = k.VectorType(); vtype != "" {
+			if expr := k.Expression(); expr != nil {
+				field = expr.String()
+				break
+			}
+		}
+	}
+	if field == "" {
+		return nil
+	}
+	info := map[string]interface{}{
+		"field":      field,
+		"type":       vtype,
+		"similarity": string(vi.VectorDistanceType()),
+		"probes":     vi.VectorProbes(),
+		"indexName":  vi.Name(),
+	}
+	// Sparse vector indexes have no fixed dimension: each document only carries
+	// whichever indices are non-zero for it, so the field is meaningless here.
+	if vtype != datastore.IK_SPARSE_VECTOR_NAME {
+		info["dimension"] = vi.VectorDimension()
+	}
+	return info
+}
+
+func collectVectorIndexes(indexes []datastore.Index) []map[string]interface{} {
+	var rv []map[string]interface{}
+	for _, idx := range indexes {
+		vi, ok := idx.(vectorIndex)
+		if !ok || !vi.IsVector() {
+			continue
+		}
+		if info := vectorFieldInfo(vi); info != nil {
+			rv = append(rv, info)
+		}
+	}
+	return rv
+}
+
+func vectorIndexesForPath(p *algebra.Path) []map[string]interface{} {
+	keyspace, err := datastore.GetKeyspace(p.Parts()...)
+	if err != nil || keyspace == nil {
+		return nil
+	}
+	indexer, err := keyspace.Indexer(datastore.GSI)
+	if err != nil || indexer == nil {
+		return nil
+	}
+	indexes, err := indexer.Indexes()
+	if err != nil {
+		return nil
+	}
+	return collectVectorIndexes(indexes)
+}
+
 func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebra.Path,
 	context NaturalContext, includeSamples bool) (map[string]interface{},
 	map[string]map[string]*sampleField, errors.Error) {
@@ -1110,6 +1181,10 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 		info["schema"] = schema
 		fullpath := p.ProtectedString()
 		info["fullpath"] = fullpath[strings.Index(fullpath, ":"):]
+
+		if vecIdx := vectorIndexesForPath(p); len(vecIdx) > 0 {
+			info["vectorIndexes"] = vecIdx
+		}
 
 		keyspaceInfo[p.Keyspace()] = info
 		if len(ksSamples) > 0 {
@@ -1166,6 +1241,7 @@ func appendSQLUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
 			"\n\nIn other words, always use USE INDEX (USING FTS) in the query.")
 	}
 	userMessageBuf.WriteString(_AMBIGUOUS_TERM_INSTRUCTION)
+	userMessageBuf.WriteString(vectorSearchInstructions(false))
 	userMessageBuf.WriteString("\n\nReturn only a single SQL++ statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a query, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
@@ -1274,6 +1350,7 @@ func appendJSUDFUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
 		"\n\nAlias is for ease of use." +
 		"\n\nQuote aliases with grave accent characters.")
 	userMessageBuf.WriteString(_AMBIGUOUS_TERM_INSTRUCTION)
+	userMessageBuf.WriteString(vectorSearchInstructions(true))
 	userMessageBuf.WriteString("\n\nReturn only a single CREATE FUNCTION statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
@@ -1341,7 +1418,7 @@ func appendJSUDFIterativeUserMessage(chat *prompt, naturalPrompt string, hint st
 	return chat
 }
 
-// Glossary of instructions that can be used in user messages.
+// Reusable instruction snippets, shared across prompt builders.
 
 const _AMBIGUOUS_TERM_INSTRUCTION = "\n\nIf a value needed to complete the query " +
 	"(for example a numeric threshold, date, or category) is not stated in the Prompt and " +
@@ -1353,7 +1430,65 @@ const _AMBIGUOUS_TERM_INSTRUCTION = "\n\nIf a value needed to complete the query
 	"could not be inferred or what is ambiguous, and suggest the user either rephrase their " +
 	"request with the missing detail or supply it using the natural_hint option."
 
-// End of glossary.
+const _AMBIGUOUS_VECTOR_FIELD_INSTRUCTION = "\n\nIf more than one candidate vector field exists -- more than " +
+	"one \"vectorIndexes\" entry, or, when there is no vector index, more than one schema field matching " +
+	"the dense or sparse shapes described above -- and the Prompt does not identify which field to search " +
+	"by name, do not guess which one to use. Instead, say #ERR: and ask the user which field to search, " +
+	"listing the candidate field names."
+
+// vectorSearchInstructions returns the instruction paragraph teaching the LLM to use
+// APPROX_VECTOR_DISTANCE/SPARSE_VECTOR_DISTANCE for similarity/nearest-neighbor requests.
+// Shared by newSQLPrompt and newJSUDFPrompt; not used by the iterative variants, since a
+// conversation's first message already carries these instructions and the full history
+// is resent every turn.
+//
+// Sparse vector search is suggested either off an explicit vectorIndexes entry, or, absent
+// one, off the schema's own nested "items" shape (see schemaField/collectFields, MB-72779):
+// a field typed "array" whose "items" are themselves array-shaped with numeric leaves is the
+// [indices, values] pair shape SPARSE_VECTOR_DISTANCE expects, distinguishable from a plain
+// dense vector field, which is a flat array of numbers (no nested array items).
+func vectorSearchInstructions(forJSUDF bool) string {
+	var b strings.Builder
+	if forJSUDF {
+		b.WriteString("\n\nIf the Prompt is asking for documents similar to something (nearest neighbor" +
+			" or semantic/similarity search), the SQL++ query inside the generated function should use" +
+			" ORDER BY APPROX_VECTOR_DISTANCE(field, $qvec, metric, nprobes) LIMIT k, where qvec is a" +
+			" parameter of the generated function, referenced as $qvec inside the query the same way" +
+			" other function arguments are referenced (see the country/$country example above).")
+	} else {
+		b.WriteString("\n\nIf the Prompt is asking for documents similar to something (nearest neighbor" +
+			" or semantic/similarity search), express it using" +
+			" ORDER BY APPROX_VECTOR_DISTANCE(field, $qvec, metric, nprobes) LIMIT k.")
+	}
+	b.WriteString("\n\nIf the keyspace information above includes a \"vectorIndexes\" entry, use that entry's \"field\"," +
+		" \"similarity\", and \"probes\" values exactly when the vector \"field\" is relevant to the question." +
+		"\n\nIf there is no relevant \"vectorIndexes\" entry, use the schema's nested \"items\" shape to pick" +
+		" between a dense and a sparse vector field. A schema field with \"type\": \"array\" whose \"items\"" +
+		" is directly \"number\" (a flat array of numbers) is a candidate dense vector field: default to the" +
+		" 'cosine' similarity metric and 1 probe. A schema field with \"type\": \"array\" whose \"items\" are" +
+		" themselves array-shaped with numeric leaves (an array of arrays, e.g. [[2,9,14],[0.8,0.6,0.3]]) is" +
+		" a candidate sparse vector field.")
+	b.WriteString(_AMBIGUOUS_VECTOR_FIELD_INSTRUCTION)
+	b.WriteString("\n\nIf the relevant vector field is sparse -- either because its \"vectorIndexes\" entry has" +
+		" \"type\": \"sparse\", or, when there is no vector index, because the schema shows the array-of-arrays" +
+		" shape above -- APPROX_VECTOR_DISTANCE does not apply to it. Use SPARSE_VECTOR_DISTANCE(field, $qvec, nprobes)" +
+		" instead: it takes no similarity metric argument (it always computes a negated dot product, so" +
+		" ORDER BY ascending still returns the closest matches first) and $qvec must be a pair of parallel" +
+		" arrays [indices, values], e.g. [[2,9,14],[0.85,0.4,0.3]], never a flat array of numbers.")
+	if forJSUDF {
+		b.WriteString("\n\nThe query vector must always come from a function parameter, never a literal array" +
+			" hard-coded in the query, unless the Prompt itself supplies literal numbers to search for.")
+	} else {
+		b.WriteString("\n\nThe query vector argument to APPROX_VECTOR_DISTANCE or SPARSE_VECTOR_DISTANCE must" +
+			" always be a query parameter such as $qvec or $1, never a literal array, unless the Prompt itself" +
+			" supplies literal numbers to search for. This also applies when the Prompt asks for documents" +
+			" similar to a previous result: reference a query parameter for the vector, never attempt to look" +
+			" up or invent a previous document's data.")
+	}
+	return b.String()
+}
+
+// End of reusable instruction snippets.
 
 const CHAT_DOC_PREFIX = "aichat::"
 
