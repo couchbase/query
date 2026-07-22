@@ -9,6 +9,7 @@
 package couchbase
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -23,7 +24,8 @@ const _ALTER_EXTERNAL_COLLECTION_PATH = "/pools/default/buckets/%s/scopes/%s/col
 const _DROP_EXTERNAL_COLLECTION_PATH = "/pools/default/buckets/%s/scopes/%s/collections/%s/?external=1"
 const _MANIFEST_EXTERNAL_COLLECTION_PATH = "/pools/default/buckets/%s/scopes/?external=1"
 
-func (b *Bucket) CreateExternalCollection(cred cbauth.Creds, scope, name, catalog, credential string, params map[string]any) error {
+func (b *Bucket) CreateExternalCollection(cred cbauth.Creds, scope, name, catalog, credential string, params map[string]any,
+	ctx context.Context) error {
 	b.RLock()
 	client := b.pool.client
 	b.RUnlock()
@@ -31,7 +33,7 @@ func (b *Bucket) CreateExternalCollection(cred cbauth.Creds, scope, name, catalo
 	if catalog == "" {
 		return fmt.Errorf("catalog name is empty '%s'", catalog)
 	}
-	catalogEntry, err := client.GetCatalog(nil, catalog)
+	catalogEntry, err := client.GetCatalog(nil, catalog, ctx)
 	if err != nil || catalogEntry == nil {
 		return fmt.Errorf("failed to get catalog '%s': %v", catalog, err)
 	}
@@ -43,10 +45,10 @@ func (b *Bucket) CreateExternalCollection(cred cbauth.Creds, scope, name, catalo
 		return err
 	}
 	target := fmt.Sprintf(_CREATE_EXTERNAL_COLLECTION_PATH, uriAdj(b.Name), uriAdj(scope))
-	return client.parsePostURLResponseTerse(target, cred, args, nil)
+	return client.parsePostURLResponseTerse(target, cred, args, nil, ctx)
 }
 
-func (b *Bucket) AlterExternalCollection(cred cbauth.Creds, scope, name string, params map[string]any) error {
+func (b *Bucket) AlterExternalCollection(cred cbauth.Creds, scope, name string, params map[string]any, ctx context.Context) error {
 	b.RLock()
 	client := b.pool.client
 	b.RUnlock()
@@ -56,7 +58,7 @@ func (b *Bucket) AlterExternalCollection(cred cbauth.Creds, scope, name string, 
 	if err != nil {
 		return err
 	}
-	oParms, err := b.GetExternalCollectionObj(scope, name)
+	oParms, err := b.GetExternalCollectionObj(scope, name, ctx)
 	if err != nil {
 		return err
 	}
@@ -71,20 +73,20 @@ func (b *Bucket) AlterExternalCollection(cred cbauth.Creds, scope, name string, 
 	}
 	//	nparams[extparams.CollectionRevison] = oParms[extparams.CollectionRevison]
 	target := fmt.Sprintf(_ALTER_EXTERNAL_COLLECTION_PATH, uriAdj(b.Name), uriAdj(scope), uriAdj(name))
-	return client.parsePatchURLResponseTerse(target, cred, nparams, nil)
+	return client.parsePatchURLResponseTerse(target, cred, nparams, nil, ctx)
 }
 
-func (b *Bucket) DropExternalCollection(cred cbauth.Creds, scope, name string) error {
+func (b *Bucket) DropExternalCollection(cred cbauth.Creds, scope, name string, ctx context.Context) error {
 	b.RLock()
 	client := b.pool.client
 	b.RUnlock()
 
 	target := fmt.Sprintf(_DROP_EXTERNAL_COLLECTION_PATH, uriAdj(b.Name), uriAdj(scope), uriAdj(name))
-	return client.parseDeleteURLResponseTerse(target, cred, nil, nil)
+	return client.parseDeleteURLResponseTerse(target, cred, nil, nil, ctx)
 }
 
-func (b *Bucket) GetExternalCollectionObj(scope, name string) (map[string]any, error) {
-	entry, err := b.GetExternalCollectionEntry(scope, name)
+func (b *Bucket) GetExternalCollectionObj(scope, name string, ctx context.Context) (map[string]any, error) {
+	entry, err := b.GetExternalCollectionEntry(scope, name, ctx)
 	if err != nil || entry == nil {
 		return nil, nil
 	}
@@ -101,9 +103,9 @@ func (b *Bucket) GetExternalCollectionObj(scope, name string) (map[string]any, e
 	return rv, nil
 }
 
-func (b *Bucket) GetExternalCollectionEntry(scope, name string) (*extparams.ExternalCollectionEntry, error) {
+func (b *Bucket) GetExternalCollectionEntry(scope, name string, ctx context.Context) (*extparams.ExternalCollectionEntry, error) {
 
-	mani, err := b.GetExternalCollectionsManifest()
+	mani, err := b.GetExternalCollectionsManifest(ctx)
 	if err != nil || mani == nil || len(mani.Scopes) == 0 {
 		return nil, err
 	}
@@ -144,7 +146,7 @@ var _EMPTY_EXTERNAL_MANIFEST *ExternalManifest = &ExternalManifest{Uid: 0, Scope
 // external collections support based on cluster capability negotiation.
 var ExternalCollectionsCapable = func() bool { return true }
 
-func (b *Bucket) GetExternalCollectionsManifest() (*ExternalManifest, error) {
+func (b *Bucket) GetExternalCollectionsManifest(ctx context.Context) (*ExternalManifest, error) {
 	if !ExternalCollectionsCapable() {
 		return nil, nil
 	}
@@ -154,7 +156,7 @@ func (b *Bucket) GetExternalCollectionsManifest() (*ExternalManifest, error) {
 
 	var im InputExternalManifest
 	target := fmt.Sprintf(_MANIFEST_EXTERNAL_COLLECTION_PATH, uriAdj(b.Name))
-	err := client.parseURLResponse(target, nil, &im)
+	err := client.parseURLResponse(target, nil, &im, ctx)
 	if err != nil {
 		if strings.Contains(err.Error(), HTTP_404) || strings.Contains(err.Error(), HTTP_400) {
 			return nil, nil

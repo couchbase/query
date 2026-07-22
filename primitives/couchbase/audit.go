@@ -32,7 +32,7 @@ type AuditUser struct {
 
 func (c *Client) GetAuditSpec() (*AuditSpec, error) {
 	ret := &AuditSpec{}
-	err := c.parseURLResponse("/settings/audit", nil, ret)
+	err := c.parseURLResponse("/settings/audit", nil, ret, nil)
 	if err != nil {
 		return nil, err
 	}

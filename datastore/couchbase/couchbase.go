@@ -651,8 +651,26 @@ type DefaultObject struct {
 	Uid string `json:"auditUid"`
 }
 
+// reqContext derives a context.Context from the query's request deadline.
+// If the deadline is non-zero, it returns a context carrying that deadline
+// together with its cancel function; the caller must defer cancel() so the
+// deadline timer is released as soon as the work completes.
+// If there is no deadline, it returns a nil context (which makes the callee
+// fall back to the default HTTP client timeout) and a no-op cancel, so callers
+// can always defer cancel() without checking.
+func reqContext(qc datastore.QueryContext) (go_context.Context, go_context.CancelFunc) {
+	if qc != nil {
+		if deadline := qc.GetReqDeadline(); !deadline.IsZero() {
+			return go_context.WithDeadline(go_context.Background(), deadline)
+		}
+	}
+	return nil, func() {}
+}
+
 func (s *store) UserInfo(context datastore.QueryContext) (value.Value, errors.Error) {
-	data, err := s.client.GetUserRoles(context.Credential())
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	data, err := s.client.GetUserRoles(context.Credential(), ctx)
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
@@ -681,7 +699,9 @@ func cbRoleTarget(roleName, bucketName, scopeName, collectionName, catalogName, 
 }
 
 func (s *store) GetUserInfoAll(context datastore.QueryContext) ([]datastore.User, errors.Error) {
-	sourceUsers, err := s.client.GetUserInfoAll(context.Credential())
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	sourceUsers, err := s.client.GetUserInfoAll(context.Credential(), ctx)
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
@@ -731,7 +751,9 @@ func (s *store) PutUserInfo(context datastore.QueryContext, u *datastore.User) e
 	outputUser.Password = u.Password
 	outputUser.Groups = u.Groups
 	cred := context.Credential()
-	err := s.client.PutUserInfo(cred, &outputUser)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.PutUserInfo(cred, &outputUser, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToUpdateError(err, "user", credInfo(context)...)
 	}
@@ -743,7 +765,9 @@ func (s *store) DeleteUser(context datastore.QueryContext, u *datastore.User) er
 	outputUser.Id = u.Id
 	outputUser.Domain = u.Domain
 	cred := context.Credential()
-	err := s.client.DeleteUser(cred, &outputUser)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.DeleteUser(cred, &outputUser, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToUpdateError(err, "user", credInfo(context)...)
 	}
@@ -754,7 +778,9 @@ func (s *store) GetUserInfo(context datastore.QueryContext, u *datastore.User) e
 	var outputUser cb.User
 	outputUser.Id = u.Id
 	outputUser.Domain = u.Domain
-	err := s.client.GetUserInfo(context.Credential(), &outputUser)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.GetUserInfo(context.Credential(), &outputUser, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToRetrieveError(err, "user information")
 	}
@@ -774,7 +800,9 @@ func (s *store) GetUserInfo(context datastore.QueryContext, u *datastore.User) e
 }
 
 func (s *store) GetRolesAll(context datastore.QueryContext) ([]datastore.Role, errors.Error) {
-	roleDescList, err := s.client.GetRolesAll(context.Credential())
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	roleDescList, err := s.client.GetRolesAll(context.Credential(), ctx)
 	if err != nil {
 		return nil, errors.NewDatastoreUnableToRetrieveRoles(err)
 	}
@@ -790,7 +818,9 @@ func (s *store) GetRolesAll(context datastore.QueryContext) ([]datastore.Role, e
 func (s *store) GetGroupInfo(context datastore.QueryContext, g *datastore.Group) errors.Error {
 	var outputGroup cb.Group
 	outputGroup.Id = g.Id
-	err := s.client.GetGroupInfo(context.Credential(), &outputGroup)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.GetGroupInfo(context.Credential(), &outputGroup, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToRetrieveError(err, "group information")
 	}
@@ -838,7 +868,9 @@ func (s *store) PutGroupInfo(context datastore.QueryContext, g *datastore.Group)
 		}
 	}
 	cred := context.Credential()
-	err := s.client.PutGroupInfo(cred, &outputGroup)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.PutGroupInfo(cred, &outputGroup, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToUpdateError(err, "group", credInfo(context)...)
 	}
@@ -849,7 +881,9 @@ func (s *store) DeleteGroup(context datastore.QueryContext, g *datastore.Group) 
 	var outputGroup cb.Group
 	outputGroup.Id = g.Id
 	cred := context.Credential()
-	err := s.client.DeleteGroup(cred, &outputGroup)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.DeleteGroup(cred, &outputGroup, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToUpdateError(err, "group", credInfo(context)...)
 	}
@@ -857,7 +891,9 @@ func (s *store) DeleteGroup(context datastore.QueryContext, g *datastore.Group) 
 }
 
 func (s *store) GroupInfo(context datastore.QueryContext) (value.Value, errors.Error) {
-	sourceGroups, err := s.client.GroupInfo(context.Credential())
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	sourceGroups, err := s.client.GroupInfo(context.Credential(), ctx)
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "group information")
 	}
@@ -865,7 +901,9 @@ func (s *store) GroupInfo(context datastore.QueryContext) (value.Value, errors.E
 }
 
 func (s *store) GetGroupInfoAll(context datastore.QueryContext) ([]datastore.Group, errors.Error) {
-	sourceGroups, err := s.client.GetGroupInfoAll(context.Credential())
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	sourceGroups, err := s.client.GetGroupInfoAll(context.Credential(), ctx)
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "group information")
 	}
@@ -890,7 +928,9 @@ func (s *store) CreateBucket(context datastore.QueryContext, name string, with v
 	var param map[string]interface{}
 	json.Unmarshal(b, &param)
 	cred := context.Credential()
-	err := s.client.CreateBucket(cred, param)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.CreateBucket(cred, param, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToUpdateError(err, "bucket", credInfo(context)...)
 	}
@@ -902,7 +942,9 @@ func (s *store) AlterBucket(context datastore.QueryContext, name string, with va
 	var param map[string]interface{}
 	json.Unmarshal(b, &param)
 	cred := context.Credential()
-	err := s.client.AlterBucket(cred, name, param)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.AlterBucket(cred, name, param, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToUpdateError(err, "bucket", credInfo(context)...)
 	}
@@ -911,7 +953,9 @@ func (s *store) AlterBucket(context datastore.QueryContext, name string, with va
 
 func (s *store) DropBucket(context datastore.QueryContext, name string) errors.Error {
 	cred := context.Credential()
-	err := s.client.DropBucket(cred, name)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.DropBucket(cred, name, ctx)
 	if err != nil {
 		return errors.NewSystemUnableToUpdateError(err, "bucket", credInfo(context)...)
 	}
@@ -919,7 +963,9 @@ func (s *store) DropBucket(context datastore.QueryContext, name string) errors.E
 }
 
 func (s *store) BucketInfo(context datastore.QueryContext) (value.Value, errors.Error) {
-	sourceBuckets, err := s.client.BucketInfo(context.Credential())
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	sourceBuckets, err := s.client.BucketInfo(context.Credential(), ctx)
 	if err != nil {
 		return nil, errors.NewSystemUnableToRetrieveError(err, "bucket information")
 	}
@@ -935,7 +981,9 @@ func (s *store) CreateCatalog(context datastore.QueryContext, name, catalogType,
 		}
 	}
 
-	err := s.client.CreateCatalog(context.Credential(), name, catalogType, source, credential, params)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.CreateCatalog(context.Credential(), name, catalogType, source, credential, params, ctx)
 	if err != nil {
 		if cb.AlreadyExistsError(err) {
 			return errors.NewCbCatalogExistsError(name)
@@ -954,7 +1002,9 @@ func (s *store) AlterCatalog(context datastore.QueryContext, name string, with v
 		}
 	}
 
-	err := s.client.AlterCatalog(context.Credential(), name, params)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.AlterCatalog(context.Credential(), name, params, ctx)
 	if err != nil {
 		return errors.NewCbCatalogAlterError(name, err)
 	}
@@ -962,7 +1012,9 @@ func (s *store) AlterCatalog(context datastore.QueryContext, name string, with v
 }
 
 func (s *store) DropCatalog(context datastore.QueryContext, name string) errors.Error {
-	err := s.client.DropCatalog(context.Credential(), name)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.DropCatalog(context.Credential(), name, ctx)
 	if err != nil {
 		return errors.NewCbCatalogDropError(name, err)
 	}
@@ -1056,7 +1108,9 @@ func (s *store) CreateCredentialStore(context datastore.QueryContext, name strin
 		}
 	}
 
-	err := s.client.CreateCredentialStore(context.Credential(), name, params)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.CreateCredentialStore(context.Credential(), name, params, ctx)
 	if err != nil {
 		if cb.AlreadyExistsError(err) {
 			return errors.NewCbCredentialStoreExistsError(name)
@@ -1075,7 +1129,9 @@ func (s *store) AlterCredentialStore(context datastore.QueryContext, name string
 		}
 	}
 
-	err := s.client.AlterCredentialStore(context.Credential(), name, params)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.AlterCredentialStore(context.Credential(), name, params, ctx)
 	if err != nil {
 		return errors.NewCbCredentialStoreAlterError(name, err)
 	}
@@ -1083,7 +1139,9 @@ func (s *store) AlterCredentialStore(context datastore.QueryContext, name string
 }
 
 func (s *store) DropCredentialStore(context datastore.QueryContext, name string) errors.Error {
-	err := s.client.DropCredentialStore(context.Credential(), name)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := s.client.DropCredentialStore(context.Credential(), name, ctx)
 	if err != nil {
 		return errors.NewCbCredentialStoreDropError(name, err)
 	}
@@ -1607,7 +1665,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 			// by the bucket update callback
 			for {
 				mani, err := keyspace.cbbucket.GetCollectionsManifest()
-				externalMani, eErr := keyspace.cbbucket.GetExternalCollectionsManifest()
+				externalMani, eErr := keyspace.cbbucket.GetExternalCollectionsManifest(nil)
 				if err == nil && eErr == nil {
 
 					// see later: another case for shared optimistic locks.
@@ -2109,7 +2167,7 @@ func newKeyspace(p *namespace, name string, version *uint64) (*keyspace, errors.
 
 	rv.scopes = _NO_SCOPES
 	mani, err := cbbucket.GetCollectionsManifest()
-	externalMani, eErr := cbbucket.GetExternalCollectionsManifest()
+	externalMani, eErr := cbbucket.GetExternalCollectionsManifest(nil)
 	if err == nil && eErr == nil {
 		rv.collectionsManifestUid = mani.Uid
 		if externalMani != nil {
@@ -3612,7 +3670,9 @@ func (ks *keyspace) ScopeByName(name string) (datastore.Scope, errors.Error) {
 }
 
 func (ks *keyspace) CreateScope(context datastore.QueryContext, name string) errors.Error {
-	err := ks.cbbucket.CreateScope(context.Credential(), name)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := ks.cbbucket.CreateScope(context.Credential(), name, ctx)
 	if err != nil {
 		return errors.NewCbBucketCreateScopeError(fullName(ks.namespace.name, ks.name, name), err)
 	}
@@ -3621,7 +3681,9 @@ func (ks *keyspace) CreateScope(context datastore.QueryContext, name string) err
 }
 
 func (ks *keyspace) DropScope(context datastore.QueryContext, name string) errors.Error {
-	err := ks.cbbucket.DropScope(context.Credential(), name)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := ks.cbbucket.DropScope(context.Credential(), name, ctx)
 	if err != nil {
 		return errors.NewCbBucketDropScopeError(fullName(ks.namespace.name, ks.name, name), err)
 	}

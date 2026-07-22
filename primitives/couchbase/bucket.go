@@ -10,34 +10,35 @@
 package couchbase
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/couchbase/cbauth"
 )
 
-func (c *Client) CreateBucket(cred cbauth.Creds, params map[string]interface{}) error {
+func (c *Client) CreateBucket(cred cbauth.Creds, params map[string]interface{}, ctx context.Context) error {
 	var ret interface{}
-	err := c.parsePostURLResponseTerse("/pools/default/buckets", cred, params, &ret)
+	err := c.parsePostURLResponseTerse("/pools/default/buckets", cred, params, &ret, ctx)
 	return err
 }
 
-func (c *Client) AlterBucket(cred cbauth.Creds, name string, params map[string]interface{}) error {
-	var ret interface{}
-	target := fmt.Sprintf("/pools/default/buckets/%s", name)
-	err := c.parsePostURLResponseTerse(target, cred, params, &ret)
-	return err
-}
-
-func (c *Client) DropBucket(cred cbauth.Creds, name string) error {
+func (c *Client) AlterBucket(cred cbauth.Creds, name string, params map[string]interface{}, ctx context.Context) error {
 	var ret interface{}
 	target := fmt.Sprintf("/pools/default/buckets/%s", name)
-	err := c.parseDeleteURLResponseTerse(target, cred, nil, &ret)
+	err := c.parsePostURLResponseTerse(target, cred, params, &ret, ctx)
 	return err
 }
 
-func (c *Client) BucketInfo(cred cbauth.Creds) ([]interface{}, error) {
+func (c *Client) DropBucket(cred cbauth.Creds, name string, ctx context.Context) error {
+	var ret interface{}
+	target := fmt.Sprintf("/pools/default/buckets/%s", name)
+	err := c.parseDeleteURLResponseTerse(target, cred, nil, &ret, ctx)
+	return err
+}
+
+func (c *Client) BucketInfo(cred cbauth.Creds, ctx context.Context) ([]interface{}, error) {
 	ret := make([]interface{}, 0, 1)
-	err := c.parseURLResponse("/pools/default/buckets", cred, &ret)
+	err := c.parseURLResponse("/pools/default/buckets", cred, &ret, ctx)
 	if err != nil {
 		return nil, err
 	}

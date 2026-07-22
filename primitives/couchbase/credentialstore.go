@@ -10,6 +10,7 @@
 package couchbase
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/couchbase/cbauth"
@@ -17,30 +18,30 @@ import (
 
 const _CREDENTIAL_STORE_PATH = "/settings/credentials"
 
-func (c *Client) CreateCredentialStore(cred cbauth.Creds, name string, params map[string]any) error {
+func (c *Client) CreateCredentialStore(cred cbauth.Creds, name string, params map[string]any, ctx context.Context) error {
 	target := fmt.Sprintf("%s/%s", _CREDENTIAL_STORE_PATH, uriAdj(name))
-	return c.parsePostURLResponseJSON(target, cred, params, nil)
+	return c.parsePostURLResponseJSON(target, cred, params, nil, ctx)
 }
 
-func (c *Client) AlterCredentialStore(cred cbauth.Creds, name string, params map[string]any) error {
+func (c *Client) AlterCredentialStore(cred cbauth.Creds, name string, params map[string]any, ctx context.Context) error {
 	target := fmt.Sprintf("%s/%s", _CREDENTIAL_STORE_PATH, uriAdj(name))
-	return c.parsePostURLResponseJSON(target, cred, params, nil)
+	return c.parsePostURLResponseJSON(target, cred, params, nil, ctx)
 }
 
-func (c *Client) DropCredentialStore(cred cbauth.Creds, name string) error {
+func (c *Client) DropCredentialStore(cred cbauth.Creds, name string, ctx context.Context) error {
 	target := fmt.Sprintf("%s/%s", _CREDENTIAL_STORE_PATH, uriAdj(name))
-	return c.parseDeleteURLResponseTerse(target, cred, nil, nil)
+	return c.parseDeleteURLResponseTerse(target, cred, nil, nil, ctx)
 }
 
-func (c *Client) GetCredentialStore(cred cbauth.Creds, name string) (rv map[string]any, err error) {
+func (c *Client) GetCredentialStore(cred cbauth.Creds, name string, ctx context.Context) (rv map[string]any, err error) {
 	target := fmt.Sprintf("%s/%s", _CREDENTIAL_STORE_PATH, uriAdj(name))
-	err = c.parseURLResponse(target, cred, &rv)
+	err = c.parseURLResponse(target, cred, &rv, ctx)
 	return
 }
 
-func (c *Client) ListCredentialStores(cred cbauth.Creds) ([]any, error) {
+func (c *Client) ListCredentialStores(cred cbauth.Creds, ctx context.Context) ([]any, error) {
 	rv := make([]any, 0, 1)
-	err := c.parseURLResponse(_CREDENTIAL_STORE_PATH, cred, &rv)
+	err := c.parseURLResponse(_CREDENTIAL_STORE_PATH, cred, &rv, ctx)
 	if err != nil {
 		return nil, err
 	}

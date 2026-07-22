@@ -152,7 +152,9 @@ func (sc *scope) CreateCollection(context datastore.QueryContext, name, catalog,
 		}
 	}
 
-	err := sc.bucket.cbbucket.CreateCollection(context.Credential(), sc.id, name, catalog, credential, params)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := sc.bucket.cbbucket.CreateCollection(context.Credential(), sc.id, name, catalog, credential, params, ctx)
 	if err != nil {
 		return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
 	}
@@ -170,7 +172,9 @@ func (sc *scope) AlterCollection(context datastore.QueryContext, name string, wi
 			json.Unmarshal(bytes, &params)
 		}
 	}
-	cbErr := sc.bucket.cbbucket.AlterCollection(context.Credential(), sc.id, name, params)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	cbErr := sc.bucket.cbbucket.AlterCollection(context.Credential(), sc.id, name, params, ctx)
 	if cbErr != nil {
 		return errors.NewCbBucketAlterCollectionError(sc.objectFullName(name), cbErr)
 	}
@@ -178,7 +182,9 @@ func (sc *scope) AlterCollection(context datastore.QueryContext, name string, wi
 }
 
 func (sc *scope) DropCollection(context datastore.QueryContext, name string) errors.Error {
-	err := sc.bucket.cbbucket.DropCollection(context.Credential(), sc.id, name)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := sc.bucket.cbbucket.DropCollection(context.Credential(), sc.id, name, ctx)
 	if err != nil {
 		return errors.NewCbBucketDropCollectionError(sc.objectFullName(name), err)
 	}
@@ -492,7 +498,9 @@ func (coll *collection) Release(bclose bool) {
 }
 
 func (coll *collection) Flush(context datastore.QueryContext) errors.Error {
-	err := coll.bucket.cbbucket.FlushCollection(context.Credential(), coll.scope.id, coll.id)
+	ctx, cancel := reqContext(context)
+	defer cancel()
+	err := coll.bucket.cbbucket.FlushCollection(context.Credential(), coll.scope.id, coll.id, ctx)
 	if err != nil {
 		return errors.NewCbBucketFlushCollectionError(coll.scope.objectFullName(coll.id), err)
 	}
