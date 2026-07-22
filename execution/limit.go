@@ -75,11 +75,17 @@ func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool
 		this.limit--
 		return this.sendItem(item)
 	} else if this.limit == 1 {
-		// MB-72917 once the last item is processed terminate immediately
-		// instead of waiting for the next (possibly expensive) input item
+		// MB-72917 once the last item is processed terminate immediately instead
+		// of waiting for the next (possibly expensive) input item. We must still
+		// report the true outcome of sendItem(): in the inline/serialized
+		// execution path our caller's own sendItem() call returns exactly what we
+		// return (see serializedSend), so lying here would make the caller think
+		// this item was rejected and recycle an item we already handed downstream.
 		this.limit--
-		this.sendItem(item)
-		return false
+		sent := this.sendItem(item)
+		this.stopped = true
+		this.notifyStop()
+		return sent
 	} else {
 
 		// MB-53235 for serialized operators item management rests with the producer
