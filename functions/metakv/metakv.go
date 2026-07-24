@@ -10,6 +10,7 @@ package metaStorage
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -112,6 +113,28 @@ func DropScope(namespace, bucket, scope string) {
 		}
 		return nil
 	})
+}
+
+// DeleteBodyEntry removes a (legacy) scope function definition from metakv identified by
+// its path parts (namespace, bucket, scope, function). Unlike NewScopeFunction, it does
+// not require the containing bucket/scope to still exist, so it can be used to clean up
+// stale definitions left behind by a dropped bucket during migration (MB-67616). A
+// missing entry is treated as success.
+func DeleteBodyEntry(parts []string) errors.Error {
+	if len(parts) != 4 {
+		return errors.NewMetaKVError("DeleteBodyEntry", fmt.Errorf("unexpected function path parts %v", parts))
+	}
+
+	var path algebra.Path
+	algebra.SetPathLong(parts[0], parts[1], parts[2], parts[3], &path)
+	key := path.FullName()
+
+	err := metakv.Delete(_FUNC_PATH+key, nil)
+	if err != nil && !isNotFoundError(err) {
+		return errors.NewMetaKVError(key, err)
+	}
+	setChange()
+	return nil
 }
 
 func Foreach(b string, f func(path string, v value.Value) error) error {

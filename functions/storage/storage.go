@@ -56,6 +56,11 @@ const _GRACE_PERIOD = 30 * time.Second
 const _RETRY_TIME = 10 * time.Second
 const _MAX_RETRY = 5
 
+// number of times a bucket must be seen as "not found" before we treat it as
+// genuinely dropped and remove its stale UDF definitions; this avoids acting on a
+// bucket that is only temporarily unavailable (e.g. during rebalance/failover)
+const _DROP_RETRY_LIMIT = 2
+
 const _N1QL_SYSTEM_BUCKET = "N1QL_SYSTEM_BUCKET"
 
 // _UNKNOWN is the zero value migrating starts at, before Migrate() has evaluated the true
@@ -70,9 +75,10 @@ var lastActivity time.Time
 
 type migrateBucket struct {
 	sync.Mutex
-	name    string
-	state   bucketState
-	primary bool
+	name      string
+	state     bucketState
+	primary   bool
+	dropCount int // times seen as "not found" - see _DROP_RETRY_LIMIT
 }
 
 var migrations map[string]*migrateBucket
@@ -285,6 +291,21 @@ func retryMigration() {
 					// make sure _system scope is available
 					err := checkSystemCollection(bucket.name)
 					if err != nil {
+						if bucketDropped(err) {
+							// the bucket appears to no longer exist, but it may only be
+							// temporarily unavailable (e.g. rebalance/failover); only treat it
+							// as dropped after seeing it missing _DROP_RETRY_LIMIT times.
+							bucket.dropCount++
+							if bucket.dropCount > _DROP_RETRY_LIMIT && doMigrateBucket(bucket.name, true) {
+								// stale UDF definitions removed from metakv (MB-67616); stop
+								// tracking the bucket so migration can complete and we don't later
+								// attempt to create a primary index on its (non-existent) system
+								// collection. If not all entries could be removed, doMigrateBucket
+								// returns false and the bucket stays in _BUCKET_NOT_MIGRATING to
+								// be retried.
+								delete(migrations, bucket.name)
+							}
+						}
 						bucket.Unlock()
 						continue
 					}
@@ -294,7 +315,7 @@ func retryMigration() {
 				// since for each bucket we are going to scan metakv entries,
 				// however this does allow us to mark migration of individual bucket
 				// as _BUCKET_MIGRATED; also reuse the same code as regular migration.
-				if doMigrateBucket(bucket.name) {
+				if doMigrateBucket(bucket.name, false) {
 					bucket.state = _BUCKET_MIGRATED
 				} else {
 					bucket.state = _BUCKET_PART_MIGRATED
@@ -644,7 +665,7 @@ func checkMigrateBucket(name string, allBuckets bool) {
 		migratingLock.Unlock()
 	}
 
-	b := doMigrateBucket(name)
+	b := doMigrateBucket(name, false)
 
 	bucket.Lock()
 	if b {
@@ -661,13 +682,20 @@ func checkMigrateBucket(name string, allBuckets bool) {
 	lastActivity = time.Now()
 }
 
-func doMigrateBucket(name string) bool {
+// doMigrateBucket migrates the UDF definitions of a bucket from metakv into the bucket's
+// own system collection. If dropped is true, the bucket no longer exists and its stale
+// UDF definitions are simply removed from metakv instead (there is no bucket to migrate
+// them into) - this allows migration to complete (MB-67616).
+func doMigrateBucket(name string, dropped bool) bool {
 
 	if name == _N1QL_SYSTEM_BUCKET {
 		return false
 	}
 
 	logging.Infof("UDF migration: Start UDF migration for bucket %s", name)
+	if dropped {
+		logging.Infof("UDF migration: Bucket %s no longer exists, removing its stale UDF definitions", name)
+	}
 
 	complete := true
 	err1 := metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]interface{}) errors.Error {
@@ -680,13 +708,26 @@ func doMigrateBucket(name string) bool {
 		}
 		logging.Infof("UDF migration: Handling %v", parts)
 
-		name, err := systemStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
+		if dropped {
+			// the bucket no longer exists, so we cannot write to system storage or
+			// construct a validated function name (NewScopeFunction requires a live
+			// scope); remove the stale metakv entry directly by path (MB-67616)
+			err := metaStorage.DeleteBodyEntry(parts)
+			if err != nil {
+				logging.Errorf("UDF migration: Removing stale entry %v error %v deleting metakv entry", parts, err)
+				return errors.NewMigrationError(_UDF_MIGRATION, "Error deleting stale entry", parts, err)
+			}
+			logging.Infof("UDF migration: Deleted stale entry %v for dropped bucket %s", parts, name)
+			return nil
+		}
+
+		sysName, err := systemStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
 		if err != nil {
 			logging.Errorf("UDF migration: Migrating %v error %v parsing name", parts, err)
 			return errors.NewMigrationError(_UDF_MIGRATION, "Error parsing name", parts, err)
 		}
 
-		err = name.SaveBodyEntry(entry, false)
+		err = sysName.SaveBodyEntry(entry, false)
 		if err != nil {
 			logging.Errorf("UDF migration: Migrating %v error %v writing body", parts, err)
 			// ignore duplicated function error but return all other errors
@@ -697,7 +738,7 @@ func doMigrateBucket(name string) bool {
 			logging.Infof("UDF migration: Added %v", parts)
 		}
 
-		name, err = metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
+		metaName, err := metaStorage.NewScopeFunction(parts[0], parts[1], parts[2], parts[3])
 		if err != nil {
 			logging.Errorf("UDF migration: Migrating %v error %v generating metakv function name for deleting old entry",
 				parts, err)
@@ -705,7 +746,7 @@ func doMigrateBucket(name string) bool {
 				parts, err)
 		}
 
-		err = name.Delete()
+		err = metaName.Delete()
 		if err != nil {
 			logging.Errorf("UDF migration: Migrating %v error %v deleting old entry", parts, err)
 			// ignore missing function error but return ll other errors
@@ -719,7 +760,7 @@ func doMigrateBucket(name string) bool {
 		logging.Infof("UDF migration: Migrated %v", parts)
 
 		// drop any functions cache entry if loaded
-		functions.DropAllCacheEntries(name)
+		functions.DropAllCacheEntries(metaName)
 
 		return nil
 	})
@@ -755,6 +796,14 @@ func checkSystemCollection(name string) errors.Error {
 		return errors.NewMigrationInternalError(_UDF_MIGRATION, "Unexpected error - datastore not available", nil, nil)
 	}
 	return nil
+}
+
+// bucketDropped returns true if the error indicates that the bucket no longer exists
+// (i.e. it was dropped). This is used to detect stale UDF definitions in metakv that
+// belong to a bucket that has since been dropped - migration cannot proceed for such a
+// bucket, so the stale definitions are removed instead (MB-67616).
+func bucketDropped(e errors.Error) bool {
+	return e != nil && (e.HasICause(errors.E_CB_BUCKET_NOT_FOUND) || e.HasICause(errors.E_CB_KEYSPACE_NOT_FOUND))
 }
 
 func createPrimaryIndexes() {
