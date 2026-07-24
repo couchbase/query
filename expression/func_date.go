@@ -4566,7 +4566,7 @@ func determineFormat(fmt string) formatType {
 // (e.g. "2023-01-15", "1111-11-11T11:11:11"), as opposed to a Go time format or other type.
 //
 // An example format is composed entirely of digits and common date/time separators
-// (. : - + T space), and must contain at least one date separator or time separator
+// (. : - / + T space), and must contain at least one date separator or time separator
 // to distinguish it from a bare number.
 //
 // The "2006" exclusion: In Go's time package, the year token is always "2006" — it is
@@ -4595,7 +4595,7 @@ func isExampleFormat(layout string) bool {
 		c := layout[i]
 
 		switch c {
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ':', '-', '+', 'T', 'Z', ' ':
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', ':', '-', '/', '+', 'T', 'Z', ' ':
 			if c == ':' {
 				hasTimeSep = true
 			} else if isDateSeparator(rune(c)) {
