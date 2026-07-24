@@ -13,6 +13,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -43,6 +44,15 @@ var ConnPoolTimeout = time.Hour * 24 * 30
 // overflow connection closer cycle time
 var ConnCloserInterval = time.Second * 30
 
+// interval after which check for restart and drain idle connections
+const _SERVER_START_CHECK_INTERVAL = 5 * time.Minute // originally 5 minutes
+
+// deadline for the uptime stat probe, so a hung node cannot stall connCloser.
+var serverStartProbeTimeout = 10 * time.Second // originally 10 seconds
+
+// to absorb small clock jitter
+var serverStartTolerance = 5 * time.Second // originally 5 seconds
+
 // ConnPoolAvailWaitTime is the amount of time to wait for an existing
 // connection from the pool before considering the creation of a new
 // one.
@@ -64,6 +74,12 @@ type connectionPool struct {
 	encrypted   bool
 	tlsConfig   *tls.Config
 	bucket      string
+
+	// serverStart is the computed start time of the memcached process on this
+	// node, derived from its "uptime" stat; lastServerCheck is when we last
+	// probed it. Both are touched only from connCloser, so no locking needed.
+	serverStart     time.Time
+	lastServerCheck time.Time
 }
 
 func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolOverflow int, tlsConfig *tls.Config, bucket string,
@@ -406,6 +422,9 @@ func (cp *connectionPool) connCloser() {
 			logCount = _LOG_INTERVAL
 		}
 
+		// drain idle connection if server has restarted
+		cp.refreshServerStart()
+
 		// no overflow connections open or sustained requests for connections
 		// nothing to do until the next cycle
 		if len(cp.connections) <= cp.poolSize ||
@@ -447,4 +466,107 @@ func (cp *connectionPool) connCleanup(c *memcached.Client) (rv bool) {
 	c.Close()
 	<-cp.createsem
 	return
+}
+
+// refresh serverStart every server start check interval
+// if new serverStart time detected -> node has restarted -> drain idle connections  
+func (cp *connectionPool) refreshServerStart() {
+	now := time.Now()
+	if !cp.lastServerCheck.IsZero() && now.Sub(cp.lastServerCheck) < _SERVER_START_CHECK_INTERVAL {
+		return
+	}
+	cp.lastServerCheck = now
+
+	uptimeSecs, ok := cp.probeUptime(now)
+	if !ok {
+		// could not read uptime this cycle
+		return
+	}
+
+	newServerStart := now.Add(-time.Duration(uptimeSecs) * time.Second)
+
+	if cp.serverStart.IsZero() {
+		// first observation 
+		cp.serverStart = newServerStart
+		return
+	}
+
+	if newServerStart.After(cp.serverStart.Add(serverStartTolerance)) {
+		prevServerStart := cp.serverStart
+		cp.serverStart = newServerStart
+		numDrained := cp.drainIdleConns()
+		logging.Infof("bucket %s node %s memcached restart detected (start %v -> %v), "+
+			"proactively drained %d stale idle connection(s)",
+			cp.bucket, cp.host, prevServerStart, newServerStart, numDrained)
+	}
+}
+
+func (cp *connectionPool) probeUptime(now time.Time) (int64, bool) {
+	// try a idle connection from pool
+	select {
+	case c, isPoolOpen := <-cp.connections:
+		if !isPoolOpen {
+			return 0, false
+		}
+
+		c.SetDeadline(now.Add(serverStartProbeTimeout)) // prevent hung node from stalling proveUptime
+		stats, err := c.StatsMap("")
+		if err == nil {
+			c.SetDeadline(noDeadline)
+			secs, ok := parseUptime(cp, stats)
+			cp.Return(c) // return connection to pool for reuse 
+			return secs, ok
+		}
+
+		// stale idle connection
+		cp.Discard(c)
+	default:
+		// no idle connection to borrow
+	}
+
+	// we can still get uptime by creating connection to the node even when whole pool is stale
+	c, _, err := cp.mkConn(cp.host, cp.auth, cp.tlsConfig, cp.bucket)
+	if err != nil || c == nil {
+		// node still unreachable
+		return 0, false
+	}
+	c.SetDeadline(now.Add(serverStartProbeTimeout)) // prevent hung node from stalling probeUptime 
+	stats, err := c.StatsMap("")
+	c.Close() // this connection is not part of pool therefore close it
+
+	if err != nil {
+		return 0, false
+	}
+	return parseUptime(cp, stats)
+}
+
+func parseUptime(cp *connectionPool, stats map[string]string) (int64, bool) {
+	uptimeStr, ok := stats["uptime"]
+	if !ok {
+		return 0, false
+	}
+	secs, err := strconv.ParseInt(uptimeStr, 10, 64)
+	if err != nil {
+		logging.Debugf("node %s unparseable uptime stat %q: %v", cp.host, uptimeStr, err)
+		return 0, false
+	}
+	return secs, true
+}
+
+func (cp *connectionPool) drainIdleConns() int {
+	drained := 0
+	for {
+		select {
+		case c, isPoolOpen := <-cp.connections:
+			if !isPoolOpen {
+				return drained
+			}
+			if !cp.connCleanup(c) { // clean idle connection
+				return drained
+			}
+			drained++
+		default:
+			return drained
+		}
+	}
 }
