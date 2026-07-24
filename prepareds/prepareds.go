@@ -962,9 +962,9 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, planSta
 				err1 = json.Unmarshal(text, &stmt)
 				if err1 == nil {
 					prepared.SetText(stmt)
-					pl, _, _ := reprepare(prepared, nil, phaseTime, planStability,
+					pl, replace, _ := reprepare(prepared, nil, phaseTime, planStability,
 						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
-					if pl != nil {
+					if pl != nil && replace {
 						return pl, nil, err
 					}
 				}
