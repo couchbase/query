@@ -1,6 +1,6 @@
 module github.com/couchbase/query
 
-go 1.25.5
+go 1.26.2
 
 replace golang.org/x/text => golang.org/x/text v0.4.0
 
