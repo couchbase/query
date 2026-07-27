@@ -469,7 +469,7 @@ func (cp *connectionPool) connCleanup(c *memcached.Client) (rv bool) {
 }
 
 // refresh serverStart every server start check interval
-// if new serverStart time detected -> node has restarted -> drain idle connections  
+// if new serverStart time detected -> node has restarted -> drain idle connections
 func (cp *connectionPool) refreshServerStart() {
 	now := time.Now()
 	if !cp.lastServerCheck.IsZero() && now.Sub(cp.lastServerCheck) < _SERVER_START_CHECK_INTERVAL {
@@ -486,7 +486,7 @@ func (cp *connectionPool) refreshServerStart() {
 	newServerStart := now.Add(-time.Duration(uptimeSecs) * time.Second)
 
 	if cp.serverStart.IsZero() {
-		// first observation 
+		// first observation
 		cp.serverStart = newServerStart
 		return
 	}
@@ -514,7 +514,7 @@ func (cp *connectionPool) probeUptime(now time.Time) (int64, bool) {
 		if err == nil {
 			c.SetDeadline(noDeadline)
 			secs, ok := parseUptime(cp, stats)
-			cp.Return(c) // return connection to pool for reuse 
+			cp.Return(c) // return connection to pool for reuse
 			return secs, ok
 		}
 
@@ -530,7 +530,7 @@ func (cp *connectionPool) probeUptime(now time.Time) (int64, bool) {
 		// node still unreachable
 		return 0, false
 	}
-	c.SetDeadline(now.Add(serverStartProbeTimeout)) // prevent hung node from stalling probeUptime 
+	c.SetDeadline(now.Add(serverStartProbeTimeout)) // prevent hung node from stalling probeUptime
 	stats, err := c.StatsMap("")
 	c.Close() // this connection is not part of pool therefore close it
 
