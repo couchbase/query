@@ -1035,8 +1035,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	request.IncrementStatementCount()
 	request.SetNaturalStatement(nlAlgebraStmt)
 
-	if (nlAlgebraStmt.Type() != "SELECT" && nlAlgebraStmt.Type() != "ADVISE" &&
-		nlAlgebraStmt.Type() != "EXPLAIN") || request.NaturalShowOnly() {
+	if !natural.CanServerExecuteGeneratedStatement(nlAlgebraStmt) || request.NaturalShowOnly() {
 		request.CompletedNaturalRequest(this)
 		return true, false
 	}

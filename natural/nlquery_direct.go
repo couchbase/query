@@ -185,60 +185,10 @@ func newDirectJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, su
 		rv.Size += len(slmSystemTmpl)
 	}
 
-	var userMessage string
-	var userMessageBuf strings.Builder
+	if err := appendJSUDFUserMessage(rv, keyspaceInfo, naturalPrompt, summary, hint); err != nil {
+		return nil, err
+	}
 
-	binKeyspacesInfo, err := json.Marshal(keyspaceInfo)
-	if err != nil {
-		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
-	}
-	if summary != "" {
-		userMessageBuf.WriteString("Summary of the conversation so far: " + summary + "\n\n")
-	}
-	userMessageBuf.WriteString("Information about keyspaces:\n\n")
-	userMessageBuf.WriteString(string(binKeyspacesInfo))
-	userMessageBuf.WriteString("\n\nPrompt: \"")
-	userMessageBuf.WriteString(naturalPrompt)
-	userMessageBuf.WriteString("\"")
-	if hint != "" {
-		userMessageBuf.WriteString("\n\nHint: \"")
-		userMessageBuf.WriteString(hint)
-		userMessageBuf.WriteString("\"")
-	}
-	userMessageBuf.WriteString("\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
-		" no explanation that implements the request in the Prompt." +
-		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
-		"\nAlways comment using multiline comment syntax,i.e /* ... */ as you have construct a SQL++ managed user defined function" +
-		" in a single line." +
-		"\n\nPrompt may request for something trivial such as string manipulation, mathematical calculations, etc." +
-		" Which are not related to the information provided but must always instruct to generate a function." +
-		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ managed user defined function." +
-		" Always generate a self-contained SQL++ managed (inline) function; do not rely on creating or managing external libraries." +
-		"\n\nExamples:" +
-		"\n\nExample1) shows an example for a request that doesn't use the information provided, example prompt:" +
-		"add 2 numbers. Statement to create a function for the request would be: CREATE FUNCTION add(a,b) LANGUAGE JAVASCRIPT AS" +
-		" 'function add(a,b) { return(a+b);}'" +
-		"\n\nExample2) shows an example for a request that uses the information provided, example prompt:" +
-		"select airlines given country as an argument. Statement to create a function for the request would be: CREATE FUNCTION" +
-		" selectAirline(country) LANGUAGE JAVASCRIPT AS 'function selectAirline(country)" +
-		" {var q = SELECT name as airline_name, callsign as airline_callsign FROM `travel-sample`.`inventory`.`airline` " +
-		"WHERE country = $country; var res = []; for (const doc of q) { var airline = {}; airline.name = doc.airline_name;" +
-		"airline.callsign = doc.airline_callsign; res.push(airline);} return res;}" +
-		"\n\nNote query context is unset." +
-		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
-		"\n\nAlias is for ease of use." +
-		"\n\nQuote aliases with grave accent characters." +
-		"\n\nReturn only a single CREATE FUNCTION statement on a single line." +
-		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
-		"\n#ERR:\" and then explain why not without prefix.\n\n")
-	rv.Size += userMessageBuf.Len()
-	userMessage = userMessageBuf.String()
-	rv.Messages = []message{
-		message{
-			Role:    "user",
-			Content: userMessage,
-		},
-	}
 	return rv, nil
 }
 
@@ -255,9 +205,6 @@ func newDirectSQLIterativePrompt(chat *prompt, naturalPrompt string, hint string
 }
 
 func newDirectJSUDFIterativePrompt(chat *prompt, naturalPrompt string, hint string, provider, model string) *prompt {
-	var userMessage string
-	var userMessageBuf strings.Builder
-
 	if provider != "" {
 		chat.Provider = provider
 	}
@@ -265,51 +212,7 @@ func newDirectJSUDFIterativePrompt(chat *prompt, naturalPrompt string, hint stri
 		chat.CompletionSettings.Model = model
 		chat.CompletionSettings.Temperature = directGetTemperatureForModel(provider, model)
 	}
-	userMessageBuf.WriteString("Your goal is to iterate on the previouly generated query by modifying it's code,")
-	userMessageBuf.WriteString(" based on this prompt:")
-	userMessageBuf.WriteString("\"")
-	userMessageBuf.WriteString(naturalPrompt)
-	userMessageBuf.WriteString("\".")
-	if hint != "" {
-		userMessageBuf.WriteString("\n\nHint: \"")
-		userMessageBuf.WriteString(hint)
-		userMessageBuf.WriteString("\"")
-	}
-	userMessageBuf.WriteString("\"\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
-		" no explanation that implements the request in the Prompt." +
-		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
-		"\nAlways comment using multiline comment syntax,i.e /* ... */ as you have construct a SQL++ managed user defined function" +
-		" in a single line." +
-		"\n\nPrompt may request for something trivial such as string manipulation, mathematical calculations, etc." +
-		" Which are not related to the information provided but must always instruct to generate a function." +
-		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ managed user defined function." +
-		" Always generate a self-contained SQL++ managed (inline) function; do not rely on creating or managing external libraries." +
-		"\n\nExamples:" +
-		"\n\nExample1) shows an example for a request that doesn't use the information provided, example prompt:" +
-		"add 2 numbers. Statement to create a function for the request would be: CREATE FUNCTION add(a,b) LANGUAGE JAVASCRIPT AS" +
-		" 'function add(a,b) { return(a+b);}'" +
-		"\n\nExample2) shows an example for a request that uses the information provided, example prompt:" +
-		"select airlines given country as an argument. Statement to create a function for the request would be: CREATE FUNCTION" +
-		" selectAirline(country) LANGUAGE JAVASCRIPT AS 'function selectAirline(country)" +
-		" {var q = SELECT name as airline_name, callsign as airline_callsign FROM `travel-sample`.`inventory`.`airline` " +
-		"WHERE country = $country; var res = []; for (const doc of q) { var airline = {}; airline.name = doc.airline_name;" +
-		"airline.callsign = doc.airline_callsign; res.push(airline);} return res;}" +
-		"\n\nNote query context is unset." +
-		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
-		"\n\nAlias is for ease of use." +
-		"\n\nQuote aliases with grave accent characters." +
-		"\n\nIf the previous message was not a CREATE FUNCTION statement, use the previous messages to for a CREATE FUNCTION statement." +
-		"\nReturn only a single CREATE FUNCTION statement on a single line." +
-		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
-		"\n#ERR:\" and then explain why not without prefix.\n\n")
-
-	chat.Size += userMessageBuf.Len()
-	userMessage = userMessageBuf.String()
-	chat.Messages = append(chat.Messages, message{
-		Content: userMessage,
-		Role:    "user",
-	})
-
+	chat = appendJSUDFIterativeUserMessage(chat, naturalPrompt, hint)
 	return chat
 }
 

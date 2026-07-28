@@ -321,7 +321,11 @@ const _MAX_PROMPT_SIZE = util.MiB
 // Returns nil when no error marker is found.
 func CheckAndReturnErrorResponse(content string) error {
 	if n := strings.Index(content, "#ERR"); n != -1 {
-		return fmt.Errorf("%s", strings.TrimRight(content[n+6:], "\n `"))
+		if len(content) > n+6 {
+			return fmt.Errorf("%s", strings.TrimRight(content[n+6:], "\n `"))
+		} else {
+			return fmt.Errorf("unexpected empty error response from LLM")
+		}
 	}
 	return nil
 }
@@ -923,6 +927,7 @@ func appendSQLUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
 			" ON a.country = ap.country WHERE a.country = \"United Kingdom\"" +
 			"\n\nIn other words, always use USE INDEX (USING FTS) in the query.")
 	}
+	userMessageBuf.WriteString(_AMBIGUOUS_TERM_INSTRUCTION)
 	userMessageBuf.WriteString("\n\nReturn only a single SQL++ statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a query, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
@@ -982,6 +987,133 @@ func appendSQLIterativeUserMessage(chat *prompt, naturalPrompt string, hint stri
 
 	return chat
 }
+
+func appendJSUDFUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
+	naturalPrompt, summary, hint string) errors.Error {
+
+	var userMessage string
+	var userMessageBuf strings.Builder
+	binKeyspacesInfo, err := json.Marshal(keyspaceInfo)
+	if err != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL, err)
+	}
+	if summary != "" {
+		userMessageBuf.WriteString("Summary of the conversation so far: " + summary + "\n\n")
+	}
+	userMessageBuf.WriteString("Information about keyspaces:\n\n")
+	userMessageBuf.WriteString(string(binKeyspacesInfo))
+	userMessageBuf.WriteString("\n\nPrompt: \"")
+	userMessageBuf.WriteString(naturalPrompt)
+	userMessageBuf.WriteString("\"")
+	if hint != "" {
+		userMessageBuf.WriteString("\n\nHint: \"")
+		userMessageBuf.WriteString(hint)
+		userMessageBuf.WriteString("\"")
+	}
+	userMessageBuf.WriteString("\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
+		" no explanation that implements the request in the Prompt." +
+		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
+		"\nAlways comment using multiline comment syntax,i.e /* ... */ as you have construct a SQL++ managed user defined function" +
+		" in a single line." +
+		"\n\nPrompt may request for something trivial such as string manipulation, mathematical calculations, etc." +
+		" Which are not related to the information provided but must always instruct to generate a function." +
+		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ managed user defined function." +
+		"As Capella does not currently support a way to create or manage an external library" +
+		"\n\nExamples:" +
+		"\n\nExample1) shows an example for a request that doesn't use the information provided, example prompt:" +
+		"add 2 numbers. Statement to create a function for the request would be: CREATE FUNCTION add(a,b) LANGUAGE JAVASCRIPT AS" +
+		" 'function add(a,b) { return(a+b);}'" +
+		"\n\nExample2) shows an example for a request that uses the information provided, example prompt:" +
+		"select airlines given country as an argument. Statement to create a function for the request would be: CREATE FUNCTION" +
+		" selectAirline(country) LANGUAGE JAVASCRIPT AS 'function selectAirline(country)" +
+		" {var q = SELECT name as airline_name, callsign as airline_callsign FROM `travel-sample`.`inventory`.`airline` " +
+		"WHERE country = $country; var res = []; for (const doc of q) { var airline = {}; airline.name = doc.airline_name;" +
+		"airline.callsign = doc.airline_callsign; res.push(airline);} return res;}" +
+		"\n\nNote query context is unset." +
+		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
+		"\n\nAlias is for ease of use." +
+		"\n\nQuote aliases with grave accent characters.")
+	userMessageBuf.WriteString(_AMBIGUOUS_TERM_INSTRUCTION)
+	userMessageBuf.WriteString("\n\nReturn only a single CREATE FUNCTION statement on a single line." +
+		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
+		"\n#ERR:\" and then explain why not without prefix.\n\n")
+
+	rv.Size += userMessageBuf.Len()
+	userMessage = userMessageBuf.String()
+	rv.Messages = []message{
+		message{
+			Role:    "user",
+			Content: userMessage,
+		},
+	}
+
+	return nil
+}
+
+func appendJSUDFIterativeUserMessage(chat *prompt, naturalPrompt string, hint string) *prompt {
+	var userMessage string
+	var userMessageBuf strings.Builder
+	userMessageBuf.WriteString("Your goal is to iterate on the previouly generated query by modifying it's code,")
+	userMessageBuf.WriteString(" based on this prompt:")
+	userMessageBuf.WriteString("\"")
+	userMessageBuf.WriteString(naturalPrompt)
+	userMessageBuf.WriteString("\".")
+	if hint != "" {
+		userMessageBuf.WriteString("\n\nHint: \"")
+		userMessageBuf.WriteString(hint)
+		userMessageBuf.WriteString("\"")
+	}
+	userMessageBuf.WriteString("\"\n\nBased on the above Information, write a valid Javascript User Defined Function with" +
+		" no explanation that implements the request in the Prompt." +
+		"\n\nComment the code liberally to explain what each piece does and why it's written that way." +
+		"\nAlways comment using multiline comment syntax,i.e /* ... */ as you have construct a SQL++ managed user defined function" +
+		" in a single line." +
+		"\n\nPrompt may request for something trivial such as string manipulation, mathematical calculations, etc." +
+		" Which are not related to the information provided but must always instruct to generate a function." +
+		" \n\n Your task is to return CREATE FUNCTION statement that follows construct for SQL++ managed user defined function." +
+		"As Capella does not currently support a way to create or manage an external library" +
+		"\n\nExamples:" +
+		"\n\nExample1) shows an example for a request that doesn't use the information provided, example prompt:" +
+		"add 2 numbers. Statement to create a function for the request would be: CREATE FUNCTION add(a,b) LANGUAGE JAVASCRIPT AS" +
+		" 'function add(a,b) { return(a+b);}'" +
+		"\n\nExample2) shows an example for a request that uses the information provided, example prompt:" +
+		"select airlines given country as an argument. Statement to create a function for the request would be: CREATE FUNCTION" +
+		" selectAirline(country) LANGUAGE JAVASCRIPT AS 'function selectAirline(country)" +
+		" {var q = SELECT name as airline_name, callsign as airline_callsign FROM `travel-sample`.`inventory`.`airline` " +
+		"WHERE country = $country; var res = []; for (const doc of q) { var airline = {}; airline.name = doc.airline_name;" +
+		"airline.callsign = doc.airline_callsign; res.push(airline);} return res;}" +
+		"\n\nNote query context is unset." +
+		"\n\nUse the fullpath from the information about keyspaces for retrieval along with an alias." +
+		"\n\nAlias is for ease of use." +
+		"\n\nQuote aliases with grave accent characters." +
+		"\n\nIf the previous message was not a CREATE FUNCTION statement, use the previous messages to for a CREATE FUNCTION statement." +
+		"\nReturn only a single CREATE FUNCTION statement on a single line." +
+		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
+		"\n#ERR:\" and then explain why not without prefix.\n\n")
+
+	chat.Size += userMessageBuf.Len()
+	userMessage = userMessageBuf.String()
+	chat.Messages = append(chat.Messages, message{
+		Content: userMessage,
+		Role:    "user",
+	})
+
+	return chat
+}
+
+// Glossary of instructions that can be used in user messages.
+
+const _AMBIGUOUS_TERM_INSTRUCTION = "\n\nIf a value needed to complete the query " +
+	"(for example a numeric threshold, date, or category) is not stated in the Prompt and " +
+	"cannot be inferred from the provided schema or the Hint, do not invent or guess a value." +
+	"\n\nInstead, prefer writing that value as a named parameter placeholder in the statement, " +
+	"for example `price < $price` or `created_at > $cutoff_date`, using a short, descriptive " +
+	"name for the placeholder." +
+	"\n\nIf that isn't possible and you have to say #ERR because of this, clearly state what " +
+	"could not be inferred or what is ambiguous, and suggest the user either rephrase their " +
+	"request with the missing detail or supply it using the natural_hint option."
+
+// End of glossary.
 
 const CHAT_DOC_PREFIX = "aichat::"
 
@@ -1147,7 +1279,17 @@ func IsCapellaPath(nlCred, nlOrgId string) bool {
 	return nlCred != "" || nlOrgId != ""
 }
 
-// slmSamplesBlock renders cached per-field sample values (keyspace -> field ->
-// values) into a compact context block appended to the final user turn for the
-// slm provider. Returns "" when there is nothing to add so the caller can skip
-// injection.
+func CanServerExecuteGeneratedStatement(nlAlgebraStmt algebra.Statement) bool {
+
+	switch stmttype := nlAlgebraStmt.Type(); stmttype {
+	case "ADVISE", "EXPLAIN":
+		return true
+	case "SELECT":
+		if nlAlgebraStmt.ParamsCount() > 0 {
+			return false
+		}
+		return true
+	default:
+		return false
+	}
+}

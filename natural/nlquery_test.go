@@ -224,15 +224,30 @@ func TestGetTemperatureForModel(t *testing.T) {
 // ─── response content extraction ──────────────────────────────────────────────
 
 func TestCheckAndReturnErrorResponse(t *testing.T) {
-	if err := CheckAndReturnErrorResponse("SELECT 1"); err != nil {
-		t.Fatalf("no #ERR marker: got %v", err)
+	tests := []struct {
+		name    string
+		content string
+		wantErr bool
+		wantMsg string
+	}{
+		{"no error marker", "SELECT * FROM foo", false, ""},
+		{"error with explanation", "#ERR: bad request", true, "bad request"},
+		{"error marker alone at end", "#ERR", true, "unexpected empty error response from LLM"},
+		{"error marker with no trailing content", "#ERR: ", true, "unexpected empty error response from LLM"},
 	}
-	err := CheckAndReturnErrorResponse("#ERR:\" cannot generate a query for that")
-	if err == nil {
-		t.Fatal("expected an error")
-	}
-	if strings.TrimSpace(err.Error()) != "cannot generate a query for that" {
-		t.Fatalf("got %q", err.Error())
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := CheckAndReturnErrorResponse(tc.content)
+			if tc.wantErr && err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			if tc.wantErr && err.Error() != tc.wantMsg {
+				t.Errorf("expected message %q, got %q", tc.wantMsg, err.Error())
+			}
+		})
 	}
 }
 
@@ -464,5 +479,54 @@ func TestToGatewayRequest_MappingAndCopy(t *testing.T) {
 	req.Messages[0].Content = "mutated"
 	if p.Messages[0].Content != "original" {
 		t.Fatal("toGatewayRequest must return copied messages, not aliases of the prompt's")
+	}
+}
+
+type fakeStatement struct {
+	algebra.Statement
+	paramsCount int
+	stmtType    string
+}
+
+func (f *fakeStatement) ParamsCount() int { return f.paramsCount }
+func (f *fakeStatement) Type() string     { return f.stmtType }
+
+func TestCanServerExecuteGeneratedStatement(t *testing.T) {
+	tests := []struct {
+		name        string
+		stmtType    string
+		paramsCount int
+		want        bool
+	}{
+		{"SELECT no params", "SELECT", 0, true},
+		{"ADVISE no params", "ADVISE", 0, true},
+		{"EXPLAIN no params", "EXPLAIN", 0, true},
+		{"SELECT with named/positional params", "SELECT", 1, false},
+		{"ADVISE with params", "ADVISE", 2, true},
+		{"EXPLAIN with params", "EXPLAIN", 3, true},
+		{"INSERT no params", "INSERT", 0, false},
+		{"UPDATE no params", "UPDATE", 0, false},
+		{"DELETE with params", "DELETE", 1, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			stmt := &fakeStatement{stmtType: tc.stmtType, paramsCount: tc.paramsCount}
+			if got := CanServerExecuteGeneratedStatement(stmt); got != tc.want {
+				t.Errorf("CanServerExecuteGeneratedStatement(%s, params=%d) = %v, want %v",
+					tc.stmtType, tc.paramsCount, got, tc.want)
+			}
+		})
+	}
+}
+
+// ─── ambiguous-term / anti-hallucination instruction (MB-72780) ───────────────
+
+func TestAppendSQLUserMessage_IncludesAmbiguousTermInstruction(t *testing.T) {
+	p := &prompt{}
+	if err := appendSQLUserMessage(p, testKeyspaceInfo(), "list hotels", "", "", false); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(p.Messages[0].Content, _AMBIGUOUS_TERM_INSTRUCTION) {
+		t.Fatal("SQL user message missing the ambiguous-term instruction")
 	}
 }
