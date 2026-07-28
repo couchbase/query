@@ -51,7 +51,7 @@ func PreparedsFromPersisted() {
 		planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
 		decodeFailedReason := make(map[string]errors.Error, _DEF_MAP_SIZE)
 		decodeReprepReason := make(map[string]errors.Errors, _DEF_MAP_SIZE)
-		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(true, planStability, planStabilityMode,
+		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(planStability, planStabilityMode,
 			planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, processPreparedPlan)
 
 		preparedPrimeReport.Success = success
@@ -118,5 +118,5 @@ func deletePreparedPlans(adHocOnly bool) errors.Error {
 		return nil
 	}
 
-	return dictionary.DeletePreparedPlans(true, adHocOnly)
+	return dictionary.DeletePreparedPlans(adHocOnly)
 }
