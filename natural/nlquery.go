@@ -136,12 +136,12 @@ type ChatEntry struct {
 	Summary   string
 	// Tokens accumulates LLM token usage across every request/conversation
 	Tokens LLMTokenUsage
-	// samples caches representative per-field sample values for the conversation
+	// samples caches a representative sample tree per field for the conversation
 	// while it is on the slm provider. Held in memory only, excluded from
 	// MarshalJSON, populated only for slm and cleared on a switch to a non-slm
 	// provider, so raw sample values never reach a non-slm provider nor the
 	// persisted chat document.
-	samples           map[string]map[string][]interface{}
+	samples           map[string]map[string]*sampleField
 	timer             *time.Timer
 	timerGen          int
 	inactivityTimeout time.Duration
@@ -305,12 +305,13 @@ type prompt struct {
 	Vendor   string    `json:"vendor,omitempty"`
 	Messages []message `json:"messages"`
 	Size     int       `json:"size"`
-	// samples holds representative per-field sample values (keyspace -> field ->
-	// values) from INFER. It is unexported so it is never marshaled into the
-	// persisted conversation, and it is injected into the outbound request only
-	// for the slm provider (see doChatCompletion) -- so raw sample values never
-	// enter Messages nor reach a non-slm provider.
-	samples map[string]map[string][]interface{}
+	// samples holds a representative sample tree per keyspace field (keyspace ->
+	// field -> tree) from INFER, mirroring the nesting of the schema tree but
+	// carrying Samples instead. It is unexported so it is never marshaled into
+	// the persisted conversation, and it is injected into the outbound request
+	// only for the slm provider (see doChatCompletion) -- so raw sample values
+	// never enter Messages nor reach a non-slm provider.
+	samples map[string]map[string]*sampleField
 }
 
 const _INIT_SIZE = 250
@@ -730,87 +731,322 @@ func getJsContent(content string) string {
 // this many bytes in the natural (AI) layer.
 const _MAX_SAMPLE_STRING_LEN = 50
 
-// capSampleStrings truncates each string sample in a field's sample-value slice
-// to at most _MAX_SAMPLE_STRING_LEN bytes. The cut is snapped back to a UTF-8
-// rune boundary so a multi-byte character is never split into invalid UTF-8.
-// Non-string samples are left untouched. Runs only on the AI path
-// (includeSamples), after samples are received from INFER.
-func capSampleStrings(arr []interface{}) []interface{} {
-	for i, e := range arr {
-		if s, ok := value.NewValue(e).Actual().(string); ok && len(s) > _MAX_SAMPLE_STRING_LEN {
-			end := _MAX_SAMPLE_STRING_LEN
-			for end > 0 && !utf8.RuneStart(s[end]) {
-				end--
-			}
-			arr[i] = value.NewValue(s[:end])
+// _MAX_SAMPLE_ARRAY_LEN bounds how many elements of a nested array sample
+// value are kept. INFER's own per-field sample count already bounds how many
+// whole sample values a field carries, but not how large any one of those
+// values is: an array-typed field's sample is a whole array value copied
+// verbatim from a real document (see leafSamples), so without this a single
+// large array field (e.g. hundreds of tags) would dump unabridged into the
+// prompt.
+const _MAX_SAMPLE_ARRAY_LEN = 5
+
+// capSampleValue recursively bounds the size of a single raw sample value
+// before it is embedded in the prompt: strings are truncated to
+// _MAX_SAMPLE_STRING_LEN bytes, snapped back to a UTF-8 rune boundary so a
+// multi-byte character is never split into invalid UTF-8; arrays are
+// truncated to their first _MAX_SAMPLE_ARRAY_LEN elements; and both array
+// elements and object field values are capped by recursing, so nesting can't
+// smuggle an unbounded value past the top-level cap. Other scalars pass
+// through unchanged.
+func capSampleValue(v interface{}) interface{} {
+	switch t := v.(type) {
+	case string:
+		if len(t) <= _MAX_SAMPLE_STRING_LEN {
+			return t
 		}
+		end := _MAX_SAMPLE_STRING_LEN
+		for end > 0 && !utf8.RuneStart(t[end]) {
+			end--
+		}
+		return t[:end]
+	case []interface{}:
+		n := len(t)
+		if n > _MAX_SAMPLE_ARRAY_LEN {
+			n = _MAX_SAMPLE_ARRAY_LEN
+		}
+		capped := make([]interface{}, n)
+		for i := 0; i < n; i++ {
+			capped[i] = capSampleValue(t[i])
+		}
+		return capped
+	case map[string]interface{}:
+		capped := make(map[string]interface{}, len(t))
+		for k, fv := range t {
+			capped[k] = capSampleValue(fv)
+		}
+		return capped
+	default:
+		return v
 	}
-	return arr
 }
 
-// collectSchemaFromInfer extracts, from a single keyspace's INFER result, the
-// per-field type strings (rendered into the prompt schema and the persisted
-// conversation) and, when includeSamples is set, the per-field representative
-// sample values. Types and samples are returned separately on purpose: types
-// are safe to persist, whereas samples are provider-gated and are kept out of
-// the persisted messages (see prompt.samples). The returned samples map is nil
-// when includeSamples is false or INFER reported no samples.
-func collectSchemaFromInfer(schema map[string]string, inferSchema value.Value,
-	includeSamples bool) (map[string]string, map[string][]interface{}) {
+// capSampleBucket applies capSampleValue to every value in a field's
+// sample-value slice. Runs only on the AI path (includeSamples), after
+// samples are received from INFER.
+func capSampleBucket(arr []interface{}) []interface{} {
+	capped := make([]interface{}, len(arr))
+	for i, e := range arr {
+		capped[i] = capSampleValue(value.NewValue(e).Actual())
+	}
+	return capped
+}
 
-	var samples map[string][]interface{}
-	if v, ok := inferSchema.Index(0); ok {
-		if prop, ok := v.Field("properties"); ok {
-			schemaFieldNames := []string{}
-			schemaFieldNames = prop.FieldNames(schemaFieldNames)
-			for _, fieldname := range schemaFieldNames {
-				if fieldname == "~meta" {
-					continue
+// schemaField is the recursive type tree collectFields builds from a single
+// field's INFER schema, nesting object fields under Properties and array
+// fields under Items. It never carries sample values, so it is always safe
+// to persist (see prompt.samples).
+type schemaField struct {
+	Type       string                  `json:"type"`
+	Properties map[string]*schemaField `json:"properties,omitempty"`
+	Items      []*schemaField          `json:"items,omitempty"`
+}
+
+// sampleField is the samples counterpart of schemaField, built in lockstep by
+// collectFields when includeSamples is true. It mirrors the same
+// Properties/Items nesting so a samples tree can be read alongside the type
+// tree. Samples is keyed by shape name (e.g. "string", "number") rather than
+// a single flat list -- when a field has more than one shape (e.g. "string or
+// number"), INFER keeps a separate list of example values per shape, and
+// flattening them together would blur which examples apply when the field
+// takes on which shape.
+type sampleField struct {
+	Samples    map[string][]interface{} `json:"samples,omitempty"`
+	Properties map[string]*sampleField  `json:"properties,omitempty"`
+	Items      []*sampleField           `json:"items,omitempty"`
+}
+
+// empty reports whether s carries no sample data anywhere in its subtree, so
+// callers can omit a node entirely rather than including it as a content-free
+// placeholder.
+func (s *sampleField) empty() bool {
+	return s == nil || (len(s.Samples) == 0 && len(s.Properties) == 0 && len(s.Items) == 0)
+}
+
+// collectProperties builds a type map and (when includeSamples is true) a
+// samples map from a properties container's fields, by calling collectFields
+// on each one. skip, if non-nil, excludes field names it returns true for --
+// used to drop INFER's synthetic "~meta" field at the keyspace root; nested
+// object properties pass nil. A field is only added to the samples map when
+// its subtree actually carries sample data, so the returned map is nil when
+// none of the fields do.
+func collectProperties(props value.Value, includeSamples bool,
+	skip func(name string) bool) (map[string]*schemaField, map[string]*sampleField) {
+
+	types := map[string]*schemaField{}
+	var samples map[string]*sampleField
+	for _, name := range props.FieldNames(nil) {
+		if skip != nil && skip(name) {
+			continue
+		}
+		if fieldVal, ok := props.Field(name); ok {
+			childType, childSamples := collectFields(fieldVal, includeSamples)
+			types[name] = childType
+			if includeSamples && !childSamples.empty() {
+				if samples == nil {
+					samples = map[string]*sampleField{}
 				}
+				samples[name] = childSamples
+			}
+		}
+	}
+	return types, samples
+}
 
-				if fieldSpecific, ok := prop.Field(fieldname); ok {
-					if typeinfo, ok := fieldSpecific.Field("type"); ok {
-						if typeinfo.Type() == value.ARRAY {
-							var typestring strings.Builder
-							var typestr string
-							if typestrslice, ok := typeinfo.Actual().([]interface{}); ok {
-								if typestr, ok = typestrslice[0].(string); ok {
-									typestring.WriteString(typestr)
-									typestring.WriteRune(' ')
-								}
-								for _, s := range typestrslice[1:] {
-									if typestr, ok = s.(string); ok {
-										typestring.WriteString("or ")
-										typestring.WriteString(typestr)
-									}
-								}
-							}
-							schema[fieldname] = typestring.String()
-						} else {
-							schema[fieldname] = typeinfo.String()
-						}
-					}
+// sampleBucket returns the raw sample bucket for the named shape (e.g.
+// "array", "string", "number") from a field's INFER schema value. INFER
+// reports a field with a single shape as one flat "samples" list; a field
+// with multiple shapes (e.g. "string or number or null") instead reports
+// "samples" as one bucket per shape, in the same order as "type" -- so
+// wantType's bucket is found at the matching index in typeNames.
+func sampleBucket(schema value.Value, typeNames []string, wantType string) []interface{} {
+	s, ok := schema.Field("samples")
+	if !ok || s.Type() != value.ARRAY {
+		return nil
+	}
+	arr, ok := s.Actual().([]interface{})
+	if !ok {
+		return nil
+	}
 
-					if includeSamples {
-						if s, ok := fieldSpecific.Field("samples"); ok && s.Type() == value.ARRAY {
-							if arr, ok := s.Actual().([]interface{}); ok && len(arr) > 0 {
-								if samples == nil {
-									samples = map[string][]interface{}{}
-								}
-								samples[fieldname] = capSampleStrings(arr)
-							}
-						}
-					}
+	if len(typeNames) <= 1 {
+		if len(typeNames) == 0 || typeNames[0] == wantType {
+			return arr
+		}
+		return nil
+	}
+	for i, name := range typeNames {
+		if name == wantType && i < len(arr) {
+			bucket, _ := arr[i].([]interface{})
+			return bucket
+		}
+	}
+	return nil
+}
+
+// leafSamples collects a field's own example values, grouped by shape name,
+// from typeNames' shapes. "null" is skipped (no useful literal value) and
+// "object" is skipped because an object's own fields already carry their own
+// samples via Properties (see collectProperties). "array" is included: INFER
+// never attaches samples inside "items" itself -- only whole example array
+// values on the array field -- so those whole instances become this field's
+// own "array" sample bucket rather than being decomposed into item fields.
+// capSampleBucket bounds their size since, unlike a scalar sample, a
+// whole-instance array sample is copied verbatim from a real document and can
+// be arbitrarily large.
+func leafSamples(schema value.Value, typeNames []string) map[string][]interface{} {
+	var result map[string][]interface{}
+	for _, name := range typeNames {
+		if name == "null" || name == "object" {
+			continue
+		}
+		if bucket := sampleBucket(schema, typeNames, name); len(bucket) > 0 {
+			if result == nil {
+				result = map[string][]interface{}{}
+			}
+			result[name] = capSampleBucket(bucket)
+		}
+	}
+	return result
+}
+
+// collectFields recursively builds a field's type tree and, when
+// includeSamples is true, its samples tree, from a single field's INFER
+// schema value. Both trees come from the same traversal of schema -- each
+// node is visited once, regardless of whether one or two trees are being
+// built from it. sampleNode is nil when includeSamples is false.
+//
+// A field's type may be more than one shape at once (e.g. "object or array"),
+// so object handling, array handling, and leaf-sample collection all run
+// independently below rather than as mutually exclusive switch cases --
+// otherwise a field that is e.g. both string- and array-shaped would lose
+// one description or the other.
+func collectFields(schema value.Value, includeSamples bool) (typeNode *schemaField, sampleNode *sampleField) {
+	typeNode = &schemaField{}
+	if includeSamples {
+		sampleNode = &sampleField{}
+	}
+	typeinfo, ok := schema.Field("type")
+	if !ok {
+		return typeNode, sampleNode
+	}
+
+	var typeNames []string
+	if typeinfo.Type() == value.ARRAY {
+		var typestring strings.Builder
+		var typestr string
+
+		if typestrslice, ok := typeinfo.Actual().([]interface{}); ok {
+			for _, s := range typestrslice {
+				if typestr, ok = s.(string); ok {
+					typeNames = append(typeNames, typestr)
+				}
+			}
+			if typestr, ok = typestrslice[0].(string); ok {
+				typestring.WriteString(typestr)
+				typestring.WriteRune(' ')
+			}
+			for _, s := range typestrslice[1:] {
+				if typestr, ok = s.(string); ok {
+					typestring.WriteString("or ")
+					typestring.WriteString(typestr)
 				}
 			}
 		}
+
+		typeNode.Type = typestring.String()
+	} else if t, ok := typeinfo.Actual().(string); ok {
+		typeNode.Type = t
+		typeNames = []string{t}
+	}
+
+	if slices.Contains(typeNames, "object") {
+		if props, ok := schema.Field("properties"); ok {
+			typeProps, sampleProps := collectProperties(props, includeSamples, nil)
+			typeNode.Properties = typeProps
+			if includeSamples {
+				sampleNode.Properties = sampleProps
+			}
+		}
+	}
+
+	if slices.Contains(typeNames, "array") {
+		if items, ok := schema.Field("items"); ok {
+			if items.Type() == value.ARRAY {
+				itemArr, _ := items.Actual().([]interface{})
+				for _, item := range itemArr {
+					childType, childSamples := collectFields(value.NewValue(item), includeSamples)
+					typeNode.Items = append(typeNode.Items, childType)
+					if includeSamples {
+						sampleNode.Items = append(sampleNode.Items, childSamples)
+					}
+				}
+			} else {
+				childType, childSamples := collectFields(items, includeSamples)
+				typeNode.Items = append(typeNode.Items, childType)
+				if includeSamples {
+					sampleNode.Items = append(sampleNode.Items, childSamples)
+				}
+			}
+			if includeSamples {
+				allEmpty := true
+				for _, it := range sampleNode.Items {
+					if !it.empty() {
+						allEmpty = false
+						break
+					}
+				}
+				if allEmpty {
+					sampleNode.Items = nil
+				}
+			}
+		}
+	}
+
+	if includeSamples {
+		if scalar := leafSamples(schema, typeNames); scalar != nil {
+			if sampleNode.Samples == nil {
+				sampleNode.Samples = scalar
+			} else {
+				for k, v := range scalar {
+					sampleNode.Samples[k] = v
+				}
+			}
+		}
+	}
+
+	return typeNode, sampleNode
+}
+
+// collectSchemaFromInfer extracts, from a single keyspace's INFER result, a
+// per-field type tree (rendered into the prompt schema and the persisted
+// conversation) and, when includeSamples is set, a separate per-field samples
+// tree. Both come from a single collectFields traversal per field, which
+// builds the two trees in lockstep -- the type tree is a distinct type from
+// the samples tree, so it can never carry sample values, and is always safe
+// to persist. The returned samples map is nil when includeSamples is false or
+// INFER reported no samples.
+func collectSchemaFromInfer(schema map[string]*schemaField, inferSchema value.Value,
+	includeSamples bool) (map[string]*schemaField, map[string]*sampleField) {
+
+	v, ok := inferSchema.Index(0)
+	if !ok {
+		return schema, nil
+	}
+	prop, ok := v.Field("properties")
+	if !ok {
+		return schema, nil
+	}
+
+	types, samples := collectProperties(prop, includeSamples, func(name string) bool { return name == "~meta" })
+	for name, node := range types {
+		schema[name] = node
 	}
 
 	return schema, samples
 }
 
-func inferSchema(schema map[string]string, p *algebra.Path, context NaturalContext,
-	includeSamples bool) (map[string]string, map[string][]interface{}, errors.Error) {
+func inferSchema(schema map[string]*schemaField, p *algebra.Path, context NaturalContext,
+	includeSamples bool) (map[string]*schemaField, map[string]*sampleField, errors.Error) {
 
 	keyspace, err := datastore.GetKeyspace(p.Parts()...)
 	if err != nil {
@@ -826,7 +1062,7 @@ func inferSchema(schema map[string]string, p *algebra.Path, context NaturalConte
 
 	inferSchema, ok := <-conn.ValueChannel()
 
-	var samples map[string][]interface{}
+	var samples map[string]*sampleField
 	if inferSchema != nil && ok {
 		schema, samples = collectSchemaFromInfer(schema, inferSchema, includeSamples)
 	}
@@ -836,10 +1072,10 @@ func inferSchema(schema map[string]string, p *algebra.Path, context NaturalConte
 
 func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebra.Path,
 	context NaturalContext, includeSamples bool) (map[string]interface{},
-	map[string]map[string][]interface{}, errors.Error) {
+	map[string]map[string]*sampleField, errors.Error) {
 
 	var err errors.Error
-	var samplesByKeyspace map[string]map[string][]interface{}
+	var samplesByKeyspace map[string]map[string]*sampleField
 	priv := auth.NewPrivileges()
 
 	var ds datastore.Datastore
@@ -863,8 +1099,8 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 		if err != nil {
 			return nil, nil, errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err)
 		}
-		schema := map[string]string{}
-		var ksSamples map[string][]interface{}
+		schema := map[string]*schemaField{}
+		var ksSamples map[string]*sampleField
 		schema, ksSamples, err = inferSchema(schema, p, context, includeSamples)
 
 		if err != nil {
@@ -878,7 +1114,7 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 		keyspaceInfo[p.Keyspace()] = info
 		if len(ksSamples) > 0 {
 			if samplesByKeyspace == nil {
-				samplesByKeyspace = map[string]map[string][]interface{}{}
+				samplesByKeyspace = map[string]map[string]*sampleField{}
 			}
 			samplesByKeyspace[p.Keyspace()] = ksSamples
 		}
@@ -904,7 +1140,9 @@ func appendSQLUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
 	if summary != "" {
 		userMessageBuf.WriteString("Summary of the conversation so far: " + summary + "\n\n")
 	}
-	userMessageBuf.WriteString("Information about keyspaces:\n\n")
+	userMessageBuf.WriteString("Information about keyspaces: a field's nested object fields appear under " +
+		"\"properties\" and an array's element type appears under \"items\" -- a field can have both if it " +
+		"can be more than one shape.\n\n")
 	userMessageBuf.WriteString(string(binKeyspacesInfo))
 	userMessageBuf.WriteString("\n\nPrompt: \"")
 	userMessageBuf.WriteString(naturalPrompt)
@@ -1000,7 +1238,9 @@ func appendJSUDFUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
 	if summary != "" {
 		userMessageBuf.WriteString("Summary of the conversation so far: " + summary + "\n\n")
 	}
-	userMessageBuf.WriteString("Information about keyspaces:\n\n")
+	userMessageBuf.WriteString("Information about keyspaces: a field's nested object fields appear under " +
+		"\"properties\" and an array's element type appears under \"items\" -- a field can have both if it " +
+		"can be more than one shape.\n\n")
 	userMessageBuf.WriteString(string(binKeyspacesInfo))
 	userMessageBuf.WriteString("\n\nPrompt: \"")
 	userMessageBuf.WriteString(naturalPrompt)

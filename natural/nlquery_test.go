@@ -309,15 +309,15 @@ func TestCollectSchemaForPromptFromInfer_Types(t *testing.T) {
 		"score": map[string]interface{}{"type": []interface{}{"number", "string"}},
 		"~meta": map[string]interface{}{"type": "object"},
 	})
-	schema, samples := collectSchemaFromInfer(map[string]string{}, infer, false)
+	schema, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, false)
 	if samples != nil {
 		t.Fatalf("samples must be nil when not requested, got %v", samples)
 	}
-	if schema["name"] != "\"string\"" {
-		t.Fatalf("name type: got %q", schema["name"])
+	if schema["name"].Type != "string" {
+		t.Fatalf("name type: got %q", schema["name"].Type)
 	}
-	if schema["score"] != "number or string" {
-		t.Fatalf("score type: got %q", schema["score"])
+	if schema["score"].Type != "number or string" {
+		t.Fatalf("score type: got %q", schema["score"].Type)
 	}
 	if _, ok := schema["~meta"]; ok {
 		t.Fatal("~meta must be skipped")
@@ -329,23 +329,177 @@ func TestCollectSchemaForPromptFromInfer_Samples(t *testing.T) {
 		"type":    map[string]interface{}{"type": "string", "samples": []interface{}{"hotel", "airline"}},
 		"ratings": map[string]interface{}{"type": "number"}, // no samples reported
 	})
-	_, samples := collectSchemaFromInfer(map[string]string{}, infer, true)
+	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
 	if len(samples) != 1 {
 		t.Fatalf("samples: got %v", samples)
 	}
 	got, ok := samples["type"]
-	if !ok || len(got) != 2 || got[0] != "hotel" || got[1] != "airline" {
-		t.Fatalf("type samples: got %v", got)
+	if !ok {
+		t.Fatalf("type samples: missing")
 	}
+	strSamples := got.Samples["string"]
+	if len(strSamples) != 2 || strSamples[0] != "hotel" || strSamples[1] != "airline" {
+		t.Fatalf("type samples: got %v", got.Samples)
+	}
+	// schemaField has no Samples field at all, so the type tree is samples-free
+	// by construction -- nothing further to assert here.
 }
 
 func TestCollectSchemaForPromptFromInfer_NoSamplesReported(t *testing.T) {
 	infer := inferValue(map[string]interface{}{
 		"name": map[string]interface{}{"type": "string"},
 	})
-	_, samples := collectSchemaFromInfer(map[string]string{}, infer, true)
+	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
 	if samples != nil {
 		t.Fatalf("expected nil samples map, got %v", samples)
+	}
+}
+
+// A field that can be more than one shape (e.g. "null or object") must still
+// recurse into its object shape's properties -- losing nested structure just
+// because a field is nullable would silently hide most optional nested
+// objects, which are common in flexible-schema documents.
+func TestCollectFields_UnionObjectRecursesIntoProperties(t *testing.T) {
+	infer := inferValue(map[string]interface{}{
+		"address": map[string]interface{}{
+			"type": []interface{}{"null", "object"},
+			"properties": map[string]interface{}{
+				"city": map[string]interface{}{"type": "string"},
+			},
+		},
+	})
+	schema, _ := collectSchemaFromInfer(map[string]*schemaField{}, infer, false)
+	addr, ok := schema["address"]
+	if !ok {
+		t.Fatal("address field missing")
+	}
+	if addr.Type != "null or object" {
+		t.Fatalf("address type: got %q", addr.Type)
+	}
+	city, ok := addr.Properties["city"]
+	if !ok || city.Type != "string" {
+		t.Fatalf("union-typed object field must still recurse into properties, got %+v", addr.Properties)
+	}
+}
+
+// INFER never attaches samples inside "items" itself -- only whole example
+// arrays on the array field -- so an array field's own sample bucket must
+// carry those whole instances as-is, keyed by the "array" shape, rather than
+// leaving them unreachable or split apart into item fields (which would lose
+// which values co-occurred in the same sampled record).
+func TestCollectFields_ArraySamplesAttachToFieldItself(t *testing.T) {
+	infer := inferValue(map[string]interface{}{
+		"reviews": map[string]interface{}{
+			"type": "array",
+			"items": map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"author": map[string]interface{}{"type": "string"},
+				},
+			},
+			"samples": []interface{}{
+				[]interface{}{
+					map[string]interface{}{"author": "Alice", "rating": 5},
+					map[string]interface{}{"author": "Bob", "rating": 3},
+				},
+			},
+		},
+	})
+	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
+	reviews, ok := samples["reviews"]
+	if !ok {
+		t.Fatal("reviews samples missing")
+	}
+	if len(reviews.Items) != 0 {
+		t.Fatalf("array field samples must not be decomposed into item properties, got Items=%+v", reviews.Items)
+	}
+	got := reviews.Samples["array"]
+	if len(got) != 1 {
+		t.Fatalf("reviews array samples: got %+v", got)
+	}
+	instance, ok := got[0].([]interface{})
+	if !ok || len(instance) != 2 {
+		t.Fatalf("expected the whole sampled instance intact, got %+v", got[0])
+	}
+	// The instance must survive as one JSON-shaped value, so author/rating pairs
+	// from the same record are still readable together.
+	first, ok := instance[0].(map[string]interface{})
+	if !ok || first["author"] != "Alice" || first["rating"] != 5 {
+		t.Fatalf("expected co-occurring fields preserved on one element, got %+v", instance[0])
+	}
+}
+
+// A heterogeneous array (items reported as more than one shape) must still
+// carry its whole sampled instances intact -- there is no per-shape routing
+// to do since nothing is being decomposed.
+func TestCollectFields_HeterogeneousArraySamplesAttachToFieldItself(t *testing.T) {
+	infer := inferValue(map[string]interface{}{
+		"notes": map[string]interface{}{
+			"type": "array",
+			"items": []interface{}{
+				map[string]interface{}{"type": "string"},
+				map[string]interface{}{
+					"type": "object",
+					"properties": map[string]interface{}{
+						"author": map[string]interface{}{"type": "string"},
+					},
+				},
+			},
+			"samples": []interface{}{
+				[]interface{}{
+					"hello",
+					map[string]interface{}{"author": "Alice"},
+				},
+			},
+		},
+	})
+	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
+	notes, ok := samples["notes"]
+	if !ok {
+		t.Fatal("notes samples missing")
+	}
+	got := notes.Samples["array"]
+	if len(got) != 1 {
+		t.Fatalf("notes array samples: got %+v", got)
+	}
+	instance, ok := got[0].([]interface{})
+	if !ok || len(instance) != 2 || instance[0] != "hello" {
+		t.Fatalf("expected the whole heterogeneous instance intact, got %+v", got[0])
+	}
+}
+
+// A single array sample is a whole field value copied verbatim from a real
+// document, unlike a scalar sample -- so unlike scalar buckets (already
+// bounded by INFER's own per-field sample count), it needs its own size cap
+// to keep a large array field (or a long string nested inside one) from
+// dumping unabridged into the prompt.
+func TestCollectFields_ArraySamplesAreCapped(t *testing.T) {
+	longString := strings.Repeat("x", _MAX_SAMPLE_STRING_LEN+10)
+	manyElems := []interface{}{}
+	for i := 0; i < _MAX_SAMPLE_ARRAY_LEN+3; i++ {
+		manyElems = append(manyElems, map[string]interface{}{"comment": longString})
+	}
+	infer := inferValue(map[string]interface{}{
+		"reviews": map[string]interface{}{
+			"type":    "array",
+			"items":   map[string]interface{}{"type": "object"},
+			"samples": []interface{}{manyElems},
+		},
+	})
+	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
+	instance, ok := samples["reviews"].Samples["array"][0].([]interface{})
+	if !ok {
+		t.Fatalf("reviews array sample missing: got %+v", samples["reviews"])
+	}
+	if len(instance) != _MAX_SAMPLE_ARRAY_LEN {
+		t.Fatalf("expected array truncated to %d elements, got %d", _MAX_SAMPLE_ARRAY_LEN, len(instance))
+	}
+	elem, ok := instance[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected element to remain an object, got %+v", instance[0])
+	}
+	if s := elem["comment"].(string); len(s) != _MAX_SAMPLE_STRING_LEN {
+		t.Fatalf("expected nested string truncated to %d bytes, got %d", _MAX_SAMPLE_STRING_LEN, len(s))
 	}
 }
 
@@ -355,8 +509,8 @@ func TestSlmSamplesBlock(t *testing.T) {
 	if got := directSLMSamplesBlock(nil); got != "" {
 		t.Fatalf("nil samples: got %q", got)
 	}
-	block := directSLMSamplesBlock(map[string]map[string][]interface{}{
-		"hotel": {"type": {"hotel", "airline"}},
+	block := directSLMSamplesBlock(map[string]map[string]*sampleField{
+		"hotel": {"type": {Samples: map[string][]interface{}{"string": {"hotel", "airline"}}}},
 	})
 	if !strings.Contains(block, "Representative sample values") ||
 		!strings.Contains(block, `"hotel"`) || !strings.Contains(block, `"airline"`) {
@@ -372,7 +526,7 @@ func TestPromptMarshal_ExcludesSamples(t *testing.T) {
 	p := &prompt{
 		Provider: ai_gateway.ProviderSLM,
 		Messages: []message{{Role: "user", Content: "list hotels"}},
-		samples:  map[string]map[string][]interface{}{"hotel": {"name": {sentinel}}},
+		samples:  map[string]map[string]*sampleField{"hotel": {"name": {Samples: map[string][]interface{}{"string": {sentinel}}}}},
 	}
 	b, err := json.Marshal(p)
 	if err != nil {
@@ -388,7 +542,7 @@ func TestPromptMarshal_ExcludesSamples(t *testing.T) {
 
 func TestChatEntryMarshal_ExcludesSamples(t *testing.T) {
 	const sentinel = "SAMPLE-VALUE-MUST-NOT-PERSIST"
-	samples := map[string]map[string][]interface{}{"hotel": {"name": {sentinel}}}
+	samples := map[string]map[string]*sampleField{"hotel": {"name": {Samples: map[string][]interface{}{"string": {sentinel}}}}}
 	ce := &ChatEntry{
 		users:     []string{"local:tester"},
 		Keyspaces: testPaths(),
