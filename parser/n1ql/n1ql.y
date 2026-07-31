@@ -237,6 +237,7 @@ column int
 %token KEY
 %token KEYS
 %token KEYSPACE
+%token KNOWLEDGE
 %token KNOWN
 %token LANGUAGE
 %token LAST
@@ -415,8 +416,8 @@ column int
 %type <s>                STR
 %type <s>                IDENT IDENT_ICASE NAMESPACE_ID DEFAULT USER USERS SEQUENCE CYCLE
 %type <s>                VECTOR DENSE SPARSE MULTI CONSUME
-%type <s>                CATALOG SOURCE TYPE SNAPSHOT TIMESTAMP CREDENTIALSTORE EXTERNAL ORDER
-%type <s>                permitted_identifiers alias_identifiers perm_ident_or_str
+%type <s>                CATALOG SOURCE TYPE SNAPSHOT TIMESTAMP CREDENTIALSTORE EXTERNAL ORDER KNOWLEDGE
+%type <s>                permitted_identifiers alias_identifiers perm_ident_or_str optional_permitted_identifiers
 %type <identifier>       ident ident_icase
 %type <s>                REPLACE
 %type <s>                NAMED_PARAM
@@ -590,6 +591,8 @@ column int
 %type <statement>          sequence_stmt create_sequence drop_sequence alter_sequence
 %type <keyspacePath>       sequence_full_name
 %type <s>                  opt_namespace_name sequence_object_name
+
+%type <statement>          knowledge_stmt create_knowledge
 %type <ss>                 sequence_next sequence_prev
 %type <expr>               sequence_expr
 
@@ -659,6 +662,8 @@ TIMESTAMP
 CREDENTIALSTORE
 |
 EXTERNAL
+|
+KNOWLEDGE
 ;
 
 permitted_identifiers:
@@ -672,6 +677,19 @@ perm_ident_or_str:
 permitted_identifiers
 |
 STR
+;
+
+/* implicit name, like PREPARE's opt_name -- the planner fills in a fresh id when omitted */
+optional_permitted_identifiers:
+/* empty */
+{
+    $$ = ""
+}
+|
+permitted_identifiers
+{
+    $$ = $1
+}
 ;
 
 opt_trailer:
@@ -720,6 +738,8 @@ transaction_stmt
 sequence_stmt
 |
 credentialstore_stmt
+|
+knowledge_stmt
 ;
 
 advise:
@@ -6487,6 +6507,29 @@ create_sequence
 drop_sequence
 |
 alter_sequence
+;
+
+knowledge_stmt:
+create_knowledge
+;
+
+create_knowledge:
+CREATE opt_replace KNOWLEDGE optional_permitted_identifiers FOR named_keyspace_ref AS expr
+{
+    // an empty $4 (name omitted) is filled in by the planner with a fresh implicit name;
+    // the OR REPLACE-requires-a-name rule and $8's shape are validated by semantics
+    $$ = algebra.NewCreateKnowledge($4, $6.Path(), $8, $2.Value().Truth())
+}
+|
+CREATE opt_replace KNOWLEDGE optional_permitted_identifiers FOR named_keyspace_ref FROM expr
+{
+    // the bulk FROM form takes its entry names from the object's fields, so a name here is
+    // meaningless; that rule and $8's shape are validated by semantics. optional_permitted_identifiers
+    // is repeated here (rather than using a bare FOR) so both alternatives share the identical parser
+    // state through FOR named_keyspace_ref, diverging only at AS/FROM - dropping it here reopens a
+    // shift/reduce conflict against the AS alternative's empty-name reduction.
+    $$ = algebra.NewCreateKnowledgeBulk($4, $6.Path(), $8, $2.Value().Truth())
+}
 ;
 
 create_sequence:

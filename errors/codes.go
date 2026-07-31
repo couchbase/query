@@ -716,4 +716,12 @@ const (
 	E_AUS_TASK_NOT_STARTED                       ErrorCode = 20010
 	E_AUS_TASK_TIMEOUT                           ErrorCode = 20011
 	E_AUS_INTERNAL                               ErrorCode = 20012
+	E_KNOWLEDGE_CREATE                           ErrorCode = 20101
+	E_KNOWLEDGE_DROP                             ErrorCode = 20102
+	E_KNOWLEDGE_NOT_FOUND                        ErrorCode = 20103
+	E_KNOWLEDGE                                  ErrorCode = 20104
+	E_KNOWLEDGE_ALREADY_EXISTS                   ErrorCode = 20105
+	E_KNOWLEDGE_INVALID_DATA                     ErrorCode = 20106
+	E_KNOWLEDGE_INVALID_PATH                     ErrorCode = 20107
+	E_KNOWLEDGE_LIMIT_EXCEEDED                   ErrorCode = 20108
 )

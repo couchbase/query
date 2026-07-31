@@ -34,6 +34,7 @@ import (
 	"github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/natural/knowledge"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
 	"github.com/couchbase/query/server/http"
@@ -297,6 +298,7 @@ func Start(site, pool, namespace string) *MockServer {
 	server.SetActives(http.NewActiveRequests(srv))
 	prepareds.PreparedsReprepareInit(ds, sys)
 	constructor.Init(nil, 6, "")
+	knowledge.Init()
 
 	srv.SetKeepAlive(1 << 10)
 	srv.SetMaxIndexAPI(datastore.INDEX_API_MAX)

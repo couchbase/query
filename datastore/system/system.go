@@ -61,6 +61,7 @@ const KEYSPACE_NAME_AUS_SETTINGS = "aus_settings"
 const KEYSPACE_NAME_AWR = "awr"
 const KEYSPACE_NAME_SETTINGS = "settings"
 const KEYSPACE_NAME_NATURAL_CHAT = "natural_chats"
+const KEYSPACE_NAME_KNOWLEDGE = "natural_knowledge"
 const KEYSPACE_NAME_CATALOGS = "catalogs"
 const KEYSPACE_NAME_CATALOGS_INFO = "catalogs_info"
 
@@ -130,6 +131,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_SEQUENCES:
 		case KEYSPACE_NAME_ALL_SEQUENCES:
 		case KEYSPACE_NAME_NATURAL_CHAT:
+		case KEYSPACE_NAME_KNOWLEDGE:
 
 		// currently these keyspaces require system read for select if on prem and open (but limited to the user) for elixir
 		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:

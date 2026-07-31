@@ -561,6 +561,10 @@ func (this *collector) VisitCreateSequence(plop *plan.CreateSequence) (interface
 	return nil, nil
 }
 
+func (this *collector) VisitCreateKnowledge(plop *plan.CreateKnowledge) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *collector) VisitDropSequence(plop *plan.DropSequence) (interface{}, error) {
 	return nil, nil
 }

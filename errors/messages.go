@@ -9169,4 +9169,92 @@ var errData = []ErrData{
 			"Server",
 		},
 	},
+	{
+		Code:        E_KNOWLEDGE_CREATE, // 20101
+		symbol:      "E_KNOWLEDGE_CREATE",
+		Description: "Creation of the named knowledge failed.",
+		Action: []string{
+			"Check the accompanying cause for the specific reason the CREATE KNOWLEDGE statement failed and address it.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_KNOWLEDGE_DROP, // 20102
+		symbol:      "E_KNOWLEDGE_DROP",
+		Description: "Removal of the named knowledge failed.",
+		Action: []string{
+			"Check the accompanying cause for the specific reason the DROP KNOWLEDGE statement failed and address it.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_KNOWLEDGE_NOT_FOUND, // 20103
+		symbol:      "E_KNOWLEDGE_NOT_FOUND",
+		Description: "The named knowledge does not exist.",
+		Action: []string{
+			"Verify the knowledge name and that it has been created, then retry.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_KNOWLEDGE, // 20104
+		symbol:      "E_KNOWLEDGE",
+		Description: "An error occurred while accessing knowledge.",
+		Action: []string{
+			"Check the accompanying cause for the specific reason and address it. If the error persists, contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_KNOWLEDGE_ALREADY_EXISTS, // 20105
+		symbol:      "E_KNOWLEDGE_ALREADY_EXISTS",
+		Description: "Knowledge with the given name already exists.",
+		Action: []string{
+			"Use a different name for the CREATE KNOWLEDGE statement, or drop the existing knowledge first.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_KNOWLEDGE_INVALID_DATA, // 20106
+		symbol:      "E_KNOWLEDGE_INVALID_DATA",
+		Description: "The data supplied for the knowledge is invalid.",
+		Action: []string{
+			"Correct the knowledge definition and retry.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_KNOWLEDGE_INVALID_PATH, // 20107
+		symbol:      "E_KNOWLEDGE_INVALID_PATH",
+		Description: "The keyspace path given for the knowledge is invalid.",
+		Action: []string{
+			"Use a valid bucket.scope.collection keyspace path and retry.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_KNOWLEDGE_LIMIT_EXCEEDED, // 20108
+		symbol:      "E_KNOWLEDGE_LIMIT_EXCEEDED",
+		Description: "A knowledge size or count limit was exceeded.",
+		Action: []string{
+			"Reduce the number of knowledge entries for the keyspace, or the size of the value, and retry.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
 }

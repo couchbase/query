@@ -38,6 +38,7 @@ import (
 	"github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
 	log_resolver "github.com/couchbase/query/logging/resolver"
+	"github.com/couchbase/query/natural/knowledge"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -610,6 +611,7 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 	} else {
 		constructor.Init(nil, 6, jsevalPath)
 	}
+	knowledge.Init()
 
 	srv.SetKeepAlive(1 << 10)
 

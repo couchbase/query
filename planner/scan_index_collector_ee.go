@@ -689,6 +689,10 @@ func (this *scanIdxCol) VisitCreateSequence(op *plan.CreateSequence) (interface{
 	return nil, nil
 }
 
+func (this *scanIdxCol) VisitCreateKnowledge(op *plan.CreateKnowledge) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *scanIdxCol) VisitDropSequence(op *plan.DropSequence) (interface{}, error) {
 	return nil, nil
 }

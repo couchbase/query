@@ -189,6 +189,9 @@ type Visitor interface {
 	VisitDropSequence(op *DropSequence) (interface{}, error)
 	VisitAlterSequence(op *AlterSequence) (interface{}, error)
 
+	// Knowledge
+	VisitCreateKnowledge(op *CreateKnowledge) (interface{}, error)
+
 	// CredentialStore
 	VisitCreateCredentialStore(op *CreateCredentialStore) (any, error)
 	VisitAlterCredentialStore(op *AlterCredentialStore) (any, error)

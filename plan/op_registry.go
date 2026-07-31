@@ -205,6 +205,9 @@ var _OPERATORS = map[string]Operator{
 	"AlterSequence":  &AlterSequence{},
 	"DropSequence":   &DropSequence{},
 
+	// Knowledge
+	"CreateKnowledge": &CreateKnowledge{},
+
 	// Users
 	"CreateUser": &CreateUser{},
 	"AlterUser":  &AlterUser{},

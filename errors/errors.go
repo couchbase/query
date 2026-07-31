@@ -517,6 +517,13 @@ func IsSequenceExistsError(e error) bool {
 	return IsExistsError("Sequence", e)
 }
 
+func IsKnowledgeExistsError(e error) bool {
+	if err, ok := e.(Error); ok && err.Code() == E_KNOWLEDGE_ALREADY_EXISTS {
+		return true
+	}
+	return IsExistsError("Knowledge", e)
+}
+
 func IsIndexNotFoundError(e error) bool {
 	if err, ok := e.(Error); ok && (err.Code() == E_INDEX_NOT_FOUND || err.Code() == E_CB_INDEX_NOT_FOUND) {
 		return true

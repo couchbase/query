@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/functions"
 	functionsStorage "github.com/couchbase/query/functions/storage"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/natural/knowledge"
 	"github.com/couchbase/query/sequences"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -911,6 +912,11 @@ func refreshScopesAndCollections(mani *cb.Manifest, externalMani *cb.ExternalMan
 					if isCBOStatsMigrationWaiting() || !isMigratingCBOStats() {
 						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
 					}
+					if kerr := knowledge.DropCollection(bucket.namespace.name, bucket.name, oldScope.Name(), oldScope.Uid(),
+						c.Name(), c.Uid()); kerr != nil {
+						logging.Warnf("Error dropping knowledge for collection %s.%s.%s: %v",
+							bucket.name, oldScope.Name(), c.Name(), kerr)
+					}
 					aus.DropCollection(bucket.namespace.name, bucket.name, oldScope.Name(), oldScope.Uid(),
 						c.Name(), c.Uid())
 				}
@@ -980,6 +986,9 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
 			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
 			aus.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
+			if kerr := knowledge.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid()); kerr != nil {
+				logging.Warnf("Error dropping knowledge for scope %s.%s: %v", bucket.name, s.Name(), kerr)
+			}
 			return true
 		}
 	}

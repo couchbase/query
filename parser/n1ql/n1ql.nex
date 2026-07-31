@@ -267,6 +267,7 @@
 /[kK][eE][yY]/                 { lval.s = yylex.Text(); yylex.curOffset += 3; return KEY }
 /[kK][eE][yY][sS]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return KEYS }
 /[kK][eE][yY][sS][pP][aA][cC][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return KEYSPACE }
+/[kK][nN][oO][wW][lL][eE][dD][gG][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return KNOWLEDGE }
 /[kK][nN][oO][wW][nN]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return KNOWN }
 /[lL][aA][nN][gG][uU][aA][gG][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 8; return LANGUAGE }
 /[lL][aA][sS][tT]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return LAST }

@@ -858,6 +858,11 @@ func (this *builder) VisitCreateSequence(plan *plan.CreateSequence) (interface{}
 	return checkOp(NewCreateSequence(plan, this.context), this.context)
 }
 
+// Knowledge
+func (this *builder) VisitCreateKnowledge(plan *plan.CreateKnowledge) (interface{}, error) {
+	return checkOp(NewCreateKnowledge(plan, this.context), this.context)
+}
+
 func (this *builder) VisitDropSequence(plan *plan.DropSequence) (interface{}, error) {
 	return checkOp(NewDropSequence(plan, this.context), this.context)
 }

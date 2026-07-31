@@ -46,6 +46,7 @@ import (
 	"github.com/couchbase/query/extparams"
 	"github.com/couchbase/query/functions"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/natural/knowledge"
 	cb "github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/primitives/external"
 	"github.com/couchbase/query/sequences"
@@ -3920,6 +3921,8 @@ func CleanupSystemCollection(namespace string, bucket string) {
 		} else if strings.HasPrefix(key, "udf::") {
 			parts := strings.Split(key, "::")
 			functions.FunctionClear(bucket+"."+parts[1], nil)
+		} else if strings.HasPrefix(key, "know::") {
+			knowledge.InvalidateCacheKey(key)
 		}
 	}
 
@@ -4026,6 +4029,39 @@ func CleanupSystemCollection(namespace string, bucket string) {
 					if !toDelete {
 						// Check if collection is still present
 						c, err := s.KeyspaceByName(elements[1])
+						if err != nil || (c.Uid() != parts[2]) {
+							toDelete = true
+						}
+					}
+				}
+			} else if len(parts) == 4 && parts[0] == "know" {
+				// know::<scopeUid>::<collectionUid>::<scope>.<collection> - either name segment may
+				// itself be a UUID (see natural/knowledge.capKeySegment) if the real name was too
+				// long to keep the key under the KV key limit; when so, resolve the real names from
+				// the document body instead of trusting the key, mirroring how the cbo case above
+				// handles the identical ambiguity.
+				path := parts[len(parts)-1]
+				elements := strings.Split(path, ".")
+				if len(elements) == 2 {
+					scopeName, collName := elements[0], elements[1]
+					if knowledge.MaybeCappedSegment(scopeName) || knowledge.MaybeCappedSegment(collName) {
+						realScope, realColl, found, rerr := knowledge.ResolveStoredNames(systemCollection, key)
+						if rerr != nil {
+							errorCount++
+							return nil
+						} else if !found {
+							return nil
+						}
+						scopeName, collName = realScope, realColl
+					}
+
+					s, err := systemCollection.Scope().Bucket().ScopeByName(scopeName)
+					if err != nil || (s.Uid() != parts[1]) {
+						toDelete = true
+					}
+
+					if !toDelete {
+						c, err := s.KeyspaceByName(collName)
 						if err != nil || (c.Uid() != parts[2]) {
 							toDelete = true
 						}

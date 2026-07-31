@@ -428,6 +428,88 @@ func (this *SemChecker) VisitAlterSequence(stmt *algebra.AlterSequence) (interfa
 	return nil, stmt.MapExpressions(this)
 }
 
+func (this *SemChecker) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (interface{}, error) {
+	// in both forms, the value has to be knowable (or at least type-checkable) independent of any
+	// query context: there's no FROM-clause keyspace or per-row context to evaluate a general
+	// expression against, so it's restricted to constants and named/positional parameters
+	if stmt.Bulk() {
+		if stmt.Name() != "" {
+			return nil, errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+				"a name is not permitted with FROM; omit it, or use AS to create a single named entry")
+		}
+		if err := validateCreateKnowledgeBulkValue(stmt.Value()); err != nil {
+			return nil, err
+		}
+		return nil, stmt.MapExpressions(this)
+	}
+
+	if stmt.Replace() && stmt.Name() == "" {
+		return nil, errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+			"CREATE OR REPLACE KNOWLEDGE requires an explicit name")
+	}
+
+	switch v := stmt.Value().(type) {
+	case *expression.Constant:
+		if v.Value().Type() != value.STRING {
+			return nil, errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+				fmt.Sprintf("value must be a string, not %v", v.Value().Type()))
+		}
+	case expression.NamedParameter, expression.PositionalParameter:
+		break
+	default:
+		return nil, errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+			fmt.Sprintf("value must be a string literal or a named/positional parameter, not '%v'", v.String()))
+	}
+
+	return nil, stmt.MapExpressions(this)
+}
+
+// validateCreateKnowledgeBulkValue restricts CREATE KNOWLEDGE FOR ... FROM <value>'s value to an
+// object literal whose fields are all string-literal or named/positional-parameter names, mapped
+// to string-literal or named/positional-parameter values, or a bare named/positional parameter
+// evaluating to such an object at execution time (checked there, since its shape isn't known until
+// then).
+func validateCreateKnowledgeBulkValue(val expression.Expression) error {
+	switch v := val.(type) {
+	case *expression.ObjectConstruct:
+		for k, fv := range v.Mapping() {
+			var keyDesc string
+			switch kk := k.(type) {
+			case *expression.Constant:
+				if kk.Value().Type() != value.STRING {
+					return errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+						fmt.Sprintf("knowledge name must be a string literal, not '%v'", k.String()))
+				}
+				keyDesc = kk.Value().ToString()
+			case expression.NamedParameter, expression.PositionalParameter:
+				keyDesc = k.String()
+			default:
+				return errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+					fmt.Sprintf("knowledge name must be a string literal or a named/positional parameter, not '%v'", k.String()))
+			}
+			switch fvv := fv.(type) {
+			case *expression.Constant:
+				if fvv.Value().Type() != value.STRING {
+					return errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+						fmt.Sprintf("value for '%v' must be a string, not %v", keyDesc, fvv.Value().Type()))
+				}
+			case expression.NamedParameter, expression.PositionalParameter:
+				break
+			default:
+				return errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+					fmt.Sprintf("value for '%v' must be a string literal or a named/positional parameter, not '%v'",
+						keyDesc, fv.String()))
+			}
+		}
+		return nil
+	case expression.NamedParameter, expression.PositionalParameter:
+		return nil
+	default:
+		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_DATA,
+			fmt.Sprintf("value must be an object literal or a named/positional parameter, not '%v'", v.String()))
+	}
+}
+
 func (this *SemChecker) VisitCreateCredentialStore(stmt *algebra.CreateCredentialStore) (any, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_create_credentialstore")

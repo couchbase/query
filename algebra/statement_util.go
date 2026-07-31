@@ -26,7 +26,8 @@ func CanSkipAutoPrepare(stmt Statement) bool {
 		*GrantRole, *RevokeRole,
 		*CreateFunction, *DropFunction, *ExecuteFunction,
 		*StartTransaction, *CommitTransaction, *RollbackTransaction, *Savepoint, *TransactionIsolation,
-		*CreateSequence, *DropSequence, *AlterSequence:
+		*CreateSequence, *DropSequence, *AlterSequence,
+		*CreateKnowledge:
 		return true
 	case *Insert:
 		if stmt.query == nil {

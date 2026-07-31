@@ -96,6 +96,10 @@ func (this *Rewrite) VisitCreateSequence(stmt *algebra.CreateSequence) (interfac
 	return stmt, stmt.MapExpressions(this)
 }
 
+func (this *Rewrite) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
 func (this *Rewrite) VisitDropSequence(stmt *algebra.DropSequence) (interface{}, error) {
 	return stmt, stmt.MapExpressions(this)
 }

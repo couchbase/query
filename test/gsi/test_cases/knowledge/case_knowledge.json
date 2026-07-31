@@ -1,0 +1,363 @@
+[
+  {
+    "testcase": "CREATE KNOWLEDGE against an explicit bucket.scope.collection succeeds for an admin user",
+    "statements": "CREATE KNOWLEDGE icao_hint FOR orders.knowledge_test.articles AS \"ICAO codes represent airports.\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "the new entry shows up in system:natural_knowledge - fetched directly by its composite key (USE KEYS) rather than via a keyspace/name predicate, so this doesn't depend on GSI index catch-up for the just-written doc",
+    "statements": "SELECT `name`, `value`, `keyspace` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "name": "icao_hint",
+        "value": "ICAO codes represent airports.",
+        "keyspace": "default:orders.knowledge_test.articles"
+      }
+    ]
+  },
+  {
+    "testcase": "creating a second, differently named, entry for the same keyspace succeeds",
+    "statements": "CREATE KNOWLEDGE iata_hint FOR orders.knowledge_test.articles AS \"IATA codes are the 3-letter airport identifiers used by airlines.\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "both entries are now visible for that keyspace",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "name": "iata_hint"
+      },
+      {
+        "name": "icao_hint"
+      }
+    ]
+  },
+  {
+    "testcase": "re-creating a knowledge entry with a name already used for that keyspace fails",
+    "statements": "CREATE KNOWLEDGE icao_hint FOR orders.knowledge_test.articles AS \"a different hint\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "already exists"
+  },
+  {
+    "testcase": "the same name is still usable for a different keyspace",
+    "statements": "CREATE KNOWLEDGE icao_hint FOR orders.knowledge_test.flights AS \"flights-specific hint\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "AS accepts a named parameter, resolved against the request's arguments",
+    "statements": "CREATE KNOWLEDGE named_param_hint FOR orders.knowledge_test.flights AS $hint",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "namedArgs": {
+      "hint": "hint supplied via a named parameter"
+    },
+    "results": []
+  },
+  {
+    "testcase": "the named-parameter value was evaluated and stored, not the parameter itself - USE KEYS again, for the same reason as above",
+    "statements": "SELECT `value` FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.flights::named_param_hint\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "value": "hint supplied via a named parameter"
+      }
+    ]
+  },
+  {
+    "testcase": "USE KEYS on system:natural_knowledge does not leak entries for a bucket the requesting user has no access to - reviewowner has no privileges on the orders bucket, so the fetch must be filtered out even though the key itself exists",
+    "statements": "SELECT `value` FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.flights::named_param_hint\"",
+    "userArgs": {
+      "reviewowner": "reviewpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "AS accepts a positional parameter, resolved against the request's arguments",
+    "statements": "CREATE KNOWLEDGE positional_param_hint FOR orders.knowledge_test.flights AS $1",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "positionalArgs": [
+      "hint supplied via a positional parameter"
+    ],
+    "results": []
+  },
+  {
+    "testcase": "a non-admin user is not allowed to create knowledge",
+    "statements": "CREATE KNOWLEDGE not_allowed FOR orders.knowledge_test.articles AS \"should not be created\"",
+    "userArgs": {
+      "ordersowner": "orderspass"
+    },
+    "error": "User does not have credentials to run this type of query. Add role admin to allow the statement to run."
+  },
+  {
+    "testcase": "CREATE KNOWLEDGE against a non-existent scope fails",
+    "statements": "CREATE KNOWLEDGE missing_scope_hint FOR orders.nosuchscope.nosuchcoll AS \"should not be created\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "Scope not found in CB datastore default:orders.nosuchscope"
+  },
+  {
+    "testcase": "CREATE KNOWLEDGE against the bucket-local _system scope is rejected, mirroring CREATE SEQUENCE's rejection of the same reserved scope",
+    "statements": "CREATE KNOWLEDGE system_scope_hint FOR orders._system._query AS \"should not be created\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "system scope not permitted"
+  },
+  {
+    "testcase": "the rejected system-scope entry above was not created - FROM's bulk form is rejected the same way",
+    "statements": "CREATE KNOWLEDGE FOR orders._system._query FROM {\"a\": \"should not be created\"}",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "system scope not permitted"
+  },
+  {
+    "testcase": "AS is syntactically a general expression, but semantics rejects anything that isn't a string constant or a named/positional parameter",
+    "statements": "CREATE KNOWLEDGE non_string_value_hint FOR orders.knowledge_test.articles AS 123",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "Invalid knowledge data: value must be a string, not number"
+  },
+  {
+    "testcase": "a named parameter resolving to a non-string value is rejected at execution time",
+    "statements": "CREATE KNOWLEDGE bad_named_param_hint FOR orders.knowledge_test.articles AS $hint",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "namedArgs": {
+      "hint": 42
+    },
+    "error": "Invalid knowledge data: value must be a string, not number"
+  },
+  {
+    "testcase": "CREATE KNOWLEDGE FOR ... FROM <object> creates multiple entries for a keyspace in a single statement",
+    "statements": "CREATE KNOWLEDGE FOR orders.knowledge_test.articles FROM {\"bulk_a\": \"First bulk hint\", \"bulk_b\": \"Second bulk hint\"}",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "both bulk-created entries are visible alongside the earlier AS-created ones",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "name": "bulk_a"
+      },
+      {
+        "name": "bulk_b"
+      },
+      {
+        "name": "iata_hint"
+      },
+      {
+        "name": "icao_hint"
+      }
+    ]
+  },
+  {
+    "testcase": "CREATE KNOWLEDGE FOR ... FROM <object> fails entirely if any one of the object's names already exists for that keyspace - icao_hint is a duplicate here, so bulk_c (which isn't) must not be added either",
+    "statements": "CREATE KNOWLEDGE FOR orders.knowledge_test.articles FROM {\"bulk_c\": \"should not be added\", \"icao_hint\": \"duplicate, should fail\"}",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "already exists"
+  },
+  {
+    "testcase": "the failed bulk create above was atomic - bulk_c was not added despite not itself being a duplicate",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "name": "bulk_a"
+      },
+      {
+        "name": "bulk_b"
+      },
+      {
+        "name": "iata_hint"
+      },
+      {
+        "name": "icao_hint"
+      }
+    ]
+  },
+  {
+    "testcase": "CREATE OR REPLACE KNOWLEDGE overwrites an existing entry's value instead of failing with already-exists",
+    "statements": "CREATE OR REPLACE KNOWLEDGE icao_hint FOR orders.knowledge_test.articles AS \"Replaced ICAO hint\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "the value was actually replaced - USE KEYS by the known composite key, same reasoning as the earlier read-after-write checks",
+    "statements": "SELECT `value` FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.articles::icao_hint\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "value": "Replaced ICAO hint"
+      }
+    ]
+  },
+  {
+    "testcase": "the replace did not create a duplicate entry - articles still has exactly the same 4 names as before",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "name": "bulk_a"
+      },
+      {
+        "name": "bulk_b"
+      },
+      {
+        "name": "iata_hint"
+      },
+      {
+        "name": "icao_hint"
+      }
+    ]
+  },
+  {
+    "testcase": "CREATE OR REPLACE KNOWLEDGE without an explicit name is rejected - an auto-generated implicit name can never already exist, so REPLACE would be meaningless",
+    "statements": "CREATE OR REPLACE KNOWLEDGE FOR orders.knowledge_test.articles AS \"x\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "requires an explicit name"
+  },
+  {
+    "testcase": "a name is still not permitted together with FROM, with or without OR REPLACE",
+    "statements": "CREATE OR REPLACE KNOWLEDGE some_name FOR orders.knowledge_test.articles FROM {\"a\": \"b\"}",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "error": "a name is not permitted with FROM"
+  },
+  {
+    "testcase": "CREATE OR REPLACE KNOWLEDGE FOR ... FROM <object> replaces existing names and adds new ones in the same call",
+    "statements": "CREATE OR REPLACE KNOWLEDGE FOR orders.knowledge_test.articles FROM {\"icao_hint\": \"Bulk-replaced ICAO hint\", \"bulk_d\": \"New bulk entry\"}",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "both effects of the bulk replace are visible - icao_hint's value changed, bulk_d was added, and no duplicates were created",
+    "statements": "SELECT `name`, `value` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "name": "bulk_a",
+        "value": "First bulk hint"
+      },
+      {
+        "name": "bulk_b",
+        "value": "Second bulk hint"
+      },
+      {
+        "name": "bulk_d",
+        "value": "New bulk entry"
+      },
+      {
+        "name": "iata_hint",
+        "value": "IATA codes are the 3-letter airport identifiers used by airlines."
+      },
+      {
+        "name": "icao_hint",
+        "value": "Bulk-replaced ICAO hint"
+      }
+    ]
+  },
+  {
+    "testcase": "system:natural_knowledge supports filtering by bucket via its secondary index",
+    "statements": "SELECT COUNT(*) AS cnt FROM system:natural_knowledge WHERE `bucket` = \"orders\" AND `scope` = \"knowledge_test\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "cnt": 8
+      }
+    ]
+  },
+  {
+    "testcase": "CREATE OR REPLACE KNOWLEDGE succeeds against a scope and collection at Couchbase's 251-character name limit - exercises capKeySegment hashing both name segments down so the underlying document key stays well clear of the 251-byte KV key limit",
+    "statements": "CREATE OR REPLACE KNOWLEDGE aa1 FOR orders.`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.`bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` AS \"blah-blah-blah-blah-BLAH\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "the entry is readable back by its composite key despite the long names - USE KEYS, same reasoning as the earlier read-after-write checks",
+    "statements": "SELECT `value` FROM system:natural_knowledge USE KEYS \"default:orders.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb::aa1\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "value": "blah-blah-blah-blah-BLAH"
+      }
+    ]
+  },
+  {
+    "testcase": "a second entry for the same long-named keyspace also succeeds - exercises the read-modify-write path against the already-existing (hashed-key) document, not just its creation",
+    "statements": "CREATE KNOWLEDGE aa2 FOR orders.`aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`.`bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` AS \"second hint for the long-named keyspace\"",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": []
+  },
+  {
+    "testcase": "both entries for the long-named keyspace are visible, and only those two - confirms the hashed key isn't colliding with anything else",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\" ORDER BY `name`",
+    "userArgs": {
+      "testAdmin": "testAdminpass"
+    },
+    "results": [
+      {
+        "name": "aa1"
+      },
+      {
+        "name": "aa2"
+      }
+    ]
+  }
+]

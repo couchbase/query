@@ -22804,6 +22804,380 @@ var dfas = []dfa{
 		},
 	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
 
+	// [kK][nN][oO][wW][lL][eE][dD][gG][eE]
+	{[]bool{false, false, false, false, false, false, false, false, false, true}, []func(rune) int{ // Transitions
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return -1
+			case 71:
+				return -1
+			case 75:
+				return 1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return -1
+			case 103:
+				return -1
+			case 107:
+				return 1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return -1
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return 2
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return -1
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return 2
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return -1
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return 3
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return -1
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return 3
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return -1
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return 4
+			case 100:
+				return -1
+			case 101:
+				return -1
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return 4
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return -1
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return 5
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return -1
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return 5
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return 6
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return 6
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return 7
+			case 69:
+				return -1
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return 7
+			case 101:
+				return -1
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return -1
+			case 71:
+				return 8
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return -1
+			case 103:
+				return 8
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return 9
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return 9
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+		func(r rune) int {
+			switch r {
+			case 68:
+				return -1
+			case 69:
+				return -1
+			case 71:
+				return -1
+			case 75:
+				return -1
+			case 76:
+				return -1
+			case 78:
+				return -1
+			case 79:
+				return -1
+			case 87:
+				return -1
+			case 100:
+				return -1
+			case 101:
+				return -1
+			case 103:
+				return -1
+			case 107:
+				return -1
+			case 108:
+				return -1
+			case 110:
+				return -1
+			case 111:
+				return -1
+			case 119:
+				return -1
+			}
+			return -1
+		},
+	}, []int{ /* Start-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, []int{ /* End-of-input transitions */ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}, nil},
+
 	// [kK][nN][oO][wW][nN]
 	{[]bool{false, false, false, false, false, true}, []func(rune) int{ // Transitions
 		func(r rune) int {
@@ -48461,833 +48835,835 @@ OUTER0:
 		case 145:
 			{
 				lval.s = yylex.Text()
+				yylex.curOffset += 9
+				return KNOWLEDGE
+			}
+		case 146:
+			{
+				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return KNOWN
 			}
-		case 146:
+		case 147:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return LANGUAGE
 			}
-		case 147:
+		case 148:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return LAST
 			}
-		case 148:
+		case 149:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return LATERAL
 			}
-		case 149:
+		case 150:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return LEFT
 			}
-		case 150:
+		case 151:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return LET
 			}
-		case 151:
+		case 152:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return LETTING
 			}
-		case 152:
+		case 153:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return LEVEL
 			}
-		case 153:
+		case 154:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return LIKE
 			}
-		case 154:
+		case 155:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return LIMIT
 			}
-		case 155:
+		case 156:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return LSM
 			}
-		case 156:
+		case 157:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return MAP
 			}
-		case 157:
+		case 158:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return MAPPING
 			}
-		case 158:
+		case 159:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return MATCHED
 			}
-		case 159:
+		case 160:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 12
 				return MATERIALIZED
 			}
-		case 160:
+		case 161:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return MAXVALUE
 			}
-		case 161:
+		case 162:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return MERGE
 			}
-		case 162:
+		case 163:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return MINVALUE
 			}
-		case 163:
+		case 164:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return MISSING
 			}
-		case 164:
+		case 165:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return MULTI
 			}
-		case 165:
+		case 166:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return NAMESPACE
 			}
-		case 166:
+		case 167:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return NEST
 			}
-		case 167:
+		case 168:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return NEXT
 			}
-		case 168:
+		case 169:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return NEXTVAL
 			}
-		case 169:
+		case 170:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 2
 				return NL
 			}
-		case 170:
+		case 171:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 2
 				return NO
 			}
-		case 171:
+		case 172:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return NOT
 			}
-		case 172:
+		case 173:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return NTH_VALUE
 			}
-		case 173:
+		case 174:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return NULL
 			}
-		case 174:
+		case 175:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return NULLS
 			}
-		case 175:
+		case 176:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return NUMBER
 			}
-		case 176:
+		case 177:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return OBJECT
 			}
-		case 177:
+		case 178:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return OFFSET
 			}
-		case 178:
+		case 179:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 2
 				return ON
 			}
-		case 179:
+		case 180:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return OPTION
 			}
-		case 180:
+		case 181:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return OPTIONS
 			}
-		case 181:
+		case 182:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 2
 				return OR
 			}
-		case 182:
+		case 183:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return ORDER
 			}
-		case 183:
+		case 184:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return OTHERS
 			}
-		case 184:
+		case 185:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return OUTER
 			}
-		case 185:
+		case 186:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return OVER
 			}
-		case 186:
+		case 187:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return PARSE
 			}
-		case 187:
+		case 188:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return PARTITION
 			}
-		case 188:
+		case 189:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return PASSWORD
 			}
-		case 189:
+		case 190:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return PATH
 			}
-		case 190:
+		case 191:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return POOL
 			}
-		case 191:
+		case 192:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return PRECEDING
 			}
-		case 192:
+		case 193:
 			{
 				yylex.curOffset += 7
 				lval.tokOffset = yylex.curOffset
 				return PREPARE
 			}
-		case 193:
-			{
-				lval.s = yylex.Text()
-				yylex.curOffset += 4
-				return PREV
-			}
 		case 194:
 			{
 				lval.s = yylex.Text()
-				yylex.curOffset += 8
+				yylex.curOffset += 4
 				return PREV
 			}
 		case 195:
 			{
 				lval.s = yylex.Text()
-				yylex.curOffset += 7
-				return PREVVAL
+				yylex.curOffset += 8
+				return PREV
 			}
 		case 196:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
-				return PRIMARY
+				return PREVVAL
 			}
 		case 197:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
-				return PRIVATE
+				return PRIMARY
 			}
 		case 198:
 			{
 				lval.s = yylex.Text()
-				yylex.curOffset += 9
-				return PRIVILEGE
+				yylex.curOffset += 7
+				return PRIVATE
 			}
 		case 199:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
-				return PROCEDURE
+				return PRIVILEGE
 			}
 		case 200:
+			{
+				lval.s = yylex.Text()
+				yylex.curOffset += 9
+				return PROCEDURE
+			}
+		case 201:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return PROBE
 			}
-		case 201:
+		case 202:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return PUBLIC
 			}
-		case 202:
+		case 203:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return RANGE
 			}
-		case 203:
+		case 204:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return RAW
 			}
-		case 204:
+		case 205:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return READ
 			}
-		case 205:
+		case 206:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return REALM
 			}
-		case 206:
+		case 207:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return RECURSIVE
 			}
-		case 207:
+		case 208:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return REDUCE
 			}
-		case 208:
+		case 209:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return RENAME
 			}
-		case 209:
+		case 210:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return REPLACE
 			}
-		case 210:
+		case 211:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return RESPECT
 			}
-		case 211:
+		case 212:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return RESTART
 			}
-		case 212:
+		case 213:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return RESTRICT
 			}
-		case 213:
+		case 214:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return RETURN
 			}
-		case 214:
+		case 215:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return RETURNING
 			}
-		case 215:
+		case 216:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return REVOKE
 			}
-		case 216:
+		case 217:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return RIGHT
 			}
-		case 217:
+		case 218:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return ROLE
 			}
-		case 218:
+		case 219:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return ROLES
 			}
-		case 219:
+		case 220:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return ROLLBACK
 			}
-		case 220:
+		case 221:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return ROW
 			}
-		case 221:
+		case 222:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return ROWS
 			}
-		case 222:
+		case 223:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return SATISFIES
 			}
-		case 223:
+		case 224:
 			{
 				yylex.curOffset += 4
 				lval.tokOffset = yylex.curOffset
 				return SAVE
 			}
-		case 224:
+		case 225:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return SAVEPOINT
 			}
-		case 225:
+		case 226:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return SCHEMA
 			}
-		case 226:
+		case 227:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return SCOPE
 			}
-		case 227:
+		case 228:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return SELECT
 			}
-		case 228:
+		case 229:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return SELF
 			}
-		case 229:
+		case 230:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return SEQUENCE
 			}
-		case 230:
+		case 231:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return SET
 			}
-		case 231:
+		case 232:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return SHOW
 			}
-		case 232:
+		case 233:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return SNAPSHOT
 			}
-		case 233:
+		case 234:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return SOME
 			}
-		case 234:
+		case 235:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return SOURCE
 			}
-		case 235:
+		case 236:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return SPARSE
 			}
-		case 236:
+		case 237:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return START
 			}
-		case 237:
+		case 238:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 10
 				return STATISTICS
 			}
-		case 238:
+		case 239:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return STRING
 			}
-		case 239:
+		case 240:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return SYSTEM
 			}
-		case 240:
+		case 241:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return THEN
 			}
-		case 241:
+		case 242:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return TIES
 			}
-		case 242:
+		case 243:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return TIMESTAMP
 			}
-		case 243:
+		case 244:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 2
 				return TO
 			}
-		case 244:
+		case 245:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return TRAN
 			}
-		case 245:
+		case 246:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 11
 				return TRANSACTION
 			}
-		case 246:
+		case 247:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return TRIGGER
 			}
-		case 247:
+		case 248:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return TRUE
 			}
-		case 248:
+		case 249:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return TRUNCATE
 			}
-		case 249:
+		case 250:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return TYPE
 			}
-		case 250:
+		case 251:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 9
 				return UNBOUNDED
 			}
-		case 251:
+		case 252:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return UNDER
 			}
-		case 252:
+		case 253:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return UNION
 			}
-		case 253:
+		case 254:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return UNIQUE
 			}
-		case 254:
+		case 255:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 7
 				return UNKNOWN
 			}
-		case 255:
+		case 256:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return UNNEST
 			}
-		case 256:
+		case 257:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return UNSET
 			}
-		case 257:
+		case 258:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return UPDATE
 			}
-		case 258:
+		case 259:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return UPSERT
 			}
-		case 259:
+		case 260:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return USE
 			}
-		case 260:
+		case 261:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return USER
 			}
-		case 261:
+		case 262:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return USERS
 			}
-		case 262:
+		case 263:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return USING
 			}
-		case 263:
+		case 264:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 8
 				return VALIDATE
 			}
-		case 264:
+		case 265:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return VALUE
 			}
-		case 265:
+		case 266:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return VALUED
 			}
-		case 266:
+		case 267:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return VALUES
 			}
-		case 267:
+		case 268:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return VECTOR
 			}
-		case 268:
+		case 269:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return VIA
 			}
-		case 269:
+		case 270:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return VIEW
 			}
-		case 270:
+		case 271:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return WHEN
 			}
-		case 271:
+		case 272:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return WHERE
 			}
-		case 272:
+		case 273:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 5
 				return WHILE
 			}
-		case 273:
+		case 274:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return WINDOW
 			}
-		case 274:
+		case 275:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return WITH
 			}
-		case 275:
+		case 276:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 6
 				return WITHIN
 			}
-		case 276:
+		case 277:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 4
 				return WORK
 			}
-		case 277:
+		case 278:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += 3
 				return XOR
 			}
-		case 278:
+		case 279:
 			{
 				lval.s = yylex.Text()
 				yylex.curOffset += len(lval.s)
 				return IDENT
 			}
-		case 279:
+		case 280:
 			{
 				lval.s = yylex.Text()[1:]
 				yylex.curOffset += len(yylex.Text())
 				return NAMED_PARAM
 			}
-		case 280:
+		case 281:
 			{
 				lval.n, _ = strconv.ParseInt(yylex.Text()[1:], 10, 64)
 				yylex.curOffset += len(yylex.Text())
 				return POSITIONAL_PARAM
 			}
-		case 281:
+		case 282:
 			{
 				yylex.curOffset += 2
 				return RANDOM_ELEMENT
 			}
-		case 282:
+		case 283:
 			{
 				lval.n = 0 // Handled by parser
 				yylex.curOffset++
 				return NEXT_PARAM
-			}
-		case 283:
-			{
-				yylex.curOffset++
 			}
 		case 284:
 			{
@@ -49298,6 +49674,10 @@ OUTER0:
 				yylex.curOffset++
 			}
 		case 286:
+			{
+				yylex.curOffset++
+			}
+		case 287:
 			{
 				/* this we don't know what it is: we'll let
 				   the parser handle it (and most probably throw a syntax error

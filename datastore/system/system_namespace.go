@@ -188,6 +188,12 @@ func (p *namespace) loadKeyspaces() (e errors.Error) {
 	}
 	registerKeyspace(p, funcs)
 
+	know, e := newKnowledgeKeyspace(p)
+	if e != nil {
+		return e
+	}
+	registerKeyspace(p, know)
+
 	dictCache, e := newDictionaryCacheKeyspace(p, KEYSPACE_NAME_DICTIONARY_CACHE)
 	if e != nil {
 		return e

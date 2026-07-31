@@ -46,6 +46,7 @@ import (
 	"github.com/couchbase/query/logging/event"
 	log_resolver "github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/natural/knowledge"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/scheduler"
 	server_package "github.com/couchbase/query/server"
@@ -465,6 +466,7 @@ func main() {
 	server.SetSettingsCallback(endpoint.SettingsCallback)
 
 	constructor.Init(endpoint.Router(), server.Servicers(), "")
+	knowledge.Init()
 	tenant.Start(endpoint, *UUID, *REGULATOR_SETTINGS_FILE)
 
 	/*  Retrieve the necessary encryption-at-rest keys from cbauth before starting listeners

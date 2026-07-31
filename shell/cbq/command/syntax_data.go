@@ -30,6 +30,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"TIMESTAMP"},
 		[]string{"CREDENTIALSTORE"},
 		[]string{"EXTERNAL"},
+		[]string{"KNOWLEDGE"},
 	},
 	"permitted_identifiers": [][]string{
 		[]string{"alias_identifiers"},
@@ -38,6 +39,9 @@ var statement_syntax = map[string][][]string{
 	"perm_ident_or_str": [][]string{
 		[]string{"permitted_identifiers"},
 		[]string{"<quoted string>"},
+	},
+	"optional_permitted_identifiers": [][]string{
+		[]string{"permitted_identifiers"},
 	},
 	"statements": [][]string{
 		[]string{"advise"},
@@ -60,6 +64,7 @@ var statement_syntax = map[string][][]string{
 		[]string{"transaction_statement"},
 		[]string{"sequence_statement"},
 		[]string{"credentialstore_statement"},
+		[]string{"knowledge_statement"},
 	},
 	"advise": [][]string{
 		[]string{"ADVISE", "[index]", "statement"},
@@ -1326,6 +1331,13 @@ var statement_syntax = map[string][][]string{
 		[]string{"create_sequence"},
 		[]string{"drop_sequence"},
 		[]string{"alter_sequence"},
+	},
+	"knowledge_statement": [][]string{
+		[]string{"create_knowledge"},
+	},
+	"create_knowledge": [][]string{
+		[]string{"CREATE", "[replace]", "KNOWLEDGE", "optional_permitted_identifiers", "FOR", "named_keyspace_ref", "AS", "expression"},
+		[]string{"CREATE", "[replace]", "KNOWLEDGE", "optional_permitted_identifiers", "FOR", "named_keyspace_ref", "FROM", "expression"},
 	},
 	"create_sequence": [][]string{
 		[]string{"CREATE", "SEQUENCE", "sequence_full_name", "[if_not_exists]", "[seq_create_options]"},
