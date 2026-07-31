@@ -59,7 +59,7 @@ func (this *builder) visitWindowAggregates(windowAggs algebra.Aggregates) {
 					frCost = OPT_COST_NOT_AVAIL
 				}
 			}
-			this.addSubChildren(plan.NewOrder(order, 0, nil, nil, cost, cardinality, size, frCost, false, true))
+			this.addSubChildren(plan.NewOrder(order, 0, nil, nil, cost, cardinality, size, frCost, false, false))
 		}
 
 		for i := len(wOrderGroup.pbys) - 1; i >= 0; i-- {
