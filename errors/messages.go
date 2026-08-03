@@ -8870,6 +8870,25 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_CHAT_ALREADY_ACTIVE, // 19255
+		symbol:      "E_NL_CHAT_ALREADY_ACTIVE",
+		Description: "chat with id: «chatid» is already active and cannot be resumed again",
+		IsUser:      YES,
+		Reason: []string{
+			"RESUME AI CHAT was issued for a chat that is already active on this node.",
+			"Resume is a one-time operation: a successful resume consumes the paused chat" +
+				" document and restores the chat to the active chat-cache. A subsequent resume of" +
+				" the same chat has nothing to consume.",
+		},
+		Action: []string{
+			"Continue using the already-active chat session instead of resuming it again.",
+			"Pause the chat first if you intend to resume it on another node.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCRYPTION_READER_CREATE, // 19300
 		symbol:      "E_ENCRYPTION_READER_CREATE",
 		Description: "Failed to create encryption reader",

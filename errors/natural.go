@@ -81,6 +81,7 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_DIRECT_CREATE_REQ:              {CHATCOMPLTIONS_IKEY, "Failed to create direct LLM request to %v"},
 	E_NL_DIRECT_SEND_REQ:                {CHATCOMPLTIONS_IKEY, "Failed to send direct LLM request to %v"},
 	E_NL_OPTION_NOT_ALLOWED:             {SERVE_NATURAL, "Option \"%s\" is not supported for %s"},
+	E_NL_CHAT_ALREADY_ACTIVE:            {SERVE_NATURAL_CHAT, "chat with id: %s is already active and cannot be resumed again"},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {

@@ -475,6 +475,34 @@ func ProcessResumeChat(chatId, requestId string, datastorecreds []string, chatTo
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_CHAT_ID)
 	}
 
+	// Resume is a one-time operation: a successful resume consumes (deletes) the
+	// chat document from QUERY_METADATA and republishes the chat in the local
+	// active-chat cache. If the chat is already active here, it has already been
+	// resumed -- report that plainly instead of the misleading "not found in
+	// QUERY_METADATA" that the metadata fetch below would otherwise produce.
+	if rv := GetConversation(chatId); rv != nil {
+		if ce, ok := rv.(*ChatEntry); ok {
+			ce.Lock()
+			// Re-check under the entry lock. A concurrent pause/end (or an
+			// inactivity expiry) may have removed this entry from the cache and
+			// set Paused/Removed after our GetConversation read above -- all of
+			// those writers hold this lock while doing so. If that happened the
+			// chat is no longer active, so fall through to the normal resume path:
+			// a just-paused chat is picked up from QUERY_METADATA (the pause
+			// writes the document under this same lock, before setting Paused),
+			// and an ended chat is correctly reported as not found.
+			if !ce.Removed && !ce.Paused {
+				if err := ce.CheckUser(datastorecreds); err != nil {
+					ce.Unlock()
+					return err
+				}
+				ce.Unlock()
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_ALREADY_ACTIVE, chatId)
+			}
+			ce.Unlock()
+		}
+	}
+
 	if IsChatCacheFull() {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
 			errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_CACHE_FULL))
@@ -519,8 +547,14 @@ func ProcessResumeChat(chatId, requestId string, datastorecreds []string, chatTo
 		}
 
 		if chatdoc, ok = fetchMap[key]; !ok || chatdoc == nil {
+			// No paused chat document exists for this id. This is not necessarily a
+			// bad id: a prior resume consumes the document, so a chat that was
+			// previously active and already resumed lands here too. The document
+			// may also have expired (CHAT_DOC_TTL_DURATION). Do not claim the chat
+			// never existed.
 			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
-				fmt.Sprintf("chat with id:%s is not found in QUERY_METADATA", chatId))
+				fmt.Sprintf("no paused chat with id:%s found in QUERY_METADATA; it may have already been"+
+					" resumed (resume is a one-time operation), expired, or never existed", chatId))
 		}
 
 		val := chatdoc.GetValue()

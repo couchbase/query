@@ -693,6 +693,7 @@ const (
 	E_NL_DIRECT_CREATE_REQ                       ErrorCode = 19252
 	E_NL_DIRECT_SEND_REQ                         ErrorCode = 19253
 	E_NL_OPTION_NOT_ALLOWED                      ErrorCode = 19254
+	E_NL_CHAT_ALREADY_ACTIVE                     ErrorCode = 19255
 	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
 	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
 	E_NO_ENCRYPTION_MANAGER                      ErrorCode = 19302
