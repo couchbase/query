@@ -1101,6 +1101,11 @@ func parseCollectionsManifest(res *gomemcached.MCResponse) (*Manifest, error) {
 	return mani, nil
 }
 
+// Collections manifest retrieval is best-effort: both callers in datastore/couchbase treat a
+// failure as non-fatal (the bucket is loaded anyway and a later refresh picks the manifest up).
+// Retry up to 3 times to load the manifest.
+const _COLLECTIONS_MANIFEST_MAX_TRIES = 3
+
 // This function assumes the bucket is locked.
 func (b *Bucket) GetCollectionsManifest() (*Manifest, error) {
 	// Collections not used?
@@ -1109,7 +1114,7 @@ func (b *Bucket) GetCollectionsManifest() (*Manifest, error) {
 	}
 
 	vb := uint32(b.VBHash("DUMMY")) // any key
-	desc := &doDescriptor{version: b.Version, maxTries: b.backOffRetries()}
+	desc := &doDescriptor{version: b.Version, maxTries: _COLLECTIONS_MANIFEST_MAX_TRIES}
 	var res *gomemcached.MCResponse
 	var lastError error
 	selectFailed := false
@@ -1121,6 +1126,12 @@ func (b *Bucket) GetCollectionsManifest() (*Manifest, error) {
 		if err != nil {
 			lastError = err
 			if desc.retry {
+				// "connection refused" means nothing is listening at all (e.g. the KV TLS
+				// port isn't up yet during recovery), so don't ride out the
+				// backoff budget. Other transient errors still get the normal retries.
+				if strings.Contains(err.Error(), "connection refused") {
+					break
+				}
 				continue
 			}
 			if desc.errorString != "" {
