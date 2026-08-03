@@ -987,12 +987,14 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			users := datastore.NonAdminUsers(request.Credentials())
 			stmt, nlAlgebraStmt, err = natural.ProcessCapellaConversationalRequest(request.NaturalCred(),
 				request.NaturalOrganizationId(), request.NaturalVendor(), request.NaturalModel(),
-				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), users,
+				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+				request.NaturalUseKnowledge(), users,
 				request.ExecutionContext(), request.Output().AddPhaseTime)
 		} else {
 			stmt, nlAlgebraStmt, err = natural.ProcessCapellaRequest(request.NaturalCred(),
 				request.NaturalOrganizationId(), request.NaturalVendor(), request.NaturalModel(),
 				nlquery, request.NaturalHint(), elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+				request.NaturalUseKnowledge(),
 				request.ExecutionContext(), request.Output().AddPhaseTime)
 		}
 	} else {
@@ -1013,12 +1015,14 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		if chatId != "" {
 			users := datastore.NonAdminUsers(request.Credentials())
 			stmt, nlAlgebraStmt, err = natural.ProcessDirectConversationalRequest(cfg,
-				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(), users,
+				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+				request.NaturalUseKnowledge(), users,
 				request.ExecutionContext(), request.Output().AddPhaseTime, &nlReqTokens, &nlChatTokens)
 			request.SetNaturalChatTokens(nlChatTokens.Prompt, nlChatTokens.Completion, nlChatTokens.Total)
 		} else {
 			stmt, nlAlgebraStmt, err = natural.ProcessDirectRequest(cfg,
 				nlquery, request.NaturalHint(), elems, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
+				request.NaturalUseKnowledge(),
 				request.ExecutionContext(), request.Output().AddPhaseTime, &nlReqTokens)
 		}
 		request.SetNaturalRequestTokens(nlReqTokens.Prompt, nlReqTokens.Completion, nlReqTokens.Total)

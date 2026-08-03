@@ -37,6 +37,7 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_SESSIONS_PARSE_EXPIRE_TIME:     {SESSIONS_IKEY, "Error parsing \"expiresAt\": %v "},
 	E_NL_PROMPT_SCHEMA_MARSHAL:          {PROMPT_IKEY, "Error marshalling schema information for prompt:"},
 	E_NL_PROMPT_INFER:                   {PROMPT_IKEY, "Schema inferring failed for keyspace %v"},
+	E_NL_PROMPT_KNOWLEDGE:               {PROMPT_IKEY, "Knowledge injection failed for keyspace %v"},
 	E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL: {CHATCOMPLTIONS_IKEY, "Error marshalling prompt for chat completions API request"},
 	E_NL_CHATCOMPLETIONS_REQ_FAILED:     {CHATCOMPLTIONS_IKEY, "Chat completions request failed with status %v"},
 	E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL: {CHATCOMPLTIONS_IKEY, "Error unmarshalling chat completions response"},

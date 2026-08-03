@@ -106,6 +106,8 @@ type Request interface {
 	NaturalAdvise() bool
 	SetNaturalExplain(exp bool)
 	NaturalExplain() bool
+	SetNaturalUseKnowledge(use bool)
+	NaturalUseKnowledge() bool
 	SetNaturalBeginChat(beg bool)
 	NaturalBeginChat() bool
 	SetNaturalEndChat(end bool)
@@ -484,6 +486,7 @@ type BaseRequest struct {
 	nloutput             string
 	nladvise             bool
 	nlexplain            bool
+	nlknowledge          bool
 	nlchatid             string
 	nlbeginchat          bool
 	nlendchat            bool
@@ -1888,6 +1891,14 @@ func (this *BaseRequest) NaturalExplain() bool {
 	return this.nlexplain
 }
 
+func (this *BaseRequest) SetNaturalUseKnowledge(use bool) {
+	this.nlknowledge = use
+}
+
+func (this *BaseRequest) NaturalUseKnowledge() bool {
+	return this.nlknowledge
+}
+
 func (this *BaseRequest) SetNaturalBeginChat(begin bool) {
 	this.nlbeginchat = begin
 }
@@ -2120,6 +2131,11 @@ func (this *BaseRequest) NaturalTime() time.Duration {
 // light-weight (lighter than a full parser) check if the statement starts with "USING AI"
 // if it does, then extract the optional WITH clause and separate out the natural language request
 var prefixuai = regexp.MustCompile("^[eE][xX][pP][lL][aA][iI][nN][[:space:]]+$|^[aA][dD][vV][iI][sS][eE][[:space:]]+$")
+
+// uaiknowledgepattern must be tried before uaipattern in combinednaturalstatement: both match a
+// "USING AI" prefix, but regexp's leftmost-first alternative selection means the longer,
+// more-specific phrase has to come first or it is never reached.
+var uaiknowledgepattern = "[Uu][Ss][Ii][Nn][Gg][[:space:]]+[Aa][Ii][[:space:]]+[Aa][Nn][Dd][[:space:]]+[Kk][Nn][Oo][Ww][Ll][Ee][Dd][Gg][Ee][[:space:]]+"
 var uaipattern = "[Uu][Ss][Ii][Nn][Gg][[:space:]]+[Aa][Ii][[:space:]]+"
 var with = regexp.MustCompile("[Ww][Ii][Tt][Hh][[:space:]]*{")
 var forfts = regexp.MustCompile("^[Ff][Oo][Rr][[:space:]]+[Ff][Tt][Ss][[:space:]]+|" +
@@ -2144,7 +2160,7 @@ var resumechatpattern = "[rR][eE][sS][uU][mM][eE][[:space:]]+[cC][hH][aA][tT][[:
 
 var alterchatpattern = "[aA][lL][tT][eE][rR][[:space:]]+[cC][hH][aA][tT][[:space:]]*"
 
-var combinednaturalstatement = regexp.MustCompile((fmt.Sprintf("%s|%s|%s|%s|%s|%s", uaipattern, beginchatpattern, endchatpattern, pausechatpattern, resumechatpattern, alterchatpattern)))
+var combinednaturalstatement = regexp.MustCompile((fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s", uaiknowledgepattern, uaipattern, beginchatpattern, endchatpattern, pausechatpattern, resumechatpattern, alterchatpattern)))
 
 func (this *BaseRequest) ProcessNatural() errors.Error {
 	s := this.Statement()
@@ -2164,6 +2180,7 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 	switch {
 	case strings.HasPrefix(matchString, "using"):
 		this.SetStatement("")
+		this.SetNaturalUseKnowledge(strings.Contains(matchString, "knowledge"))
 		return this.processNaturalUsingAi(m, s)
 
 	case strings.HasPrefix(matchString, "begin"):
@@ -2219,7 +2236,7 @@ var (
 	usingAiWithOpts = map[string]bool{
 		"keyspaces": true, "creds": true, "orgId": true, "execute": true,
 		"output": true, "chatId": true, "hint": true, "vendor": true,
-		"model": true, "config": true,
+		"model": true, "config": true, "knowledge": true,
 	}
 	beginChatWithOpts = map[string]bool{"keyspaces": true, "timeout": true}
 	pauseChatWithOpts = map[string]bool{
@@ -2278,6 +2295,12 @@ func (this *BaseRequest) applyNaturalWithOpts(opts map[string]interface{},
 		case "execute":
 			if b, ok := v.(bool); ok {
 				this.SetNaturalShowOnly(!b)
+			} else {
+				return errors.NewAdminSettingTypeError(k, v)
+			}
+		case "knowledge":
+			if b, ok := v.(bool); ok {
+				this.SetNaturalUseKnowledge(b)
 			} else {
 				return errors.NewAdminSettingTypeError(k, v)
 			}

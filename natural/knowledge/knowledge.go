@@ -428,30 +428,15 @@ func FetchEntry(extKey string) (value.AnnotatedValue, errors.Error) {
 		return nil, err
 	}
 
-	scopeUid, collectionUid, uerr := resolveUids(path)
-	if uerr != nil {
-		if errors.IsNotFoundError("", uerr) {
-			return nil, nil
-		}
-		return nil, uerr
-	}
-
-	b, err := getSystemCollection(path.Bucket())
-	if err != nil {
-		if errors.IsNotFoundError("", err) {
-			return nil, nil
-		}
-		return nil, err
+	b, resolved, scopeUid, collectionUid, rerr := resolveForRead(path)
+	if rerr != nil {
+		return nil, rerr
 	}
 	if b == nil {
 		return nil, nil
 	}
-	if rejectSystemScope(b, path) != nil {
-		return nil, nil
-	}
-	key := getStorageKey(scopeUid, collectionUid, path)
 
-	av, exists, lerr := loadDoc(b, key)
+	av, exists, lerr := loadDoc(b, getStorageKey(scopeUid, collectionUid, resolved))
 	if lerr != nil {
 		return nil, lerr
 	}
@@ -466,7 +451,82 @@ func FetchEntry(extKey string) (value.AnnotatedValue, errors.Error) {
 	if !ok {
 		return nil, nil
 	}
-	return rowFor(path, name, vv), nil
+	return rowFor(resolved, name, vv), nil
+}
+
+// resolveForRead resolves path the same way validateAndResolvePath does for writes, but tolerates
+// (returns nil, "", "", nil) rather than erroring on any "there's nothing here to read" condition -
+// keyspace/scope not found, no system collection for the bucket, or a path targeting the reserved
+// system scope - since callers reading knowledge legitimately expect "no knowledge for this
+// keyspace" to look identical to "keyspace not there", not to be a hard error.
+func resolveForRead(path *algebra.Path) (b datastore.Keyspace, resolved *algebra.Path, scopeUid, collectionUid string, err errors.Error) {
+	// a bare bucket name (no scope/collection given) implicitly means bucket._default._default,
+	// mirroring algebra.newCreateKnowledge's normalization on the write side - without this, a
+	// USING AI AND KNOWLEDGE request naming just a bucket (the common case) would never find
+	// knowledge created against that same bucket. The normalized path is returned so callers use
+	// it (not their original, possibly-short path) to compute the matching storage key.
+	if path.Scope() == "" {
+		path = algebra.NewPathLong(path.Namespace(), path.Bucket(), "_default", "_default")
+	}
+	if !path.IsCollection() || path.Namespace() == datastore.SYSTEM_NAMESPACE {
+		return nil, nil, "", "", nil
+	}
+
+	scopeUid, collectionUid, uerr := resolveUids(path)
+	if uerr != nil {
+		if errors.IsNotFoundError("", uerr) {
+			return nil, nil, "", "", nil
+		}
+		return nil, nil, "", "", uerr
+	}
+
+	b, err = getSystemCollection(path.Bucket())
+	if err != nil {
+		if errors.IsNotFoundError("", err) {
+			return nil, nil, "", "", nil
+		}
+		return nil, nil, "", "", err
+	}
+	if b == nil || rejectSystemScope(b, path) != nil {
+		return nil, nil, "", "", nil
+	}
+	return b, path, scopeUid, collectionUid, nil
+}
+
+// FetchAll returns every knowledge entry stored for the keyspace identified by path, as a
+// name-to-value map, or (nil, nil) if the keyspace has no knowledge entries (including if it has
+// no system collection, or targets the reserved system scope). Used by natural.KnowledgeInjector
+// to gather knowledge for a USING AI AND KNOWLEDGE prompt - the caller is expected to have already
+// authorized the keyspace itself before calling this.
+func FetchAll(path *algebra.Path) (map[string]string, errors.Error) {
+	b, resolved, scopeUid, collectionUid, rerr := resolveForRead(path)
+	if rerr != nil {
+		return nil, rerr
+	}
+	if b == nil {
+		return nil, nil
+	}
+
+	av, exists, lerr := loadDoc(b, getStorageKey(scopeUid, collectionUid, resolved))
+	if lerr != nil {
+		return nil, lerr
+	}
+	if !exists {
+		return nil, nil
+	}
+	obj, ok := av.Field(_FIELD)
+	if !ok || obj.Type() != value.OBJECT {
+		return nil, nil
+	}
+	fields := obj.Fields()
+	if len(fields) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]string, len(fields))
+	for name, v := range fields {
+		out[name] = value.NewValue(v).ToString()
+	}
+	return out, nil
 }
 
 // DropCollection removes the knowledge document (if any) holding the entries for the

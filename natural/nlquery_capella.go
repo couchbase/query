@@ -572,7 +572,7 @@ func capellaGetTemperatureForModel(provider, model string) float64 {
 }
 
 func ProcessCapellaRequest(nlCred, nlOrgId, nlProvider, nlModel, nlquery, nlHint string, elems []*algebra.Path, nloutputOpt naturalOutput,
-	explain, advise bool,
+	explain, advise, useKnowledge bool,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
 	waitTime := util.Now()
@@ -596,7 +596,7 @@ func ProcessCapellaRequest(nlCred, nlOrgId, nlProvider, nlModel, nlquery, nlHint
 
 	keyspaceInfo := make(map[string]interface{}, len(elems))
 	inferschema := util.Now()
-	keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context, false)
+	keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context, false, useKnowledge, nlquery)
 	record(execution.INFERSCHEMA, util.Since(inferschema))
 	if err != nil {
 		return "", nil, err
@@ -756,7 +756,7 @@ func capellaRetryRequest(nlCred, nlOrgId string, prompt *prompt,
 }
 
 func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, nlquery, nlHint string, chatId string,
-	nloutputOpt naturalOutput, explain, advise bool,
+	nloutputOpt naturalOutput, explain, advise, useKnowledge bool,
 	users []string,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
@@ -806,7 +806,7 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 	if ce.prompt == nil {
 		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
 		inferschema := util.Now()
-		keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context, false)
+		keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context, false, useKnowledge, nlquery)
 		record(execution.INFERSCHEMA, util.Since(inferschema))
 		if err != nil {
 			return "", nil, err

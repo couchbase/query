@@ -1176,7 +1176,8 @@ func vectorIndexesForPath(p *algebra.Path) []map[string]interface{} {
 }
 
 func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebra.Path,
-	context NaturalContext, includeSamples bool) (map[string]interface{},
+	context NaturalContext, includeSamples bool,
+	useKnowledge bool, naturalPrompt string) (map[string]interface{},
 	map[string]map[string]*sampleField, errors.Error) {
 
 	var err errors.Error
@@ -1218,6 +1219,18 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 
 		if vecIdx := vectorIndexesForPath(p); len(vecIdx) > 0 {
 			info["vectorIndexes"] = vecIdx
+		}
+		if useKnowledge {
+			// Knowledge is an enrichment, not a requirement for building a valid prompt (unlike
+			// schema, above): a failure here shouldn't fail an otherwise-successful NL query, so
+			// log and continue without knowledge for this keyspace rather than aborting.
+			knowledge, kerr := Injector.Inject(context, p, naturalPrompt)
+			if kerr != nil {
+				logging.Errorf("USING AI AND KNOWLEDGE [%s]: failed to gather knowledge for %s: %v",
+					context.RequestId(), p.ProtectedString(), kerr)
+			} else if knowledge != "" {
+				info["knowledge"] = knowledge
+			}
 		}
 
 		keyspaceInfo[p.Keyspace()] = info
@@ -1276,6 +1289,7 @@ func appendSQLUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
 	}
 	userMessageBuf.WriteString(_AMBIGUOUS_TERM_INSTRUCTION)
 	userMessageBuf.WriteString(vectorSearchInstructions(false))
+	userMessageBuf.WriteString(_KNOWLEDGE_INSTRUCTION)
 	userMessageBuf.WriteString("\n\nReturn only a single SQL++ statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a query, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
@@ -1385,6 +1399,7 @@ func appendJSUDFUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
 		"\n\nQuote aliases with grave accent characters.")
 	userMessageBuf.WriteString(_AMBIGUOUS_TERM_INSTRUCTION)
 	userMessageBuf.WriteString(vectorSearchInstructions(true))
+	userMessageBuf.WriteString(_KNOWLEDGE_INSTRUCTION)
 	userMessageBuf.WriteString("\n\nReturn only a single CREATE FUNCTION statement on a single line." +
 		"\n\nIf you're sure the Prompt can't be used to generate a function, say " +
 		"\n#ERR:\" and then explain why not without prefix.\n\n")
@@ -1453,6 +1468,10 @@ func appendJSUDFIterativeUserMessage(chat *prompt, naturalPrompt string, hint st
 }
 
 // Reusable instruction snippets, shared across prompt builders.
+
+const _KNOWLEDGE_INSTRUCTION = "\n\nIf a keyspace's information above includes a \"knowledge\" entry, apply " +
+	"it the same way as a Hint, except that it is persistent, keyspace-level context rather than something " +
+	"supplied with this particular request. Prefer it over your own assumptions if it conflicts with them."
 
 const _AMBIGUOUS_TERM_INSTRUCTION = "\n\nIf a value needed to complete the query " +
 	"(for example a numeric threshold, date, or category) is not stated in the Prompt and " +

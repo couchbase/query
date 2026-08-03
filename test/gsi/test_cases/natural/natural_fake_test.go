@@ -21,8 +21,10 @@ package natural
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -95,6 +97,17 @@ func testNaturalFakeProvider(qc *gsi.MockServer, t *testing.T) {
 	testNaturalConversationalWrongUser(qc, t)
 	testNaturalConfigInWithClause(qc, t)
 	testNaturalWithOptionNotAllowed(qc, t)
+	testNaturalUsingAiAndKnowledgeInjectsPrompt(qc, t)
+	testNaturalUsingAiWithoutKnowledgeOmitsPrompt(qc, t)
+	testNaturalUsingAiKnowledgeWithOptOverridesPhrase(qc, t)
+
+	// best-effort cleanup: this is the last of the three tests that depend on the aiknow1 entry
+	// seeded above, so remove it now rather than leaving it behind - qc runs against a real,
+	// persistent cluster bucket (not a fresh one per test run), and a leftover entry would make
+	// the next run's seeding CREATE KNOWLEDGE fail with "already exists" instead of re-seeding
+	// cleanly. There's no DROP KNOWLEDGE statement (yet), so this goes through
+	// system:natural_knowledge directly.
+	gsi.RunAdminStmt(qc, "DELETE FROM system:natural_knowledge")
 }
 
 // testNaturalHappyPath verifies the full round-trip: the gateway posts to the
@@ -309,5 +322,82 @@ func testNaturalWithOptionNotAllowed(qc *gsi.MockServer, t *testing.T) {
 	if rr.Err.Code() != errors.E_NL_OPTION_NOT_ALLOWED {
 		t.Errorf("option-not-allowed: got code %d, want %d (%v)",
 			rr.Err.Code(), errors.E_NL_OPTION_NOT_ALLOWED, rr.Err)
+	}
+}
+
+// captureBody starts a fake LLM server that records the raw request body of the last call it
+// received (the chat-completions payload, containing the fully-built prompt) and replies with a
+// canned assistant completion.
+func captureBody(content string, body *string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		*body = string(b)
+		writeChatCompletion(w, content)
+	}))
+}
+
+// testNaturalUsingAiAndKnowledgeInjectsPrompt is the end-to-end regression guard for USING AI AND
+// KNOWLEDGE: a CREATE KNOWLEDGE entry for a keyspace must show up in the prompt actually posted to
+// the LLM for a subsequent USING AI AND KNOWLEDGE request against that keyspace. CREATE KNOWLEDGE
+// requires PRIV_ADMIN so it's seeded with RunAdminStmt; the USING AI request itself runs with the
+// harness's regular (non-admin) creds, which also verifies that reading system:natural_knowledge
+// from within the injector does not require admin privileges.
+func testNaturalUsingAiAndKnowledgeInjectsPrompt(qc *gsi.MockServer, t *testing.T) {
+	seed := gsi.RunAdminStmt(qc, `CREATE KNOWLEDGE aiknow1 FOR orders AS 'ICAO codes identify airlines uniquely';`)
+	if seed.Err != nil {
+		t.Fatalf("using-ai-and-knowledge: seeding CREATE KNOWLEDGE failed: %v", seed.Err)
+	}
+
+	var body string
+	srv := captureBody("```sql\nSELECT name FROM orders\n```", &body)
+	defer srv.Close()
+
+	rr := runNatural(qc, `USING AI AND KNOWLEDGE WITH {"keyspaces":"orders", "execute":false} list the character names`,
+		slmConfig(srv.URL))
+	if rr.Err != nil {
+		t.Fatalf("using-ai-and-knowledge: unexpected error: %v", rr.Err)
+	}
+	if !strings.Contains(body, "ICAO codes identify airlines uniquely") {
+		t.Errorf("using-ai-and-knowledge: prompt sent to the LLM did not carry the CREATE KNOWLEDGE "+
+			"entry; body: %s", body)
+	}
+}
+
+// testNaturalUsingAiWithoutKnowledgeOmitsPrompt is the negative counterpart: a plain USING AI
+// request (no AND KNOWLEDGE phrase, no "knowledge" WITH-option) against the same keyspace/entry
+// from the prior test must NOT carry the knowledge text, confirming the feature is opt-in.
+func testNaturalUsingAiWithoutKnowledgeOmitsPrompt(qc *gsi.MockServer, t *testing.T) {
+	var body string
+	srv := captureBody("```sql\nSELECT name FROM orders\n```", &body)
+	defer srv.Close()
+
+	rr := runNatural(qc, `USING AI WITH {"keyspaces":"orders", "execute":false} list the character names`,
+		slmConfig(srv.URL))
+	if rr.Err != nil {
+		t.Fatalf("using-ai-without-knowledge: unexpected error: %v", rr.Err)
+	}
+	if strings.Contains(body, "ICAO codes identify airlines uniquely") {
+		t.Errorf("using-ai-without-knowledge: prompt unexpectedly carried the knowledge entry when "+
+			"knowledge was not requested; body: %s", body)
+	}
+}
+
+// testNaturalUsingAiKnowledgeWithOptOverridesPhrase verifies the "knowledge" WITH-option can force
+// injection on for a plain USING AI request even without the AND KNOWLEDGE phrase, the same way
+// "execute" overrides ADVISE/EXPLAIN's show-only default.
+func testNaturalUsingAiKnowledgeWithOptOverridesPhrase(qc *gsi.MockServer, t *testing.T) {
+	var body string
+	srv := captureBody("```sql\nSELECT name FROM orders\n```", &body)
+	defer srv.Close()
+
+	rr := runNatural(qc,
+		`USING AI WITH {"keyspaces":"orders", "execute":false, "knowledge":true} list the character names`,
+		slmConfig(srv.URL))
+	if rr.Err != nil {
+		t.Fatalf("knowledge-with-opt: unexpected error: %v", rr.Err)
+	}
+	if !strings.Contains(body, "ICAO codes identify airlines uniquely") {
+		t.Errorf(`knowledge-with-opt: prompt did not carry the knowledge entry despite "knowledge":true; `+
+			"body: %s", body)
 	}
 }

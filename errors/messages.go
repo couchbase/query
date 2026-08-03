@@ -8918,6 +8918,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_NL_PROMPT_KNOWLEDGE, // 19255
+		symbol:      "E_NL_PROMPT_KNOWLEDGE",
+		Description: "Knowledge injection failed for keyspace «keyspace»",
+		IsUser:      YES,
+		Reason: []string{
+			"Retrieving CREATE KNOWLEDGE entries for a keyspace referenced by a USING AI AND KNOWLEDGE request failed.",
+		},
+		Action: []string{
+			"Check the accompanying cause for the specific reason knowledge retrieval failed and address it.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_ENCRYPTION_READER_CREATE, // 19300
 		symbol:      "E_ENCRYPTION_READER_CREATE",
 		Description: "Failed to create encryption reader",
