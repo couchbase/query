@@ -375,7 +375,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 			delete(_POOLMAP.poolServices, p.Name)
 		}
 		if err == nil {
-			pool.Close()
+			pool.Close(false)
 		}
 	}
 
@@ -1448,7 +1448,12 @@ func (p *namespace) refreshFully(optimizedRefresh bool) {
 		p.last = util.Now()
 		return
 	}
-	newpool.Close()
+
+	// Pass force=true when calling newpool.Close() to eagerly close newpool's underlying buckets and their connection pools -
+	// freeing resources sooner for GC reclamation.
+	// It is safe to pass force=true when calling newpool.Close() here, as newpool and its underlying buckets are not being
+	// used anywhere
+	newpool.Close(true)
 
 	p.lock.Lock()
 	for _, ks := range p.keyspaceCache {
@@ -1580,7 +1585,7 @@ func (p *namespace) reload2(newpool *cb.Pool, version *uint64) {
 	p.nslock.Unlock()
 
 	// ...MB-33185 let go of old pool when noone is accessing it
-	oldPool.Close()
+	oldPool.Close(false)
 }
 
 const (
