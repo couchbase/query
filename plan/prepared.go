@@ -32,7 +32,7 @@ import (
 const (
 	_PLAN_VERSION_DUMMY          = -1                   // unused, e.g. for SubqueryPlans
 	_PLAN_VERSION_ORDER_OFFSET   = util.PLAN_VERSION_72 // Order with Offset behavioral change
-	_PLAN_VERSION_PLAN_STABILITY = util.PLAN_VERSION_81 // Plan stability
+	_PLAN_VERSION_PLAN_STABILITY = util.PLAN_VERSION_85 // Plan stability
 )
 
 type Prepared struct {

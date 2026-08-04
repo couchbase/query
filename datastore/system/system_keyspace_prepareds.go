@@ -136,7 +136,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 						remoteValue.UnsetField("planVersion")
 					}
 					metaPlan := doc["plan"]
-					if planVersion < util.PLAN_VERSION_81 {
+					if planVersion < util.PLAN_VERSION_85 {
 						newMetaPlan := make(map[string]interface{}, 2)
 						newMetaPlan["plan"] = metaPlan
 						if _, ok := doc["subqueryPlans"]; ok {

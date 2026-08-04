@@ -80,7 +80,7 @@
 	"n1ql_chats": {
 		"type": "counter",
 		"help": "Total number of natural language chats.",
-		"added": "8.1.0"
+		"added": "8.5.0"
 	},
 	"n1ql_deletes": {
 		"type": "counter",
@@ -645,7 +645,7 @@
 	},
 	"n1ql_external_scans": {
 		"type": "counter",
-		"added": "8.1.0",
+		"added": "8.5.0",
 		"help": "Total number of external collection scans."
 	},
 	"n1ql_approx_vector_distance_func": {
