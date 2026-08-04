@@ -441,10 +441,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// migrations (functions storage and CBO stats)
-	storage.Migrate()
-	server_package.MigrateDictionary()
-
 	er = endpoint.SetupSSL()
 	if er != nil {
 		logging.Errorf("Error with Setting up SSL endpoints : %v", err.Error())
@@ -456,6 +452,10 @@ func main() {
 
 	// topology awareness - after listeners are ready to handle requests
 	_ = control.NewManager(*UUID)
+
+	// migrations (functions storage and CBO stats)
+	storage.Migrate()
+	server_package.MigrateDictionary()
 
 	// Now that we are up and running, try to prime the prepareds cache
 	prepareds.PreparedsRemotePrime()
