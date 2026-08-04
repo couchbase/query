@@ -1421,7 +1421,7 @@ func (b *Bucket) mkConnPool(node string, poolServices *PoolServices) (*connectio
 }
 
 func (p *Pool) refresh() (err error) {
-	buckets := []Bucket{}
+	buckets := make([]Bucket, 0, len(p.BucketMap))
 	err = p.client.parseURLResponse(p.BucketURL["uri"], &buckets)
 	if err != nil {
 		return err
@@ -1697,7 +1697,11 @@ func (p *Pool) BucketExists(name string) bool {
 }
 
 // Release bucket connections when the pool is no longer in use
-func (p *Pool) Close() {
+// force=false: a bucket is closed and its connection pools are torn down immediately only if the bucket is already
+// unused; otherwise, the bucket close and connection pool teardown is deferred until the bucket itself is no longer referenced.
+// force=true: closes the buckets and all the buckets' connection pools immediately. Pass force=true when the caller
+// already knows none of the buckets are in use.
+func (p *Pool) Close(force bool) {
 
 	p.Lock()
 
@@ -1719,9 +1723,12 @@ func (p *Pool) Close() {
 
 		// MB-33208 defer closing connection pools until the bucket is no longer used
 		// MB-36186 if the bucket is unused make it unreachable straight away
-		needClose := bucket.connPools == nil && !bucket.closed
+		needClose := force || (bucket.connPools == nil && !bucket.closed)
 		if needClose {
-			runtime.SetFinalizer(&bucket, nil)
+			// Un-set the previously set finalizer. If an object has no finalizer associated with it when it becomes unreachable
+			// the GC can reclaim the object in a single GC cycle instead of 2 GC cycles ( which is the case when an object has
+			// a finalizer associated with it )
+			runtime.SetFinalizer(bucket, nil)
 		}
 		bucket.closed = true
 		bucket.Unlock()
