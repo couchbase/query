@@ -412,10 +412,6 @@ func main() {
 		)
 	})
 
-	// perform migration before accepting connections
-	storage.Migrate()
-	server_package.MigrateDictionary()
-
 	// Create http endpoint (but don't start it yet)
 	endpoint := http.NewServiceEndpoint(server, *STATIC_PATH, *METRICS,
 		*HTTP_ADDR, *HTTPS_ADDR, *CA_FILE, *CERT_FILE, *KEY_FILE)
@@ -444,6 +440,10 @@ func main() {
 		logging.Errorf("cbq-engine (HTTP_ADDR %v) exiting with error: %v", *HTTP_ADDR, er)
 		os.Exit(1)
 	}
+
+	// migrations (functions storage and CBO stats)
+	storage.Migrate()
+	server_package.MigrateDictionary()
 
 	er = endpoint.SetupSSL()
 	if er != nil {
