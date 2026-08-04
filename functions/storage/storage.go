@@ -33,7 +33,8 @@ import (
 type nodeState int
 
 const (
-	_NOT_MIGRATING = nodeState(iota)
+	_UNKNOWN = nodeState(iota)
+	_NOT_MIGRATING
 	_MIGRATING
 	_MIGRATED
 	_ABORTING
@@ -57,8 +58,13 @@ const _MAX_RETRY = 5
 
 const _N1QL_SYSTEM_BUCKET = "N1QL_SYSTEM_BUCKET"
 
-var migrating nodeState = _NOT_MIGRATING
+// _UNKNOWN is the zero value migrating starts at, before Migrate() has evaluated the true
+// state. It is distinct from _NOT_MIGRATING (evaluated: no migration currently under way) so
+// that a caller racing Migrate() at start-up can tell "not yet evaluated" from "evaluated, and
+// migration isn't needed/running" and wait rather than wrongly assuming the latter.
+var migrating nodeState = _UNKNOWN
 var migratingLock sync.Mutex
+var migratingCond = sync.NewCond(&migratingLock)
 var countDownStarted time.Time
 var lastActivity time.Time
 
@@ -76,15 +82,32 @@ var migrationStartLock sync.Mutex
 var migrationStartCond *sync.Cond
 var migrationStartWait bool
 
+// sets migrating to state under migratingLock and wakes any caller waiting in UseSystemStorage()
+// for the initial _UNKNOWN evaluation to resolve
+func setMigrating(state nodeState) {
+	migratingLock.Lock()
+	migrating = state
+	if state != _UNKNOWN {
+		migratingCond.Broadcast()
+	}
+	migratingLock.Unlock()
+}
+
 func Migrate() {
 
 	// no migration needed if serverless
 	if tenant.IsServerless() {
-		migrating = _MIGRATED
+		setMigrating(_MIGRATED)
 		return
 	}
 
-	if checkSetComplete() {
+	migratingLock.Lock()
+	complete := checkSetComplete()
+	if complete {
+		migratingCond.Broadcast()
+	}
+	migratingLock.Unlock()
+	if complete {
 		logging.Infof("UDF migration: Already done")
 		return
 	}
@@ -100,7 +123,7 @@ func Migrate() {
 	ds, ok := datastore.GetDatastore().(datastore.Datastore2)
 	if !ok || ds == nil {
 		logging.Warnf("UDF migration: Migration not done - datastore does not support scanning buckets directly")
-		migrating = _MIGRATED
+		setMigrating(_MIGRATED)
 		datastore.MarkMigrationComplete(true, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 		return
 	}
@@ -122,12 +145,19 @@ func Migrate() {
 
 	// if all the buckets appear migrated attempt migration now (including when bucketCount == 0)
 	if bucketCount == newBucketCount {
-		migrating = _MIGRATING
+		setMigrating(_MIGRATING)
 
 		go migrateAll(bucketCount)
 
 		return
 	}
+
+	// evaluated: migration isn't needed yet (waiting for buckets to gain the new _system._query
+	// collection) - set migration state to _NOT_MIGRATING before RegisterMigrator() so its
+	// callback never observes _UNKNOWN
+	// after this call there is no need to check for _UNKNOWN or call setMigrating() to change
+	// migration state
+	setMigrating(_NOT_MIGRATING)
 
 	datastore.RegisterMigrator(func(b string) {
 		// At least one bucket has the new _query collection
@@ -853,17 +883,26 @@ func checkMigrations() {
 }
 
 func UseSystemStorage() bool {
+	// terminal states never revert once observed, so this unsynchronized peek is safe and
+	// avoids taking the lock on the common, post-migration steady-state path
 	if migrating == _MIGRATED || migrating == _ABORTED || tenant.IsServerless() {
 		return true
 	}
 
-	if migrating == _NOT_MIGRATING {
-		migratingLock.Lock()
-		notMigrating := migrating == _NOT_MIGRATING
-		migratingLock.Unlock()
-		if notMigrating {
-			return false
-		}
+	migratingLock.Lock()
+	for migrating == _UNKNOWN {
+		// Migrate() hasn't evaluated the migration state yet - wait rather than assume
+		// _NOT_MIGRATING, which would spuriously take the legacy storage path
+		migratingCond.Wait()
+	}
+	state := migrating
+	migratingLock.Unlock()
+
+	if state == _MIGRATED || state == _ABORTED {
+		return true
+	}
+	if state == _NOT_MIGRATING {
+		return false
 	}
 
 	migration.Await(_UDF_MIGRATION)
