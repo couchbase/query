@@ -749,6 +749,21 @@ func (s *store) SetClientConnectionSecurityConfig() (err error) {
 	return
 }
 
+// Applies the datastore's connection security configuration to the passed cb.Client
+func applyConnSecurityConfigToCbClient(client *cb.Client, s *store) error {
+	if s.connSecConfig != nil && s.connSecConfig.ClusterEncryptionConfig.EncryptData {
+		return client.InitTLS(s.connSecConfig.CAFile,
+			s.connSecConfig.CertFile,
+			s.connSecConfig.KeyFile,
+			s.connSecConfig.ClusterEncryptionConfig.DisableNonSSLPorts,
+			s.connSecConfig.TLSConfig.PrivateKeyPassphrase)
+	} else {
+		client.ClearTLS()
+	}
+
+	return nil
+}
+
 func (s *store) SetConnectionSecurityConfig(connSecConfig *datastore.ConnectionSecurityConfig) {
 	s.connSecConfig = connSecConfig
 	if err := s.SetClientConnectionSecurityConfig(); err != nil {
@@ -968,12 +983,23 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 			if err != nil {
 				return nil, errors.NewCbNamespaceNotFoundError(err, name)
 			}
-			// check if the default pool exists
-			cbpool, err = client.GetPool(name)
+
+			// MB-73090: Apply the current security configuration to the new client before invoking GetPool(). This ensure that
+			// the new pool and new bucket pools created by GetPool(), inherit the correct connection security settings -
+			// Preventing connection failures when the connections are used.
+			err = applyConnSecurityConfigToCbClient(&client, s)
 			if err != nil {
 				return nil, errors.NewCbNamespaceNotFoundError(err, name)
 			}
+
+			// Only reset the datastore's client to the newly created client, if connection security application is successful
 			s.client = client
+
+			// check if the default pool exists
+			cbpool, err = s.client.GetPool(name)
+			if err != nil {
+				return nil, errors.NewCbNamespaceNotFoundError(err, name)
+			}
 
 			err = s.SetClientConnectionSecurityConfig()
 			if err != nil {
@@ -1493,7 +1519,7 @@ func (p *namespace) reload(version *uint64) {
 func (p *namespace) reload1(err error) (cb.Pool, error) {
 	var client cb.Client
 
-	logging.Errorf("Error updating pool name <ud>'%s'</ud>: %v", p.name, err)
+	logging.Errorf("Error updating pool name <ud>'%s'</ud>. Retrying reloading namespace.: %v", p.name, err)
 	url := p.store.URL()
 
 	/*
@@ -1507,19 +1533,36 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 		client, err = cb.Connect(url, cb.USER_AGENT)
 	}
 	if err != nil {
-		logging.Errorf("Error connecting to URL %s: %v", url, err)
+		logging.Errorf("Retrying reloading namespace <ud>'%s'</ud> failed: Error connecting to URL %s: %v", p.name, url, err)
 		return cb.Pool{}, err
 	}
-	// check if the default pool exists
-	newpool, err := client.GetPool(p.name)
+
+	// MB-73090: Apply the current security configuration to the new client before invoking GetPool(). This ensure that
+	// the new pool and new bucket pools created by GetPool(), inherit the correct connection security settings -
+	// Preventing connection failures when the connections are used.
+	err = applyConnSecurityConfigToCbClient(&client, p.store)
 	if err != nil {
-		logging.Errorf("Retry Failed Error updating pool name <ud>%s</ud>: %v", p.name, err)
+		logging.Errorf(
+			"Retrying reloading namespace <ud>'%s'</ud> failed: Error applying connection security configuration to cb.Client: %v",
+			p.name, err)
+		return cb.Pool{}, err
+	}
+
+	// Only reset the datastore's client if connection security application is successful
+	p.store.client = client
+
+	// check if the default pool exists
+	newpool, err := p.store.client.GetPool(p.name)
+	if err != nil {
+		logging.Errorf("Retrying reloading namespace <ud>'%s'</ud> failed: Error updating pool name <ud>%s</ud>: %v", p.name, err)
 		return newpool, err
 	}
-	p.store.client = client
 
 	err = p.store.SetClientConnectionSecurityConfig()
 	if err != nil {
+		logging.Errorf(
+			"Retrying reloading namespace <ud>'%s'</ud> failed: Error applying connection security configuration to datastore: %v",
+			p.name, err)
 		return newpool, err
 	}
 
