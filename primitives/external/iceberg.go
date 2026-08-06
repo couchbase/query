@@ -490,6 +490,108 @@ func flipOp(op iceberg.Operation) iceberg.Operation {
 	}
 }
 
+// variantPredicate is a candidate row-group-stats pruning predicate on a shredded
+// VARIANT sub-path (e.g. "attrs.color"), extracted directly from the N1QL filter
+// expression -- NOT derived from n1qlToIcebergExpr's iceberg.BooleanExpression
+// output. That's necessary because a VARIANT column has no children/field-IDs in
+// Iceberg's logical schema, so a reference to one of its sub-paths can never bind;
+// iceberg.UnboundPredicate's public interface only exposes Term()/Op(), and the
+// literal value on an unbound predicate is locked inside a private iceberg-go type,
+// so there is no way to recover it after n1qlToIcebergExpr's conversion runs. This
+// works directly from the original N1QL expression instead, reusing the same
+// n1qlFieldPath/n1qlExtractValue helpers n1qlToIcebergExpr itself uses.
+//
+// Whether "top" in "top.sub" actually IS a shredded variant column, and whether
+// "sub" is itself a scalar leaf, is decided later at the physical-Parquet-schema
+// level (see findVariantLeaf in iceberg_row_filter.go) -- this struct only records
+// that the path SHAPE (exactly two dotted segments) is a candidate.
+type variantPredicate struct {
+	path string            // e.g. "attrs.color"
+	op   iceberg.Operation // OpEQ, OpLT, OpLTEQ, OpGT, or OpGTEQ
+	lit  interface{}       // from n1qlExtractValue
+}
+
+// extractVariantPredicates walks expr (mirroring n1qlToIcebergExpr's *expression.Eq/
+// LT/LE/And cases) collecting comparisons whose field path is exactly two dotted
+// segments deep -- the shape a shredded VARIANT sub-path access takes. Only AND is
+// recursed into (via the same expression.FlattenAndNoDedup n1qlToIcebergExpr's own
+// AND case uses); OR/NOT/IN/BETWEEN/etc. contribute nothing extra. That's always
+// safe: this is a strictly additive pruning layer alongside the existing,
+// always-correct Iceberg-schema-bound matcher (buildRowGroupMatcher) -- missing a
+// candidate here only means less pruning, never a wrong result.
+func extractVariantPredicates(expr expression.Expression, alias string, parent value.Value) []variantPredicate {
+	if expr == nil {
+		return nil
+	}
+	switch e := expr.(type) {
+	case *expression.Eq:
+		return variantCompareExpr(iceberg.OpEQ, e.First(), e.Second(), alias, parent)
+
+	case *expression.LT:
+		return variantCompareExpr(iceberg.OpLT, e.First(), e.Second(), alias, parent)
+
+	case *expression.LE:
+		return variantCompareExpr(iceberg.OpLTEQ, e.First(), e.Second(), alias, parent)
+
+	case *expression.And:
+		flat, _ := expression.FlattenAndNoDedup(e)
+		var preds []variantPredicate
+		for _, op := range flat.Operands() {
+			preds = append(preds, extractVariantPredicates(op, alias, parent)...)
+		}
+		return preds
+	}
+	return nil
+}
+
+// variantCompareExpr mirrors n1qlCompareExpr's field/const-side detection and
+// operator-flip logic, but returns a variantPredicate (a plain Go literal, no
+// Iceberg binding involved) instead of an iceberg.BooleanExpression, and only when
+// the field path is exactly two dotted segments deep.
+func variantCompareExpr(op iceberg.Operation, first, second expression.Expression, alias string,
+	parent value.Value) []variantPredicate {
+
+	firstVal := n1qlExtractValue(first, parent)
+	secondVal := n1qlExtractValue(second, parent)
+
+	var field string
+	var val interface{}
+	var flip bool
+
+	switch {
+	case firstVal == nil && secondVal != nil:
+		var ok bool
+		field, ok = n1qlFieldPath(first, alias)
+		if !ok {
+			return nil
+		}
+		val = secondVal
+	case firstVal != nil && secondVal == nil:
+		var ok bool
+		field, ok = n1qlFieldPath(second, alias)
+		if !ok {
+			return nil
+		}
+		val = firstVal
+		flip = true
+	default:
+		return nil
+	}
+
+	if strings.Count(field, ".") < 1 {
+		// A bare top-level field -- already covered by the existing
+		// Iceberg-schema pushdown, which VARIANT sub-paths (any path with at
+		// least one dot here) can never use. Any depth beyond that is a
+		// candidate; findVariantLeaf/matchShreddedPath resolve the actual
+		// physical leaf, to whatever depth the path specifies.
+		return nil
+	}
+	if flip {
+		op = flipOp(op)
+	}
+	return []variantPredicate{{path: field, op: op, lit: val}}
+}
+
 // n1qlFieldPath extracts a dot-separated field path from a N1QL identifier expression.
 // Supports both top-level fields (t.name → "name") and nested fields
 // (t.address.city → "address.city") using Iceberg's dot-notation for nested access.
@@ -686,12 +788,14 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 	}
 
 	opts.FilterExpr = nil
+	opts.VariantPredicates = nil
 	var filterDesc string
 	if params.Filter != nil {
 		if expr := n1qlToIcebergExpr(params.Filter, params.Alias, params.Parent); expr != nil {
 			opts.FilterExpr = expr
 			filterDesc = fmt.Sprintf(", filter pushdown: %v", expr)
 		}
+		opts.VariantPredicates = extractVariantPredicates(params.Filter, params.Alias, params.Parent)
 	}
 
 	// IcebergScanTimeout only applies when the query itself has no timeout; otherwise the

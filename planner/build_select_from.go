@@ -10,6 +10,7 @@ package planner
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
@@ -424,6 +425,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 		if this.initialProjection != nil && this.initialProjection.CheckEarlyProjection(node.Alias()) {
 			ident := expression.NewIdentifier(node.Alias())
 			nameMap := make(map[string]bool)
+			pathRoots := make(map[string]*pathNode)
 			allFields := false
 			for _, expr := range this.node.Expressions() {
 				if expr.EquivalentTo(ident) {
@@ -431,11 +433,26 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 					break
 				}
 				expr.FieldNames(ident, nameMap)
+				collectFieldSubPaths(expr, node.Alias(), pathRoots)
 			}
 			if !allFields && len(nameMap) > 0 {
 				names = make([]string, 0, len(nameMap))
 				for n := range nameMap {
-					names = append(names, n)
+					// pathRoots survives per-name only when collectFieldSubPaths could
+					// resolve every reference to n into a clean Field-chain path (see
+					// fieldPathSegments) -- e.g. "attrs.geo.lat" -- so flattening it here
+					// is safe: it lets a shredded Iceberg VARIANT column's column-pruning
+					// (resolveColumnIndices/collectSubtree in
+					// primitives/external/iceberg_scanner.go) read only the requested
+					// sub-columns, to whatever depth was actually narrowed. Any bare,
+					// ambiguous, or unresolvable reference collapses that node (or the
+					// whole name, if pathRoots has no entry at all) back to the field name
+					// alone, matching prior behavior exactly.
+					if node := pathRoots[n]; node != nil {
+						names = append(names, flattenPathNode(n, node)...)
+					} else {
+						names = append(names, n)
+					}
 				}
 			}
 		}
@@ -1777,4 +1794,112 @@ func (this *builder) checkEarlyProjection(projection *algebra.Projection) error 
 	}
 
 	return nil
+}
+
+// pathNode is one node of a tree recording which dotted sub-paths of a
+// top-level field a query actually touches, to arbitrary depth (e.g.
+// "attrs.geo.lat"). whole=true means "this node's entire subtree is needed" --
+// set for a bare reference at this depth, or a fully-specified terminal
+// segment; children holds narrower requests one level down. A node ends up
+// with exactly one of the two meaningfully set: setting whole clears any
+// children (a bare/wider reference dominates any narrower one collected
+// elsewhere), and children is only populated on a node that isn't whole.
+//
+// This exact shape is duplicated (not shared via import) in
+// primitives/external/iceberg_scanner.go, which builds an equivalent tree by
+// parsing the flattened dotted-path strings this one produces back apart --
+// the two sides only agree on shape and flattening format, never on a Go type.
+type pathNode struct {
+	whole    bool
+	children map[string]*pathNode
+}
+
+// insertPath records that segments (e.g. ["attrs", "geo", "lat"]) was
+// referenced, narrowing the tree rooted at roots accordingly.
+func insertPath(roots map[string]*pathNode, segments []string) {
+	top := segments[0]
+	node := roots[top]
+	if node == nil {
+		node = &pathNode{}
+		roots[top] = node
+	}
+	if len(segments) == 1 {
+		node.whole = true
+		node.children = nil
+		return
+	}
+	if node.whole {
+		return // already whole; a narrower reference elsewhere can't undo that
+	}
+	if node.children == nil {
+		node.children = make(map[string]*pathNode)
+	}
+	insertPath(node.children, segments[1:])
+}
+
+// flattenPathNode walks node back into the dotted-path string format
+// SetEarlyProjection expects: prefix alone whenever node is whole or has no
+// further children (nothing more specific is known beyond this point), else
+// one entry per child, recursively.
+func flattenPathNode(prefix string, node *pathNode) []string {
+	if node.whole || len(node.children) == 0 {
+		return []string{prefix}
+	}
+	var out []string
+	for name, child := range node.children {
+		out = append(out, flattenPathNode(prefix+"."+name, child)...)
+	}
+	return out
+}
+
+// collectFieldSubPaths walks expr looking for Field chains rooted at ident
+// (e.g. ident.attrs, ident.attrs.geo.lat) and records each one, to whatever
+// depth it resolves to, in the tree rooted at roots (keyed by top-level field
+// name). See pathNode for how a node's whole/children state combines across
+// multiple references to the same field.
+//
+// This only concerns candidate sub-column pruning for external-collection scans
+// (see the external-scan block above and resolveColumnIndices/collectSubtree in
+// primitives/external/iceberg_scanner.go); it does not change what FieldNames
+// itself collects.
+func collectFieldSubPaths(expr expression.Expression, alias string, roots map[string]*pathNode) {
+	if field, ok := expr.(*expression.Field); ok {
+		if segments, matched := fieldPathSegments(field, alias); matched {
+			insertPath(roots, segments)
+			return
+		}
+	}
+
+	for _, child := range expr.Children() {
+		collectFieldSubPaths(child, alias, roots)
+	}
+}
+
+// fieldPathSegments returns the dotted path segments of a Field chain relative to
+// alias (e.g. for d.attrs.color it returns ["attrs", "color"]) when expr resolves to
+// such a chain rooted at alias. It reuses expression.PathString -- the same
+// alias/path extraction primitives/external/iceberg.go's n1qlFieldPath already
+// relies on for predicate pushdown -- rather than a bespoke walk, so both stay
+// consistent on backtick-quoted and case-insensitive segments. matched is false
+// when expr isn't a path rooted at alias at all (a different alias, or something
+// PathString can't turn into a path, e.g. an array index or a non-constant
+// sub-expression), letting the caller fall back to a normal child-by-child walk.
+func fieldPathSegments(expr expression.Expression, alias string) (segments []string, matched bool) {
+	exprAlias, path, err := expression.PathString(expr)
+	if err != nil || path == "" || exprAlias != alias {
+		return nil, false
+	}
+	// PathString wraps each segment in backticks (e.g. `attrs`.`color`); strip them
+	// the same way n1qlFieldPath does, keeping "." as the segment separator.
+	path = strings.ReplaceAll(path, "`", "")
+	if strings.ContainsAny(path, "[]") {
+		// An array-index term (e.g. d.attrs[0].color) got folded into the path --
+		// PathString still resolved it, but "attrs[0]" isn't a real top-level field
+		// name that anything downstream (extractTopLevelParents, resolveColumnIndices)
+		// would recognize. Reject rather than emit a segment nothing will ever match,
+		// even though the caller's separate FieldNames-based collection of the real
+		// top-level name still safely falls back to a whole-field read either way.
+		return nil, false
+	}
+	return strings.Split(path, "."), true
 }

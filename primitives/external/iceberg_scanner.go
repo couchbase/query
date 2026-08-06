@@ -99,22 +99,23 @@ func icebergTransport() *http.Transport {
 }
 
 type Scanner struct {
-	catalog         catalog.Catalog
-	table           *table.Table
-	tableIdent      []string
-	tableName       string
-	databaseName    string
-	snapshotID      *int64
-	snapshotAsOf    *int64
-	selectedFields  []string
-	limit           int64
-	filterExpr      iceberg.BooleanExpression
-	rowMatcher      rowMatcher // Per-row filter evaluator for the parallel-files path
-	awsConfig       *aws.Config
-	sourceType      string             // Track which catalog source type we're using
-	parallelScans   int                // Scan parallelism override (0 = use default 1)
-	collectionCred  *cbauth.Credential // Credential for reading data files
-	decimalToDouble bool               // When true, decimal columns are converted to float64
+	catalog           catalog.Catalog
+	table             *table.Table
+	tableIdent        []string
+	tableName         string
+	databaseName      string
+	snapshotID        *int64
+	snapshotAsOf      *int64
+	selectedFields    []string
+	limit             int64
+	filterExpr        iceberg.BooleanExpression
+	variantPredicates []variantPredicate // extra row-group pruning for VARIANT sub-paths
+	rowMatcher        rowMatcher         // Per-row filter evaluator for the parallel-files path
+	awsConfig         *aws.Config
+	sourceType        string             // Track which catalog source type we're using
+	parallelScans     int                // Scan parallelism override (0 = use default 1)
+	collectionCred    *cbauth.Credential // Credential for reading data files
+	decimalToDouble   bool               // When true, decimal columns are converted to float64
 
 	filesScanned int64 // Number of data files touched by the scan (atomic)
 	bytesRead    int64 // Actual bytes read from storage across all files (atomic); for
@@ -167,6 +168,7 @@ type ScanOptions struct {
 	Limit              int64
 	AwsConfig          *aws.Config
 	FilterExpr         iceberg.BooleanExpression
+	VariantPredicates  []variantPredicate // extra row-group pruning for VARIANT sub-paths; see extractVariantPredicates
 	SourceType         string
 	URI                string
 	Warehouse          string
@@ -950,6 +952,7 @@ func NewScanner(ctx go_context.Context, opts ScanOptions, cat catalog.Catalog) (
 		scanner.filterExpr = opts.FilterExpr
 		logging.Debugf("Iceberg Scanner: using filter expression for pushdown")
 	}
+	scanner.variantPredicates = opts.VariantPredicates
 
 	return scanner, nil
 }
@@ -1578,19 +1581,44 @@ func stripInvalidPredicates(schema *iceberg.Schema, expr iceberg.BooleanExpressi
 // ensureRowMatcher builds the per-row filter evaluator used by the parallel-files
 // scan path. The parallel-files path reads raw data files directly and bypasses
 // iceberg-go's ToArrowRecords() filtering, so without this evaluator pushed-down
-// filters only prune files/row-groups — every surviving row is emitted unfiltered.
+// filters only prune files/row-groups — a row group that survives that pruning
+// would otherwise emit every row unfiltered, even ones that don't match. Combines
+// the existing Iceberg-schema-bound matcher (from s.filterExpr, when it binds) with
+// a VARIANT sub-path matcher (from s.variantPredicates, which never binds there --
+// see buildVariantRowMatcher) into a single s.rowMatcher that requires both.
 // Idempotent; safe to call after the table is loaded.
 func (s *Scanner) ensureRowMatcher() {
-	if s.rowMatcher != nil || s.filterExpr == nil || s.table == nil {
+	if s.rowMatcher != nil {
 		return
 	}
-	safe := stripInvalidPredicates(s.table.Schema(), s.filterExpr, true)
-	matcher, err := buildRowMatcher(s.table.Schema(), safe)
-	if err != nil {
-		logging.Warnf("Iceberg scan: could not build row matcher, parallel-files path will skip row filtering: %v", err)
+	if s.filterExpr == nil && len(s.variantPredicates) == 0 {
 		return
 	}
-	s.rowMatcher = matcher
+
+	var schemaMatcher rowMatcher
+	if s.filterExpr != nil && s.table != nil {
+		safe := stripInvalidPredicates(s.table.Schema(), s.filterExpr, true)
+		m, err := buildRowMatcher(s.table.Schema(), safe)
+		if err != nil {
+			logging.Warnf("Iceberg scan: could not build row matcher, parallel-files path will skip row filtering: %v", err)
+		} else {
+			schemaMatcher = m
+		}
+	}
+	variantMatcher := buildVariantRowMatcher(s.variantPredicates)
+
+	switch {
+	case schemaMatcher == nil && variantMatcher == nil:
+		return
+	case schemaMatcher == nil:
+		s.rowMatcher = variantMatcher
+	case variantMatcher == nil:
+		s.rowMatcher = schemaMatcher
+	default:
+		s.rowMatcher = func(row map[string]interface{}) bool {
+			return schemaMatcher(row) && variantMatcher(row)
+		}
+	}
 }
 
 // emitRow applies the per-row filter (if any) and sends the row to resultChan.
@@ -2431,7 +2459,7 @@ func (s *Scanner) streamParquetFile(ctx go_context.Context, r parquet.ReaderAtSe
 	}
 
 	fieldSet := s.projectionFieldSet()
-	colIndices := resolveColumnIndices(arrowReader.Manifest, fieldSet)
+	colIndices := resolveColumnIndices(arrowReader.Manifest, fieldSet, s.fieldSubNames())
 	rowGroups := s.selectRowGroups(pqReader, arrowReader.Manifest)
 
 	totalRowGroups := pqReader.NumRowGroups()
@@ -2654,12 +2682,83 @@ func (s *Scanner) projectionFieldSet() map[string]bool {
 	return fieldSet
 }
 
+// pathNode is one node of a tree recording which dotted sub-paths of a
+// top-level field a query actually touches, to arbitrary depth (e.g.
+// "attrs.geo.lat"). whole=true means "this node's entire physical subtree
+// must be read" -- set for a bare reference at this depth, or a
+// fully-specified terminal segment; children holds narrower requests one
+// level down. A node ends up with exactly one of the two meaningfully set.
+//
+// This exact shape is duplicated (not shared via import) in
+// planner/build_select_from.go, which builds the tree this one is parsed back
+// from (via the flattened dotted-path strings in selectedFields) -- the two
+// sides only agree on shape and on that flattened string format, never on a
+// Go type.
+type pathNode struct {
+	whole    bool
+	children map[string]*pathNode
+}
+
+// insertPath records that segments (e.g. ["attrs", "geo", "lat"]) was
+// requested, narrowing the tree rooted at roots accordingly. Mirrors
+// planner/build_select_from.go's insertPath exactly.
+func insertPath(roots map[string]*pathNode, segments []string) {
+	top := segments[0]
+	node := roots[top]
+	if node == nil {
+		node = &pathNode{}
+		roots[top] = node
+	}
+	if len(segments) == 1 {
+		node.whole = true
+		node.children = nil
+		return
+	}
+	if node.whole {
+		return
+	}
+	if node.children == nil {
+		node.children = make(map[string]*pathNode)
+	}
+	insertPath(node.children, segments[1:])
+}
+
+// fieldSubNames parses selectedFields' dotted paths into the tree
+// resolveColumnIndices/collectSubtree consult to decide, per top-level field
+// and to whatever depth was actually narrowed, which physical columns are
+// needed. A field with no entry here (or one resolving to `whole` immediately)
+// must be read in full -- callers must never treat a missing entry as "read
+// nothing". Returns nil when selectedFields is empty.
+//
+// This is deliberately type-agnostic (it doesn't know or care whether a named
+// field is a shredded VARIANT or a plain nested struct) -- collectSubtree
+// decides how to apply it per field, via collectVariantLeaves for VARIANT
+// columns and collectStructSubLeaves for plain structs.
+func (s *Scanner) fieldSubNames() map[string]*pathNode {
+	if len(s.selectedFields) == 0 {
+		return nil
+	}
+	roots := make(map[string]*pathNode)
+	for _, field := range s.selectedFields {
+		segments := parseDottedPathForExtract(field)
+		if len(segments) == 0 {
+			continue
+		}
+		insertPath(roots, segments)
+	}
+	return roots
+}
+
 // resolveColumnIndices maps the top-level field names in fieldSet to the parquet
 // leaf column indices needed to decode them, for pqarrow.FileReader.GetRecordReader.
 // All descendant leaves of a selected nested/struct field are included so the whole
-// field decodes intact. Returns nil (meaning "read every column") when fieldSet is
-// nil or when none of its names match a top-level field in this file's schema.
-func resolveColumnIndices(manifest *pqarrow.SchemaManifest, fieldSet map[string]bool) []int {
+// field decodes intact -- EXCEPT a field named in pathRoots, which is narrowed to
+// only the requested sub-paths, to whatever depth was requested, via collectSubtree.
+// Returns nil (meaning "read every column") when fieldSet is nil or when none of
+// its names match a top-level field in this file's schema.
+func resolveColumnIndices(manifest *pqarrow.SchemaManifest, fieldSet map[string]bool,
+	pathRoots map[string]*pathNode) []int {
+
 	if fieldSet == nil {
 		return nil
 	}
@@ -2680,14 +2779,119 @@ func resolveColumnIndices(manifest *pqarrow.SchemaManifest, fieldSet map[string]
 	}
 	for i := range manifest.Fields {
 		field := &manifest.Fields[i]
-		if field.Field != nil && fieldSet[field.Field.Name] {
-			collectLeaves(field)
+		if field.Field == nil || !fieldSet[field.Field.Name] {
+			continue
 		}
+		if node := pathRoots[field.Field.Name]; node != nil {
+			collectSubtree(field, node, collectLeaves)
+			continue
+		}
+		collectLeaves(field)
 	}
 	if len(indices) == 0 {
 		return nil
 	}
 	return indices
+}
+
+// collectSubtree applies node's narrowing to f, to whatever depth node
+// resolves: a "whole" node (or one with no further children -- a leaf of the
+// requested-path tree) grabs f's entire physical subtree via collectLeaves;
+// otherwise it recurses one physical level via whichever of
+// collectVariantLeaves/collectStructSubLeaves matches f's actual shape,
+// falling back to the whole subtree when neither does (f is a scalar leaf, or
+// a list/map that can't be narrowed by name) -- conservative by construction,
+// since collectLeaves is always a safe superset of what's actually needed.
+func collectSubtree(f *pqarrow.SchemaField, node *pathNode, collectLeaves func(f *pqarrow.SchemaField)) {
+	if node.whole || len(node.children) == 0 {
+		collectLeaves(f)
+		return
+	}
+	if collectVariantLeaves(f, node.children, collectLeaves) {
+		return
+	}
+	if collectStructSubLeaves(f, node.children, collectLeaves) {
+		return
+	}
+	collectLeaves(f)
+}
+
+// collectVariantLeaves narrows a shredded VARIANT field's column selection to only
+// the requested sub-names: it always keeps "metadata" and "value" (the residual --
+// needed so any sub-name NOT requested, or a value that wasn't shredded at all,
+// still decodes correctly) and recurses into "typed_value" only for children whose
+// name is in subNames, via collectSubtree so a further-narrowed child (e.g.
+// "attrs.geo.lat") descends one more physical level instead of being pulled in
+// whole.
+//
+// Returns false (nothing collected, caller should fall back to collectLeaves(field))
+// when f is not actually a shredded variant field (no "typed_value" child) --
+// e.g. a plain nested struct that happens to share a name with a variant column
+// requested elsewhere, or a non-shredded (unshredded-only) variant.
+func collectVariantLeaves(f *pqarrow.SchemaField, subNames map[string]*pathNode,
+	collectLeaves func(f *pqarrow.SchemaField)) bool {
+
+	var typedValue *pqarrow.SchemaField
+	for i := range f.Children {
+		if f.Children[i].Field != nil && f.Children[i].Field.Name == "typed_value" {
+			typedValue = &f.Children[i]
+			break
+		}
+	}
+	if typedValue == nil {
+		return false
+	}
+	for i := range f.Children {
+		child := &f.Children[i]
+		if child == typedValue {
+			continue
+		}
+		collectLeaves(child) // "metadata", "value" (residual) -- always kept
+	}
+	for i := range typedValue.Children {
+		sub := &typedValue.Children[i]
+		if sub.Field == nil {
+			continue
+		}
+		if childNode := subNames[sub.Field.Name]; childNode != nil {
+			collectSubtree(sub, childNode, collectLeaves)
+		}
+	}
+	return true
+}
+
+// collectStructSubLeaves narrows a plain nested struct field's column selection to
+// only the requested sub-names, dropping any child whose name isn't in subNames,
+// and recursing one more physical level via collectSubtree for any matched child
+// that itself has further-narrowed sub-paths requested. Unlike collectVariantLeaves
+// there's no residual value to preserve -- an omitted sub-field simply won't appear
+// in the decoded row (Reader.getStructValue already builds its result dynamically
+// from whatever fields are actually present in the array, per
+// structType.Field(i)/arr.NumField()), which is exactly the pruning outcome a
+// point-projection query wants.
+//
+// Returns false (nothing collected, caller should fall back to collectLeaves(field))
+// when f isn't a plain struct (a scalar leaf, or a LIST/MAP whose children are
+// synthetic wrapper nodes rather than named sub-fields matching subNames) or when
+// none of subNames actually matches one of f's children.
+func collectStructSubLeaves(f *pqarrow.SchemaField, subNames map[string]*pathNode,
+	collectLeaves func(f *pqarrow.SchemaField)) bool {
+
+	if f.Field == nil || f.Field.Type.ID() != arrow.STRUCT || len(f.Children) == 0 {
+		return false
+	}
+	matched := false
+	for i := range f.Children {
+		child := &f.Children[i]
+		if child.Field == nil {
+			continue
+		}
+		if childNode := subNames[child.Field.Name]; childNode != nil {
+			collectSubtree(child, childNode, collectLeaves)
+			matched = true
+		}
+	}
+	return matched
 }
 
 // countLeafColumns returns the total number of leaf (physical) columns in the
@@ -2717,24 +2921,30 @@ func countLeafColumns(manifest *pqarrow.SchemaManifest) int {
 // ("read every row group") when there's no filter, or when the matcher can't
 // be built (e.g. the filter can't be bound against the table schema).
 func (s *Scanner) selectRowGroups(pqReader *pqfile.Reader, manifest *pqarrow.SchemaManifest) []int {
-	if s.filterExpr == nil || s.table == nil {
-		return nil
+	var matcher rowGroupMatcher
+	if s.filterExpr != nil && s.table != nil {
+		schema := s.table.Schema()
+		safe := stripInvalidPredicates(schema, s.filterExpr, true)
+		m, err := buildRowGroupMatcher(schema, safe, buildColumnPathIndex(manifest))
+		if err != nil {
+			logging.Debugf("Iceberg scan: could not build row-group matcher, reading all row groups: %v", err)
+		} else {
+			matcher = m
+		}
 	}
-	schema := s.table.Schema()
-	safe := stripInvalidPredicates(schema, s.filterExpr, true)
-	matcher, err := buildRowGroupMatcher(schema, safe, buildColumnPathIndex(manifest))
-	if err != nil {
-		logging.Debugf("Iceberg scan: could not build row-group matcher, reading all row groups: %v", err)
-		return nil
-	}
-	if matcher == nil {
+	// variantMatcher covers VARIANT sub-path predicates the Iceberg-schema-bound
+	// matcher above can never reach (see extractVariantPredicates/
+	// buildVariantRowGroupMatcher) -- purely additive, independent of matcher.
+	variantMatcher := buildVariantRowGroupMatcher(manifest, s.variantPredicates)
+	if matcher == nil && variantMatcher == nil {
 		return nil
 	}
 
 	numRowGroups := pqReader.NumRowGroups()
 	kept := make([]int, 0, numRowGroups)
 	for i := 0; i < numRowGroups; i++ {
-		if matcher(pqReader.MetaData().RowGroup(i)) {
+		rgMeta := pqReader.MetaData().RowGroup(i)
+		if (matcher == nil || matcher(rgMeta)) && (variantMatcher == nil || variantMatcher(rgMeta)) {
 			kept = append(kept, i)
 		}
 	}

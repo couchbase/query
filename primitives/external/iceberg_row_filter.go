@@ -295,7 +295,16 @@ func (e *rowEvaluator) VisitNotIn(term iceberg.BoundTerm, lits iceberg.Set[icebe
 // -1/0/1 like bytes.Compare. The second result is false if the two values
 // aren't comparable (e.g. comparing a string row value to a numeric literal).
 func compareToLiteral(rowVal interface{}, lit iceberg.Literal) (int, bool) {
-	switch lv := lit.Any().(type) {
+	return compareValues(rowVal, lit.Any())
+}
+
+// compareValues is compareToLiteral's core comparison, taking a plain Go value
+// instead of an iceberg.Literal -- reusable from contexts with no Iceberg literal
+// to unwrap in the first place (see buildVariantRowGroupMatcher, which works from
+// N1QL-extracted Go values directly since VARIANT sub-paths can't bind to an
+// iceberg.Literal at all).
+func compareValues(rowVal interface{}, litVal interface{}) (int, bool) {
+	switch lv := litVal.(type) {
 	case string:
 		if rv, ok := rowVal.(string); ok {
 			return strings.Compare(rv, lv), true
@@ -471,6 +480,215 @@ func buildColumnPathIndex(manifest *pqarrow.SchemaManifest) map[string]int {
 	return idx
 }
 
+// findVariantLeaf locates the physical Parquet leaf column for a shredded VARIANT
+// path "top.path[0].path[1]..." (e.g. top="attrs", path=["geo","lat"]), to
+// arbitrary depth, directly in the file's pqarrow schema manifest -- no Iceberg
+// schema/field-ID involved, since a VARIANT sub-path has none there.
+//
+// ok is false when top isn't a top-level field in this file or matchShreddedPath
+// can't resolve path within it.
+func findVariantLeaf(manifest *pqarrow.SchemaManifest, top string, path []string) (colIdx int, ok bool) {
+	for i := range manifest.Fields {
+		field := &manifest.Fields[i]
+		if field.Field == nil || field.Field.Name != top {
+			continue
+		}
+		return matchShreddedPath(field, path)
+	}
+	return 0, false // top not a top-level field in this file
+}
+
+// matchShreddedPath resolves path within f's shredded "typed_value" struct, one
+// segment at a time. Mirrors collectVariantLeaves' "find the typed_value child"
+// pattern in iceberg_scanner.go, generalized to arbitrary depth.
+//
+// Per the Parquet Variant shredding spec, even a scalar shredded sub-field is
+// itself wrapped in its own {value, typed_value} pair (mirroring the top-level
+// variant's own shape), to support per-row shredded/not-shredded fallback -- so
+// matching path[0] among typed_value's children isn't the leaf itself unless
+// that child has no children of its own (some shredding layouts omit the
+// wrapper for a scalar); otherwise, on the *last* segment, the leaf is that
+// child's own "typed_value" grandchild (the stats there are what's actually
+// decodable and comparable -- the child's "value" sibling is raw
+// variant-encoded bytes). A nested shredded *struct* sub-field (e.g. "geo") has
+// exactly that same {value, typed_value} shape one level down, so any segment
+// before the last simply recurses matchShreddedPath on the matched child.
+//
+// ok is false when f isn't a shredded VARIANT/sub-field (no "typed_value"
+// child), path[0] isn't among typed_value's children, or the match's shape
+// doesn't fit what the remaining path expects (a scalar wrapper with segments
+// left over, or a struct wrapper on the last segment with no "typed_value"
+// leaf of its own).
+func matchShreddedPath(f *pqarrow.SchemaField, path []string) (colIdx int, ok bool) {
+	if len(path) == 0 {
+		return 0, false
+	}
+
+	var typedValue *pqarrow.SchemaField
+	for i := range f.Children {
+		if f.Children[i].Field != nil && f.Children[i].Field.Name == "typed_value" {
+			typedValue = &f.Children[i]
+			break
+		}
+	}
+	if typedValue == nil {
+		return 0, false
+	}
+
+	for i := range typedValue.Children {
+		child := &typedValue.Children[i]
+		if child.Field == nil || child.Field.Name != path[0] {
+			continue
+		}
+		if len(child.Children) == 0 {
+			// Already a direct leaf -- some shredding layouts may omit the
+			// per-field value/typed_value wrapper for a scalar.
+			if len(path) == 1 {
+				return child.ColIndex, true
+			}
+			return 0, false // more segments requested past a scalar leaf
+		}
+		if len(path) == 1 {
+			for j := range child.Children {
+				gc := &child.Children[j]
+				if gc.Field != nil && gc.Field.Name == "typed_value" && len(gc.Children) == 0 {
+					return gc.ColIndex, true
+				}
+			}
+			return 0, false // shreds to something more complex than a scalar wrapper
+		}
+		return matchShreddedPath(child, path[1:])
+	}
+	return 0, false // path[0] not among typed_value's children
+}
+
+// buildVariantRowGroupMatcher returns a row-group-level evaluator for candidate
+// VARIANT sub-path predicates (see extractVariantPredicates), pruning row groups
+// via each sub-path's physical Parquet column statistics -- entirely independent
+// of buildRowGroupMatcher/Iceberg schema binding, which can't reach a VARIANT
+// sub-path at all. Purely additive: the caller ANDs this together with the
+// existing schema-bound matcher, so a nil/no-op result here (no predicates,
+// unresolvable leaf, missing/unusable stats) only ever means "no extra pruning",
+// never a wrong result. Returns nil when preds is empty.
+func buildVariantRowGroupMatcher(manifest *pqarrow.SchemaManifest, preds []variantPredicate) rowGroupMatcher {
+	if len(preds) == 0 {
+		return nil
+	}
+
+	type resolved struct {
+		colIdx int
+		op     iceberg.Operation
+		lit    interface{}
+	}
+	var leaves []resolved
+	for _, p := range preds {
+		segs := strings.Split(p.path, ".")
+		if len(segs) < 2 {
+			continue // shouldn't happen (extractVariantPredicates only emits 2+ segment paths)
+		}
+		colIdx, ok := findVariantLeaf(manifest, segs[0], segs[1:])
+		if !ok {
+			continue
+		}
+		leaves = append(leaves, resolved{colIdx: colIdx, op: p.op, lit: p.lit})
+	}
+	if len(leaves) == 0 {
+		return nil
+	}
+
+	return func(rgMeta *metadata.RowGroupMetaData) bool {
+		for _, r := range leaves {
+			cs := statsForColIndex(rgMeta, r.colIdx)
+			if !cs.ok || !cs.hasMinMax {
+				continue // can't reason about this predicate; doesn't disqualify the row group
+			}
+			if !variantStatsCouldMatch(r.op, cs.min, cs.max, r.lit) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// variantStatsCouldMatch answers "could some row in this row group satisfy
+// `col OP lit`?" from only the column's min/max, mirroring
+// rowGroupEvaluator.VisitEqual/VisitGreaterEqual/etc.'s range-check logic exactly
+// (same compareValues comparator), just without an iceberg.BoundTerm/Literal to
+// visit through.
+func variantStatsCouldMatch(op iceberg.Operation, min, max, lit interface{}) bool {
+	switch op {
+	case iceberg.OpEQ:
+		cmin, okMin := compareValues(min, lit)
+		cmax, okMax := compareValues(max, lit)
+		return !okMin || !okMax || (cmin <= 0 && cmax >= 0)
+	case iceberg.OpLT:
+		c, ok := compareValues(min, lit)
+		return !ok || c < 0
+	case iceberg.OpLTEQ:
+		c, ok := compareValues(min, lit)
+		return !ok || c <= 0
+	case iceberg.OpGT:
+		c, ok := compareValues(max, lit)
+		return !ok || c > 0
+	case iceberg.OpGTEQ:
+		c, ok := compareValues(max, lit)
+		return !ok || c >= 0
+	default:
+		return true // unsupported op -- keep
+	}
+}
+
+// buildVariantRowMatcher returns a row-level evaluator for candidate VARIANT
+// sub-path predicates (see extractVariantPredicates), applied to already-decoded
+// rows -- unlike buildVariantRowGroupMatcher (which reasons about Parquet column
+// statistics before any row is read, so it can only ever prove "no match" from a
+// range), this checks the actual decoded value via navigateRow (the same helper
+// buildRowMatcher/rowEvaluator use), so it's an exact match/no-match rather than a
+// range-based "could match". An unresolvable path or incomparable types keep the
+// row rather than risk dropping one that does match. Returns nil when preds is
+// empty.
+func buildVariantRowMatcher(preds []variantPredicate) rowMatcher {
+	if len(preds) == 0 {
+		return nil
+	}
+	return func(row map[string]interface{}) bool {
+		for _, p := range preds {
+			val, ok := navigateRow(row, p.path)
+			if !ok {
+				continue // can't resolve -- don't disqualify the row
+			}
+			if !variantValueMatches(p.op, val, p.lit) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// variantValueMatches answers `val OP lit` exactly, given the row's actual decoded
+// value -- unlike variantStatsCouldMatch's min/max range check, this can return a
+// definite no-match.
+func variantValueMatches(op iceberg.Operation, val, lit interface{}) bool {
+	c, ok := compareValues(val, lit)
+	if !ok {
+		return true // can't compare these types -- don't drop the row
+	}
+	switch op {
+	case iceberg.OpEQ:
+		return c == 0
+	case iceberg.OpLT:
+		return c < 0
+	case iceberg.OpLTEQ:
+		return c <= 0
+	case iceberg.OpGT:
+		return c > 0
+	case iceberg.OpGTEQ:
+		return c >= 0
+	default:
+		return true // unsupported op -- keep
+	}
+}
+
 // rowGroupEvaluator implements iceberg.BoundBooleanExprVisitor[bool] over a row
 // group's Parquet column statistics instead of a concrete row. Each predicate
 // visit answers "could some row in this row group satisfy this condition?"
@@ -519,7 +737,15 @@ func (e *rowGroupEvaluator) statsFor(term iceberg.BoundTerm) colStats {
 	if !ok {
 		return colStats{}
 	}
-	cc, err := e.rgMeta.ColumnChunk(colIdx)
+	return statsForColIndex(e.rgMeta, colIdx)
+}
+
+// statsForColIndex decodes a single physical column's row-group statistics into
+// colStats, given only its leaf column index -- no Iceberg schema/field-ID lookup
+// involved, so it's equally usable from a schema-bound evaluator (via statsFor
+// above) and a physical-layer-only one (see buildVariantRowGroupMatcher).
+func statsForColIndex(rgMeta *metadata.RowGroupMetaData, colIdx int) colStats {
+	cc, err := rgMeta.ColumnChunk(colIdx)
 	if err != nil {
 		return colStats{}
 	}
@@ -536,27 +762,38 @@ func (e *rowGroupEvaluator) statsFor(term iceberg.BoundTerm) colStats {
 	if !stats.HasMinMax() {
 		return cs
 	}
-	switch st := stats.(type) {
-	case *metadata.Int32Statistics:
-		cs.min, cs.max = int64(st.Min()), int64(st.Max())
-	case *metadata.Int64Statistics:
-		cs.min, cs.max = st.Min(), st.Max()
-	case *metadata.Float32Statistics:
-		cs.min, cs.max = float64(st.Min()), float64(st.Max())
-	case *metadata.Float64Statistics:
-		cs.min, cs.max = st.Min(), st.Max()
-	case *metadata.BooleanStatistics:
-		cs.min, cs.max = st.Min(), st.Max()
-	case *metadata.ByteArrayStatistics:
-		cs.min, cs.max = []byte(st.Min()), []byte(st.Max())
-	case *metadata.FixedLenByteArrayStatistics:
-		cs.min, cs.max = []byte(st.Min()), []byte(st.Max())
-	default:
-		// Int96/Float16 or any future stat type: not worth decoding, keep.
+	min, max, ok := decodeMinMax(stats)
+	if !ok {
 		return cs
 	}
-	cs.hasMinMax = true
+	cs.min, cs.max, cs.hasMinMax = min, max, true
 	return cs
+}
+
+// decodeMinMax decodes a Parquet column's min/max statistics into the Go-native
+// types compareValues expects. ok is false for a physical stat type not worth
+// decoding (Int96/Float16, or any future type) -- callers must treat that as
+// "keep, can't prune", same as a missing/absent stats object entirely.
+func decodeMinMax(stats metadata.TypedStatistics) (min, max interface{}, ok bool) {
+	switch st := stats.(type) {
+	case *metadata.Int32Statistics:
+		return int64(st.Min()), int64(st.Max()), true
+	case *metadata.Int64Statistics:
+		return st.Min(), st.Max(), true
+	case *metadata.Float32Statistics:
+		return float64(st.Min()), float64(st.Max()), true
+	case *metadata.Float64Statistics:
+		return st.Min(), st.Max(), true
+	case *metadata.BooleanStatistics:
+		return st.Min(), st.Max(), true
+	case *metadata.ByteArrayStatistics:
+		return []byte(st.Min()), []byte(st.Max()), true
+	case *metadata.FixedLenByteArrayStatistics:
+		return []byte(st.Min()), []byte(st.Max()), true
+	default:
+		// Int96/Float16 or any future stat type: not worth decoding, keep.
+		return nil, nil, false
+	}
 }
 
 func (e *rowGroupEvaluator) VisitIsNull(term iceberg.BoundTerm) bool {
