@@ -97,7 +97,7 @@ require (
 	github.com/blevesearch/gtreap v0.1.1 // indirect
 	github.com/blevesearch/mmap-go v1.0.4 // indirect
 	github.com/blevesearch/scorch_segment_api/v2 v2.4.0 // indirect
-	github.com/blevesearch/sear v0.4.0 // indirect
+	github.com/blevesearch/sear v0.4.1-0.20260806080022-c189621d5526 // indirect
 	github.com/blevesearch/segment v0.9.1 // indirect
 	github.com/blevesearch/snowballstem v0.9.0 // indirect
 	github.com/blevesearch/stempel v0.2.0 // indirect
