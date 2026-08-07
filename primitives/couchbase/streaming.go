@@ -368,21 +368,23 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 		tmpb := &Bucket{}
 		for {
 			b.RLock()
-			terminate := b.updater != updater || b.closed
+			changed := b.updater != updater
+			closed := b.closed
 			b.RUnlock()
-			if terminate {
+			if changed || closed {
 				res.Body.Close()
-				logging.Infof("%s Stopping (changed:%v,closed:%v)", msgPrefix, b.updater != updater, b.closed)
+				logging.Infof("%s Stopping (changed:%v,closed:%v)", msgPrefix, changed, closed)
 				return nil
 			}
 
 			err := dec.Decode(&tmpb)
 
 			b.RLock()
-			terminate = b.updater != updater || b.closed
+			changed = b.updater != updater
+			closed = b.closed
 			b.RUnlock()
-			if terminate {
-				logging.Infof("%s Stopping (changed:%v,closed:%v)", msgPrefix, b.updater != updater, b.closed)
+			if changed || closed {
+				logging.Infof("%s Stopping (changed:%v,closed:%v)", msgPrefix, changed, closed)
 				return nil
 			}
 

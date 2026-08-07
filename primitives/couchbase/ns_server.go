@@ -412,7 +412,10 @@ func (b *Bucket) HasCapability(cap string) bool {
 }
 
 func (b *Bucket) IsClosed() bool {
-	return b.closed
+	b.RLock()
+	closed := b.closed
+	b.RUnlock()
+	return closed
 }
 
 // PoolServices is all the bucket-independent services in a pool
@@ -1682,6 +1685,7 @@ func (b *Bucket) Close() {
 		b.updater.Close()
 		b.updater = nil
 	}
+	b.closed = true
 	b.Unlock()
 }
 
