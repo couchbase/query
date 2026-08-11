@@ -1818,27 +1818,37 @@ func (this *Context) getUdfStmtTimes() interface{} {
 func (this *Context) done() {
 	trees := this.contextSubExecTrees()
 	if trees != nil {
-		trees.mutex.RLock()
-		for _, e := range trees.entries {
+		// Done() on a cached execution tree can block waiting for it to finish executing.
+		// A subquery still in flight may itself need this same lock (subqueryArrayMap.get/set),
+		// so the lock must not be held across the Done() calls below - MB-71026.
+		trees.mutex.Lock()
+		entries := trees.entries
+		trees.entries = make(map[*algebra.Select][]subqueryEntry)
+		trees.closed = true
+		trees.mutex.Unlock()
+
+		for _, e := range entries {
 			for _, i := range e {
 				if i.sequence != nil {
 					i.sequence.Done()
 				}
 			}
 		}
-		trees.mutex.RUnlock()
 	}
 
 	// clean up all cached execution trees from JS UDF execution
 	udfs := this.contextUdfStmtExecTrees()
 	if udfs != nil {
-		udfs.mutex.RLock()
+		// Same reasoning as above: don't hold the lock across the blocking Done() calls.
+		udfs.mutex.Lock()
+		udfTrees := udfs.trees
+		udfs.trees = make([]*execTreeMapEntry, 0)
+		udfs.closed = true
+		udfs.mutex.Unlock()
 
-		for _, t := range udfs.trees {
+		for _, t := range udfTrees {
 			t.root.Done()
 		}
-
-		udfs.mutex.RUnlock()
 	}
 }
 
@@ -1943,6 +1953,7 @@ type subqueryEntry struct {
 type subqueryArrayMap struct {
 	mutex   sync.RWMutex
 	entries map[*algebra.Select][]subqueryEntry
+	closed  bool // set once the request's cleanup (Context.done()) has swept this cache - MB-71026
 }
 
 func newSubqueryArrayMap() *subqueryArrayMap {
@@ -1953,6 +1964,10 @@ func newSubqueryArrayMap() *subqueryArrayMap {
 
 func (this *subqueryArrayMap) get(key *algebra.Select) (*Sequence, *Collect, bool) {
 	this.mutex.Lock()
+	if this.closed {
+		this.mutex.Unlock()
+		return nil, nil, false
+	}
 	e, ok := this.entries[key]
 	if ok {
 		for i, l := range e {
@@ -1970,6 +1985,15 @@ func (this *subqueryArrayMap) get(key *algebra.Select) (*Sequence, *Collect, boo
 
 func (this *subqueryArrayMap) set(key *algebra.Select, sequence *Sequence, collect *Collect) {
 	this.mutex.Lock()
+	if this.closed {
+		// cleanup has already swept the cache and won't run again: this execution tree
+		// finished too late to be picked up, so free it here instead of orphaning it - MB-71026
+		this.mutex.Unlock()
+		if sequence != nil {
+			sequence.Done()
+		}
+		return
+	}
 	e := this.entries[key]
 	if e == nil {
 		e = []subqueryEntry{{sequence, collect}}
@@ -2455,8 +2479,9 @@ func (this *Context) ErrorCount() int {
 // Key of this map is : (query_context + query statement)
 // Used for storing execution trees of N1QL queries inside JS UDFs for profiling purposes
 type udfExecTreeMap struct {
-	mutex sync.RWMutex
-	trees []*execTreeMapEntry
+	mutex  sync.RWMutex
+	trees  []*execTreeMapEntry
+	closed bool // set once the request's cleanup (Context.done()) has swept this cache - MB-71026
 }
 
 // Execution Tree Map Entry
@@ -2475,6 +2500,15 @@ func newUdfStmtExecTreeMap() *udfExecTreeMap {
 
 func (this *udfExecTreeMap) set(funcKey string, query string, root Operator, collRcv Operator) {
 	this.mutex.Lock()
+	if this.closed {
+		// cleanup has already swept the cache and won't run again: this execution tree
+		// finished too late to be picked up, so free it here instead of orphaning it - MB-71026
+		this.mutex.Unlock()
+		if root != nil {
+			root.Done()
+		}
+		return
+	}
 	entry := &execTreeMapEntry{
 		funcKey: funcKey,
 		query:   query,
