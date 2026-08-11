@@ -41,7 +41,8 @@
     "#comment": "-1 for infinite iterations.",
     "iterations": -1,
     "request": {
-      "#comment": "Any standard request parameters."
+      "#comment": "Any standard request parameters.",
+      "timeout":"25m"
     }
   },
   "statements": {
