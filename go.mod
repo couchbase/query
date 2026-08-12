@@ -56,7 +56,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/bedrockruntime v1.54.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
 	github.com/aws/smithy-go v1.27.1
-	github.com/couchbase/cbauth v0.1.20
+	github.com/couchbase/cbauth v0.1.23-0.20260807235904-eda1f2edba77
 	github.com/couchbase/clog v0.1.0
 	github.com/couchbase/eventing-ee v0.0.0-00010101000000-000000000000
 	github.com/couchbase/go-couchbase v0.1.1
