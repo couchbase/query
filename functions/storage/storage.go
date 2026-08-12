@@ -724,7 +724,7 @@ func doMigrateBucket(name string) bool {
 		return nil
 	})
 	if err1 != nil {
-		logging.Errorf("UDF migration: Error during scan of old UDF definitions - %V", err1)
+		logging.Errorf("UDF migration: Error during scan of old UDF definitions - %v", err1)
 		complete = false
 	}
 
@@ -824,7 +824,7 @@ func checkMigrationComplete() bool {
 	}
 
 	complete := true
-	err1 := metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
+	err1 := metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]interface{}) errors.Error {
 		if len(parts) == 4 {
 			if parts[1] == _N1QL_SYSTEM_BUCKET {
 				// ignore entries on N1QL_SYSTEM_BUCKET since that'll be dropped
@@ -863,7 +863,7 @@ func checkMigrationComplete() bool {
 
 // if retrying migration, since we go from the migrations map, make sure all buckets are in the map
 func checkMigrations() {
-	metaStorage.ForeachBody(func(parts []string, body functions.FunctionBody) errors.Error {
+	metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]interface{}) errors.Error {
 		if len(parts) == 4 {
 			bname := parts[1]
 			if bname == _N1QL_SYSTEM_BUCKET {
