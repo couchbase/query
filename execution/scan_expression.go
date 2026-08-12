@@ -133,9 +133,29 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		if ev == nil {
 			return
 		}
+		actuals := ev.Actual()
+		switch actuals.(type) {
+		case []interface{}:
+		case nil:
+			if ev.Type() == value.NULL {
+				actuals = _ARRAY_NULL_VALUE
+			} else {
+				actuals = _ARRAY_MISSING_VALUE
+			}
+		default:
+			actuals = []interface{}{actuals}
+		}
+
+		acts := actuals.([]interface{})
+
 		var freeSize uint64
 		if context.UseRequestQuota() {
-			freeSize = ev.Size()
+			// Size the elements the same way they are accounted for individually below, so that
+			// what is tracked here always covers what is subtracted from it (and released downstream).
+			// Note this has to be done after ev.Actual() above: for a *parsedValue (eg. a named
+			// parameter) Size() reports the length of the unparsed JSON until Actual() materializes
+			// it, which would under-account the elements and underflow the in-use quota on release.
+			freeSize = value.AnySize(acts)
 			// Track output of expression evaluation as necessary:
 			// 1. For correlated subqueries:
 			//    The values are already tracked as part of (repeated) execution of the subquery.
@@ -151,20 +171,6 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		actuals := ev.Actual()
-		switch actuals.(type) {
-		case []interface{}:
-		case nil:
-			if ev.Type() == value.NULL {
-				actuals = _ARRAY_NULL_VALUE
-			} else {
-				actuals = _ARRAY_MISSING_VALUE
-			}
-		default:
-			actuals = []interface{}{actuals}
-		}
-
-		acts := actuals.([]interface{})
 		var results []interface{}
 		if useCache {
 			this.results = nil
