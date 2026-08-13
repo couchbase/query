@@ -959,11 +959,20 @@ func UseSystemStorage() bool {
 	return true
 }
 
+// IsMigratingUDF reports whether it is unsafe for a caller outside the migration code
+// (e.g. scope/bucket drop cleanup) to delete UDF definitions directly from metakv.
+//
+// This must return true for every state other than _MIGRATED/_ABORTED, not just
+// _MIGRATING: migration is driven independently by each node, so a node that is still
+// _NOT_MIGRATING (or _UNKNOWN) for a given bucket cannot assume no other node is
+// concurrently migrating that bucket's UDFs. Treating _NOT_MIGRATING as safe let a scope
+// drop notification on one node delete metakv entries out from under a migration that was
+// already in flight on another node, permanently losing the function (MB-73270).
 func IsMigratingUDF() bool {
 	migratingLock.Lock()
-	migrating := migrating == _MIGRATING
+	state := migrating
 	migratingLock.Unlock()
-	return migrating
+	return state != _MIGRATED && state != _ABORTED
 }
 
 func GetDDLFromDefinition(name string, defn value.Value) string {
