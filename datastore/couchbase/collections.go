@@ -667,10 +667,17 @@ func refreshScopesAndCollections(mani *cb.Manifest, bucket *keyspace) (map[strin
 						}
 					}
 
-					// during migration, the following call to DropDictionaryEntry()
-					// will block on migration status  and cause a deadlock; skip
-					// and wait till next time cleanup happens
-					if !isMigratingCBOStats() {
+					// once this bucket has gained system-collection capability,
+					// some node in the cluster may be migrating (or have migrated)
+					// its CBO stats, so calling DropDictionaryEntry() here could
+					// either deadlock on migration status or race with an in-flight
+					// migration on another node and delete a CBO stats entry out
+					// from under it (MB-73270) - skip and wait till next time
+					// cleanup happens. Before the bucket has that capability
+					// no migration can be under way anywhere (mixed-mode cluster),
+					// so it's always safe to clean up directly
+					if !bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) ||
+						(!functionsStorage.IsMigratingUDF() && !isMigratingCBOStats()) {
 						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
 					}
 					aus.DropCollection(bucket.namespace.name, bucket.name, oldScope.Name(), oldScope.Uid(),
@@ -715,12 +722,13 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 	}
 
 	// once this bucket has gained system-collection capability, some node in the cluster may
-	// be migrating (or have migrated) its CBO statss, so calling DropDictionaryEntry() here
+	// be migrating (or have migrated) its CBO stats, so calling DropDictionaryEntry() here
 	// could either deadlock on migration status or race with an in-flight migration on
 	// another node and delete a CBO stats entry out from under it (MB-73270) - skip and wait till
 	// next time cleanup happens. Before the bucket has that capability no migration can be
 	// under way anywhere (mixed-mode cluster), so it's always safe to clean up directly
-	if !bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) || !isMigratingCBOStats() {
+	if !bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) ||
+		(!functionsStorage.IsMigratingUDF() && !isMigratingCBOStats()) {
 		// do not modify s.keyspaces since it may be concurrently used by other callers of
 		// refreshScopesAndCollections whilst this clean-up is still taking place
 		for _, val := range s.keyspaces {
@@ -738,7 +746,8 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 	// another node and delete a function out from under it (MB-73270) - skip and wait till
 	// next time cleanup happens. Before the bucket has that capability no migration can be
 	// under way anywhere (mixed-mode cluster), so it's always safe to clean up directly
-	if cleanUp && (!bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) || !functionsStorage.IsMigratingUDF()) {
+	if cleanUp && (!bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) ||
+		(!functionsStorage.IsMigratingUDF() && !isMigratingCBOStats())) {
 		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
 			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
 			aus.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
