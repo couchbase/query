@@ -59,6 +59,9 @@ func IndexInfoDoc(index Index, keyspaceId, scopeId, bucketId, namespaceName, nam
 	if partition := indexPartitionString(index); partition != "" {
 		doc["partition"] = partition
 	}
+	if include := GetIndexIncludes(index); include != nil {
+		doc["include"] = jsonSafe(indexExprStrings(include))
+	}
 	if ixm, ok := index.(interface{ IndexMetadata() map[string]interface{} }); ok {
 		if md, ok := jsonSafe(ixm.IndexMetadata()).(map[string]interface{}); ok {
 			doc["metadata"] = indexStats(md)
@@ -127,6 +130,14 @@ func indexPartitionString(index Index) string {
 	}
 	stringer.WriteString(")")
 	return stringer.String()
+}
+
+func indexExprStrings(exprs expression.Expressions) []string {
+	rv := make([]string, len(exprs))
+	for i, e := range exprs {
+		rv[i] = e.String()
+	}
+	return rv
 }
 
 func jsonSafe(obj interface{}) interface{} {
