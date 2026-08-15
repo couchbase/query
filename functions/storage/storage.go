@@ -499,9 +499,9 @@ func SupportedBackupVersion() int {
 		return datastore.CURRENT_BACKUP_VERSION
 	}
 	migratingLock.Lock()
-	notMigrating := migrating == _NOT_MIGRATING
+	state := migrating
 	migratingLock.Unlock()
-	if notMigrating {
+	if state == _NOT_MIGRATING || state == _UNKNOWN {
 		return datastore.BACKUP_VERSION_1
 	}
 	return datastore.BACKUP_NOT_POSSIBLE
@@ -1094,7 +1094,7 @@ func abortMigration() (string, errors.Error) {
 	}
 
 	migration.Complete(_UDF_MIGRATION, false)
-	migrating = _ABORTED
+	setMigrating(_ABORTED)
 	datastore.MarkMigrationComplete(false, _UDF_MIGRATION, datastore.HAS_SYSTEM_COLLECTION)
 
 	res.WriteString("UDF migration: Aborted.\n")
