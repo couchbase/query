@@ -96,8 +96,27 @@ var EnableTracing = false
 // Enable KV data in snappy compressed format
 var EnableSnappyCompression = false
 
-// TCP keepalive interval in seconds. Default 30 minutes
-var TCPKeepaliveInterval = 30 * 60
+// Quiet time in seconds (TCP_KEEPIDLE) before keepalive probing starts on a connection parked
+// in the pool. Applies only while the connection is pooled; see TCPKeepaliveActiveIdleTime for
+// the value used once it is checked out. Default 30 minutes.
+var TCPKeepalivePooledIdleTime = 30 * 60
+
+// Quiet time in seconds (TCP_KEEPIDLE) before keepalive probing starts on a connection that is
+// checked out of the pool and actively in use. Kept much lower than
+// TCPKeepalivePooledIdleTime so a half-dead socket is detected quickly regardless of how long
+// the caller's own read deadline is (which may be as long as the statement timeout), without
+// paying the probe overhead on connections sitting in the pool. Default 5 seconds.
+var TCPKeepaliveActiveIdleTime = 5
+
+// Seconds between individual keepalive probes (TCP_KEEPINTVL) once the idle time above has
+// elapsed. Note this is a different quantity from the two idle times: worst case detection is
+// idleTime + TCPKeepaliveProbeInterval * TCPKeepaliveProbeCount. Left at 2s so that a
+// black-holed peer is noticed in about 11s rather than the ~11 minutes the OS defaults
+// (75s x 9 on Linux) would give.
+var TCPKeepaliveProbeInterval = 2
+
+// Number of unanswered keepalive probes (TCP_KEEPCNT) before the kernel drops the connection.
+var TCPKeepaliveProbeCount = 3
 
 // Used to decide whether to skip verification of certificates when
 // connecting to an ssl port.
@@ -157,13 +176,29 @@ func EnableAsynchronousCloser(closer bool, interval time.Duration) {
 	ConnCloserInterval = interval
 }
 
-// Allow TCP keepalive parameters to be set by the application
-func SetTcpKeepalive(enabled bool, interval int) {
+// Allow TCP keepalive to be enabled, and the pooled idle time to be set, by the application
+func SetTcpKeepalive(enabled bool, pooledIdleTime int) {
 
 	TCPKeepalive = enabled
 
-	if interval > 0 {
-		TCPKeepaliveInterval = interval
+	// the pooled idle time must stay at or above the active one, otherwise the two tiers invert
+	// and a parked connection would probe more aggressively than one in use
+	if pooledIdleTime > 0 && pooledIdleTime >= TCPKeepaliveActiveIdleTime {
+		TCPKeepalivePooledIdleTime = pooledIdleTime
+	}
+}
+
+// Allow the active-use TCP keepalive parameters to be set by the application. A non-positive
+// value leaves the corresponding parameter at its current setting.
+func SetTcpKeepaliveActive(activeIdleTime, probeInterval, probeCount int) {
+	if activeIdleTime > 0 && activeIdleTime <= TCPKeepalivePooledIdleTime {
+		TCPKeepaliveActiveIdleTime = activeIdleTime
+	}
+	if probeInterval > 0 {
+		TCPKeepaliveProbeInterval = probeInterval
+	}
+	if probeCount > 0 {
+		TCPKeepaliveProbeCount = probeCount
 	}
 }
 

@@ -103,6 +103,26 @@ const (
 	_SERVERLESS_TIMEOUT = 20 * time.Second
 )
 
+// TCP keepalive settings, in seconds, for KV connections while they are checked out of the pool
+// and in active use. Worst case detection of a half-dead peer is
+// activeIdleTime + probeInterval*probeCount, i.e. ~11s, versus the ~10 minutes that the OS
+// default probe schedule would add. Each is overridable at startup by the matching environment
+// variable, for field diagnosis without a new build.
+const (
+	_KV_KEEPALIVE_ACTIVE_IDLE_TIME = 5
+	_KV_KEEPALIVE_PROBE_INTERVAL   = 2
+	_KV_KEEPALIVE_PROBE_COUNT      = 3
+)
+
+// envIntOr returns the integer value of environment variable name, or def if it is unset or
+// not a positive integer.
+func envIntOr(name string, def int) int {
+	if v, err := strconv.Atoi(os.Getenv(name)); err == nil && v > 0 {
+		return v
+	}
+	return def
+}
+
 // Max number of mutation workers
 // 1 routine for every 4 CPU cores
 // But, a max of 4 go routines are allowed
@@ -122,6 +142,14 @@ func init() {
 	// MB-27415 have a larger overflow pool and close overflow connections asynchronously
 	cb.SetConnectionPoolParams(_DEFAULT_CONN, _OVERFLOW_CONN)
 	cb.EnableAsynchronousCloser(true, _DEFAULT_TIMEOUT)
+
+	// MB-73071 bound detection of a half-dead KV socket at ~11s, rather than leaving it to the
+	// 30 minute pooled idle time and the OS default probe schedule
+	cb.SetTcpKeepaliveActive(
+		envIntOr("GOQUERY_KV_KEEPALIVE_ACTIVE_IDLE_TIME", _KV_KEEPALIVE_ACTIVE_IDLE_TIME),
+		envIntOr("GOQUERY_KV_KEEPALIVE_PROBE_INTERVAL", _KV_KEEPALIVE_PROBE_INTERVAL),
+		envIntOr("GOQUERY_KV_KEEPALIVE_PROBE_COUNT", _KV_KEEPALIVE_PROBE_COUNT))
+
 	cb.ExternalCollectionsCapable = func() bool {
 		return distributed.RemoteAccess().Enabled(distributed.EXTERNAL_COLLECTIONS)
 	}

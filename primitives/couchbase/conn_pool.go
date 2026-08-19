@@ -114,6 +114,38 @@ func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolO
 // ConnPoolTimeout is notified whenever connections are acquired from a pool.
 var ConnPoolCallback func(host string, source string, start time.Time, err error)
 
+// keepAliveConfig builds a full keepalive configuration for the given idle time. Setting the
+// probe interval and count explicitly, rather than relying on SetKeepAliveOptions (which sets
+// TCP_KEEPIDLE alone), is what bounds detection at idleTime + probeInterval*probeCount instead
+// of leaving a ~10 minute tail at the OS default probe schedule.
+func keepAliveConfig(idleTime int) net.KeepAliveConfig {
+	return net.KeepAliveConfig{
+		Enable:   true,
+		Idle:     time.Duration(idleTime) * time.Second,
+		Interval: time.Duration(TCPKeepaliveProbeInterval) * time.Second,
+		Count:    TCPKeepaliveProbeCount,
+	}
+}
+
+// applyActiveKeepAlive tightens TCP keepalive on a connection that is about to be handed out
+// for active use, so a half-dead socket is detected in seconds rather than waiting on the
+// caller's own (potentially long, statement-timeout-derived) read deadline.
+func applyActiveKeepAlive(c *memcached.Client) {
+	if TCPKeepalive {
+		c.SetKeepAliveConfig(keepAliveConfig(TCPKeepaliveActiveIdleTime))
+	}
+}
+
+// applyPooledKeepAlive relaxes the idle time on a connection being returned to the pool, since
+// nothing is blocked on it until it is next checked out. The probe interval and count stay as
+// they are: a parked connection that does fail its probes simply dies quietly and the next
+// checkout takes the existing discard-and-retry path.
+func applyPooledKeepAlive(c *memcached.Client) {
+	if TCPKeepalive {
+		c.SetKeepAliveConfig(keepAliveConfig(TCPKeepalivePooledIdleTime))
+	}
+}
+
 // Use regular in-the-clear connection if tlsConfig is nil.
 // Use secure connection (TLS) if tlsConfig is set.
 func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, string, error) {
@@ -143,9 +175,8 @@ func defaultMkConn(host string, ah AuthHandler, tlsConfig *tls.Config, bucketNam
 		conn.SetDeadline(dl)
 	}
 
-	if TCPKeepalive == true {
-		conn.SetKeepAliveOptions(time.Duration(TCPKeepaliveInterval) * time.Second)
-	}
+	// freshly created connections go straight into active use
+	applyActiveKeepAlive(conn)
 
 	if EnableMutationToken == true {
 		features = append(features, memcached.FeatureMutationToken)
@@ -292,6 +323,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 			return nil, errClosedPool
 		}
 		atomic.AddUint64(&cp.connCount, 1)
+		applyActiveKeepAlive(rv)
 		return rv, nil
 	default:
 	}
@@ -307,6 +339,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 			return nil, errClosedPool
 		}
 		atomic.AddUint64(&cp.connCount, 1)
+		applyActiveKeepAlive(rv)
 		return rv, nil
 	case <-t.C:
 		// No connection came around in time, let's see
@@ -319,6 +352,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 				return nil, errClosedPool
 			}
 			atomic.AddUint64(&cp.connCount, 1)
+			applyActiveKeepAlive(rv)
 			return rv, nil
 		case cp.createsem <- true:
 			path = "create"
@@ -374,6 +408,8 @@ func (cp *connectionPool) Return(c *memcached.Client) {
 				c.Close()
 			}
 		}()
+
+		applyPooledKeepAlive(c)
 
 		select {
 		case cp.connections <- c:

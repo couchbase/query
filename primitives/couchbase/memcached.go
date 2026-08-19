@@ -788,14 +788,16 @@ func IsReadTimeOutError(err error) bool {
 	estr := err.Error()
 	return strings.Contains(estr, "read tcp") ||
 		strings.Contains(estr, "i/o timeout") ||
-		strings.Contains(estr, "connection timed out")
+		strings.Contains(estr, "connection timed out") ||
+		strings.Contains(estr, "network is unreachable")
 }
 
 func isTimeoutError(err error) bool {
 	estr := err.Error()
 	return strings.Contains(estr, "i/o timeout") ||
 		strings.Contains(estr, "connection timed out") ||
-		strings.Contains(estr, "no route to host")
+		strings.Contains(estr, "no route to host") ||
+		strings.Contains(estr, "network is unreachable")
 }
 
 // Errors that are not considered fatal for our fetch loop
