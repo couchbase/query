@@ -3247,6 +3247,35 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_INDEX_CHECKSUM, // 4420
+		symbol:      "E_INDEX_CHECKSUM",
+		Description: "Error generating index definition checksum for index <<name>>",
+		Reason: []string{
+			"An error occurred when generating index definition checksum for an index used in a saved prepare query plan",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        W_INDEX_CHECKSUM_MISMATCH, // 4421
+		symbol:      "W_INDEX_CHECKSUM_MISMATCH",
+		Description: "Index definition checksum mismatch for index <<name>>: old <<oldChecksum>> new <<newChecksum>>",
+		Reason: []string{
+			"The index definition checksum for an index used in a saved prepared query plan does not match the same index during restore",
+		},
+		Action: []string{
+			"Contact support.",
+		},
+		IsWarning: true,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MISSING_QUERY_METADATA, // 4500
 		symbol:      "E_MISSING_QUERY_METADATA",
 		Description: "'QUERY_METADATA' bucket is required for <<msg>>",

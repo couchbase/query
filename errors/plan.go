@@ -250,6 +250,18 @@ func NewPreparedDeletePlanError(name string, e error) Error {
 		ICause:      e, InternalCaller: CallerN(1)}
 }
 
+func NewIndexChecksumError(name string, e error) Error {
+	return &err{level: EXCEPTION, ICode: E_INDEX_CHECKSUM, IKey: "plan.index.checksum",
+		InternalMsg: fmt.Sprintf("Error generating index definition checksum for index %s.", name),
+		ICause:      e, InternalCaller: CallerN(1)}
+}
+
+func NewIndexChecksumMismatch(name, oldChecksum, newChecksum string) Error {
+	return &err{level: WARNING, ICode: W_INDEX_CHECKSUM_MISMATCH, IKey: "plan.index.checksum_mismatch",
+		InternalMsg:    fmt.Sprintf("Index definition checksum mismatch for index %s: old %s new %s", name, oldChecksum, newChecksum),
+		InternalCaller: CallerN(1)}
+}
+
 func NewMissingQueryMetadataError(msg string) Error {
 	return &err{level: EXCEPTION, ICode: E_MISSING_QUERY_METADATA, IKey: "plan.missing_query_metadata",
 		InternalMsg:    "'QUERY_METADATA' bucket is required for " + msg,

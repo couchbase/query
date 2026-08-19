@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -127,6 +128,11 @@ func (this *IndexCountDistinctScan2) MarshalBase(f func(map[string]interface{}))
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
+	checksum, err := datastore.IndexInfoChecksum(this.index, util.PLAN_VERSION)
+	if err == nil {
+		r["index_definition_checksum"] = checksum
+	}
+
 	setRangeIndexKey(this.spans, this.index)
 	r["spans"] = this.spans
 
@@ -155,18 +161,19 @@ func (this *IndexCountDistinctScan2) MarshalBase(f func(map[string]interface{}))
 
 func (this *IndexCountDistinctScan2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Index        string                 `json:"index"`
-		IndexId      string                 `json:"index_id"`
-		Namespace    string                 `json:"namespace"`
-		Bucket       string                 `json:"bucket"`
-		Scope        string                 `json:"scope"`
-		Keyspace     string                 `json:"keyspace"`
-		As           string                 `json:"as"`
-		Using        datastore.IndexType    `json:"using"`
-		Spans        Spans2                 `json:"spans"`
-		Covers       []string               `json:"covers"`
-		FilterCovers map[string]interface{} `json:"filter_covers"`
+		_                string                 `json:"#operator"`
+		Index            string                 `json:"index"`
+		IndexId          string                 `json:"index_id"`
+		Namespace        string                 `json:"namespace"`
+		Bucket           string                 `json:"bucket"`
+		Scope            string                 `json:"scope"`
+		Keyspace         string                 `json:"keyspace"`
+		As               string                 `json:"as"`
+		Using            datastore.IndexType    `json:"using"`
+		Spans            Spans2                 `json:"spans"`
+		Covers           []string               `json:"covers"`
+		FilterCovers     map[string]interface{} `json:"filter_covers"`
+		IndexDefChecksum string                 `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -219,7 +226,8 @@ func (this *IndexCountDistinctScan2) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		if planContext != nil && planContext.remap {
 			var err1 errors.Error
-			index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer)
+			index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer,
+				_unmarshalled.IndexDefChecksum, planContext.planVersion)
 			if err1 != nil || index == nil {
 				// return the original err
 				return err

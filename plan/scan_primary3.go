@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/util"
 )
 
 type PrimaryScan3 struct {
@@ -129,6 +130,10 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 	r["index"] = this.index.Name()
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
+	checksum, err := datastore.IndexInfoChecksum(this.index, util.PLAN_VERSION)
+	if err == nil {
+		r["index_definition_checksum"] = checksum
+	}
 
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
@@ -190,6 +195,7 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
 		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
 		SkipNewKeys      bool                   `json:"skip_new_keys"`
+		IndexDefChecksum string                 `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -235,7 +241,8 @@ func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 
 	var index datastore.Index
 	if planContext != nil && planContext.remap {
-		index, err = getRemapIndex(_unmarshalled.Index, this.indexer)
+		index, err = getRemapIndex(_unmarshalled.Index, this.indexer,
+			_unmarshalled.IndexDefChecksum, planContext.planVersion)
 	} else {
 		index, err = this.indexer.IndexByName(_unmarshalled.Index)
 	}

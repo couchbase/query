@@ -347,7 +347,7 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 			}
 		}
 
-		planContext := newPlanContext(subqMap, subqPlans, remap)
+		planContext := newPlanContext(subqMap, subqPlans, remap, this.planVersion)
 		this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
 		if err != nil {
 			return err
@@ -989,6 +989,7 @@ func (this *Prepared) SetupUdfSubqPlans(expr expression.Expression, subqPlans *a
 	marshalSubqPlans := subqPlans.MarshalPlans(lock, this.name, marshalSubqueryPlan)
 	r := map[string]interface{}{
 		"udfExpr":          expr,
+		"planVersion":      util.PLAN_VERSION,
 		"udfSubqueryPlans": marshalSubqPlans,
 	}
 	udfSubqPlans, err := json.Marshal(r)
@@ -1002,6 +1003,7 @@ func (this *Prepared) SetupUdfSubqPlans(expr expression.Expression, subqPlans *a
 func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlans) error {
 	var _unmarshalled struct {
 		UdfExpr      string `json:"udfExpr"`
+		PlanVersion  int    `json:"planVersion"`
 		UdfSubqPlans map[string]struct {
 			PlanOp             json.RawMessage `json:"plan"`
 			IndexScanKeyspaces map[string]bool `json:"indexSccanKeyspaces"`
@@ -1040,7 +1042,7 @@ func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlan
 			return err
 		}
 
-		planContext := newPlanContext(nil, nil, false)
+		planContext := newPlanContext(nil, nil, false, _unmarshalled.PlanVersion)
 		op, err := MakeOperator(op_type.Operator, subqPlanInfo.PlanOp, planContext)
 		if err != nil {
 			return err

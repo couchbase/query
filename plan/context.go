@@ -30,16 +30,19 @@ type planContext struct {
 
 	// for remapping (backup/restore)
 	remap bool
+
+	planVersion int
 }
 
-func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.SubqueryPlans, remap bool) *planContext {
+func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.SubqueryPlans, remap bool, planVersion int) *planContext {
 	rv := &planContext{
-		withs:     value.NewScopeValue(make(map[string]interface{}), nil),
-		vars:      value.NewScopeValue(make(map[string]interface{}), nil),
-		keyspaces: value.NewScopeValue(make(map[string]interface{}), nil),
-		subqMap:   subqMap,
-		subqPlans: subqPlans,
-		remap:     remap,
+		withs:       value.NewScopeValue(make(map[string]interface{}), nil),
+		vars:        value.NewScopeValue(make(map[string]interface{}), nil),
+		keyspaces:   value.NewScopeValue(make(map[string]interface{}), nil),
+		subqMap:     subqMap,
+		subqPlans:   subqPlans,
+		remap:       remap,
+		planVersion: planVersion,
 	}
 
 	rv.SetMapper(rv)
@@ -56,12 +59,13 @@ func subqPlanContext(parent *planContext) *planContext {
 	// the pointers since this is currently only used for unmarshal of subquery plans from a
 	// prepared statement (no parallelism)
 	rv := &planContext{
-		withs:     value.NewScopeValue(make(map[string]interface{}), parent.withs),
-		vars:      value.NewScopeValue(make(map[string]interface{}), parent.vars),
-		keyspaces: value.NewScopeValue(make(map[string]interface{}), parent.keyspaces),
-		subqMap:   parent.subqMap,
-		subqPlans: parent.subqPlans,
-		remap:     parent.remap,
+		withs:       value.NewScopeValue(make(map[string]interface{}), parent.withs),
+		vars:        value.NewScopeValue(make(map[string]interface{}), parent.vars),
+		keyspaces:   value.NewScopeValue(make(map[string]interface{}), parent.keyspaces),
+		subqMap:     parent.subqMap,
+		subqPlans:   parent.subqPlans,
+		remap:       parent.remap,
+		planVersion: parent.planVersion,
 	}
 
 	rv.SetMapper(rv)

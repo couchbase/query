@@ -1,446 +1,450 @@
 [
-	{
-		"statements": "prepare test from select name, statement, uses from system:prepareds",
-		"ignore": [
-			"encoded_plan",
-			"indexApiVersion",
-			"featureControls",
-			"namespace",
-			"planPreparedTime",
-			"queryContext",
-			"reqType",
-			"users"
-		],
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": [
-			{
-                                "keyspaceReferences": [
-                                        "system:prepareds"
-                                ],
-				"name": "test",
-				"operator": {
-					"#operator": "Authorize",
-					"privileges": {
-						"List": [
-							{
-								"Priv": 4,
-								"Props": 0,
-								"Target": ""
-							}
-						]
-					},
-					"~child": {
-						"#operator": "Sequence",
-						"~children": [
-							{
-								"#operator": "Sequence",
-								"~children": [
-									{
-										"#operator": "PrimaryScan",
-										"index": "#primary",
-										"keyspace": "prepareds",
-										"using": "system"
-									},
-									{
-										"#operator": "Fetch",
-										"early_projection": [
-											"name",
-											"statement",
-											"uses"
-										],
-										"keyspace": "prepareds"
-									},
-									{
-										"#operator": "Parallel",
-										"~child": {
-											"#operator": "Sequence",
-											"~children": [
-												{
-													"#operator": "InitialProject",
-													"discard_original": true,
-													"preserve_order": true,
-													"result_terms": [
-														{
-															"expr": "(`prepareds`.`name`)"
-														},
-														{
-															"expr": "(`prepareds`.`statement`)"
-														},
-														{
-															"expr": "(`prepareds`.`uses`)"
-														}
-													]
-												}
-											]
-										}
-									}
-								]
-							},
-							{
-								"#operator": "Stream",
-								"serializable": true
-							}
-						]
-					}
-				},
-				"signature": {
-					"name": "json",
-					"statement": "json",
-					"uses": "json"
-				},
-				"text": "prepare test from select name, statement, uses from system:prepareds"
-			}
-		]
-	},
-	{
-		"statements": "prepare force test from select name, statement, uses from system:prepareds",
-		"ignore": [
-			"encoded_plan",
-			"indexApiVersion",
-			"featureControls",
-			"namespace",
-			"planPreparedTime",
-			"queryContext",
-			"reqType",
-			"users"
-		],
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": [
-			{
-                                "keyspaceReferences": [
-                                        "system:prepareds"
-                                ],
-				"name": "test",
-				"operator": {
-					"#operator": "Authorize",
-					"privileges": {
-						"List": [
-							{
-								"Priv": 4,
-								"Props": 0,
-								"Target": ""
-							}
-						]
-					},
-					"~child": {
-						"#operator": "Sequence",
-						"~children": [
-							{
-								"#operator": "Sequence",
-								"~children": [
-									{
-										"#operator": "PrimaryScan",
-										"index": "#primary",
-										"keyspace": "prepareds",
-										"using": "system"
-									},
-									{
-										"#operator": "Fetch",
-										"early_projection": [
-											"name",
-											"statement",
-											"uses"
-										],
-										"keyspace": "prepareds"
-									},
-									{
-										"#operator": "Parallel",
-										"~child": {
-											"#operator": "Sequence",
-											"~children": [
-												{
-													"#operator": "InitialProject",
-													"discard_original": true,
-													"preserve_order": true,
-													"result_terms": [
-														{
-															"expr": "(`prepareds`.`name`)"
-														},
-														{
-															"expr": "(`prepareds`.`statement`)"
-														},
-														{
-															"expr": "(`prepareds`.`uses`)"
-														}
-													]
-												}
-											]
-										}
-									}
-								]
-							},
-							{
-								"#operator": "Stream",
-								"serializable": true
-							}
-						]
-					}
-				},
-				"signature": {
-					"name": "json",
-					"statement": "json",
-					"uses": "json"
-				},
-				"text": "prepare test from select name, statement, uses from system:prepareds"
-			}
-		]
-	},
-	{
-		"statements": "select name, statement, uses from system:prepareds",
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": [
-			{
-				"name": "test",
-				"statement": "prepare test from select name, statement, uses from system:prepareds",
-				"uses": 0
-			}
-		]
-	},
-	{
-		"statements": "execute test",
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": [
-			{
-				"name": "test",
-				"statement": "prepare test from select name, statement, uses from system:prepareds",
-				"uses": 1
-			}
-		]
-	},
-	{
-		"statements": "delete from system:prepareds",
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": []
-	},
-	{
-		"statements": "select name, statement, uses from system:prepareds",
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": []
-	},
-	{
-		"statements": "prepare select name, statement, uses from system:prepareds",
-		"ignore": [
-			"name",
-			"encoded_plan",
-			"indexApiVersion",
-			"featureControls",
-			"namespace",
-			"planPreparedTime",
-			"queryContext",
-			"reqType",
-			"users"
-		],
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": [
-			{
-                                "keyspaceReferences": [
-                                        "system:prepareds"
-                                ],
-				"operator": {
-					"#operator": "Authorize",
-					"privileges": {
-						"List": [
-							{
-								"Priv": 4,
-								"Props": 0,
-								"Target": ""
-							}
-						]
-					},
-					"~child": {
-						"#operator": "Sequence",
-						"~children": [
-							{
-								"#operator": "Sequence",
-								"~children": [
-									{
-										"#operator": "PrimaryScan",
-										"index": "#primary",
-										"keyspace": "prepareds",
-										"using": "system"
-									},
-									{
-										"#operator": "Fetch",
-										"early_projection": [
-											"name",
-											"statement",
-											"uses"
-										],
-										"keyspace": "prepareds"
-									},
-									{
-										"#operator": "Parallel",
-										"~child": {
-											"#operator": "Sequence",
-											"~children": [
-												{
-													"#operator": "InitialProject",
-													"discard_original": true,
-													"preserve_order": true,
-													"result_terms": [
-														{
-															"expr": "(`prepareds`.`name`)"
-														},
-														{
-															"expr": "(`prepareds`.`statement`)"
-														},
-														{
-															"expr": "(`prepareds`.`uses`)"
-														}
-													]
-												}
-											]
-										}
-									}
-								]
-							},
-							{
-								"#operator": "Stream",
-								"serializable": true
-							}
-						]
-					}
-				},
-				"signature": {
-					"statement": "json",
-					"uses": "json"
-				},
-				"text": "prepare select name, statement, uses from system:prepareds"
-			}
-		]
-	},
-	{
-		"statements": "prepare force select name, statement, uses from system:prepareds",
-		"ignore": [
-			"name",
-			"encoded_plan",
-			"indexApiVersion",
-			"featureControls",
-			"namespace",
-			"planPreparedTime",
-			"queryContext",
-			"reqType",
-			"users"
-		],
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": [
-			{
-                                "keyspaceReferences": [
-                                        "system:prepareds"
-                                ],
-				"operator": {
-					"#operator": "Authorize",
-					"privileges": {
-						"List": [
-							{
-								"Priv": 4,
-								"Props": 0,
-								"Target": ""
-							}
-						]
-					},
-					"~child": {
-						"#operator": "Sequence",
-						"~children": [
-							{
-								"#operator": "Sequence",
-								"~children": [
-									{
-										"#operator": "PrimaryScan",
-										"index": "#primary",
-										"keyspace": "prepareds",
-										"using": "system"
-									},
-									{
-										"#operator": "Fetch",
-										"early_projection": [
-											"name",
-											"statement",
-											"uses"
-										],
-										"keyspace": "prepareds"
-									},
-									{
-										"#operator": "Parallel",
-										"~child": {
-											"#operator": "Sequence",
-											"~children": [
-												{
-													"#operator": "InitialProject",
-													"discard_original": true,
-													"preserve_order": true,
-													"result_terms": [
-														{
-															"expr": "(`prepareds`.`name`)"
-														},
-														{
-															"expr": "(`prepareds`.`statement`)"
-														},
-														{
-															"expr": "(`prepareds`.`uses`)"
-														}
-													]
-												}
-											]
-										}
-									}
-								]
-							},
-							{
-								"#operator": "Stream",
-								"serializable": true
-							}
-						]
-					}
-				},
-				"signature": {
-					"statement": "json",
-					"uses": "json"
-				},
-				"text": "prepare select name, statement, uses from system:prepareds"
-			}
-		]
-	},
-	{
-		"statements": "select statement, uses from system:prepareds",
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": [
-			{
-				"statement": "prepare select name, statement, uses from system:prepareds",
-				"uses": 0
-			}
-		]
-	},
-	{
-		"statements": "delete from system:prepareds",
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": []
-	},
-	{
-		"statements": "select name, statement, uses from system:prepareds",
-		"userArgs": {
-			"testAdmin": "testAdminpass"
-		},
-		"results": []
-	}
+    {
+        "statements": "prepare test from select name, statement, uses from system:prepareds",
+        "ignore": [
+            "encoded_plan",
+            "indexApiVersion",
+            "index_definition_checksum",
+            "featureControls",
+            "namespace",
+            "planPreparedTime",
+            "queryContext",
+            "reqType",
+            "users"
+        ],
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "system:prepareds"
+                ],
+                "name": "test",
+                "operator": {
+                    "#operator": "Authorize",
+                    "privileges": {
+                        "List": [
+                            {
+                                "Priv": 4,
+                                "Props": 0,
+                                "Target": ""
+                            }
+                        ]
+                    },
+                    "~child": {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "Sequence",
+                                "~children": [
+                                    {
+                                        "#operator": "PrimaryScan",
+                                        "index": "#primary",
+                                        "keyspace": "prepareds",
+                                        "using": "system"
+                                    },
+                                    {
+                                        "#operator": "Fetch",
+                                        "early_projection": [
+                                            "name",
+                                            "statement",
+                                            "uses"
+                                        ],
+                                        "keyspace": "prepareds"
+                                    },
+                                    {
+                                        "#operator": "Parallel",
+                                        "~child": {
+                                            "#operator": "Sequence",
+                                            "~children": [
+                                                {
+                                                    "#operator": "InitialProject",
+                                                    "discard_original": true,
+                                                    "preserve_order": true,
+                                                    "result_terms": [
+                                                        {
+                                                            "expr": "(`prepareds`.`name`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`statement`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`uses`)"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "#operator": "Stream",
+                                "serializable": true
+                            }
+                        ]
+                    }
+                },
+                "signature": {
+                    "name": "json",
+                    "statement": "json",
+                    "uses": "json"
+                },
+                "text": "prepare test from select name, statement, uses from system:prepareds"
+            }
+        ]
+    },
+    {
+        "statements": "prepare force test from select name, statement, uses from system:prepareds",
+        "ignore": [
+            "encoded_plan",
+            "indexApiVersion",
+            "index_definition_checksum",
+            "featureControls",
+            "namespace",
+            "planPreparedTime",
+            "queryContext",
+            "reqType",
+            "users"
+        ],
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "keyspaceReferences": [
+                     "system:prepareds"
+                ],
+                "name": "test",
+                "operator": {
+                    "#operator": "Authorize",
+                    "privileges": {
+                        "List": [
+                            {
+                                "Priv": 4,
+                                "Props": 0,
+                                "Target": ""
+                            }
+                        ]
+                    },
+                    "~child": {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "Sequence",
+                                "~children": [
+                                    {
+                                        "#operator": "PrimaryScan",
+                                        "index": "#primary",
+                                        "keyspace": "prepareds",
+                                        "using": "system"
+                                    },
+                                    {
+                                        "#operator": "Fetch",
+                                        "early_projection": [
+                                            "name",
+                                            "statement",
+                                            "uses"
+                                        ],
+                                        "keyspace": "prepareds"
+                                    },
+                                    {
+                                        "#operator": "Parallel",
+                                        "~child": {
+                                            "#operator": "Sequence",
+                                            "~children": [
+                                                {
+                                                    "#operator": "InitialProject",
+                                                    "discard_original": true,
+                                                    "preserve_order": true,
+                                                    "result_terms": [
+                                                        {
+                                                            "expr": "(`prepareds`.`name`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`statement`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`uses`)"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "#operator": "Stream",
+                                "serializable": true
+                            }
+                        ]
+                    }
+                },
+                "signature": {
+                    "name": "json",
+                    "statement": "json",
+                    "uses": "json"
+                },
+                "text": "prepare test from select name, statement, uses from system:prepareds"
+            }
+        ]
+    },
+    {
+        "statements": "select name, statement, uses from system:prepareds",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "name": "test",
+                "statement": "prepare test from select name, statement, uses from system:prepareds",
+                "uses": 0
+            }
+        ]
+    },
+    {
+        "statements": "execute test",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "name": "test",
+                "statement": "prepare test from select name, statement, uses from system:prepareds",
+                "uses": 1
+            }
+        ]
+    },
+    {
+        "statements": "delete from system:prepareds",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": []
+    },
+    {
+        "statements": "select name, statement, uses from system:prepareds",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": []
+    },
+    {
+        "statements": "prepare select name, statement, uses from system:prepareds",
+        "ignore": [
+            "name",
+            "encoded_plan",
+            "indexApiVersion",
+            "index_definition_checksum",
+            "featureControls",
+            "namespace",
+            "planPreparedTime",
+            "queryContext",
+            "reqType",
+            "users"
+        ],
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "system:prepareds"
+                ],
+                "operator": {
+                    "#operator": "Authorize",
+                    "privileges": {
+                        "List": [
+                            {
+                                "Priv": 4,
+                                "Props": 0,
+                                "Target": ""
+                            }
+                        ]
+                    },
+                    "~child": {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "Sequence",
+                                "~children": [
+                                    {
+                                        "#operator": "PrimaryScan",
+                                        "index": "#primary",
+                                        "keyspace": "prepareds",
+                                        "using": "system"
+                                    },
+                                    {
+                                        "#operator": "Fetch",
+                                        "early_projection": [
+                                            "name",
+                                            "statement",
+                                            "uses"
+                                        ],
+                                        "keyspace": "prepareds"
+                                    },
+                                    {
+                                        "#operator": "Parallel",
+                                        "~child": {
+                                            "#operator": "Sequence",
+                                            "~children": [
+                                                {
+                                                    "#operator": "InitialProject",
+                                                    "discard_original": true,
+                                                    "preserve_order": true,
+                                                    "result_terms": [
+                                                        {
+                                                            "expr": "(`prepareds`.`name`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`statement`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`uses`)"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "#operator": "Stream",
+                                "serializable": true
+                            }
+                        ]
+                    }
+                },
+                "signature": {
+                    "statement": "json",
+                    "uses": "json"
+                },
+                "text": "prepare select name, statement, uses from system:prepareds"
+            }
+        ]
+    },
+    {
+        "statements": "prepare force select name, statement, uses from system:prepareds",
+        "ignore": [
+            "name",
+            "encoded_plan",
+            "indexApiVersion",
+            "index_definition_checksum",
+            "featureControls",
+            "namespace",
+            "planPreparedTime",
+            "queryContext",
+            "reqType",
+            "users"
+        ],
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "system:prepareds"
+                ],
+                "operator": {
+                    "#operator": "Authorize",
+                    "privileges": {
+                        "List": [
+                            {
+                                "Priv": 4,
+                                "Props": 0,
+                                "Target": ""
+                            }
+                        ]
+                    },
+                    "~child": {
+                        "#operator": "Sequence",
+                        "~children": [
+                            {
+                                "#operator": "Sequence",
+                                "~children": [
+                                    {
+                                        "#operator": "PrimaryScan",
+                                        "index": "#primary",
+                                        "keyspace": "prepareds",
+                                        "using": "system"
+                                    },
+                                    {
+                                        "#operator": "Fetch",
+                                        "early_projection": [
+                                            "name",
+                                            "statement",
+                                            "uses"
+                                        ],
+                                        "keyspace": "prepareds"
+                                    },
+                                    {
+                                        "#operator": "Parallel",
+                                        "~child": {
+                                            "#operator": "Sequence",
+                                            "~children": [
+                                                {
+                                                    "#operator": "InitialProject",
+                                                    "discard_original": true,
+                                                    "preserve_order": true,
+                                                    "result_terms": [
+                                                        {
+                                                            "expr": "(`prepareds`.`name`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`statement`)"
+                                                        },
+                                                        {
+                                                            "expr": "(`prepareds`.`uses`)"
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "#operator": "Stream",
+                                "serializable": true
+                            }
+                        ]
+                    }
+                },
+                "signature": {
+                    "statement": "json",
+                    "uses": "json"
+                },
+                "text": "prepare select name, statement, uses from system:prepareds"
+            }
+        ]
+    },
+    {
+        "statements": "select statement, uses from system:prepareds",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "statement": "prepare select name, statement, uses from system:prepareds",
+                "uses": 0
+            }
+        ]
+    },
+    {
+        "statements": "delete from system:prepareds",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": []
+    },
+    {
+        "statements": "select name, statement, uses from system:prepareds",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": []
+    }
 ]

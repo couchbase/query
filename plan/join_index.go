@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -143,6 +144,10 @@ func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]in
 		"index_id": this.index.Id(),
 		"using":    this.index.Type(),
 	}
+	checksum, err := datastore.IndexInfoChecksum(this.index, util.PLAN_VERSION)
+	if err == nil {
+		scan["index_definition_checksum"] = checksum
+	}
 
 	if this.covers != nil {
 		scan["covers"] = this.covers
@@ -185,11 +190,12 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		As        string `json:"as"`
 		For       string `json:"for"`
 		Scan      struct {
-			Index        string                 `json:"index"`
-			IndexId      string                 `json:"index_id"`
-			Using        datastore.IndexType    `json:"using"`
-			Covers       []string               `json:"covers"`
-			FilterCovers map[string]interface{} `json:"filter_covers"`
+			Index            string                 `json:"index"`
+			IndexId          string                 `json:"index_id"`
+			Using            datastore.IndexType    `json:"using"`
+			Covers           []string               `json:"covers"`
+			FilterCovers     map[string]interface{} `json:"filter_covers"`
+			IndexDefChecksum string                 `json:"index_definition_checksum"`
 		} `json:"scan"`
 		SubPaths     []string               `json:"subpaths"`
 		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
@@ -236,7 +242,8 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		if planContext != nil && planContext.remap {
 			var err1 errors.Error
-			this.index, err1 = getRemapIndex(_unmarshalled.Scan.Index, this.indexer)
+			this.index, err1 = getRemapIndex(_unmarshalled.Scan.Index, this.indexer,
+				_unmarshalled.Scan.IndexDefChecksum, planContext.planVersion)
 			if err1 != nil || this.index == nil {
 				// return the original err
 				return err

@@ -6,6 +6,7 @@
             ]
     },
     {
+        "ignore":["index_definition_checksum"],
         "statements": "EXPLAIN SELECT * FROM default:game WHERE META(game).id = \"damien\" ORDER BY id",
         "results": [
         {
@@ -95,8 +96,9 @@
     },
     {
         "description": "query with WHERE clause using OR but not only ID comparisons should scan",
+        "ignore":["index_definition_checksum"],
         "statements": "EXPLAIN SELECT * FROM default:game WHERE META(game).id = \"damien\" OR name = \"foo\" ORDER BY id",
-         "results": [
+        "results": [
         {
         "plan": {
             "#operator": "Sequence",
@@ -157,6 +159,7 @@
     },
     {
         "description": "query with WHERE clause matches multiple IDs nested in ANY comparison with literal array of ids should not scan",
+        "ignore":["index_definition_checksum"],
         "statements": "EXPLAIN SELECT * FROM default:game WHERE ANY id IN [\"damien\", \"dustin\", \"junyi\"]  satisfies META(game).id = id END ORDER BY id",
         "results": [
         {
@@ -231,6 +234,7 @@
     },
     {
         "description": "query with WHERE clause using ANY but not just comparison with literal array of docids should scan",
+        "ignore":["index_definition_checksum"],
         "statements": "explain SELECT META(game).id FROM default:game WHERE ANY id IN [\"damien\", \"dustin\", \"does_not_exist\"] satisfies META(game).id = id or id IS NOT NULL END ORDER BY id",
         "results": [
         {
@@ -365,6 +369,7 @@
    },
    {
         "description": "query with COUNT(*) and anything else should perform scan",
+        "ignore":["index_definition_checksum"],
         "statements": "EXPLAIN SELECT COUNT(*), MIN(score) as sc FROM default:game ORDER BY MIN(score)",
         "results": [
         {
@@ -461,6 +466,7 @@
    },
    {
         "description": "query with COUNT(*) with WHERE clause should perform scan",
+        "ignore":["index_definition_checksum"],
         "statements": "EXPLAIN SELECT COUNT(*) as c FROM default:game WHERE score > 5",
          "results": [
         {

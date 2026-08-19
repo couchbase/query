@@ -238,6 +238,8 @@ const (
 	E_PREPARED_ENCODED_PLAN                      ErrorCode = 4410
 	E_PREPARED_SAVE_PLAN                         ErrorCode = 4411
 	E_PREPARED_DELETE_PLAN                       ErrorCode = 4412
+	E_INDEX_CHECKSUM                             ErrorCode = 4420
+	W_INDEX_CHECKSUM_MISMATCH                    ErrorCode = 4421
 	E_MISSING_QUERY_METADATA                     ErrorCode = 4500
 	E_CBO                                        ErrorCode = 4600
 	E_INDEX_STAT                                 ErrorCode = 4610

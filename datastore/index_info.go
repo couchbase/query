@@ -9,6 +9,8 @@
 package datastore
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -74,6 +76,65 @@ func IndexInfoDoc(index Index, keyspaceId, scopeId, bucketId, namespaceName, nam
 	}
 
 	return doc, nil
+}
+
+// index info needed for query plan, used in backup/restore of prepared plans
+func IndexInfoPlan(index Index, planVersion int) map[string]interface{} {
+	doc := map[string]interface{}{
+		"name":      index.Name(),
+		"index_key": jsonSafe(indexKeyStrings(index)),
+		"using":     jsonSafe(index.Type()),
+	}
+
+	if cond := index.Condition(); cond != nil {
+		doc["condition"] = cond.String()
+	}
+	if index.IsPrimary() {
+		doc["is_primary"] = true
+	}
+	if partition := indexPartitionString(index); partition != "" {
+		doc["partition"] = partition
+	}
+	if include := GetIndexIncludes(index); include != nil {
+		doc["include"] = jsonSafe(indexExprStrings(include))
+	}
+	if ixw, ok := index.(interface{ With() map[string]interface{} }); ok {
+		if w, ok := jsonSafe(ixw.With()).(map[string]interface{}); ok {
+			// only include certain fields in the WITH clause
+			with := make(map[string]interface{}, len(w))
+			if desc, ok := w["description"]; ok {
+				with["description"] = desc
+			}
+			if dim, ok := w["dimension"]; ok {
+				with["dimension"] = dim
+			}
+			if nprobes, ok := w["scan_nprobes"]; ok {
+				with["scan_nprobes"] = nprobes
+			}
+			if sim, ok := w["similarity"]; ok {
+				with["similarity"] = sim
+			}
+			if tlist, ok := w["train_list"]; ok {
+				with["train_list"] = tlist
+			}
+			if len(with) > 0 {
+				doc["with"] = with
+			}
+		}
+	}
+
+	return doc
+}
+
+// computes a checksum of IndexInfoPlan() output
+func IndexInfoChecksum(index Index, planVersion int) (string, error) {
+	info := IndexInfoPlan(index, planVersion)
+	bytes, err := json.Marshal(info)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(bytes)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 func indexKeyStrings(index Index) []string {

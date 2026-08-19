@@ -18,6 +18,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -436,6 +437,10 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
+	checksum, err := datastore.IndexInfoChecksum(this.index, util.PLAN_VERSION)
+	if err == nil {
+		r["index_definition_checksum"] = checksum
+	}
 
 	setRangeIndexKey(this.spans, this.index)
 	r["spans"] = this.spans
@@ -605,6 +610,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		IndexVector        json.RawMessage        `json:"index_vector"`
 		IndexKeyNames      []string               `json:"index_key_names"`
 		IndexPartitionSets [][]string             `json:"index_partition_sets"`
+		IndexDefChecksum   string                 `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -767,7 +773,8 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		if planContext != nil && planContext.remap {
 			var err1 errors.Error
-			index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer)
+			index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer,
+				_unmarshalled.IndexDefChecksum, planContext.planVersion)
 			if err1 != nil || index == nil {
 				// return the original err
 				return err
@@ -810,7 +817,7 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 
 // for restored query plan, get the index via IndexByName() instead of IndexById(); a retry loop is
 // included in case the new index is not yet created in the restore process
-func getRemapIndex(indexName string, indexer datastore.Indexer) (index datastore.Index, err errors.Error) {
+func getRemapIndex(indexName string, indexer datastore.Indexer, indexDefChecksum string, planVersion int) (index datastore.Index, err errors.Error) {
 	maxRetry := 6
 	interval := 100 * time.Millisecond
 	for i := 0; i < maxRetry; i++ {
@@ -823,7 +830,15 @@ func getRemapIndex(indexName string, indexer datastore.Indexer) (index datastore
 			} else {
 				break
 			}
-		} else {
+		} else if indexDefChecksum != "" {
+			checksum, err1 := datastore.IndexInfoChecksum(index, planVersion)
+			if err1 != nil {
+				err = errors.NewIndexChecksumError(index.Name(), err1)
+				index = nil
+			} else if checksum != indexDefChecksum {
+				err = errors.NewIndexChecksumMismatch(index.Name(), indexDefChecksum, checksum)
+				index = nil
+			}
 			return
 		}
 	}

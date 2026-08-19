@@ -20,6 +20,7 @@
         ]
     },
     {
+        "ignore":["index_definition_checksum"],
         "statements": "EXPLAIN SELECT dimensions FROM default:catalog ORDER BY dimensions.length, dimensions.width ASC LIMIT 1 OFFSET 1",
         "results": [
         {
@@ -92,6 +93,7 @@
 
 
     {
+        "ignore":["index_definition_checksum"],
         "statements": "EXPLAIN SELECT personal_details.first_name AS first_name, personal_details.state, personal_details.age AS age FROM default:user_profile AS u ORDER BY age, first_name DESC LIMIT 3",
         "results": [
         {

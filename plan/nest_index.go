@@ -15,6 +15,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
+	"github.com/couchbase/query/util"
 )
 
 type IndexNest struct {
@@ -111,6 +112,10 @@ func (this *IndexNest) MarshalBase(f func(map[string]interface{})) map[string]in
 		"index_id": this.index.Id(),
 		"using":    this.index.Type(),
 	}
+	checksum, err := datastore.IndexInfoChecksum(this.index, util.PLAN_VERSION)
+	if err == nil {
+		scan["index_definition_checksum"] = checksum
+	}
 
 	r["scan"] = scan
 
@@ -140,9 +145,10 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 		As        string `json:"as"`
 		For       string `json:"for"`
 		Scan      struct {
-			Index   string              `json:"index"`
-			IndexId string              `json:"index_id"`
-			Using   datastore.IndexType `json:"using"`
+			Index            string              `json:"index"`
+			IndexId          string              `json:"index_id"`
+			Using            datastore.IndexType `json:"using"`
+			IndexDefChecksum string              `json:"index_definition_checksum"`
 		} `json:"scan"`
 		SubPaths     []string               `json:"subpaths"`
 		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
@@ -188,7 +194,8 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 	if err != nil {
 		if planContext != nil && planContext.remap {
 			var err1 errors.Error
-			this.index, err1 = getRemapIndex(_unmarshalled.Scan.Index, this.indexer)
+			this.index, err1 = getRemapIndex(_unmarshalled.Scan.Index, this.indexer,
+				_unmarshalled.Scan.IndexDefChecksum, planContext.planVersion)
 			if err1 != nil || this.index == nil {
 				// return the original err
 				return err
