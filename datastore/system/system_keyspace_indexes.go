@@ -265,6 +265,10 @@ func (b *indexKeyspace) fetchOne(key string, keysMap map[string]value.AnnotatedV
 			doc.SetField("partition", partition)
 		}
 
+		if include := datastore.GetIndexIncludes(index); include != nil {
+			doc.SetField("include", datastoreObjectToJSONSafe(indexIncludeToIndexIncludeStringArray(include)))
+		}
+
 		if msg != "" {
 			doc.SetField("message", msg)
 		}
@@ -356,6 +360,10 @@ func (b *indexKeyspace) fetchOneCollection(key string, keysMap map[string]value.
 			doc.SetField("partition", partition)
 		}
 
+		if include := datastore.GetIndexIncludes(index); include != nil {
+			doc.SetField("include", datastoreObjectToJSONSafe(indexIncludeToIndexIncludeStringArray(include)))
+		}
+
 		if msg != "" {
 			doc.SetField("message", msg)
 		}
@@ -410,6 +418,14 @@ func indexKeyToIndexKeyStringArray(index datastore.Index) (rv []string) {
 		}
 	}
 	return
+}
+
+func indexIncludeToIndexIncludeStringArray(exprs expression.Expressions) (rv []string) {
+	rv = make([]string, len(exprs))
+	for i, e := range exprs {
+		rv[i] = e.String()
+	}
+	return rv
 }
 
 func indexPartitionToString(index datastore.Index) string {
