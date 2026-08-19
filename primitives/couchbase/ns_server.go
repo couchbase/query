@@ -238,6 +238,7 @@ type Pool struct {
 
 	updater io.ReadCloser
 	client  *Client
+	closed  bool
 }
 
 func (p *Pool) GetExternalCatalogs() (map[string]*extparams.CatalogEntry, uint64, error) {
@@ -1884,6 +1885,7 @@ func (p *Pool) Close(force bool) {
 	// MB-36186 make the bucket map inaccessible
 	bucketMap := p.BucketMap
 	p.BucketMap = nil
+	p.closed = true
 	if p.updater != nil {
 		p.updater.Close()
 	}
