@@ -55,6 +55,7 @@ set -- $args
 
 GIT=`which git`
 
+regulatorcommit=7fe2b38
 cbranch=`$GIT rev-parse --abbrev-ref HEAD`
 rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
   awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
@@ -256,7 +257,7 @@ function repo_setup {
     repo_by_gomod go.mod gometa "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod eventing-ee "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod n1fty "" $cbranch $rbranch $defbranch
-    repo_by_gomod go.mod regulator "" $cbranch $rbranch $defbranch
+    repo_by_gomod go.mod regulator "" $regulatorcommit $rbranch $defbranch
     repo_by_gomod go.mod sigar "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
