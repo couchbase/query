@@ -359,5 +359,126 @@
         "name": "aa2"
       }
     ]
+  },
+  {
+    "testcase": "a non-admin user is not allowed to drop knowledge, mirroring CREATE KNOWLEDGE's privilege check",
+    "statements": "DROP KNOWLEDGE bulk_a FOR orders.knowledge_test.articles",
+    "userArgs": { "ordersowner": "orderspass" },
+    "error": "User does not have credentials to run this type of query. Add role admin to allow the statement to run."
+  },
+  {
+    "testcase": "dropping a name that doesn't exist fails without IF EXISTS",
+    "statements": "DROP KNOWLEDGE nosuchname FOR orders.knowledge_test.articles",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "error": "not found"
+  },
+  {
+    "testcase": "DROP KNOWLEDGE IF EXISTS succeeds silently when the name doesn't exist",
+    "statements": "DROP KNOWLEDGE IF EXISTS nosuchname FOR orders.knowledge_test.articles",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "DROP KNOWLEDGE removes a single named entry",
+    "statements": "DROP KNOWLEDGE bulk_a FOR orders.knowledge_test.articles",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "bulk_a is gone, the other four articles entries remain",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": [
+      { "name": "bulk_b" },
+      { "name": "bulk_d" },
+      { "name": "iata_hint" },
+      { "name": "icao_hint" }
+    ]
+  },
+  {
+    "testcase": "dropping the same name again fails - it no longer exists",
+    "statements": "DROP KNOWLEDGE bulk_a FOR orders.knowledge_test.articles",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "error": "not found"
+  },
+  {
+    "testcase": "DROP KNOWLEDGE accepts a comma-separated list of names, removing all of them in one write",
+    "statements": "DROP KNOWLEDGE bulk_b, bulk_d FOR orders.knowledge_test.articles",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "both bulk_b and bulk_d are gone, leaving only the two AS-created entries",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": [
+      { "name": "iata_hint" },
+      { "name": "icao_hint" }
+    ]
+  },
+  {
+    "testcase": "a list drop fails entirely if any one of the names doesn't exist - iata_hint is real but nosuch isn't, so neither is removed",
+    "statements": "DROP KNOWLEDGE iata_hint, nosuch FOR orders.knowledge_test.articles",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "error": "not found"
+  },
+  {
+    "testcase": "the failed list drop above was atomic - iata_hint was not removed despite existing",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": [
+      { "name": "iata_hint" },
+      { "name": "icao_hint" }
+    ]
+  },
+  {
+    "testcase": "DROP KNOWLEDGE FOR <keyspace> with no name(s) removes every entry for the keyspace in one write",
+    "statements": "DROP KNOWLEDGE FOR orders.knowledge_test.flights",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "flights now has no knowledge entries at all",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.flights\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "dropping everything again fails without IF EXISTS - there's no knowledge document left to drop",
+    "statements": "DROP KNOWLEDGE FOR orders.knowledge_test.flights",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "error": "not found"
+  },
+  {
+    "testcase": "DROP KNOWLEDGE IF EXISTS FOR <keyspace> succeeds silently even with nothing left to drop",
+    "statements": "DROP KNOWLEDGE IF EXISTS FOR orders.knowledge_test.flights",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "a bare bucket name is normalized to bucket._default._default the same way on both CREATE and DROP, so a bucket-only DROP finds what a bucket-only CREATE stored",
+    "statements": "CREATE KNOWLEDGE bucket_only_hint FOR orders AS \"bucket-only hint\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "the bucket-only entry round-trips through DROP KNOWLEDGE using the same bare bucket name",
+    "statements": "DROP KNOWLEDGE bucket_only_hint FOR orders",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "DROP KNOWLEDGE against the bucket-local _system scope is rejected, matching CREATE KNOWLEDGE's rejection - IF EXISTS only suppresses not-found, not an invalid path",
+    "statements": "DROP KNOWLEDGE IF EXISTS some_name FOR orders._system._query",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "error": "system scope not permitted"
+  },
+  {
+    "testcase": "final state check - only the two original AS-created articles entries remain across the whole keyspace_test scope",
+    "statements": "SELECT COUNT(*) AS cnt FROM system:natural_knowledge WHERE `bucket` = \"orders\" AND `scope` = \"knowledge_test\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": [
+      { "cnt": 2 }
+    ]
   }
 ]

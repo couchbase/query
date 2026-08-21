@@ -693,6 +693,10 @@ func (this *scanIdxCol) VisitCreateKnowledge(op *plan.CreateKnowledge) (interfac
 	return nil, nil
 }
 
+func (this *scanIdxCol) VisitDropKnowledge(op *plan.DropKnowledge) (interface{}, error) {
+	return nil, nil
+}
+
 func (this *scanIdxCol) VisitDropSequence(op *plan.DropSequence) (interface{}, error) {
 	return nil, nil
 }

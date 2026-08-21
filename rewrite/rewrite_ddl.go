@@ -100,6 +100,10 @@ func (this *Rewrite) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (interf
 	return stmt, stmt.MapExpressions(this)
 }
 
+func (this *Rewrite) VisitDropKnowledge(stmt *algebra.DropKnowledge) (interface{}, error) {
+	return stmt, stmt.MapExpressions(this)
+}
+
 func (this *Rewrite) VisitDropSequence(stmt *algebra.DropSequence) (interface{}, error) {
 	return stmt, stmt.MapExpressions(this)
 }

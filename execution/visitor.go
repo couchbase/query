@@ -194,6 +194,7 @@ type Visitor interface {
 
 	// Knowledge
 	VisitCreateKnowledge(op *CreateKnowledge) (interface{}, error)
+	VisitDropKnowledge(op *DropKnowledge) (interface{}, error)
 
 	// CredentialStore
 	VisitCreateCredentialStore(op *CreateCredentialStore) (any, error)

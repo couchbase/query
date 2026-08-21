@@ -256,8 +256,11 @@ func writeKnowledgeEntries(b datastore.Keyspace, scopeUid, collectionUid string,
 			// Insert losing one (a concurrent writer created the document between our loadDoc seeing
 			// it not exist and this Insert) - errors.NewDuplicateKeyError's message ("Duplicate Key:
 			// ...") doesn't match IsExistsError's "already exist" pattern, so it needs its own check.
+			// A NotFound on Update is the same kind of lost race, the other way round: a concurrent
+			// DROP KNOWLEDGE (or the cleanup sweep) removed the document between our loadDoc seeing
+			// it exist and this Update - retrying re-loads, sees it gone, and takes the Insert path.
 			if errs2[0].HasCause(errors.E_CAS_MISMATCH) || errs2[0].HasCause(errors.E_DUPLICATE_KEY) ||
-				errors.IsExistsError("", errs2[0]) {
+				errors.IsExistsError("", errs2[0]) || errors.IsNotFoundError("", errs2[0]) {
 				invalidate(key) // our cached copy (if any) is out of date; refetch on retry
 				continue        // lost a race with a concurrent writer; retry
 			}
@@ -271,33 +274,33 @@ func writeKnowledgeEntries(b datastore.Keyspace, scopeUid, collectionUid string,
 
 // validateAndResolvePath checks that path is eligible for knowledge and resolves it to its current
 // live scope/collection UIDs (see getStorageKey/resolveUids).
-func validateAndResolvePath(path *algebra.Path) (b datastore.Keyspace, scopeUid, collectionUid string, err errors.Error) {
+func validateAndResolvePath(path *algebra.Path, code errors.ErrorCode) (b datastore.Keyspace, scopeUid, collectionUid string, err errors.Error) {
 	if path.Scope() == "" || !path.IsCollection() {
 		return nil, "", "", errors.NewKnowledgeError(errors.E_KNOWLEDGE_INVALID_PATH, path.SimpleString())
 	}
 	if path.Namespace() == datastore.SYSTEM_NAMESPACE {
-		return nil, "", "", errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, path.SimpleString(),
+		return nil, "", "", errors.NewKnowledgeError(code, path.SimpleString(),
 			errors.NewDatastoreInvalidPathError("system namespace not permitted", "knowledge keyspace"))
 	}
 	if datastore.GetDatastore() == nil {
-		return nil, "", "", errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, path.SimpleString(), errors.NewNoDatastoreError())
+		return nil, "", "", errors.NewKnowledgeError(code, path.SimpleString(), errors.NewNoDatastoreError())
 	}
 
 	scopeUid, collectionUid, uerr := resolveUids(path)
 	if uerr != nil {
-		return nil, "", "", errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, path.SimpleString(), uerr)
+		return nil, "", "", errors.NewKnowledgeError(code, path.SimpleString(), uerr)
 	}
 
 	b, err = getSystemCollection(path.Bucket())
 	if err != nil {
-		return nil, "", "", errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, path.SimpleString(), err)
+		return nil, "", "", errors.NewKnowledgeError(code, path.SimpleString(), err)
 	}
 	if b == nil {
-		return nil, "", "", errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, path.SimpleString(),
+		return nil, "", "", errors.NewKnowledgeError(code, path.SimpleString(),
 			"system collection not available for bucket "+path.Bucket())
 	}
 	if serr := rejectSystemScope(b, path); serr != nil {
-		return nil, "", "", errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, path.SimpleString(), serr)
+		return nil, "", "", errors.NewKnowledgeError(code, path.SimpleString(), serr)
 	}
 	return b, scopeUid, collectionUid, nil
 }
@@ -306,7 +309,7 @@ func validateAndResolvePath(path *algebra.Path) (b datastore.Keyspace, scopeUid,
 // path. Unless replace is set, it fails if an entry with the same name already exists for that
 // keyspace; with replace, an existing entry's value is overwritten instead.
 func CreateKnowledge(path *algebra.Path, name string, val string, replace bool) errors.Error {
-	b, scopeUid, collectionUid, err := validateAndResolvePath(path)
+	b, scopeUid, collectionUid, err := validateAndResolvePath(path, errors.E_KNOWLEDGE_CREATE)
 	if err != nil {
 		return err
 	}
@@ -336,7 +339,7 @@ func CreateKnowledge(path *algebra.Path, name string, val string, replace bool) 
 // anything, if any of the given names already exists for that keyspace; with replace, existing
 // entries among them are overwritten instead.
 func CreateKnowledgeBulk(path *algebra.Path, entries map[string]string, replace bool) errors.Error {
-	b, scopeUid, collectionUid, err := validateAndResolvePath(path)
+	b, scopeUid, collectionUid, err := validateAndResolvePath(path, errors.E_KNOWLEDGE_CREATE)
 	if err != nil {
 		return err
 	}
@@ -365,6 +368,123 @@ func CreateKnowledgeBulk(path *algebra.Path, entries map[string]string, replace 
 		}
 		return merged, nil
 	})
+}
+
+// DropEntries removes the named knowledge entries for the keyspace identified by path. If names is
+// empty, every entry for the keyspace is removed in one write (the underlying document is deleted
+// outright, rather than left behind holding an empty knowledge object) - this is DROP KNOWLEDGE's
+// bare "FOR <keyspace>" form. Returns an E_KNOWLEDGE_NOT_FOUND error (see
+// errors.IsKnowledgeNotFoundError) if the keyspace has no knowledge document at all, or - for a
+// non-empty names list - if any of the given names doesn't exist; callers implementing IF EXISTS
+// should treat that specific error as success rather than propagating it.
+func DropEntries(path *algebra.Path, names []string) errors.Error {
+	b, scopeUid, collectionUid, err := validateAndResolvePath(path, errors.E_KNOWLEDGE_DROP)
+	if err != nil {
+		return err
+	}
+	key := getStorageKey(scopeUid, collectionUid, path)
+
+	if len(names) == 0 {
+		return dropAllEntries(b, key, path)
+	}
+	return dropNamedEntries(b, key, path, names)
+}
+
+// dropAllEntries deletes the keyspace's entire knowledge document unconditionally (matching
+// DropCollection's delete-by-key semantics: Delete doesn't check CAS, so no retry loop is needed).
+func dropAllEntries(b datastore.Keyspace, key string, path *algebra.Path) errors.Error {
+	_, exists, lerr := loadDoc(b, key)
+	if lerr != nil {
+		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_DROP, path.SimpleString(), lerr)
+	}
+	if !exists {
+		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_NOT_FOUND, path.SimpleString())
+	}
+
+	pairs := make([]value.Pair, 1)
+	pairs[0].Name = key
+	_, _, errs := b.Delete(pairs, datastore.GetDurableQueryContextFor(b), true)
+	if errs != nil && len(errs) > 0 && !errors.IsNotFoundError("", errs[0]) {
+		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_DROP, key, errs[0])
+	}
+	setChange()
+	invalidate(key)
+	return nil
+}
+
+// dropNamedEntries removes specific names from the keyspace's knowledge document, retrying on a
+// concurrent writer's CAS win the same way writeKnowledgeEntries does, and giving up after the same
+// number of retries. If removing the given names leaves the document empty, the document is written
+// back holding an empty knowledge object rather than being deleted outright: b.Delete has no CAS
+// check of its own (unlike Update/Insert), so an unconditional delete here could discard a
+// concurrent CREATE KNOWLEDGE's entry written in the gap between our CAS-protected write and the
+// delete call - the empty document is harmless and gets reaped the next time this keyspace's
+// knowledge is fully rewritten or its scope/collection is dropped.
+func dropNamedEntries(b datastore.Keyspace, key string, path *algebra.Path, names []string) errors.Error {
+	wrap := func(cause error) errors.Error {
+		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_DROP, strings.Join(names, ", "), cause)
+	}
+
+	for retry := 0; ; retry++ {
+		if retry == _MAX_WRITE_RETRIES {
+			return wrap(fmt.Errorf("failed after %d retries", retry))
+		} else if retry > 0 {
+			time.Sleep(time.Duration(retry) * _WRITE_RETRY_BACKOFF)
+		}
+
+		av, exists, lerr := loadDoc(b, key)
+		if lerr != nil {
+			return wrap(lerr)
+		}
+		if !exists {
+			return errors.NewKnowledgeError(errors.E_KNOWLEDGE_NOT_FOUND, path.SimpleString())
+		}
+
+		var existing map[string]interface{}
+		if obj, ok := av.Field(_FIELD); ok && obj.Type() == value.OBJECT {
+			existing, _ = obj.Actual().(map[string]interface{})
+		}
+
+		// missing is checked against existing (never mutated), so a name repeated in names is
+		// resolved consistently regardless of how many times it appears
+		var missing []string
+		for _, name := range names {
+			if _, ok := existing[name]; !ok {
+				missing = append(missing, name)
+			}
+		}
+		if len(missing) > 0 {
+			return errors.NewKnowledgeError(errors.E_KNOWLEDGE_NOT_FOUND, strings.Join(missing, ", "))
+		}
+
+		remaining := make(map[string]interface{}, len(existing))
+		for k, v := range existing {
+			remaining[k] = v
+		}
+		for _, name := range names {
+			delete(remaining, name)
+		}
+
+		pairs := make([]value.Pair, 1)
+		pairs[0].Name = key
+		newDoc := av.CopyForUpdate().(value.AnnotatedValue)
+		newDoc.SetField(_FIELD, value.NewValue(remaining))
+		pairs[0].Value = newDoc
+		_, _, errs2 := b.Update(pairs, datastore.GetDurableQueryContextFor(b), true)
+		if errs2 != nil && len(errs2) > 0 {
+			if errs2[0].HasCause(errors.E_CAS_MISMATCH) || errors.IsExistsError("", errs2[0]) {
+				invalidate(key) // our cached copy is out of date; refetch on retry
+				continue
+			}
+			if errors.IsNotFoundError("", errs2[0]) {
+				return errors.NewKnowledgeError(errors.E_KNOWLEDGE_NOT_FOUND, path.SimpleString())
+			}
+			return wrap(errs2[0])
+		}
+		setChange()
+		refreshDoc(b, key)
+		return nil
+	}
 }
 
 // splitExtKey splits a composite external key ("<ns>:<bucket>.<scope>.<collection>::<name>")

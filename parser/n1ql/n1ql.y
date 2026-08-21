@@ -592,7 +592,7 @@ column int
 %type <keyspacePath>       sequence_full_name
 %type <s>                  opt_namespace_name sequence_object_name
 
-%type <statement>          knowledge_stmt create_knowledge
+%type <statement>          knowledge_stmt create_knowledge drop_knowledge
 %type <ss>                 sequence_next sequence_prev
 %type <expr>               sequence_expr
 
@@ -6511,6 +6511,31 @@ alter_sequence
 
 knowledge_stmt:
 create_knowledge
+|
+drop_knowledge
+;
+
+drop_knowledge:
+DROP KNOWLEDGE ident_list FOR named_keyspace_ref opt_if_exists
+{
+    $$ = algebra.NewDropKnowledge($5.Path(), $3, $6)
+}
+|
+DROP KNOWLEDGE IF EXISTS ident_list FOR named_keyspace_ref
+{
+    $$ = algebra.NewDropKnowledge($7.Path(), $5, false)
+}
+|
+DROP KNOWLEDGE FOR named_keyspace_ref opt_if_exists
+{
+    // no name(s) given - drop every entry stored for the keyspace in one write
+    $$ = algebra.NewDropKnowledge($4.Path(), nil, $5)
+}
+|
+DROP KNOWLEDGE IF EXISTS FOR named_keyspace_ref
+{
+    $$ = algebra.NewDropKnowledge($6.Path(), nil, false)
+}
 ;
 
 create_knowledge:

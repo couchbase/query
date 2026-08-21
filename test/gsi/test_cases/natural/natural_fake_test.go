@@ -97,17 +97,21 @@ func testNaturalFakeProvider(qc *gsi.MockServer, t *testing.T) {
 	testNaturalConversationalWrongUser(qc, t)
 	testNaturalConfigInWithClause(qc, t)
 	testNaturalWithOptionNotAllowed(qc, t)
+
+	seed := gsi.RunAdminStmt(qc, `CREATE KNOWLEDGE aiknow1 FOR orders AS 'ICAO codes identify airlines uniquely';`)
+	if seed.Err != nil {
+		t.Fatalf("using-ai-and-knowledge: seeding CREATE KNOWLEDGE failed: %v", seed.Err)
+	}
+
 	testNaturalUsingAiAndKnowledgeInjectsPrompt(qc, t)
 	testNaturalUsingAiWithoutKnowledgeOmitsPrompt(qc, t)
 	testNaturalUsingAiKnowledgeWithOptOverridesPhrase(qc, t)
 
-	// best-effort cleanup: this is the last of the three tests that depend on the aiknow1 entry
-	// seeded above, so remove it now rather than leaving it behind - qc runs against a real,
-	// persistent cluster bucket (not a fresh one per test run), and a leftover entry would make
-	// the next run's seeding CREATE KNOWLEDGE fail with "already exists" instead of re-seeding
-	// cleanly. There's no DROP KNOWLEDGE statement (yet), so this goes through
-	// system:natural_knowledge directly.
-	gsi.RunAdminStmt(qc, "DELETE FROM system:natural_knowledge")
+	// cleanup: this is the last of the three tests that depend on the aiknow1 entry seeded above,
+	// so remove it now rather than leaving it behind - qc runs against a real, persistent cluster
+	// bucket (not a fresh one per test run), and a leftover entry would otherwise carry over into
+	// the next run.
+	gsi.RunAdminStmt(qc, "DROP KNOWLEDGE IF EXISTS aiknow1 FOR orders")
 }
 
 // testNaturalHappyPath verifies the full round-trip: the gateway posts to the
@@ -343,10 +347,6 @@ func captureBody(content string, body *string) *httptest.Server {
 // harness's regular (non-admin) creds, which also verifies that reading system:natural_knowledge
 // from within the injector does not require admin privileges.
 func testNaturalUsingAiAndKnowledgeInjectsPrompt(qc *gsi.MockServer, t *testing.T) {
-	seed := gsi.RunAdminStmt(qc, `CREATE KNOWLEDGE aiknow1 FOR orders AS 'ICAO codes identify airlines uniquely';`)
-	if seed.Err != nil {
-		t.Fatalf("using-ai-and-knowledge: seeding CREATE KNOWLEDGE failed: %v", seed.Err)
-	}
 
 	var body string
 	srv := captureBody("```sql\nSELECT name FROM orders\n```", &body)

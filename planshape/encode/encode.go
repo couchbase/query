@@ -696,6 +696,11 @@ func (this *planShape) VisitCreateKnowledge(op *execution.CreateKnowledge) (inte
 	return nil, nil
 }
 
+func (this *planShape) VisitDropKnowledge(op *execution.DropKnowledge) (interface{}, error) {
+	this.add(planshape.DROPKNOWLEDGE)
+	return nil, nil
+}
+
 func (this *planShape) VisitDropSequence(op *execution.DropSequence) (interface{}, error) {
 	this.add(planshape.DROPSEQUENCE)
 	return nil, nil

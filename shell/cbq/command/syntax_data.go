@@ -1334,6 +1334,13 @@ var statement_syntax = map[string][][]string{
 	},
 	"knowledge_statement": [][]string{
 		[]string{"create_knowledge"},
+		[]string{"drop_knowledge"},
+	},
+	"drop_knowledge": [][]string{
+		[]string{"DROP", "KNOWLEDGE", "ident_list", "FOR", "named_keyspace_ref", "[if_exists]"},
+		[]string{"DROP", "KNOWLEDGE", "IF", "EXISTS", "ident_list", "FOR", "named_keyspace_ref"},
+		[]string{"DROP", "KNOWLEDGE", "FOR", "named_keyspace_ref", "[if_exists]"},
+		[]string{"DROP", "KNOWLEDGE", "IF", "EXISTS", "FOR", "named_keyspace_ref"},
 	},
 	"create_knowledge": [][]string{
 		[]string{"CREATE", "[replace]", "KNOWLEDGE", "optional_permitted_identifiers", "FOR", "named_keyspace_ref", "AS", "expression"},

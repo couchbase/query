@@ -464,6 +464,10 @@ func (this *SemChecker) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (int
 	return nil, stmt.MapExpressions(this)
 }
 
+func (this *SemChecker) VisitDropKnowledge(stmt *algebra.DropKnowledge) (interface{}, error) {
+	return nil, stmt.MapExpressions(this)
+}
+
 // validateCreateKnowledgeBulkValue restricts CREATE KNOWLEDGE FOR ... FROM <value>'s value to an
 // object literal whose fields are all string-literal or named/positional-parameter names, mapped
 // to string-literal or named/positional-parameter values, or a bare named/positional parameter

@@ -147,6 +147,7 @@ var simple = map[byte]string{
 	planshape.ALTERCREDENTIALSTORE:  "AlterCredentialStore",
 	planshape.DROPCREDENTIALSTORE:   "DropCredentialStore",
 	planshape.CREATEKNOWLEDGE:       "CreateKnowledge",
+	planshape.DROPKNOWLEDGE:         "DropKnowledge",
 }
 
 func decodePSElem(buf []byte, i io.Reader, o io.StringWriter) bool {

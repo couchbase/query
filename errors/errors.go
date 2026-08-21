@@ -549,6 +549,13 @@ func IsSequenceNotFoundError(e error) bool {
 	return IsNotFoundError("Sequence", e)
 }
 
+func IsKnowledgeNotFoundError(e error) bool {
+	if err, ok := e.(Error); ok && err.Code() == E_KNOWLEDGE_NOT_FOUND {
+		return true
+	}
+	return IsNotFoundError("Knowledge", e)
+}
+
 // search initial error text and all cause nesting levels for the given string
 func (e *err) ContainsText(text string) bool {
 	s := e.Error()

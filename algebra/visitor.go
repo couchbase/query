@@ -127,6 +127,7 @@ type Visitor interface {
 	VisitAlterSequence(stmt *AlterSequence) (interface{}, error)
 
 	VisitCreateKnowledge(stmt *CreateKnowledge) (interface{}, error)
+	VisitDropKnowledge(stmt *DropKnowledge) (interface{}, error)
 
 	VisitCreateCredentialStore(stmt *CreateCredentialStore) (any, error)
 	VisitAlterCredentialStore(stmt *AlterCredentialStore) (any, error)

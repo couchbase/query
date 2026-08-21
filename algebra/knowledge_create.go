@@ -29,9 +29,9 @@ later use as ontology/domain hints (e.g. in USING AI queries). The AS form adds 
 entry; the FROM form (bulk, see Bulk()) adds one entry per field of an object literal in a single
 write, with the field name as the knowledge name.
 
-Without OR REPLACE, either form fails if a name it's writing already exists for the keyspace
-(there is no ALTER/DROP-then-CREATE KNOWLEDGE - use OR REPLACE instead). With OR REPLACE, an
-existing entry's value is overwritten rather than rejected. See Replace().
+Without OR REPLACE, either form fails if a name it's writing already exists for the keyspace; use
+OR REPLACE to overwrite an existing entry's value instead, or DROP KNOWLEDGE (see DropKnowledge) to
+remove entries outright. See Replace().
 
 value is kept as an expression.Expression rather than a plain string/object, so it is exposed via
 Expressions()/MapExpressions() and gets picked up by the same generic literal-redaction pass

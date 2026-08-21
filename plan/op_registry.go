@@ -207,6 +207,7 @@ var _OPERATORS = map[string]Operator{
 
 	// Knowledge
 	"CreateKnowledge": &CreateKnowledge{},
+	"DropKnowledge":   &DropKnowledge{},
 
 	// Users
 	"CreateUser": &CreateUser{},

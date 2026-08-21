@@ -713,6 +713,11 @@ func (this *execAnalyser) VisitCreateKnowledge(op *CreateKnowledge) (interface{}
 	return nil, nil
 }
 
+func (this *execAnalyser) VisitDropKnowledge(op *DropKnowledge) (interface{}, error) {
+	this.record(op.getBase())
+	return nil, nil
+}
+
 func (this *execAnalyser) VisitDropSequence(op *DropSequence) (interface{}, error) {
 	this.record(op.getBase())
 	return nil, nil

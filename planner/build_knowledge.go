@@ -44,3 +44,11 @@ func (this *builder) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (interf
 	// name instead of minting a fresh one.
 	return plan.NewQueryPlan(plan.NewCreateKnowledge(stmt)), nil
 }
+
+func (this *builder) VisitDropKnowledge(stmt *algebra.DropKnowledge) (interface{}, error) {
+	err := validateKnowledgePath(this.context.Credentials(), stmt.Keyspace())
+	if err != nil {
+		return nil, err
+	}
+	return plan.NewQueryPlan(plan.NewDropKnowledge(stmt)), nil
+}
