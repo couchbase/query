@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/couchbase/cbauth/metakv"
 	atomic "github.com/couchbase/go-couchbase/platform"
@@ -102,14 +101,17 @@ func fmtChangeCounter() []byte {
 // datastore and function store actions
 // TODO this is very inefficient - we'll amend when we write the new storage
 func DropScope(namespace, bucket, scope string) {
-	scopePath := _FUNC_PATH + namespace + ":" + bucket + "." + scope + "."
 	metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
-		if strings.HasPrefix(kve.Path, scopePath) {
+		path := kve.Path[len(_FUNC_PATH):]
+		if algebra.PartsFromPath(path) == 4 {
+			parts, _, err := getFuncPath(path, kve.Value)
+			if err == nil && len(parts) == 4 && parts[0] == namespace && parts[1] == bucket && parts[2] == scope {
 
-			// technically, we don't need to clear the cache because clearing the
-			// storage will invalidate the entry, but for completeness
-			functions.FunctionClear(kve.Path[len(scopePath):], nil)
-			metakv.Delete(kve.Path, nil)
+				// technically, we don't need to clear the cache because clearing the
+				// storage will invalidate the entry, but for completeness
+				functions.FunctionClear(parts[3], nil)
+				metakv.Delete(kve.Path, nil)
+			}
 		}
 		return nil
 	})
@@ -142,41 +144,38 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 		return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 			path := kve.Path[len(_FUNC_PATH):]
 			if algebra.PartsFromPath(path) == 2 {
-				return f(path, value.NewValue(kve.Value))
+				_, newPath, err := getFuncPath(path, kve.Value)
+				if err == nil {
+					return f(newPath, value.NewValue(kve.Value))
+				}
 			}
 			return nil
 		})
 	}
 	return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		path := kve.Path[len(_FUNC_PATH):]
-		parts := algebra.ParsePath(path)
-		if len(parts) == 4 && (parts[1] == b || b == "*") {
-			return f(path, value.NewValue(kve.Value))
+		if algebra.PartsFromPath(path) == 4 {
+			parts, newPath, err := getFuncPath(path, kve.Value)
+			if err == nil && len(parts) == 4 && (parts[1] == b || b == "*") {
+				return f(newPath, value.NewValue(kve.Value))
+			}
 		}
 		return nil
 	})
 }
 
 func ForeachBodyEntry(f func(parts []string, entry map[string]interface{}) errors.Error) errors.Error {
-	var _unmarshalled struct {
-		Identity   json.RawMessage `json:"identity"`
-		Definition json.RawMessage `json:"definition"`
-	}
-
 	err1 := metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		path := kve.Path[len(_FUNC_PATH):]
-		parts := algebra.ParsePath(path)
-		if len(parts) == 4 {
+		if algebra.PartsFromPath(path) == 4 {
 
-			// unmarshal signature and body
-			err := json.Unmarshal(kve.Value, &_unmarshalled)
+			parts, definition, err := getFuncPathAndBody(path, kve.Value)
 			if err != nil {
-				logging.Infof("processing %v error %v unmarshalling entry", parts, err)
-				name := parts[0] + ":" + parts[1] + "." + parts[2] + "." + parts[3]
-				return errors.NewFunctionEncodingError("decode", name, err)
+				logging.Infof("processing %v error %v unmarshalling entry", path, err)
+				return err
 			}
 
-			entry, err := resolver.MakeBodyEntry(path, _unmarshalled.Definition)
+			entry, err := resolver.MakeBodyEntry(path, definition)
 			if err != nil {
 				logging.Infof("processing %v error %v constructing function body entry", parts, err)
 				return err
@@ -195,26 +194,19 @@ func ForeachBodyEntry(f func(parts []string, entry map[string]interface{}) error
 }
 
 func ForeachBody(f func(parts []string, b functions.FunctionBody) errors.Error) errors.Error {
-	var _unmarshalled struct {
-		Identity   json.RawMessage `json:"identity"`
-		Definition json.RawMessage `json:"definition"`
-	}
-
 	err1 := metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		path := kve.Path[len(_FUNC_PATH):]
-		parts := algebra.ParsePath(path)
-		if len(parts) == 4 {
+		if algebra.PartsFromPath(path) == 4 {
 
 			// unmarshal signature and body
-			err := json.Unmarshal(kve.Value, &_unmarshalled)
+			parts, definition, err := getFuncPathAndBody(path, kve.Value)
 			if err != nil {
-				logging.Infof("processing %v error %v unmarshalling entry", parts, err)
-				name := parts[0] + ":" + parts[1] + "." + parts[2] + "." + parts[3]
-				return errors.NewFunctionEncodingError("decode", name, err)
+				logging.Infof("processing %v error %v unmarshalling entry", path, err)
+				return err
 			}
 
 			// determine language and create body from definition
-			body, err := resolver.MakeBody(path, _unmarshalled.Definition)
+			body, err := resolver.MakeBody(path, definition)
 			if err != nil {
 				logging.Infof("processing %v error %v constructing function body", parts, err)
 				return err
@@ -238,16 +230,21 @@ func Scan(b string, f func(path string) error) error {
 		return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 			path := kve.Path[len(_FUNC_PATH):]
 			if algebra.PartsFromPath(path) == 2 {
-				return f(path)
+				parts, newPath, err := getFuncPath(path, kve.Value)
+				if err == nil && len(parts) == 2 {
+					return f(newPath)
+				}
 			}
 			return nil
 		})
 	}
 	return metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		path := kve.Path[len(_FUNC_PATH):]
-		parts := algebra.ParsePath(path)
-		if len(parts) == 4 && parts[1] == b {
-			return f(path)
+		if algebra.PartsFromPath(path) == 4 {
+			parts, newPath, err := getFuncPath(path, kve.Value)
+			if err == nil && len(parts) == 4 && parts[1] == b {
+				return f(newPath)
+			}
 		}
 		return nil
 	})
@@ -276,13 +273,111 @@ func Count(b string) (int64, error) {
 	}
 	err := metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		path := kve.Path[len(_FUNC_PATH):]
-		parts := algebra.ParsePath(path)
-		if len(parts) == 4 && parts[1] == b {
-			count++
+		if algebra.PartsFromPath(path) == 4 {
+			parts, _, err := getFuncPath(path, kve.Value)
+			if err == nil && len(parts) == 4 && parts[1] == b {
+				count++
+			}
 		}
 		return nil
 	})
 	return count, err
+}
+
+// checks whether a string contains non-ASCII characters
+func hasNonASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] > 127 {
+			return true
+		}
+	}
+	return false
+}
+
+func getFuncPath(mpath string, bytes []byte) ([]string, string, error) {
+
+	// metakv.IterateChildren does not handle UTF8 characters beyond ASCII properly.
+	// check if any such characters exists.
+	if !hasNonASCII(mpath) {
+		return algebra.ParsePath(mpath), mpath, nil
+	}
+
+	// if non-ASCII characters exist, need to unmarshal the identity saved to get the proper path
+	var _unmarshalled struct {
+		Identity struct {
+			Namespace string `json:"namespace"`
+			Bucket    string `json:"bucket"`
+			Scope     string `json:"scope"`
+			Name      string `json:"name"`
+		} `json:"identity"`
+	}
+
+	// unmarshal signature
+	err := json.Unmarshal(bytes, &_unmarshalled)
+	if err != nil {
+		return nil, "", errors.NewFunctionEncodingError("decode", mpath, err)
+	}
+
+	elems := make([]string, 0, 4)
+	if _unmarshalled.Identity.Namespace != "" {
+		elems = append(elems, _unmarshalled.Identity.Namespace)
+	}
+	if _unmarshalled.Identity.Bucket != "" {
+		elems = append(elems, _unmarshalled.Identity.Bucket)
+	}
+	if _unmarshalled.Identity.Scope != "" {
+		elems = append(elems, _unmarshalled.Identity.Scope)
+	}
+	if _unmarshalled.Identity.Name != "" {
+		elems = append(elems, _unmarshalled.Identity.Name)
+	}
+
+	if len(elems) != 2 && len(elems) != 4 {
+		return nil, "", errors.NewMetaKVError(mpath, fmt.Errorf("Unexpected decoded function name %v", elems))
+	}
+
+	return elems, algebra.PathFromParts(elems...), nil
+}
+
+func getFuncPathAndBody(mpath string, bytes []byte) ([]string, []byte, error) {
+
+	// we'll need to unmarshal to get the function definition anyway so get the path as well
+	// (mpath is the metakv path and used for error message only)
+	var _unmarshalled struct {
+		Identity struct {
+			Namespace string `json:"namespace"`
+			Bucket    string `json:"bucket"`
+			Scope     string `json:"scope"`
+			Name      string `json:"name"`
+		} `json:"identity"`
+		Definition json.RawMessage `json:"definition"`
+	}
+
+	// unmarshal signature and body
+	err := json.Unmarshal(bytes, &_unmarshalled)
+	if err != nil {
+		return nil, nil, errors.NewFunctionEncodingError("decode", mpath, err)
+	}
+
+	elems := make([]string, 0, 4)
+	if _unmarshalled.Identity.Namespace != "" {
+		elems = append(elems, _unmarshalled.Identity.Namespace)
+	}
+	if _unmarshalled.Identity.Bucket != "" {
+		elems = append(elems, _unmarshalled.Identity.Bucket)
+	}
+	if _unmarshalled.Identity.Scope != "" {
+		elems = append(elems, _unmarshalled.Identity.Scope)
+	}
+	if _unmarshalled.Identity.Name != "" {
+		elems = append(elems, _unmarshalled.Identity.Name)
+	}
+
+	if len(elems) != 2 && len(elems) != 4 {
+		return nil, nil, errors.NewMetaKVError(mpath, fmt.Errorf("Unexpected decoded function name %v", elems))
+	}
+
+	return elems, _unmarshalled.Definition, nil
 }
 
 type metaEntry struct {
