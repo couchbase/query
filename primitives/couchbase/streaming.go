@@ -162,6 +162,7 @@ func (c *Client) processStream(baseURL *url.URL, path string, authHandler AuthHa
 const MAX_RETRY_COUNT = 5
 const DISCONNECT_PERIOD = 120 * time.Second
 const STREAM_RETRY_PERIOD = 100 * time.Millisecond
+const UPDATER_RESTART_BACKOFF = 500 * time.Millisecond
 
 type NotifyFn func(bucket string, err error)
 type StreamingFn func(bucket *Bucket, msgPrefix string) bool
@@ -225,8 +226,12 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) boo
 			msgPrefix := fmt.Sprintf("[%p:%.8s:%s:%04x] Updater:", b, abName, b.GetAbbreviatedUUID(), id)
 			err := b.UpdateBucket2(msgPrefix, streamingFn)
 			if err != nil {
-				if notify != nil {
-					notify(name, err)
+				if err.Code() == errors.E_BUCKET_UPDATER_EP_NOT_FOUND {
+					// ns_server confirmed (404) that the bucket streaming endpoint is
+					// gone - this is a genuine deletion, so tear things down
+					if notify != nil {
+						notify(name, err)
+					}
 
 					// MB-49772 get rid of the deleted bucket
 					p := b.pool
@@ -237,9 +242,20 @@ func (b *Bucket) RunBucketUpdater2(streamingFn StreamingFn, notify NotifyFn) boo
 						delete(p.BucketMap, name)
 					}
 					p.Unlock()
-				}
-				if err.Code() != errors.E_BUCKET_UPDATER_EP_NOT_FOUND {
-					logging.Errorf("%s (%s) exited with: %v", msgPrefix, name, err)
+				} else {
+					// transient failure (e.g. repeated 5xx / connection errors) - the
+					// bucket may still exist, so don't treat retry exhaustion as a
+					// deletion; just restart the updater instead of tearing down
+					// the keyspace.
+					//
+					// some failure paths in UpdateBucket2 (auth errors, no healthy
+					// nodes, non-connection HTTP errors, TLS mapping errors) return
+					// immediately without any internal retry/backoff, so without a
+					// floor here a persistent instance of one of those would restart
+					// in a tight, unthrottled loop
+					logging.Errorf("%s (%s) exited with: %v; restarting updater in %v", msgPrefix, name, err, UPDATER_RESTART_BACKOFF)
+					time.Sleep(UPDATER_RESTART_BACKOFF)
+					b.RunBucketUpdater2(streamingFn, notify)
 				}
 			}
 		}()
@@ -342,6 +358,10 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			res.Body.Close()
 			returnErr = errors.NewBucketUpdaterFailedToConnectToHost(res.StatusCode, bod)
 			failures++
+			if failures < MAX_RETRY_COUNT {
+				logging.Infof("%s Retrying %v", msgPrefix, failures)
+				time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
+			}
 			continue
 		}
 
@@ -462,6 +482,10 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 		}
 		// we are here because of an error
 		failures++
+		if failures < MAX_RETRY_COUNT {
+			logging.Infof("%s Retrying %v", msgPrefix, failures)
+			time.Sleep(time.Duration(failures) * STREAM_RETRY_PERIOD)
+		}
 		continue
 
 	}
