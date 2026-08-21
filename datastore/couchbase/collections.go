@@ -899,16 +899,16 @@ func refreshScopesAndCollections(mani *cb.Manifest, externalMani *cb.ExternalMan
 						}
 					}
 
-					// once this bucket has gained system-collection capability,
-					// some node in the cluster may be migrating (or have migrated)
-					// its CBO stats, so calling DropDictionaryEntry() here could
-					// either deadlock on migration status or race with an in-flight
-					// migration on another node and delete a CBO stats entry out
-					// from under it (MB-73270) - skip and wait till next time
-					// cleanup happens. Before the bucket has that capability
-					// no migration can be under way anywhere (mixed-mode cluster),
-					// so it's always safe to clean up directly
-					if !bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) || !isMigratingCBOStats() {
+					// once CBO stats migration has started (i.e. not in waiting
+					// mode), some node in the cluster may be migrating (or have
+					// migrated) its CBO stats, so calling DropDictionaryEntry()
+					// here could either deadlock on migration status or race with
+					// an in-flight migration on another node and delete a CBO stats
+					// entry out from under it (MB-73270) - skip and wait till
+					// next time cleanup happens. If CBO stats migration is still
+					// in waiting mode (mixed-mode cluster) it should be safe to
+					// clean up directly
+					if isCBOStatsMigrationWaiting() || !isMigratingCBOStats() {
 						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
 					}
 					aus.DropCollection(bucket.namespace.name, bucket.name, oldScope.Name(), oldScope.Uid(),
@@ -952,13 +952,13 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 		return cleanUp
 	}
 
-	// once this bucket has gained system-collection capability, some node in the cluster may
-	// be migrating (or have migrated) its CBO stats, so calling DropDictionaryEntry() here
+	// once CBO stats migration has started (i.e. not in waiting mode), some node in the cluster
+	// may be migrating (or have migrated) its CBO stats, so calling DropDictionaryEntry() here
 	// could either deadlock on migration status or race with an in-flight migration on
 	// another node and delete a CBO stats entry out from under it (MB-73270) - skip and wait till
-	// next time cleanup happens. Before the bucket has that capability no migration can be
-	// under way anywhere (mixed-mode cluster), so it's always safe to clean up directly
-	if !bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) || !isMigratingCBOStats() {
+	// next time cleanup happens. If CBO stats migration is still in waiting mode (mixed-mode cluster)
+	// it should be safe to clean up directly
+	if isCBOStatsMigrationWaiting() || !isMigratingCBOStats() {
 		// do not modify s.keyspaces since it may be concurrently used by other callers of
 		// refreshScopesAndCollections whilst this clean-up is still taking place
 		for _, val := range s.keyspaces {
@@ -970,13 +970,13 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 		}
 	}
 
-	// once this bucket has gained system-collection capability, some node in the cluster may
-	// be migrating (or have migrated) its UDFs, so calling functionsStorage.DropScope() here
+	// once UDF migration has started (i.e. not in waiting mode), some node in the cluster
+	// may be migrating (or have migrated) its UDFs, so calling functionsStorage.DropScope() here
 	// could either deadlock on migration status or race with an in-flight migration on
 	// another node and delete a function out from under it (MB-73270) - skip and wait till
-	// next time cleanup happens. Before the bucket has that capability no migration can be
-	// under way anywhere (mixed-mode cluster), so it's always safe to clean up directly
-	if cleanUp && (!bucket.HasCapability(datastore.HAS_SYSTEM_COLLECTION) || !functionsStorage.IsMigratingUDF()) {
+	// next time cleanup happens. If UDF migration is still in waiting mode (mixed-mode cluster)
+	// it should be safe to clean up directly
+	if cleanUp && (functionsStorage.IsUDFMigrationWaiting() || !functionsStorage.IsMigratingUDF()) {
 		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
 			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
 			aus.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())

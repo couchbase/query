@@ -622,17 +622,13 @@ func checkMigrateBucket(name string, allBuckets bool) {
 		}
 		return
 	} else if !allBuckets && migrationStartWait {
-		needSignal := false
 		migrationStartLock.Lock()
 		if migrationStartWait && migrationStartCond != nil {
-			needSignal = true
 			migrationStartWait = false
-		}
-		migrationStartLock.Unlock()
-		if needSignal {
 			// there should be only a single waiter
 			migrationStartCond.Signal()
 		}
+		migrationStartLock.Unlock()
 	}
 
 	if doSysColl {
@@ -973,6 +969,16 @@ func IsMigratingUDF() bool {
 	state := migrating
 	migratingLock.Unlock()
 	return state != _MIGRATED && state != _ABORTED
+}
+
+// IsUDFMigrationWaiting reports whether UDF migration is waiting to start. It returns
+// true when not all buckets has obtained the datastore.HAS_SYSTEM_COLLECTION capability,
+// i.e. it is still in mixed-cluster mode.
+func IsUDFMigrationWaiting() bool {
+	migrationStartLock.Lock()
+	waiting := migrationStartWait == true
+	migrationStartLock.Unlock()
+	return waiting
 }
 
 func GetDDLFromDefinition(name string, defn value.Value) string {

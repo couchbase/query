@@ -120,3 +120,7 @@ func SupportedBackupVersion() int {
 func isMigratingCBOStats() bool {
 	return false
 }
+
+func isCBOStatsMigrationWaiting() bool {
+	return false
+}
