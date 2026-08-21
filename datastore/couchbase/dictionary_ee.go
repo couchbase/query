@@ -199,3 +199,7 @@ func SupportedBackupVersion() int {
 func isMigratingCBOStats() bool {
 	return dictionary.IsMigratingCBOStats()
 }
+
+func isCBOStatsMigrationWaiting() bool {
+	return dictionary.IsCBOStatsMigrationWaiting()
+}
