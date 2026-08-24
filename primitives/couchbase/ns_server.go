@@ -632,7 +632,9 @@ func (b *Bucket) getTempConnPool(i int, serverList []string, node string) *conne
 
 			b.tempServers[i] = node
 			client := b.pool.client
-			if client.tlsConfig != nil {
+			tlsConfig := client.tlsConfig
+			disableNonSSLPorts := client.disableNonSSLPorts
+			if tlsConfig != nil {
 				poolServices, err = client.GetPoolServices("default")
 				if err != nil {
 					b.Unlock()
@@ -641,7 +643,7 @@ func (b *Bucket) getTempConnPool(i int, serverList []string, node string) *conne
 			}
 
 			// if we get an error, we populate the node name, so that we don't try over and over again
-			b.tempConnPools[i], _ = b.mkConnPool(node, &poolServices)
+			b.tempConnPools[i], _ = b.mkConnPool(node, &poolServices, tlsConfig, disableNonSSLPorts)
 		}
 
 		// if the entry is populated but different, the vbmap has changed *again* and we ignore the node
@@ -1393,7 +1395,7 @@ func (b *Bucket) GetCollectionsManifest() (*Manifest, error) {
 		} else {
 			selectFailed = true
 		}
-		b.processOpError(vb, lastError, pool.Node(), desc)
+		b.processOpError(vb, lastError, pool.Node(), desc, pool)
 		if desc.discard {
 			pool.Discard(conn)
 		} else {
@@ -1451,11 +1453,12 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	client := pool.client
 	refreshes := b.refreshes
 	tlsConfig := client.tlsConfig
+	disableNonSSLPorts := client.disableNonSSLPorts
 	b.RUnlock()
 
 	var poolServices PoolServices
 	var err error
-	if client.tlsConfig != nil {
+	if tlsConfig != nil {
 		poolServices, err = client.GetPoolServices("default")
 		if err != nil {
 			return err
@@ -1517,7 +1520,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		hostport := tmpb.VBSMJson.ServerList[i]
 		if preserveConnections {
 			pool := b.getConnPoolByHost(hostport, true /* bucket already locked */)
-			if pool != nil && pool.inUse == false && pool.tlsConfig == client.tlsConfig {
+			if pool != nil && pool.inUse == false && pool.tlsConfig == tlsConfig {
 				// if the hostname and index is unchanged then reuse this pool
 				newcps[i] = pool
 				pool.inUse = true
@@ -1534,7 +1537,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 			}
 		}
 
-		newcps[i], err = b.mkConnPool(hostport, &poolServices)
+		newcps[i], err = b.mkConnPool(hostport, &poolServices, tlsConfig, disableNonSSLPorts)
 		if err != nil {
 			b.Unlock()
 			return err
@@ -1570,14 +1573,17 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	return nil
 }
 
-func (b *Bucket) mkConnPool(node string, poolServices *PoolServices) (*connectionPool, error) {
+// Initializes connection pools for connections to KV
+// tlsConfig: The tls configuration to be used to create connections in the connection pool
+// disableNonSSLPorts: Whether non-SSL ports are to be disabled according to the cluster connection security config
+func (b *Bucket) mkConnPool(node string, poolServices *PoolServices, tlsConfig *tls.Config, disableNonSSLPorts bool) (
+	*connectionPool, error) {
 	var encrypted bool
 	var pool *connectionPool
 	var err error
 
-	client := b.pool.client
-	if client.tlsConfig != nil {
-		node, encrypted, err = MapKVtoSSLExt(node, poolServices, client.disableNonSSLPorts)
+	if tlsConfig != nil {
+		node, encrypted, err = MapKVtoSSLExt(node, poolServices, disableNonSSLPorts)
 		if err != nil {
 			return nil, err
 		}
@@ -1585,12 +1591,12 @@ func (b *Bucket) mkConnPool(node string, poolServices *PoolServices) (*connectio
 
 	if b.ah != nil {
 		pool = newConnectionPool(node,
-			b.ah, AsynchronousCloser, PoolSize, PoolOverflow, client.tlsConfig, b.Name, encrypted)
+			b.ah, AsynchronousCloser, PoolSize, PoolOverflow, tlsConfig, b.Name, encrypted)
 
 	} else {
 		pool = newConnectionPool(node,
 			b.authHandler(true /* bucket already locked */),
-			AsynchronousCloser, PoolSize, PoolOverflow, client.tlsConfig, b.Name, encrypted)
+			AsynchronousCloser, PoolSize, PoolOverflow, tlsConfig, b.Name, encrypted)
 	}
 	return pool, nil
 }

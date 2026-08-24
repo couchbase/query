@@ -418,8 +418,11 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			// if we got here, reset failure count
 			failures = 0
 
-			if b.pool.client.tlsConfig != nil {
-				poolServices, err = b.pool.client.GetPoolServices("default")
+			client := b.pool.client
+			tlsConfig := client.tlsConfig
+			disableNonSSLPorts := client.disableNonSSLPorts
+			if tlsConfig != nil {
+				poolServices, err = client.GetPoolServices("default")
 				if err != nil {
 					returnErr = err
 					res.Body.Close()
@@ -441,30 +444,18 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			for i := range newcps {
 				// get the old connection pool and check if it is still valid
 				pool := b.getConnPoolByHost(tmpb.VBSMJson.ServerList[i], true /* bucket already locked */)
-				if pool != nil && pool.inUse == false && pool.tlsConfig == b.pool.client.tlsConfig {
+				if pool != nil && pool.inUse == false && pool.tlsConfig == tlsConfig {
 					// if the hostname and index is unchanged then reuse this pool
 					newcps[i] = pool
 					pool.inUse = true
 					continue
 				}
 				// else create a new pool
-				var encrypted bool
 				hostport := tmpb.VBSMJson.ServerList[i]
-				if b.pool.client.tlsConfig != nil {
-					hostport, encrypted, err = MapKVtoSSLExt(hostport, &poolServices, b.pool.client.disableNonSSLPorts)
-					if err != nil {
-						b.Unlock()
-						return errors.NewUpdaterMappingError(b.GetName(), err)
-					}
-				}
-				if b.ah != nil {
-					newcps[i] = newConnectionPool(hostport,
-						b.ah, AsynchronousCloser, PoolSize, PoolOverflow, b.pool.client.tlsConfig, b.Name, encrypted)
-
-				} else {
-					newcps[i] = newConnectionPool(hostport,
-						b.authHandler(true /* bucket already locked */),
-						AsynchronousCloser, PoolSize, PoolOverflow, b.pool.client.tlsConfig, b.Name, encrypted)
+				newcps[i], err = b.mkConnPool(hostport, &poolServices, tlsConfig, disableNonSSLPorts)
+				if err != nil {
+					b.Unlock()
+					return errors.NewUpdaterMappingError(b.GetName(), err)
 				}
 			}
 
