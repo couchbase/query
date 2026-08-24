@@ -74,7 +74,7 @@ func indexScanCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressi
 		errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
 
-func getIndexMinMaxCost(alias, keyspace string, indexKey expression.Expression,
+func getIndexMinMaxCost(alias, keyspace string, indexKey expression.Expression, arrayKey *expression.All,
 	cost, cardinality, frCost float64, missing, null, advisorValidate bool) (
 	float64, float64, float64, error) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
