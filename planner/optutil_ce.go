@@ -78,7 +78,7 @@ func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64)
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
 
-func getIndexMinMaxCost(alias, keyspace string, indexKey expression.Expression,
+func getIndexMinMaxCost(alias, keyspace string, indexKey expression.Expression, arrayKey *expression.All,
 	cost, cardinality, frCost float64, missing, null, advisorValidate bool) (
 	float64, float64, float64, error) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil

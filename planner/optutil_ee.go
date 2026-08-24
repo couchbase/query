@@ -261,10 +261,10 @@ func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64)
 	return optutil.IndexLimitCost(nlimit, noffset, cost, cardinality, frCost, selec)
 }
 
-func getIndexMinMaxCost(alias, keyspace string, indexKey expression.Expression,
+func getIndexMinMaxCost(alias, keyspace string, indexKey expression.Expression, arrayKey *expression.All,
 	cost, cardinality, frCost float64, missing, null, advisorValidate bool) (
 	float64, float64, float64, error) {
-	return optutil.CalcIndexMinMaxCost(alias, keyspace, indexKey, cost, cardinality, frCost,
+	return optutil.CalcIndexMinMaxCost(alias, keyspace, indexKey, arrayKey, cost, cardinality, frCost,
 		missing, null, advisorValidate)
 }
 
