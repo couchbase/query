@@ -200,14 +200,19 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor, random bool) (co
 		}
 	} else if isConnError(err) || isSeveredConnectionError(err) {
 		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
+			securityCfgMismatch := pool.tlsConfig != b.pool.client.tlsConfig
 
 			// check for a new vbmap
-			if desc.version == b.Version {
+			// Or if there is a mismatch between the current connection security config, and the one used to initialize the bucket's
+			// connection pools. If there is, refresh the bucket
+			if desc.version == b.Version || securityCfgMismatch {
 				b.Refresh()
 			}
 
 			// if one's available, assume the master is up
-			if desc.version != b.Version {
+			// Or if there was a connection security config mismatch, assume the master is up and the error was due to the
+			// connection having been created with an older security config. The caller can retry the operation against the master
+			if desc.version != b.Version || securityCfgMismatch {
 				desc.version = b.Version
 				desc.replica = 0
 				desc.amendReplica = false
@@ -232,14 +237,19 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor, random bool) (co
 		}
 	} else if isTimeoutError(err) {
 		desc.retry = true
+		securityCfgMismatch := pool.tlsConfig != b.pool.client.tlsConfig
 
 		// check for a new vbmap
-		if desc.version == b.Version {
+		// Or if there is a mismatch between the current connection security config, and the one used to initialize the bucket's
+		// connection pools. If there is, refresh the bucket
+		if desc.version == b.Version || securityCfgMismatch {
 			b.Refresh()
 		}
 
 		// if one's available, assume the master is up
-		if desc.version != b.Version {
+		// Or if there was a connection security config mismatch, assume the master is up and the error was due to the
+		// connection having been created with an older security config. The caller can retry the operation against the master
+		if desc.version != b.Version || securityCfgMismatch {
 			desc.version = b.Version
 			desc.replica = 0
 			desc.amendReplica = false
@@ -281,7 +291,7 @@ func getDelay(resp *gomemcached.MCResponse) time.Duration {
 }
 
 // second part of the retry loop: handle the command errors and retry strategy
-func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *doDescriptor) {
+func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *doDescriptor, pool *connectionPool) {
 	desc.retry = false
 	desc.discard = false
 	desc.delay = time.Duration(0)
@@ -374,6 +384,9 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.discard = true
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+			if desc.retry && pool.tlsConfig != b.pool.client.tlsConfig {
+				b.Refresh()
+			}
 		} else if isAddrNotAvailable(lastError) {
 			desc.discard = true
 			desc.backOffAttempts++
@@ -385,17 +398,25 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 			desc.discard = true
 			desc.backOffAttempts++
 			desc.retry = backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true)
+			if desc.retry && pool.tlsConfig != b.pool.client.tlsConfig {
+				b.Refresh()
+			}
 		} else if IsReadTimeOutError(lastError) {
 			desc.discard = true
 			desc.retry = true
+			securityCfgMismatch := pool.tlsConfig != b.pool.client.tlsConfig
 
 			// check for a new vbmap
-			if desc.version == b.Version {
+			// Or if there is a mismatch between the current connection security config, and the one used to initialize the bucket's
+			// connection pools. If there is, refresh the bucket
+			if desc.version == b.Version || securityCfgMismatch {
 				b.Refresh()
 			}
 
 			// if one's available, assume the master is up
-			if desc.version != b.Version {
+			// Or if there was a connection security config mismatch, assume the master is up and the error was due to the
+			// connection having been created with an older security config. The caller can retry the operation against the master
+			if desc.version != b.Version || securityCfgMismatch {
 				desc.version = b.Version
 				desc.replica = 0
 				desc.amendReplica = false
@@ -537,7 +558,7 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 			conn.SetReplica(true)
 		}
 		lastError = f(conn, uint16(vb))
-		b.processOpError(uint32(vb), lastError, pool.Node(), desc)
+		b.processOpError(uint32(vb), lastError, pool.Node(), desc, pool)
 
 		if desc.discard {
 			pool.Discard(conn)
@@ -939,7 +960,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 				}
 			}()
 
-			b.processOpError(uint32(vb), err, pool.Node(), desc)
+			b.processOpError(uint32(vb), err, pool.Node(), desc, pool)
 			if desc.errorString != "" {
 				logging.Infof(desc.errorString, err.Error(), bname, vb, keys)
 			}
