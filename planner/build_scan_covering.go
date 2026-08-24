@@ -859,7 +859,7 @@ func (this *builder) checkMinMaxOptimization(entry *indexEntry, alias, keyspace 
 			for i := range spans[0].Ranges {
 				if i >= len(keys) {
 					break
-				} else if i > 0 && len(spans) > 1 {
+				} else if i > 0 && (len(spans) > 1 || spans.HasDynamicIn()) {
 					// only allow multiple spans if it's leading key
 					break
 				}
@@ -881,8 +881,13 @@ func (this *builder) checkMinMaxOptimization(entry *indexEntry, alias, keyspace 
 						missing = true
 					}
 				}
+				var arrayKey *expression.All
+				if keyPos == entry.arrayKeyPos {
+					arrayKey = entry.arrayKey
+				}
 				cost, cardinality, frCost, err := getIndexMinMaxCost(alias, keyspace, keys[keyPos].Expr,
-					entry.cost, entry.cardinality, entry.frCost, missing, null, this.advisorValidate())
+					arrayKey, entry.cost, entry.cardinality, entry.frCost, missing, null,
+					this.advisorValidate())
 				if err != nil {
 					return useCBO
 				} else if cost > 0.0 && cardinality > 0.0 && frCost > 0.0 {
