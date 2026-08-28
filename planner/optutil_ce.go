@@ -19,10 +19,6 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func checkCostModel(featureControls uint64) {
-	// no-op
-}
-
 func optDocCount(keyspace string, useCBO bool) int64 {
 	return -1
 }

@@ -29,7 +29,6 @@ func Build(stmt algebra.Statement, datastore, systemstore datastore.Datastore,
 	builder := newBuilder(datastore, systemstore, namespace, subquery, context)
 	if context.UseCBO() && context.Optimizer() != nil {
 		builder.useCBO = true
-		checkCostModel(context.FeatureControls())
 	}
 
 	// subquery plan is currently only for explain, explain_function and advise
