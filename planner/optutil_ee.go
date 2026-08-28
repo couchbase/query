@@ -21,14 +21,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
-	"github.com/couchbase/query/util"
 )
-
-func checkCostModel(featureControls uint64) {
-	if util.IsFeatureEnabled(featureControls, util.N1QL_CBO_NEW) {
-		optutil.SetNewCostModel()
-	}
-}
 
 func optDocCount(keyspace string, useCBO bool) int64 {
 	docCount := int64(-1)
@@ -164,6 +157,56 @@ func intersectSpansCost(entry *indexEntry, sargKeys, sargIncludes expression.Exp
 			OPT_COST_NOT_AVAIL, OPT_COST_NOT_AVAIL, skipKeys)
 		indexes = append(indexes, icost)
 		spanMap[icost] = span
+	}
+
+	// logic similar to adjustIndexSelectivity(), except it is the same index for all scans here
+	sort.Slice(indexes, func(i, j int) bool {
+		return ((indexes[i].ScanCost(false) < indexes[j].ScanCost(false)) ||
+			((indexes[i].ScanCost(false) == indexes[j].ScanCost(false)) &&
+				(indexes[i].Selectivity() < indexes[j].Selectivity())) ||
+			((indexes[i].ScanCost(false) == indexes[j].ScanCost(false)) &&
+				(indexes[i].Selectivity() == indexes[j].Selectivity()) &&
+				(indexes[i].Cardinality() < indexes[j].Cardinality())))
+	})
+
+	// adjust selectivity for all index scans except the 1st one
+	for i := 1; i < len(indexes); i++ {
+		idx := indexes[i]
+		adjust := false
+		arrayPos := -1
+		for j, key := range sargKeys {
+			if _, ok := key.(*expression.All); ok {
+				// remember first array key position (FLATTEN_KEYS can have multiple)
+				if arrayPos < 0 {
+					arrayPos = j
+				}
+			} else {
+				// any non-array index key should be skipped since its selectivity
+				// is already accounted for in the 1st index scan
+				idx.SetSkipKey(j)
+				adjust = true
+			}
+		}
+		if adjust {
+			sel, e := indexSelec(index, sargKeys, idx.SkipKeys(), false, spanMap[idx], alias,
+				advisorValidate, context)
+			if e == nil {
+				if arrayPos >= 0 {
+					distSel := optutil.CalcDistinctScanSelec(index, sel, arrayPos, advisorValidate)
+					if distSel > 0 {
+						sel = distSel
+					}
+				}
+				origSel := idx.Selectivity()
+				origCard := idx.Cardinality()
+				origFetchCost := idx.FetchCost()
+				newCard := (origCard / origSel) * sel
+				newFetchCost := (origFetchCost / origSel) * sel
+				idx.SetSelectivity(sel)
+				idx.SetCardinality(newCard)
+				idx.SetFetchCost(newFetchCost)
+			}
+		}
 	}
 
 	indexes = optutil.ChooseIntersectScan(datastore.IndexQualifiedKeyspacePath(index), indexes, -1)
