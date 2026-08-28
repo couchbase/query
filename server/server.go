@@ -2056,8 +2056,10 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 		var stmt algebra.Statement
 		var err error
+		isNaturalStmt := false
 		if nlstmt := request.NaturalStatement(); nlstmt != nil {
 			stmt = nlstmt
+			isNaturalStmt = true
 			planStabilityAdHoc = false
 			planStabilityAdHocRead = false
 		} else {
@@ -2109,14 +2111,21 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 			return nil, errors.NewTranStatementNotSupportedError(stype, msg)
 		}
 
-		if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
-			return nil, errors.NewRewriteError(err, "")
-		}
+		// NL-generated statements have already been through rewrite and semantic
+		// checking in the natural package (see validateGeneratedStatement), where a
+		// failure can still be fed back to the model for correction. Redoing it here
+		// would be dead work on the success path and would run the (non-idempotent)
+		// rewrite pass a second time over the same AST.
+		if !isNaturalStmt {
+			if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
+				return nil, errors.NewRewriteError(err, "")
+			}
 
-		semChecker := semantics.GetSemChecker(stmt.Type(), request.TxId() != "")
-		_, err = stmt.Accept(semChecker)
-		if err != nil {
-			return nil, errors.NewSemanticsError(err, "")
+			semChecker := semantics.GetSemChecker(stmt.Type(), request.TxId() != "")
+			_, err = stmt.Accept(semChecker)
+			if err != nil {
+				return nil, errors.NewSemanticsError(err, "")
+			}
 		}
 
 		prep := util.Now()

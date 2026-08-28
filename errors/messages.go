@@ -4910,6 +4910,13 @@ var errData = []ErrData{
 		Code:        E_REWRITE, // 6500
 		symbol:      "E_REWRITE",
 		Description: "An error occurred during query rewrite.",
+		Reason: []string{
+			"The statement includes a construct that the rewrite phase could not process.",
+		},
+		Action: []string{
+			"The cause will contain more detail on the specific violation; revise the statement and " +
+				"re-submit.",
+		},
 		AppliesTo: []string{
 			"Server",
 		},
@@ -8348,11 +8355,12 @@ var errData = []ErrData{
 	{
 		Code:        E_NL_FAIL_GENERATED_STMT, // 19214
 		symbol:      "E_NL_FAIL_GENERATED_STMT",
-		Description: "Statement generation failed: «failure»",
+		Description: "Statement generation failed after «retries» retries: «failure»",
 		IsUser:      MAYBE,
 		Reason: []string{
 			"Syntax error in generated statement.",
 			"LLM returned an empty response",
+			"Generated statement failed rewrite or semantic validation (e.g. an invalid alias, window reference, or clause combination).",
 		},
 		Action: []string{
 			"Examine the «failure», adjust and re-submit as a direct statement execution request if possible.",

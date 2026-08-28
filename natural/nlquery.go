@@ -28,6 +28,8 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/natural/ai_gateway"
 	"github.com/couchbase/query/primitives/couchbase"
+	"github.com/couchbase/query/rewrite"
+	"github.com/couchbase/query/semantics"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -705,7 +707,11 @@ func ProcessResumeChat(chatId, requestId string, datastorecreds []string, chatTo
 
 func getStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {
 	if content == "" {
-		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, "empty response")
+		// getStatement has no visibility into which correction round it's being
+		// called from (the very first attempt, or from inside directRetryRequest/
+		// capellaRetryRequest), so it cannot report a real retry count here; 0 is
+		// simply the accurate count for its own, single generation attempt.
+		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT, 0, "empty response")
 	}
 	switch nloutputOpt {
 	case SQL, FTSSQL:
@@ -1469,6 +1475,37 @@ func appendJSUDFIterativeUserMessage(chat *prompt, naturalPrompt string, hint st
 
 // Reusable instruction snippets, shared across prompt builders.
 
+// _SQLPP_TASK_INSTRUCTIONS is the shared set of SQL++ correctness rules (with
+// WRONG/RIGHT examples) used both as part of the slm system prompt below and,
+// on the first correction round only, folded into the non-slm retry feedback so
+// hosted providers get the same known-pitfall guidance when a generated
+// statement needs correcting. See directBuildRetryPrompt.
+const _SQLPP_TASK_INSTRUCTIONS = "- Backtick-quote field names that are reserved keywords or contain spaces/special characters.\n  WRONG: SELECT value, Enrollment (K-12) ...\n  RIGHT: SELECT `value`, `Enrollment (K-12)` ...\n\n- SUBSTR is 0-based: SUBSTR(str, 0, 4) returns the first 4 characters. Use this for year extraction from date strings.\n  WRONG: SUBSTR(dob, 1, 4) = '1990'\n  RIGHT: SUBSTR(dob, 0, 4) = '1990'\n\n- Only use keyspaces and fields present in the schema; do not infer array, object, or foreign-key structure unless the schema shows it.\n  WRONG: UNNEST t.tags AS tag (when `tags` is a plain string in schema)\n  RIGHT: WHERE t.tags = 'sports'\n\n- Never use CAST(); it is not supported in SQL++.\n  WRONG: CAST(price AS FLOAT)\n  RIGHT: TO_NUMBER(price)\n\n- Use the exact field named in the question; do not substitute a related variant.\n  WRONG: question asks for `revenue`, query uses `total_sales`\n  RIGHT: query uses `revenue`\n\n- When similar fields exist, prefer the one whose name most literally matches the question; use sample values to distinguish (e.g., `type` vs `types`, `id` vs `uuid`).\n  WRONG: question asks for \"account type\", query uses `types` (samples: [1,2,3])\n  RIGHT: uses `type` (samples: [\"savings\",\"checking\"])\n\n- Prefer a direct count or pre-aggregated field over computing it from related records when one exists.\n  WRONG: (SELECT COUNT(*) FROM reviews r WHERE r.product_id = p.id) >= 3\n  RIGHT: WHERE p.review_count >= 3\n\n- Wrap string fields in TO_NUMBER() before numeric aggregation or ordering.\n  WRONG: AVG(p.score)  when score is stored as \"8.5\"\n  RIGHT: AVG(TO_NUMBER(p.score))\n\n- If one collection contains all needed fields and filters, do not join.\n  WRONG: FROM orders o JOIN orders o2 ON ...\n  RIGHT: FROM orders o WHERE o.status = 'shipped'\n\n- Use DISTINCT when unique values are requested or when a join could produce duplicates.\n  WRONG: SELECT c.id FROM customers c JOIN orders o ON c.id = o.customer_id\n  RIGHT: SELECT DISTINCT c.id ...\n\n- For yes/no questions, return a single existence answer, not matching rows.\n  WRONG: SELECT e.name FROM employees e WHERE e.dept = 'HR'\n  RIGHT: SELECT COUNT(*) > 0 FROM employees e WHERE e.dept = 'HR'\n\n- When listing entities with no specified attribute, return the entity identifier.\n  WRONG: question says \"list employees\", query returns SELECT e.name\n  RIGHT: SELECT e.id\n\n- No colon after FROM.\n  WRONG: FROM: orders o\n  RIGHT: FROM orders o\n\n- Every alias in a statement must be unique. Couchbase does not allow the same alias to be assigned more than once, even across subqueries or when referencing the same collection.\n  WRONG: SELECT * FROM orders o WHERE o.id IN (SELECT RAW o.ref_id FROM orders o WHERE ...)\n  RIGHT: SELECT * FROM orders o WHERE o.id IN (SELECT RAW o2.ref_id FROM orders o2 WHERE ...)\n\n- Match literal types to schema field types; quote string-typed fields even when values look numeric.\n  WRONG: WHERE zip_code = 10001  (zip_code type is string in the schema)\n  RIGHT: WHERE zip_code = '10001'\n\n\n- Never use strftime(); it is a SQLite function not supported in SQL++. Extract date parts with DATE_PART_STR() (or format with DATE_FORMAT_STR()) rather than SUBSTR \u2014 SUBSTR slicing only gives correct results when the date string is guaranteed to be 'YYYY-MM-DD...' format.\n  WRONG: strftime('%Y', date) = '2012'\n  WRONG: SUBSTR(date, 0, 4) = '2012'  (unsafe unless the date format is guaranteed to be YYYY-MM-DD)\n  RIGHT: DATE_PART_STR(date, 'year') = 2012\n  For month: DATE_PART_STR(date, 'month') = 3\n  For a formatted string: DATE_FORMAT_STR(date, 'YYYY-MM-DD') = '2012-03-15'\n\n- Never use GROUP_CONCAT(); it is not supported in SQL++. Use ARRAY_AGG() if aggregation is truly needed, but often the correct answer is to list individual rows rather than concatenate them.\n  WRONG: SELECT sex, GROUP_CONCAT(DISTINCT id) FROM patients GROUP BY sex\n  RIGHT: SELECT id, sex FROM patients ORDER BY sex  (list each row separately)\n\n- Never use DIVIDE(); use the / operator directly.\n  WRONG: DIVIDE(numerator, denominator)\n  RIGHT: numerator / denominator\n\n- The LET clause is a query-level clause that must appear between FROM and WHERE. Never put LET inside an expression or after WHERE.\n  WRONG: ... WHERE x > 0 LET y = expr\n  WRONG: WHERE x > (LET avg_val = AVG(x) IN avg_val * 1.2 END)\n  RIGHT: FROM collection AS c LET y = c.field1 / c.field2 WHERE y > threshold\n  RIGHT (for correlated average): WHERE val > (SELECT RAW AVG(val2) FROM coll AS t2) * 1.2\n\n- For IN value lists, always use square bracket array literals []. Never use parentheses () for value lists, parentheses after IN are treated as subquery syntax and cause a ParsingFailedException.\n  WRONG: WHERE status IN ('+', '-')\n  WRONG: WHERE element IN ('h', 'c', 'o')\n  RIGHT: WHERE status IN ['+', '-']\n  RIGHT: WHERE element IN ['h', 'c', 'o']\n  RIGHT alternative: WHERE status = '+' OR status = '-'\n\n- Every JOIN must have an ON clause. Never chain a JOIN without its ON clause.\n  WRONG: JOIN collection AS b JOIN collection2 AS c ON b.id = c.id  (b has no ON)\n  RIGHT: JOIN collection AS b ON a.id = b.ref_id JOIN collection2 AS c ON b.id = c.id\n\n- Window functions (RANK() OVER, ROW_NUMBER() OVER, etc.) are supported in Couchbase SQL++, but not inside LET, WHERE, GROUP BY, LETTING, or HAVING clauses. When window-function logic is needed in one of those clauses, use a subquery with ORDER BY and LIMIT/OFFSET instead.\n  WRONG: WHERE RANK() OVER (PARTITION BY county ORDER BY score DESC) <= 5\n  RIGHT: Use a subquery to filter: WHERE (SELECT COUNT(*) FROM coll AS t2 WHERE t2.county = t.county AND t2.score >= t.score) <= 5\n\n- When GROUP BY is present, every non-aggregate expression in SELECT must appear in the GROUP BY clause, and every expression in ORDER BY that is not an aggregate must also appear in GROUP BY.\n  WRONG: SELECT name, score, MAX(pts) FROM t GROUP BY score  (name not in GROUP BY)\n  WRONG: SELECT publisher FROM t GROUP BY publisher ORDER BY attribute_value ASC  (attribute_value not in GROUP BY and not an aggregate)\n  RIGHT: SELECT name, score, MAX(pts) FROM t GROUP BY name, score\n  RIGHT: SELECT publisher, MIN(attribute_value) AS min_val FROM t GROUP BY publisher ORDER BY min_val ASC\n\n- Include aggregate expressions in SELECT when using them in ORDER BY with GROUP BY.\n  WRONG: SELECT label FROM t GROUP BY label ORDER BY COUNT(*) DESC LIMIT 1\n  RIGHT: SELECT label, COUNT(*) AS cnt FROM t GROUP BY label ORDER BY cnt DESC LIMIT 1\n\n- Without GROUP BY, you cannot mix aggregate functions with bare column references in SELECT or ORDER BY.\n  WRONG: SELECT name, nationality, MAX(points) FROM drivers ORDER BY wins DESC LIMIT 1\n  RIGHT option 1, if you want one row: SELECT name, nationality, points FROM drivers ORDER BY wins DESC LIMIT 1\n  RIGHT option 2, if aggregation is needed: SELECT name, nationality, MAX(points) FROM drivers GROUP BY name, nationality ORDER BY MAX(points) DESC LIMIT 1\n\n- When a question asks for an aggregate (COUNT, SUM, AVG) \"for the entity with max/min Y\", first find that entity using a subquery, then compute the aggregate for it. Never apply ORDER BY + LIMIT to a scalar aggregate.\n  WRONG: SELECT COUNT(*) FROM district AS d JOIN client AS c ON d.id = c.district_id WHERE c.gender = 'M' ORDER BY d.crimes DESC LIMIT 1 OFFSET 1\n  RIGHT: SELECT COUNT(*) FROM district AS d JOIN client AS c ON d.id = c.district_id WHERE c.gender = 'M' AND d.id = (SELECT RAW d2.id FROM district AS d2 ORDER BY d2.crimes DESC LIMIT 1 OFFSET 1)[0]\n\n- For the Nth ranked item, use LIMIT 1 OFFSET N-1, not LIMIT N.\n  WRONG: ORDER BY score DESC LIMIT 7  (for \"7th highest\")\n  RIGHT: ORDER BY score DESC LIMIT 1 OFFSET 6\n\n- Use the correct join key from the schema. Do not assume two collections join on a field just because both have a field with a similar name; verify in the schema.\n  WRONG: JOIN foreign_data AS fd ON c.id = fd.id  (when schema shows join is on uuid)\n  RIGHT: JOIN foreign_data AS fd ON c.uuid = fd.uuid\n\n- \"Oldest\" means earliest date, ORDER BY date_field ASC. \"Newest\" or \"latest\" means most recent, ORDER BY date_field DESC. Sort by STR_TO_MILLIS(date_field) rather than the raw string \u2014 string ordering only matches date ordering when the format is a fixed-width, zero-padded 'YYYY-MM-DD...' string.\n  WRONG: SELECT name FROM people ORDER BY birthday DESC LIMIT 1  (for \"oldest person\")\n  WRONG: SELECT name FROM people ORDER BY birthday ASC LIMIT 1  (unsafe unless birthday format is guaranteed YYYY-MM-DD)\n  RIGHT: SELECT name FROM people ORDER BY STR_TO_MILLIS(birthday) ASC LIMIT 1\n\n- Use schema sample values to determine actual stored values, not English equivalents. Do not substitute readable labels for the coded values the schema stores.\n  WRONG: WHERE bond_type = 'double'  (when schema samples show bond_type values like '=', '-', '#')\n  RIGHT: WHERE bond_type = '='  (double bond stored as '=')\n  WRONG: WHERE admission = 'inpatient'  (when schema samples show '+' and '-')\n  RIGHT: WHERE admission = '+'\n\n- Count the requested entities, not joined rows.\n  WRONG: `SELECT COUNT(*) FROM bucket.scope.a AS a JOIN bucket.scope.b AS b ON a.k = b.k WHERE b.flag = TRUE;`\n  RIGHT: `SELECT COUNT(DISTINCT a.entity_id) FROM bucket.scope.a AS a JOIN bucket.scope.b AS b ON a.k = b.k WHERE b.flag = TRUE;`\n\n- Follow the schema's actual bridge path before filtering by person or ownership attributes.\n  WRONG: `SELECT SUM(f.amount) FROM bucket.scope.fact AS f JOIN bucket.scope.person AS p ON f.region_id = p.region_id WHERE p.attr = 'X';`\n  RIGHT: `SELECT SUM(f.amount) FROM bucket.scope.fact AS f JOIN bucket.scope.bridge AS br ON f.account_id = br.account_id JOIN bucket.scope.person AS p ON br.person_id = p.person_id WHERE p.attr = 'X' AND br.role = 'OWNER';`\n\n- Compute percentages with an explicit numerator and denominator population.\n  WRONG: `SELECT COUNT(*) FROM bucket.scope.t WHERE cond1 AND cond2;`\n  RIGHT: `SELECT 100.0 * SUM(CASE WHEN cond1 THEN 1 ELSE 0 END) / COUNT(*) FROM bucket.scope.t WHERE cond2;`\n\n- Sort and limit by the exact metric named in the question.\n  WRONG: `SELECT k, COUNT(*) AS c FROM bucket.scope.t GROUP BY k ORDER BY c DESC LIMIT 10;`\n  RIGHT: `SELECT k, metric FROM bucket.scope.t ORDER BY metric DESC LIMIT 10;`\n\n- Apply date filters to the correct field using date functions rather than string slicing \u2014 SUBSTR boundaries only work when the date string is a fixed 'YYYY-MM-DD' format.\n  WRONG: `WHERE city = 'X' AND date_field BETWEEN '1980-01-01' AND '1980-12-31'`\n  WRONG: `WHERE county = 'X' AND SUBSTR(date_field, 0, 4) = '1980'`  (unsafe unless the date format is guaranteed to be YYYY-MM-DD)\n  RIGHT: `WHERE county = 'X' AND DATE_PART_STR(date_field, 'year') = 1980`\n  For a date range or difference: use DATE_DIFF_STR(date_field, other_date_field, 'day')\n"
+
+// correctionFeedback builds the non-slm correction-round feedback text: the
+// failing error, optionally followed (on the first correction round only) by
+// _SQLPP_TASK_INSTRUCTIONS. Shared by directBuildRetryPrompt (its non-slm
+// branch) and capellaBuildRetryPrompt (Capella never uses the slm feedback
+// template).
+func correctionFeedback(retryErr error, includeInstructions bool) string {
+	feedback := "The previous response errored out with: " + retryErr.Error() + "."
+	if includeInstructions {
+		feedback += "\n\nKeep the following SQL++ correctness rules in mind while correcting it:\n\n" + _SQLPP_TASK_INSTRUCTIONS
+	}
+	feedback += "\nCan you correct the previous response?"
+	return feedback
+}
+
+// buildRetryPrompt appends the assistant's previous (failing) response and the
+// given correction-feedback user turn to pmt, keeping pmt.Size in sync, and
+// returns pmt for convenient reassignment at the call site.
+func buildRetryPrompt(pmt *prompt, assistantContent, feedback string) *prompt {
+	pmt.Messages = append(pmt.Messages, message{Role: "assistant", Content: assistantContent})
+	pmt.Size += len(feedback)
+	pmt.Messages = append(pmt.Messages, message{Role: "user", Content: feedback})
+	return pmt
+}
+
 const _KNOWLEDGE_INSTRUCTION = "\n\nIf a keyspace's information above includes a \"knowledge\" entry, apply " +
 	"it the same way as a Hint, except that it is persistent, keyspace-level context rather than something " +
 	"supplied with this particular request. Prefer it over your own assumptions if it conflicts with them."
@@ -1705,6 +1742,34 @@ func ParseNaturalConfig(naturalConfig value.Value) (*NaturalConfig, errors.Error
 // decision, used by both the HTTP layer and the server dispatch.
 func IsCapellaPath(nlCred, nlOrgId string) bool {
 	return nlCred != "" || nlOrgId != ""
+}
+
+// validateGeneratedStatement runs the same rewrite and semantic-check passes the
+// query engine applies before planning (execution.Context.PrepareStatement), on a
+// freshly-parsed NL-generated statement. Without this, a statement that parses
+// cleanly but would fail rewrite or semantic validation (e.g. a duplicate alias,
+// an invalid GROUP BY reference) sails through the correction loop and only
+// surfaces once CanServerExecuteGeneratedStatement hands it to the normal
+// execution pipeline - by which point there is no model left to correct it. Doing
+// the check here lets the error be fed back for another correction round exactly
+// like a parse error.
+func validateGeneratedStatement(nlAlgebraStmt algebra.Statement, context NaturalContext) error {
+	// Wrapped the same way eval_stmt.go's PrepareStatement wraps it, so the
+	// returned error carries a proper error code (E_REWRITE) -- the raw error
+	// from the rewrite visitor does not have one of its own. This matters once
+	// this error becomes the cause of the terminal E_NL_FAIL_GENERATED_STMT
+	// error: errors.processValue serializes a coded errors.Error as a full
+	// nested error object in the JSON response, not just a flat string.
+	// NewRewriteError is a no-op wrap when its input is already an errors.Error.
+	if _, err := nlAlgebraStmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
+		return errors.NewRewriteError(err, "")
+	}
+	inTx := context != nil && context.GetTxContext() != nil
+	semChecker := semantics.GetSemChecker(nlAlgebraStmt.Type(), inTx)
+	// Semantic-check errors are already errors.Error (e.g. errors.NewSemanticsError),
+	// so no wrapping is needed here.
+	_, err := nlAlgebraStmt.Accept(semChecker)
+	return err
 }
 
 func CanServerExecuteGeneratedStatement(nlAlgebraStmt algebra.Statement) bool {

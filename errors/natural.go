@@ -43,7 +43,7 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL: {CHATCOMPLTIONS_IKEY, "Error unmarshalling chat completions response"},
 	E_NL_ERR_CHATCOMPLETIONS_RESP:       {CHATCOMPLTIONS_IKEY, "LLM processing failed"},
 	E_NL_MISSING_NL_PARAM:               {NLPARAM_IKEY, "Natural Language request expects %s request parameter to be set"},
-	E_NL_FAIL_GENERATED_STMT:            {FAIL_IKEY, "Statement generation failed: %v"},
+	E_NL_FAIL_GENERATED_STMT:            {FAIL_IKEY, "Statement generation failed after %d retries: %v"},
 	E_NL_CONTEXT:                        {NLCONTEXT_IKEY, "Error in keyspace list provided for natural language processing"},
 	E_NL_ORG_NOT_FOUND:                  {CHATCOMPLTIONS_IKEY, "Organization \"%v\" not found"},
 	E_NL_ORG_UNAUTH: {CHATCOMPLTIONS_IKEY, "Access to organisation '%v' is not authorized " +

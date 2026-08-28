@@ -646,13 +646,16 @@ func ProcessCapellaRequest(nlCred, nlOrgId, nlProvider, nlModel, nlquery, nlHint
 	var nlAlgebraStmt algebra.Statement
 	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
 	record(execution.NLPARSE, util.Since(parse))
+	if parseErr == nil {
+		parseErr = validateGeneratedStatement(nlAlgebraStmt, context)
+	}
 	if parseErr != nil {
 		retrytime := util.Now()
-		prompt = capellaBuildRetryPrompt(prompt, content, parseErr.Error())
+		prompt = capellaBuildRetryPrompt(prompt, content, parseErr, true)
 		var retryErr error
 		for i := 0; i < maxCorrectionRetries; i++ {
 			var fatalErr errors.Error
-			content, stmt, nlAlgebraStmt, fatalErr, retryErr = capellaRetryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
+			content, stmt, nlAlgebraStmt, fatalErr, retryErr = capellaRetryRequest(nlCred, nlOrgId, prompt, context, record, nloutputOpt, explain, advise)
 			if fatalErr != nil {
 				// Request-level failure (throttle, JWT/auth, gateway/transport error,
 				// model refusal): not a correctable statement, so surface it immediately
@@ -663,35 +666,22 @@ func ProcessCapellaRequest(nlCred, nlOrgId, nlProvider, nlModel, nlquery, nlHint
 				record(execution.NLRETRY, util.Since(retrytime))
 				return stmt, nlAlgebraStmt, nil
 			} else {
-				prompt = capellaBuildRetryPrompt(prompt, content, retryErr.Error())
+				prompt = capellaBuildRetryPrompt(prompt, content, retryErr, false)
 			}
 		}
 		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
-			content, retryErr)
+			maxCorrectionRetries, content, retryErr)
 	}
 
 	return stmt, nlAlgebraStmt, nil
 }
 
-func capellaBuildRetryPrompt(pmt *prompt, assistantContent string, reason string) *prompt {
-	assistantmessage := message{
-		Role:    "assistant",
-		Content: assistantContent,
-	}
-	pmt.Messages = append(pmt.Messages, assistantmessage)
-
-	var parseErrorMessage strings.Builder
-	parseErrorMessage.WriteString("The previous response errored out with: ")
-	parseErrorMessage.WriteString(reason)
-	parseErrorMessage.WriteString(".\nCan you correct the previous response?")
-	pmt.Size += parseErrorMessage.Len()
-
-	pmt.Messages = append(pmt.Messages, message{
-		Role:    "user",
-		Content: parseErrorMessage.String(),
-	})
-
-	return pmt
+// includeInstructions folds _SQLPP_TASK_INSTRUCTIONS into the feedback message.
+// Callers pass true only for the first correction round of a request: the rules
+// then stay in the message history for every subsequent round without needing to
+// be resent.
+func capellaBuildRetryPrompt(pmt *prompt, assistantContent string, retryErr error, includeInstructions bool) *prompt {
+	return buildRetryPrompt(pmt, assistantContent, correctionFeedback(retryErr, includeInstructions))
 }
 
 // capellaRetryRequest runs one correction round: it re-sends the prompt, extracts
@@ -706,7 +696,7 @@ func capellaBuildRetryPrompt(pmt *prompt, assistantContent string, reason string
 //     and retry.
 //
 // At most one of fatalErr / parseErr is non-nil.
-func capellaRetryRequest(nlCred, nlOrgId string, prompt *prompt,
+func capellaRetryRequest(nlCred, nlOrgId string, prompt *prompt, context NaturalContext,
 	record func(execution.Phases, time.Duration), nloutputOpt naturalOutput,
 	explain, advise bool) (content, stmt string, nlAlgebraStmt algebra.Statement,
 	fatalErr errors.Error, parseErr error) {
@@ -751,6 +741,9 @@ func capellaRetryRequest(nlCred, nlOrgId string, prompt *prompt,
 
 	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
 	record(execution.NLPARSE, util.Since(parse))
+	if parseErr == nil {
+		parseErr = validateGeneratedStatement(nlAlgebraStmt, context)
+	}
 
 	return content, stmt, nlAlgebraStmt, nil, parseErr
 }
@@ -876,13 +869,16 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 	var nlAlgebraStmt algebra.Statement
 	nlAlgebraStmt, parseErr = n1ql.ParseStatement2(stmt, "default", "")
 	record(execution.NLPARSE, util.Since(parse))
+	if parseErr == nil {
+		parseErr = validateGeneratedStatement(nlAlgebraStmt, context)
+	}
 	if parseErr != nil {
 		retrytime := util.Now()
-		prompt = capellaBuildRetryPrompt(prompt, content, parseErr.Error())
+		prompt = capellaBuildRetryPrompt(prompt, content, parseErr, true)
 		var retryErr error
 		for i := 0; i < maxCorrectionRetries; i++ {
 			var fatalErr errors.Error
-			content, stmt, nlAlgebraStmt, fatalErr, retryErr = capellaRetryRequest(nlCred, nlOrgId, prompt, record, nloutputOpt, explain, advise)
+			content, stmt, nlAlgebraStmt, fatalErr, retryErr = capellaRetryRequest(nlCred, nlOrgId, prompt, context, record, nloutputOpt, explain, advise)
 			if fatalErr != nil {
 				// Request-level failure (throttle, JWT/auth, gateway/transport error,
 				// model refusal): not a correctable statement, so surface it immediately
@@ -895,12 +891,12 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 				record(execution.NLRETRY, util.Since(retrytime))
 				return stmt, nlAlgebraStmt, nil
 			} else if i < maxCorrectionRetries-1 {
-				prompt = capellaBuildRetryPrompt(prompt, content, retryErr.Error())
+				prompt = capellaBuildRetryPrompt(prompt, content, retryErr, false)
 			}
 		}
 		completeConversationPromptLocked(content, ce, prompt)
 		return "", nil, errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
-			content, retryErr)
+			maxCorrectionRetries, content, retryErr)
 	}
 
 	completeConversationPromptLocked(content, ce, prompt)

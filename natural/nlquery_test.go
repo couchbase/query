@@ -24,6 +24,7 @@ package natural
 
 import (
 	"encoding/json"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -34,6 +35,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/natural/ai_gateway"
+	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/value"
 )
 
@@ -293,6 +295,12 @@ func TestGetStatement_EmptyContent(t *testing.T) {
 	_, err := getStatement("", SQL)
 	if err == nil || err.Code() != errors.E_NL_FAIL_GENERATED_STMT {
 		t.Fatalf("expected E_NL_FAIL_GENERATED_STMT, got %v", err)
+	}
+	// Locks in that the call site supplies args matching E_NL_FAIL_GENERATED_STMT's
+	// "...failed after %d retries: %v" format (a mismatched-arity Sprintf call here
+	// would silently produce a garbled "%!d(string=...)" message instead of an error).
+	if want := "Statement generation failed after 0 retries: empty response"; err.Error() != want {
+		t.Fatalf("got %q, want %q", err.Error(), want)
 	}
 }
 
@@ -851,5 +859,126 @@ func TestAppendSQLUserMessage_IncludesAmbiguousTermInstruction(t *testing.T) {
 	}
 	if !strings.Contains(p.Messages[0].Content, _AMBIGUOUS_TERM_INSTRUCTION) {
 		t.Fatal("SQL user message missing the ambiguous-term instruction")
+	}
+}
+
+// ─── validateGeneratedStatement (rewrite + semantic-check retry coverage) ─────
+
+// mustParse parses a raw N1QL statement for use as validateGeneratedStatement
+// input. Parsing alone (no datastore) is enough since neither rewrite nor the
+// semantic checker touches the datastore.
+func mustParse(t *testing.T, stmt string) algebra.Statement {
+	t.Helper()
+	s, err := n1ql.ParseStatement2(stmt, "default", "")
+	if err != nil {
+		t.Fatalf("parse %q: %v", stmt, err)
+	}
+	return s
+}
+
+func TestValidateGeneratedStatement_Valid(t *testing.T) {
+	if err := validateGeneratedStatement(mustParse(t, "SELECT * FROM default"), nil); err != nil {
+		t.Fatalf("unexpected error for a valid statement: %v", err)
+	}
+}
+
+// A generated statement referencing an undeclared window name parses fine but
+// fails rewrite.NewRewrite(REWRITE_PHASE1)'s window-term validation.
+func TestValidateGeneratedStatement_RewriteError(t *testing.T) {
+	stmt := mustParse(t, "SELECT RANK() OVER w FROM default")
+	if err := validateGeneratedStatement(stmt, nil); err == nil {
+		t.Fatal("expected a rewrite error for an undeclared window reference")
+	}
+}
+
+// A sequence operation inside a WHERE clause parses fine but is rejected by
+// semantics.GetSemChecker.
+func TestValidateGeneratedStatement_SemanticError(t *testing.T) {
+	stmt := mustParse(t, "SELECT * FROM default WHERE NEXTVAL FOR `b`.`s`.`seq1` > 0")
+	if err := validateGeneratedStatement(stmt, nil); err == nil {
+		t.Fatal("expected a semantic error for a sequence operation in a WHERE clause")
+	}
+}
+
+// A nil context (as used by callers that have none available) must not panic
+// and must behave as inTx=false.
+func TestValidateGeneratedStatement_NilContext(t *testing.T) {
+	if err := validateGeneratedStatement(mustParse(t, "SELECT * FROM default"), nil); err != nil {
+		t.Fatalf("unexpected error with nil context: %v", err)
+	}
+}
+
+// ─── retry-feedback prompts fold in _SQLPP_TASK_INSTRUCTIONS once ────────────
+
+func TestDirectBuildRetryPrompt_SLM_NeverIncludesInstructions(t *testing.T) {
+	// The slm system prompt already carries _SQLPP_TASK_INSTRUCTIONS, so the slm
+	// feedback branch must never duplicate it into the feedback turn regardless
+	// of includeInstructions.
+	for _, include := range []bool{true, false} {
+		p := &prompt{Provider: ai_gateway.ProviderSLM}
+		directBuildRetryPrompt(p, "SELECT bogus", fmt.Errorf("parse error"), include)
+		feedback := p.Messages[len(p.Messages)-1].Content
+		if strings.Contains(feedback, _SQLPP_TASK_INSTRUCTIONS) {
+			t.Fatalf("include=%v: slm feedback must not carry _SQLPP_TASK_INSTRUCTIONS, got: %.80q", include, feedback)
+		}
+	}
+}
+
+func TestDirectBuildRetryPrompt_NonSLM_IncludesInstructionsOnlyWhenAsked(t *testing.T) {
+	p := &prompt{Provider: ai_gateway.ProviderOpenAI}
+	directBuildRetryPrompt(p, "SELECT bogus", fmt.Errorf("parse error"), true)
+	if got := p.Messages[len(p.Messages)-1].Content; !strings.Contains(got, _SQLPP_TASK_INSTRUCTIONS) {
+		t.Fatalf("includeInstructions=true: expected _SQLPP_TASK_INSTRUCTIONS in feedback, got: %.80q", got)
+	}
+
+	p2 := &prompt{Provider: ai_gateway.ProviderOpenAI}
+	directBuildRetryPrompt(p2, "SELECT bogus", fmt.Errorf("parse error"), false)
+	if got := p2.Messages[len(p2.Messages)-1].Content; strings.Contains(got, _SQLPP_TASK_INSTRUCTIONS) {
+		t.Fatalf("includeInstructions=false: expected no _SQLPP_TASK_INSTRUCTIONS in feedback, got: %.80q", got)
+	}
+}
+
+// directBuildRetryPrompt must append exactly one assistant turn (the prior,
+// failing response) followed by one user turn (the correction feedback), and
+// keep pmt.Size in sync with the appended feedback text.
+func TestDirectBuildRetryPrompt_AppendsTurnsAndUpdatesSize(t *testing.T) {
+	p := &prompt{Provider: ai_gateway.ProviderOpenAI, Size: 10}
+	directBuildRetryPrompt(p, "SELECT bogus", fmt.Errorf("parse error"), false)
+	if len(p.Messages) != 2 {
+		t.Fatalf("expected 2 messages appended, got %d", len(p.Messages))
+	}
+	if p.Messages[0].Role != "assistant" || p.Messages[0].Content != "SELECT bogus" {
+		t.Fatalf("assistant turn not as expected: %+v", p.Messages[0])
+	}
+	if p.Messages[1].Role != "user" || !strings.Contains(p.Messages[1].Content, "parse error") {
+		t.Fatalf("user feedback turn not as expected: %+v", p.Messages[1])
+	}
+	if want := 10 + len(p.Messages[1].Content); p.Size != want {
+		t.Fatalf("size accounting: got %d, want %d", p.Size, want)
+	}
+}
+
+func TestCapellaBuildRetryPrompt_IncludesInstructionsOnlyWhenAsked(t *testing.T) {
+	p := &prompt{}
+	capellaBuildRetryPrompt(p, "SELECT bogus", fmt.Errorf("parse error"), true)
+	if got := p.Messages[len(p.Messages)-1].Content; !strings.Contains(got, _SQLPP_TASK_INSTRUCTIONS) {
+		t.Fatalf("includeInstructions=true: expected _SQLPP_TASK_INSTRUCTIONS in feedback, got: %.80q", got)
+	}
+
+	p2 := &prompt{}
+	capellaBuildRetryPrompt(p2, "SELECT bogus", fmt.Errorf("parse error"), false)
+	if got := p2.Messages[len(p2.Messages)-1].Content; strings.Contains(got, _SQLPP_TASK_INSTRUCTIONS) {
+		t.Fatalf("includeInstructions=false: expected no _SQLPP_TASK_INSTRUCTIONS in feedback, got: %.80q", got)
+	}
+}
+
+// ─── E_NL_FAIL_GENERATED_STMT retry-count reporting ───────────────────────────
+
+func TestFailGeneratedStmtError_IncludesRetryCount(t *testing.T) {
+	e := errors.NewNaturalLanguageRequestError(errors.E_NL_FAIL_GENERATED_STMT,
+		maxCorrectionRetries, "SELECT bogus", fmt.Errorf("parse error"))
+	want := fmt.Sprintf("Statement generation failed after %d retries: SELECT bogus", maxCorrectionRetries)
+	if e.Error() != want {
+		t.Fatalf("got %q, want %q", e.Error(), want)
 	}
 }
