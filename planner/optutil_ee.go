@@ -151,6 +151,56 @@ func intersectSpansCost(index datastore.Index, sargKeys expression.Expressions, 
 		spanMap[icost] = span
 	}
 
+	// logic similar to adjustIndexSelectivity(), except it is the same index for all scans here
+	sort.Slice(indexes, func(i, j int) bool {
+		return ((indexes[i].ScanCost(false) < indexes[j].ScanCost(false)) ||
+			((indexes[i].ScanCost(false) == indexes[j].ScanCost(false)) &&
+				(indexes[i].Selectivity() < indexes[j].Selectivity())) ||
+			((indexes[i].ScanCost(false) == indexes[j].ScanCost(false)) &&
+				(indexes[i].Selectivity() == indexes[j].Selectivity()) &&
+				(indexes[i].Cardinality() < indexes[j].Cardinality())))
+	})
+
+	// adjust selectivity for all index scans except the 1st one
+	for i := 1; i < len(indexes); i++ {
+		idx := indexes[i]
+		adjust := false
+		arrayPos := -1
+		for j, key := range sargKeys {
+			if _, ok := key.(*expression.All); ok {
+				// remember first array key position (FLATTEN_KEYS can have multiple)
+				if arrayPos < 0 {
+					arrayPos = j
+				}
+			} else {
+				// any non-array index key should be skipped since its selectivity
+				// is already accounted for in the 1st index scan
+				idx.SetSkipKey(j)
+				adjust = true
+			}
+		}
+		if adjust {
+			sel, e := indexSelec(index, sargKeys, idx.SkipKeys(), spanMap[idx], alias,
+				advisorValidate, context)
+			if e == nil {
+				if arrayPos >= 0 {
+					distSel := optutil.CalcDistinctScanSelec(index, sel, arrayPos, advisorValidate)
+					if distSel > 0 {
+						sel = distSel
+					}
+				}
+				origSel := idx.Selectivity()
+				origCard := idx.Cardinality()
+				origFetchCost := idx.FetchCost()
+				newCard := (origCard / origSel) * sel
+				newFetchCost := (origFetchCost / origSel) * sel
+				idx.SetSelectivity(sel)
+				idx.SetCardinality(newCard)
+				idx.SetFetchCost(newFetchCost)
+			}
+		}
+	}
+
 	indexes = optutil.ChooseIntersectScan(datastore.IndexQualifiedKeyspacePath(index), indexes, -1)
 
 	var cost, sel, frCost, nrows float64
