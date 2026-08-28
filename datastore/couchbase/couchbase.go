@@ -1035,11 +1035,11 @@ func (s *store) GetCatalogs(ctx datastore.QueryContext, name string, infoFlags u
 	if name != "" {
 		entry := catalogs[name]
 		if entry == nil {
-			return nil, nil
+			return nil, errors.NewCbCatalogNotFoundError(nil, name)
 		}
 		var catalogMap map[string]any
-		if extparams.GetAny(entry, &catalogMap) != nil {
-			return nil, nil
+		if err := extparams.GetAny(entry, &catalogMap); err != nil {
+			return nil, errors.NewSystemUnableToRetrieveError(err, name)
 		}
 		if infoFlags != 0 {
 			s.loadCatalogMetadata(ctx, catalogMap, infoFlags)
