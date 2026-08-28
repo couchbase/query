@@ -43,6 +43,8 @@ tags:
     description: Operations for query statistics.
   - name: settings
     description: Operations for query settings.
+  - name: external catalogs
+    description: Operations for external (federated) catalog metadata.
   - name: default
     description: Other operations.
 
@@ -629,6 +631,53 @@ paths:
               example:
                 $ref: 'examples/get_encryption_at_rest.json'
 
+  /admin/catalogs:
+    get:
+      operationId: get_catalogs
+      summary: Retrieve External Catalogs
+      description: |-
+        Returns information about the external (federated) catalogs configured on the cluster, such as the Iceberg catalogs used by external collections.
+      tags:
+        - external catalogs
+      security:
+        - Default: []
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+          description: |-
+            The name of a single external catalog to retrieve.
+            If omitted, all configured catalogs are returned.
+        - name: infoFlags
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+          description: |-
+            A bitmask selecting additional metadata to load from the external catalog itself and include in the `metadata` property of the response.
+
+            * `1` -- load column schema information.
+            * `2` -- load snapshot history.
+            * `4` -- load the data file list.
+            * `7` -- load all of the above.
+
+            If `0` (the default), no additional metadata is loaded, and only the catalog's own configuration is returned.
+      responses:
+        200:
+          description: |-
+            An object describing the specified external catalog, or an array of such objects if `name` wasn't specified.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Catalog"
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/Catalog"
+
 components:
  schemas:
   Clusters:
@@ -863,6 +912,16 @@ components:
       - statement
       - uses
     properties:
+      adHocStatement:
+        type: boolean
+        description: |-
+          Indicates the statement was prepared as an ad hoc (unnamed) statement.
+          It's only returned when true.
+      creatingUserAgent:
+        type: string
+        description: |-
+          The user agent of the client that originally created this prepared statement.
+          It's only returned when the statement has since been re-prepared and the original creating user agent is known.
       encoded_plan:
         type: string
         description: The full prepared statement in encoded format.
@@ -876,6 +935,20 @@ components:
         description: |-
           This property is provided for technical support only.
           It's only returned when retrieving a specific prepared statement, not when retrieving all prepared statements.
+      indexScanKeyspaces:
+        type: array
+        items:
+          type: string
+        description: |-
+          The keyspaces scanned using an index by this prepared statement's plan.
+          It's only returned when there is at least one such keyspace.
+      keyspaceReferences:
+        type: array
+        items:
+          type: string
+        description: |-
+          The keyspaces referenced by this prepared statement's plan.
+          It's only returned when there is at least one such keyspace.
       name:
         type: string
         description: |-
@@ -886,16 +959,95 @@ components:
         description: |-
           The namespace in which the prepared statement is stored.
           Currently, only the `default` namespace is available.
+
+          This property applies to the `system:prepareds` keyspace representation of the statement; it isn't returned by this REST endpoint.
       node:
         type: string
         description: |-
           The node on which the prepared statement is stored.
+
+          This property applies to the `system:prepareds` keyspace representation of the statement; it isn't returned by this REST endpoint.
+      optimizer_hints:
+        type: object
+        description: |-
+          The optimizer hints (for example, `/*+ ... */`) that were specified when the statement was prepared.
+          It's only returned when optimizer hints were specified.
+      persist:
+        type: boolean
+        description: |-
+          Indicates the statement was prepared with the `SAVE` keyword, so its plan is persisted for plan stability.
+          It's only returned when true.
+      plan:
+        type: object
+        description: |-
+          This property is provided for technical support only.
+          It's only returned for requests made with the POST method (i.e. when profiling), and contains the plan and any subquery plans.
+      planPreparedTime:
+        type: string
+        format: date-time
+        description: |-
+          Date and time the plan was last prepared or re-prepared.
+      planVersion:
+        type: integer
+        description: |-
+          This property is provided for technical support only.
+          It's only returned for requests made with the POST method (i.e. when profiling).
+      queryContext:
+        type: string
+        description: |-
+          The query context in effect when the statement was prepared.
+          It's only returned when a non-default query context was used.
+      remoteAddr:
+        type: string
+        description: |-
+          The remote address of the client that most recently used this prepared statement.
+      sanitized_statement:
+        type: string
+        description: |-
+          A sanitized (redacted) form of the statement text.
+          It's returned in place of `statement` when redaction of the response is requested and the statement can be sanitized.
       statement:
         type: string
         description: The text of the query.
+      subqueryPlans:
+        type: object
+        description: |-
+          This property is provided for technical support only.
+          It's only returned for requests made with the POST method (i.e. when profiling), and only when the plan contains subqueries.
+      txPlans:
+        type: object
+        description: |-
+          This property is provided for technical support only.
+          It's only returned when the prepared statement has associated transaction-scoped prepared statements.
+      txPrepareds:
+        type: array
+        items:
+          type: string
+        description: |-
+          The names of transaction-scoped prepared statements associated with this prepared statement.
+          It's only returned when there is at least one such prepared statement.
+      userAgent:
+        type: string
+        description: |-
+          The user agent of the client that created this prepared statement.
+          It's only returned when the statement hasn't since been re-prepared.
+      users:
+        type: string
+        description: |-
+          The user(s) associated with this prepared statement.
       uses:
         type: integer
         description: The count of times the prepared statement has been executed.
+      verificationErrorCount:
+        type: integer
+        description: |-
+          The number of non-fatal errors encountered verifying the plan (plan stability).
+          It's only returned when this count is non-zero.
+      verificationFatalError:
+        type: boolean
+        description: |-
+          Indicates plan verification (plan stability) encountered a fatal error.
+          It's only returned when true.
       avgElapsedTime:
         type: string
         format: duration
@@ -2357,6 +2509,200 @@ components:
             A DEK ID may be an empty string, indicating the presence of unencrypted data on disk.
           items:
             type: string
+
+  Catalog:
+    type: object
+    title: External Catalog
+    required:
+      - name
+      - catalogType
+      - catalogSource
+    properties:
+      name:
+        type: string
+        description: The name of the external catalog.
+      catalogType:
+        type: string
+        enum:
+          - ICEBERG
+        description: The type of the external catalog.
+      catalogSource:
+        type: string
+        enum:
+          - AWS_GLUE
+          - AWS_GLUE_REST
+          - S3_TABLES
+          - BIGLAKE_METASTORE
+          - NESSIE
+          - REST
+          - NESSIE_REST
+          - UNITY_CATALOG
+          - SQL
+        description: The source (implementation) backing the external catalog.
+      credentialId:
+        type: string
+        description: |-
+          The identifier of the credential used to access the external catalog.
+          It's not returned for the `SQL` source unless a credential was configured.
+      rev:
+        type: integer
+        description: The revision number of the catalog definition, incremented each time it's changed.
+      uid:
+        type: string
+        description: A unique identifier assigned to the catalog definition when it was created.
+      uri:
+        type: string
+        description: |-
+          The URI of the external catalog service.
+          It's not returned for sources that don't require one.
+      warehouse:
+        type: string
+        description: |-
+          The warehouse location or identifier used by the external catalog.
+          It's only returned for sources that use one.
+      sigv4SigningName:
+        type: string
+        description: |-
+          The AWS SigV4 signing name used to authenticate to the external catalog.
+          It's only returned for sources that use it.
+      sigv4SigningRegion:
+        type: string
+        description: |-
+          The AWS SigV4 signing region used to authenticate to the external catalog.
+          It's only returned for sources that use it.
+      quotaProjectId:
+        type: string
+        description: |-
+          The Google Cloud quota project ID used when accessing the external catalog.
+          It's only returned for the `BIGLAKE_METASTORE` source.
+      sqlDialect:
+        type: string
+        description: |-
+          The SQL dialect used by the external catalog.
+          It's only returned for the `SQL` source.
+      branch:
+        type: string
+        description: |-
+          The branch used by the external catalog.
+          It's only returned for the `NESSIE` source.
+      metadata:
+        type: object
+        description: |-
+          Metadata loaded from the external catalog itself.
+          It's only returned when the `infoFlags` query parameter was non-zero and a credential is configured for the catalog.
+        properties:
+          namespaces:
+            type: array
+            description: The namespaces (databases) in the external catalog.
+            items:
+              $ref: "#/components/schemas/CatalogNamespace"
+          row_count:
+            type: integer
+            description: |-
+              The total number of rows across all tables in all namespaces.
+              It's only returned when the `infoFlags` query parameter requested file information.
+
+  CatalogNamespace:
+    type: object
+    title: External Catalog Namespace
+    properties:
+      name:
+        type: string
+        description: The name of the namespace.
+      tables:
+        type: array
+        description: The tables in the namespace.
+        items:
+          $ref: "#/components/schemas/CatalogTable"
+      row_count:
+        type: integer
+        description: |-
+          The total number of rows across all tables in the namespace.
+          It's only returned when the `infoFlags` query parameter requested file information.
+
+  CatalogTable:
+    type: object
+    title: External Catalog Table
+    properties:
+      name:
+        type: string
+        description: The name of the table.
+      location:
+        type: string
+        description: The storage location of the table.
+      format:
+        type: string
+        description: The data file format used by the table (for example, `parquet`).
+      current_schema:
+        type: integer
+        description: The schema ID of the table's current schema.
+      schema:
+        type: array
+        description: |-
+          The columns of the table's current schema.
+          It's only returned when the `infoFlags` query parameter requested schema information.
+        items:
+          $ref: "#/components/schemas/CatalogColumn"
+      snapshots:
+        type: array
+        description: |-
+          The table's snapshot history (at most the 8 most recent snapshots).
+          It's only returned when the `infoFlags` query parameter requested snapshot information.
+        items:
+          $ref: "#/components/schemas/CatalogSnapshot"
+      files:
+        type: array
+        description: |-
+          The data files backing the table's current snapshot.
+          It's only returned when the `infoFlags` query parameter requested file information.
+        items:
+          $ref: "#/components/schemas/CatalogFile"
+      row_count:
+        type: integer
+        description: |-
+          The total number of rows in the table's current snapshot.
+          It's only returned when the `infoFlags` query parameter requested file information.
+
+  CatalogColumn:
+    type: object
+    title: External Catalog Table Column
+    properties:
+      name:
+        type: string
+        description: The name of the column.
+      type:
+        type: string
+        description: The Iceberg data type of the column.
+      required:
+        type: boolean
+        description: Indicates the column is required (not nullable).
+      added_in_schema:
+        type: integer
+        description: |-
+          The schema ID in which the column was added.
+          It's only returned when the column wasn't present in the table's earliest schema.
+
+  CatalogSnapshot:
+    type: object
+    title: External Catalog Table Snapshot
+    properties:
+      snapshot_id:
+        type: integer
+        description: The identifier of the snapshot.
+      timestamp_ms:
+        type: integer
+        description: The time the snapshot was created, in milliseconds since the epoch.
+
+  CatalogFile:
+    type: object
+    title: External Catalog Data File
+    properties:
+      path:
+        type: string
+        description: The path of the data file.
+      record_count:
+        type: integer
+        description: The number of records in the data file.
 
  parameters:
   PathStat:
