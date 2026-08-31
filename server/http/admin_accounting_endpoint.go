@@ -1897,16 +1897,17 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 			prof = endpoint.server.Profile()
 		}
 
-		// TODO - check lifetime of entry
-		// by the time we marshal, is this still valid?
 		if prof == server.ProfOn || prof == server.ProfBench {
-			timings := request.GetTimings()
+
+			// the request being reported on can complete - and clean up its execution tree -
+			// whilst the plan is gathered or marshalled, so this is guarded against the
+			// resulting faults and yields a null plan rather than failing this request
+			timings, estimates := server.RequestPlan(request)
 			if timings != nil {
-				reqMap["timings"] = util.InterfaceRedacted(value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings)),
+				reqMap["timings"] = util.InterfaceRedacted(value.ApplyDurationStyleToValue(durStyle, timings),
 					redact)
-				p = request.Output().FmtOptimizerEstimates(timings)
-				if p != nil {
-					reqMap["optimizerEstimates"] = value.NewValue(util.InterfaceRedacted(p, redact))
+				if estimates != nil {
+					reqMap["optimizerEstimates"] = value.NewValue(util.InterfaceRedacted(estimates, redact))
 				}
 			}
 		}

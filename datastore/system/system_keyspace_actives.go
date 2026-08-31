@@ -263,10 +263,12 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 				meta := item.NewMeta()
 				meta["keyspace"] = b.fullName
 
-				timings := request.GetTimings()
-				if timings != nil {
-					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), value.NewMarshalledValue(timings))
-					optEstimates := request.Output().FmtOptimizerEstimates(timings)
+				// the request being reported on can complete - and clean up its execution tree -
+				// whilst the plan is gathered or marshalled, so this is guarded against the
+				// resulting faults and yields a null plan rather than failing this request
+				plan, optEstimates := server.RequestPlan(request)
+				if plan != nil {
+					meta["plan"] = value.ApplyDurationStyleToValue(context.DurationStyle(), plan)
 					if optEstimates != nil {
 						meta["optimizerEstimates"] = value.NewValue(optEstimates)
 					}
