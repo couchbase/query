@@ -86,6 +86,20 @@ func PreparedsInit(limit int) {
 	}
 }
 
+// MB-73680: delay before retrying a prime decode that failed because the GSI metadata watcher hasn't
+// synced yet (see waitForIndexerSync in datastore/couchbase), rather than treating it as a genuine failure.
+const _PRIME_RETRY_DELAY = 10 * time.Second
+
+// isIndexerNotReady reports whether a DecodePrepared failure's cause is an index-not-found error - see
+// errors.NewUnrecognizedPreparedError, which is what sets Cause() to it.
+func isIndexerNotReady(err errors.Error) bool {
+	if err == nil {
+		return false
+	}
+	cause, ok := err.Cause().(errors.Error)
+	return ok && errors.IsIndexNotFoundError(cause)
+}
+
 // initialize the cache from a different node
 func PreparedsRemotePrime() {
 
@@ -131,6 +145,8 @@ func PreparedsRemotePrime() {
 			StartTime: time.Now(),
 		}
 		decodeFailedReason := map[string]string{}
+		var pendingRetry []struct{ name, encoded_plan string }
+		retried := 0
 
 		// get the keys
 		distributed.RemoteAccess().GetRemoteKeys([]string{host}, "prepareds",
@@ -142,9 +158,17 @@ func PreparedsRemotePrime() {
 					func(doc map[string]interface{}) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
-							_, err := DecodePrepared(name, encoded_plan, true, logging.NULL_LOG)
+							// deferIndexerRace=true: an indexer-not-ready failure is deferred (below)
+							// instead of repreparing against the same not-yet-synced state; anything
+							// else reprepares immediately, as this loop always has.
+							_, err := DecodePreparedWithContext(name, "", encoded_plan, false, nil, true, true,
+								logging.NULL_LOG)
 							if err == nil {
 								count++
+							} else if isIndexerNotReady(err) {
+								retried++
+								pendingRetry = append(pendingRetry,
+									struct{ name, encoded_plan string }{name, encoded_plan})
 							} else {
 								failed++
 								decodeFailedReason[name] = err.Error()
@@ -158,8 +182,27 @@ func PreparedsRemotePrime() {
 				getRemoteKeysFailed = warn
 			}, distributed.NO_CREDS, "")
 
+		// one delayed retry for the entries deferred above before giving up on them; reprep=true as a
+		// last-resort fallback if the watcher still hasn't synced.
+		retrySuccess := 0
+		if len(pendingRetry) > 0 {
+			time.Sleep(_PRIME_RETRY_DELAY)
+			for _, p := range pendingRetry {
+				_, err := DecodePrepared(p.name, p.encoded_plan, true, logging.NULL_LOG)
+				if err == nil {
+					retrySuccess++
+				} else {
+					failed++
+					decodeFailedReason[p.name] = err.Error()
+				}
+			}
+		}
+
+		// count and retrySuccess don't overlap: the former is first-try successes only.
 		preparedPrimeReportEntry.Success = count
 		preparedPrimeReportEntry.Failed = failed
+		preparedPrimeReportEntry.Retried = retried
+		preparedPrimeReportEntry.RetrySuccess = retrySuccess
 		preparedPrimeReportEntry.Host = host
 
 		if len(decodeFailedReason) > 0 {
@@ -171,7 +214,7 @@ func PreparedsRemotePrime() {
 		preparedPrimeReportEntry.EndTime = time.Now()
 		preparedPrimeReport = append(preparedPrimeReport, preparedPrimeReportEntry)
 		// we found stuff, that's good enough
-		if count > 0 {
+		if count > 0 || retrySuccess > 0 {
 			break
 		}
 	}
@@ -190,6 +233,11 @@ type PrimeReport struct {
 	Reason    interface{} `json:"reason,omitempty"`
 	Success   int         `json:"success"`
 	Failed    int         `json:"failed"`
+
+	// Retried: decodes that hit an index-not-found error and got a delayed retry. RetrySuccess: how
+	// many of those the retry fixed (not included in Success).
+	Retried      int `json:"retried,omitempty"`
+	RetrySuccess int `json:"retrySuccess,omitempty"`
 }
 
 // preparedCache implements planner.PlanCache
@@ -580,7 +628,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			func(doc map[string]interface{}) {
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
-					prepared, err = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime, true, log)
+					prepared, err = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime, true, false, log)
 				}
 			},
 			func(warn errors.Error) {
@@ -675,15 +723,17 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 }
 
 func DecodePrepared(prepared_name string, prepared_stmt string, reprep bool, log logging.Log) (*plan.Prepared, errors.Error) {
-	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, log)
+	return DecodePreparedWithContext(prepared_name, "", prepared_stmt, false, nil, reprep, false, log)
 }
 
+// deferIndexerRace, with reprep true, makes an indexer-not-ready decode failure (see isIndexerNotReady)
+// come back as-is instead of repreparing - only PreparedsRemotePrime sets it.
 func DecodePreparedWithContext(prepared_name string, queryContext string, prepared_stmt string, track bool,
-	phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error) {
+	phaseTime *time.Duration, reprep bool, deferIndexerRace bool, log logging.Log) (*plan.Prepared, errors.Error) {
 
 	added := true
 
-	prepared, err := unmarshalPrepared(prepared_stmt, phaseTime, reprep, log)
+	prepared, err := unmarshalPrepared(prepared_stmt, phaseTime, reprep, deferIndexerRace, log)
 	if err != nil {
 		return nil, err
 	}
@@ -746,10 +796,12 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	}
 }
 
-func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, log logging.Log) (*plan.Prepared, errors.Error) {
+func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep bool, deferIndexerRace bool,
+	log logging.Log) (*plan.Prepared, errors.Error) {
+
 	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded)
 	if err != nil {
-		if reprep && len(bytes) > 0 {
+		if reprep && len(bytes) > 0 && !(deferIndexerRace && isIndexerNotReady(err)) {
 
 			// if we failed to unmarshall, we find  the statement
 			// and try preparing from scratch

@@ -265,6 +265,7 @@ func (coll *collection) Indexer(name datastore.IndexType) (datastore.Indexer, er
 	switch name {
 	case datastore.GSI, datastore.DEFAULT:
 		if coll.gsiIndexer != nil {
+			waitForIndexerSync(coll.gsiIndexer)
 			return coll.gsiIndexer, nil
 		}
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("GSI may not be enabled"))

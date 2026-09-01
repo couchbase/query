@@ -1979,11 +1979,39 @@ func (b *keyspace) size(context datastore.QueryContext, clientContext ...*memcac
 	return size[0], nil
 }
 
+const (
+	_INDEXER_SYNC_MAX_WAIT      = 10 * time.Second
+	_INDEXER_SYNC_POLL_INTERVAL = 200 * time.Millisecond
+)
+
+// MB-73680: right after a query service restart, the GSI metadata watcher may not have completed its
+// initial sync with the indexer nodes yet, in which case a freshly-loaded indexer's local index list is
+// empty - not because no indexes exist, but because nothing has synced yet. Callers (plan decode, verify,
+// hint validation, fresh planning) then see a real index as "not found". MetadataVersion() is 0 only in
+// that never-synced state, and stays that way until at least one sync succeeds anywhere in the process,
+// since all indexers on a cluster share one singleton GSI client underneath - so this wait is a one-time
+// cost paid by whichever indexer happens to be resolved first, not a per-keyspace/collection cost.
+func waitForIndexerSync(indexer datastore.Indexer) {
+	// only GSI's MetadataVersion() means "never synced yet" at 0; every other Indexer implementation
+	// (mock, file, system, virtual) returns a hardcoded 0 permanently, and FTS returns a fixed non-zero
+	// version constant unrelated to sync state - so guard on Name() too, not just the caller's context,
+	// in case this ever gets called on something other than a GSI indexer.
+	if indexer == nil || indexer.Name() != datastore.GSI || indexer.MetadataVersion() != 0 {
+		return // already synced (the overwhelmingly common case), or not a GSI indexer - effectively free
+	}
+	deadline := time.Now().Add(_INDEXER_SYNC_MAX_WAIT)
+	for indexer.MetadataVersion() == 0 && time.Now().Before(deadline) {
+		time.Sleep(_INDEXER_SYNC_POLL_INTERVAL)
+		indexer.Refresh()
+	}
+}
+
 func (b *keyspace) Indexer(name datastore.IndexType) (datastore.Indexer, errors.Error) {
 	b.loadIndexes()
 	switch name {
 	case datastore.GSI, datastore.DEFAULT:
 		if b.gsiIndexer != nil {
+			waitForIndexerSync(b.gsiIndexer)
 			return b.gsiIndexer, nil
 		}
 		return nil, errors.NewCbIndexerNotImplementedError(nil, fmt.Sprintf("GSI may not be enabled"))
