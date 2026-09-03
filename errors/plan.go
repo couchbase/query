@@ -89,9 +89,10 @@ func NewNoSuchPreparedWithContextError(name string, queryContext string) Error {
 		InternalMsg: fmt.Sprintf("No such prepared statement: %s, context: %s", name, queryContext), InternalCaller: CallerN(1)}
 }
 
+// cause is set so Cause() returns e undistorted for a caller that wants to inspect it.
 func NewUnrecognizedPreparedError(e error) Error {
 	return &err{level: EXCEPTION, ICode: E_UNRECOGNIZED_PREPARED, IKey: "plan.build_prepared.unrecognized_prepared",
-		ICause: fmt.Errorf("JSON unmarshalling error: %v", e), InternalMsg: "Unrecognizable prepared statement",
+		ICause: fmt.Errorf("JSON unmarshalling error: %v", e), cause: e, InternalMsg: "Unrecognizable prepared statement",
 		InternalCaller: CallerN(1)}
 }
 
