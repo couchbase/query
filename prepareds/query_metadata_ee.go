@@ -51,12 +51,50 @@ func PreparedsFromPersisted() {
 		planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
 		decodeFailedReason := make(map[string]errors.Error, _DEF_MAP_SIZE)
 		decodeReprepReason := make(map[string]errors.Errors, _DEF_MAP_SIZE)
+
+		// MB-73680: entries deferred here (index-not-found while the GSI metadata watcher hasn't synced
+		// yet, same race as PreparedsRemotePrime) get a delayed retry below instead of being counted as
+		// a genuine failure.
+		var pendingRetry []struct{ name, encoded_plan string }
+		proc := func(name, encoded_plan string, persist, planStability bool, planStabilityMode settings.PlanStabilityMode,
+			planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, decodeFailedReason map[string]errors.Error,
+			decodeReprepReason map[string]errors.Errors) (bool, bool) {
+			return processPreparedPlan(name, encoded_plan, persist, planStability, planStabilityMode,
+				planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, &pendingRetry)
+		}
 		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(planStability, planStabilityMode,
-			planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, processPreparedPlan)
+			planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, proc)
+
+		// one delayed retry for the entries deferred above before giving up on them; reprep=true as a
+		// last-resort fallback if the watcher still hasn't synced. Each deferred entry was already
+		// counted towards fail above (proc returned success=false for it), so a retry success here both
+		// adds to success and backs out of fail.
+		retried := len(pendingRetry)
+		retrySuccess := 0
+		if retried > 0 {
+			time.Sleep(_PRIME_RETRY_DELAY)
+			for _, p := range pendingRetry {
+				_, decErr, reprepareCause := DecodePrepared(p.name, p.encoded_plan, true, false, planStability,
+					planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+				if decErr == nil {
+					retrySuccess++
+					success++
+					fail--
+					if len(reprepareCause) > 0 {
+						reprepare++
+						decodeReprepReason[p.name] = reprepareCause
+					}
+				} else {
+					decodeFailedReason[p.name] = decErr
+				}
+			}
+		}
 
 		preparedPrimeReport.Success = success
 		preparedPrimeReport.Failed = fail
 		preparedPrimeReport.Reprepared = reprepare
+		preparedPrimeReport.Retried = retried
+		preparedPrimeReport.RetrySuccess = retrySuccess
 
 		if len(decodeFailedReason) > 0 {
 			preparedPrimeReport.Reason = decodeFailedReason
@@ -76,13 +114,18 @@ func PreparedsFromPersisted() {
 	}
 }
 
+// deferIndexerRace=true: an indexer-not-ready failure (see isIndexerNotReady) is appended to
+// pendingRetry instead of being recorded as a genuine failure here - PreparedsFromPersisted gives it
+// one delayed retry; anything else fails immediately, as this always has.
 func processPreparedPlan(name, encoded_plan string, persist, planStability bool, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, decodeFailedReason map[string]errors.Error,
-	decodeReprepReason map[string]errors.Errors) (success bool, reprep bool) {
-	_, err, reprepareCause := DecodePrepared(name, encoded_plan, true, false, planStability,
-		planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+	decodeReprepReason map[string]errors.Errors, pendingRetry *[]struct{ name, encoded_plan string }) (success bool, reprep bool) {
+	_, err, reprepareCause := DecodePreparedWithContext(name, "", encoded_plan, false, nil, true, false,
+		planStability, true, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 	if err != nil {
-		if decodeFailedReason != nil {
+		if isIndexerNotReady(err) {
+			*pendingRetry = append(*pendingRetry, struct{ name, encoded_plan string }{name, encoded_plan})
+		} else if decodeFailedReason != nil {
 			decodeFailedReason[name] = err
 		}
 	} else {
