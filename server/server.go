@@ -1965,6 +1965,8 @@ func (this *Server) serviceRequest(request Request) {
 	if er != nil {
 		// NewError returns its error argument if it is an Error object
 		request.Fail(errors.NewError(er, ""))
+		request.Failed(this)
+		return
 	}
 
 	operator.SetRoot(context)
