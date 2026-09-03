@@ -1418,6 +1418,8 @@ func (this *Server) serviceRequest(request Request) {
 		} else {
 			request.Fail(errors.NewError(er, ""))
 		}
+		request.Failed(this)
+		return
 	}
 
 	operator.SetRoot(context)
