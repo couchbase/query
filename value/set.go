@@ -37,23 +37,15 @@ type Set struct {
 var _MAP_CAP = 64
 
 func NewSet(objectCap int, collect, numeric bool) *Set {
-	mapCap := util.MaxInt(objectCap, _MAP_CAP)
-
-	rv := &Set{
-		floats:    make(map[float64]Value, mapCap),
-		ints:      make(map[int64]Value, mapCap),
+	return &Set{
 		numeric:   numeric,
 		collect:   collect,
 		objectCap: objectCap,
 	}
-	if !numeric {
-		rv.booleans = make(map[bool]Value, 2)
-		rv.strings = make(map[string]Value, mapCap)
-		rv.arrays = make(map[string]Value, _MAP_CAP)
-		rv.objects = make(map[string]Value, objectCap)
-		rv.binaries = make(map[string]Value, _MAP_CAP)
-	}
-	return rv
+}
+
+func (this *Set) mapCap() int {
+	return util.MaxInt(this.objectCap, _MAP_CAP)
 }
 
 func (this *Set) Add(item Value) {
@@ -88,6 +80,9 @@ func (this *Set) Put(key, item Value) {
 	case NULL:
 		this.nulls = item
 	case BOOLEAN:
+		if this.booleans == nil {
+			this.booleans = make(map[bool]Value, 2)
+		}
 		this.booleans[key.Actual().(bool)] = mapItem
 	case NUMBER:
 		num := key.unwrap()
@@ -95,22 +90,43 @@ func (this *Set) Put(key, item Value) {
 		case floatValue:
 			f := float64(num)
 			if IsInt(f) {
+				if this.ints == nil {
+					this.ints = make(map[int64]Value, this.mapCap())
+				}
 				this.ints[int64(f)] = mapItem
 			} else {
+				if this.floats == nil {
+					this.floats = make(map[float64]Value, this.mapCap())
+				}
 				this.floats[f] = mapItem
 			}
 		case intValue:
+			if this.ints == nil {
+				this.ints = make(map[int64]Value, this.mapCap())
+			}
 			this.ints[int64(num)] = mapItem
 		default:
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
+		if this.strings == nil {
+			this.strings = make(map[string]Value, this.mapCap())
+		}
 		this.strings[key.Actual().(string)] = mapItem
 	case ARRAY:
+		if this.arrays == nil {
+			this.arrays = make(map[string]Value, _MAP_CAP)
+		}
 		this.arrays[key.String()] = mapItem
 	case OBJECT:
+		if this.objects == nil {
+			this.objects = make(map[string]Value, this.objectCap)
+		}
 		this.objects[key.String()] = mapItem
 	case BINARY:
+		if this.binaries == nil {
+			this.binaries = make(map[string]Value, _MAP_CAP)
+		}
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
 		this.binaries[str] = mapItem
 	default:
@@ -440,44 +456,57 @@ func (this *Set) Copy() *Set {
 	rv.missings = this.missings
 	rv.nulls = this.nulls
 	rv.numeric = this.numeric
+	rv.objectCap = this.objectCap
 
-	rv.floats = make(map[float64]Value, 2*(1+len(this.floats)))
-	rv.ints = make(map[int64]Value, 2*(1+len(this.ints)))
+	if this.floats != nil {
+		rv.floats = make(map[float64]Value, 2*(1+len(this.floats)))
+		for k, v := range this.floats {
+			rv.floats[k] = v
+		}
+	}
+
+	if this.ints != nil {
+		rv.ints = make(map[int64]Value, 2*(1+len(this.ints)))
+		for k, v := range this.ints {
+			rv.ints[k] = v
+		}
+	}
 
 	if !rv.numeric {
-		rv.booleans = make(map[bool]Value, len(this.booleans))
-		rv.strings = make(map[string]Value, 2*(1+len(this.strings)))
-		rv.arrays = make(map[string]Value, 2*(1+len(this.arrays)))
-		rv.objects = make(map[string]Value, 2*(1+len(this.objects)))
-		rv.binaries = make(map[string]Value, 2*(1+len((this.binaries))))
-
-		for k, v := range this.booleans {
-			rv.booleans[k] = v
+		if this.booleans != nil {
+			rv.booleans = make(map[bool]Value, len(this.booleans))
+			for k, v := range this.booleans {
+				rv.booleans[k] = v
+			}
 		}
 
-		for k, v := range this.strings {
-			rv.strings[k] = v
+		if this.strings != nil {
+			rv.strings = make(map[string]Value, 2*(1+len(this.strings)))
+			for k, v := range this.strings {
+				rv.strings[k] = v
+			}
 		}
 
-		for k, v := range this.arrays {
-			rv.arrays[k] = v
+		if this.arrays != nil {
+			rv.arrays = make(map[string]Value, 2*(1+len(this.arrays)))
+			for k, v := range this.arrays {
+				rv.arrays[k] = v
+			}
 		}
 
-		for k, v := range this.objects {
-			rv.objects[k] = v
+		if this.objects != nil {
+			rv.objects = make(map[string]Value, 2*(1+len(this.objects)))
+			for k, v := range this.objects {
+				rv.objects[k] = v
+			}
 		}
 
-		for k, v := range this.binaries {
-			rv.binaries[k] = v
+		if this.binaries != nil {
+			rv.binaries = make(map[string]Value, 2*(1+len(this.binaries)))
+			for k, v := range this.binaries {
+				rv.binaries[k] = v
+			}
 		}
-	}
-
-	for k, v := range this.floats {
-		rv.floats[k] = v
-	}
-
-	for k, v := range this.ints {
-		rv.ints[k] = v
 	}
 
 	return rv
