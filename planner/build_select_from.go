@@ -1474,10 +1474,11 @@ func (this *builder) getFilter(alias string, join, allowNow bool, onclause expre
 
 	var err error
 	baseKeyspace, _ := this.baseKeyspaces[alias]
+	unnest := baseKeyspace.IsUnnest()
 
 	// cannot do early filtering on subservient side of outer join
 	outer := baseKeyspace.Outerlevel() > 0
-	if outer && !join {
+	if outer && !(join || unnest) {
 		return nil, OPT_SELEC_NOT_AVAIL, nil
 	}
 
@@ -1511,7 +1512,7 @@ func (this *builder) getFilter(alias string, join, allowNow bool, onclause expre
 				continue
 			}
 		} else {
-			if fl.IsJoin() {
+			if !unnest && fl.IsJoin() {
 				continue
 			} else if base.IgnoreFilter(fl) {
 				continue
