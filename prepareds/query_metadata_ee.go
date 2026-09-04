@@ -56,14 +56,11 @@ func PreparedsFromPersisted() {
 		// yet, same race as PreparedsRemotePrime) get a delayed retry below instead of being counted as
 		// a genuine failure.
 		var pendingRetry []struct{ name, encoded_plan string }
-		proc := func(name, encoded_plan string, persist, planStability bool, planStabilityMode settings.PlanStabilityMode,
-			planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, decodeFailedReason map[string]errors.Error,
-			decodeReprepReason map[string]errors.Errors) (bool, bool) {
+		proc := func(name, encoded_plan string, persist bool) (bool, bool) {
 			return processPreparedPlan(name, encoded_plan, persist, planStability, planStabilityMode,
 				planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, &pendingRetry)
 		}
-		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(planStability, planStabilityMode,
-			planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, proc)
+		success, fail, reprepare, err := dictionary.ForeachPreparedPlan(proc)
 
 		// one delayed retry for the entries deferred above before giving up on them; reprep=true as a
 		// last-resort fallback if the watcher still hasn't synced. Each deferred entry was already
