@@ -35,7 +35,7 @@ const (
 	CollectionRevison            = "rev"
 )
 
-var collectionParamsTypes = map[string]any{CollectionRevison: "", _collectionFormat: "", _collectionNamespace: "",
+var collectionParamsTypes = map[string]any{CollectionRevison: 1, _collectionFormat: "", _collectionNamespace: "",
 	_collectionTableName: "", _collectionSnapshotId: "", _collectionSnapshotTimestamp: "",
 	_collectionParallelScans: 1, _collectionDecimalToDouble: false,
 	_collectionCatalog: "", _collectionCatalogType: "", _collectionCredentialId: "",
@@ -153,20 +153,20 @@ func GetCollectionEntry(params map[string]any) (*ExternalCollectionEntry, error)
 
 // ExternalCollectionEntry represents an Collection stored in metakv
 type ExternalCollectionEntry struct {
-	SUid              string `json:"uid"`
-	Collection        string `json:"name"`
-	Revision          int    `json:"rev,omitempty"`
-	Format            string `json:"format,omitempty"`
-	Catalog           string `json:"catalog"`
-	CatalogType       string `json:"catalogType"`
-	CredentialId      string `json:"credentialId"`
-	Namespace         string `json:"namespace"`
-	TableName         string `json:"tableName"`
-	SnapshotId        string `json:"snapshotId,omitempty"`
-	SnapshotTimestamp string `json:"snapshotTimestamp,omitempty"`
-	ParallelScans     int    `json:"parallelScans,omitempty"`
-	DecimalToDouble   bool   `json:"decimal-to-double,omitempty"`
-	Uid               uint64
+	SUid              string        `json:"uid"`
+	Collection        string        `json:"name"`
+	Revision          int           `json:"rev,omitempty"`
+	Format            string        `json:"format,omitempty"`
+	Catalog           string        `json:"catalog"`
+	CatalogType       string        `json:"catalogType"`
+	CredentialId      string        `json:"credentialId"`
+	Namespace         string        `json:"namespace"`
+	TableName         string        `json:"tableName"`
+	SnapshotId        string        `json:"snapshotId,omitempty"`
+	SnapshotTimestamp string        `json:"snapshotTimestamp,omitempty"`
+	ParallelScans     int           `json:"parallelScans,omitempty"`
+	DecimalToDouble   bool          `json:"decimal-to-double,omitempty"`
+	Uid               uint64        `json:"-"`
 	CatalogInfo       *CatalogEntry `json:"-"`
 }
 

@@ -232,7 +232,7 @@ type CatalogEntry struct {
 	SQLDialect         string `json:"sqlDialect,omitempty"`
 	Branch             string `json:"branch,omitempty"`
 	SUid               string `json:"uid"`
-	Uid                uint64
+	Uid                uint64 `json:"-"`
 }
 
 func SetCatalogInfo(name, catalogType, source, credential string, params map[string]any) map[string]any {
