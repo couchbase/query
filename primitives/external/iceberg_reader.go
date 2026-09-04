@@ -310,6 +310,8 @@ func (r *Reader) getColumnValue(col arrow.Array, pos int) interface{} {
 		return arr.Value(pos)
 	case *array.Binary:
 		return arr.Value(pos)
+	case *array.FixedSizeBinary:
+		return arr.Value(pos)
 	case *array.LargeString:
 		return arr.Value(pos)
 	case *array.LargeBinary:
@@ -1011,6 +1013,8 @@ func (au *ArrowUtility) getArrowValue(arr arrow.Array, pos int) interface{} {
 	case *array.String:
 		return a.Value(pos)
 	case *array.Binary:
+		return a.Value(pos)
+	case *array.FixedSizeBinary:
 		return a.Value(pos)
 	case *array.LargeString:
 		return a.Value(pos)
