@@ -276,12 +276,26 @@ func (this *SemChecker) VisitCreateCatalog(stmt *algebra.CreateCatalog) (any, er
 	return nil, stmt.MapExpressions(this)
 }
 
+// catalogAlterImmutableFields are catalog identity fields that ALTER CATALOG is not
+// allowed to change. They're fixed at CREATE CATALOG time (via the TYPE/SOURCE clauses)
+// because they determine which backend/protocol the catalog talks to; changing them out
+// from under external collections already built against the old catalog would leave those
+// collections silently pointed at a different catalog rather than tracking any real edit.
+var catalogAlterImmutableFields = []string{"catalogType", "catalogSource"}
+
 func (this *SemChecker) VisitAlterCatalog(stmt *algebra.AlterCatalog) (any, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature(strings.ReplaceAll(stmt.Type(), "_", " "), "semantics.visit_alter_catalog")
 	}
 	if stmt.Name() == "" {
 		return nil, errors.NewFieldEmpty(stmt.Type(), "name")
+	}
+	if with := stmt.With(); with != nil && with.Type() == value.OBJECT {
+		for _, k := range catalogAlterImmutableFields {
+			if _, ok := with.Field(k); ok {
+				return nil, errors.NewWithInvalidOptionError(k)
+			}
+		}
 	}
 	return nil, stmt.MapExpressions(this)
 }
