@@ -732,6 +732,12 @@ func (this *parsedValue) ContainsMatchingToken(matcher MatchFunc, options Value)
 }
 
 func (this *parsedValue) Size() uint64 {
+	this.RLock()
+	parsed := this.parsed
+	this.RUnlock()
+	if parsed != nil {
+		return parsed.Size()
+	}
 	return this.len
 }
 
