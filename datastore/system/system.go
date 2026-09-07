@@ -95,6 +95,11 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_AUS_SETTINGS:
 			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
 
+		// mirrors CreateKnowledge/DropKnowledge's own Privileges(): only admins may remove
+		// knowledge entries, even ones for a bucket the caller otherwise has read access to
+		case KEYSPACE_NAME_KNOWLEDGE:
+			privs.Add("", auth.PRIV_ADMIN, auth.PRIV_PROPS_NONE)
+
 			// for all other keyspaces, we rely on the implementation do deny access
 		}
 

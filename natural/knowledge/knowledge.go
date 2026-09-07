@@ -574,6 +574,20 @@ func FetchEntry(extKey string) (value.AnnotatedValue, errors.Error) {
 	return rowFor(resolved, name, vv), nil
 }
 
+// DeleteEntry deletes a single knowledge entry addressed by its composite external key, as used by
+// the system:knowledge catalog keyspace's Delete. Unlike DROP KNOWLEDGE, there's no IF EXISTS
+// concept here: a plain USE KEYS DELETE with no RETURNING clause plans to a DummyFetch rather than a
+// real Fetch (see builder.beginMutate), so this is often the first and only place a given key is
+// actually looked up - an E_KNOWLEDGE_NOT_FOUND here is reported as an ordinary statement error, the
+// same as any other name that was never there.
+func DeleteEntry(extKey string) errors.Error {
+	path, name, err := parseExtKey(extKey)
+	if err != nil {
+		return err
+	}
+	return DropEntries(path, []string{name})
+}
+
 // resolveForRead resolves path the same way validateAndResolvePath does for writes, but tolerates
 // (returns nil, "", "", nil) rather than erroring on any "there's nothing here to read" condition -
 // keyspace/scope not found, no system collection for the bucket, or a path targeting the reserved

@@ -474,6 +474,101 @@
     "error": "system scope not permitted"
   },
   {
+    "testcase": "set up a scratch entry to exercise DELETE FROM system:natural_knowledge",
+    "statements": "CREATE KNOWLEDGE delete_test_hint FOR orders.knowledge_test.articles AS \"should be removed via DELETE\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "a non-admin user is not allowed to DELETE FROM system:natural_knowledge, mirroring DROP KNOWLEDGE's privilege check",
+    "statements": "DELETE FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.articles::delete_test_hint\"",
+    "userArgs": { "ordersowner": "orderspass" },
+    "error": "User does not have credentials to run this type of query. Add role admin to allow the statement to run."
+  },
+  {
+    "testcase": "the scratch entry survived the denied non-admin delete attempt",
+    "statements": "SELECT `value` FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.articles::delete_test_hint\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": [
+      { "value": "should be removed via DELETE" }
+    ]
+  },
+  {
+    "testcase": "an admin can DELETE FROM system:natural_knowledge USE KEYS a single composite key",
+    "statements": "DELETE FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.articles::delete_test_hint\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "the deleted entry is gone",
+    "statements": "SELECT `value` FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.articles::delete_test_hint\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "deleting an already-deleted key fails - a bare USE KEYS DELETE with no RETURNING clause plans to a DummyFetch rather than a real Fetch (see builder.beginMutate), so knowledgeKeyspace.Delete is the only place that ever sees this key, and it reports not-found itself",
+    "statements": "DELETE FROM system:natural_knowledge USE KEYS \"default:orders.knowledge_test.articles::delete_test_hint\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "error": "not found"
+  },
+  {
+    "testcase": "DELETE FROM system:natural_knowledge USE KEYS with an invalid composite key (no keyspace::name separator) fails - same DummyFetch reasoning as above, knowledgeKeyspace.Delete parses the key itself and rejects it",
+    "statements": "DELETE FROM system:natural_knowledge USE KEYS \"not-a-composite-key\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "error": "Invalid knowledge keyspace path"
+  },
+  {
+    "testcase": "set up two more scratch entries to exercise a multi-key DELETE in one statement",
+    "statements": "CREATE KNOWLEDGE FOR orders.knowledge_test.articles FROM {\"delete_test_x\": \"remove me x\", \"delete_test_y\": \"remove me y\"}",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "DELETE FROM system:natural_knowledge USE KEYS accepts a list of composite keys, removing all of them in one statement",
+    "statements": "DELETE FROM system:natural_knowledge USE KEYS [\"default:orders.knowledge_test.articles::delete_test_x\", \"default:orders.knowledge_test.articles::delete_test_y\"]",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "both entries from the multi-key delete are gone",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" AND `name` LIKE \"delete_test_%\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "set up scratch entries in two different collections (articles and flights) to exercise a predicate DELETE that spans both in one statement",
+    "statements": "CREATE KNOWLEDGE multi_del_hint FOR orders.knowledge_test.articles AS \"articles scratch for cross-collection delete\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "the second scratch entry, in the flights collection",
+    "statements": "CREATE KNOWLEDGE multi_del_hint FOR orders.knowledge_test.flights AS \"flights scratch for cross-collection delete\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "DELETE FROM system:natural_knowledge WHERE ... (no USE KEYS) clears matching entries across both collections in a single statement - unlike the USE KEYS cases above",
+    "statements": "DELETE FROM system:natural_knowledge WHERE `bucket` = \"orders\" AND `scope` = \"knowledge_test\" AND `name` = \"multi_del_hint\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
+    "testcase": "the articles collection's scratch entry is gone, leaving only the two original AS-created entries",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.articles\" ORDER BY `name`",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": [
+      { "name": "iata_hint" },
+      { "name": "icao_hint" }
+    ]
+  },
+  {
+    "testcase": "the flights collection's scratch entry is gone too - flights has no knowledge entries left at all",
+    "statements": "SELECT `name` FROM system:natural_knowledge WHERE `keyspace` = \"default:orders.knowledge_test.flights\"",
+    "userArgs": { "testAdmin": "testAdminpass" },
+    "results": []
+  },
+  {
     "testcase": "final state check - only the two original AS-created articles entries remain across the whole keyspace_test scope",
     "statements": "SELECT COUNT(*) AS cnt FROM system:natural_knowledge WHERE `bucket` = \"orders\" AND `scope` = \"knowledge_test\"",
     "userArgs": { "testAdmin": "testAdminpass" },

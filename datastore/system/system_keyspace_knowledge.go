@@ -114,6 +114,39 @@ func (b *knowledgeKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 	return
 }
 
+func (b *knowledgeKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
+	int, value.Pairs, errors.Errors) {
+
+	// unlike Fetch, there's no per-bucket access check here: PrivilegesFromPath requires PRIV_ADMIN
+	// for PRIV_QUERY_DELETE against this keyspace (see system.go), so only an admin - who has access
+	// to every bucket - can ever reach this code
+	var deleted value.Pairs
+	count := 0
+
+	for _, pair := range deletes {
+		k := pair.Name
+		e := knowledge.DeleteEntry(k)
+
+		if e != nil {
+			errs := errors.Errors{e}
+			if preserveMutations {
+				return count, deleted, errs
+			}
+			return count, nil, errs
+		}
+
+		count++
+		if preserveMutations {
+			deleted = append(deleted, pair)
+		}
+	}
+
+	if preserveMutations {
+		return count, deleted, nil
+	}
+	return count, nil, nil
+}
+
 func newKnowledgeKeyspace(p *namespace) (*knowledgeKeyspace, errors.Error) {
 	b := new(knowledgeKeyspace)
 	setKeyspaceBase(&b.keyspaceBase, p, KEYSPACE_NAME_KNOWLEDGE)
