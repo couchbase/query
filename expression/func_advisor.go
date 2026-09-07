@@ -121,8 +121,9 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 				distributed.RemoteAccess().Settings(settings_start)
 
 				settings_stop := getSettings(profile, sessionName, response_limit, query_count, numOfQueryNodes, false)
-				err = this.scheduleTask(sessionName, duration, newContext, settings_stop, analyzeWorkload(profile, response_limit,
-					duration.Seconds(), query_count, context))
+				workloadQuery, workloadArgs := analyzeWorkload(profile, response_limit, duration.Seconds(),
+					query_count, context)
+				err = this.scheduleTask(sessionName, duration, newContext, settings_stop, workloadQuery, workloadArgs)
 				if err != nil {
 					return nil, err
 				}
@@ -243,14 +244,14 @@ func (this *Advisor) isSession() bool {
 }
 
 func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]interface{},
-	query string) error {
+	query string, args map[string]value.Value) error {
 
 	return scheduler.ScheduleTask(sessionName, _CLASS, _ANALYZE, duration,
 		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
 			// stop monitoring
 			distributed.RemoteAccess().Settings(settings)
 			// collect completed requests
-			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false, "")
+			res, _, err := context.EvaluateStatement(query, args, nil, false, true, false, "")
 			if err != nil {
 				// NewError returns its error argument if it is an Error object
 				return nil, []errors.Error{errors.NewError(err, "")}
@@ -263,7 +264,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 			// stop monitoring
 			distributed.RemoteAccess().Settings(settings)
 			// collect completed requests afterwards
-			res, _, err := context.EvaluateStatement(query, nil, nil, false, true, false, "")
+			res, _, err := context.EvaluateStatement(query, args, nil, false, true, false, "")
 			if err != nil {
 				// NewError returns its error argument if it is an Error object
 				return nil, []errors.Error{errors.NewError(err, "")}
@@ -274,7 +275,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 		nil, "", context)
 }
 
-func queryContext(context Context) string {
+func queryContext(context Context, args map[string]value.Value) string {
 	elems := context.QueryContextParts()
 
 	// this can't happen with serverless, but for correctness
@@ -285,20 +286,37 @@ func queryContext(context Context) string {
 		elems[0] = "default"
 	}
 	queryContext := elems[0] + ":" + elems[1]
-	return " AND (queryContext = \"" + queryContext + "\" OR queryContext LIKE \"" + queryContext + ".%\")"
+	// tenant-controlled: pass as parameters, don't concatenate (MB-73772)
+	args["av_qc"] = value.NewValue(queryContext)
+	args["av_qclike"] = value.NewValue(queryContext + ".%")
+	return " AND (queryContext = $av_qc OR queryContext LIKE $av_qclike)"
 }
 
-func analyzeWorkload(profile, response_limit string, delta, query_count float64, context Context) string {
+func advisorSessionArgs(sessionName string) map[string]value.Value {
+	return map[string]value.Value{
+		"av_class":   value.NewValue(_CLASS),
+		"av_session": value.NewValue(sessionName),
+	}
+}
+
+// analyzeWorkload returns the workload-collection statement and its named args.
+// The statement is executed later in the scheduler closures (see scheduleTask),
+// so the args are returned to be threaded through.
+func analyzeWorkload(profile, response_limit string, delta, query_count float64, context Context) (string,
+	map[string]value.Value) {
+	args := make(map[string]value.Value)
 	start_time := time.Now().Format(DEFAULT_FORMAT)
 	workload := "SELECT statement, queryContext AS query_context FROM system:completed_requests" +
 		" WHERE statementType IN ['SELECT','UPSERT','UPDATE','INSERT','DELETE','MERGE']" +
 		" AND preparedName IS NOT VALUED"
 
 	if tenant.IsServerless() && !context.IsAdmin() {
-		workload += queryContext(context)
+		workload += queryContext(context, args)
 	}
 	if len(profile) > 0 {
-		workload += " AND users LIKE \"%" + profile + "%\""
+		// tenant-controlled: pass as a parameter, don't concatenate (MB-73772)
+		workload += " AND users LIKE $av_profile"
+		args["av_profile"] = value.NewValue("%" + profile + "%")
 	}
 	if response_limit != "" {
 		workload += " AND str_to_duration(elapsedTime)/1000000 > " + response_limit
@@ -313,16 +331,17 @@ func analyzeWorkload(profile, response_limit string, delta, query_count float64,
 	workload += " AND requestTime BETWEEN \"" + start_time + "\" AND date_add_str(\"" + start_time + "\", " +
 		strconv.FormatFloat(delta, 'f', 0, 64) + ",\"second\") " + " ORDER BY requestTime LIMIT " +
 		strconv.FormatFloat(query_count, 'f', 0, 64)
-	return "SELECT RAW Advisor((" + workload + "))"
+	return "SELECT RAW Advisor((" + workload + "))", args
 }
 
 func getResults(sessionName string, context Context, newContext Context) (value.Value, error) {
-	query := "SELECT RAW results FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" +
-		sessionName + "\" AND ANY v IN results SATISFIES v <> {} END"
+	args := advisorSessionArgs(sessionName)
+	query := "SELECT RAW results FROM system:tasks_cache WHERE class = $av_class AND name = $av_session" +
+		" AND ANY v IN results SATISFIES v <> {} END"
 	if tenant.IsServerless() && !context.IsAdmin() {
-		query += queryContext(context)
+		query += queryContext(context, args)
 	}
-	r, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, true, false, "")
+	r, _, err := newContext.(Context).EvaluateStatement(query, args, nil, false, true, false, "")
 	if err != nil {
 		return nil, err
 	}
@@ -332,11 +351,12 @@ func getResults(sessionName string, context Context, newContext Context) (value.
 const _EMPTY_STATE scheduler.State = ""
 
 func getState(sessionName string, context Context, newContext Context) (scheduler.State, error) {
-	query := "SELECT state FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName + "\""
+	args := advisorSessionArgs(sessionName)
+	query := "SELECT state FROM system:tasks_cache WHERE class = $av_class AND name = $av_session"
 	if tenant.IsServerless() && !context.IsAdmin() {
-		query += queryContext(context)
+		query += queryContext(context, args)
 	}
-	res, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, false, false, "")
+	res, _, err := newContext.(Context).EvaluateStatement(query, args, nil, false, false, false, "")
 	if err != nil {
 		return _EMPTY_STATE, err
 	}
@@ -352,16 +372,17 @@ func getState(sessionName string, context Context, newContext Context) (schedule
 }
 
 func purgeResults(sessionName string, context Context, newContext Context, analysis bool) (value.Value, error) {
-	query := "DELETE FROM system:tasks_cache WHERE class = \"" + _CLASS + "\" AND name = \"" + sessionName + "\""
+	args := advisorSessionArgs(sessionName)
+	query := "DELETE FROM system:tasks_cache WHERE class = $av_class AND name = $av_session"
 	if tenant.IsServerless() && !context.IsAdmin() {
-		query += queryContext(context)
+		query += queryContext(context, args)
 	}
-	_, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, false, false, "")
+	_, _, err := newContext.(Context).EvaluateStatement(query, args, nil, false, false, false, "")
 	if !analysis {
 		//For purge and abort, scheduler.stop func will run upon deletion when task is not nil.
 		//Need to run deleting for another time to reset scheduler.stop to nil and delete the entry.
 		if err == nil {
-			_, _, err = context.(Context).EvaluateStatement(query, nil, nil, false, false, false, "")
+			_, _, err = context.(Context).EvaluateStatement(query, args, nil, false, false, false, "")
 		}
 	}
 	if err != nil {
@@ -371,11 +392,13 @@ func purgeResults(sessionName string, context Context, newContext Context, analy
 }
 
 func listSessions(status string, context Context, newContext Context) (value.Value, error) {
-	query := "SELECT * FROM system:tasks_cache WHERE class = \"" + _CLASS + "\"" + queryDict()(status)
+	// status is allow-listed by getStatus(); queryDict returns a fixed clause
+	args := map[string]value.Value{"av_class": value.NewValue(_CLASS)}
+	query := "SELECT * FROM system:tasks_cache WHERE class = $av_class" + queryDict()(status)
 	if tenant.IsServerless() && !context.IsAdmin() {
-		query += queryContext(context)
+		query += queryContext(context, args)
 	}
-	r, _, err := newContext.(Context).EvaluateStatement(query, nil, nil, false, true, false, "")
+	r, _, err := newContext.(Context).EvaluateStatement(query, args, nil, false, true, false, "")
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +531,33 @@ func (this *Advisor) getSession(m map[string]interface{}) (string, error) {
 		return "", fmt.Errorf("%s() not valid argument for 'session'", this.Name())
 	}
 
-	return strings.ToLower(val.(value.Value).ToString()), nil
+	// session is always a UUIDV4(); reject other shapes (defense-in-depth, MB-73772)
+	session := strings.ToLower(val.(value.Value).ToString())
+	if !isSessionNameValid(session) {
+		return "", fmt.Errorf("%s() not valid argument for 'session'", this.Name())
+	}
+
+	return session, nil
+}
+
+// isSessionNameValid reports whether s is a lower-cased 8-4-4-4-12 hex UUID.
+func isSessionNameValid(s string) bool {
+	if len(s) != 36 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if i == 8 || i == 13 || i == 18 || i == 23 {
+			if c != '-' {
+				return false
+			}
+			continue
+		}
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			return false
+		}
+	}
+	return true
 }
 
 func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
