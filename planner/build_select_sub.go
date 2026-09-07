@@ -135,14 +135,22 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 					return nil, err
 				}
 			}
-			anns := make(expression.Expressions, 0, len(sortExprs))
-			for _, term := range sortExprs {
-				if _, ok := term.(*expression.ApproxVectorDistance); ok {
-					anns = append(anns, term)
+			// Without a LIMIT there's no bound justifying the ANN index's inherently
+			// approximate (nprobes-capped) scan, so don't even collect the vector
+			// predicate in that case -- this keeps the vector index key from ever
+			// being considered sargable (sargableIndexes / SargableFor treat a nil
+			// vpred as unsargable for the vector key) instead of having to gate that
+			// downstream.
+			if hasVector && this.limit != nil {
+				anns := make(expression.Expressions, 0, len(sortExprs))
+				for _, term := range sortExprs {
+					if _, ok := term.(*expression.ApproxVectorDistance); ok {
+						anns = append(anns, term)
+					}
 				}
-			}
-			if len(anns) > 0 {
-				this.vectors = anns
+				if len(anns) > 0 {
+					this.vectors = anns
+				}
 			}
 		}
 	}
