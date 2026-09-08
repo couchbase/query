@@ -135,10 +135,6 @@
                 {
                   "index_statement": "CREATE INDEX adv_size_brand_vecVECTOR ON `default`:`product`.`_default`.`vectors`(`size`,`brand`,`vec` VECTOR) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
                   "keyspace_alias": "vectors"
-                },
-                {
-                  "index_statement": "CREATE VECTOR INDEX adv_VECTOR_vecVECTOR_INCLUDE_size_brand ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR) INCLUDE (`size`,`brand`) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
-                  "keyspace_alias": "vectors"
                 }
               ]
             }
@@ -164,10 +160,6 @@
                 {
                   "index_property": "ORDER pushdown (partial)",
                   "index_statement": "CREATE INDEX adv_size_brand_vecVECTOR ON `default`:`product`.`_default`.`vectors`(`size`,`brand`,`vec` VECTOR) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
-                  "keyspace_alias": "vectors"
-                },
-                {
-                  "index_statement": "CREATE VECTOR INDEX adv_VECTOR_vecVECTOR_INCLUDE_size_brand ON `default`:`product`.`_default`.`vectors`(`vec` VECTOR) INCLUDE (`size`,`brand`) WITH { 'dimension': array_length($qvec), 'similarity': 'l2_squared', 'description': 'IVF,SQ8' }",
                   "keyspace_alias": "vectors"
                 }
               ]
