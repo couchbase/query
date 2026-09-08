@@ -208,7 +208,8 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 				!entry.IsPushDownProperty(_PUSHDOWN_FULLGROUPAGGS|_PUSHDOWN_GROUPAGGS|_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER) &&
 				!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
 				if entry.cost > 0.0 && entry.cardinality > 0.0 && entry.size > 0 && entry.frCost > 0.0 {
-					cost, card, frCost, _ := this.getIndexLimitCost(entry.cost, entry.cardinality, entry.frCost, entry.selectivity)
+					cost, card, frCost, _ := this.getIndexLimitCost(entry.cost, entry.cardinality, entry.frCost, entry.selectivity,
+						entry.IsPushDownProperty(_PUSHDOWN_LIMIT), entry.IsPushDownProperty(_PUSHDOWN_OFFSET))
 					if cost > 0.0 && card > 0.0 && frCost > 0.0 {
 						entry.cardinality, entry.cost, entry.frCost = card, cost, frCost
 					} else {

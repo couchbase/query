@@ -148,7 +148,9 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 
 	for index, entry := range indexes {
 		// skip primary index with no sargable keys. Able to do PrimaryScan
-		if index.IsPrimary() && entry.minKeys == 0 {
+		// keep the entry with ORDER/LIMIT/OFFSET pushdown
+		if index.IsPrimary() && entry.minKeys == 0 &&
+			!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
 			continue
 		}
 		// If this is a join with primary key (meta().id), then it's
@@ -643,7 +645,8 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 			if se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
 				!se.HasFlag(IE_LIMIT_OFFSET_COST) {
 				if se.cost > 0.0 && se.cardinality > 0.0 && se.size > 0 && se.frCost > 0.0 {
-					cost, card, frCost, selec := this.getIndexLimitCost(se.cost, se.cardinality, se.frCost, se.selectivity)
+					cost, card, frCost, selec := this.getIndexLimitCost(se.cost, se.cardinality, se.frCost, se.selectivity,
+						se.IsPushDownProperty(_PUSHDOWN_LIMIT), se.IsPushDownProperty(_PUSHDOWN_OFFSET))
 					if cost > 0.0 && card > 0.0 && frCost > 0.0 && selec > 0.0 {
 						se.cost, se.cardinality, se.frCost, se.selectivity = cost, card, frCost, selec
 						// expect shortest is true when pushdown is set
@@ -1278,7 +1281,8 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		} else {
 			if entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
 				!entry.HasFlag(IE_LIMIT_OFFSET_COST) {
-				cost, card, frCost, selec = this.getIndexLimitCost(cost, card, frCost, selec)
+				cost, card, frCost, selec = this.getIndexLimitCost(cost, card, frCost, selec,
+					entry.IsPushDownProperty(_PUSHDOWN_LIMIT), entry.IsPushDownProperty(_PUSHDOWN_OFFSET))
 				entry.SetFlags(IE_LIMIT_OFFSET_COST, true)
 			}
 			if cost > 0.0 && card > 0.0 && frCost > 0.0 && selec > 0.0 {

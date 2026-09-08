@@ -268,19 +268,32 @@ func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, ski
 	return sel, nil
 }
 
-func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64) (float64, float64, float64, float64) {
+func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64, doLimit, doOffset bool) (
+	float64, float64, float64, float64) {
+
 	namedArgs := this.context.NamedArgs()
 	positionalArgs := this.context.PositionalArgs()
 
 	nlimit := int64(-1)
 	noffset := int64(-1)
-	limit := this.limit
-	offset := this.offset
+	var limit, offset expression.Expression
+	if doLimit {
+		limit = this.limit
+	}
+	if doOffset {
+		offset = this.offset
+	}
+	if limit == nil && offset == nil {
+		return cost, cardinality, frCost, selec
+	}
+
 	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
 		var err error
-		limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
-		if err != nil {
-			return cost, cardinality, frCost, selec
+		if limit != nil {
+			limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
+			if err != nil {
+				return cost, cardinality, frCost, selec
+			}
 		}
 		if offset != nil {
 			offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
@@ -290,9 +303,11 @@ func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64)
 		}
 	}
 
-	lv, static := base.GetStaticInt(limit)
-	if static {
-		nlimit = lv
+	if limit != nil {
+		lv, static := base.GetStaticInt(limit)
+		if static {
+			nlimit = lv
+		}
 	}
 	if offset != nil {
 		ov, static := base.GetStaticInt(offset)

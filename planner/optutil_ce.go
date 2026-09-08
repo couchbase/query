@@ -70,7 +70,8 @@ func indexScanCost(index datastore.Index, sargKeys expression.Expressions, reque
 		errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
 
-func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64) (float64, float64, float64, float64) {
+func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64, doLimit, doOffset bool) (
+	float64, float64, float64, float64) {
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL
 }
 
