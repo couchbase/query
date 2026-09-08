@@ -150,7 +150,9 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 	hasRerank := false
 	for index, entry := range indexes {
 		// skip primary index with no sargable keys. Able to do PrimaryScan
-		if index.IsPrimary() && entry.minKeys == 0 {
+		// keep the entry with ORDER/LIMIT/OFFSET pushdown
+		if index.IsPrimary() && entry.minKeys == 0 &&
+			!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
 			continue
 		}
 		// If this is a join with primary key (meta().id), then it's
@@ -729,13 +731,13 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 		advisorValidate := this.advisorValidate()
 		keyspace := baseKeyspace.Keyspace()
 		for _, se := range sargables {
-			// limit_cost indicates whether cost needs to be recalculated due to LIMIT pushdown
+			// limit_cost indicates whether cost needs to be recalculated due to LIMIT/OFFSET pushdown
 			limit_cost := se.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-				!se.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil
+				!se.HasFlag(IE_LIMIT_OFFSET_COST) && (this.limit != nil || this.offset != nil)
 			if se.cost <= 0.0 || limit_cost {
 				var limit, offset int64
 				if limit_cost {
-					limit, offset = this.getLimitOffset(se, this.limit, this.offset)
+					limit, offset = this.getLimitOffset(se, this.limit, this.offset, true)
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(se, se.sargKeys,
 					se.sargIncludes, this.context.RequestId(), se.spans, se.includeSpans,
@@ -1484,13 +1486,13 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	advisorValidate := this.advisorValidate()
 	requestId := this.context.RequestId()
 	if useCBO {
-		// limit_cost indicates whether cost needs to be recalculated due to LIMIT pushdown
+		// limit_cost indicates whether cost needs to be recalculated due to LIMIT/OFFSET pushdown
 		limit_cost := entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-			!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil
+			!entry.HasFlag(IE_LIMIT_OFFSET_COST) && (this.limit != nil || this.offset != nil)
 		if (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) || limit_cost {
 			var limit, offset int64
 			if limit_cost {
-				limit, offset = this.getLimitOffset(entry, this.limit, this.offset)
+				limit, offset = this.getLimitOffset(entry, this.limit, this.offset, true)
 			}
 			cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys, entry.sargIncludes,
 				requestId, entry.spans, entry.includeSpans, alias, baseKeyspace.Keyspace(),
@@ -1612,7 +1614,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 
 		cons := true
 		isParam := false
-		nlimit, noffset := this.getLimitOffset(entry, this.limit, this.offset)
+		nlimit, noffset := this.getLimitOffset(entry, this.limit, this.offset, false)
 		if nlimit <= 0 {
 			cons = false
 			switch this.limit.(type) {
@@ -2173,7 +2175,9 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, index datastor
 	return rv
 }
 
-func (this *builder) getLimitOffset(entry *indexEntry, limit, offset expression.Expression) (int64, int64) {
+// get the integer value for LIMIT/OFFSET when specified
+// pushdown: require LIMIT/OFFSET pushdown before getting the actual value for LIMIT/OFFSET
+func (this *builder) getLimitOffset(entry *indexEntry, limit, offset expression.Expression, pushdown bool) (int64, int64) {
 	namedArgs := this.context.NamedArgs()
 	positionalArgs := this.context.PositionalArgs()
 
@@ -2204,15 +2208,18 @@ func (this *builder) getLimitOffset(entry *indexEntry, limit, offset expression.
 		limit = expandOffsetLimit(offset, limit, factor)
 	}
 
-	lv, static := base.GetStaticInt(limit)
-	if static {
-		nlimit = lv
+	if (!pushdown || entry.IsPushDownProperty(_PUSHDOWN_LIMIT)) && limit != nil {
+		lv, static := base.GetStaticInt(limit)
+		if static {
+			nlimit = lv
+		}
 	}
-	if offset != nil {
+	if (!pushdown || entry.IsPushDownProperty(_PUSHDOWN_OFFSET)) && offset != nil {
 		ov, static := base.GetStaticInt(offset)
 		if static {
 			noffset = ov
 		}
 	}
+
 	return nlimit, noffset
 }

@@ -231,13 +231,13 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 	if useCBO {
 		for _, ce := range coveringEntries {
 			entry := ce.idxEntry
-			// limit_cost indicates whether cost needs to be recalculated due to LIMIT pushdown
+			// limit_cost indicates whether cost needs to be recalculated due to LIMIT/OFFSET pushdown
 			limit_cost := entry.IsPushDownProperty(_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) &&
-				!entry.HasFlag(IE_LIMIT_OFFSET_COST) && this.limit != nil
+				!entry.HasFlag(IE_LIMIT_OFFSET_COST) && (this.limit != nil || this.offset != nil)
 			if entry.cost <= 0.0 || limit_cost {
 				var limit, offset int64
 				if limit_cost {
-					limit, offset = this.getLimitOffset(entry, this.limit, this.offset)
+					limit, offset = this.getLimitOffset(entry, this.limit, this.offset, true)
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys,
 					entry.sargIncludes, this.context.RequestId(), entry.spans, entry.includeSpans,
