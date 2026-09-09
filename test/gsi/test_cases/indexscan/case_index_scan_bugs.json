@@ -479,5 +479,21 @@
                 "$1": 0
             }
     ]
+    },
+    {
+	"testcase": "MB-73846",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`plan`.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`index_keys`) > 0 AND v.`filter` IS NOT MISSING END"
+        },
+        "statements":"SELECT * FROM shellTest WHERE c11 = 1 AND (c12 = 12 OR (c12 IS NOT NULL AND ARRAY_CONTAINS(arr1, 4)) OR (c12 IS NOT NULL AND ARRAY_CONTAINS(arr2, 14)))",
+        "results": [
+    ]
     }
 ]
