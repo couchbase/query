@@ -876,3 +876,102 @@ func Scan(bucket string, cb func(string) error) errors.Error {
 			return ferr
 		})
 }
+
+// BackupEntries returns every keyspace's knowledge entries for the given bucket, one element per
+// keyspace, shaped as {"identity": "<namespace>:<bucket>.<scope>.<collection>", "knowledge":
+// {name: value, ...}}. This is the shape the backup service's "admin/backup" endpoint
+// (server/http/admin_accounting_endpoint.go, doBucketBackup) writes into a backup image and later
+// replays through CreateKnowledgeBulk on restore - mirroring aus.BackupAusSettings, which does the
+// same job for keyspace-level AUS settings (a document keyed the same UID-embedding way, see
+// getStorageKey). Unlike Scan, this reads straight off the live system collection (no cache-first
+// pass): a backup is expected to reflect durable state, not whatever this node happens to have
+// cached.
+//
+// filter, if non-nil, is called with the keyspace's path parts ([namespace, bucket, scope,
+// collection]) and the keyspace is skipped when it returns false - the backup service uses this to
+// apply the request's include/exclude filters, exactly as it does for cbo and plan stability.
+func BackupEntries(namespace, bucket string, filter func([]string) bool) ([]interface{}, errors.Error) {
+	rv := make([]interface{}, 0)
+
+	process := func(av value.AnnotatedValue) {
+		obj, ok := av.Field(_FIELD)
+		if !ok || obj.Type() != value.OBJECT {
+			return
+		}
+		fields := obj.Fields()
+		if len(fields) == 0 {
+			return
+		}
+
+		// prefer the document's own namespace/scope/collection fields over the caller's
+		// namespace argument and the (possibly capKeySegment-hashed) key segments, mirroring
+		// Scan/emitDocEntries
+		ns, ok := av.Field("namespace")
+		nsStr := namespace
+		if ok {
+			nsStr = ns.ToString()
+		}
+		sc, ok := av.Field("scope")
+		if !ok {
+			return
+		}
+		co, ok := av.Field("collection")
+		if !ok {
+			return
+		}
+		path := []string{nsStr, bucket, sc.ToString(), co.ToString()}
+		if filter != nil && !filter(path) {
+			return
+		}
+
+		entries := make(map[string]interface{}, len(fields))
+		for name, v := range fields {
+			entries[name] = v
+		}
+		rv = append(rv, map[string]interface{}{
+			"identity":  algebra.PathFromParts(path...),
+			"knowledge": entries,
+		})
+	}
+
+	// batch the scanned keys rather than fetching one at a time, mirroring Scan's flush pattern
+	keys := make([]string, 0, _BATCH_SIZE)
+	var ferr errors.Error
+
+	flush := func(systemCollection datastore.Keyspace) {
+		if len(keys) == 0 {
+			return
+		}
+		res := make(map[string]value.AnnotatedValue, len(keys))
+		errs := systemCollection.Fetch(keys, res, datastore.NULL_QUERY_CONTEXT, nil, nil, false)
+		if len(errs) > 0 && !errors.IsNotFoundError("", errs[0]) && !errs[0].HasCause(errors.E_CB_BULK_GET) {
+			ferr = errs[0]
+		}
+		for _, key := range keys {
+			if av, ok := res[key]; ok {
+				process(av)
+			}
+		}
+		keys = keys[:0]
+	}
+
+	err := datastore.ScanSystemCollection(bucket, _PREFIX, nil,
+		func(key string, systemCollection datastore.Keyspace) errors.Error {
+			keys = append(keys, key)
+			if len(keys) >= _BATCH_SIZE {
+				flush(systemCollection)
+				if ferr != nil {
+					return ferr
+				}
+			}
+			return nil
+		},
+		func(systemCollection datastore.Keyspace) errors.Error {
+			flush(systemCollection)
+			return ferr
+		})
+	if err != nil {
+		return nil, err
+	}
+	return rv, nil
+}

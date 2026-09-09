@@ -43,6 +43,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/natural"
+	"github.com/couchbase/query/natural/knowledge"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/primitives/couchbase"
@@ -1226,7 +1227,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			}
 		}
 
-		return makeBackupHeader(data, nil, nil, awr, ausSettings, nil, planStabilitySetting, nil), nil
+		return makeBackupHeader(data, nil, nil, awr, ausSettings, nil, planStabilitySetting, nil, nil), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1243,7 +1244,8 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return nil, err
 		}
 
-		fns, _, _, awr, ausGlobal, _, planStabilitySetting, _, e := checkBackupHeader(bytes)
+		// knowledge is always nil for the global header (see the GET case above); nothing to restore
+		fns, _, _, awr, ausGlobal, _, planStabilitySetting, _, _, e := checkBackupHeader(bytes)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1558,7 +1560,15 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			}
 		}
 
-		return makeBackupHeader(fns, seqs, cbo, nil, nil, ausSettings, nil, planStability), nil
+		// Backup keyspace level Knowledge entries (see natural/knowledge)
+		knowledgeEntries, err := knowledge.BackupEntries("default", bucket, func(pathParts []string) bool {
+			return filterEval(pathParts, include, exclude, true)
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return makeBackupHeader(fns, seqs, cbo, nil, nil, ausSettings, nil, planStability, knowledgeEntries), nil
 
 	case "POST":
 		var iState json.IndexState
@@ -1574,7 +1584,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if err != nil {
 			return nil, err
 		}
-		fns, seqs, cbo, _, _, ausSettings, _, planStability, e := checkBackupHeader(body)
+		fns, seqs, cbo, _, _, ausSettings, _, planStability, knowledgeEntries, e := checkBackupHeader(body)
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "restore body")
 		}
@@ -1769,6 +1779,33 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			}
 		}
 
+		// Restore keyspace level Knowledge entries (see natural/knowledge)
+		if knowledgeEntries != nil {
+			remap, err = newRemapper(req.FormValue("remap"), "knowledge")
+			if err != nil {
+				return nil, err
+			}
+			index = 0
+			json.SetIndexState(&iState, knowledgeEntries)
+			for {
+				v, err := iState.FindIndex(index)
+				if err != nil {
+					iState.Release()
+					return nil, errors.NewServiceErrorBadValue(err, "restore knowledge")
+				}
+				if string(v) == "" {
+					break
+				}
+				err1 := doKnowledgeRestore(v, index, bucket, include, exclude, remap)
+				index++
+				if err1 != nil {
+					iState.Release()
+					return nil, err1
+				}
+			}
+			iState.Release()
+		}
+
 		// after restoring cleanup any stale entries in the system collection
 		go dictionary.CleanupSystemCollection("default", bucket)
 
@@ -1795,9 +1832,11 @@ const _AUS_KEY = "aus"                   // Global AUS settings in system:aus
 const _AUS_SETTINGS_KEY = "aus_settings" // Keyspace level AUS settings in system:aus_settings
 const _PLAN_STABILITY_KEY = "plan_stability"
 const _PLAN_STABILITY_SETTINGS_KEY = "plan_stability_settings"
+const _KNOWLEDGE_KEY = "knowledge" // Keyspace level knowledge entries (see natural/knowledge)
 
 func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}, aus interface{},
-	ausSettings interface{}, planStabilitySetting interface{}, planStability interface{}) interface{} {
+	ausSettings interface{}, planStabilitySetting interface{}, planStability interface{},
+	knowledgeEntries interface{}) interface{} {
 	data := make(map[string]interface{}, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION
@@ -1809,6 +1848,7 @@ func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}
 	data[_AUS_SETTINGS_KEY] = ausSettings
 	data[_PLAN_STABILITY_KEY] = planStability
 	data[_PLAN_STABILITY_SETTINGS_KEY] = planStabilitySetting
+	data[_KNOWLEDGE_KEY] = knowledgeEntries
 	return data
 }
 
@@ -1844,31 +1884,31 @@ func makeBackupHeaderV1(v interface{}) interface{} {
 	return data
 }
 
-func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte, []byte, []byte, errors.Error) {
+func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte, []byte, []byte, []byte, errors.Error) {
 	var oState json.KeyState
 	json.SetKeyState(&oState, d)
 	magic, err := oState.FindKey(_MAGIC_KEY)
 	if err != nil || string(magic) != "\""+_MAGIC+"\"" {
 		oState.Release()
-		return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid magic")
 	}
 	version, err := oState.FindKey(_VERSION_KEY)
 	var ver uint64
 	if err == nil {
 		trimmed := strings.Trim(string(version), "\"")
 		if !strings.HasPrefix(trimmed, "0x") || len(trimmed) <= 2 {
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(nil, "restore: invalid version")
 		}
 		ver, err = strconv.ParseUint(trimmed[2:], 16, 64)
 	}
 	if err != nil || ver < _VERSION_MIN || ver > _VERSION_MAX {
 		oState.Release()
-		return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: invalid version")
 	}
 	udfs, err := oState.FindKey(_UDF_KEY)
 	if err != nil {
 		oState.Release()
-		return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing UDF field")
 	}
 	// only expect sequences & cbo for version 2+ backup images
 	var seqs []byte
@@ -1877,12 +1917,12 @@ func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte
 		seqs, err = oState.FindKey(_SEQ_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing sequences field")
 		}
 		cbo, err = oState.FindKey(_CBO_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing cbo field")
 		}
 	}
 	var awr []byte
@@ -1892,40 +1932,46 @@ func checkBackupHeader(d []byte) ([]byte, []byte, []byte, []byte, []byte, []byte
 		awr, err = oState.FindKey(_AWR_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing awr field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing awr field")
 		}
 
 		aus, err = oState.FindKey(_AUS_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus field")
 		}
 
 		ausSettings, err = oState.FindKey(_AUS_SETTINGS_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus_settings field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing aus_settings field")
 		}
 
 	}
 	var planStabilitySettings []byte
 	var planStability []byte
+	var knowledgeEntries []byte
 	if ver >= 4 {
 		planStabilitySettings, err = oState.FindKey(_PLAN_STABILITY_SETTINGS_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing plan_stability_settings field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing plan_stability_settings field")
 		}
 
 		planStability, err = oState.FindKey(_PLAN_STABILITY_KEY)
 		if err != nil {
 			oState.Release()
-			return nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing plan_stability field")
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing plan_stability field")
 		}
 
+		knowledgeEntries, err = oState.FindKey(_KNOWLEDGE_KEY)
+		if err != nil {
+			oState.Release()
+			return nil, nil, nil, nil, nil, nil, nil, nil, nil, errors.NewServiceErrorBadValue(err, "restore: missing knowledge field")
+		}
 	}
 	oState.Release()
-	return udfs, seqs, cbo, awr, aus, ausSettings, planStabilitySettings, planStability, nil
+	return udfs, seqs, cbo, awr, aus, ausSettings, planStabilitySettings, planStability, knowledgeEntries, nil
 }
 
 type matcher map[string]map[string]bool
@@ -3539,6 +3585,73 @@ func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap 
 		return errs[0]
 	}
 	return nil
+}
+
+// doKnowledgeRestore restores one keyspace's worth of knowledge entries (see natural/knowledge)
+// from a single element of the "knowledge" backup array, shaped as {"identity":
+// "<ns>:<bucket>.<scope>.<collection>", "knowledge": {name: value, ...}} by knowledge.BackupEntries.
+//
+// Unlike doCBORestore/doPlanStabilityRestore, there is no raw storage key to patch up: knowledge
+// entries are addressed purely by keyspace path (see knowledge.CreateKnowledgeBulk), which itself
+// resolves that path to the target keyspace's *current* scope/collection UIDs - the same reason
+// aus settings restore (doAusSettingsRestore) can restore by identity alone rather than by key.
+func doKnowledgeRestore(v []byte, index int, bucket string, include, exclude matcher, remap remapper) errors.Error {
+	var oState json.KeyState
+	json.SetKeyState(&oState, v)
+
+	aPath, err := oState.FindKey("identity")
+	if err != nil {
+		oState.Release()
+		return errors.NewServiceErrorBadValue(err, fmt.Sprintf("knowledge restore: identity (entry #%d)", index))
+	}
+
+	aKnowledge, err := oState.FindKey("knowledge")
+	oState.Release()
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err,
+			fmt.Sprintf("knowledge restore: knowledge (entry #%d, identity: %s)", index, aPath))
+	}
+
+	path := strings.Trim(string(aPath), "\"")
+	if path == "" {
+		return errors.NewServiceErrorBadValue(nil,
+			fmt.Sprintf("knowledge restore: identity invalid (entry #%d)", index))
+	}
+	parts := algebra.ParsePath(path)
+	if len(parts) != 4 {
+		return errors.NewServiceErrorBadValue(nil,
+			fmt.Sprintf("knowledge restore: identity %q is not a keyspace path (entry #%d)", path, index))
+	}
+
+	// Check for inclusion/exclusion of the path. If it qualifies to be restored, remap the path
+	if !filterEval(parts, include, exclude, true) {
+		return nil
+	}
+	remap.remap(bucket, parts, true)
+
+	var fields map[string]interface{}
+	if uerr := json.Unmarshal(aKnowledge, &fields); uerr != nil {
+		return errors.NewServiceErrorBadValue(uerr,
+			fmt.Sprintf("knowledge restore: invalid knowledge value (identity: %s)", path))
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+
+	entries := make(map[string]string, len(fields))
+	for name, val := range fields {
+		s, ok := val.(string)
+		if !ok {
+			return errors.NewServiceErrorBadValue(nil,
+				fmt.Sprintf("knowledge restore: value for entry %q is not a string (identity: %s)", name, path))
+		}
+		entries[name] = s
+	}
+
+	// replace=true: a restore reflects what was captured at backup time, so an entry that already
+	// exists under the same name at the target keyspace (e.g. a restore onto a live, already-
+	// populated keyspace) is overwritten rather than rejected as a duplicate
+	return knowledge.CreateKnowledgeBulk(algebra.NewPathFromElements(parts), entries, true)
 }
 
 func doCompletedRequestHistory(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
