@@ -54,32 +54,32 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "DROP INDEX purchase.plistidx")
 
 	// Single-level Indexes
-	runStmt(qc, "CREATE INDEX iv ON product( DISTINCT ARRAY v FOR v IN b END )")
-	runStmt(qc, "CREATE INDEX ix ON product( DISTINCT ARRAY v.x FOR v IN b END )")
-	runStmt(qc, "CREATE INDEX ixy ON product( DISTINCT ARRAY v.x + v.y FOR v IN b END )")
+	// runStmt(qc, "CREATE INDEX iv ON product( DISTINCT ARRAY v FOR v IN b END )")
+	// runStmt(qc, "CREATE INDEX ix ON product( DISTINCT ARRAY v.x FOR v IN b END )")
+	// runStmt(qc, "CREATE INDEX ixy ON product( DISTINCT ARRAY v.x + v.y FOR v IN b END )")
 
 	//As covering indexes
-	runStmt(qc, "CREATE INDEX cover_iv ON product( DISTINCT ARRAY v FOR v IN b END, b, type)")
-	runStmt(qc, "CREATE INDEX cover_ix ON product( DISTINCT ARRAY v.x FOR v IN b END,b, type )")
-	runStmt(qc, "CREATE INDEX cover_ixy ON product( DISTINCT ARRAY v.x + v.y FOR v IN b END,b, type )")
+	// runStmt(qc, "CREATE INDEX cover_iv ON product( DISTINCT ARRAY v FOR v IN b END, b, type)")
+	// runStmt(qc, "CREATE INDEX cover_ix ON product( DISTINCT ARRAY v.x FOR v IN b END,b, type )")
+	// runStmt(qc, "CREATE INDEX cover_ixy ON product( DISTINCT ARRAY v.x + v.y FOR v IN b END,b, type )")
 
 	//		runMatch("case_explain_test3.json", false, false,qc, t)
 
 	//Multi-level index
-	runStmt(qc, "DROP INDEX product.iv")
-	runStmt(qc, "DROP INDEX product.ix")
-	runStmt(qc, "DROP INDEX product.ixy")
-	runStmt(qc, "DROP INDEX product.cover_iv")
-	runStmt(qc, "DROP INDEX product.cover_ix")
-	runStmt(qc, "DROP INDEX product.cover_ixy")
+	// runStmt(qc, "DROP INDEX product.iv")
+	// runStmt(qc, "DROP INDEX product.ix")
+	// runStmt(qc, "DROP INDEX product.ixy")
+	// runStmt(qc, "DROP INDEX product.cover_iv")
+	// runStmt(qc, "DROP INDEX product.cover_ix")
+	// runStmt(qc, "DROP INDEX product.cover_ixy")
 
-	runStmt(qc, "CREATE INDEX ivw ON product( DISTINCT ARRAY ( DISTINCT ARRAY w FOR w IN v END ) FOR v IN b END )")
-	runStmt(qc, "CREATE INDEX cover_ivw ON product( DISTINCT ARRAY ( DISTINCT ARRAY w FOR w IN v END ) FOR v IN b END,b, type )")
+	// runStmt(qc, "CREATE INDEX ivw ON product( DISTINCT ARRAY ( DISTINCT ARRAY w FOR w IN v END ) FOR v IN b END )")
+	// runStmt(qc, "CREATE INDEX cover_ivw ON product( DISTINCT ARRAY ( DISTINCT ARRAY w FOR w IN v END ) FOR v IN b END,b, type )")
 
 	//		runMatch("case_explain_test4.json", false, false,qc, t)
 
-	runStmt(qc, "DROP INDEX product.ivw")
-	runStmt(qc, "DROP INDEX product.cover_ivw")
+	// runStmt(qc, "DROP INDEX product.ivw")
+	// runStmt(qc, "DROP INDEX product.cover_ivw")
 
 	// Create array index on TOKENS()
 	runStmt(qc, "CREATE INDEX tokenindex ON product ((distinct (array lower(to_string(d)) for d in tokens(description) end)))")
@@ -137,15 +137,19 @@ func TestIndexScan(t *testing.T) {
 
 	// order nulls ASC index
 	runStmt(qc, "CREATE INDEX noix1 ON orders (c1, c2, c3, c4) WHERE test_id = \"ordernulls\"")
+
 	runMatch("case_ordernulls.json", false, true, qc, t)
 	runMatch("case_ordernulls.json", true, true, qc, t)
 	runMatch("case_let.json", false, true, qc, t)
+
 	runStmt(qc, "DROP INDEX orders.noix1")
 
 	// order nulls DESC index
 	runStmt(qc, "CREATE INDEX noix1 ON orders (c1, c2 DESC, c3, c4) WHERE test_id = \"ordernulls\"")
+
 	runMatch("case_ordernullsdesc.json", false, true, qc, t)
 	runMatch("case_ordernullsdesc.json", true, true, qc, t)
+
 	runStmt(qc, "DROP INDEX orders.noix1")
 
 	// query named and positional parameters
@@ -154,7 +158,9 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX poix3 ON orders (DISTINCT ARRAY v.id FOR v IN a4 WHEN v.name = \"abc\" END) "+
 		"WHERE test_id = \"parameters\"")
 	runStmt(qc, "CREATE INDEX poix4 ON orders (c1, c2, c3, c4) WHERE test_id LIKE \"parameter%\"")
+
 	runMatch("case_parameters.json", false, true, qc, t)
+
 	runStmt(qc, "DROP INDEX orders.poix1")
 	runStmt(qc, "DROP INDEX orders.poix2")
 	runStmt(qc, "DROP INDEX orders.poix3")
@@ -162,13 +168,17 @@ func TestIndexScan(t *testing.T) {
 
 	runStmt(qc, "CREATE INDEX ifloix1 ON orders (c1, c2, c3, c4, c5) WHERE test_id = \"idxfltr\"")
 	runStmt(qc, "CREATE INDEX ifloix2 ON orders (c6, a1) WHERE test_id = \"idxfltr\"")
+
 	runMatch("case_index_filter.json", false, true, qc, t)
 	runMatch("case_index_filter.json", true, true, qc, t)
+
 	runStmt(qc, "DROP INDEX orders.ifloix1")
 	runStmt(qc, "DROP INDEX orders.ifloix2")
 
 	runStmt(qc, "CREATE INDEX ieopix1 ON purchase (customerId, purchaseId, purchasedAt) WHERE test_id = \"arrayIndex\"")
+
 	runMatch("case_early_order.json", false, true, qc, t)
+
 	runStmt(qc, "DROP INDEX purchase.ieopix1")
 
 	runStmt(qc, "CREATE INDEX ioaix1 ON orders (ALL a1) WHERE test_id = \"parameters\"")
@@ -187,7 +197,10 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "CREATE INDEX ishix6 ON shellTest(id, type) WHERE type NOT IN [\"type2\",\"type3\"]")
 	runStmt(qc, "CREATE INDEX ishix7 ON shellTest(city) WHERE country = \"US\"")
 	runStmt(qc, "CREATE INDEX ishix8 ON shellTest(city) WHERE country = \"UK\"")
+	runStmt(qc, "CREATE INDEX ishix9 ON shellTest(c11, c12, arr1, arr2)")
+
 	runMatch("case_index_scan_bugs.json", false, true, qc, t)
+
 	runStmt(qc, "DROP INDEX orders.ioaix1")
 	runStmt(qc, "DROP INDEX orders.iorix1")
 	runStmt(qc, "DROP INDEX orders.iorix2")
@@ -204,6 +217,7 @@ func TestIndexScan(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.ishix6")
 	runStmt(qc, "DROP INDEX shellTest.ishix7")
 	runStmt(qc, "DROP INDEX shellTest.ishix8")
+	runStmt(qc, "DROP INDEX shellTest.ishix9")
 
 	runStmt(qc, "create primary index on product ")
 	runStmt(qc, "create primary index on purchase")

@@ -2093,86 +2093,38 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, index datastor
 		orOps = expression.Expressions{pred}
 	}
 
-	modified := false
-	terms := make(expression.Expressions, 0, len(orOps))
 	for _, op := range orOps {
-		var term expression.Expression
 		var andOps expression.Expressions
 		if and, ok := op.(*expression.And); ok {
 			andOps = and.Operands()
 		} else {
 			andOps = expression.Expressions{op}
 		}
+		exact := true
 		for _, op1 := range andOps {
-			add := true
 			for i, key := range keys {
 				min, _, _, _, _ := SargableFor(op1, nil, index, datastore.IndexKeys{&datastore.IndexKey{key, datastore.IK_NONE}},
 					nil, (missing || i > 0), skip, nil, this.context, this.aliases)
 				if min == 0 {
 					continue
 				}
-				rs, exact, err := sargFor(op1, index, key, false, false, baseKeyspace,
+				rs, ex, err := sargFor(op1, index, key, false, false, baseKeyspace,
 					this.keyspaceNames, this.advisorValidate(), (missing || i > 0),
 					false, false, false, i, this.aliases, this.context)
-				if err == nil && rs != nil && exact {
-					add = false
+				if err == nil && rs != nil {
+					if !ex {
+						exact = false
+					}
 					break
 				}
 			}
-			if add {
-				if term == nil {
-					term = op1
-				} else {
-					term = expression.NewAnd(term, op1)
-				}
-			} else {
-				modified = true
+			if !exact {
+				return pred
 			}
 		}
-		if term == nil {
-			// one of the OR subterms is "empty", i.e., true
-			return nil
-		}
-		found := false
-		if modified {
-			// avoid adding redundant term
-			for i := 0; i < len(terms); i++ {
-				// SubsetOf() could result in exponential number of comparisons if
-				// both term and terms[i] are AND expressions with many children
-				if _, ok := term.(*expression.And); ok {
-					if term.EquivalentTo(terms[i]) {
-						found = true
-					}
-				} else {
-					if base.SubsetOf(terms[i], term) {
-						terms[i] = term
-						found = true
-					}
-				}
-				if found {
-					break
-				}
-			}
-		}
-		if !found {
-			terms = append(terms, term)
-		}
 	}
 
-	if !modified {
-		return pred
-	}
-
-	var rv expression.Expression
-	if len(terms) == 0 {
-		return nil
-	} else if len(terms) == 1 {
-		rv = terms[0]
-	} else {
-		rv = expression.NewOr(terms...)
-	}
-
-	return rv
+	return nil
 }
 
 // get the integer value for LIMIT/OFFSET when specified
