@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/memory"
 	"github.com/couchbase/query/scheduler"
 	"github.com/couchbase/query/util"
 )
@@ -41,8 +42,24 @@ func updateStats(names []string, subClass string, keyspace datastore.Keyspace, c
 
 	params := newIndexUpdStatParams(keyspace, names)
 	description := keyspace.QualifiedName() + "(" + allNames + ")"
+
+	// MB-73749: A CREATE INDEX/BUILD INDEX statement triggers an UPDATE STATISTICS on the index
+	// that is run asynchronously as a task in the scheduler. This statistics update can still be
+	// running well after the CREATE INDEX/BUILD INDEX request has finished. When node-quota is enabled, a final release of
+	// any memory tracked by the request's memory session is performed when the request completes
+	// execution, returning that tracked memory back to the node-wide pool. However, if the
+	// scheduled UPDATE STATISTICS statement kept tracking memory against that same,
+	// already-released session afterwards, any memory it tracks against it can leak and never be
+	// returned back to the node-wide pool, since no final release would ever be called again. To
+	// avoid this, give the scheduled task its own Context with an independent memory session. Any
+	// memory used by the asynchronous UPDATE STATISTICS execution is tracked against this new
+	// session instead, and a final release is performed on it once the execution completes.
+	taskCtx := context.Copy()
+	if context.memorySession != nil {
+		taskCtx.SetMemorySession(memory.Register())
+	}
 	err = scheduler.ScheduleTask(sessionName, "update_statistics", subClass, time.Second,
-		updateIndexStats, nil, params, description, context)
+		updateIndexStats, nil, params, description, taskCtx)
 	if err != nil {
 		return errors.NewIndexUpdStatsError(allNames, "error scheduling task", err)
 	}
@@ -117,6 +134,9 @@ func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}
 	}
 	fullName += "`" + keyspace.Id() + "`"
 	query := "UPDATE STATISTICS FOR " + fullName + " INDEX(" + allNames + ")"
+
+	// MB-73749: Release any tracked memory back to the node-wide quota once the execution completes
+	defer context.Release()
 	_, _, err1 := context.EvaluateStatement(query, nil, nil, false, true, false, "")
 	if err1 != nil {
 		// error should already be logged during the scheduled UPDATE STATISTICS statement,

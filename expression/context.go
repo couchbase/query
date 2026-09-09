@@ -56,6 +56,7 @@ type Context interface {
 	SetPreserveProjectionOrder(on bool) bool
 	IsAdmin() bool
 	IsPrepared() bool
+	Release()
 }
 
 type ExecutionHandle interface {
