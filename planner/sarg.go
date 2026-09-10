@@ -102,7 +102,7 @@ func sargForOr(or *expression.Or, vpred expression.Expression, entry *indexEntry
 			exactInclude = exactInclude && iex
 		}
 
-		if exact && !entry.HasFlag(IE_OR_NON_SARG_EXPR) {
+		if exact && entry != nil && !entry.HasFlag(IE_OR_NON_SARG_EXPR) {
 			setFlag := false
 			if max1 < max {
 				// check for non-sargable key in predicate
