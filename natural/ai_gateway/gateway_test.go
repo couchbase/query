@@ -112,6 +112,7 @@ func (c *testContext) OpenStatement(_ string, _ map[string]value.Value, _ value.
 	_, _, _ bool, _ string) (functions.Handle, error) {
 	return nil, nil
 }
+func (c *testContext) Release() {}
 
 // datastore.Context extras
 func (c *testContext) GetScanCap() int64             { return 0 }

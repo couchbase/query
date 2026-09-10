@@ -99,6 +99,7 @@ func (*testContextStub) EvaluateStatement(_ string, _ map[string]value.Value, _ 
 func (*testContextStub) OpenStatement(_ string, _ map[string]value.Value, _ value.Values, _, _ bool, _ bool, _ string) (functions.Handle, error) {
 	return nil, nil
 }
+func (*testContextStub) Release() {}
 
 // logging.Log no-ops
 func (*testContextStub) Loga(_ logging.Level, _ func() string)            {}
