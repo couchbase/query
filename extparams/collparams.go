@@ -27,6 +27,7 @@ const (
 	_collectionSnapshotTimestamp = "snapshotTimestamp"
 	_collectionParallelScans     = "parallelScans"
 	_collectionDecimalToDouble   = "decimal-to-double"
+	_collectionTemporalToString  = "temporal-to-string"
 	_collectionUid               = "uid"
 	_collectionBucket            = "bucket"
 	_collectionScope             = "scope"
@@ -37,7 +38,7 @@ const (
 
 var collectionParamsTypes = map[string]any{CollectionRevison: 1, _collectionFormat: "", _collectionNamespace: "",
 	_collectionTableName: "", _collectionSnapshotId: "", _collectionSnapshotTimestamp: "",
-	_collectionParallelScans: 1, _collectionDecimalToDouble: false,
+	_collectionParallelScans: 1, _collectionDecimalToDouble: false, _collectionTemporalToString: false,
 	_collectionCatalog: "", _collectionCatalogType: "", _collectionCredentialId: "",
 	_collectionUid: "", _collectionBucket: "", _collectionScope: "", _collectionName: "", _collectionCompatVersion: 1}
 
@@ -48,7 +49,7 @@ var collectionMandatoryTypeParams = map[string][]string{
 
 var collectionOptinalTypeParams = map[string][]string{
 	CatalogTypeIceberg: {CollectionRevison, _collectionSnapshotId, _collectionSnapshotTimestamp,
-		_collectionParallelScans, _collectionDecimalToDouble,
+		_collectionParallelScans, _collectionDecimalToDouble, _collectionTemporalToString,
 		_collectionFormat, _collectionUid, _collectionBucket, _collectionScope, _collectionName, _collectionCompatVersion},
 }
 
@@ -166,6 +167,7 @@ type ExternalCollectionEntry struct {
 	SnapshotTimestamp string        `json:"snapshotTimestamp,omitempty"`
 	ParallelScans     int           `json:"parallelScans,omitempty"`
 	DecimalToDouble   bool          `json:"decimal-to-double,omitempty"`
+	TemporalToString  bool          `json:"temporal-to-string,omitempty"`
 	Uid               uint64        `json:"-"`
 	CatalogInfo       *CatalogEntry `json:"-"`
 }
@@ -175,8 +177,9 @@ type ExternalCollectionEntry struct {
 func (e *ExternalCollectionEntry) UnmarshalJSON(data []byte) error {
 	type Alias ExternalCollectionEntry
 	aux := &struct {
-		ParallelScans   json.RawMessage `json:"parallelScans,omitempty"`
-		DecimalToDouble json.RawMessage `json:"decimal-to-double,omitempty"`
+		ParallelScans    json.RawMessage `json:"parallelScans,omitempty"`
+		DecimalToDouble  json.RawMessage `json:"decimal-to-double,omitempty"`
+		TemporalToString json.RawMessage `json:"temporal-to-string,omitempty"`
 		*Alias
 	}{
 		Alias: (*Alias)(e),
@@ -201,23 +204,39 @@ func (e *ExternalCollectionEntry) UnmarshalJSON(data []byte) error {
 		}
 	}
 	if len(aux.DecimalToDouble) > 0 {
-		var b bool
-		if err := json.Unmarshal(aux.DecimalToDouble, &b); err == nil {
-			e.DecimalToDouble = b
-		} else {
-			var s string
-			if err := json.Unmarshal(aux.DecimalToDouble, &s); err != nil {
-				return fmt.Errorf("invalid decimal-to-double: %s", aux.DecimalToDouble)
-			}
-			switch s {
-			case "true":
-				e.DecimalToDouble = true
-			case "false":
-				e.DecimalToDouble = false
-			default:
-				return fmt.Errorf("invalid decimal-to-double value %q", s)
-			}
+		b, err := unmarshalBoolOrString(aux.DecimalToDouble, "decimal-to-double")
+		if err != nil {
+			return err
 		}
+		e.DecimalToDouble = b
+	}
+	if len(aux.TemporalToString) > 0 {
+		b, err := unmarshalBoolOrString(aux.TemporalToString, "temporal-to-string")
+		if err != nil {
+			return err
+		}
+		e.TemporalToString = b
 	}
 	return nil
+}
+
+// unmarshalBoolOrString decodes a JSON field that ns_server may store as a
+// native bool or, due to form-encoding, as the string "true"/"false".
+func unmarshalBoolOrString(raw json.RawMessage, name string) (bool, error) {
+	var b bool
+	if err := json.Unmarshal(raw, &b); err == nil {
+		return b, nil
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return false, fmt.Errorf("invalid %s: %s", name, raw)
+	}
+	switch s {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid %s value %q", name, s)
+	}
 }

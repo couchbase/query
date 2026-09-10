@@ -334,10 +334,40 @@ func compareValues(rowVal interface{}, litVal interface{}) (int, bool) {
 		li, _ := toInt64(lv)
 		return compareRowValToInt64(rowVal, li)
 	case iceberg.Date:
+		// Reader/Scanner render DATE columns as "YYYY-MM-DD" strings (see
+		// iceberg_temporal.go); reverse that back to an epoch-day count
+		// before comparing, so this stays exact instead of a lossy string
+		// compare against an int-typed literal.
+		if s, ok := rowVal.(string); ok {
+			if days, pok := parseIcebergDate(s); pok {
+				return compareRowValToInt64(int64(days), int64(lv))
+			}
+			return 0, false
+		}
 		return compareRowValToInt64(rowVal, int64(lv))
 	case iceberg.Time:
+		if s, ok := rowVal.(string); ok {
+			if micros, pok := parseIcebergTime(s); pok {
+				return compareRowValToInt64(micros, int64(lv))
+			}
+			return 0, false
+		}
 		return compareRowValToInt64(rowVal, int64(lv))
 	case iceberg.Timestamp:
+		if s, ok := rowVal.(string); ok {
+			if micros, pok := parseIcebergTimestampTime(s, false); pok {
+				return compareRowValToInt64(micros, int64(lv))
+			}
+			return 0, false
+		}
+		return compareRowValToInt64(rowVal, int64(lv))
+	case iceberg.TimestampNano:
+		if s, ok := rowVal.(string); ok {
+			if nanos, pok := parseIcebergTimestampTime(s, true); pok {
+				return compareRowValToInt64(nanos, int64(lv))
+			}
+			return 0, false
+		}
 		return compareRowValToInt64(rowVal, int64(lv))
 	case float32, float64:
 		lf, _ := toFloat64(lv)

@@ -355,6 +355,8 @@ Optional WITH parameters (TYPE = ICEBERG):
 | `snapshotId` | string | No | Default snapshot ID to use when querying |
 | `snapshotTimestamp` | string | No | Default snapshot timestamp to use when querying |
 | `parallelScans` | int | No | Number of parallel scan threads (default: 1) |
+| `decimal-to-double` | bool | No | When `true`, DECIMAL columns are returned as `float64` instead of their string representation (default: `false`) |
+| `temporal-to-string` | bool | No | When `true`, TIMESTAMP/TIMESTAMPTZ/DATE/TIME columns are returned as ISO-8601 strings instead of raw epoch integers (default: `false`) |
 | `rev` | string | No | Revision (managed by server) |
 | `uid` | string | No | Unique collection ID (managed by server) |
 | `compat_version` | int | No | Compatibility version (managed by server) |

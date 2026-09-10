@@ -781,6 +781,7 @@ func ScanIcebergCatalog(externalEntry *extparams.ExternalCollectionEntry, params
 			QuotaProjectID:     catalogInfo.QuotaProjectID,
 			ParallelScans:      parallelScans,
 			DecimalToDouble:    externalEntry.DecimalToDouble,
+			TemporalToString:   externalEntry.TemporalToString,
 			SQLDialect:         catalogInfo.SQLDialect,
 			Branch:             catalogInfo.Branch,
 		}

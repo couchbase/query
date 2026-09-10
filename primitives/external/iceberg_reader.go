@@ -40,18 +40,19 @@ import (
 
 // Reader handles iteration over Iceberg table scan results using Arrow records
 type Reader struct {
-	ctx             go_context.Context
-	scan            *table.Scan
-	arrowSchema     *arrow.Schema
-	recordIter      iter.Seq2[arrow.RecordBatch, error]
-	currentRecord   arrow.RecordBatch
-	currentRow      int
-	schema          interface{}
-	columnFilter    func(string) bool // Optional column filter function
-	decimalToDouble bool              // When true, Decimal128/256 columns yield float64 instead of string
-	lastError       error             // Last error encountered during iteration
-	mu              sync.Mutex
-	closed          bool
+	ctx              go_context.Context
+	scan             *table.Scan
+	arrowSchema      *arrow.Schema
+	recordIter       iter.Seq2[arrow.RecordBatch, error]
+	currentRecord    arrow.RecordBatch
+	currentRow       int
+	schema           interface{}
+	columnFilter     func(string) bool // Optional column filter function
+	decimalToDouble  bool              // When true, Decimal128/256 columns yield float64 instead of string
+	temporalToString bool              // When true, TIMESTAMP/DATE/TIME columns render as ISO-8601 strings instead of raw epoch ints
+	lastError        error             // Last error encountered during iteration
+	mu               sync.Mutex
+	closed           bool
 }
 
 // NewReader creates a new reader for an Iceberg table using arrow records
@@ -88,16 +89,25 @@ func NewReader(ctx go_context.Context, scan *table.Scan) (*Reader, error) {
 // Columns for which the filter returns false will be excluded from results
 func (r *Reader) SetColumnFilter(filter func(string) bool) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.columnFilter = filter
+	r.mu.Unlock()
 }
 
 // SetDecimalToDouble toggles whether Decimal128/256 columns are returned as float64
 // (true) or as their string representation (false, the default).
 func (r *Reader) SetDecimalToDouble(b bool) {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.decimalToDouble = b
+	r.mu.Unlock()
+}
+
+// SetTemporalToString toggles whether TIMESTAMP/TIMESTAMPTZ/DATE/TIME columns are
+// rendered as ISO-8601 strings (true) or as raw epoch integers (false, the default,
+// preserving pre-existing behavior).
+func (r *Reader) SetTemporalToString(b bool) {
+	r.mu.Lock()
+	r.temporalToString = b
+	r.mu.Unlock()
 }
 
 // Next advances the reader to the next row
@@ -329,15 +339,40 @@ func (r *Reader) getColumnValue(col arrow.Array, pos int) interface{} {
 		}
 		return arr.ValueStr(pos)
 	case *array.Timestamp:
-		return int64(arr.Value(pos))
+		if !r.temporalToString {
+			// Preserve the pre-existing raw-int behavior exactly: the value
+			// in whatever unit the column's own Arrow type uses, unscaled.
+			return int64(arr.Value(pos))
+		}
+		dt := arr.DataType().(*arrow.TimestampType)
+		hasTZ := isIcebergUTCAlias(dt.TimeZone)
+		if dt.Unit == arrow.Nanosecond {
+			return formatIcebergTimestampNano(int64(arr.Value(pos)), hasTZ)
+		}
+		return formatIcebergTimestamp(scaleToMicros(int64(arr.Value(pos)), dt.Unit), hasTZ)
 	case *array.Date32:
-		return int32(arr.Value(pos))
+		if !r.temporalToString {
+			return int32(arr.Value(pos))
+		}
+		return formatIcebergDate(int32(arr.Value(pos)))
 	case *array.Date64:
-		return int64(arr.Value(pos))
+		if !r.temporalToString {
+			return int64(arr.Value(pos))
+		}
+		// Arrow Date64 stores milliseconds since epoch (at midnight).
+		return formatIcebergDate(int32(int64(arr.Value(pos)) / 86400000))
 	case *array.Time32:
-		return int32(arr.Value(pos))
+		if !r.temporalToString {
+			return int32(arr.Value(pos))
+		}
+		dt := arr.DataType().(*arrow.Time32Type)
+		return formatIcebergTime(scaleToMicros(int64(arr.Value(pos)), dt.Unit))
 	case *array.Time64:
-		return int64(arr.Value(pos))
+		if !r.temporalToString {
+			return int64(arr.Value(pos))
+		}
+		dt := arr.DataType().(*arrow.Time64Type)
+		return formatIcebergTime(scaleToMicros(int64(arr.Value(pos)), dt.Unit))
 	case *array.Struct:
 		return r.getStructValue(arr, pos)
 	case *array.List:
@@ -373,10 +408,17 @@ func getVariantValue(arr *extensions.VariantArray, pos int, decimalToDouble bool
 }
 
 // decodeVariantScalar recursively converts a decoded variant.Value into native Go values,
-// mirroring the scalar conventions getColumnValue already uses for the same Arrow/Parquet
-// logical types (timestamps/dates/times as epoch ints, decimals following decimalToDouble)
-// so a value doesn't change shape depending on whether it arrived via a plain column or
-// buried inside a Variant.
+// following decimalToDouble for decimals as getColumnValue does for a plain column.
+//
+// KNOWN INCONSISTENCY, not fixed here: temporal values (Date32/Timestamp/Time64) below
+// are still returned as raw epoch ints, unlike getColumnValue's plain-column path, which
+// now formats these as ISO-8601 strings (see iceberg_temporal.go). So the same logical
+// temporal value renders differently depending on whether it arrived via a top-level
+// column or buried inside a VARIANT sub-field. Fixing this means threading the Arrow
+// unit/timezone metadata for the variant's shredded typed_value field down to this call
+// (variant.Value's Date32/Timestamp/Time64 cases don't carry that themselves the way an
+// arrow.DataType does), and updating compareValues'/buildVariantRowGroupMatcher's variant
+// comparators to match. Left as a follow-up rather than done here.
 func decodeVariantScalar(vv variant.Value, decimalToDouble bool) interface{} {
 	switch t := vv.Value().(type) {
 	case nil, bool, int8, int16, int32, int64, float32, float64, string:

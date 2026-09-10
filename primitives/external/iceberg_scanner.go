@@ -116,6 +116,7 @@ type Scanner struct {
 	parallelScans     int                // Scan parallelism override (0 = use default 1)
 	collectionCred    *cbauth.Credential // Credential for reading data files
 	decimalToDouble   bool               // When true, decimal columns are converted to float64
+	temporalToString  bool               // When true, TIMESTAMP/DATE/TIME columns render as ISO-8601 strings instead of raw epoch ints
 
 	filesScanned int64 // Number of data files touched by the scan (atomic)
 	bytesRead    int64 // Actual bytes read from storage across all files (atomic); for
@@ -180,6 +181,7 @@ type ScanOptions struct {
 	QuotaProjectID     string
 	ParallelScans      int  // Scan parallelism override (defaults to 1 if not set)
 	DecimalToDouble    bool // When true, Decimal128/256 columns are converted to float64 instead of string
+	TemporalToString   bool // When true, TIMESTAMP/DATE/TIME columns render as ISO-8601 strings instead of raw epoch ints
 	SQLDialect         string
 	Branch             string // Nessie branch/ref; maps to rest.WithPrefix for NESSIE/NESSIE_REST
 }
@@ -912,18 +914,19 @@ func NewScanner(ctx go_context.Context, opts ScanOptions, cat catalog.Catalog) (
 	}
 
 	scanner := &Scanner{
-		databaseName:    opts.Database,
-		tableName:       opts.Table,
-		tableIdent:      catalog.ToIdentifier(opts.Database + "." + opts.Table),
-		snapshotID:      opts.SnapshotID,
-		snapshotAsOf:    opts.SnapshotAsOf,
-		selectedFields:  opts.SelectedFields,
-		limit:           opts.Limit,
-		awsConfig:       opts.AwsConfig,
-		sourceType:      strings.ToUpper(opts.SourceType),
-		parallelScans:   opts.ParallelScans,
-		collectionCred:  opts.CollectionCred,
-		decimalToDouble: opts.DecimalToDouble,
+		databaseName:     opts.Database,
+		tableName:        opts.Table,
+		tableIdent:       catalog.ToIdentifier(opts.Database + "." + opts.Table),
+		snapshotID:       opts.SnapshotID,
+		snapshotAsOf:     opts.SnapshotAsOf,
+		selectedFields:   opts.SelectedFields,
+		limit:            opts.Limit,
+		awsConfig:        opts.AwsConfig,
+		sourceType:       strings.ToUpper(opts.SourceType),
+		parallelScans:    opts.ParallelScans,
+		collectionCred:   opts.CollectionCred,
+		decimalToDouble:  opts.DecimalToDouble,
+		temporalToString: opts.TemporalToString,
 	}
 
 	if cat == nil {
@@ -1504,6 +1507,9 @@ func (s *Scanner) CreateReader(ctx go_context.Context) (*Reader, error) {
 	if s.decimalToDouble {
 		reader.SetDecimalToDouble(true)
 	}
+	if s.temporalToString {
+		reader.SetTemporalToString(true)
+	}
 
 	// Set column filter if selectedFields is specified
 	if len(s.selectedFields) > 0 {
@@ -1810,7 +1816,49 @@ func (s *Scanner) convertArrowValue(column arrow.Array, rowIdx int, fieldType ar
 	case *array.Boolean:
 		return arr.Value(rowIdx), nil
 	case *array.Timestamp:
-		return arr.Value(rowIdx), nil
+		if !s.temporalToString {
+			// Preserve the pre-existing raw-int behavior exactly: the value in
+			// whatever unit the column's own Arrow type uses, unscaled.
+			return int64(arr.Value(rowIdx)), nil
+		}
+		dt, ok := fieldType.(*arrow.TimestampType)
+		if !ok {
+			return int64(arr.Value(rowIdx)), nil
+		}
+		hasTZ := isIcebergUTCAlias(dt.TimeZone)
+		if dt.Unit == arrow.Nanosecond {
+			return formatIcebergTimestampNano(int64(arr.Value(rowIdx)), hasTZ), nil
+		}
+		return formatIcebergTimestamp(scaleToMicros(int64(arr.Value(rowIdx)), dt.Unit), hasTZ), nil
+	case *array.Date32:
+		if !s.temporalToString {
+			return int32(arr.Value(rowIdx)), nil
+		}
+		return formatIcebergDate(int32(arr.Value(rowIdx))), nil
+	case *array.Date64:
+		if !s.temporalToString {
+			return int64(arr.Value(rowIdx)), nil
+		}
+		// Arrow Date64 stores milliseconds since epoch (at midnight).
+		return formatIcebergDate(int32(int64(arr.Value(rowIdx)) / 86400000)), nil
+	case *array.Time32:
+		if !s.temporalToString {
+			return int32(arr.Value(rowIdx)), nil
+		}
+		dt, ok := fieldType.(*arrow.Time32Type)
+		if !ok {
+			return arr.Value(rowIdx), nil
+		}
+		return formatIcebergTime(scaleToMicros(int64(arr.Value(rowIdx)), dt.Unit)), nil
+	case *array.Time64:
+		if !s.temporalToString {
+			return int64(arr.Value(rowIdx)), nil
+		}
+		dt, ok := fieldType.(*arrow.Time64Type)
+		if !ok {
+			return arr.Value(rowIdx), nil
+		}
+		return formatIcebergTime(scaleToMicros(int64(arr.Value(rowIdx)), dt.Unit)), nil
 	case *extensions.VariantArray:
 		return getVariantValue(arr, rowIdx, s.decimalToDouble), nil
 	default:
@@ -2486,7 +2534,7 @@ func (s *Scanner) streamParquetFile(ctx go_context.Context, r parquet.ReaderAtSe
 	}
 	defer rr.Release()
 
-	helper := &Reader{decimalToDouble: s.decimalToDouble}
+	helper := &Reader{decimalToDouble: s.decimalToDouble, temporalToString: s.temporalToString}
 
 	for rr.Next() {
 		rec := rr.Record()
@@ -2519,7 +2567,7 @@ func (s *Scanner) streamArrowIPCFile(ctx go_context.Context, data []byte, result
 	}
 	defer ipcReader.Release()
 
-	helper := &Reader{decimalToDouble: s.decimalToDouble}
+	helper := &Reader{decimalToDouble: s.decimalToDouble, temporalToString: s.temporalToString}
 	fieldSet := s.projectionFieldSet()
 
 	for ipcReader.Next() {
