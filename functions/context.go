@@ -61,6 +61,7 @@ type Context interface {
 	Resume(changeCallerState bool)
 	IsPrepared() bool
 	SanitizeStatement(stmt string) (string, value.Value, error)
+	Release()
 }
 
 type CurlContext interface {
