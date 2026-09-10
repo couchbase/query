@@ -1508,14 +1508,11 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			fltrExpr := fl.FltrExpr()
 			derived := false
 			orig := false
-			subFltr := false
 			if chkOr || chkUnnest {
-				fltr := this.orGetIndexFilter(fltrExpr, entry.sargKeys, baseKeyspace, missing, skip)
+				fltr := this.orGetIndexFilter(fltrExpr, entry.idxSargKeys, entry.maxKeys,
+					baseKeyspace, missing, skip)
 				if fltr == nil {
 					continue
-				} else if fltr != fltrExpr {
-					fltrExpr = fltr
-					subFltr = true
 				}
 			} else if _, ok := entry.exactFilters[fl]; ok {
 				// Skip the filters used to generate exact spans since these are
@@ -1525,7 +1522,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				continue
 			}
 
-			if !subFltr && entry.cond != nil {
+			if entry.cond != nil {
 				// Also skip filters that is in index condition
 				origExpr := fl.OrigExpr()
 				flExpr := fltrExpr
@@ -1573,7 +1570,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 						if fl.Selec() > 0.0 {
 							// filters marked with EXPR_DEFAULT_LIKE has its
 							// selectivity already accounted for in spans
-							if !subFltr && !fltrExpr.HasExprFlag(expression.EXPR_DEFAULT_LIKE) {
+							if !fltrExpr.HasExprFlag(expression.EXPR_DEFAULT_LIKE) {
 								selec *= fl.Selec()
 							}
 						} else {
@@ -1856,8 +1853,8 @@ func (this *builder) orSargUseFilters(pred *expression.Or, baseKeyspace *base.Ba
 	return true
 }
 
-func (this *builder) orGetIndexFilter(pred expression.Expression, keys expression.Expressions,
-	baseKeyspace *base.BaseKeyspace, missing, skip bool) expression.Expression {
+func (this *builder) orGetIndexFilter(pred expression.Expression, keys datastore.IndexKeys,
+	max int, baseKeyspace *base.BaseKeyspace, missing, skip bool) expression.Expression {
 	var orOps expression.Expressions
 	if or, ok := pred.(*expression.Or); ok {
 		orOps = or.Operands()
@@ -1866,33 +1863,16 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, keys expressio
 	}
 
 	for _, op := range orOps {
-		var andOps expression.Expressions
-		if and, ok := op.(*expression.And); ok {
-			andOps = and.Operands()
-		} else {
-			andOps = expression.Expressions{op}
+		min, _, _, _ := SargableFor(op, keys, missing, skip, nil, this.context, this.aliases)
+		if min == 0 {
+			return pred
 		}
-		exact := true
-		for _, op1 := range andOps {
-			for i, key := range keys {
-				min, _, _, _ := SargableFor(op1, datastore.IndexKeys{&datastore.IndexKey{key, datastore.IK_NONE}},
-					(missing || i > 0), skip, nil, this.context, this.aliases)
-				if min == 0 {
-					continue
-				}
-				rs, ex, err := sargFor(op1, key, false, false, baseKeyspace,
-					this.keyspaceNames, this.advisorValidate(),
-					(missing || i > 0), false, this.aliases, this.context)
-				if err == nil && rs != nil {
-					if !ex {
-						exact = false
-					}
-					break
-				}
-			}
-			if !exact {
-				return pred
-			}
+		// indexEntry is only used for OR clause, since we've broken up the OR already, it
+		// should be safe to use a nil pointer
+		spans, exact, err := SargFor(op, nil, keys, missing, nil, max, false, false,
+			baseKeyspace, this.keyspaceNames, this.advisorValidate(), this.aliases, this.context)
+		if err == nil && spans != nil && spans.Size() > 0 && !exact {
+			return pred
 		}
 	}
 
