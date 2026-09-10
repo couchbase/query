@@ -25,7 +25,9 @@ func (c *Client) CreateCredentialStore(cred cbauth.Creds, name string, params ma
 
 func (c *Client) AlterCredentialStore(cred cbauth.Creds, name string, params map[string]any, ctx context.Context) error {
 	target := fmt.Sprintf("%s/%s", _CREDENTIAL_STORE_PATH, uriAdj(name))
-	return c.parsePostURLResponseJSON(target, cred, params, nil, ctx)
+	// ns_server treats this endpoint as create-only for POST (409s if the credential
+	// already exists); updating an existing credential requires PUT.
+	return c.parsePutURLResponseJSON(target, cred, params, nil, ctx)
 }
 
 func (c *Client) DropCredentialStore(cred cbauth.Creds, name string, ctx context.Context) error {

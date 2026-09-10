@@ -1151,6 +1151,17 @@ func (c *Client) parsePutURLResponseTerse(path string, cred cbauth.Creds, params
 
 // parsePostURLResponseJSON sends a POST request with JSON body
 func (c *Client) parsePostURLResponseJSON(path string, cred cbauth.Creds, params map[string]any, out interface{}, ctx context.Context) error {
+	return c.doURLRequestJSON("POST", path, cred, params, out, ctx)
+}
+
+// parsePutURLResponseJSON sends a PUT request with JSON body
+func (c *Client) parsePutURLResponseJSON(path string, cred cbauth.Creds, params map[string]any, out interface{}, ctx context.Context) error {
+	return c.doURLRequestJSON("PUT", path, cred, params, out, ctx)
+}
+
+// doURLRequestJSON sends a request with a JSON body and the given HTTP verb, returning an
+// error for any non-2xx response instead of silently treating it as success.
+func (c *Client) doURLRequestJSON(verb, path string, cred cbauth.Creds, params map[string]any, out interface{}, ctx context.Context) error {
 	var requestUrl string
 	if q := bytes.IndexByte([]byte(path), '?'); q > 0 {
 		requestUrl = c.BaseURL.Scheme + "://" + c.BaseURL.Host + path[:q] + "?" + path[q+1:]
@@ -1165,9 +1176,9 @@ func (c *Client) parsePostURLResponseJSON(path string, cred cbauth.Creds, params
 
 	var req *http.Request
 	if ctx != nil {
-		req, err = http.NewRequestWithContext(ctx, "POST", requestUrl, bytes.NewReader(body))
+		req, err = http.NewRequestWithContext(ctx, verb, requestUrl, bytes.NewReader(body))
 	} else {
-		req, err = http.NewRequest("POST", requestUrl, bytes.NewReader(body))
+		req, err = http.NewRequest(verb, requestUrl, bytes.NewReader(body))
 	}
 	if err != nil {
 		return err
@@ -1190,6 +1201,17 @@ func (c *Client) parsePostURLResponseJSON(path string, cred cbauth.Creds, params
 		return err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
+		var outBuf interface{}
+		if json.Unmarshal(bod, &outBuf) == nil && outBuf != nil {
+			if errText, ok := outBuf.(string); ok {
+				return fmt.Errorf("%s", errText)
+			}
+		}
+		return fmt.Errorf("HTTP error %v on %s %q: %s", res.Status, verb, requestUrl, bod)
+	}
 
 	if out != nil {
 		return json.NewDecoder(res.Body).Decode(out)
