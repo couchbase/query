@@ -1509,8 +1509,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			derived := false
 			orig := false
 			if chkOr || chkUnnest {
-				fltr := this.orGetIndexFilter(fltrExpr, entry.idxSargKeys, entry.maxKeys,
-					baseKeyspace, missing, skip)
+				fltr := this.orGetIndexFilter(fltrExpr, entry, baseKeyspace, missing, skip)
 				if fltr == nil {
 					continue
 				}
@@ -1853,8 +1852,9 @@ func (this *builder) orSargUseFilters(pred *expression.Or, baseKeyspace *base.Ba
 	return true
 }
 
-func (this *builder) orGetIndexFilter(pred expression.Expression, keys datastore.IndexKeys,
-	max int, baseKeyspace *base.BaseKeyspace, missing, skip bool) expression.Expression {
+func (this *builder) orGetIndexFilter(pred expression.Expression, entry *indexEntry,
+	baseKeyspace *base.BaseKeyspace, missing, skip bool) expression.Expression {
+
 	var orOps expression.Expressions
 	if or, ok := pred.(*expression.Or); ok {
 		orOps = or.Operands()
@@ -1863,13 +1863,11 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, keys datastore
 	}
 
 	for _, op := range orOps {
-		min, _, _, _ := SargableFor(op, keys, missing, skip, nil, this.context, this.aliases)
+		min, _, _, _ := SargableFor(op, entry.idxSargKeys, missing, skip, nil, this.context, this.aliases)
 		if min == 0 {
 			return pred
 		}
-		// indexEntry is only used for OR clause, since we've broken up the OR already, it
-		// should be safe to use a nil pointer
-		spans, exact, err := SargFor(op, nil, keys, missing, nil, max, false, false,
+		spans, exact, err := SargFor(op, entry, entry.idxSargKeys, missing, nil, entry.maxKeys, false, false,
 			baseKeyspace, this.keyspaceNames, this.advisorValidate(), this.aliases, this.context)
 		if err == nil && spans != nil && spans.Size() > 0 && !exact {
 			return pred
