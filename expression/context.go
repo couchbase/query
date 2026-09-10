@@ -61,6 +61,7 @@ type Context interface {
 	IsAdmin() bool
 	IsPrepared() bool
 	SanitizeStatement(stmt string) (string, value.Value, error)
+	Release()
 }
 
 type ExecutionHandle interface {

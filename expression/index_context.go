@@ -208,3 +208,6 @@ func (this *IndexContext) Fatalf(f string, args ...interface{})                 
 func (this *IndexContext) IsPrepared() bool {
 	return false
 }
+
+func (this *IndexContext) Release() {
+}
