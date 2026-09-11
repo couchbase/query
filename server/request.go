@@ -23,6 +23,7 @@ import (
 	"unicode/utf8"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/algebra"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
@@ -1177,6 +1178,71 @@ func (this *BaseRequest) GetTimings() execution.Operator {
 	return this.timings
 }
 
+// The execution tree of a request, marshalled on demand.
+//
+// system:active_requests and /admin/active_requests report on requests other than the one doing
+// the reporting, and do so from a different goroutine: the request being reported on can complete
+// at any moment, cleaning up its execution tree and returning its operators to their pools, so a
+// concurrent marshal can fault on memory that is being torn down underneath it.
+// There is no contention to speak of on this path and the plan is best effort reporting rather
+// than something the request depends on, so rather than synchronise the whole execution tree
+// against its own cleanup, the fault is contained here and the plan reported as null.
+type requestPlan struct {
+	id      string
+	timings execution.Operator
+}
+
+func (this *requestPlan) MarshalJSON() (b []byte, err error) {
+
+	// the tree can be cleaned up while it is being walked: returning an error leaves the caller
+	// with a null plan, which beats aborting the request that is doing the reporting
+	defer func() {
+		if e := recover(); e != nil {
+			b = nil
+			err = fmt.Errorf("execution tree cleaned up whilst marshalling: %v", e)
+			logPlanCleanedUp(this.id, e)
+		}
+	}()
+
+	return json.Marshal(this.timings)
+}
+
+func logPlanCleanedUp(id string, e interface{}) {
+	logging.Debugf("Execution tree of request %v cleaned up whilst gathering its plan: %v", id, e)
+}
+
+// Gathers a request's plan and optimizer estimates on behalf of another request.
+// The plan is marshalled lazily - and only if it is actually projected - but is protected against
+// the execution tree being cleaned up in the meantime; the estimates are gathered now, so they
+// need the same protection here.
+// Both are nil if the request has no execution tree, or if it was cleaned up whilst gathering.
+func RequestPlan(request Request) (value.Value, map[string]interface{}) {
+	return gatherRequestPlan(request.Id().String(), request.GetTimings(),
+		func(op execution.Operator) map[string]interface{} { return request.Output().FmtOptimizerEstimates(op) })
+}
+
+// The estimates are gathered through a function so that whichever way the caller reaches them -
+// Output() for a foreign request, the request itself when formatting - is resolved inside the
+// guarded region, along with the walk of the tree they are gathered from.
+func gatherRequestPlan(id string, timings execution.Operator,
+	fmtEstimates func(execution.Operator) map[string]interface{}) (plan value.Value, estimates map[string]interface{}) {
+
+	if timings == nil {
+		return nil, nil
+	}
+
+	defer func() {
+		if e := recover(); e != nil {
+			plan = nil
+			estimates = nil
+			logPlanCleanedUp(id, e)
+		}
+	}()
+
+	estimates = fmtEstimates(timings)
+	return value.NewMarshalledValue(&requestPlan{id: id, timings: timings}), estimates
+}
+
 func (this *BaseRequest) SetFmtTimings(t []byte) {
 	this.fmtTimings = t
 }
@@ -1886,11 +1952,14 @@ func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof
 	}
 
 	if prof {
-		timings := this.GetTimings()
+
+		// system:active_requests and /admin/active_requests format requests other than the one doing
+		// the reporting, and do so from a different goroutine: the request being formatted can complete -
+		// and clean up its execution tree - whilst its plan is gathered or marshalled, so this is guarded
+		// against the resulting faults and yields a null plan rather than failing the reporting request
+		timings, p := gatherRequestPlan(this.Id().String(), this.GetTimings(), this.FmtOptimizerEstimates)
 		if timings != nil {
-			item["timings"] = util.InterfaceRedacted(value.ApplyDurationStyleToValue(durStyle, value.NewMarshalledValue(timings)),
-				redact)
-			p := this.FmtOptimizerEstimates(timings)
+			item["timings"] = util.InterfaceRedacted(value.ApplyDurationStyleToValue(durStyle, timings), redact)
 			if p != nil {
 				item["optimizerEstimates"] = value.NewValue(util.InterfaceRedacted(p, redact))
 			}
