@@ -54,10 +54,18 @@ func NameDictCacheEntries() []string {
 
 func Get(key string) (DictCacheEntry, error) {
 	ce, err := dictionary.Get(key)
-	if err != nil {
+
+	// dictionary.Get() reports "not found" as (nil, nil) rather than as an error;
+	// pass that on instead of asserting on a nil interface (MB-73743)
+	if err != nil || ce == nil {
 		return nil, err
 	}
-	return ce.(DictCacheEntry), nil
+
+	entry, ok := ce.(DictCacheEntry)
+	if !ok {
+		return nil, errors.NewSystemCollectionError("Unexpected dictionary entry type for "+key, nil)
+	}
+	return entry, nil
 }
 
 func Count(bucketName string, context datastore.QueryContext, check func(context datastore.QueryContext, ds datastore.Datastore,
