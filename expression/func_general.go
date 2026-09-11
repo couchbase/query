@@ -290,6 +290,7 @@ const (
 	_FUNCTION_INFO
 	_PREPARED_INFO
 	_CATALOG_INFO
+	_KNOWLEDGE_INFO
 )
 
 type ExtractDDL struct {
@@ -501,6 +502,50 @@ func buildCatalogDDL(catVal value.Value) string {
 	return b.String()
 }
 
+// buildKnowledgeDDL builds a CREATE OR REPLACE KNOWLEDGE statement from a single
+// system:natural_knowledge row.  One statement is emitted per entry rather than a single bulk
+// "CREATE OR REPLACE KNOWLEDGE FOR <keyspace> FROM {...}" per collection so that individual
+// entries can be replayed, edited or omitted independently.  OR REPLACE is used - matching the
+// other DDL this function generates, which is all written to be re-runnable - and is always legal
+// here since every stored entry has a name (an omitted name is filled in with a generated one when
+// the entry is created).
+func buildKnowledgeDDL(kv value.Value, bucket string) string {
+	// values are restricted to strings (see semantics.VisitCreateKnowledge), so anything else is a
+	// row we can't render as valid DDL and is skipped rather than emitted malformed
+	name, ok := kv.Field("name")
+	if !ok || name.Type() != value.STRING {
+		return ""
+	}
+	scope, ok := kv.Field("scope")
+	if !ok || scope.Type() != value.STRING {
+		return ""
+	}
+	collection, ok := kv.Field("collection")
+	if !ok || collection.Type() != value.STRING {
+		return ""
+	}
+	val, ok := kv.Field("value")
+	if !ok || val.Type() != value.STRING {
+		return ""
+	}
+
+	var b strings.Builder
+	b.WriteString("CREATE OR REPLACE KNOWLEDGE `")
+	b.WriteString(name.ToString())
+	b.WriteString("` FOR `")
+	b.WriteString(bucket)
+	b.WriteString("`.`")
+	b.WriteString(scope.ToString())
+	b.WriteString("`.`")
+	b.WriteString(collection.ToString())
+	b.WriteString("` AS ")
+	// String() renders the value as a JSON string literal: quoted, with any embedded quotes,
+	// backslashes and control characters escaped, which is exactly N1QL's string literal syntax
+	b.WriteString(val.String())
+	b.WriteRune(';')
+	return b.String()
+}
+
 func (this *ExtractDDL) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
@@ -533,6 +578,10 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			return nil, err
 		} else if with.Type() == value.MISSING {
 			return value.MISSING_VALUE, nil
+		} else if with.Type() == value.ARRAY {
+			// flags on their own may be given as a bare array - EXTRACTDDL('', ['knowledge']) -
+			// rather than having to be wrapped up as EXTRACTDDL('', {'flags':['knowledge']})
+			with = value.NewValue(map[string]interface{}{"flags": with})
 		} else if with.Type() != value.OBJECT {
 			return value.NULL_VALUE, nil
 		}
@@ -569,7 +618,8 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 	}
 	buckets := v.Actual().([]interface{})
 
-	flags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO | _FUNCTION_INFO | _PREPARED_INFO
+	flags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO | _FUNCTION_INFO | _PREPARED_INFO |
+		_KNOWLEDGE_INFO
 	if f, ok := with.Field("flags"); ok {
 		if f.Type() == value.STRING {
 			f = value.NewValue([]interface{}{f})
@@ -580,8 +630,16 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			act := f.Actual().([]interface{})
 			flags = 0
 			for i := range act {
-				switch t := act[i].(type) {
-				case value.Value:
+				// Elements are value.Values only when the array was built in the statement
+				// itself - EXTRACTDDL('b', {'flags':['index']}) - because ArrayConstruct stores
+				// the evaluated operands.  An array reaching us any other way holds plain Go
+				// values: a parameter (EXTRACTDDL('b', {'flags':$flags})), a document field or a
+				// subquery result all arrive unwrapped from JSON.  The original type switch
+				// matched value.Value alone, so every one of those spellings reported "Invalid
+				// flag" for flags that are in fact valid; normalising first reads both the same
+				// way.  See the named-parameter cases in case_extractddl_basic.json.
+				switch t := value.NewValue(act[i]); t.Type() {
+				case value.STRING:
 					switch t.ToString() {
 					case "bucket":
 						flags |= _BUCKET_INFO
@@ -599,6 +657,8 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 						flags |= _PREPARED_INFO
 					case "catalog":
 						flags |= _CATALOG_INFO
+					case "knowledge":
+						flags |= _KNOWLEDGE_INFO
 					default:
 						return value.MISSING_VALUE, errors.NewWarning(fmt.Sprintf("Invalid flag: %v", act[i]))
 					}
@@ -616,12 +676,13 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		flags |= _CATALOG_INFO
 	}
 
-	if flags&(_BUCKET_INFO|_SCOPE_INFO|_COLLECTION_INFO|_INDEX_INFO|_SEQUENCE_INFO|_FUNCTION_INFO|_PREPARED_INFO|_CATALOG_INFO) == 0 {
+	if flags&(_BUCKET_INFO|_SCOPE_INFO|_COLLECTION_INFO|_INDEX_INFO|_SEQUENCE_INFO|_FUNCTION_INFO|_PREPARED_INFO|_CATALOG_INFO|
+		_KNOWLEDGE_INFO) == 0 {
 		return value.NULL_VALUE, errors.NewWarning("Flags exclude all data.")
 	}
 
 	// Check if bucket-related operations are requested but no buckets found
-	bucketRelatedFlags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO
+	bucketRelatedFlags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO | _KNOWLEDGE_INFO
 	if len(buckets) == 0 && (flags&bucketRelatedFlags) != 0 {
 		// Only return error if ONLY bucket-related flags are requested (no prepared or function flags)
 		if (flags & (_PREPARED_INFO | _FUNCTION_INFO)) == 0 { // If neither prepared nor function flags are set
@@ -942,6 +1003,28 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			for _, sf := range scopedFunctions {
 				funcVal := value.NewValue(sf)
 				if ddl := buildFunctionDDL(funcVal, bucket); ddl != "" {
+					res = append(res, ddl)
+				}
+			}
+		}
+
+		if flags&_KNOWLEDGE_INFO != 0 {
+			// knowledge entries are attached to a collection, so these come last for the bucket:
+			// replaying the generated DDL in order creates the collection before its knowledge
+			stmt = "SELECT `scope`, `collection`, `name`, `value`" +
+				" FROM system:natural_knowledge" +
+				" WHERE `bucket` = ?" +
+				" ORDER BY `scope`, `collection`, `name`"
+			v, _, err = context.EvaluateStatement(stmt, nil, posArg, false, true, false, "")
+			if err != nil {
+				return value.MISSING_VALUE, err
+			}
+			for k := 0; ; k++ {
+				kv, ok := v.Index(k)
+				if !ok {
+					break
+				}
+				if ddl := buildKnowledgeDDL(kv, bucket); ddl != "" {
 					res = append(res, ddl)
 				}
 			}

@@ -22,6 +22,22 @@ func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
 }
 
+// runAdminStmt runs a statement with full admin credentials, for the statements whose privileges
+// the harness's regular (bucket-owner) credentials don't satisfy.
+func runAdminStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
+	return gsi.RunAdminStmt(mockServer, q)
+}
+
+// mustRun fails the test immediately if a setup statement did not succeed.  Setup failures are
+// otherwise invisible - the RunResult is normally discarded - and surface only as unexplained
+// missing rows when the extracted DDL is compared.
+func mustRun(t *testing.T, rr *gsi.RunResult) {
+	t.Helper()
+	if rr.Err != nil {
+		t.Fatalf("setup statement failed: %v", rr.Err)
+	}
+}
+
 func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *testing.T) {
 	gsi.RunMatch(filename, prepared, explain, qc, t)
 }

@@ -53,6 +53,21 @@ func TestExtractDDL(t *testing.T) {
 	// Create an external JavaScript function
 	runStmt(qc, "CREATE OR REPLACE FUNCTION ejs1() LANGUAGE JAVASCRIPT AS \"ej1\" AT \"lib1\";")
 
+	// Create knowledge entries: one naming the bucket only (which resolves to _default._default)
+	// and one naming the collection in full, so both spellings are covered.  zz_hint's value
+	// carries embedded double quotes and a backslash to check they are escaped in the generated
+	// DDL - unescaped, the generated statement would not parse when replayed.
+	//
+	// CREATE/DROP KNOWLEDGE require PRIV_ADMIN (see algebra.CreateKnowledge.Privileges), which the
+	// harness's regular bucket-owner credentials do not have, so these are seeded with admin
+	// credentials.  Reading them back through EXTRACTDDL needs no admin privilege, so the test
+	// cases themselves still run as the ordinary user.
+	mustRun(t, runAdminStmt(qc,
+		"CREATE OR REPLACE KNOWLEDGE zz_hint FOR customer AS "+
+			"'the \"customer\" bucket holds records (path a\\\\b)';"))
+	mustRun(t, runAdminStmt(qc,
+		"CREATE OR REPLACE KNOWLEDGE aa_hint FOR customer._default._default AS 'orders are linked by custId';"))
+
 	// Test using JSON test case file
 	runMatch("case_extractddl_basic.json", false, true, qc, t)
 
@@ -67,6 +82,7 @@ func TestExtractDDL(t *testing.T) {
 	runStmt(qc, "DROP FUNCTION no_param_func IF EXISTS")
 	runStmt(qc, "DROP FUNCTION ejs1 IF EXISTS")
 	runStmt(qc, "DROP INDEX test_index ON customer._default._default IF EXISTS")
+	runAdminStmt(qc, "DROP KNOWLEDGE IF EXISTS zz_hint, aa_hint FOR customer._default._default")
 
 	fmt.Println("\n\nExtractDDL test completed \n\n ")
 }

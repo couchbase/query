@@ -10,6 +10,8 @@
                     "CREATE INDEX `test_index` ON `customer`(`name`) ;",
                     "CREATE SEQUENCE `default`:`customer`.`_default`.`test_sequence` START WITH 100 CACHE 10 NO CYCLE INCREMENT BY 5 MINVALUE -9223372036854775808;",
                     "CREATE OR REPLACE FUNCTION `customer`.`_default`.`scoped_multiply`(`x`, `y`) LANGUAGE INLINE AS x * y;",
+                    "CREATE OR REPLACE KNOWLEDGE `aa_hint` FOR `customer`.`_default`.`_default` AS \"orders are linked by custId\";",
+                    "CREATE OR REPLACE KNOWLEDGE `zz_hint` FOR `customer`.`_default`.`_default` AS \"the \\\"customer\\\" bucket holds records (path a\\\\b)\";",
                     "PREPARE test_prepared_stmt AS SELECT * FROM customer WHERE name = $1;"
                 ]
             }
@@ -89,6 +91,70 @@
                     "CREATE OR REPLACE FUNCTION `test_inline_func`(`x`) LANGUAGE INLINE AS x * 2;",
                     "CREATE OR REPLACE FUNCTION `variadic_func`(...) LANGUAGE INLINE AS args[0] + args[1];",
                     "CREATE OR REPLACE FUNCTION `customer`.`_default`.`scoped_multiply`(`x`, `y`) LANGUAGE INLINE AS x * y;"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL with knowledge flag for customer bucket",
+        "statements": "SELECT EXTRACTDDL('customer', {'flags': ['knowledge']}) AS ddl_statements",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE OR REPLACE KNOWLEDGE `aa_hint` FOR `customer`.`_default`.`_default` AS \"orders are linked by custId\";",
+                    "CREATE OR REPLACE KNOWLEDGE `zz_hint` FOR `customer`.`_default`.`_default` AS \"the \\\"customer\\\" bucket holds records (path a\\\\b)\";"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL knowledge flag given as a bare array rather than a flags object",
+        "statements": "SELECT EXTRACTDDL('customer', ['knowledge']) AS ddl_statements",
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE OR REPLACE KNOWLEDGE `aa_hint` FOR `customer`.`_default`.`_default` AS \"orders are linked by custId\";",
+                    "CREATE OR REPLACE KNOWLEDGE `zz_hint` FOR `customer`.`_default`.`_default` AS \"the \\\"customer\\\" bucket holds records (path a\\\\b)\";"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL flags array supplied as a named parameter. Unlike an in-statement array literal, whose elements arrive as values, a parameter's elements arrive as plain strings - before they were normalised every flag given this way was rejected as invalid",
+        "statements": "SELECT EXTRACTDDL('customer', {'flags': $flags}) AS ddl_statements",
+        "namedArgs": {
+            "flags": [
+                "knowledge"
+            ]
+        },
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE OR REPLACE KNOWLEDGE `aa_hint` FOR `customer`.`_default`.`_default` AS \"orders are linked by custId\";",
+                    "CREATE OR REPLACE KNOWLEDGE `zz_hint` FOR `customer`.`_default`.`_default` AS \"the \\\"customer\\\" bucket holds records (path a\\\\b)\";"
+                ]
+            }
+        ]
+    },
+    {
+        "description": "Test ExtractDDL with the whole second argument supplied as a named parameter, combining the bare array form with parameter-supplied flags",
+        "statements": "SELECT EXTRACTDDL('customer', $flags) AS ddl_statements",
+        "namedArgs": {
+            "flags": [
+                "knowledge",
+                "index"
+            ]
+        },
+        "ordered": true,
+        "results": [
+            {
+                "ddl_statements": [
+                    "CREATE INDEX `test_index` ON `customer`(`name`) ;",
+                    "CREATE OR REPLACE KNOWLEDGE `aa_hint` FOR `customer`.`_default`.`_default` AS \"orders are linked by custId\";",
+                    "CREATE OR REPLACE KNOWLEDGE `zz_hint` FOR `customer`.`_default`.`_default` AS \"the \\\"customer\\\" bucket holds records (path a\\\\b)\";"
                 ]
             }
         ]
