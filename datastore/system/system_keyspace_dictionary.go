@@ -107,14 +107,20 @@ func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 
 func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, errors.Error) {
 	entry, err := dictionary.Get(key)
-
-	// get does not return is not found, but nil, nil instead
-	if err == nil && entry == nil {
-		return nil, errors.NewSystemDatastoreError(nil, "Key Not Found "+key)
-	}
 	if err != nil {
 		return nil, errors.NewSystemCollectionError("Fetch from system collection", err)
 	}
+
+	// get does not return is not found, but nil, nil instead. An entry can
+	// legitimately go away between the scan that produced the key and this fetch -
+	// the two are separate, independently consistent reads of the system
+	// collection - so report no document rather than failing the whole request,
+	// as system:dictionary_cache does for a missing cache entry. Fetch() and the
+	// fetch operator both already treat a missing value as "no row".
+	if entry == nil {
+		return nil, nil
+	}
+
 	itemMap := map[string]interface{}{}
 	entry.Target(itemMap)
 	entry.Dictionary(itemMap)
