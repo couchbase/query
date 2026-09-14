@@ -1310,9 +1310,19 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 					return nil
 				}
 				parts := strings.Split(key, "::")
-				path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
-				p := algebra.ParsePath(path)
-				if !filterEval(p, include, exclude, false) {
+				path, hasUUID, _, err1 := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
+				if err1 != nil {
+					logging.Errorf("cbo backup: error from GetCBOKeyspaceFromKey: %v", err1)
+					return errors.NewServiceErrorBadValue(err1, fmt.Sprintf("cbo backup: error getting keyspace from document key (%v)",
+						parts[len(parts)-1]))
+				}
+				fullPath := "default:" + bucket + "." + path
+				p := algebra.ParsePath(fullPath)
+				if len(p) != 4 {
+					logging.Errorf("cbo backup: unexpected path %v", fullPath)
+					return errors.NewServiceErrorBadValue(nil, fmt.Sprintf("cbo backup: unexpected path %v", fullPath))
+				}
+				if !hasUUID && !filterEval(p, include, exclude, true) {
 					return nil
 				}
 				keys[0] = key
@@ -1322,6 +1332,29 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				}
 				av, ok := res[key]
 				if ok {
+					if hasUUID {
+						// get scope/collection from document
+						if scv, ok := av.Field("scope"); ok && scv != nil {
+							if sc, ok := scv.Actual().(string); ok {
+								p[2] = sc
+							} else {
+								logging.Errorf("cbo backup: document key %v - scope (%v) not a string (%T)",
+									key, scv, scv)
+							}
+						}
+						if cv, ok := av.Field("collection"); ok && cv != nil {
+							if c, ok := cv.Actual().(string); ok {
+								p[3] = c
+							} else {
+								logging.Errorf("cbo backup: document key %v - collection (%v) not a string",
+									key, cv, cv)
+							}
+						}
+						if !filterEval(p, include, exclude, true) {
+
+							return nil
+						}
+					}
 					b, err := av.MarshalJSON()
 					if err == nil {
 						d := make(map[string]interface{})
@@ -1457,31 +1490,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				return nil, errors.NewServiceErrorBadValue(err, "restore cbo")
 			}
 
-			// gather a list of target keyspaces
 			purge := make(map[string]bool)
-			index = 0
-			json.SetIndexState(&iState, cbo)
-			for {
-				v, err := iState.FindIndex(index)
-				if err != nil {
-					iState.Release()
-					return nil, errors.NewServiceErrorBadValue(err, "restore cbo")
-				}
-				if string(v) == "" {
-					break
-				}
-				index++
-				ks, ok := getCBORestoreKeyspace(v, bucket, include, exclude, remap)
-				if ok {
-					purge[ks] = true
-				}
-			}
-			iState.Release()
-
-			// ensure we've cleared existing stats
-			for k, _ := range purge {
-				dictionary.DropDictEntryAndAllCache(k, datastore.NULL_QUERY_CONTEXT, false)
-			}
 
 			// restore the stats
 			index = 0
@@ -1496,7 +1505,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 					break
 				}
 				index++
-				err1 := doCBORestore(v, bucket, include, exclude, remap, systemCollection)
+				err1 := doCBORestore(v, bucket, include, exclude, remap, systemCollection, purge)
 				if err1 != nil {
 					iState.Release()
 					return nil, err1
@@ -2899,23 +2908,9 @@ func getCBORestoreKeyValue(v []byte, doValue bool) (string, []byte, error) {
 	return key, bvalue, nil
 }
 
-func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap remapper) (string, bool) {
-	key, _, err := getCBORestoreKeyValue(v, false)
-	if err != nil || key == "" {
-		return "", false
-	}
-	parts := strings.Split(key, "::")
-	path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
-	fullPath := "default:" + b + "." + path
-	p := algebra.ParsePath(fullPath)
-	if !filterEval(p, include, exclude, false) {
-		return "", false
-	}
-	remap.remap(b, p, false)
-	return algebra.NewPathFromElements(p).SimpleString(), true
-}
+func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace,
+	purge map[string]bool) errors.Error {
 
-func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace) errors.Error {
 	key, bvalue, err := getCBORestoreKeyValue(v, true)
 	if err != nil {
 		if key == "" {
@@ -2941,23 +2936,22 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 		parts = []string{parts[0], parts[1], strings.Join(parts[2:], "::")}
 	}
 
-	path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
+	path, hasUUID, _, err := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, fmt.Sprintf("cbo restore: error getting path from %v", parts[len(parts)-1]))
+	}
 	fullPath := "default:" + b + "." + path
 	p := algebra.ParsePath(fullPath)
 	if len(p) != 4 {
 		return errors.NewServiceErrorBadValue(err, fmt.Sprintf("cbo restore: invalid key (path length %d)", len(p)))
 	}
-	if !filterEval(p, include, exclude, false) {
-		return nil
-	}
+	if !hasUUID {
+		if !filterEval(p, include, exclude, true) {
+			return nil
+		}
 
-	remap.remap(b, p, false)
-	key = strings.Replace(key, path, p[2]+"."+p[3], 1)
-	uid, err := datastore.GetScopeUid(p[:3]...)
-	if err != nil {
-		return errors.NewServiceErrorBadValue(err, "cbo restore: error determining scope UID")
+		remap.remap(b, p, true)
 	}
-	key = strings.Replace(key, parts[1], uid, 1)
 
 	data := make([]byte, base64.StdEncoding.DecodedLen(len(bvalue)-2))
 	n, err := base64.StdEncoding.Decode(data, []byte(bvalue[1:len(bvalue)-1]))
@@ -2965,10 +2959,70 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	if cerr != nil {
 		return errors.NewServiceErrorBadValue(cerr, "cbo restore: error decoding value"+":"+key)
 	}
+	val := value.NewValue(raw)
+
+	// get scope/collection for updating (if remapped) and/or filtering (if hasUUID)
+	var scope, collection string
+	if scv, ok := val.Field("scope"); ok {
+		if sc, ok := scv.Actual().(string); ok {
+			scope = sc
+			if hasUUID && sc != p[2] {
+				p[2] = sc
+			}
+		}
+	}
+	if cv, ok := val.Field("collection"); ok {
+		if c, ok := cv.Actual().(string); ok {
+			collection = c
+			if hasUUID && c != p[3] {
+				p[3] = c
+			}
+		}
+	}
+
+	if hasUUID {
+		if !filterEval(p, include, exclude, true) {
+			return nil
+		}
+
+		remap.remap(b, p, true)
+	}
+
+	newPath := algebra.NewPathFromElements(p).SimpleString()
+	if _, ok := purge[newPath]; !ok {
+		// ensure we've cleared existing stats
+		dictionary.DropDictEntryAndAllCache(newPath, datastore.NULL_QUERY_CONTEXT, false)
+		purge[newPath] = true
+	}
+
+	// update scope/collection in document if remapped
+	if scope != "" && scope != p[2] {
+		err1 := val.SetField("scope", p[2])
+		if err1 != nil {
+			logging.Errorf("cbo restore: error updating scope field for %s", newPath)
+			return errors.NewServiceErrorBadValue(err1, fmt.Sprintf("cbo restore: error updating scope field for %s", newPath))
+		}
+	}
+	if collection != "" && collection != p[3] {
+		err1 := val.SetField("collection", p[3])
+		if err1 != nil {
+			logging.Errorf("cbo restore: error updating collection field for %s", newPath)
+			return errors.NewServiceErrorBadValue(err1, fmt.Sprintf("cbo restore: error updating collection field for %s", newPath))
+		}
+	}
+
+	// re-generate document key in case UUID is needed (after remap)
+	newp := dictionary.GetCBOStatsPathElems(p)
+	key = strings.Replace(key, path, newp[2]+"."+newp[3], 1)
+	uid, err := datastore.GetScopeUid(p[:3]...)
+	if err != nil {
+		return errors.NewServiceErrorBadValue(err, "cbo restore: error determining scope UID")
+	}
+	key = strings.Replace(key, parts[1], uid, 1)
 
 	pairs := make([]value.Pair, 1)
 	pairs[0].Name = key
-	pairs[0].Value = value.NewValue(raw)
+	pairs[0].Value = val
 	_, _, errs := systemCollection.Upsert(pairs, datastore.NULL_QUERY_CONTEXT, true)
 	if errs != nil && len(errs) > 0 {
 		return errs[0]
