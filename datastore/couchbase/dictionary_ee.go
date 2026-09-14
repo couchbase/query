@@ -152,6 +152,10 @@ func GetCBOKeyspaceFromDoc(docKey string, bucket string, sysStore bool) (string,
 	return dictionary.GetKeyspaceFromDoc(docKey, bucket, sysStore)
 }
 
+func GetCBOStatsPathElems(parts []string) []string {
+	return dictionary.GetCBOStatsPathElems(parts)
+}
+
 const _GRACE_PERIOD = 2 * time.Second
 
 type chkIndexDict struct {

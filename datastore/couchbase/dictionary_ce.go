@@ -105,6 +105,10 @@ func GetCBOKeyspaceFromDoc(docKey string, bucket string, sysStore bool) (string,
 	return "", false, nil
 }
 
+func GetCBOStatsPathElems(parts []string) []string {
+	return parts
+}
+
 type chkIndexDict struct {
 	// dummy struct
 }
