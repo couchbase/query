@@ -1166,7 +1166,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		// do not archive functions if the metadata is already stored in KV
 		snapshot := func(name string, v value.Value) error {
 			path := algebra.ParsePath(name)
-			if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude) {
+			if len(path) == 4 && path[1] == bucket && filterEval(path, include, exclude, false) {
 				fns = append(fns, v)
 			}
 			return nil
@@ -1185,7 +1185,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 		seqs, err := sequences.BackupSequences("default", bucket, func(name string) bool {
 			path := algebra.ParsePath(name)
-			return filterEval(path, include, exclude)
+			return filterEval(path, include, exclude, false)
 		})
 		if err != nil {
 			return nil, err
@@ -1204,7 +1204,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				parts := strings.Split(key, "::")
 				path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
 				p := algebra.ParsePath(path)
-				if !filterEval(p, include, exclude) {
+				if !filterEval(p, include, exclude, false) {
 					return nil
 				}
 				keys[0] = key
@@ -1536,28 +1536,48 @@ func newFilter(p string) (matcher, errors.Error) {
 	return m, nil
 }
 
-func (f matcher) match(p []string) bool {
+// matchCollections: Whether collection matching should be attempted
+func (f matcher) match(p []string, matchCollections bool) bool {
+	// Only paths with parts containing a scope can be matched
+	if len(p) != 3 && len(p) != 4 {
+		return false
+	}
+
 	scope, ok := f[p[2]]
 	if !ok {
 		return false
 	}
+
+	// Attempt to only match scope
 	if len(scope) == 0 {
 		return true
 	}
 
-	// any collections matches are ignored
-	return false
+	if !matchCollections {
+		// No scope match found. Any collections matches are ignored
+		return false
+	} else {
+		// Check collection matches
+		if len(p) == 4 {
+			if _, ok := scope[p[3]]; ok {
+				return true
+			}
+		}
+
+		return false
+	}
+
 }
 
-func filterEval(path []string, include, exclude matcher) bool {
+func filterEval(path []string, include, exclude matcher, matchCollections bool) bool {
 	if len(include) == 0 && len(exclude) == 0 {
 		return true
 	}
 	if len(include) > 0 {
-		return include.match(path)
+		return include.match(path, matchCollections)
 	}
 	if len(exclude) > 0 {
-		return !exclude.match(path)
+		return !exclude.match(path, matchCollections)
 	}
 
 	// should never reach this
@@ -1610,15 +1630,40 @@ func newRemapper(p string, serv string) (remapper, errors.Error) {
 	return m, nil
 }
 
-func (r remapper) remap(bucket string, path []string) {
-	if bucket == "" || len(path) != 4 {
+// Remapping of scopes and collections
+// remapCollections: Whether collection remapping should be attempted
+func (r remapper) remap(bucket string, path []string, remapCollections bool) {
+
+	// Only paths with scope can be remapped
+	if bucket == "" || (len(path) != 3 && len(path) != 4) {
 		return
 	}
+
 	path[1] = bucket
 	scope, ok := r[path[2]]
 
-	// in order to remap functions, we must be remapping scopes, not individual collections
 	if ok {
+		if remapCollections {
+			// Attempt collection remap
+			if len(path) == 4 {
+
+				// Get the collection's remap
+				remap, okC := scope[path[3]]
+				if okC {
+					// Collection's remap should contain the name of the scope and collection to be remapped to
+					if len(remap) == 2 {
+						path[2] = remap[0]
+						path[3] = remap[1]
+						return
+					}
+				}
+			}
+		}
+
+		// Attempt to perform scope remap, if remapCollections=false or collection has no remap specified
+		// in order to remap functions, sequences we must be remapping scopes, not individual collections
+
+		// Get the scope's remap
 		target, ok := scope[""]
 		if ok {
 			path[2] = target[0]
@@ -1666,8 +1711,8 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 		return nil
 	}
 
-	if l == 2 || filterEval(path, include, exclude) {
-		remap.remap(b, path)
+	if l == 2 || filterEval(path, include, exclude, false) {
+		remap.remap(b, path, false)
 
 		name, err1 := functionsBridge.NewFunctionName(path, path[0], "")
 		if err1 != nil {
@@ -2651,8 +2696,8 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 	if err != nil {
 		return errors.NewServiceErrorBadValue(err, "sequence restore: min invalid")
 	}
-	if filterEval(path, include, exclude) {
-		remap.remap(b, path)
+	if filterEval(path, include, exclude, false) {
+		remap.remap(b, path, false)
 		m := make(map[string]interface{}, 2)
 		m[sequences.OPT_CACHE] = cache
 		m[sequences.OPT_CYCLE] = cycle
@@ -2723,10 +2768,10 @@ func getCBORestoreKeyspace(v []byte, b string, include, exclude matcher, remap r
 	path, _, _, _ := dictionary.GetCBOKeyspaceFromKey(parts[len(parts)-1])
 	fullPath := "default:" + b + "." + path
 	p := algebra.ParsePath(fullPath)
-	if !filterEval(p, include, exclude) {
+	if !filterEval(p, include, exclude, false) {
 		return "", false
 	}
-	remap.remap(b, p)
+	remap.remap(b, p, false)
 	return algebra.NewPathFromElements(p).SimpleString(), true
 }
 
@@ -2762,11 +2807,11 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	if len(p) != 4 {
 		return errors.NewServiceErrorBadValue(err, fmt.Sprintf("cbo restore: invalid key (path length %d)", len(p)))
 	}
-	if !filterEval(p, include, exclude) {
+	if !filterEval(p, include, exclude, false) {
 		return nil
 	}
 
-	remap.remap(b, p)
+	remap.remap(b, p, false)
 	key = strings.Replace(key, path, p[2]+"."+p[3], 1)
 	uid, err := datastore.GetScopeUid(p[:3]...)
 	if err != nil {
