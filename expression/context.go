@@ -118,3 +118,9 @@ type SequenceContext interface {
 	NextSequenceValue(name string) (int64, errors.Error)
 	PrevSequenceValue(name string) (int64, errors.Error)
 }
+
+// Created to avoid import cycles between execution and expression packages
+type ScheduledTaskContext interface {
+	Context
+	CopyForScheduledTask() Context
+}
