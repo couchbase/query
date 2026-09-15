@@ -1,0 +1,9 @@
+{
+  "service": "n1ql",
+  "proxy-strategy": "sticky",
+  "rest-api-prefixes": {
+    "query": {
+      "portName": "query_port"
+    }
+  }
+}
