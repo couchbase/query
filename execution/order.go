@@ -46,13 +46,11 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 	}
 	// here only setting function to test for spilling when quota is in effect
 	var shouldSpill func(uint64, uint64) bool
-	var encryptionKey *encryption.EaRKey
-	var err error
+	var getEncryptionKey func() (*encryption.EaRKey, errors.Error)
 
 	if plan.CanSpill() && context.IsFeatureEnabled(util.N1QL_SPILL_TO_DISK) {
-		encryptionKey, err = context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE})
-		if err != nil {
-			return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, err)
+		getEncryptionKey = func() (*encryption.EaRKey, errors.Error) {
+			return context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE})
 		}
 
 		if context.UseRequestQuota() && context.MemoryQuota() > 0 {
@@ -113,6 +111,7 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 	if less == nil {
 		less = rv.lessThan
 	}
+
 	rv.values = value.NewAnnotatedArray(
 		acquire,
 		func(p value.AnnotatedValues) { _ORDER_POOL.Put(p) },
@@ -120,7 +119,7 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 		trackMem,
 		less,
 		!plan.ClipValues(),
-		encryptionKey,
+		getEncryptionKey,
 	)
 
 	newBase(&rv.base, context)

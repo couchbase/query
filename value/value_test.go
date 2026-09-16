@@ -21,6 +21,8 @@ import (
 	// "time"
 
 	json "github.com/couchbase/go_json"
+	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/errors"
 	diffpkg "github.com/kylelemons/godebug/diff"
 )
 
@@ -783,7 +785,10 @@ func TestSpillingArray(t *testing.T) {
 		n2 := m2["name"].(string) + m2["surname"].(string)
 		return strings.Compare(n1, n2) < 0
 	}
-	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, lessThan, false, nil)
+	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, lessThan, false,
+		func() (*encryption.EaRKey, errors.Error) {
+			return nil, nil
+		})
 	check := make([]string, 4)
 
 	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
@@ -845,7 +850,10 @@ func TestSpillingUnsortedArray(t *testing.T) {
 		tracking -= sz
 		return nil
 	}
-	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, nil, false, nil)
+	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, nil, false,
+		func() (*encryption.EaRKey, errors.Error) {
+			return nil, nil
+		})
 	check := make(map[string]bool, 4)
 
 	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))

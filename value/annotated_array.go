@@ -161,25 +161,28 @@ type AnnotatedArray struct {
 
 	valIn uint64
 
-	// Set if spill files are to be encrypted
-	encryptionKey *encryption.EaRKey
+	// Encryption key for spill files, resolved lazily (only once a spill actually happens) and cached
+	// thereafter so getEncryptionKey is invoked at most once per AnnotatedArray.
+	encryptionKeyResolved bool
+	getEncryptionKey      func() (*encryption.EaRKey, errors.Error)
+	encryptionKey         *encryption.EaRKey
 }
 
 func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(AnnotatedValues),
 	shouldSpill func(uint64, uint64) bool,
 	trackMemory func(int64) error,
 	less func(AnnotatedValue, AnnotatedValue) bool,
-	compressSpill bool, encryptionKey *encryption.EaRKey) *AnnotatedArray {
+	compressSpill bool, getEncryptionKey func() (*encryption.EaRKey, errors.Error)) *AnnotatedArray {
 
 	rv := &AnnotatedArray{
-		acquire:       acquire,
-		release:       release,
-		less:          less,
-		shouldSpill:   shouldSpill,
-		trackMemory:   trackMemory,
-		compress:      compressSpill && logging.LogLevel() != logging.DEBUG,
-		parentsMap:    make(map[string]Value),
-		encryptionKey: encryptionKey,
+		acquire:          acquire,
+		release:          release,
+		less:             less,
+		shouldSpill:      shouldSpill,
+		trackMemory:      trackMemory,
+		compress:         compressSpill && logging.LogLevel() != logging.DEBUG,
+		parentsMap:       make(map[string]Value),
+		getEncryptionKey: getEncryptionKey,
 	}
 	rv.valFunc = func(av AnnotatedValue) bool {
 		p := av.GetAttachment(ATT_PARENT)
@@ -198,16 +201,38 @@ func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(Annotated
 	return rv
 }
 
+// Use this method only to checks whether spill files should be encrypted and to obtain the encryption key information
+func (this *AnnotatedArray) resolveEncryptionKey() (*encryption.EaRKey, error) {
+	if this.encryptionKeyResolved {
+		return this.encryptionKey, nil
+	}
+
+	if this.getEncryptionKey == nil {
+		return nil, fmt.Errorf("getEncryptionKey() not defined")
+	}
+
+	key, err := this.getEncryptionKey()
+	if err != nil {
+		return nil, err
+	}
+
+	this.encryptionKey = key
+	this.encryptionKeyResolved = true
+	return key, nil
+}
+
 func (this *AnnotatedArray) Copy() *AnnotatedArray {
 	rv := &AnnotatedArray{
-		acquire:       this.acquire,
-		release:       this.release,
-		less:          this.less,
-		shouldSpill:   this.shouldSpill,
-		trackMemory:   this.trackMemory,
-		compress:      this.compress,
-		parentsMap:    make(map[string]Value),
-		encryptionKey: this.encryptionKey,
+		acquire:               this.acquire,
+		release:               this.release,
+		less:                  this.less,
+		shouldSpill:           this.shouldSpill,
+		trackMemory:           this.trackMemory,
+		compress:              this.compress,
+		parentsMap:            make(map[string]Value),
+		encryptionKeyResolved: this.encryptionKeyResolved,
+		getEncryptionKey:      this.getEncryptionKey,
+		encryptionKey:         this.encryptionKey,
 	}
 	rv.valFunc = func(av AnnotatedValue) bool {
 		p := av.GetAttachment(ATT_PARENT)
@@ -258,12 +283,18 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 	if this.shouldSpill != nil {
 		sz = v.Size()
 		if this.memSize > 0 && this.shouldSpill(this.memSize, sz) {
-			if this.encryptionKey != nil {
-				logging.Debugf("[%p] need to spill: %v+%v, heapSize: %v encryption keyId: %+q", this, this.memSize, sz, this.heapSize, this.encryptionKey.Id)
+			encryptionKey, err := this.resolveEncryptionKey()
+			if err != nil {
+				return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+			}
+
+			if encryptionKey != nil {
+				logging.Debugf("[%p] need to spill: %v+%v, heapSize: %v encryption keyId: %+q", this, this.memSize, sz,
+					this.heapSize, encryptionKey.Id)
 			} else {
 				logging.Debugf("[%p] need to spill: %v+%v, heapSize: %v", this, this.memSize, sz, this.heapSize)
 			}
-			err := this.spillToDisk()
+			err = this.spillToDisk()
 			if err != nil {
 				return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
 			}
@@ -337,12 +368,24 @@ func (this *AnnotatedArray) spillToDisk() error {
 	if err != nil {
 		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
-	logging.Debugf("[%p] spilling to %s (#:%v, sz:%v, compr:%v)", this, sf.Name(), len(this.mem), this.memSize, this.compress)
-	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress, encryptionKey: this.encryptionKey}
+
+	encryptionKey, err := this.resolveEncryptionKey()
+	if err != nil {
+		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
+	}
+
+	if encryptionKey == nil {
+		logging.Debugf("[%p] spilling to %s (#:%v, sz:%v, compr:%v)", this, sf.Name(), len(this.mem), this.memSize, this.compress)
+	} else {
+		logging.Debugf("[%p] spilling to %s (#:%v, sz:%v, compr:%v) keyId: %+q: ", this, sf.Name(), len(this.mem), this.memSize,
+			this.compress, encryptionKey.Id)
+	}
+
+	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress, encryptionKey: encryptionKey}
 	this.spill = append(this.spill, spf)
 	var writer writerFlusher
 
-	if this.encryptionKey == nil {
+	if encryptionKey == nil {
 		if this.compress {
 			writer = zlib.NewWriter(sf)
 		} else {
@@ -354,7 +397,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 			compression = encryption.CBEF_ZLIB
 		}
 
-		ew, err := encryption.NewCBEFWriterSize(sf, this.encryptionKey, compression, _BUFFER_SIZE)
+		ew, err := encryption.NewCBEFWriterSize(sf, encryptionKey, compression, _BUFFER_SIZE)
 		if err != nil {
 			return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 		}

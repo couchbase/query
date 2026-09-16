@@ -51,13 +51,11 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 	if context.IsFeatureEnabled(util.N1QL_NEW_MERGE) {
 		// for spilling to disk use the same functions/constants as used in Order operator
 		var shouldSpill func(uint64, uint64) bool
-		var encryptionKey *encryption.EaRKey
-		var err error
+		var getEncryptionKey func() (*encryption.EaRKey, errors.Error)
 
 		if plan.CanSpill() && context.IsFeatureEnabled(util.N1QL_SPILL_TO_DISK) {
-			encryptionKey, err = context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE})
-			if err != nil {
-				return nil, errors.NewEncryptionError(errors.E_ENCRYPTION, err)
+			getEncryptionKey = func() (*encryption.EaRKey, errors.Error) {
+				return context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.OTHER_KEY_DATATYPE})
 			}
 
 			if context.UseRequestQuota() && context.MemoryQuota() > 0 {
@@ -118,13 +116,13 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 		}
 
 		if update != nil {
-			updates = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, encryptionKey)
+			updates = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, getEncryptionKey)
 		}
 		if delete != nil {
-			deletes = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, encryptionKey)
+			deletes = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, getEncryptionKey)
 		}
 		if insert != nil {
-			inserts = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, encryptionKey)
+			inserts = value.NewAnnotatedArray(acquire, release, shouldSpill, trackMem, nil, true, getEncryptionKey)
 		}
 	}
 
