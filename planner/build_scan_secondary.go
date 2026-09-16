@@ -426,12 +426,9 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset exp
 	ubs expression.Bindings, join bool) (
 	sargables, arrays, flex map[datastore.Index]*indexEntry, err error) {
 
-	flexPred := pred
-	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
-		flexPred, err = base.ReplaceParameters(flexPred, this.context.NamedArgs(), this.context.PositionalArgs())
-		if err != nil {
-			return
-		}
+	flexPred, err := this.context.ReplaceParameters(pred, false)
+	if err != nil {
+		return
 	}
 
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
@@ -1371,9 +1368,6 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		}
 	}
 
-	namedArgs := this.context.NamedArgs()
-	positionalArgs := this.context.PositionalArgs()
-
 	if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_EARLY_ORDER) && !arrayKey &&
 		this.order != nil && this.limit != nil &&
 		!this.hasBuilderFlag(BUILDER_ORDER_DEPENDS_ON_LET) &&
@@ -1384,17 +1378,13 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		noffset := int64(-1)
 		limit := this.limit
 		offset := this.offset
-		if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-			limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
-			if err != nil {
-				return
-			}
-			if offset != nil {
-				offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
-				if err != nil {
-					return
-				}
-			}
+		limit, err = this.context.ReplaceParameters(limit, false)
+		if err != nil {
+			return
+		}
+		offset, err = this.context.ReplaceParameters(offset, false)
+		if err != nil {
+			return
 		}
 		cons := true
 		isParam := false
@@ -1525,17 +1515,13 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				// Also skip filters that is in index condition
 				origExpr := fl.OrigExpr()
 				flExpr := fltrExpr
-				if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-					flExpr, err = base.ReplaceParameters(flExpr, namedArgs, positionalArgs)
-					if err != nil {
-						return
-					}
-					if origExpr != nil {
-						origExpr, err = base.ReplaceParameters(origExpr, namedArgs, positionalArgs)
-						if err != nil {
-							return
-						}
-					}
+				flExpr, err = this.context.ReplaceParameters(flExpr, false)
+				if err != nil {
+					return
+				}
+				origExpr, err = this.context.ReplaceParameters(origExpr, false)
+				if err != nil {
+					return
 				}
 				if base.SubsetOf(entry.cond, flExpr) {
 					continue

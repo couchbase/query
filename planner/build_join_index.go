@@ -164,11 +164,9 @@ func (this *builder) buildJoinScan(keyspace datastore.Keyspace, node *algebra.Ke
 			expression.NewFieldName("id", false)),
 	}
 
-	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
-		subset, err = base.ReplaceParameters(subset, this.context.NamedArgs(), this.context.PositionalArgs())
-		if err != nil {
-			return nil, nil, nil, err
-		}
+	subset, err = this.context.ReplaceParameters(subset, false)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	sargables, _, _, err := this.sargableIndexes(indexes, pred, subset, primaryKey, formalizer, nil, false)

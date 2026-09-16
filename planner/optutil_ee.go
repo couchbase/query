@@ -271,9 +271,6 @@ func multiIndexSelec(index datastore.Index, sargKeys expression.Expressions, ski
 func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64, doLimit, doOffset bool) (
 	float64, float64, float64, float64) {
 
-	namedArgs := this.context.NamedArgs()
-	positionalArgs := this.context.PositionalArgs()
-
 	nlimit := int64(-1)
 	noffset := int64(-1)
 	var limit, offset expression.Expression
@@ -287,20 +284,14 @@ func (this *builder) getIndexLimitCost(cost, cardinality, frCost, selec float64,
 		return cost, cardinality, frCost, selec
 	}
 
-	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-		var err error
-		if limit != nil {
-			limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
-			if err != nil {
-				return cost, cardinality, frCost, selec
-			}
-		}
-		if offset != nil {
-			offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
-			if err != nil {
-				return cost, cardinality, frCost, selec
-			}
-		}
+	var err error
+	limit, err = this.context.ReplaceParameters(limit, false)
+	if err != nil {
+		return cost, cardinality, frCost, selec
+	}
+	offset, err = this.context.ReplaceParameters(offset, false)
+	if err != nil {
+		return cost, cardinality, frCost, selec
 	}
 
 	if limit != nil {

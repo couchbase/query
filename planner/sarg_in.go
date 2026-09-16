@@ -35,19 +35,16 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 
 	var array expression.Expressions
 
-	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
-		replaced, err := base.ReplaceParameters(pred, this.context.NamedArgs(), this.context.PositionalArgs())
-		if err != nil {
-			return nil, err
-		}
-		if repIn, ok := replaced.(*expression.In); ok {
-			pred = repIn
-		}
+	replaced, err := this.context.ReplaceParameters(pred, false)
+	if err != nil {
+		return nil, err
+	}
+	if repIn, ok := replaced.(*expression.In); ok {
+		pred = repIn
 	}
 
 	selec := OPT_SELEC_NOT_AVAIL
 	defSelec := OPT_SELEC_NOT_AVAIL
-	var err error
 	var keyspaces map[string]string
 	if this.doSelec {
 		selec = this.getSelec(pred)
@@ -129,6 +126,11 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 		}
 		if arrayMinMax {
 			if dynamicIn {
+				// arrayKey may alias a node from the (possibly cached and
+				// shared) replaced predicate; copy before mutating it in
+				// place so other holders of the shared expression are
+				// unaffected.
+				arrayKey = arrayKey.Copy()
 				arrayKey.SetExprFlag(expression.EXPR_DYNAMIC_IN)
 			}
 			range2 := plan.NewRange2(expression.NewArrayMin(arrayKey), expression.NewArrayMax(arrayKey), datastore.BOTH, selec,
