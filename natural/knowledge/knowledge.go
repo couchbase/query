@@ -705,8 +705,12 @@ func DropCollection(namespace, bucket, scope, scopeUid, collection, collectionUi
 // DropScope removes every knowledge document stored against a collection within the given scope.
 // Mirrors aus.DropScope (same signature shape, taking both name and UID): invoked whenever a scope
 // disappears from a bucket's manifest - whether dropped via DROP SCOPE, as part of a bucket drop,
-// or externally.
-func DropScope(namespace, bucket, scope, scopeUid string) errors.Error {
+// or externally. cacheOnly restricts the clean-up to this node's cache, skipping the live scan -
+// set when the whole bucket is being dropped (MB-73823), since the stored documents die with the
+// bucket and the scan can only fail (or resolve a same-named bucket recreated in the interim and
+// delete its live knowledge, as the storage key carries no bucket name and scope UIDs restart per
+// bucket).
+func DropScope(namespace, bucket, scope, scopeUid string, cacheOnly bool) errors.Error {
 	// targeted prefix scan by scope UID, not by name: every collection-level key under this scope
 	// shares the scopeUid segment (see getStorageKey), so this one scan catches all of them without
 	// a full bucket scan - mirrors aus.DropScope's key scheme exactly.
@@ -716,6 +720,10 @@ func DropScope(namespace, bucket, scope, scopeUid string) errors.Error {
 	// DropCollection: no longer load-bearing for correctness now that keys are UID-specific, but it
 	// frees cache slots for this scope promptly rather than waiting for LRU eviction.
 	purgeScope(bucket, scope)
+
+	if cacheOnly {
+		return nil
+	}
 
 	var context datastore.QueryContext
 	pairs := make(value.Pairs, 0, _BATCH_SIZE)
@@ -751,8 +759,18 @@ func DropScope(namespace, bucket, scope, scopeUid string) errors.Error {
 			}
 			return nil
 		})
-	if serr != nil && serr.Code() != errors.E_SYSTEM_COLLECTION {
-		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_DROP, prefix, serr)
+	// a missing system collection isn't a failure: the bucket (or its _system scope) can be dropped
+	// from under us mid-scan, and ScanSystemCollection reports that two different ways - wrapped as
+	// E_SYSTEM_COLLECTION when the scan connection can't be set up, but raw from getSystemCollection
+	// when the keyspace can't be resolved at all. The cache has already been purged above either way.
+	if serr != nil {
+		switch serr.Code() {
+		case errors.E_SYSTEM_COLLECTION, errors.E_CB_BUCKET_NOT_FOUND, errors.E_CB_KEYSPACE_NOT_FOUND,
+			errors.E_CB_SCOPE_NOT_FOUND:
+			// nothing to drop
+		default:
+			return errors.NewKnowledgeError(errors.E_KNOWLEDGE_DROP, prefix, serr)
+		}
 	}
 	if dropped {
 		setChange()

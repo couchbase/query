@@ -193,8 +193,8 @@ func (sc *scope) DropCollection(context datastore.QueryContext, name string) err
 	return nil
 }
 
-func (sc *scope) DropAllSequences() errors.Error {
-	return sequences.DropAllSequences(sc.bucket.namespace.name, sc.bucket.name, sc.id, sc.uid)
+func (sc *scope) DropAllSequences(cacheOnly bool) errors.Error {
+	return sequences.DropAllSequences(sc.bucket.namespace.name, sc.bucket.name, sc.id, sc.uid, cacheOnly)
 }
 
 type collection struct {
@@ -983,11 +983,25 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 	// another node and delete a function out from under it (MB-73270) - skip and wait till
 	// next time cleanup happens. If UDF migration is still in waiting mode (mixed-mode cluster)
 	// it should be safe to clean up directly
+	//
+	// as with the dictionary entries above, when the whole bucket is being dropped there is nothing
+	// to remove from its _system collection - it is going away too - so restrict these to this
+	// node's caches (MB-73823). Scanning it live would at best fail (this path runs from
+	// KeyspaceDeleteCallback, i.e. after the bucket has already gone) and at worst resolve a
+	// same-named bucket recreated in the interim and delete its live data, since none of these
+	// storage keys carry the bucket name and scope UIDs restart per bucket. Anything genuinely
+	// orphaned is reclaimed by CleanupSystemCollection when the bucket is next loaded
 	if cleanUp && (functionsStorage.IsUDFMigrationWaiting() || !functionsStorage.IsMigratingUDF()) {
-		if err := s.DropAllSequences(); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
-			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
-			aus.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
-			if kerr := knowledge.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid()); kerr != nil {
+		if err := s.DropAllSequences(isDropBucket); err == nil || err.Code() != errors.E_CB_KEYSPACE_NOT_FOUND {
+			// note this still cleans up metakv-stored UDFs on a bucket drop: those live outside
+			// the bucket and nothing else removes them
+			functionsStorage.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid(), isDropBucket)
+			if !isDropBucket {
+				// AUS keeps no local cache, so there is nothing to do here on a bucket drop
+				aus.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid())
+			}
+			if kerr := knowledge.DropScope(bucket.namespace.name, bucket.name, s.Name(), s.Uid(),
+				isDropBucket); kerr != nil {
 				logging.Warnf("Error dropping knowledge for scope %s.%s: %v", bucket.name, s.Name(), kerr)
 			}
 			return true

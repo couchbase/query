@@ -454,8 +454,19 @@ func IsInternal(val interface{}) (bool, error) {
 	}
 }
 
-func DropScope(namespace string, bucket string, scope string, uid string) {
+// isDropBucket signals that the whole bucket is going away (MB-73823). It only short-circuits the
+// system storage path, whose documents live in the bucket's own _system collection and therefore
+// die with it - scanning for them there can only fail, or resolve a same-named bucket recreated in
+// the interim and delete its live functions, since the storage key carries no bucket name and scope
+// UIDs restart per bucket. The cache invalidation that scan would have done per key is done wholesale
+// instead. The metakv path must still run: its entries live outside the bucket and nothing else
+// cleans them up.
+func DropScope(namespace string, bucket string, scope string, uid string, isDropBucket bool) {
 	if UseSystemStorage() {
+		if isDropBucket {
+			functions.ClearScopeEntries(namespace, bucket, scope)
+			return
+		}
 		systemStorage.DropScope(namespace, bucket, scope, uid)
 	} else {
 		metaStorage.DropScope(namespace, bucket, scope)

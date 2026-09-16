@@ -634,7 +634,12 @@ func loadSequence(name string) errors.Error {
 	return err
 }
 
-func DropAllSequences(namespace string, bucket string, scope string, uid string) errors.Error {
+// cacheOnly restricts the clean-up to this node's sequence cache, skipping the scan of (and
+// deletes against) the bucket's system collection. Set when the whole bucket is being dropped
+// (MB-73823): the stored documents die with the bucket, so the scan can only fail - or, worse,
+// resolve a same-named bucket that has since been recreated and delete its live sequences, since
+// the storage key carries no bucket name and scope UIDs restart per bucket.
+func DropAllSequences(namespace string, bucket string, scope string, uid string, cacheOnly bool) errors.Error {
 
 	var del string
 	keyPrefix := namespace + ":" + bucket
@@ -660,6 +665,10 @@ func DropAllSequences(namespace string, bucket string, scope string, uid string)
 			return true
 		})
 	listWalkMutex.Unlock()
+
+	if cacheOnly {
+		return nil
+	}
 
 	var lastError errors.Error
 	pairs := make([]value.Pair, 0, _BATCH_SIZE)
