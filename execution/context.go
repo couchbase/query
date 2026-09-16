@@ -522,6 +522,17 @@ func (this *Context) Copy() *Context {
 	return rv
 }
 
+// MB-73749: gives a scheduled task its own Context with an independent memory session, so that
+// memory it tracks isn't leaked once the originating request's session has already been
+// released while the task is still pending/running.
+func (this *Context) CopyForScheduledTask() expression.Context {
+	rv := this.Copy()
+	if this.memorySession != nil {
+		rv.SetMemorySession(memory.Register())
+	}
+	return rv
+}
+
 func (this *Context) NewQueryContext(queryContext string, readonly bool) interface{} {
 	rv := this.Copy()
 	rv.queryContext = queryContext

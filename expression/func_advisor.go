@@ -245,8 +245,23 @@ func (this *Advisor) isSession() bool {
 func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]interface{},
 	query string) error {
 
+	// MB-73749: the ADVISOR collects the workload to run ADVISE on as a task run
+	// asynchronously by the scheduler, which can still be running after the original request has
+	// finished and released its memory session back to the node-wide quota. Run the task against
+	// an independent copy of the context with its own memory session, and release that session
+	// once the task completes, so memory it tracks does not leak.
+	taskContext := context
+	releaseTaskCtx := false
+	if ctxCopy, ok := context.(ScheduledTaskContext); ok {
+		taskContext = ctxCopy.CopyForScheduledTask()
+		releaseTaskCtx = true
+	}
+
 	return scheduler.ScheduleTask(sessionName, _CLASS, _ANALYZE, duration,
 		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+			if releaseTaskCtx {
+				defer context.Release()
+			}
 			// stop monitoring
 			distributed.RemoteAccess().Settings(settings)
 			// collect completed requests
@@ -260,6 +275,9 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 
 		// stop task
 		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+			if releaseTaskCtx {
+				defer context.Release()
+			}
 			// stop monitoring
 			distributed.RemoteAccess().Settings(settings)
 			// collect completed requests afterwards
@@ -271,7 +289,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 			return res, nil
 		},
 
-		nil, "", context)
+		nil, "", taskContext)
 }
 
 func queryContext(context Context) string {
