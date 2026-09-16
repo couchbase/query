@@ -99,6 +99,8 @@ const (
 
 var crsKeyDataType = encryption.KeyDataType{TypeName: encryption.LOG_KEY_DATATYPE}
 
+var errCRSSourceFileMissing = go_errors.New("CRS source file missing")
+
 type requestStreamFile struct {
 	sync.Mutex
 	f       *os.File
@@ -512,7 +514,7 @@ func (this *fileInfo) beginDelete() bool {
 func (this *fileInfo) endDelete() {
 	this.lock.Lock()
 	if this.operation == _ARCHIVE_DELETING {
-		this.operation = _ARCHIVE_NONE
+		this.operation = _ARCHIVE_DELETED
 	}
 	this.lock.Unlock()
 }
@@ -523,6 +525,7 @@ const (
 	_ARCHIVE_NONE archiveFileOp = iota
 	_ARCHIVE_DELETING
 	_ARCHIVE_TRANSFORMING
+	_ARCHIVE_DELETED // the on-disk file has been removed, this fileInfo must never be acted on again
 )
 
 type crsOrphanFile struct {
@@ -1507,23 +1510,27 @@ func (this *requestLogStream) DropKey(dt encryption.KeyDataType, keyIdToDrop str
 			return err
 		}
 
-		transformErr := archive.transformForKeyDrop(keyIdToDrop, activeKey, this.encryptionProvider, this)
-		postOp()
-
 		var targetKeyId string
 		if activeKey != nil {
 			targetKeyId = activeKey.Id
 		}
 
+		archiveName := requestLogStreamFileBaseName(archive.num)
+		logging.Infof(_MSG_PREFIX+"Transforming file %v to drop key id %+q and encrypt with key id %+q",
+			archiveName, keyIdToDrop, targetKeyId)
+
+		transformErr := archive.transformForKeyDrop(keyIdToDrop, activeKey, this.encryptionProvider, this)
+		postOp()
+
 		if transformErr != nil {
 			errStr := fmt.Sprintf("Failed to transform file %v to drop key id %+q and encrypt with key id %+q: %v",
-				requestLogStreamFileBaseName(archive.num), keyIdToDrop, targetKeyId, transformErr)
+				archiveName, keyIdToDrop, targetKeyId, transformErr)
 
 			logging.Errorf(_MSG_PREFIX + errStr)
 			return fmt.Errorf("%s", errStr)
 		} else {
 			logging.Infof(_MSG_PREFIX+"Successfully transformed file %v to drop key id %+q and encrypt with key id %+q",
-				requestLogStreamFileBaseName(archive.num), keyIdToDrop, targetKeyId)
+				archiveName, keyIdToDrop, targetKeyId)
 		}
 	}
 
@@ -1633,6 +1640,9 @@ func (fi *fileInfo) encryptUnencryptedFile(activeKey *encryption.EaRKey, encPath
 
 	f, err := os.Open(origPath)
 	if err != nil {
+		if go_errors.Is(err, os.ErrNotExist) {
+			return errCRSSourceFileMissing
+		}
 		return err
 	}
 	defer f.Close()
@@ -1641,32 +1651,32 @@ func (fi *fileInfo) encryptUnencryptedFile(activeKey *encryption.EaRKey, encPath
 	buf := bufio.NewReaderSize(f, _STREAM_BUF_SIZE)
 	gz, err := gzip.NewReader(buf)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open gzip reader on source file: %w", err)
 	}
 	defer gz.Close()
 	gz.Multistream(false) // we have trailing data that gzip should not attempt to interpret
 
 	encFile, err := os.Create(encPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create destination file: %w", err)
 	}
 	defer encFile.Close()
 
 	err = encryption.EncryptFileAsCBEF(gz, encFile, activeKey, encryption.CBEF_ZLIB, _STREAM_BUF_SIZE)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to encrypt source file: %w", err)
 	}
 
 	// Write the TOC to the metadata file
 	// Read last 16 bytes for the trailer of the TOC
 	_, err = f.Seek(-16, io.SeekEnd)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to seek to TOC trailer in source file: %w", err)
 	}
 
 	trailer := make([]byte, 16)
 	if _, err := io.ReadFull(f, trailer); err != nil {
-		return err
+		return fmt.Errorf("failed to read TOC trailer from source file: %w", err)
 	}
 	count := binary.BigEndian.Uint32(trailer[4:8]) // Number of JSON request entries in the file
 
@@ -1675,24 +1685,24 @@ func (fi *fileInfo) encryptUnencryptedFile(activeKey *encryption.EaRKey, encPath
 
 	_, err = f.Seek(-tocLen, io.SeekEnd)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to seek to TOC in source file: %w", err)
 	}
 
 	toc := make([]byte, tocLen)
 	_, err = io.ReadFull(f, toc)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read TOC from source file: %w", err)
 	}
 
 	metaFile, err := os.Create(metaPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create metadata file: %w", err)
 	}
 	defer metaFile.Close()
 
 	_, err = metaFile.Write(toc)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write TOC to metadata file: %w", err)
 	}
 
 	// Do not swap here. Just return success.
@@ -1705,13 +1715,16 @@ func (fi *fileInfo) reencryptEncryptedFile(encProvider encryption.EncryptionProv
 
 	src, err := os.Open(origPath)
 	if err != nil {
+		if go_errors.Is(err, os.ErrNotExist) {
+			return errCRSSourceFileMissing
+		}
 		return err
 	}
 	defer src.Close()
 
 	dst, err := os.Create(encPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create destination file: %w", err)
 	}
 	defer dst.Close()
 
@@ -1726,7 +1739,7 @@ func (fi *fileInfo) reencryptEncryptedFile(encProvider encryption.EncryptionProv
 	)
 
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to re-encrypt source file: %w", err)
 	}
 
 	return nil
@@ -1738,13 +1751,16 @@ func (fi *fileInfo) decryptEncryptedFile(encProvider encryption.EncryptionProvid
 
 	src, err := os.Open(origPath)
 	if err != nil {
+		if go_errors.Is(err, os.ErrNotExist) {
+			return errCRSSourceFileMissing
+		}
 		return err
 	}
 	defer src.Close()
 
 	dst, err := os.Create(decPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create destination file: %w", err)
 	}
 	defer dst.Close()
 
@@ -1760,22 +1776,28 @@ func (fi *fileInfo) decryptEncryptedFile(encProvider encryption.EncryptionProvid
 	gw.Close()
 	bw.Flush()
 
+	if err != nil {
+		return fmt.Errorf("failed to decrypt source file: %w", err)
+	}
+
 	// Write TOC to a new metadata file
 	metaFile, err := os.Open(metaPath)
 	if err != nil {
 		// If the metadata file for does not exist for some reason, just continue with success.
 		// There is no need to block key drop in this case
 		if go_errors.Is(err, os.ErrNotExist) {
+			logging.Infof(_MSG_PREFIX+"Skipping TOC copy for %v during key drop transformation: metadata file no longer exists",
+				requestLogStreamFileBaseName(fi.num))
 			return nil
 
 		}
-		return err
+		return fmt.Errorf("failed to open metadata file: %w", err)
 	}
 	defer metaFile.Close()
 
 	_, err = io.Copy(dst, metaFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to copy TOC to destination file: %w", err)
 	}
 
 	return nil
@@ -1812,13 +1834,21 @@ func (this *fileInfo) transformForKeyDrop(keyIdToDrop string, activeKey *encrypt
 	}
 
 	cleanup := func() {
-		// Delete the transform file
+		// Delete the transform file (safe to call even though it was never created: removeCRSFile tolerates the
+		// file not existing)
 		removeCRSFile(transformPath, stream)
 		this.setTargetKeyID(true, _STREAM_UNSET_KEY_ID)
 	}
 
 	if transformErr != nil {
 		cleanup()
+		if go_errors.Is(transformErr, errCRSSourceFileMissing) {
+			// The source file was concurrently removed (e.g. by space management or an operator). There is
+			// nothing left to transform, so this is a no-op rather than a failure of the key drop.
+			logging.Infof(_MSG_PREFIX+"Skipping key drop transformation for %v: source file no longer exists",
+				requestLogStreamFileBaseName(this.num))
+			return nil
+		}
 		return transformErr
 	}
 

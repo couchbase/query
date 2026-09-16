@@ -146,7 +146,8 @@ func (this *ffdcFile) transformFile(targetKeyID string, stagingEncrypted bool,
 		src, ferr = os.Open(ffdcPath)
 		if ferr != nil {
 			if go_errors.Is(ferr, os.ErrNotExist) {
-				// Nothing to process
+				logging.Infof("FFDC: Skipping key drop transformation for %v: source file no longer exists",
+					originalName)
 				this.lock.Lock()
 				this.setCurrentKeyId(_UNSET_KEY_ID, false)
 				this.setTargetKeyId(_UNSET_KEY_ID, false)
@@ -274,13 +275,16 @@ func (this *ffdcFile) transformForKeyDrop(keyIdToDrop string, activeKey *encrypt
 			br := bufio.NewReader(src)
 			gr, err := gzip.NewReader(br)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to open gzip reader on source file: %w", err)
 			}
 
 			err = encryption.EncryptFileAsCBEF(gr, dst, activeKey, encryption.CBEF_ZLIB, _ENCRYPTION_BUFFER_SIZE)
 			gr.Close()
+			if err != nil {
+				return fmt.Errorf("failed to encrypt source file: %w", err)
+			}
 
-			return err
+			return nil
 		}, ffdcMgr)
 	}
 
@@ -290,7 +294,7 @@ func (this *ffdcFile) transformForKeyDrop(keyIdToDrop string, activeKey *encrypt
 			keyId := this.CurrentKeyId(true)
 			key, err := ffdcMgr.getKey(keyId)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to get key %+q for decryption: %w", keyId, err)
 			}
 
 			zip := gzip.NewWriter(dst)
@@ -303,7 +307,10 @@ func (this *ffdcFile) transformForKeyDrop(keyIdToDrop string, activeKey *encrypt
 			bw.Flush()
 			zip.Close()
 
-			return derr
+			if derr != nil {
+				return fmt.Errorf("failed to decrypt source file: %w", derr)
+			}
+			return nil
 		}, ffdcMgr)
 	}
 
@@ -312,11 +319,14 @@ func (this *ffdcFile) transformForKeyDrop(keyIdToDrop string, activeKey *encrypt
 		keyId := this.CurrentKeyId(true)
 		key, err := ffdcMgr.getKey(keyId)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get key %+q for re-encryption: %w", keyId, err)
 		}
-		return encryption.ReEncryptCBEFFile(src, dst, func(keyID string) (*encryption.EaRKey, errors.Error) {
+		if err := encryption.ReEncryptCBEFFile(src, dst, func(keyID string) (*encryption.EaRKey, errors.Error) {
 			return key, nil
-		}, activeKey)
+		}, activeKey); err != nil {
+			return fmt.Errorf("failed to re-encrypt source file: %w", err)
+		}
+		return nil
 	}, ffdcMgr)
 }
 

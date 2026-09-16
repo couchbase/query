@@ -61,6 +61,7 @@ func (this *nodeKeyStore) PrimeKeys(keyDataTypes []encryption.KeyDataType) error
 		this.lock.RUnlock()
 
 		if !needsPrime {
+			logging.Infof("EAR: [data_type=%s] Encryption-at-rest configuration already primed", dt.String())
 			continue
 		}
 
@@ -290,11 +291,13 @@ func (this *nodeKeyStore) primeKey(dt cbauth.KeyDataType) errors.Error {
 	}
 
 	err, _ := this.UpdateKeys(dt, keys, true)
+	t := cbauthTypeToDataType(dt)
 	if err != nil {
-		t := cbauthTypeToDataType(dt)
 		logging.Errorf("EAR: [data_type=%s] Error priming encryption-at-rest configuration: %v", t.String(), err)
 		return errors.NewEncryptionError(errors.E_ENCRYPTION_PRIME, err, t.String())
 	}
+
+	logging.Infof("EAR: [data_type=%s] Successfully primed encryption-at-rest configuration", t.String())
 
 	return nil
 }
