@@ -128,3 +128,9 @@ type FunctionsPhaseCount interface {
 	Context
 	AddFunctionsPhaseCount(fname string, c uint64)
 }
+
+// Created to avoid import cycles between execution and expression packages
+type ScheduledTaskContext interface {
+	Context
+	CopyForScheduledTask() Context
+}
