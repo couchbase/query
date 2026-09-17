@@ -25,6 +25,7 @@ type EncryptionManager interface {
 	SynchronizeKeyFilesCallback(dt cbauth.KeyDataType) error
 	RefreshKeysCallback(dt cbauth.KeyDataType) error
 	GetAllInUseKeys() (map[encryption.KeyDataType][]string, error)
+	DeleteKeyDataType(dt encryption.KeyDataType)
 }
 
 type TrackedEncryptor interface {
@@ -74,4 +75,7 @@ func (this *NoopEncryptionManager) SynchronizeKeyFilesCallback(dt cbauth.KeyData
 
 func (this *NoopEncryptionManager) RefreshKeysCallback(dt cbauth.KeyDataType) error {
 	return nil
+}
+
+func (this *NoopEncryptionManager) DeleteKeyDataType(dt encryption.KeyDataType) {
 }

@@ -36,25 +36,20 @@ type nodeKeyStore struct {
 }
 
 func newNodeKeyStore() *nodeKeyStore {
-	return &nodeKeyStore{}
+	return &nodeKeyStore{
+		encrKeysMaterial: make(map[string]*encryption.EaRKey, _MAX_KEY_DATATYPES),
+
+		// Can potentially expand beyond _MAX_KEY_DATATYPES, but start with this initial capacity
+		encrKeysInfo: make(map[encryption.KeyDataType]*encryption.EncrKeysInfo, _MAX_KEY_DATATYPES),
+	}
 }
 
 // Attempts to load the key store with key information of all the provided key data types.
 // If priming fails for any datatype, it does not mean permanent absence of its key info from the store.
 // Any missing entries will be loaded later through future refresh callback triggers or lazy prime on first access of the key.
 func (this *nodeKeyStore) PrimeKeys(keyDataTypes []encryption.KeyDataType) errors.Error {
-	this.lock.Lock()
-	if this.encrKeysMaterial == nil {
-		this.encrKeysMaterial = make(map[string]*encryption.EaRKey, _MAX_KEY_DATATYPES)
-	}
-
-	if this.encrKeysInfo == nil {
-		// Can potentially expand beyond _MAX_KEY_DATATYPES, but start with this initial capacity
-		this.encrKeysInfo = make(map[encryption.KeyDataType]*encryption.EncrKeysInfo, _MAX_KEY_DATATYPES)
-	}
-	this.lock.Unlock()
-
 	for _, dt := range keyDataTypes {
+		logging.Infof("EAR: [data_type=%s] Attempt to prime encryption-at-rest configuration", dt.String())
 		this.lock.RLock()
 		entry, ok := this.encrKeysInfo[dt]
 		needsPrime := !ok || entry == nil // Only prime if another path has not already loaded key info for this data type
@@ -84,15 +79,6 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 
 	this.lock.Lock()
 	defer this.lock.Unlock()
-
-	if this.encrKeysMaterial == nil {
-		this.encrKeysMaterial = make(map[string]*encryption.EaRKey, _MAX_KEY_DATATYPES)
-	}
-
-	if this.encrKeysInfo == nil {
-		// Can potentially expand beyond _MAX_KEY_DATATYPES, but start with this initial capacity
-		this.encrKeysInfo = make(map[encryption.KeyDataType]*encryption.EncrKeysInfo, _MAX_KEY_DATATYPES)
-	}
 
 	// Update the manager if no config exists or the new config differs from the existing config for this type
 	currInfo, exists := this.encrKeysInfo[dt]
@@ -155,33 +141,30 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 	}
 
 	info := &encryption.EncrKeysInfo{
-		ActiveKeyId: newInfo.ActiveKeyId,
+		ActiveKeyId:       newInfo.ActiveKeyId,
+		UnavailableKeyIds: make([]string, len(newInfo.UnavailableKeyIds)),
+		Keys:              make([]*encryption.EaRKey, len(newInfo.Keys)),
 	}
 
 	if len(newInfo.UnavailableKeyIds) > 0 {
-		info.UnavailableKeyIds = make([]string, len(newInfo.UnavailableKeyIds))
 		copy(info.UnavailableKeyIds, newInfo.UnavailableKeyIds)
 	}
 
-	if len(newInfo.Keys) > 0 {
-		info.Keys = make([]*encryption.EaRKey, len(newInfo.Keys))
-
-		for i, k := range newInfo.Keys {
-			newKey := &encryption.EaRKey{
-				Id:     k.Id,
-				Cipher: k.Cipher,
-			}
-
-			// Deep copy key material
-			newKey.Key = make([]byte, len(k.Key))
-			copy(newKey.Key, k.Key)
-
-			info.Keys[i] = newKey
-
-			// Update key material map.
-			// Store a copy of the key material pointer to allow updates to EncrKeysInfo.Keys[i] after we update this map
-			this.encrKeysMaterial[k.Id] = newKey
+	for i, k := range newInfo.Keys {
+		newKey := &encryption.EaRKey{
+			Id:     k.Id,
+			Cipher: k.Cipher,
 		}
+
+		// Deep copy key material
+		newKey.Key = make([]byte, len(k.Key))
+		copy(newKey.Key, k.Key)
+
+		info.Keys[i] = newKey
+
+		// Update key material map.
+		// Store a copy of the key material pointer to allow updates to EncrKeysInfo.Keys[i] after we update this map
+		this.encrKeysMaterial[k.Id] = newKey
 	}
 
 	this.encrKeysInfo[dt] = info
@@ -193,10 +176,10 @@ func (this *nodeKeyStore) UpdateKeys(dataType cbauth.KeyDataType, newInfo *cbaut
 }
 
 func (this *nodeKeyStore) GetAllStoredActiveKeyIds(exclude map[encryption.KeyDataType]bool) map[encryption.KeyDataType]string {
-	activeKeyIds := make(map[encryption.KeyDataType]string, len(this.encrKeysInfo))
-
 	this.lock.RLock()
 	defer this.lock.RUnlock()
+
+	activeKeyIds := make(map[encryption.KeyDataType]string, len(this.encrKeysInfo))
 
 	for dt, keyInfo := range this.encrKeysInfo {
 		if keyInfo != nil {
@@ -251,13 +234,17 @@ func (this *nodeKeyStore) getKeyHelper(dt encryption.KeyDataType, findActiveKey 
 		// After priming, check the cached entry again
 		keyInfo, ok = this.encrKeysInfo[dt]
 		if !ok || keyInfo == nil {
-			return nil, nil
+			idForError := keyID
+			if findActiveKey {
+				idForError = "'active'"
+			}
+			return nil, errors.NewEncryptionError(errors.E_ENCRYPTION_KEY_INFO_NOT_FOUND, nil, idForError, dt.String())
 		}
 	}
 
 	if findActiveKey {
 		// If ActiveKeyId is empty, encryption at rest is not enabled for this data type
-		if keyInfo == nil || keyInfo.ActiveKeyId == encryption.UNENCRYPTED_KEY_ID {
+		if keyInfo.ActiveKeyId == encryption.UNENCRYPTED_KEY_ID {
 			return nil, nil
 		}
 
@@ -300,4 +287,36 @@ func (this *nodeKeyStore) primeKey(dt cbauth.KeyDataType) errors.Error {
 	logging.Infof("EAR: [data_type=%s] Successfully primed encryption-at-rest configuration", t.String())
 
 	return nil
+}
+
+func (this *nodeKeyStore) DeleteKeyDataType(dt encryption.KeyDataType) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
+
+	keyInfo, ok := this.encrKeysInfo[dt]
+	if !ok || keyInfo == nil {
+		return
+	}
+
+	// Delete active key material
+	if keyInfo.ActiveKeyId != encryption.UNENCRYPTED_KEY_ID {
+		delete(this.encrKeysMaterial, keyInfo.ActiveKeyId)
+	}
+
+	// Delete all cached key material
+	for _, key := range keyInfo.Keys {
+		if key == nil {
+			continue
+		}
+		delete(this.encrKeysMaterial, key.Id)
+	}
+
+	// Delete unavailable keys material
+	for _, uk := range keyInfo.UnavailableKeyIds {
+		delete(this.encrKeysMaterial, uk)
+	}
+
+	delete(this.encrKeysInfo, dt)
+
+	logging.Infof("EAR: [data_type=%s] Encryption-at-rest configuration removed from key store", dt.String())
 }

@@ -24,3 +24,6 @@ func (NoopEncryptionProvider) GetActiveKey(dt encryption.KeyDataType) (*encrypti
 func (NoopEncryptionProvider) GetKey(dt encryption.KeyDataType, keyID string) (*encryption.EaRKey, errors.Error) {
 	return nil, nil
 }
+
+func (NoopEncryptionProvider) DeleteKeyDataType(dt encryption.KeyDataType) {
+}

@@ -2320,6 +2320,11 @@ func (p *namespace) KeyspaceDeleteCallback(name string, err error) {
 		if isQueryMetadata(cbKeyspace.name) {
 			resetQueryMetadata()
 		}
+
+		if encProvider := p.store.EncryptionProvider(); encProvider != nil {
+			encProvider.DeleteKeyDataType(encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE,
+				BucketUUID: cbKeyspace.uidString})
+		}
 	}
 }
 

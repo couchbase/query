@@ -62,4 +62,5 @@ func (k *EaRKey) String() string {
 type EncryptionProvider interface {
 	GetActiveKey(dt KeyDataType) (*EaRKey, errors.Error)
 	GetKey(dt KeyDataType, keyID string) (*EaRKey, errors.Error)
+	DeleteKeyDataType(dt KeyDataType)
 }

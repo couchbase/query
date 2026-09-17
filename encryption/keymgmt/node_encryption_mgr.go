@@ -68,9 +68,10 @@ func (this *NodeEncryptionManager) initDropKeysWorker() {
 // Performs initialization of the manager with info about the provided key datatypes
 // Typically invoked during service startup to initialize the manager with required key data.
 func (this *NodeEncryptionManager) PrimeKeys(keyDataTypes []encryption.KeyDataType) errors.Error {
-	logging.Infof("EAR: Priming manager with keys for all available key data types")
+	logging.Infof("EAR: Priming manager with encryption-at-rest configuration for all available key data types")
 	this.keyStore.PrimeKeys(keyDataTypes)
-	logging.Infof("EAR: Finished priming operation of manager with keys for all available key data types")
+	logging.Infof(
+		"EAR: Finished priming operation of manager with encryption-at-rest configuration for all available key data types")
 	return nil
 }
 
@@ -117,7 +118,7 @@ func (this *NodeEncryptionManager) RefreshKeysCallback(dt cbauth.KeyDataType) er
 
 	err := this.UpdateKeys(dt, newKeys, false)
 	if err != nil && err.Code() != errors.E_INVALID_ENCRYPTION_KEY_DATATYPE {
-		logging.Errorf("EAR: [data_type=%s] Error refreshing encryption configuration. Failed to update local key store: %v",
+		logging.Errorf("EAR: [data_type=%s] Error refreshing encryption configuration. Failed to update key store: %v",
 			cbauthTypeToDataType(dt).String(), err)
 	}
 
@@ -256,6 +257,10 @@ func (this *NodeEncryptionManager) DropKeysCallback(dt cbauth.KeyDataType, KeyId
 func (this *NodeEncryptionManager) SynchronizeKeyFilesCallback(dt cbauth.KeyDataType) error {
 	// Query has no requirement for this as of now
 	return nil
+}
+
+func (this *NodeEncryptionManager) DeleteKeyDataType(dt encryption.KeyDataType) {
+	this.keyStore.DeleteKeyDataType(dt)
 }
 
 func (this *NodeEncryptionManager) dropKeysWorker() {
