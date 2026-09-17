@@ -1029,6 +1029,10 @@ func (this *httpRequest) writeMetrics(metrics bool, prefix, indent string) bool 
 		fmt.Fprintf(buf, ",%s\"naturalLanguageProcessingTime\": \"%s\"", newPrefix, util.FormatDuration(nt, this.DurationStyle()))
 	}
 
+	if this.Natural() != "" && this.Statement() != "" && this.State() == server.COMPLETED && this.GetErrorCount() == 0 {
+		fmt.Fprintf(buf, ",%s\"generatedStatementExecuted\": %t", newPrefix, this.NaturalStatementExecuted())
+	}
+
 	if prefix != "" && !(this.writeString("\n") && this.writeString(prefix)) {
 		this.writer.truncate(beforeMetrics)
 		return false
@@ -1105,6 +1109,10 @@ func (this *httpRequest) writeMetricsXML(metrics bool, prefix string, indent str
 
 	if this.GetWarningCount() > 0 {
 		fmt.Fprintf(buf, "%s<warningCount>%d</warningCount>", newPrefix, this.GetWarningCount())
+	}
+
+	if this.Natural() != "" && this.Statement() != "" && this.State() == server.COMPLETED && this.GetErrorCount() == 0 {
+		fmt.Fprintf(buf, "%s<generatedStatementExecuted>%t</generatedStatementExecuted>", newPrefix, this.NaturalStatementExecuted())
 	}
 
 	if newPrefix != "" && !this.writeString(newPrefix[:len(prefix)+1]) {

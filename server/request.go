@@ -96,6 +96,8 @@ type Request interface {
 	SetNaturalStatement(algebra.Statement)
 	NaturalStatement() algebra.Statement
 	NaturalShowOnly() bool
+	SetNaturalStatementExecuted(bool)
+	NaturalStatementExecuted() bool
 	SetNaturalOutput(n string)
 	NaturalOutput() string
 	SetNaturalVendor(vendor string)
@@ -483,6 +485,7 @@ type BaseRequest struct {
 	naturalModel         string
 	nlStatement          algebra.Statement
 	nlShowOnly           bool
+	nlStatementExecuted  bool
 	nloutput             string
 	nladvise             bool
 	nlexplain            bool
@@ -1914,6 +1917,14 @@ func (this *BaseRequest) SetNaturalShowOnly(show bool) {
 
 func (this *BaseRequest) NaturalShowOnly() bool {
 	return this.nlShowOnly
+}
+
+func (this *BaseRequest) SetNaturalStatementExecuted(executed bool) {
+	this.nlStatementExecuted = executed
+}
+
+func (this *BaseRequest) NaturalStatementExecuted() bool {
+	return this.nlStatementExecuted
 }
 
 func (this *BaseRequest) SetNaturalOutput(n string) {

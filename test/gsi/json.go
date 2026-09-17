@@ -87,6 +87,11 @@ type RunResult struct {
 	Err                errors.Error
 	SortCount          int
 	GeneratedStatement bool
+	// GeneratedStatementExecuted mirrors server.BaseRequest.NaturalStatementExecuted():
+	// true when a generated statement was actually executed, false when it was
+	// generated but not (e.g. show-only or a non-executable statement kind).
+	// Only meaningful when GeneratedStatement is true.
+	GeneratedStatementExecuted bool
 	// ChatId is the natural-language conversation id associated with the
 	// request. For a BEGIN CHAT request it carries the server-minted id back to
 	// the caller; empty otherwise.
@@ -374,7 +379,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	if prepare {
 		prepared, err := PrepareStmt(mockServer, queryParams, namespace, q)
 		if err != nil {
-			return &RunResult{nil, nil, err, -1, false, "", nil, nil}
+			return &RunResult{nil, nil, err, -1, false, false, "", nil, nil}
 		}
 		query.SetPrepared(prepared)
 		query.SetType(prepared.Type())
@@ -481,7 +486,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 
 	err := query.ProcessNatural()
 	if err != nil {
-		return &RunResult{nil, nil, err, -1, false, "", nil, nil}
+		return &RunResult{nil, nil, err, -1, false, false, "", nil, nil}
 	}
 
 	if userArgs == nil {
@@ -506,7 +511,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 
 	if !ret {
 		mockServer.saveTxId(gv, query.Type(), nil)
-		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1, false, "", nil, nil}
+		return &RunResult{nil, nil, errors.NewError(nil, "Query timed out"), -1, false, false, "", nil, nil}
 	}
 
 	// wait till all the results are ready
@@ -520,8 +525,8 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 			mr.err = errs[0]
 		}
 	}
-	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount, mr.generatedStmt, query.NaturalChatId(),
-		query.FmtNaturalRequestTokens(), query.FmtNaturalChatTokens()}
+	return &RunResult{mr.results, query.Warnings(), mr.err, mr.sortCount, mr.generatedStmt, query.NaturalStatementExecuted(),
+		query.NaturalChatId(), query.FmtNaturalRequestTokens(), query.FmtNaturalChatTokens()}
 }
 
 /*

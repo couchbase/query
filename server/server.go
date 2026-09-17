@@ -1040,10 +1040,12 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	request.SetNaturalStatement(nlAlgebraStmt)
 
 	if !natural.CanServerExecuteGeneratedStatement(nlAlgebraStmt) || request.NaturalShowOnly() {
+		request.SetNaturalStatementExecuted(false)
 		request.CompletedNaturalRequest(this)
 		return true, false
 	}
 
+	request.SetNaturalStatementExecuted(true)
 	return false, false
 }
 

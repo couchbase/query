@@ -97,6 +97,7 @@ func testNaturalFakeProvider(qc *gsi.MockServer, t *testing.T) {
 	testNaturalConversationalWrongUser(qc, t)
 	testNaturalConfigInWithClause(qc, t)
 	testNaturalWithOptionNotAllowed(qc, t)
+	testNaturalStatementExecutedMetric(qc, t)
 
 	seed := gsi.RunAdminStmt(qc, `CREATE KNOWLEDGE aiknow1 FOR orders AS 'ICAO codes identify airlines uniquely';`)
 	if seed.Err != nil {
@@ -326,6 +327,67 @@ func testNaturalWithOptionNotAllowed(qc *gsi.MockServer, t *testing.T) {
 	if rr.Err.Code() != errors.E_NL_OPTION_NOT_ALLOWED {
 		t.Errorf("option-not-allowed: got code %d, want %d (%v)",
 			rr.Err.Code(), errors.E_NL_OPTION_NOT_ALLOWED, rr.Err)
+	}
+}
+
+// testNaturalStatementExecutedMetric is the regression guard for MB-73787: the
+// generated_statement's execution outcome must be reported back (via
+// RunResult.GeneratedStatementExecuted, which mirrors the response's
+// "generatedStatementExecuted" metric) as true when the generated statement is
+// actually run, and false when it is not - either because the request is
+// show-only ("execute":false) or because the generated statement's kind is one
+// the server never auto-executes regardless of "execute" (natural.
+// CanServerExecuteGeneratedStatement only allows ADVISE/EXPLAIN/param-less
+// SELECT; a DML statement like DELETE is always generated-only).
+func testNaturalStatementExecutedMetric(qc *gsi.MockServer, t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeChatCompletion(w, "```sql\nSELECT name FROM orders\n```")
+	}))
+	defer srv.Close()
+
+	executed := runNatural(qc, `USING AI WITH {"keyspaces":"orders", "execute":true} list the character names`,
+		slmConfig(srv.URL))
+	if executed.Err != nil {
+		t.Fatalf("statement-executed metric: unexpected error on executed case: %v", executed.Err)
+	}
+	if !executed.GeneratedStatement {
+		t.Fatalf("statement-executed metric: expected a generated statement on executed case")
+	}
+	if !executed.GeneratedStatementExecuted {
+		t.Errorf("statement-executed metric: expected the generated statement to be reported executed")
+	}
+
+	showOnly := runNatural(qc, `USING AI WITH {"keyspaces":"orders", "execute":false} list the character names`,
+		slmConfig(srv.URL))
+	if showOnly.Err != nil {
+		t.Fatalf("statement-executed metric: unexpected error on show-only case: %v", showOnly.Err)
+	}
+	if !showOnly.GeneratedStatement {
+		t.Fatalf("statement-executed metric: expected a generated statement on show-only case")
+	}
+	if showOnly.GeneratedStatementExecuted {
+		t.Errorf("statement-executed metric: expected the generated statement NOT to be reported executed " +
+			"in show-only mode")
+	}
+
+	deleteSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeChatCompletion(w, "```sql\nDELETE FROM orders WHERE name = 'Alice'\n```")
+	}))
+	defer deleteSrv.Close()
+
+	// "execute":true is set deliberately, to prove the non-execution here comes
+	// from the DELETE statement kind itself, not from a show-only request.
+	deleteGenerated := runNatural(qc, `USING AI WITH {"keyspaces":"orders", "execute":true} delete Alice's orders`,
+		slmConfig(deleteSrv.URL))
+	if deleteGenerated.Err != nil {
+		t.Fatalf("statement-executed metric: unexpected error on DELETE case: %v", deleteGenerated.Err)
+	}
+	if !deleteGenerated.GeneratedStatement {
+		t.Fatalf("statement-executed metric: expected a generated statement on DELETE case")
+	}
+	if deleteGenerated.GeneratedStatementExecuted {
+		t.Errorf("statement-executed metric: expected a generated DELETE statement NOT to be reported " +
+			"executed even with \"execute\":true")
 	}
 }
 
