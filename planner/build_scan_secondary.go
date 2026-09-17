@@ -484,16 +484,13 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 	ubs expression.Bindings, join bool, baseKeyspace *base.BaseKeyspace) (
 	sargables, arrays, flex map[datastore.Index]*indexEntry, err error) {
 
-	flexPred := pred
-	flexVecPred := vpred
-	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
-		flexPred, err = base.ReplaceParameters(flexPred, this.context.NamedArgs(), this.context.PositionalArgs())
-		if err == nil {
-			flexVecPred, err = base.ReplaceParameters(flexVecPred, this.context.NamedArgs(), this.context.PositionalArgs())
-		}
-		if err != nil {
-			return
-		}
+	flexPred, err := this.context.ReplaceParameters(pred, false)
+	if err != nil {
+		return
+	}
+	flexVecPred, err := this.context.ReplaceParameters(vpred, false)
+	if err != nil {
+		return
 	}
 
 	sargables = make(map[datastore.Index]*indexEntry, len(indexes))
@@ -1602,9 +1599,6 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		}
 	}
 
-	namedArgs := this.context.NamedArgs()
-	positionalArgs := this.context.PositionalArgs()
-
 	if util.IsFeatureEnabled(this.context.FeatureControls(), util.N1QL_EARLY_ORDER) && !arrayKey &&
 		this.order != nil && this.limit != nil &&
 		!this.hasBuilderFlag(BUILDER_ORDER_DEPENDS_ON_LET) &&
@@ -1733,17 +1727,13 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 				// Also skip filters that is in index condition
 				origExpr := fl.OrigExpr()
 				flExpr := fltrExpr
-				if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-					flExpr, err = base.ReplaceParameters(flExpr, namedArgs, positionalArgs)
-					if err != nil {
-						return
-					}
-					if origExpr != nil {
-						origExpr, err = base.ReplaceParameters(origExpr, namedArgs, positionalArgs)
-						if err != nil {
-							return
-						}
-					}
+				flExpr, err = this.context.ReplaceParameters(flExpr, false)
+				if err != nil {
+					return
+				}
+				origExpr, err = this.context.ReplaceParameters(origExpr, false)
+				if err != nil {
+					return
 				}
 				if base.SubsetOf(entry.cond, flExpr) {
 					continue
@@ -2109,23 +2099,16 @@ func (this *builder) orGetIndexFilter(pred expression.Expression, entry *indexEn
 // get the integer value for LIMIT/OFFSET when specified
 // pushdown: require LIMIT/OFFSET pushdown before getting the actual value for LIMIT/OFFSET
 func (this *builder) getLimitOffset(entry *indexEntry, limit, offset expression.Expression, pushdown bool) (int64, int64) {
-	namedArgs := this.context.NamedArgs()
-	positionalArgs := this.context.PositionalArgs()
-
 	nlimit := int64(-1)
 	noffset := int64(-1)
-	if len(namedArgs) > 0 || len(positionalArgs) > 0 {
-		var err error
-		limit, err = base.ReplaceParameters(limit, namedArgs, positionalArgs)
-		if err != nil {
-			return -1, -1
-		}
-		if offset != nil {
-			offset, err = base.ReplaceParameters(offset, namedArgs, positionalArgs)
-			if err != nil {
-				return -1, -1
-			}
-		}
+	var err error
+	limit, err = this.context.ReplaceParameters(limit, false)
+	if err != nil {
+		return -1, -1
+	}
+	offset, err = this.context.ReplaceParameters(offset, false)
+	if err != nil {
+		return -1, -1
 	}
 
 	if entry.IsPushDownProperty(_PUSHDOWN_LIMIT) && entry.HasFlag(IE_VECTOR_RERANK) {
