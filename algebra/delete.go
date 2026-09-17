@@ -237,7 +237,7 @@ func (this *Delete) Privileges() (*auth.Privileges, errors.Error) {
 	}
 	if this.returning != nil {
 		if isSystem {
-			datastore.GetSystemstore().PrivilegesFromPath(fullKeyspace, this.keyspace.Keyspace(), auth.PRIV_QUERY_DELETE, privs)
+			datastore.GetSystemstore().PrivilegesFromPath(fullKeyspace, this.keyspace.Keyspace(), auth.PRIV_QUERY_SELECT, privs)
 		} else {
 			privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, props)
 		}

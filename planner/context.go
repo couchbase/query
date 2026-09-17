@@ -11,6 +11,8 @@ package planner
 import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/expression"
+	base "github.com/couchbase/query/plannerbase"
 	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/value"
 )
@@ -32,6 +34,9 @@ type PrepareContext struct {
 
 	planStabilityMode        settings.PlanStabilityMode
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy
+
+	// cache of ReplaceParameters() results
+	replaced map[string]expression.Expression
 }
 
 func NewPrepareContext(rv *PrepareContext, requestId, queryContext string,
@@ -74,6 +79,48 @@ func (this *PrepareContext) PositionalArgs() value.Values {
 	return this.positionalArgs
 }
 
+// HasParameters returns if this context has named and/or positional parameters
+func (this *PrepareContext) HasParameters() bool {
+	return len(this.namedArgs) > 0 || len(this.positionalArgs) > 0
+}
+
+// ReplaceParameters replaces named/positional parameters in expr with their argument values.
+// The result is cached and reused across calls with the same source expression.
+//
+// Pass needCopy true when the caller intends to mutate the returned expression (e.g. via SetExprFlag)
+// or hand it off to something else that might mutate it
+func (this *PrepareContext) ReplaceParameters(expr expression.Expression, needCopy bool) (expression.Expression, error) {
+	if expr == nil || !this.HasParameters() {
+		return expr, nil
+	}
+
+	if this.replaced == nil {
+		this.replaced = make(map[string]expression.Expression, 8)
+	}
+
+	str := expr.String()
+	var replaced expression.Expression
+	if cached, ok := this.replaced[str]; ok {
+		replaced = cached
+	} else {
+		var err error
+		replaced, err = base.ReplaceParameters(expr, this.namedArgs, this.positionalArgs)
+		if err != nil {
+			return nil, err
+		}
+		this.replaced[str] = replaced
+	}
+
+	// the cached entry is shared across every caller thus the caller needs to request a copy
+	// if it needs to mutate its result (or otherwise not risk affecting other holders of the
+	// cached instance).
+	// a copy is needed whether this call populated the cache or just hit it.
+	if needCopy {
+		return replaced.Copy(), nil
+	}
+	return replaced, nil
+}
+
 func (this *PrepareContext) IndexApiVersion() int {
 	return this.indexApiVersion
 }
@@ -100,10 +147,12 @@ func (this *PrepareContext) SetDeltaKeyspaces(dk map[string]bool) {
 
 func (this *PrepareContext) SetNamedArgs(na map[string]value.Value) {
 	this.namedArgs = na
+	this.replaced = nil
 }
 
 func (this *PrepareContext) SetPositionalArgs(pa value.Values) {
 	this.positionalArgs = pa
+	this.replaced = nil
 }
 
 func (this *PrepareContext) ScanConsistency() datastore.ScanConsistency {

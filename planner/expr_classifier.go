@@ -115,23 +115,16 @@ func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 	newExpr := false
 	orTerms := make(expression.Expressions, 0, len(or.Operands()))
 
-	posParams := this.context.PositionalArgs()
-	namedParams := this.context.NamedArgs()
-
 	for _, op := range or.Operands() {
 		skip := false
 		var cop value.Value
 
 		// replace named/pos param thus eliminating unwanted span generation for cases like ($c=1)
-		if len(posParams) > 0 || len(namedParams) > 0 {
-			rop, err := base.ReplaceParameters(op, namedParams, posParams)
-			if err != nil {
-				return nil, err
-			}
-			cop = rop.Value()
-		} else {
-			cop = op.Value()
+		rop, err := this.context.ReplaceParameters(op, false)
+		if err != nil {
+			return nil, err
 		}
+		cop = rop.Value()
 
 		if op.HasExprFlag(expression.EXPR_VALUE_MISSING) || op.HasExprFlag(expression.EXPR_VALUE_NULL) {
 			skip = true

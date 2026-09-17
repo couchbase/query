@@ -22,14 +22,12 @@ func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
 		return nil, nil
 	}
 
-	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
-		replaced, err := base.ReplaceParameters(pred, this.context.NamedArgs(), this.context.PositionalArgs())
-		if err != nil {
-			return nil, err
-		}
-		if repFunc, ok := replaced.(expression.LikeFunction); ok {
-			pred = repFunc
-		}
+	replaced, err := this.context.ReplaceParameters(pred, false)
+	if err != nil {
+		return nil, err
+	}
+	if repFunc, ok := replaced.(expression.LikeFunction); ok {
+		pred = repFunc
 	}
 
 	prefix := ""

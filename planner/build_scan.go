@@ -354,12 +354,9 @@ func (this *builder) buildTermScan(node *algebra.KeyspaceTerm,
 		pred = baseKeyspace.Onclause()
 	}
 
-	subset := pred
-	if len(this.context.NamedArgs()) > 0 || len(this.context.PositionalArgs()) > 0 {
-		subset, err = base.ReplaceParameters(subset, this.context.NamedArgs(), this.context.PositionalArgs())
-		if err != nil {
-			return
-		}
+	subset, err := this.context.ReplaceParameters(pred, false)
+	if err != nil {
+		return
 	}
 
 	// collect UNNEST bindings when HINT indexes has FTS index
@@ -906,9 +903,9 @@ func allIndexes(keyspace datastore.Keyspace, skip, virtualIndexes []datastore.In
 }
 
 func checkSubset(pred, cond expression.Expression, context *PrepareContext) bool {
-	if context != nil && (len(context.NamedArgs()) > 0 || len(context.PositionalArgs()) > 0) {
+	if context != nil {
 		var err error
-		pred, err = base.ReplaceParameters(pred, context.NamedArgs(), context.PositionalArgs())
+		pred, err = context.ReplaceParameters(pred, false)
 		if err != nil {
 			return false
 		}

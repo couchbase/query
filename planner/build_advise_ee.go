@@ -629,14 +629,17 @@ func getFilterInfos(filters base.Filters, context *PrepareContext) base.Filters 
 	exprs := make(base.Filters, 0, len(filters))
 	for _, f := range filters {
 		var fl *base.Filter
-		if context != nil && (len(context.NamedArgs()) > 0 || len(context.PositionalArgs()) > 0) {
-			namedArgs := context.NamedArgs()
-			positionalArgs := context.PositionalArgs()
-			fltrExpr, err := base.ReplaceParameters(f.FltrExpr(), namedArgs, positionalArgs)
+		if context != nil && context.HasParameters() {
+			// getFilterInfos is called repeatedly with the same underlying
+			// filters (e.g. once per join-order enumeration attempt), each
+			// time building a distinct advisor.KeyspaceInfo. Request a copy
+			// so each result owns its expressions independently of
+			// PrepareContext's ReplaceParameters cache and of each other.
+			fltrExpr, err := context.ReplaceParameters(f.FltrExpr(), true)
 			if err != nil {
 				continue
 			}
-			origExpr, err := base.ReplaceParameters(f.OrigExpr(), namedArgs, positionalArgs)
+			origExpr, err := context.ReplaceParameters(f.OrigExpr(), true)
 			if err != nil {
 				continue
 			}
