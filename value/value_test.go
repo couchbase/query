@@ -10,6 +10,7 @@ package value
 
 import (
 	"compress/gzip"
+	"crypto/rand"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -22,7 +23,9 @@ import (
 
 	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/encryption"
+	"github.com/couchbase/query/encryption/openssl"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/util"
 	diffpkg "github.com/kylelemons/godebug/diff"
 )
 
@@ -44,6 +47,10 @@ func init() {
 	}
 
 	codeJSON = data
+
+	// Key derivation (KBKDF) is provided by the openssl package. It must be initialized before any
+	// encrypted spill file is written or read.
+	openssl.Init()
 }
 
 func TestTypeRecognition(t *testing.T) {
@@ -765,143 +772,177 @@ func TestValueSpilling(t *testing.T) {
 	os.Remove(f.Name()) // remove after so files can be examined if necessary
 }
 
+// spillTestMode describes one of the ways AnnotatedArray spilling is exercised: with encryption
+// disabled, with encryption enabled, and with encryption and compression both enabled.
+type spillTestMode struct {
+	name             string
+	compress         bool
+	getEncryptionKey func() (*encryption.EaRKey, errors.Error)
+}
+
+// spillTestModes generates a fresh 256-bit encryption key and returns the three modes that
+// TestSpillingArray and TestSpillingUnsortedArray both run through.
+func spillTestModes(t *testing.T) []spillTestMode {
+	t.Helper()
+
+	keyMaterial := make([]byte, 32)
+	if _, err := rand.Read(keyMaterial); err != nil {
+		t.Fatalf("Failed to generate key material: %v", err)
+	}
+	uuid, err := util.UUIDV4()
+	if err != nil {
+		t.Fatalf("Failed to generate key ID: %v", err)
+	}
+	key := &encryption.EaRKey{
+		Id:     uuid,
+		Cipher: encryption.AES_256_GCM_CIPHER,
+		Key:    keyMaterial,
+	}
+
+	noKey := func() (*encryption.EaRKey, errors.Error) { return nil, nil }
+	withKey := func() (*encryption.EaRKey, errors.Error) { return key, nil }
+
+	return []spillTestMode{
+		{"no encryption", false, noKey},
+		{"encryption enabled", false, withKey},
+		{"encryption and compression enabled", true, withKey},
+	}
+}
+
 func TestSpillingArray(t *testing.T) {
 
-	tracking := int64(0)
-	spillThreshold := uint64(0)
+	for _, mode := range spillTestModes(t) {
+		tracking := int64(0)
+		spillThreshold := uint64(0)
 
-	shouldSpill := func(c uint64, n uint64) bool {
-		return c > spillThreshold
-	}
-	acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
-	trackMem := func(sz int64) error {
-		tracking -= sz
-		return nil
-	}
-	lessThan := func(v1 AnnotatedValue, v2 AnnotatedValue) bool {
-		m1 := v1.GetValue().Actual().(map[string]interface{})
-		m2 := v2.GetValue().Actual().(map[string]interface{})
-		n1 := m1["name"].(string) + m1["surname"].(string)
-		n2 := m2["name"].(string) + m2["surname"].(string)
-		return strings.Compare(n1, n2) < 0
-	}
-	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, lessThan, false,
-		func() (*encryption.EaRKey, errors.Error) {
-			return nil, nil
-		})
-	check := make([]string, 4)
-
-	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
-	av.SetId("doc1")
-	av.SetField("selfref", av)
-	spillThreshold += av.Size()
-	array.Append(av)
-	check[3] = av.GetId().(string)
-
-	av = NewAnnotatedValue([]byte(`{"name":"Emmett","surname":"Brown"}`))
-	av.SetId("doc2")
-	av.SetField("selfref", av)
-	spillThreshold += av.Size()
-	array.Append(av)
-	check[0] = av.GetId().(string)
-
-	av = NewAnnotatedValue([]byte(`{"name":"Loraine","surname":"Baines"}`))
-	av.SetId("doc3")
-	av.SetField("selfref", av)
-	array.Append(av)
-	check[2] = av.GetId().(string)
-
-	av = NewAnnotatedValue([]byte(`{"name":"George","surname":"McFly"}`))
-	av.SetId("doc4")
-	av.SetField("selfref", av)
-	array.Append(av)
-	check[1] = av.GetId().(string)
-
-	checkIndex := 0
-	err := array.Foreach(func(av AnnotatedValue) bool {
-		if check[checkIndex] != av.GetId().(string) {
-			t.Errorf("documents not in order: expected '%v' at position %v found '%v'",
-				check[checkIndex], checkIndex, av.GetId().(string))
-			return false
+		shouldSpill := func(c uint64, n uint64) bool {
+			return c > spillThreshold
 		}
-		checkIndex++
-		return true
-	})
-	if err != nil {
-		t.Errorf("Error: %v", err)
-	}
+		acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
+		trackMem := func(sz int64) error {
+			tracking -= sz
+			return nil
+		}
+		lessThan := func(v1 AnnotatedValue, v2 AnnotatedValue) bool {
+			m1 := v1.GetValue().Actual().(map[string]interface{})
+			m2 := v2.GetValue().Actual().(map[string]interface{})
+			n1 := m1["name"].(string) + m1["surname"].(string)
+			n2 := m2["name"].(string) + m2["surname"].(string)
+			return strings.Compare(n1, n2) < 0
+		}
+		array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, lessThan, mode.compress, mode.getEncryptionKey)
+		check := make([]string, 4)
 
-	if tracking != 0 {
-		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
-	}
+		av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
+		av.SetId("doc1")
+		av.SetField("selfref", av)
+		spillThreshold += av.Size()
+		array.Append(av)
+		check[3] = av.GetId().(string)
 
+		av = NewAnnotatedValue([]byte(`{"name":"Emmett","surname":"Brown"}`))
+		av.SetId("doc2")
+		av.SetField("selfref", av)
+		spillThreshold += av.Size()
+		array.Append(av)
+		check[0] = av.GetId().(string)
+
+		av = NewAnnotatedValue([]byte(`{"name":"Loraine","surname":"Baines"}`))
+		av.SetId("doc3")
+		av.SetField("selfref", av)
+		array.Append(av)
+		check[2] = av.GetId().(string)
+
+		av = NewAnnotatedValue([]byte(`{"name":"George","surname":"McFly"}`))
+		av.SetId("doc4")
+		av.SetField("selfref", av)
+		array.Append(av)
+		check[1] = av.GetId().(string)
+
+		checkIndex := 0
+		err := array.Foreach(func(av AnnotatedValue) bool {
+			if check[checkIndex] != av.GetId().(string) {
+				t.Errorf("[%v] documents not in order: expected '%v' at position %v found '%v'",
+					mode.name, check[checkIndex], checkIndex, av.GetId().(string))
+				return false
+			}
+			checkIndex++
+			return true
+		})
+		if err != nil {
+			t.Errorf("[%v] Error: %v", mode.name, err)
+		}
+
+		if tracking != 0 {
+			t.Errorf("[%v] memory accounting error, found %v (should be 0)", mode.name, tracking)
+		}
+	}
 }
 
 func TestSpillingUnsortedArray(t *testing.T) {
 
-	tracking := int64(0)
-	spillThreshold := uint64(0)
+	for _, mode := range spillTestModes(t) {
+		tracking := int64(0)
+		spillThreshold := uint64(0)
 
-	shouldSpill := func(c uint64, n uint64) bool {
-		return c > spillThreshold
-	}
-	acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
-	trackMem := func(sz int64) error {
-		tracking -= sz
-		return nil
-	}
-	array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, nil, false,
-		func() (*encryption.EaRKey, errors.Error) {
-			return nil, nil
+		shouldSpill := func(c uint64, n uint64) bool {
+			return c > spillThreshold
+		}
+		acquire := func(size int) AnnotatedValues { return make(AnnotatedValues, 0, size) }
+		trackMem := func(sz int64) error {
+			tracking -= sz
+			return nil
+		}
+		array := NewAnnotatedArray(acquire, nil, shouldSpill, trackMem, nil, mode.compress, mode.getEncryptionKey)
+		check := make(map[string]bool, 4)
+
+		av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
+		av.SetId("doc1")
+		av.SetField("selfref", av)
+		spillThreshold += av.Size()
+		array.Append(av)
+		check[av.GetId().(string)] = true
+
+		av = NewAnnotatedValue([]byte(`{"name":"Emmett","surname":"Brown"}`))
+		av.SetId("doc2")
+		av.SetField("selfref", av)
+		spillThreshold += av.Size()
+		array.Append(av)
+		check[av.GetId().(string)] = true
+
+		av = NewAnnotatedValue([]byte(`{"name":"Loraine","surname":"Baines"}`))
+		av.SetId("doc3")
+		av.SetField("selfref", av)
+		array.Append(av)
+		check[av.GetId().(string)] = true
+
+		av = NewAnnotatedValue([]byte(`{"name":"George","surname":"McFly"}`))
+		av.SetId("doc4")
+		av.SetField("selfref", av)
+		array.Append(av)
+		check[av.GetId().(string)] = true
+
+		pos := 0
+		err := array.Foreach(func(av AnnotatedValue) bool {
+			if _, ok := check[av.GetId().(string)]; ok {
+				check[av.GetId().(string)] = false
+			} else {
+				t.Errorf("[%v] unexpected document found: '%v' at position %v", mode.name, av.GetId().(string), pos)
+			}
+			pos++
+			return true
 		})
-	check := make(map[string]bool, 4)
-
-	av := NewAnnotatedValue([]byte(`{"name":"Marty","surname":"McFly"}`))
-	av.SetId("doc1")
-	av.SetField("selfref", av)
-	spillThreshold += av.Size()
-	array.Append(av)
-	check[av.GetId().(string)] = true
-
-	av = NewAnnotatedValue([]byte(`{"name":"Emmett","surname":"Brown"}`))
-	av.SetId("doc2")
-	av.SetField("selfref", av)
-	spillThreshold += av.Size()
-	array.Append(av)
-	check[av.GetId().(string)] = true
-
-	av = NewAnnotatedValue([]byte(`{"name":"Loraine","surname":"Baines"}`))
-	av.SetId("doc3")
-	av.SetField("selfref", av)
-	array.Append(av)
-	check[av.GetId().(string)] = true
-
-	av = NewAnnotatedValue([]byte(`{"name":"George","surname":"McFly"}`))
-	av.SetId("doc4")
-	av.SetField("selfref", av)
-	array.Append(av)
-	check[av.GetId().(string)] = true
-
-	pos := 0
-	err := array.Foreach(func(av AnnotatedValue) bool {
-		if _, ok := check[av.GetId().(string)]; ok {
-			check[av.GetId().(string)] = false
-		} else {
-			t.Errorf("unexpected document found: '%v' at position %v", av.GetId().(string), pos)
+		if err != nil {
+			t.Errorf("[%v] Error: %v", mode.name, err)
 		}
-		pos++
-		return true
-	})
-	if err != nil {
-		t.Errorf("Error: %v", err)
-	}
-	for k, v := range check {
-		if v {
-			t.Errorf("document '%v' not found", k)
+		for k, v := range check {
+			if v {
+				t.Errorf("[%v] document '%v' not found", mode.name, k)
+			}
 		}
-	}
 
-	if tracking != 0 {
-		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
+		if tracking != 0 {
+			t.Errorf("[%v] memory accounting error, found %v (should be 0)", mode.name, tracking)
+		}
 	}
 }
