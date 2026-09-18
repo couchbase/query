@@ -42,8 +42,9 @@ const (
 	EXPR_ORDER_BY // used in higher version
 	EXPR_IS_GROUP_COVER
 	EXPR_IS_AGG_COVER
-	EXPR_NULLS_POSITION // used in higher version
-	EXPR_NOW_VOLATILE   // for DATE functions that starts with NOW
+	EXPR_NULLS_POSITION   // used in higher version
+	EXPR_NOW_VOLATILE     // for DATE functions that starts with NOW
+	EXPR_VECTOR_REDUNDANT // used in higher version
 	EXPR_PARAMS_REPLACED
 )
 
