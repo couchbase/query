@@ -45,6 +45,7 @@ const (
 	EXPR_NULLS_POSITION
 	EXPR_NOW_VOLATILE     // for DATE functions that starts with NOW
 	EXPR_VECTOR_REDUNDANT // multiple ApproxVectorDistance functions specified
+	EXPR_PARAMS_REPLACED
 )
 
 /*

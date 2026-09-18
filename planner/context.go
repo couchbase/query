@@ -80,7 +80,7 @@ func (this *PrepareContext) HasParameters() bool {
 // Pass needCopy true when the caller intends to mutate the returned expression (e.g. via SetExprFlag)
 // or hand it off to something else that might mutate it
 func (this *PrepareContext) ReplaceParameters(expr expression.Expression, needCopy bool) (expression.Expression, error) {
-	if expr == nil || !this.HasParameters() {
+	if expr == nil || expr.HasExprFlag(expression.EXPR_PARAMS_REPLACED) || !this.HasParameters() {
 		return expr, nil
 	}
 
@@ -98,6 +98,7 @@ func (this *PrepareContext) ReplaceParameters(expr expression.Expression, needCo
 		if err != nil {
 			return nil, err
 		}
+		replaced.SetExprFlag(expression.EXPR_PARAMS_REPLACED)
 		this.replaced[str] = replaced
 	}
 
