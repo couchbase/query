@@ -44,6 +44,7 @@ const (
 	EXPR_IS_AGG_COVER
 	EXPR_NULLS_POSITION // used in higher version
 	EXPR_NOW_VOLATILE   // for DATE functions that starts with NOW
+	EXPR_PARAMS_REPLACED
 )
 
 /*
