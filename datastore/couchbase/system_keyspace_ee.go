@@ -228,27 +228,21 @@ func (s *store) GetSystemCBOStats() (datastore.Keyspace, errors.Error) {
 }
 
 func (s *store) HasQueryMetadata() (bool, errors.Error) {
-	defaultPool, er := s.NamespaceByName("default") // so we're using the cached namespace always
+	dPool, er := s.NamespaceByName("default") // so we're using the cached namespace always
 	if er != nil {
 		return false, er
 	}
+	defaultPool := dPool.(*namespace)
 
-	sysBucket, er := defaultPool.BucketByName(_QUERY_METADATA_BUCKET)
-	if er != nil {
-		return false, er
+	defaultPool.lock.RLock()
+	entry := defaultPool.keyspaceCache[_QUERY_METADATA_BUCKET]
+	defaultPool.lock.RUnlock()
+	if entry != nil {
+		return true, nil
 	}
 
-	sysScope, er := sysBucket.ScopeByName(_BUCKET_SYSTEM_SCOPE)
-	if er != nil {
-		return false, er
-	}
-
-	queryMetadata, er := sysScope.KeyspaceByName(_BUCKET_SYSTEM_COLLECTION)
-	if er != nil {
-		return false, er
-	}
-
-	return (queryMetadata != nil), nil
+	cbNamespace := defaultPool.getPool()
+	return cbNamespace.BucketExists(_QUERY_METADATA_BUCKET), nil
 }
 
 func (s *store) GetQueryMetadata() (datastore.Keyspace, errors.Error) {
