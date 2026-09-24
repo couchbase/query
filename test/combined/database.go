@@ -402,6 +402,7 @@ func (this *Database) create() error {
 
 	n := 0
 	created := make(map[string]bool)
+	bucketNew := make(map[string]bool) // whether each bucket touched this iteration was newly created or reused
 
 	allKeyspaces := make([]*Keyspace, 0, len(this.keyspaces)+1)
 	allKeyspaces = append(allKeyspaces, this.keyspaces...)
@@ -423,6 +424,7 @@ func (this *Database) create() error {
 			if err == nil {
 				logging.Infof("Created bucket `%s`.", ks.bucket())
 				created[ks.bucket()] = true
+				bucketNew[ks.bucket()] = true
 				break
 			} else if err == os.ErrExist {
 				if _, ok := created[ks.bucket()]; ok {
@@ -441,6 +443,9 @@ func (this *Database) create() error {
 					continue
 				}
 				logging.Infof("Bucket `%s` already exists.", ks.bucket())
+				if _, ok := bucketNew[ks.bucket()]; !ok {
+					bucketNew[ks.bucket()] = false
+				}
 				if customConfig {
 					logging.Debugf("Altering bucket '%s'.", ks.bucket())
 					if err = alterBucket(ks.bucket(), config); err != nil {
@@ -495,6 +500,9 @@ func (this *Database) create() error {
 		}
 		n++
 	}
+
+	applyEncryptionAtRest(bucketNew)
+
 	if n == 0 {
 		logging.Fatalf("No valid keyspaces in the configuration.")
 		return os.ErrNotExist

@@ -30,6 +30,10 @@
     "#comment": "Minimum elapsed time between e-mail notifications.  Use this to limit the spamming when things go wrong",
     "min_interval": "5m"
   },
+  "encryptionAtRest": {
+    "#comment": "Run every Nth iteration with encryption at rest enabled for buckets and 'other' (log/config/audit).",
+    "every": 5
+  },
   "runtime": {
     "clients": {
       "#comment": "Optional range for the number of clients (default 1)",

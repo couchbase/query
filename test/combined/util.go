@@ -211,6 +211,42 @@ func doQueryPost(uri string, data map[string]interface{}, body bool) (int, []byt
 	return resp.StatusCode, b, nil
 }
 
+// handles posting JSON to a management REST endpoint (application/json)
+func doNodePostJSON(uri string, data interface{}) (int, []byte, error) {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return -1, nil, err
+	}
+	u, _ := url.JoinPath(_NODE_URL, uri)
+	req, err := http.NewRequest("POST", u, bytes.NewReader(b))
+	if err != nil {
+		return -1, nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "Combined test")
+	req.SetBasicAuth(USER, PASSWORD)
+	http.DefaultClient.Timeout = _HTTP_TIMEOUT
+	var resp *http.Response
+	for retry := 0; retry < _RETRY_COUNT; retry++ {
+		resp, err = http.DefaultClient.Do(req)
+		if err == nil || !isHttpConnError(err) {
+			break
+		}
+		logging.Debugf("Retrying: %s (%d: %v)", uri, retry, err)
+	}
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return -1, nil, err
+	}
+	b, _ = io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return resp.StatusCode, nil, fmt.Errorf("%s", string(b))
+	}
+	return resp.StatusCode, b, nil
+}
+
 // checks for common connection error responses
 func isHttpConnError(err error) bool {
 	estr := strings.ToLower(err.Error())

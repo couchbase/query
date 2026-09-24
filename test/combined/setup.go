@@ -31,6 +31,10 @@ import (
 
 var serverPat = regexp.MustCompile("couchbase-server-enterprise_.*-([0-9]*)-linux_amd64.deb$")
 
+// whether the cluster used for the current iteration was already initialised (i.e. carried over from a previous
+// iteration) rather than freshly initialised by this iteration
+var ClusterReused bool
+
 // find the desired (or latest) installation binary .deb package in the local directory tree
 func findLocalServer(loc string, bld int) (string, error) {
 	d, err := os.Open(loc)
@@ -522,10 +526,12 @@ func configureInstance(c map[string]interface{}) error {
 		time.Sleep(_RETRY_WAIT)
 	}
 	waitMigration := false
+	ClusterReused = false
 	if err != nil {
 		if strings.Contains(err.Error(), "Cluster is already initialized") {
 			logging.Infof("Cluster already initialised; using existing cluster.")
 			err = nil
+			ClusterReused = true
 			if rs, ok := cs["restart"].(bool); ok && rs {
 				if err = restartCluster(); err != nil {
 					logging.Errorf("Cluster restart failed: %v", err)

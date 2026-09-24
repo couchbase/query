@@ -303,6 +303,9 @@ func main() {
 		if time.Since(LastNotification) >= time.Hour*24 {
 			notify(fmt.Sprintf("Test iteration %d starting.", iter))
 		}
+		// report on the previous iteration's encryption-at-rest initialisation/disablement, if it failed, regardless
+		// of whether the iteration itself succeeded or failed
+		checkEncryptionNotification()
 		waitTime = _ITERATION_INTERVAL
 		DataFiles = nil
 		DB = nil
@@ -361,6 +364,10 @@ func main() {
 			continue
 		}
 
+		// determine whether this iteration should run with encryption at rest enabled, and locate/create the key
+		// to use if so; failures here never fail the iteration - they are reported by e-mail once it completes
+		Encryption = setupEncryptionAtRest(c, iter)
+
 		if DB.createIndexes {
 			if err := addAdviseIndexes(); err != nil {
 				reportRunFailure(iter, "Failed to advise query.", err)
@@ -407,6 +414,7 @@ func main() {
 
 		cleanupTempDataFiles()
 	}
+	checkEncryptionNotification()
 	logging.Infof("Test complete.")
 	LastNotification = time.Time{} // force final notification always
 	notify("Testing complete.")
@@ -448,6 +456,15 @@ func reportRunFailure(iter uint64, args ...interface{}) {
 	content := make([]interface{}, len(args)+1, len(args)+3)
 	content[0] = fmt.Sprintf("Iteration %d failed.", iter)
 	copy(content[1:], args)
+
+	// fold in any as-yet-unreported encryption at rest failure for this same iteration, rather than sending a
+	// separate e-mail for it
+	if Encryption != nil && Encryption.iteration == iter {
+		if ec := encryptionFailureContent(); ec != nil {
+			content = append(content, ec...)
+			Encryption.reported = true
+		}
+	}
 
 	if len(files) > 0 {
 		zip := path.Join(os.TempDir(), fmt.Sprintf("iter_%d_failure_%d.zip", iter, time.Now().Unix()))
