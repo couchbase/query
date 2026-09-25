@@ -45,6 +45,7 @@ type Prepared struct {
 	tenant          string
 	useFts          bool
 	useCBO          bool
+	autoPrepared    bool      // plan was cached by auto prepare rather than an explicit PREPARE
 	preparedTime    time.Time // time the plan was generated
 	optimHints      *algebra.OptimHints
 
@@ -139,6 +140,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.useCBO {
 		r["useCBO"] = this.useCBO
 	}
+	if this.autoPrepared {
+		r["autoPrepared"] = this.autoPrepared
+	}
 	if len(this.indexScanKeyspaces) > 0 {
 		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
 	}
@@ -165,6 +169,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 		QueryContext       string                 `json:"queryContext"`
 		UseFts             bool                   `json:"useFts"`
 		UseCBO             bool                   `json:"useCBO"`
+		AutoPrepared       bool                   `json:"autoPrepared"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
@@ -201,6 +206,7 @@ func (this *Prepared) unmarshalInternal(body []byte) error {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
+	this.autoPrepared = _unmarshalled.AutoPrepared
 	this.planVersion = _unmarshalled.Version
 
 	if _unmarshalled.PreparedTime != "" {
@@ -249,6 +255,14 @@ func (this *Prepared) Text() string {
 
 func (this *Prepared) SetText(text string) {
 	this.text = text
+}
+
+func (this *Prepared) AutoPrepared() bool {
+	return this.autoPrepared
+}
+
+func (this *Prepared) SetAutoPrepared(autoPrepared bool) {
+	this.autoPrepared = autoPrepared
 }
 
 func (this *Prepared) Type() string {

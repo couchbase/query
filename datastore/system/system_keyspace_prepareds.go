@@ -199,6 +199,9 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
 		"featuresControl": entry.Prepared.FeatureControls(),
 	}
+	if entry.Prepared.AutoPrepared() {
+		itemMap["autoPrepared"] = true
+	}
 	if entry.Prepared.Namespace() != "" {
 		itemMap["namespace"] = entry.Prepared.Namespace()
 	}

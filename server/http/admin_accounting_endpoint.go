@@ -658,6 +658,9 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
 		"featureControls": entry.Prepared.FeatureControls(),
 	}
+	if entry.Prepared.AutoPrepared() {
+		itemMap["autoPrepared"] = true
+	}
 	if entry.Prepared.QueryContext() != "" {
 		itemMap["queryContext"] = entry.Prepared.QueryContext()
 	}

@@ -792,6 +792,12 @@ components:
       - statement
       - uses
     properties:
+      autoPrepared:
+        type: boolean
+        description: |-
+          Indicates that the prepared statement was cached automatically by auto prepare, rather than created by an explicit `PREPARE` statement.
+
+          This property is only returned when the value is `true`.
       encoded_plan:
         type: string
         description: The full prepared statement in encoded format.
