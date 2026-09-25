@@ -917,6 +917,12 @@ components:
         description: |-
           Indicates the statement was prepared as an ad hoc (unnamed) statement.
           It's only returned when true.
+      autoPrepared:
+        type: boolean
+        description: |-
+          Indicates that the prepared statement was cached automatically by auto prepare, rather than created by an explicit `PREPARE` statement.
+
+          This property is only returned when the value is `true`.
       creatingUserAgent:
         type: string
         description: |-
