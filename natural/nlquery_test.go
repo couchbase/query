@@ -982,3 +982,368 @@ func TestFailGeneratedStmtError_IncludesRetryCount(t *testing.T) {
 		t.Fatalf("got %q, want %q", e.Error(), want)
 	}
 }
+
+// ─── persistPausedChat: MB-73909 ambiguous-timeout / duplicate-key disambiguation ──
+
+// fakeQueryMetadataKeyspace embeds a nil datastore.Keyspace and overrides only Insert
+// and Fetch, since persistPausedChat (directly, or via confirmChatDocPersisted's
+// read-back fallback) never calls any other Keyspace method.
+type fakeQueryMetadataKeyspace struct {
+	datastore.Keyspace
+	attempt        int
+	behavior       func(attempt int) (int, value.Pairs, errors.Errors)
+	fetchAttempt   int
+	fetchBehavior  func(attempt int) (value.AnnotatedValue, errors.Errors) // nil value means "not found"
+	updateAttempt  int
+	updateBehavior func(attempt int) (int, value.Pairs, errors.Errors)
+}
+
+func (f *fakeQueryMetadataKeyspace) Insert(inserts value.Pairs, context datastore.QueryContext,
+	preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	f.attempt++
+	return f.behavior(f.attempt)
+}
+
+// Delete shares Insert's attempt/behavior fields -- a given fake instance is only
+// ever exercised through one of the two methods per test (persistPausedChat uses
+// Insert; completeChatClaim uses Delete), so reusing the same counters keeps the
+// fake simple rather than duplicating them.
+func (f *fakeQueryMetadataKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext,
+	preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	f.attempt++
+	return f.behavior(f.attempt)
+}
+
+func (f *fakeQueryMetadataKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
+	context datastore.QueryContext, subPath []string, projection []string, useSubDoc bool) errors.Errors {
+	f.fetchAttempt++
+	if f.fetchBehavior == nil {
+		return errors.Errors{errors.NewOtherDatastoreError(nil, "test: unexpected Fetch call, no fetchBehavior set")}
+	}
+	av, errs := f.fetchBehavior(f.fetchAttempt)
+	if av != nil {
+		keysMap[keys[0]] = av
+	}
+	return errs
+}
+
+func (f *fakeQueryMetadataKeyspace) Update(updates value.Pairs, context datastore.QueryContext,
+	preserveMutations bool) (int, value.Pairs, errors.Errors) {
+	f.updateAttempt++
+	if f.updateBehavior == nil {
+		return 0, nil, errors.Errors{errors.NewOtherDatastoreError(nil, "test: unexpected Update call, no updateBehavior set")}
+	}
+	return f.updateBehavior(f.updateAttempt)
+}
+
+func timeoutError() errors.Errors {
+	return errors.Errors{errors.NewOtherDatastoreError(nil, "read tcp 1.2.3.4:1->5.6.7.8:11210: i/o timeout")}
+}
+
+func syncWriteAmbiguousError() errors.Errors {
+	return errors.Errors{errors.NewOtherDatastoreError(nil, "SYNC_WRITE_AMBIGUOUS")}
+}
+
+func syncWriteInProgressError() errors.Errors {
+	return errors.Errors{errors.NewOtherDatastoreError(nil, "SYNC_WRITE_IN_PROGRESS")}
+}
+
+func notMyVbucketError() errors.Errors {
+	return errors.Errors{errors.NewOtherDatastoreError(nil, "NOT_MY_VBUCKET")}
+}
+
+// casMismatchError mirrors what a real CAS-mismatched Update returns: an E_CB_DML
+// error whose cause chain carries E_CAS_MISMATCH (see errors.NewCbDMLError).
+func casMismatchError() errors.Errors {
+	return errors.Errors{errors.NewCbDMLError(nil, "test cas mismatch", true, errors.FALSE, "aichat::chat1", "QUERY_METADATA")}
+}
+
+// withFastRetry temporarily shrinks the package's retry budget (maxRetry/interval)
+// for exhaustion-path test cases, which otherwise sleep out the full real backoff
+// (~6.3s each) for no added coverage. Restored via t.Cleanup once the whole calling
+// Test function (including all its t.Run subtests) finishes.
+func withFastRetry(t *testing.T) {
+	t.Helper()
+	origMaxRetry, origInterval, origConfirmMaxRetry := maxRetry, interval, confirmMaxRetry
+	maxRetry, interval, confirmMaxRetry = 3, time.Millisecond, 3
+	t.Cleanup(func() { maxRetry, interval, confirmMaxRetry = origMaxRetry, origInterval, origConfirmMaxRetry })
+}
+
+func TestPersistPausedChat(t *testing.T) {
+	withFastRetry(t)
+	successResult := func(attempt int) (int, value.Pairs, errors.Errors) { return 1, nil, nil }
+
+	tests := []struct {
+		name          string
+		behavior      func(attempt int) (int, value.Pairs, errors.Errors)
+		fetchBehavior func(attempt int) (value.AnnotatedValue, errors.Errors)
+		wantErrCode   errors.ErrorCode // 0 means expect nil error
+		wantPaused    bool
+		wantAttempts  int
+	}{
+		{
+			name:         "immediate success",
+			behavior:     successResult,
+			wantPaused:   true,
+			wantAttempts: 1,
+		},
+		{
+			name: "ambiguous timeout then success",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				if attempt == 1 {
+					return 0, nil, timeoutError()
+				}
+				return successResult(attempt)
+			},
+			wantPaused:   true,
+			wantAttempts: 2,
+		},
+		{
+			name: "ambiguous timeout then duplicate key -- the write already landed",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				if attempt == 1 {
+					return 0, nil, timeoutError()
+				}
+				return 0, nil, errors.Errors{errors.NewDuplicateKeyError("aichat::chat1", "", nil)}
+			},
+			wantPaused:   true,
+			wantAttempts: 2,
+		},
+		{
+			name: "non-retryable failure fails immediately, chat stays live",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				return 0, nil, errors.Errors{errors.NewOtherDatastoreError(nil, "some fatal error")}
+			},
+			wantErrCode:  errors.E_NL_CHAT_PAUSE_FAILED,
+			wantPaused:   false,
+			wantAttempts: 1,
+		},
+		{
+			name:     "exhausted retries without confirmation fails, chat stays live",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) { return 0, nil, timeoutError() },
+			// The write genuinely never landed -- read-back confirms the key absent.
+			fetchBehavior: func(attempt int) (value.AnnotatedValue, errors.Errors) { return nil, nil },
+			wantErrCode:   errors.E_NL_CHAT_PAUSE_FAILED,
+			wantPaused:    false,
+			wantAttempts:  maxRetry,
+		},
+		{
+			// MB-73909: the KV-reported (not just client-side-timeout) ambiguity.
+			// Every insert attempt comes back SYNC_WRITE_AMBIGUOUS, exhausting the
+			// retry budget without ever seeing a duplicate-key confirmation -- exactly
+			// the case confirmChatDocPersisted's read-back fallback exists for. The
+			// direct read finds the document, confirming the write actually landed, so
+			// PAUSE must still report success rather than the old "exhausted retries ==
+			// failure" inference.
+			name: "SYNC_WRITE_AMBIGUOUS exhausts insert retries, read-back confirms persisted",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				return 0, nil, syncWriteAmbiguousError()
+			},
+			fetchBehavior: func(attempt int) (value.AnnotatedValue, errors.Errors) {
+				return value.NewAnnotatedValue(map[string]interface{}{"chat": "b64"}), nil
+			},
+			wantPaused:   true,
+			wantAttempts: maxRetry,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			chatId := "chat1-" + tt.name
+			ce := &ChatEntry{Id: chatId, users: []string{"local:tester"}}
+			AddConversation(ce, chatId)
+
+			fake := &fakeQueryMetadataKeyspace{behavior: tt.behavior, fetchBehavior: tt.fetchBehavior}
+			err := persistPausedChat(chatId, ce, fake, datastore.NULL_QUERY_CONTEXT)
+
+			if tt.wantErrCode == 0 {
+				if err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Fatalf("expected error code %v, got nil", tt.wantErrCode)
+				} else if err.Code() != tt.wantErrCode {
+					t.Fatalf("expected error code %v, got %v (%v)", tt.wantErrCode, err.Code(), err)
+				}
+			}
+
+			if ce.Paused != tt.wantPaused {
+				t.Errorf("ce.Paused = %v, want %v", ce.Paused, tt.wantPaused)
+			}
+			stillLive := GetConversation(chatId) != nil
+			if stillLive == tt.wantPaused {
+				t.Errorf("chat live-cache presence = %v, want live iff !wantPaused (wantPaused=%v)", stillLive, tt.wantPaused)
+			}
+			if fake.attempt != tt.wantAttempts {
+				t.Errorf("Insert call count = %d, want %d", fake.attempt, tt.wantAttempts)
+			}
+
+			DeleteConversation(chatId)
+		})
+	}
+}
+
+// ─── claimChatDocument / completeChatClaim: RESUME's claim-Update and claim- ──────
+// ─── completion-Delete retry/disambiguation (mirrors persistPausedChat's Insert) ──
+
+func TestClaimChatDocument(t *testing.T) {
+	withFastRetry(t)
+	updateSuccess := func(attempt int) (int, value.Pairs, errors.Errors) { return 1, nil, nil }
+
+	tests := []struct {
+		name         string
+		behavior     func(attempt int) (int, value.Pairs, errors.Errors)
+		wantClaimed  bool
+		wantRetry    bool
+		wantErrCode  errors.ErrorCode // 0 means expect nil error
+		wantAttempts int
+	}{
+		{
+			name:         "immediate success",
+			behavior:     updateSuccess,
+			wantClaimed:  true,
+			wantAttempts: 1,
+		},
+		{
+			name: "NOT_MY_VBUCKET then success",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				if attempt == 1 {
+					return 0, nil, notMyVbucketError()
+				}
+				return updateSuccess(attempt)
+			},
+			wantClaimed:  true,
+			wantAttempts: 2,
+		},
+		{
+			name:         "CAS mismatch signals retry rather than failure",
+			behavior:     func(attempt int) (int, value.Pairs, errors.Errors) { return 0, nil, casMismatchError() },
+			wantRetry:    true,
+			wantAttempts: 1,
+		},
+		{
+			name:         "SYNC_WRITE_IN_PROGRESS signals retry rather than failure",
+			behavior:     func(attempt int) (int, value.Pairs, errors.Errors) { return 0, nil, syncWriteInProgressError() },
+			wantRetry:    true,
+			wantAttempts: 1,
+		},
+		{
+			// The gap this test closes: an ambiguous outcome must be treated the same
+			// as CAS mismatch (re-fetch and re-check the claimer field), not as a hard
+			// failure -- our own update may have actually landed.
+			name:         "SYNC_WRITE_AMBIGUOUS signals retry rather than failure",
+			behavior:     func(attempt int) (int, value.Pairs, errors.Errors) { return 0, nil, syncWriteAmbiguousError() },
+			wantRetry:    true,
+			wantAttempts: 1,
+		},
+		{
+			name: "non-retryable failure fails immediately",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				return 0, nil, errors.Errors{errors.NewOtherDatastoreError(nil, "some fatal error")}
+			},
+			wantErrCode:  errors.E_NL_CHAT_RESUME_FAILED,
+			wantAttempts: 1,
+		},
+		{
+			name:         "exhausted retries without a definitive outcome",
+			behavior:     func(attempt int) (int, value.Pairs, errors.Errors) { return 0, nil, notMyVbucketError() },
+			wantAttempts: maxRetry,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeQueryMetadataKeyspace{updateBehavior: tt.behavior}
+			udpairs := value.Pairs{{Name: "aichat::chat1", Value: value.NewValue(map[string]interface{}{})}}
+			claimed, retryClaim, err := claimChatDocument("chat1", "aichat::chat1", fake, datastore.NULL_QUERY_CONTEXT, udpairs)
+
+			if tt.wantErrCode == 0 {
+				if err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
+			} else if err == nil || err.Code() != tt.wantErrCode {
+				t.Fatalf("expected error code %v, got %v", tt.wantErrCode, err)
+			}
+			if claimed != tt.wantClaimed {
+				t.Errorf("claimed = %v, want %v", claimed, tt.wantClaimed)
+			}
+			if retryClaim != tt.wantRetry {
+				t.Errorf("retryClaim = %v, want %v", retryClaim, tt.wantRetry)
+			}
+			if fake.updateAttempt != tt.wantAttempts {
+				t.Errorf("Update call count = %d, want %d", fake.updateAttempt, tt.wantAttempts)
+			}
+		})
+	}
+}
+
+func TestCompleteChatClaim(t *testing.T) {
+	withFastRetry(t)
+	deleteSuccess := func(attempt int) (int, value.Pairs, errors.Errors) { return 1, nil, nil }
+
+	tests := []struct {
+		name         string
+		behavior     func(attempt int) (int, value.Pairs, errors.Errors)
+		wantErrCode  errors.ErrorCode // 0 means expect nil error
+		wantAttempts int
+	}{
+		{
+			name:         "immediate success",
+			behavior:     deleteSuccess,
+			wantAttempts: 1,
+		},
+		{
+			name: "SYNC_WRITE_IN_PROGRESS then success",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				if attempt == 1 {
+					return 0, nil, syncWriteInProgressError()
+				}
+				return deleteSuccess(attempt)
+			},
+			wantAttempts: 2,
+		},
+		{
+			name: "SYNC_WRITE_AMBIGUOUS then success",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				if attempt == 1 {
+					return 0, nil, syncWriteAmbiguousError()
+				}
+				return deleteSuccess(attempt)
+			},
+			wantAttempts: 2,
+		},
+		{
+			name: "non-retryable failure fails immediately",
+			behavior: func(attempt int) (int, value.Pairs, errors.Errors) {
+				return 0, nil, errors.Errors{errors.NewOtherDatastoreError(nil, "some fatal error")}
+			},
+			wantErrCode:  errors.E_NL_CHAT_RESUME_FAILED,
+			wantAttempts: 1,
+		},
+		{
+			name:         "exhausted retries with persistent ambiguity fails",
+			behavior:     func(attempt int) (int, value.Pairs, errors.Errors) { return 0, nil, syncWriteAmbiguousError() },
+			wantErrCode:  errors.E_NL_CHAT_RESUME_FAILED,
+			wantAttempts: maxRetry,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake := &fakeQueryMetadataKeyspace{behavior: tt.behavior}
+			err := completeChatClaim("chat1", "aichat::chat1", fake, datastore.NULL_QUERY_CONTEXT)
+
+			if tt.wantErrCode == 0 {
+				if err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
+			} else if err == nil || err.Code() != tt.wantErrCode {
+				t.Fatalf("expected error code %v, got %v", tt.wantErrCode, err)
+			}
+			if fake.attempt != tt.wantAttempts {
+				t.Errorf("Delete call count = %d, want %d", fake.attempt, tt.wantAttempts)
+			}
+		})
+	}
+}
