@@ -449,8 +449,9 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 					dt, derr := json.Marshal(data)
 					if derr == nil {
 						distributed.RemoteAccess().DoRemoteOps([]string{node}, "natural_chats", "PATCH", localKey, string(dt),
-							func(warn errors.Error) {
-								if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+							func(warn errors.Error, queryNode string) {
+								if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) &&
+									!warn.HasICause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 									context.Warning(warn)
 								}
 							}, creds, "")

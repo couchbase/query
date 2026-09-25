@@ -452,7 +452,7 @@ func settingsWorkHorse(settings map[string]interface{}, srvr *server.Server) err
 	if distribute != nil {
 		body, _ := json.Marshal(settings)
 		go distributed.RemoteAccess().DoRemoteOps([]string{}, "settings", "POST", "", string(body),
-			func(warn errors.Error) {
+			func(warn errors.Error, node string) {
 				if warn != nil {
 					logging.Infof("failed to distribute settings <ud>%v</ud>", settings)
 				}

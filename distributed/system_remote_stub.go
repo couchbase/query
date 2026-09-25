@@ -49,7 +49,7 @@ func (this systemRemoteStub) GetRemoteDoc(node string, key string, endpoint stri
 
 // perform operation on keys on the specified nodes for the specified endpoint
 func (this systemRemoteStub) DoRemoteOps(nodes []string, endpoint string, command string, key string, data string,
-	warnFn func(warn errors.Error), creds Creds, authToken string) {
+	warnFn func(warn errors.Error, node string), creds Creds, authToken string) {
 
 	// nothing to see here
 }

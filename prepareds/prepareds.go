@@ -1056,7 +1056,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 
 func distributePrepared(name, plan string) {
 	go distributed.RemoteAccess().DoRemoteOps([]string{}, "prepareds", "PUT", name, plan,
-		func(warn errors.Error) {
+		func(warn errors.Error, node string) {
 			if warn != nil {
 				logging.Infof("failed to distribute statement <ud>%v</ud>: %v", name, warn)
 			}
