@@ -54,6 +54,7 @@ type Prepared struct {
 	inlineUdf       bool
 	restored        bool
 	keyspaceRefs    []string
+	autoPrepared    bool      // plan was cached by auto prepare rather than an explicit PREPARE
 	preparedTime    time.Time // time the plan was generated
 	optimHints      *algebra.OptimHints
 
@@ -192,6 +193,9 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if this.restored {
 		r["restored"] = this.restored
 	}
+	if this.autoPrepared {
+		r["autoPrepared"] = this.autoPrepared
+	}
 	if len(this.indexScanKeyspaces) > 0 {
 		r["indexScanKeyspaces"] = this.IndexScanKeyspaces()
 	}
@@ -234,6 +238,7 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 		AdHoc              bool                   `json:"adHocStatement"`
 		InlineUdf          bool                   `json:"inlineUdf"`
 		Restored           bool                   `json:"restored"`
+		AutoPrepared       bool                   `json:"autoPrepared"`
 		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
 		Version            int                    `json:"planVersion"`
 		OptimHints         json.RawMessage        `json:"optimizer_hints"`
@@ -287,6 +292,7 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 	this.adHoc = _unmarshalled.AdHoc
 	this.inlineUdf = _unmarshalled.InlineUdf
 	this.restored = _unmarshalled.Restored
+	this.autoPrepared = _unmarshalled.AutoPrepared
 	this.planVersion = _unmarshalled.Version
 	this.fatalError = _unmarshalled.FatalError
 	this.errCount = _unmarshalled.ErrCount
@@ -385,6 +391,14 @@ func (this *Prepared) Text() string {
 
 func (this *Prepared) SetText(text string) {
 	this.text = text
+}
+
+func (this *Prepared) AutoPrepared() bool {
+	return this.autoPrepared
+}
+
+func (this *Prepared) SetAutoPrepared(autoPrepared bool) {
+	this.autoPrepared = autoPrepared
 }
 
 func (this *Prepared) Type() string {

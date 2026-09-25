@@ -205,6 +205,17 @@
         ]
     },
     {
+        "statements": "select name, autoPrepared from system:prepareds",
+        "userArgs": {
+            "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "name": "test"
+            }
+        ]
+    },
+    {
         "statements": "execute test",
         "userArgs": {
             "testAdmin": "testAdminpass"

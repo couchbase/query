@@ -544,10 +544,10 @@ func (this *systemRemoteHttp) doRemoteEndpointOp(fullEndpoint string, command st
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	request.Header.Set("User-Agent", couchbase.USER_AGENT)
 
-	// Use Basic Authentication unless internal client certificate is to be used
-	if !cp.useInternalClientCert {
-		request.SetBasicAuth(u, p)
-	}
+	// Always send Basic Authentication, even when the internal client
+	// certificate is presented: ns_server can be configured to authenticate such
+	// a request from its credentials rather than from the certificate.
+	request.SetBasicAuth(u, p)
 
 	resp, err := cp.client.Do(request)
 	if err != nil {

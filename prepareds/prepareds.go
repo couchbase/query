@@ -536,6 +536,7 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planSta
 		featureName = "Plan Stability (AD_HOC)"
 	}
 
+	prepared.SetAutoPrepared(true)
 	added := true
 	prepareds.add(prepared, false, true, func(ce *CacheEntry) bool {
 		added = ce.Prepared.Text() == prepared.Text()
@@ -1132,6 +1133,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl.SetQueryContext(prepared.QueryContext())
 	pl.SetUseFts(prepared.UseFts())
 	pl.SetUseCBO(prepared.UseCBO())
+	pl.SetAutoPrepared(prepared.AutoPrepared())
 	pl.SetPreparedTime(prep.ToTime()) // reset the time the plan was re-prepared as the time the plan was generated
 	pl.SetReprepared(true)
 	pl.SetUserAgent(prepared.UserAgent())

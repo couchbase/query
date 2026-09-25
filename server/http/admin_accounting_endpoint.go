@@ -732,6 +732,9 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 			}
 		}
 	}
+	if entry.Prepared.AutoPrepared() {
+		itemMap["autoPrepared"] = true
+	}
 	if entry.Prepared.QueryContext() != "" {
 		itemMap["queryContext"] = entry.Prepared.QueryContext()
 	}
