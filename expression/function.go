@@ -229,7 +229,7 @@ func (this *FunctionBase) SetOperator() {}
 
 func (this *FunctionBase) Operator() string { return "" }
 
-var _ARGS_POOL = value.NewValuePool(64)
+var _ARGS_POOL = util.NewSlicePool[value.Value](64)
 
 /*
 A Nullary function doesnt have any input operands. Type
@@ -484,4 +484,4 @@ type UserDefinedFunctionBase struct {
 	FunctionBase
 }
 
-var _FOUND_POOL = util.NewBoolPool(64)
+var _FOUND_POOL = util.NewSlicePool[bool](64)

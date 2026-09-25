@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -828,4 +829,4 @@ func addLowHigh(operands expression.Expressions, exp expression.Expression, low 
 	return operands
 }
 
-var _STRING_SPAN_POOL = plan.NewStringSpanPool(1024)
+var _STRING_SPAN_POOL = util.NewMapPool[string, *plan.Span2](1024)

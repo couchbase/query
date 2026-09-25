@@ -398,4 +398,4 @@ func (this *chkNullRej) VisitAll(pred *expression.All) (interface{}, error) {
 	return false, nil
 }
 
-var _KEYSPACE_NAMES_POOL = util.NewStringStringPool(16)
+var _KEYSPACE_NAMES_POOL = util.NewMapPool[string, string](16)

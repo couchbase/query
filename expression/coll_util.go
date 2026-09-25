@@ -150,8 +150,8 @@ func collReleaseBuffers(bvals, buffers [][]interface{}, bpairs [][]util.IPair) {
 	}
 }
 
-var _INTERFACE_POOL = util.NewInterfacePool(1024)
-var _IPAIR_POOL = util.NewIPairPool(1024)
+var _INTERFACE_POOL = util.NewSlicePool[interface{}](1024)
+var _IPAIR_POOL = util.NewSlicePool[util.IPair](1024)
 
-var _INTERFACES_POOL = util.NewInterfacesPool(8)
-var _IPAIRS_POOL = util.NewIPairsPool(8)
+var _INTERFACES_POOL = util.NewSlicePool[[]interface{}](8)
+var _IPAIRS_POOL = util.NewSlicePool[[]util.IPair](8)

@@ -169,4 +169,4 @@ func andTerms(and *And, buffer Expressions, terms map[string]bool) Expressions {
 	return buffer
 }
 
-var _STRING_BOOL_POOL = util.NewStringBoolPool(32)
+var _STRING_BOOL_POOL = util.NewMapPool[string, bool](32)

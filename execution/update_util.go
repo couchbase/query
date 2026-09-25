@@ -191,12 +191,12 @@ func releaseBuffersFor(arrays, buffers [][]interface{}, pairs [][]util.IPair) {
 	}
 }
 
-var _IPAIR_POOL = util.NewIPairPool(1024)
-var _INTERFACE_POOL = util.NewInterfacePool(1024)
-var _VALUE_POOL = value.NewValuePool(1024)
+var _IPAIR_POOL = util.NewSlicePool[util.IPair](1024)
+var _INTERFACE_POOL = util.NewSlicePool[interface{}](1024)
+var _VALUE_POOL = util.NewSlicePool[value.Value](1024)
 
-var _INTERFACES_POOL = util.NewInterfacesPool(64)
-var _IPAIRS_POOL = util.NewIPairsPool(64)
+var _INTERFACES_POOL = util.NewSlicePool[[]interface{}](64)
+var _IPAIRS_POOL = util.NewSlicePool[[]util.IPair](64)
 
 const _NAME_CAP = 16
 

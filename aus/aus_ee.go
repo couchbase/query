@@ -196,7 +196,7 @@ func startupAus() {
 	logging.Infof("AUS: Initialization started.")
 
 	// Initialize the system:aus_settings Fetch pool
-	_STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(1)
+	_STRING_ANNOTATED_POOL = util.NewMapPool[string, value.AnnotatedValue](1)
 
 	// Initialize the global settings in metakv
 	err := initMetakv()

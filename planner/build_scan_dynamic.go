@@ -152,5 +152,5 @@ func aliasNamed(expr expression.Expression) expression.Expressions {
 }
 
 var _EMPTY_EXPRESSIONS = expression.Expressions{}
-var _NAMES_POOL = util.NewStringIntPool(64)
+var _NAMES_POOL = util.NewMapPool[string, int](64)
 var _DEFAULT_PAIRS_VARIABLE = expression.NewIdentifier("p")

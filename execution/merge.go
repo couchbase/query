@@ -737,9 +737,9 @@ func (this *Merge) Done() {
 	_MERGE_CHANNEL_POOL.Put(inputs)
 }
 
-var _MERGE_OPERATOR_POOL = NewOperatorPool(3)
-var _MERGE_CHANNEL_POOL = NewChannelPool(3)
-var _MERGE_KEY_POOL = util.NewStringBoolPool(1024)
+var _MERGE_OPERATOR_POOL = util.NewSlicePool[Operator](3)
+var _MERGE_CHANNEL_POOL = util.NewSlicePool[*Channel](3)
+var _MERGE_KEY_POOL = util.NewMapPool[string, bool](1024)
 
 // The purpose of this type is to accept a stop notification from an action and relay that to the merge by stopping the merge's
 // valueExchange.  This will wake it if it is waiting along with preventing further exchange actions, allowing the operator to end

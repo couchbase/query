@@ -328,6 +328,6 @@ func getIndexPartitionSets(planIndexPartitionSets plan.IndexPartitionSets, paren
 	return indexPartitionSets, nil
 }
 
-var _INDEX_SCAN_POOL = NewOperatorPool(16)
-var _INDEX_VALUE_POOL = value.NewStringAnnotatedPool(1024)
-var _INDEX_BIT_POOL = util.NewStringInt64Pool(1024)
+var _INDEX_SCAN_POOL = util.NewSlicePool[Operator](16)
+var _INDEX_VALUE_POOL = util.NewMapPool[string, value.AnnotatedValue](1024)
+var _INDEX_BIT_POOL = util.NewMapPool[string, int64](1024)

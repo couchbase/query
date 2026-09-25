@@ -19,6 +19,7 @@ import (
 	metaStorage "github.com/couchbase/query/functions/metakv"
 	"github.com/couchbase/query/functions/resolver"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -350,4 +351,4 @@ func (name *systemEntry) InheritStorage(changeCnter int32) {
 	name.changeCounter = changeCnter
 }
 
-var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(1)
+var _STRING_ANNOTATED_POOL = util.NewMapPool[string, value.AnnotatedValue](1)

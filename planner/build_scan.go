@@ -913,6 +913,6 @@ func checkSubset(pred, cond expression.Expression, context *PrepareContext) bool
 	return base.SubsetOf(pred, cond)
 }
 
-var _INDEX_POOL = datastore.NewIndexPool(256)
-var _SKIP_POOL = datastore.NewIndexBoolPool(32)
+var _INDEX_POOL = util.NewSlicePool[datastore.Index](256)
+var _SKIP_POOL = util.NewMapPool[datastore.Index, bool](32)
 var _EMPTY_PLAN = plan.NewValueScan(algebra.Pairs{}, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL)

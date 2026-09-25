@@ -197,4 +197,4 @@ func (this *collPredBase) SetArrayId(arrayId int) {
 	this.arrayId = arrayId
 }
 
-var _VARS_POOL = util.NewStringInterfacePool(8)
+var _VARS_POOL = util.NewMapPool[string, interface{}](8)

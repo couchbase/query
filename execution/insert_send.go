@@ -329,4 +329,4 @@ func (this *SendInsert) Done() {
 	}
 }
 
-var _INSERT_POOL = value.NewPairPool(_BATCH_SIZE)
+var _INSERT_POOL = util.NewSlicePool[value.Pair](_BATCH_SIZE)

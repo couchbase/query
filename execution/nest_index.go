@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -194,4 +195,4 @@ func (this *IndexNest) SendAction(action opAction) {
 	this.Unlock()
 }
 
-var _INDEX_ENTRY_POOL = datastore.NewIndexEntryPool(16)
+var _INDEX_ENTRY_POOL = util.NewSlicePool[*datastore.IndexEntry](16)

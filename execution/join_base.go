@@ -309,4 +309,4 @@ func (this *joinBase) validateKeys(pairMap map[string]value.AnnotatedValue) {
 	}
 }
 
-var _STRING_KEYCOUNT_POOL = util.NewStringIntPool(_MAP_POOL_CAP)
+var _STRING_KEYCOUNT_POOL = util.NewMapPool[string, int](_MAP_POOL_CAP)

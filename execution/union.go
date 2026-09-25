@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -144,4 +145,4 @@ func (this *UnionAll) Done() {
 	this.children = nil
 }
 
-var _UNION_POOL = NewOperatorPool(4)
+var _UNION_POOL = util.NewSlicePool[Operator](4)

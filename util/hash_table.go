@@ -395,5 +395,5 @@ func GetNumMemCopy(purpose int, size float64) float64 {
 	return total * HTLoadThreshold
 }
 
-var _ARR_POOL_1 = NewInterfacePool(1)
-var _ARR_POOL_4 = NewInterfacePool(4)
+var _ARR_POOL_1 = NewSlicePool[interface{}](1)
+var _ARR_POOL_4 = NewSlicePool[interface{}](4)

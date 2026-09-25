@@ -214,4 +214,4 @@ func (this *Parallel) Done() {
 	}
 }
 
-var _PARALLEL_POOL = NewOperatorPool(util.NumCPU())
+var _PARALLEL_POOL = util.NewSlicePool[Operator](util.NumCPU())

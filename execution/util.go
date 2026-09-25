@@ -40,7 +40,7 @@ func copyOperator(op Operator) Operator {
 }
 
 var _STRING_POOL = util.NewStringPool(_BATCH_SIZE)
-var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)
+var _STRING_ANNOTATED_POOL = util.NewMapPool[string, value.AnnotatedValue](_BATCH_SIZE)
 
 const _DEF_NUM_CUSTOM_ATT = 4
 

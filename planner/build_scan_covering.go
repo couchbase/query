@@ -1168,5 +1168,7 @@ func replaceVectorKey(keys datastore.IndexKeys, entry *indexEntry, cover bool) (
 	return newKeys, vecExpr, nil
 }
 
-var _FILTER_COVERS_POOL = value.NewStringValuePool(32)
-var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)
+var _FILTER_COVERS_POOL = util.NewMapPool[string, value.Value](32)
+var _STRING_BOOL_POOL = util.NewMapPool[string, bool](1024)
+
+var _COVERING_ENTRY_POOL = util.NewMapPool[datastore.Index, *coveringEntry](16)

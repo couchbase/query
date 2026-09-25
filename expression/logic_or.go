@@ -9,6 +9,7 @@
 package expression
 
 import (
+	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
 
@@ -210,7 +211,7 @@ func (this *Or) FilterExpressionCovers(covers map[Expression]value.Value) map[Ex
 	return covers
 }
 
-var _COVERS_POOL = value.NewStringValuePool(16)
+var _COVERS_POOL = util.NewMapPool[string, value.Value](16)
 
 /*
 Return TRUE for OR. This will include false positives.

@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/util"
 )
 
 /*
@@ -620,4 +621,4 @@ func chkMultiOpUnnestIndexes(scans []plan.SecondaryScan,
 	return
 }
 
-var _UNNEST_POOL = algebra.NewUnnestPool(8)
+var _UNNEST_POOL = util.NewSlicePool[*algebra.Unnest](8)

@@ -335,4 +335,4 @@ func (this *UnionScan) Equals(i interface{}) bool {
 	return false
 }
 
-var _STRING_SCANS_POOL = util.NewStringBoolPool(16)
+var _STRING_SCANS_POOL = util.NewMapPool[string, bool](16)

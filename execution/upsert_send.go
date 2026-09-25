@@ -289,4 +289,4 @@ func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-var _UPSERT_POOL = value.NewPairPool(_BATCH_SIZE)
+var _UPSERT_POOL = util.NewSlicePool[value.Pair](_BATCH_SIZE)

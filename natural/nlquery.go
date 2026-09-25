@@ -478,7 +478,7 @@ var (
 
 const _BATCH_SIZE = 64
 
-var _STRING_ANNOTATED_POOL = value.NewStringAnnotatedPool(_BATCH_SIZE)
+var _STRING_ANNOTATED_POOL = util.NewMapPool[string, value.AnnotatedValue](_BATCH_SIZE)
 
 func ProcessResumeChat(chatId, requestId string, datastorecreds []string, chatTokens *LLMTokenUsage) errors.Error {
 	if chatId == "" {

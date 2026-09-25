@@ -203,4 +203,4 @@ func (this *DistinctScan) Done() {
 	}
 }
 
-var _STRING_BOOL_POOL = util.NewStringBoolPool(1024)
+var _STRING_BOOL_POOL = util.NewMapPool[string, bool](1024)

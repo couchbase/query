@@ -427,4 +427,4 @@ func (this stringValue) tokens(set map[string]bool, options Value,
 	return false
 }
 
-var _STRING_TOKENS_POOL = util.NewStringBoolPool(64)
+var _STRING_TOKENS_POOL = util.NewMapPool[string, bool](64)

@@ -2279,7 +2279,7 @@ func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value,
 	return value.NewValue(pairs), nil
 }
 
-var _DUP_POOL = value.NewValuePool(1024)
+var _DUP_POOL = util.NewSlicePool[value.Value](1024)
 
 /*
 Factory method pattern.

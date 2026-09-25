@@ -235,4 +235,4 @@ func (this *SendDelete) Done() {
 	}
 }
 
-var _DELETE_POOL = value.NewPairPool(_BATCH_SIZE)
+var _DELETE_POOL = util.NewSlicePool[value.Pair](_BATCH_SIZE)

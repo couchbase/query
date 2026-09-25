@@ -383,7 +383,7 @@ func (this *InitialProject) Done() {
 	}
 }
 
-var _PROJECTION_ORDER_POOL = util.NewStringIntPool(256)
+var _PROJECTION_ORDER_POOL = util.NewMapPool[string, int](256)
 
 type sortableList struct {
 	list []string

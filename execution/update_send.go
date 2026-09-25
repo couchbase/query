@@ -306,4 +306,4 @@ func setMetaExpiration(av value.AnnotatedValue, options value.Value, preserveExp
 	}
 }
 
-var _UPDATE_POOL = value.NewPairPool(_BATCH_SIZE)
+var _UPDATE_POOL = util.NewSlicePool[value.Pair](_BATCH_SIZE)

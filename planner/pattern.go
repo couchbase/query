@@ -317,6 +317,6 @@ outer:
 	}
 }
 
-var _PATTERN_INDEX_POOL = util.NewStringStringPool(64)
+var _PATTERN_INDEX_POOL = util.NewMapPool[string, string](64)
 var _DEFAULT_SUFFIXES_VARIABLE = "s"
 var _DEFAULT_TOKENS_VARIABLE = "t"

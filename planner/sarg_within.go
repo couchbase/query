@@ -84,4 +84,4 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 
 const _WITHIN_POOL_SIZE = 64
 
-var _WITHIN_POOL = util.NewInterfacePool(_WITHIN_POOL_SIZE)
+var _WITHIN_POOL = util.NewSlicePool[interface{}](_WITHIN_POOL_SIZE)

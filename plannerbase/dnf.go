@@ -408,4 +408,4 @@ func (this *DNF) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, erro
 
 const _MAX_DNF_COMPLEXITY = 1024
 
-var _EXPRESSIONS_POOL = expression.NewExpressionsPool(_MAX_DNF_COMPLEXITY)
+var _EXPRESSIONS_POOL = util.NewSlicePool[expression.Expressions](_MAX_DNF_COMPLEXITY)

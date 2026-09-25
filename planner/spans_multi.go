@@ -145,5 +145,5 @@ func dedupSpans(spans []SargSpans) []SargSpans {
 	return rv
 }
 
-var _SPANS_POOL = NewSargSpansPool(16)
-var _STRING_SPANS_POOL = util.NewStringBoolPool(16)
+var _SPANS_POOL = util.NewSlicePool[SargSpans](16)
+var _STRING_SPANS_POOL = util.NewMapPool[string, bool](16)

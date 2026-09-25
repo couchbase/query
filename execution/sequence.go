@@ -214,4 +214,4 @@ func (this *Sequence) Done() {
 	}
 }
 
-var _SEQUENCE_POOL = NewOperatorPool(32)
+var _SEQUENCE_POOL = util.NewSlicePool[Operator](32)
