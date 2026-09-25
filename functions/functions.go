@@ -332,7 +332,7 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 
 		// remove any missing entry remotely
 		distributed.RemoteAccess().DoRemoteOps([]string{}, "functions_cache", "DELETE", key, "",
-			func(warn errors.Error) {
+			func(warn errors.Error, node string) {
 				if warn != nil {
 					logging.Infof("failed to remote delete function <ud>%v</ud>: %v", name.Name(), warn)
 				}
@@ -365,7 +365,7 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 
 		// and remotely
 		distributed.RemoteAccess().DoRemoteOps([]string{}, "functions_cache", "DELETE", key, "",
-			func(warn errors.Error) {
+			func(warn errors.Error, node string) {
 				if warn != nil {
 					logging.Infof("failed to remote delete function <ud>%v</ud>: %v", name.Name(), warn)
 				}
@@ -384,7 +384,7 @@ func DropAllCacheEntries(name FunctionName) {
 
 	// drops remote function cache entries
 	distributed.RemoteAccess().DoRemoteOps([]string{}, "functions_cache", "DELETE", key, "",
-		func(warn errors.Error) {
+		func(warn errors.Error, node string) {
 			if warn != nil {
 				logging.Warnf("failed to delete remote function cache entry for %s: %v", key, warn)
 			}
