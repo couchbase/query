@@ -4647,6 +4647,21 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_INVALID_TOPNTERMS, // 5436
+		symbol:      "E_INVALID_TOPNTERMS",
+		Description: "Invalid parameter (TopNTerms) specified for sparse vector function: <<msg>>.",
+		Reason: []string{
+			"An invalid parameter (TopNTerms) is specified for sparse vector function: <<msg>>.",
+		},
+		Action: []string{
+			"Revise the sparse vector function to use a non-negative integer for the topNTerms parameter.",
+		},
+		IsUser: YES,
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_MEMORY_QUOTA_EXCEEDED, // 5500
 		symbol:      "E_MEMORY_QUOTA_EXCEEDED",
 		Description: "Request has exceeded memory quota.",

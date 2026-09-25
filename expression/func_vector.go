@@ -468,7 +468,7 @@ func (this *SparseVectorDistance) MinArgs() int {
 }
 
 func (this *SparseVectorDistance) MaxArgs() int {
-	return 4
+	return 5
 }
 
 func (this *SparseVectorDistance) Constructor() FunctionConstructor {
@@ -515,6 +515,13 @@ func (this *SparseVectorDistance) Nprobes() Expression {
 func (this *SparseVectorDistance) TopNScan() Expression {
 	if len(this.operands) > 3 {
 		return this.operands[3]
+	}
+	return nil
+}
+
+func (this *SparseVectorDistance) TopNTerms() Expression {
+	if len(this.operands) > 4 {
+		return this.operands[4]
 	}
 	return nil
 }
