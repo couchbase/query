@@ -85,6 +85,7 @@ type Database struct {
 	awrConfig       map[string]interface{} // Settings to be updated in system:awr.
 	awrKeyspace     *Keyspace              // The keyspace where AWR data will be stored.
 	testStartTime   time.Time              // The time that the iteration started executing the test queries.
+	nodeQuotaBase   *uint64                // Node-wide memory pool usage before any statements were issued; nil if not captured.
 }
 
 func NewDatabase(i interface{}) (*Database, error) {
@@ -378,18 +379,20 @@ func (this *Database) getBucketConfig(bucket string) (map[string]interface{}, bo
 	return res, true
 }
 
-// create the buckets, scopes & collections
-func (this *Database) create() error {
-	if !checkWait("http://localhost:8091/pools/default", "Waiting for instance prior to collections configuration...") {
-		return fmt.Errorf("Unable to create/configure keyspaces.")
-	}
-
-	// configure the Query node at this point since we know it is up and running by this point
+// applies the configured Query node settings; must only be called once the Query service is up and running
+func (this *Database) configureQueryNode() {
 	if len(this.queryConfig) > 0 {
 		_, _, err := doQueryPost("/admin/settings", this.queryConfig, false)
 		if err != nil {
 			logging.Warnf("Failed to configure query node: %v", err)
 		}
+	}
+}
+
+// create the buckets, scopes & collections
+func (this *Database) create() error {
+	if !checkWait("http://localhost:8091/pools/default", "Waiting for instance prior to collections configuration...") {
+		return fmt.Errorf("Unable to create/configure keyspaces.")
 	}
 
 	if this.purge {

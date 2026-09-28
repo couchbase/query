@@ -363,6 +363,9 @@ func main() {
 			reportRunFailure(iter, "Failed to configure the instance.", err)
 			continue
 		}
+		// apply the Query node settings and capture the node quota baseline before any statements are issued
+		DB.configureQueryNode()
+		captureNodeQuotaBaseline()
 
 		// determine whether this iteration should run with encryption at rest enabled, and locate/create the key
 		// to use if so; failures here never fail the iteration - they are reported by e-mail once it completes
@@ -408,6 +411,12 @@ func main() {
 				logging.Infof("%v", string(b))
 			}
 		}
+
+		if err := checkNodeQuotaUsage(); err != nil {
+			logging.Errorf("%v", err)
+			report = append(report, err.Error())
+		}
+
 		if len(report) > 0 {
 			reportRunFailure(iter, report...)
 		}
