@@ -36,9 +36,10 @@ type SystemRemoteAccess interface {
 
 	// Perform an operation on a key on all nodes in the argument
 	// data is sent to each remote node
-	// warnFn is called on the result of each node, with no warnigs if succesful
+	// warnFn is called with the warning and the name of the node it applies to
+	// (empty if the warning is not specific to a node), e.g. to allow retries
 	DoRemoteOps(nodes []string, endpoint string, command string, key string,
-		data string, warnFn func(warn errors.Error), creds Creds, authToken string)
+		data string, warnFn func(warn errors.Error, node string), creds Creds, authToken string)
 
 	// local node name, if known
 	WhoAmI() string
