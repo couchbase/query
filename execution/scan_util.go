@@ -282,6 +282,18 @@ func getIndexVector(planIndexVector *plan.IndexVector, indexVector *datastore.In
 		indexVector.TopNScan = int(topNScan)
 	}
 
+	if planIndexVector.TopNTerms != nil {
+		nnzVal, err := planIndexVector.TopNTerms.Evaluate(parent, context)
+		if err != nil {
+			return errors.NewEvaluationError(err, "index vector parameter: topNTerms")
+		}
+		nnz, ok := value.IsIntValue(nnzVal)
+		if !ok || nnz < 0 {
+			return errors.NewInvalidTopNTerms("not a non-negative integer")
+		}
+		indexVector.SparseTopNTerms = int(nnz)
+	}
+
 	if planIndexVector.ReRank != nil {
 		avVal, err := planIndexVector.ReRank.Evaluate(parent, context)
 		if err != nil {

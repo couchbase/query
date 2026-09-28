@@ -49,7 +49,7 @@ func (this *TermSpans) CreateScan(
 	if index3, ok := index.(datastore.Index3); ok && useIndex3API(index, indexApiVersion) {
 		var indexVector *plan.IndexVector
 		if index6, ok := index.(datastore.Index6); ok && useIndex6API(index, indexApiVersion) && !setop && this.vecExpr != nil {
-			var reRank, topNScan, queryVector, nprobes expression.Expression
+			var reRank, topNScan, queryVector, nprobes, topNTerms expression.Expression
 			var squareRoot bool
 			var vectorType string
 			switch vecExpr := this.vecExpr.(type) {
@@ -66,10 +66,11 @@ func (this *TermSpans) CreateScan(
 				topNScan = vecExpr.TopNScan()
 				queryVector = vecExpr.QueryVector()
 				nprobes = vecExpr.Nprobes()
+				topNTerms = vecExpr.TopNTerms()
 				vectorType = datastore.IK_SPARSE_VECTOR_NAME
 			}
 			indexVector = plan.NewIndexVector(queryVector, this.vecPos, vectorType,
-				nprobes, reRank, topNScan, squareRoot)
+				nprobes, reRank, topNScan, topNTerms, squareRoot)
 		} else {
 			indexKeyNames = nil
 			indexPartitionSets = nil

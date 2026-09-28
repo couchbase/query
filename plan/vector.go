@@ -25,11 +25,12 @@ type IndexVector struct {
 	Probes      expression.Expression
 	ReRank      expression.Expression
 	TopNScan    expression.Expression
+	TopNTerms   expression.Expression
 	SquareRoot  bool
 }
 
 func NewIndexVector(queryVector expression.Expression, indexKeyPos int, vectorType string,
-	probes, reRank, topNScan expression.Expression, squareRoot bool) *IndexVector {
+	probes, reRank, topNScan, topNTerms expression.Expression, squareRoot bool) *IndexVector {
 	return &IndexVector{
 		QueryVector: queryVector,
 		IndexKeyPos: indexKeyPos,
@@ -37,6 +38,7 @@ func NewIndexVector(queryVector expression.Expression, indexKeyPos int, vectorTy
 		Probes:      probes,
 		ReRank:      reRank,
 		TopNScan:    topNScan,
+		TopNTerms:   topNTerms,
 		SquareRoot:  squareRoot,
 	}
 }
@@ -49,6 +51,8 @@ func (this *IndexVector) Copy() *IndexVector {
 		Probes:      expression.Copy(this.Probes),
 		ReRank:      expression.Copy(this.ReRank),
 		TopNScan:    expression.Copy(this.TopNScan),
+
+		TopNTerms: expression.Copy(this.TopNTerms),
 	}
 }
 
@@ -76,6 +80,12 @@ func (this *IndexVector) EquivalentTo(other *IndexVector) bool {
 	} else if this.ReRank != nil && !this.ReRank.EquivalentTo(other.ReRank) {
 		return false
 	}
+	if (this.TopNTerms == nil && other.TopNTerms != nil) ||
+		(this.TopNTerms != nil && other.TopNTerms == nil) {
+		return false
+	} else if this.TopNTerms != nil && !this.TopNTerms.EquivalentTo(other.TopNTerms) {
+		return false
+	}
 	return true
 }
 
@@ -100,6 +110,9 @@ func (this *IndexVector) MarshalBase(f func(map[string]interface{})) map[string]
 	if this.TopNScan != nil {
 		rv["top_nscan"] = this.TopNScan
 	}
+	if this.TopNTerms != nil {
+		rv["top_n_terms"] = this.TopNTerms
+	}
 	if this.SquareRoot {
 		rv["square_root"] = this.SquareRoot
 	}
@@ -115,6 +128,8 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 		ReRank      string `json:"re_rank"`
 		TopNScan    string `json:"top_nscan"`
 		SquareRoot  bool   `json:"square_root"`
+
+		TopNTerms string `json:"top_n_terms"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -152,6 +167,13 @@ func (this *IndexVector) UnmarshalJSON(body []byte) error {
 
 	if _unmarshalled.TopNScan != "" {
 		this.TopNScan, err = parser.Parse(_unmarshalled.TopNScan)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _unmarshalled.TopNTerms != "" {
+		this.TopNTerms, err = parser.Parse(_unmarshalled.TopNTerms)
 		if err != nil {
 			return err
 		}
