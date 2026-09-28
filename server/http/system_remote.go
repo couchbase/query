@@ -375,7 +375,7 @@ func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint str
 
 // perform operation on key on the specified nodes for the specified endpoint
 func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, command string, key string, data string,
-	warnFn func(warn errors.Error), creds distributed.Creds, authToken string) {
+	warnFn func(warn errors.Error, node string), creds distributed.Creds, authToken string) {
 
 	// now that the local node name can change, use a consistent one across the scan
 	whoAmI := this.WhoAmI()
@@ -396,7 +396,7 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 		clusters, err := this.configStore.ClusterNames()
 		if err != nil {
 			if warnFn != nil {
-				warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+				warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint), "")
 			}
 			return
 		}
@@ -405,14 +405,14 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 			cl, err := this.configStore.ClusterByName(clusters[c])
 			if err != nil {
 				if warnFn != nil {
-					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint), "")
 				}
 				continue
 			}
 			queryNodeNames, err := cl.QueryNodeNames()
 			if err != nil {
 				if warnFn != nil {
-					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint))
+					warnFn(errors.NewSystemRemoteWarning(err, "scan", endpoint), "")
 				}
 				continue
 			}
@@ -428,13 +428,13 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 				queryNode, err := this.getQueryNode(node, "scan", endpoint)
 				if err != nil {
 					if warnFn != nil {
-						warnFn(err)
+						warnFn(err, node)
 					}
 					continue
 				}
 				_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
 				if warnFn != nil && opErr != nil {
-					warnFn(opErr)
+					warnFn(opErr, node)
 				}
 
 			}
@@ -451,14 +451,14 @@ func (this *systemRemoteHttp) DoRemoteOps(nodes []string, endpoint string, comma
 			queryNode, err := this.getQueryNode(node, "scan", endpoint)
 			if err != nil {
 				if warnFn != nil {
-					warnFn(err)
+					warnFn(err, node)
 				}
 				continue
 			}
 
 			_, opErr := this.doRemoteOp(queryNode, endpoint, command, data, command, creds, authToken, cp)
 			if warnFn != nil && opErr != nil {
-				warnFn(opErr)
+				warnFn(opErr, node)
 			}
 		}
 	}

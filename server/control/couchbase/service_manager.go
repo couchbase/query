@@ -297,7 +297,7 @@ func (m *ServiceMgr) CancelTask(id string, rev service.Revision) error {
 						logging.Infof("ServiceMgr::CancelTask failed to cancel shutdown on %s: unable to resolve host", string(e))
 					} else {
 						var err errors.Error
-						distributed.RemoteAccess().DoRemoteOps([]string{host}, "shutdown", "POST", "", data, func(e errors.Error) {
+						distributed.RemoteAccess().DoRemoteOps([]string{host}, "shutdown", "POST", "", data, func(e errors.Error, node string) {
 							err = e
 						}, distributed.NO_CREDS, "")
 						if err == nil {
@@ -515,7 +515,7 @@ func (m *ServiceMgr) StartTopologyChange(change service.TopologyChange) error {
 						string(m.eject[i]))
 				} else {
 					var err errors.Error
-					distributed.RemoteAccess().DoRemoteOps([]string{host}, "shutdown", "POST", "", data, func(e errors.Error) {
+					distributed.RemoteAccess().DoRemoteOps([]string{host}, "shutdown", "POST", "", data, func(e errors.Error, node string) {
 						err = e
 					}, distributed.NO_CREDS, "")
 					if err == nil {
