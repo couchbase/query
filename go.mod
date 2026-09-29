@@ -2,8 +2,6 @@ module github.com/couchbase/query
 
 go 1.26.2
 
-replace golang.org/x/text => golang.org/x/text v0.4.0
-
 replace github.com/couchbase/bhive => ../bhive
 
 replace github.com/couchbase/cbauth => ../cbauth
@@ -73,7 +71,7 @@ require (
 	github.com/couchbase/regulator v0.0.0-00010101000000-000000000000
 	github.com/golang/snappy v1.0.0
 	github.com/google/uuid v1.6.0
-	github.com/hamba/avro/v2 v2.31.0
+	github.com/iskorotkov/avro/v2 v2.34.0
 	github.com/kylelemons/godebug v1.1.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-runewidth v0.0.20
@@ -83,7 +81,7 @@ require (
 	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
 	github.com/scritchley/orc v0.0.0-20210513144143-06dddf1ad665
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/net v0.58.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sys v0.47.0
@@ -115,7 +113,7 @@ require (
 	github.com/RoaringBitmap/roaring/v2 v2.18.0 // indirect
 	github.com/andybalholm/brotli v1.2.1 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
-	github.com/apache/thrift v0.23.0 // indirect
+	github.com/apache/thrift v0.24.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.13 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.23 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.18 // indirect
@@ -267,7 +265,7 @@ require (
 	go.uber.org/zap v1.27.1 // indirect
 	gocloud.dev v0.45.0 // indirect
 	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
-	golang.org/x/mod v0.34.0 // indirect
+	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect

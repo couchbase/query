@@ -53,7 +53,7 @@ import (
 	"github.com/couchbase/query/extparams"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/util"
-	"github.com/hamba/avro/v2/ocf"
+	"github.com/iskorotkov/avro/v2/ocf"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/scritchley/orc"
@@ -2595,7 +2595,7 @@ func (s *Scanner) streamArrowIPCFile(ctx go_context.Context, data []byte, result
 }
 
 // streamAvroFile reads an Avro OCF file and sends rows to resultChan.
-// Row values are decoded into map[string]interface{} via hamba/avro.
+// Row values are decoded into map[string]interface{} via iskorotkov/avro.
 func (s *Scanner) streamAvroFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]interface{}) error {
 	dec, err := ocf.NewDecoder(bytes.NewReader(data))
 	if err != nil {

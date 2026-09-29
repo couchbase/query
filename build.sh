@@ -11,6 +11,8 @@
 #
 # To build the enterprise version, launch this  AS './build.sh -tags enterprise'
 # To build the enterprise version with latest updates, launch this  AS './build.sh -u -tags enterprise'
+# Add -vuln to run govulncheck on cbq-engine (requires govulncheck in PATH)
+#   go install golang.org/x/vuln/cmd/govulncheck@latest
 # Add -s to fix standalone build issues. Keep indexer generated files in ~/devbld
 # Note standalone build requires libraries from installed server, make sure installed server is
 # compatible with source that is being built
@@ -36,6 +38,7 @@ uflag=
 sflag=0
 fflag=1
 vflag=0
+vulnflag=0
 while [ $# -gt 0 ]; do
   case $1 in
     -tags)
@@ -48,6 +51,7 @@ while [ $# -gt 0 ]; do
     -S) sflag=2 ;;
     -nofmt) fflag=0 ;;
     -vet) vflag=1 ;;
+    -vuln) vulnflag=1 ;;
     *) args="$args $1" ;;
   esac
   shift
@@ -402,6 +406,16 @@ then
     then
       exit 1
     fi
+  fi
+fi
+
+if [[ ($vulnflag != 0) ]]
+then
+  echo govulncheck $* ./server/cbq-engine/...
+  govulncheck $* ./server/cbq-engine/...
+  if [ $? -ne 0 ]
+  then
+    exit 1
   fi
 fi
 
