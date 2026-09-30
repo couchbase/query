@@ -463,9 +463,17 @@ const CHAT_DOC_TTL_DURATION = 7 * 24 * time.Hour
 const summarizeThreshold = 1024 * 10
 const summarizeMessageLen = 8
 
-const (
+// var, not const, so tests can temporarily shrink the retry budget for
+// exhaustion-path cases instead of sleeping out the full real backoff.
+var (
 	maxRetry = 6
 	interval = 100 * time.Millisecond
+	// confirmMaxRetry bounds confirmChatDocPersisted's own retry loop. Deliberately
+	// smaller than maxRetry: by the time it runs, the Insert loop has already spent a
+	// full backoff cycle establishing that the write's outcome is unclear. The
+	// read-back only needs a few tries to get a definitive answer via Fetch, not to
+	// replicate the write path's full retry budget stacked on top of it.
+	confirmMaxRetry = 3
 )
 
 const _BATCH_SIZE = 64
@@ -607,49 +615,36 @@ func ProcessResumeChat(chatId, requestId string, datastorecreds []string, chatTo
 			return err
 		}
 
-		udpairs := make([]value.Pair, 1)
+		udpairs := make(value.Pairs, 1)
 		udpairs[0].Name = key
 		chatdoc.SetField("claimer", value.NewValue(distributed.RemoteAccess().WhoAmI()))
 		chatdoc.SetField("claim_time", value.NewValue(time.Now().Format(util.DEFAULT_FORMAT)))
 		udpairs[0].Value = chatdoc
 
-		retryClaim := false
-		claimUpdateInterval := interval
-		for claimUpdate := 0; claimUpdate < maxRetry; claimUpdate++ {
-			_, _, errs = queryMetadata.Update(udpairs, queryContext, false)
-			if len(errs) > 0 {
-				if couchbase.CanRetryWithRefresh(errs[0]) {
-					time.Sleep(claimUpdateInterval)
-					claimUpdateInterval *= 2
-				} else if errs[0].HasCause(errors.E_CAS_MISMATCH) || errs[0].ContainsText("SYNC_WRITE_IN_PROGRESS") {
-					// some else tried to resume concurrently
-					chatdoc.Recycle()
-					chatdoc = nil
-					fetchMap[key] = nil
-					ce.Reset()
-					retryClaim = true
-					break
-				} else {
-					logging.Errorf("%s Chat claim failed: error updating QUERY_METADATA bucket (key %s): %v",
-						_CHAT_LOG_PREFIX, key, errs)
-					return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
-						fmt.Sprintf("err updating the chat document: %v", errs))
-				}
-			} else {
-				claimed = true
-				break
-			}
-		}
-
-		if retryClaim {
-			claimInterval *= 2
-			time.Sleep(claimInterval)
-			continue
+		var retryClaim bool
+		claimed, retryClaim, err = claimChatDocument(chatId, key, queryMetadata, queryContext, udpairs)
+		if err != nil {
+			return err
 		}
 
 		if claimed {
 			logging.Infof("%s Chat claimed successfully for chat id: %s", _CHAT_LOG_PREFIX, chatId)
 			break
+		}
+
+		// Not claimed -- either a concurrent claim/ambiguous update was detected
+		// (retryClaim), or claimChatDocument's inner retry budget exhausted without a
+		// definitive outcome. Either way, stale chatdoc/ce state must not survive into
+		// the next fetch: ce.UnmarshalJSON merges fields rather than overwriting them,
+		// so a zero/empty field on the re-fetched document would otherwise silently
+		// keep this iteration's now-stale value instead of being cleared.
+		chatdoc.Recycle()
+		chatdoc = nil
+		fetchMap[key] = nil
+		ce.Reset()
+		if retryClaim {
+			claimInterval *= 2
+			time.Sleep(claimInterval)
 		}
 	}
 
@@ -659,35 +654,8 @@ func ProcessResumeChat(chatId, requestId string, datastorecreds []string, chatTo
 			fmt.Sprintf("failed to claim chat document for chat id: %s after retries: %d", chatId, maxRetry))
 	}
 
-	dpairs := make([]value.Pair, 1)
-	dpairs[0].Name = key
-	completeClaimInterval := interval
-	claimcompleted := true
-	for claimComplete := 0; claimComplete < maxRetry; claimComplete++ {
-		claimcompleted = false
-		_, _, errs := queryMetadata.Delete(dpairs, queryContext, false)
-		if len(errs) > 0 {
-			if couchbase.CanRetryWithRefresh(errs[0]) {
-				time.Sleep(completeClaimInterval)
-				completeClaimInterval *= 2
-			} else {
-				logging.Errorf("%s Chat claim completion failed: error deleting from QUERY_METADATA bucket (key %s): %v",
-					_CHAT_LOG_PREFIX, key, errs)
-				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
-					fmt.Sprintf("err deleting the chat document: %v", errs))
-			}
-		} else {
-			logging.Infof("%s Chat claim completed for chat id: %s", _CHAT_LOG_PREFIX, chatId)
-			claimcompleted = true
-			break
-		}
-	}
-
-	if !claimcompleted {
-		logging.Errorf("%s Chat claim completion failed after %d retries:"+
-			" error in deleting the chat document for chat id: %s", _CHAT_LOG_PREFIX, maxRetry, chatId)
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
-			fmt.Sprintf("failed to complete the claim for chat document for chat id: %s after retries: %d", chatId, maxRetry))
+	if err := completeChatClaim(chatId, key, queryMetadata, queryContext); err != nil {
+		return err
 	}
 
 	ce.Id = chatId
@@ -703,6 +671,216 @@ func ProcessResumeChat(chatId, requestId string, datastorecreds []string, chatTo
 	AddConversation(ce, ce.Id)
 	logging.Infof("%s Chat with id %s resumed", _CHAT_LOG_PREFIX, chatId)
 	return nil
+}
+
+// claimChatDocument attempts to claim the chat document at key for this node by
+// CAS-updating its claimer/claim_time fields (udpairs must already carry both, set
+// against the chatdoc value read by the caller's Fetch). Returns claimed=true on
+// success. If a concurrent claim is detected (E_CAS_MISMATCH, a rejected sync write,
+// or an ambiguous outcome -- our own update may have actually landed despite the
+// ambiguity), it returns retryClaim=true instead of failing outright, so the caller
+// re-fetches the document and re-checks the claimer field rather than assuming
+// failure.
+func claimChatDocument(chatId, key string, queryMetadata datastore.Keyspace,
+	queryContext datastore.QueryContext, udpairs value.Pairs) (claimed, retryClaim bool, rerr errors.Error) {
+
+	claimUpdateInterval := interval
+	for i := 0; i < maxRetry; i++ {
+		_, _, errs := queryMetadata.Update(udpairs, queryContext, false)
+		if len(errs) == 0 {
+			return true, false, nil
+		}
+		if errs[0].HasCause(errors.E_CAS_MISMATCH) || errs[0].ContainsText("SYNC_WRITE_IN_PROGRESS") ||
+			couchbase.IsAmbiguousTimeoutError(errs[0]) {
+			return false, true, nil
+		}
+		if couchbase.CanRetryWithRefresh(errs[0]) {
+			time.Sleep(claimUpdateInterval)
+			claimUpdateInterval *= 2
+			continue
+		}
+		logging.Errorf("%s Chat claim failed: error updating QUERY_METADATA bucket (key %s): %v",
+			_CHAT_LOG_PREFIX, key, errs)
+		return false, false, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+			fmt.Sprintf("err updating the chat document: %v", errs))
+	}
+	// Exhausted retries without a definitive outcome -- the caller's outer loop
+	// re-fetches on its own next iteration regardless, so nothing further to signal.
+	return false, false, nil
+}
+
+// completeChatClaim deletes the claimed chat document at key from QUERY_METADATA,
+// consuming it so it cannot be resumed again. Retries on ambiguous outcomes -- unlike
+// Insert, Delete needs no extra disambiguation: a retry's "not found" is already
+// treated as success, so simply retrying is enough to resolve an ambiguous timeout.
+func completeChatClaim(chatId, key string, queryMetadata datastore.Keyspace,
+	queryContext datastore.QueryContext) errors.Error {
+
+	dpairs := make(value.Pairs, 1)
+	dpairs[0].Name = key
+	completeClaimInterval := interval
+	for i := 0; i < maxRetry; i++ {
+		_, _, errs := queryMetadata.Delete(dpairs, queryContext, false)
+		if len(errs) == 0 {
+			logging.Infof("%s Chat claim completed for chat id: %s", _CHAT_LOG_PREFIX, chatId)
+			return nil
+		}
+		if isRetryableSyncWriteError(errs[0]) {
+			time.Sleep(completeClaimInterval)
+			completeClaimInterval *= 2
+			continue
+		}
+		logging.Errorf("%s Chat claim completion failed: error deleting from QUERY_METADATA bucket (key %s): %v",
+			_CHAT_LOG_PREFIX, key, errs)
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+			fmt.Sprintf("err deleting the chat document: %v", errs))
+	}
+	logging.Errorf("%s Chat claim completion failed after %d retries:"+
+		" error in deleting the chat document for chat id: %s", _CHAT_LOG_PREFIX, maxRetry, chatId)
+	return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_RESUME_FAILED,
+		fmt.Sprintf("failed to complete the claim for chat document for chat id: %s after retries: %d", chatId, maxRetry))
+}
+
+// Marshal ce and insert it into QUERY_METADATA under aichat::<chatId>, then evict the
+// chat from the local live-chat cache once the document is confirmed persisted.
+//
+// caller should have already acquired lock on ce
+func persistPausedChat(chatId string, ce *ChatEntry, queryMetadata datastore.Keyspace,
+	queryContext datastore.QueryContext) errors.Error {
+
+	if ce.Paused {
+		// Two concurrent PAUSE requests for the same chatId on this node both read the
+		// same *ChatEntry before either locks it; the second one reaches here only
+		// after the first has already persisted and evicted it. Nothing left to do --
+		// avoid a redundant Insert (which would just come back E_DUPLICATE_KEY anyway).
+		logging.Infof("%s Chat with id %s already paused; skipping redundant persist", _CHAT_LOG_PREFIX, chatId)
+		return nil
+	}
+
+	marshalledchat, merr := ce.MarshalJSON()
+	if merr != nil {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED, "failed to marshal chat entry", merr)
+	}
+	key := fmt.Sprintf("%s%s", CHAT_DOC_PREFIX, chatId)
+	dpairs := make([]value.Pair, 1)
+	dpairs[0].Name = key
+	dpairs[0].Value = value.NewValue(map[string]interface{}{"chat": base64.StdEncoding.EncodeToString(marshalledchat)})
+	ttltime := time.Now().Add(CHAT_DOC_TTL_DURATION)
+	opt := value.NewValue(map[string]interface{}{})
+	opt.SetField("expiration", ttltime.Unix())
+	dpairs[0].Options = opt
+
+	inserted := false
+	sawAmbiguous := false
+	insertInterval := interval
+	for i := 0; i < maxRetry; i++ {
+		_, _, errs := queryMetadata.Insert(dpairs, queryContext, false)
+		if len(errs) == 0 {
+			inserted = true
+			break
+		}
+		if errs[0].HasCause(errors.E_DUPLICATE_KEY) {
+			// The document already exists in QUERY_METADATA. Either our own earlier
+			// attempt actually landed after a client-side timeout (this is a retry of
+			// that same ambiguous write), or another pause already persisted it --
+			// either way the desired persisted state now holds.
+			logging.Infof("%s Chat document for id %s already present in QUERY_METADATA; treating pause as persisted",
+				_CHAT_LOG_PREFIX, chatId)
+			inserted = true
+			break
+		}
+		if isRetryableSyncWriteError(errs[0]) {
+			sawAmbiguous = true
+			time.Sleep(insertInterval)
+			insertInterval *= 2
+			continue
+		}
+		if !sawAmbiguous {
+			// No earlier attempt in this loop was ambiguous -- this is a genuine
+			// first-try failure, safe to report as-is.
+			logging.Errorf("%s Error inserting into QUERY_METADATA bucket: %v (key %s)", _CHAT_LOG_PREFIX, errs, key)
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
+				fmt.Sprintf("err inserting the chat document: %v", errs))
+		}
+		// A definitive-looking error followed an earlier ambiguous attempt that may
+		// have already landed -- don't trust it at face value; fall through to the
+		// read-back check below instead of returning failure outright.
+		logging.Errorf("%s Error inserting into QUERY_METADATA bucket: %v (key %s)", _CHAT_LOG_PREFIX, errs, key)
+		break
+	}
+	if !inserted {
+		// The insert loop exhausted its retries while still seeing a retryable
+		// (ambiguous / sync-write-in-progress) outcome -- we genuinely do not know
+		// whether the write landed. Don't infer failure from a used-up retry budget: a
+		// durability-timeout response from KV only means the server gave up waiting
+		// for a replica ack, not that the mutation itself didn't happen. Reporting
+		// failure here while the write actually lands would leave the caller keeping
+		// this chat live locally while a resume elsewhere could claim the
+		// now-persisted document too -- the split-brain condition this whole path
+		// exists to prevent. Ask KV directly instead of guessing.
+		persisted, ferr := confirmChatDocPersisted(key, queryMetadata, queryContext)
+		if ferr != nil {
+			logging.Errorf("%s Failed to confirm chat document persistence via read-back for chat id: %s (key %s): %v",
+				_CHAT_LOG_PREFIX, chatId, key, ferr)
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
+				fmt.Sprintf("failed to confirm the chat document was persisted for chat id: %s: %v", chatId, ferr))
+		}
+		if !persisted {
+			logging.Errorf("%s Failed to confirm chat document was persisted into QUERY_METADATA after %d retries (key %s)",
+				_CHAT_LOG_PREFIX, confirmMaxRetry, key)
+			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
+				fmt.Sprintf("failed to confirm the chat document was persisted for chat id: %s after retries: %d", chatId, confirmMaxRetry))
+		}
+		logging.Infof("%s Chat document for id %s confirmed persisted via read-back after ambiguous insert outcome",
+			_CHAT_LOG_PREFIX, chatId)
+	}
+
+	ce.stopInactivityTimer()
+	DeleteConversation(chatId)
+	ce.Paused = true
+	logging.Infof("%s Chat with id %s paused", _CHAT_LOG_PREFIX, chatId)
+	return nil
+}
+
+// isRetryableSyncWriteError reports whether err reflects a transient KV outcome
+// worth retrying, as opposed to a definitive failure.
+func isRetryableSyncWriteError(err errors.Error) bool {
+	if err == nil {
+		return false
+	}
+	// SYNC_WRITE_IN_PROGRESS means the op was rejected outright (another sync write
+	// is already pending on this key), not ambiguous -- safe to just retry.
+	return couchbase.CanRetryWithRefresh(err) || couchbase.IsAmbiguousTimeoutError(err) ||
+		err.ContainsText("SYNC_WRITE_IN_PROGRESS")
+}
+
+// confirmChatDocPersisted authoritatively resolves whether the chat document at key
+// exists in QUERY_METADATA, by reading it directly rather than inferring the outcome
+// from an exhausted insert-retry budget. It keeps retrying while KV itself reports the
+// read as still-pending (ambiguous / sync-write-in-progress) rather than concluding
+// "not persisted" on anything short of a definitive miss.
+func confirmChatDocPersisted(key string, queryMetadata datastore.Keyspace,
+	queryContext datastore.QueryContext) (bool, errors.Error) {
+
+	fetchMap := _STRING_ANNOTATED_POOL.Get()
+	defer _STRING_ANNOTATED_POOL.Put(fetchMap)
+
+	fetchInterval := interval
+	for i := 0; i < confirmMaxRetry; i++ {
+		errs := queryMetadata.Fetch([]string{key}, fetchMap, queryContext, nil, nil, false)
+		if len(errs) == 0 {
+			_, ok := fetchMap[key]
+			return ok, nil
+		}
+		if isRetryableSyncWriteError(errs[0]) {
+			time.Sleep(fetchInterval)
+			fetchInterval *= 2
+			continue
+		}
+		return false, errs[0]
+	}
+	return false, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
+		fmt.Sprintf("could not resolve pending write for key %s via read-back after %d retries", key, confirmMaxRetry))
 }
 
 func getStatement(content string, nloutputOpt naturalOutput) (string, errors.Error) {

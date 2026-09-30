@@ -92,6 +92,25 @@ func CanRetryWithRefresh(err qerrors.Error) bool {
 	return false
 }
 
+// Return true if err indicates a client-side KV timeout/network condition, or a KV-side
+// SyncWrite ambiguity, where the mutation request may already have reached the server
+// (and may still commit) despite the client giving up waiting for a definite response --
+// the outcome is ambiguous, not a definite failure, and is worth retrying rather than
+// failing immediately.
+func IsAmbiguousTimeoutError(err qerrors.Error) bool {
+	if err != nil {
+		return err.ContainsText("i/o timeout") ||
+			err.ContainsText("connection timed out") ||
+			err.ContainsText("no route to host") ||
+			err.ContainsText("network is unreachable") ||
+			err.ContainsText("connection reset by peer") ||
+			err.ContainsText("broken pipe") ||
+			err.ContainsText("use of closed network connection") ||
+			err.ContainsText(gomemcached.StatusNames[gomemcached.SYNC_WRITE_AMBIGUOUS])
+	}
+	return false
+}
+
 func IsBucketNotFound(err error) bool {
 	return strings.Contains(err.Error(), BUCKET_NOT_FOUND) ||
 		strings.Contains(err.Error(), BUCKET_UUID_MISMATCH)

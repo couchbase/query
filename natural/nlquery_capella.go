@@ -33,7 +33,6 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/parser/n1ql"
-	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -980,41 +979,8 @@ func ProcessCapellaPauseChat(chatId, requestId string,
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED, "failed to get query metadata: %v", err)
 	}
 
-	dpairs := make([]value.Pair, 1)
 	queryContext := datastore.GetDurableQueryContextFor(queryMetadata)
-
-	marshalledchat, merr := ce.MarshalJSON()
-	if merr != nil {
-		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED, "failed to marshal chat entry", merr)
-	}
-	key := fmt.Sprintf("%s%s", CHAT_DOC_PREFIX, chatId)
-	dpairs[0].Name = key
-	dpairs[0].Value = value.NewValue(map[string]interface{}{"chat": base64.StdEncoding.EncodeToString(marshalledchat)})
-	ttltime := time.Now().Add(CHAT_DOC_TTL_DURATION)
-	opt := value.NewValue(map[string]interface{}{})
-	opt.SetField("expiration", ttltime.Unix())
-	dpairs[0].Options = opt
-	insertInterval := interval
-	for i := 0; i < maxRetry; i++ {
-		_, _, errs := queryMetadata.Insert(dpairs, queryContext, false)
-		if len(errs) > 0 {
-			if couchbase.CanRetryWithRefresh(errs[0]) {
-				time.Sleep(insertInterval)
-				insertInterval *= 2
-			} else {
-				logging.Errorf("%s Error inserting into QUERY_METADATA bucket: %v (key %s)", _CHAT_LOG_PREFIX, errs, key)
-				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_PAUSE_FAILED,
-					fmt.Sprintf("err inserting the chat document: %v", errs))
-			}
-		} else {
-			break
-		}
-	}
-	ce.stopInactivityTimer()
-	DeleteConversation(chatId)
-	ce.Paused = true
-	logging.Infof("%s Chat with id %s paused", _CHAT_LOG_PREFIX, chatId)
-	return nil
+	return persistPausedChat(chatId, ce, queryMetadata, queryContext)
 }
 
 func capellaSummarizePrompt(ce *ChatEntry, nlorgid, nlcred, provider, model, jwt string, record func(execution.Phases, time.Duration)) errors.Error {
