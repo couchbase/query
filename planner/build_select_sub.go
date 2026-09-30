@@ -141,7 +141,12 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 			// being considered sargable (sargableIndexes / SargableFor treat a nil
 			// vpred as unsargable for the vector key) instead of having to gate that
 			// downstream.
-			if hasVector && this.limit != nil {
+			// Gate on LIMIT only, not on hasVector: hasVector looks at the ORDER BY
+			// terms before projection aliases and LET variables are replaced, so it
+			// is false for "ORDER BY <alias>" / "ORDER BY <let var>". sortExprs is
+			// already resolved here and the loop below keeps only vector distance
+			// expressions.
+			if this.limit != nil {
 				vecExprs := make(expression.Expressions, 0, len(sortExprs))
 				for _, term := range sortExprs {
 					switch term.(type) {
