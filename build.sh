@@ -11,6 +11,8 @@
 #
 # To build the enterprise version, launch this  AS './build.sh -tags enterprise'
 # To build the enterprise version with latest updates, launch this  AS './build.sh -u -tags enterprise'
+# Add -vuln to run govulncheck on cbq-engine (requires govulncheck in PATH)
+#   go install golang.org/x/vuln/cmd/govulncheck@latest
 # Add -s to fix standalone build issues. Keep indexer generated files in ~/devbld
 # Note standalone build requires libraries from installed server, make sure installed server is
 # compatible with source that is being built
@@ -35,6 +37,7 @@ enterprise=0
 uflag=
 sflag=0
 fflag=1
+vulnflag=0
 while [ $# -gt 0 ]; do
   case $1 in
     -tags)
@@ -46,6 +49,7 @@ while [ $# -gt 0 ]; do
     -s) sflag=1 ;;
     -S) sflag=2 ;;
     -nofmt) fflag=0 ;;
+    -vuln) vulnflag=1 ;;
     *) args="$args $1" ;;
   esac
   shift
@@ -282,7 +286,7 @@ function DevStandaloneSetup {
     if [[ -f ~/devbld/protoc-gen-go ]]
     then
             ln -sf ~/devbld/protoc-gen-go $GOPATH/bin
-	    (cd $GOPATH/src/github.com/couchbase/indexing/secondary/protobuf/query; protoc -I. --plugin=protoc-gen-go=$GOPATH/bin//protoc-gen-go query.proto --go_out=`pwd`)
+	    (cd ../indexing/secondary/protobuf/query; protoc -I. --plugin=protoc-gen-go=$GOPATH/bin/protoc-gen-go query.proto --go_out=. --go_opt=paths=source_relative)
     fi
 
     if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) ]]
@@ -350,6 +354,16 @@ then
   go fmt ./...
   if [[ $enterprise == 1 ]]; then
     (echo go fmt ../query-ee/...; cd ../query-ee; go fmt ./...)
+  fi
+fi
+
+if [[ ($vulnflag != 0) ]]
+then
+  echo govulncheck $* ./server/cbq-engine/...
+  govulncheck $* ./server/cbq-engine/...
+  if [ $? -ne 0 ]
+  then
+    exit 1
   fi
 fi
 
