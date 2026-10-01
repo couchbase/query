@@ -319,7 +319,7 @@ function DevStandaloneSetup {
     if [[ -f ~/devbld/protoc-gen-go ]]
     then
             ln -sf ~/devbld/protoc-gen-go $GOPATH/bin
-	    (cd $GOPATH/src/github.com/couchbase/indexing/secondary/protobuf/query; protoc -I. --plugin=protoc-gen-go=$GOPATH/bin//protoc-gen-go query.proto --go_out=`pwd`)
+	    (cd ../indexing/secondary/protobuf/query; protoc -I. --plugin=protoc-gen-go=$GOPATH/bin/protoc-gen-go query.proto --go_out=. --go_opt=paths=source_relative)
     fi
 
     if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) ]]
