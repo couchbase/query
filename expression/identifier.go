@@ -189,7 +189,15 @@ func (this *Identifier) MapChildren(mapper Mapper) error {
 }
 
 func (this *Identifier) Copy() Expression {
-	return this
+	rv := &Identifier{
+		identifier:      this.identifier,
+		caseInsensitive: this.caseInsensitive,
+		parenthesis:     this.parenthesis,
+		identFlags:      this.identFlags,
+	}
+	rv.expr = rv
+	rv.BaseCopy(this)
+	return rv
 }
 
 func (this *Identifier) SurvivesGrouping(groupKeys Expressions, allowed *value.ScopeValue) (
