@@ -1,0 +1,209 @@
+[
+    {
+        "testcase":"Sparse bhive: ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`index_vector`.`vector_type` = 'sparse' END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id FROM sparse_vectors ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 5",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_651"
+        },
+        {
+            "id": "svec_656"
+        },
+        {
+            "id": "svec_657"
+        },
+        {
+            "id": "svec_2138"
+        },
+        {
+            "id": "svec_2132"
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse bhive: nprobes, topNScan, topNTerms in index_vector",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`index_vector`.`vector_type` = 'sparse' AND v.`index_vector`.`probes` = '4' AND v.`index_vector`.`top_nscan` = '50' AND v.`index_vector`.`top_n_terms` = '8' END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id FROM sparse_vectors ORDER BY sparse_vector_distance(svec, $qvec, 4, 50, 8) LIMIT 5",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_651"
+        },
+        {
+            "id": "svec_656"
+        },
+        {
+            "id": "svec_657"
+        },
+        {
+            "id": "svec_2138"
+        },
+        {
+            "id": "svec_2132"
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse bhive: ORDER, LIMIT pushed down, fetch",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` = 'Fetch' END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT id, brand FROM sparse_vectors ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 5",
+        "ordered": true,
+        "results": [
+        {
+            "id": 651,
+            "brand": "adidas"
+        },
+        {
+            "id": 656,
+            "brand": "adidas"
+        },
+        {
+            "id": 657,
+            "brand": "puma"
+        },
+        {
+            "id": 2138,
+            "brand": "hoka"
+        },
+        {
+            "id": 2132,
+            "brand": "puma"
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse bhive: OFFSET, LIMIT pushed down",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id FROM sparse_vectors ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 3 OFFSET 2",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_657"
+        },
+        {
+            "id": "svec_2138"
+        },
+        {
+            "id": "svec_2132"
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse bhive: positional parameter query vector",
+        "ignore": "index_id",
+        "queryParams": {"query_context": "product._default"},
+        "positionalArgs": [[[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]],
+        "statements":"SELECT meta().id FROM sparse_vectors ORDER BY sparse_vector_distance(svec, $1) LIMIT 3",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_651"
+        },
+        {
+            "id": "svec_656"
+        },
+        {
+            "id": "svec_657"
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse bhive: filter not in index, early order, no LIMIT pushdown",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index_order` IS MISSING AND v.`limit` IS MISSING END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` = 'Order' AND CONTAINS(u.`sort_terms`[0].`expr`, '_index_key') END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 3",
+        "ordered": true,
+        "results": [
+        {
+            "id": 657
+        },
+        {
+            "id": 2132
+        },
+        {
+            "id": 3822
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse bhive: range filter not in index",
+        "ignore": "index_id",
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT id FROM sparse_vectors WHERE id < 1000 ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 5",
+        "ordered": true,
+        "results": [
+        {
+            "id": 651
+        },
+        {
+            "id": 656
+        },
+        {
+            "id": 657
+        },
+        {
+            "id": 882
+        },
+        {
+            "id": 653
+        }
+        ]
+    }
+]

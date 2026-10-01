@@ -53,12 +53,14 @@ do
     if [[ `uname` == "Darwin" ]] ; then
         if [[ $i == "test_cases/vector_search" ]] ; then
             /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/product_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport.out
+            /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/sparse_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport_sparse.out
         fi
         export JSEVALUATOR_PATH="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin"
         (go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose -p 1 -tags enterprise,udf_query ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
     else
         if [[ $i == "test_cases/vector_search" ]] ; then
             /opt/couchbase/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/product_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport.out
+            /opt/couchbase/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/sparse_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport_sparse.out
         fi
         export JSEVALUATOR_PATH="/opt/couchbase/bin"
         (go test $verbose -p 1 -tags enterprise,udf_query ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"

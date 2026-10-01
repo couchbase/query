@@ -1,0 +1,68 @@
+[
+    {
+        "testcase": "Sparse: exact sparse_vector_distance on fetched documents",
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id, ROUND(sparse_vector_distance(svec, $qvec), 4) AS d FROM sparse_vectors USE KEYS [\"svec_651\", \"svec_2132\", \"svec_1\"] ORDER BY meta().id",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_1",
+            "d": 0
+        },
+        {
+            "id": "svec_2132",
+            "d": -11.4461
+        },
+        {
+            "id": "svec_651",
+            "d": -14.6903
+        }
+        ]
+    },
+    {
+        "testcase": "Sparse: sparse_vector_distance MISSING and NULL handling",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT ROUND(sparse_vector_distance(svec, [[1012, 2001], [1.0, 2.0]]), 4) AS d, sparse_vector_distance(nosuch, [[1], [1.0]]) AS m, sparse_vector_distance(svec[0], [[1], [1.0]]) AS n1, sparse_vector_distance(brand, [[1], [1.0]]) AS n2, sparse_vector_distance([svec[0], svec[1], svec[1]], [[1], [1.0]]) AS n3, sparse_vector_distance([svec[0], ARRAY_REMOVE(svec[1], svec[1][0])], [[1], [1.0]]) AS n4 FROM sparse_vectors USE KEYS [\"svec_0\"]",
+        "results": [
+        {
+            "d": -1.6595,
+            "n1": null,
+            "n2": null,
+            "n3": null,
+            "n4": null
+        }
+        ]
+    },
+    {
+        "testcase": "Sparse: encode_vector/decode_vector round trip on documents",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id, d[0] = svec[0] AS same_idx, ARRAY ROUND(v, 4) FOR v IN d[1] END = svec[1] AS same_val FROM sparse_vectors USE KEYS [\"svec_0\", \"svec_651\"] LET d = decode_vector(encode_vector(svec, false, \"sparse\"), false, \"sparse\") ORDER BY meta().id",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_0",
+            "same_idx": true,
+            "same_val": true
+        },
+        {
+            "id": "svec_651",
+            "same_idx": true,
+            "same_val": true
+        }
+        ]
+    },
+    {
+        "testcase": "Sparse: encode_vector little/big endian and decode_vector",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT encode_vector([[1, 5], [0.5, 2.0]], false, \"sparse\") AS le, encode_vector([[1, 5], [0.5, 2.0]], true, \"sparse\") AS be, decode_vector(\"AQAAAAUAAAAAAAA/AAAAQA==\", false, \"sparse\") AS dle, decode_vector(\"AAAAAQAAAAU/AAAAQAAAAA==\", true, \"sparse\") AS dbe",
+        "results": [
+        {
+            "le": "AQAAAAUAAAAAAAA/AAAAQA==",
+            "be": "AAAAAQAAAAU/AAAAQAAAAA==",
+            "dle": [[1, 5], [0.5, 2]],
+            "dbe": [[1, 5], [0.5, 2]]
+        }
+        ]
+    }
+]
