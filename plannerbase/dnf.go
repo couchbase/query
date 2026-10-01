@@ -236,7 +236,7 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 		exp.SetExprFlag(expression.EXPR_DERIVED_RANGE)
 	case *expression.IsObject:
 		exp = expression.NewGE(expr.Operand(), expression.EMPTY_OBJECT_EXPR)
-		expr.SetExprFlag(expression.EXPR_DERIVED_FROM_ISOBJECT)
+		exp.SetExprFlag(expression.EXPR_DERIVED_FROM_ISOBJECT)
 		return exp, nil // Avoid infinite recursion
 	default:
 		return expr, nil // Avoid infinite recursion
