@@ -87,12 +87,60 @@ func TestVectors(t *testing.T) {
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX ix_prod_id on product._default.vectors")
 
-	// create primary indexes
+	// free up space used by dense vectors before sparse vector test cases
 	runStmt(qc, "CREATE PRIMARY INDEX ON product._default.vectors")
+	runStmt(qc, "DELETE FROM product._default.vectors")
+	runStmt(qc, "DROP PRIMARY INDEX ON product._default.vectors")
+
+	// Sparse vector test cases
+
+	fmt.Print("\n\nChecking import into sparse_vectors collection\n\n")
+	runMatch("check_import_sparse.json", false, false, qc, t)
+	if !t.Failed() {
+		fmt.Print("Import succeeded\n\n")
+		os.Remove("cbimport_sparse.out")
+	}
+
+	fmt.Println("Running sparse vector function test cases")
+
+	runStmt(qc, "CREATE INDEX ix_sparse_id on product._default.sparse_vectors(id)")
+
+	runMatch("case_sparse_functions.json", false, false, qc, t)
+
+	fmt.Println("Sparse Bhive vector index")
+
+	createVectorIndex(qc, "CREATE VECTOR INDEX idx_svec1 on product._default.sparse_vectors(svec SPARSE VECTOR)")
+
+	runMatch("case_sparse_bhive.json", false, true, qc, t)
+
+	runMatch("case_sparse_error.json", false, false, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_svec1 on product._default.sparse_vectors")
+
+	fmt.Println("Sparse Bhive vector index with include columns")
+
+	createVectorIndex(qc, "CREATE VECTOR INDEX idx_svec2 on product._default.sparse_vectors(svec SPARSE VECTOR) INCLUDE (brand, size)")
+
+	runMatch("case_sparse_bhive_include.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_svec2 on product._default.sparse_vectors")
+
+	fmt.Println("Sparse vector index with leading scalar key and sparse vector key")
+
+	createVectorIndex(qc, "CREATE INDEX idx_svec3 on product._default.sparse_vectors(brand, svec SPARSE VECTOR, size)")
+
+	runMatch("case_sparse_composite.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_svec3 on product._default.sparse_vectors")
+
+	runStmt(qc, "DROP INDEX ix_sparse_id on product._default.sparse_vectors")
+
+	// create primary indexes
+	runStmt(qc, "CREATE PRIMARY INDEX ON product._default.sparse_vectors")
 
 	// delete all rows from keyspaces used
-	runStmt(qc, "DELETE FROM product._default.vectors")
+	runStmt(qc, "DELETE FROM product._default.sparse_vectors")
 
 	// drop primary indexes
-	runStmt(qc, "DROP PRIMARY INDEX ON product._default.vectors")
+	runStmt(qc, "DROP PRIMARY INDEX ON product._default.sparse_vectors")
 }

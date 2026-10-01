@@ -53,9 +53,11 @@ then
     if [[ `uname` == "Darwin" ]]
     then
       /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/product_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport.out
+      /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/sparse_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport_sparse.out
     elif [[ `uname` == "Linux" ]]
     then
       /opt/couchbase/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/product_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport.out
+      /opt/couchbase/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/sparse_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport_sparse.out
     fi
 fi
 if [[ $TEST == "natural" ]]

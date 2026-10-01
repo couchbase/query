@@ -10,12 +10,20 @@ package vectors
 
 import (
 	"testing"
+	"time"
 
 	"github.com/couchbase/query/test/gsi"
 )
 
 func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
+}
+
+// create vector index and give the indexer time to settle before scanning it
+func createVectorIndex(mockServer *gsi.MockServer, q string) *gsi.RunResult {
+	rr := gsi.RunStmt(mockServer, q)
+	time.Sleep(10 * time.Second)
+	return rr
 }
 
 func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *testing.T) {

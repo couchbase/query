@@ -1,0 +1,68 @@
+[
+    {
+        "testcase": "Sparse: query vector indices and values length mismatch",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [[1, 2], [1.0]]) LIMIT 3",
+        "error": "number of indices doesn't match with number of values"
+    },
+    {
+        "testcase": "Sparse: dense query vector",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [1.0, 2.0]) LIMIT 3",
+        "error": "not a sparse vector"
+    },
+    {
+        "testcase": "Sparse: negative query vector index",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [[-1, 2], [1.0, 2.0]]) LIMIT 3",
+        "error": "indices array integer out of range"
+    },
+    {
+        "testcase": "Sparse: non-numeric query vector value",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [[1, 2], [1.0, \"a\"]]) LIMIT 3",
+        "errorCode": 5430
+    },
+    {
+        "testcase": "Sparse: constant field",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance([[1], [1.0]], [[1], [1.0]]) LIMIT 3",
+        "errorCode": 10511
+    },
+    {
+        "testcase": "Sparse: non-integer nprobes",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [[2221, 3385], [3.0541, 2.0468]], \"a\") LIMIT 3",
+        "errorCode": 5431
+    },
+    {
+        "testcase": "Sparse: negative topNTerms",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [[2221, 3385], [3.0541, 2.0468]], 2, 50, -1) LIMIT 3",
+        "errorCode": 5436
+    },
+    {
+        "testcase": "Sparse: non-integer topNTerms",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [[2221, 3385], [3.0541, 2.0468]], 2, 50, 1.5) LIMIT 3",
+        "errorCode": 5436
+    },
+    {
+        "testcase": "Sparse: string topNTerms",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, [[2221, 3385], [3.0541, 2.0468]], 2, 50, \"a\") LIMIT 3",
+        "errorCode": 5436
+    },
+    {
+        "testcase": "Sparse: index similarity other than DOT",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"CREATE VECTOR INDEX idx_sparse_bad ON sparse_vectors(svec SPARSE VECTOR) WITH {'similarity': 'L2'}",
+        "error": "Fail to create sparse vector index. Invalid `similarity` parameter"
+    },
+    {
+        "testcase": "Sparse: index sparse_max_terms not positive",
+        "queryParams": {"query_context": "product._default"},
+        "statements":"CREATE VECTOR INDEX idx_sparse_bad ON sparse_vectors(svec SPARSE VECTOR) WITH {'sparse_max_terms': -1}",
+        "error": "Parameter 'sparse_max_terms' must be a positive integer value"
+    }
+]

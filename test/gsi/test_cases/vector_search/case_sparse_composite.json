@@ -1,0 +1,89 @@
+[
+    {
+        "testcase":"Sparse composite: leading key equality, ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`index_vector`.`vector_type` = 'sparse' AND v.`index_vector`.`index_key_pos` = 1 END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand = \"puma\" ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 3",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_657"
+        },
+        {
+            "id": "svec_2132"
+        },
+        {
+            "id": "svec_3822"
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse composite: leading key equality and trailing key range, ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id, size FROM sparse_vectors WHERE brand = \"puma\" AND size > 5 ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 3",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_657",
+            "size": 7
+        },
+        {
+            "id": "svec_3697",
+            "size": 7
+        },
+        {
+            "id": "svec_1447",
+            "size": 7
+        }
+        ]
+    },
+    {
+        "testcase":"Sparse composite: leading key IN list, ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id FROM sparse_vectors WHERE brand IN [\"puma\", \"hoka\"] ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 3",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_657"
+        },
+        {
+            "id": "svec_2138"
+        },
+        {
+            "id": "svec_2132"
+        }
+        ]
+    }
+]
