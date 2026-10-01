@@ -284,7 +284,7 @@ function DevStandaloneSetup {
     if [[ -f ~/devbld/protoc-gen-go ]]
     then
             ln -sf ~/devbld/protoc-gen-go $GOPATH/bin
-	    (cd ../indexing/secondary/protobuf/query; protoc -I. --plugin=protoc-gen-go=$GOPATH/bin/protoc-gen-go query.proto --go_out=. --go_opt=paths=source_relative)
+	    (cd ../indexing/secondary/protobuf/query; protoc -I. --plugin=protoc-gen-go=$GOPATH/bin/protoc-gen-go query.proto --go_out=. --go_opt=paths=source_relative --go_opt="Mquery.proto=github.com/couchbase/indexing/secondary/protobuf/query;protoQuery")
     fi
 
     if [[ (! -f ../indexing/secondary/protobuf/query/query.pb.go) ]]
