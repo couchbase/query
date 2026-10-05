@@ -151,6 +151,7 @@ var qualTypeMap = map[string]func(interface{}) (qualifier, errors.Error){
 	"plan":         newPlanElement,
 	"seqscan_keys": newSeqScanKeys,
 	"used_memory":  newUsedMemory,
+	"unsuccessful": newUnsuccessful,
 }
 
 // init completed requests
@@ -1865,4 +1866,35 @@ func (this *usedMemory) checkCondition(c interface{}) errors.Error {
 
 func (this *usedMemory) evaluate(request *BaseRequest, req *http.Request) bool {
 	return request.UsedMemory() >= this.size
+}
+
+// 16 - unsuccessful
+type unsuccessful struct{}
+
+func newUnsuccessful(c interface{}) (qualifier, errors.Error) {
+	return &unsuccessful{}, nil
+}
+
+func (this *unsuccessful) name() string {
+	return "unsuccessful"
+}
+
+func (this *unsuccessful) unique() bool {
+	return true
+}
+
+func (this *unsuccessful) condition() interface{} {
+	return nil
+}
+
+func (this *unsuccessful) isCondition(c interface{}) bool {
+	return true
+}
+
+func (this *unsuccessful) checkCondition(c interface{}) errors.Error {
+	return nil
+}
+
+func (this *unsuccessful) evaluate(request *BaseRequest, req *http.Request) bool {
+	return !((request.State() == COMPLETED || request.State() == SUCCESS) && request.GetErrorCount() == 0)
 }
