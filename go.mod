@@ -10,8 +10,6 @@ replace github.com/couchbase/cbft => ../../../../../cbft
 
 replace github.com/couchbase/cbftx => ../../../../../cbftx
 
-replace github.com/couchbase/hebrew => ../../../../../hebrew
-
 replace github.com/couchbase/cbgt => ../../../../../cbgt
 
 replace github.com/couchbase/eventing => ../eventing
@@ -163,13 +161,13 @@ require (
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/couchbase/blance v0.1.6 // indirect
 	github.com/couchbase/cbft v0.0.0-00010101000000-000000000000 // indirect
+	github.com/couchbase/cbftx v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/cbgt v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/ghistogram v0.1.0 // indirect
 	github.com/couchbase/gocbcore/v9 v9.1.11 // indirect
 	github.com/couchbase/gocbcoreps v0.1.5-0.20260107140814-1c3a03f888f8 // indirect
 	github.com/couchbase/gometa v0.0.0-20220803182802-05cb6b2e299f // indirect
 	github.com/couchbase/goprotostellar v1.0.6-0.20260407143512-d7af25156dcc // indirect
-	github.com/couchbase/hebrew v0.0.0-00010101000000-000000000000 // indirect
 	github.com/couchbase/logstats v1.1.1 // indirect
 	github.com/couchbase/moss v0.3.0 // indirect
 	github.com/couchbase/tools-common/cloud/v8 v8.1.4 // indirect
