@@ -1404,28 +1404,39 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 	replace := true
 	if planStability {
 		// look for subquery plans in prepareds cache
-		prepared, err1 = prepareds.GetUdfPrepared(udfName, this.deltaKeyspaces, this.planStabilityMode,
+		// SetupSubqueryPlans() is called with generate == false on every execution of the UDF,
+		// so track usage of the prepared entry only then
+		prepared, err1 = prepareds.GetUdfPrepared(udfName, !generate, this.planStabilityMode,
 			this.planStabilityErrorPolicy, this)
 		if err1 != nil {
 			return err1
 		}
 		if prepared != nil {
-			// only an inline UDF with subqueries should have a prepared entry
-			err = prepared.GetUdfSubqPlans(lock, subqPlans)
-			if err != nil {
-				return err
-			}
-			err1, _ = this.VerifySubqueryPlans(expr, subqPlans, lock)
-			if err1 != nil {
-				if this.IsPlanStabilityErrorStrict() {
-					return errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
-				} else if this.IsPlanStabilityErrorModerate() {
-					replace = false
-				}
-				prepared = nil
-			} else {
+			if !generate {
+				// subqPlans (from the UDF) is already populated and verified by the
+				// caller, either from this prepared entry or freshly generated and
+				// added as this prepared entry; no need to unmarshal the subquery
+				// plans into subqPlans again
 				hasPreparedPlans = true
-				hasSubquery = true // prepared only generated when subqueries present
+				hasSubquery = true
+			} else {
+				// only an inline UDF with subqueries should have a prepared entry
+				err = prepared.GetUdfSubqPlans(lock, subqPlans)
+				if err != nil {
+					return err
+				}
+				err1, _ = this.VerifySubqueryPlans(expr, subqPlans, lock)
+				if err1 != nil {
+					if this.IsPlanStabilityErrorStrict() {
+						return errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
+					} else if this.IsPlanStabilityErrorModerate() {
+						replace = false
+					}
+					prepared = nil
+				} else {
+					hasPreparedPlans = true
+					hasSubquery = true // prepared only generated when subqueries present
+				}
 			}
 		}
 	}

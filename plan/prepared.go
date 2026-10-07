@@ -63,7 +63,7 @@ type Prepared struct {
 	keyspaceMetas      []ksVersion
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
-	udfSubqPlans       []byte
+	udfSubqPlans       json.RawMessage
 	planVersion        int
 	errCount           int
 	fatalError         bool
@@ -252,10 +252,10 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 		KeyspaceRefs       []string               `json:"keyspaceReferences"`
 		SubqPlans          map[string]struct {
 			PlanOp             json.RawMessage `json:"plan"`
-			IndexScanKeyspaces map[string]bool `json:"indexSccanKeyspaces"`
+			IndexScanKeyspaces map[string]bool `json:"indexScanKeyspaces"`
 			SubqText           string          `json:"subquery"`
 		} `json:"subqueryPlans"`
-		UdfSubqPlans []byte `json:"udfSubqPlans"`
+		UdfSubqPlans json.RawMessage `json:"udfSubqPlans"`
 	}
 
 	var op_type struct {
@@ -267,21 +267,13 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 		return err
 	}
 
-	err = json.Unmarshal(_unmarshalled.Operator, &op_type)
-	if err != nil {
-		return err
-	}
-
 	if _unmarshalled.ApiVersion < datastore.INDEX_API_MIN {
 		_unmarshalled.ApiVersion = datastore.INDEX_API_MIN
 	} else if _unmarshalled.ApiVersion > datastore.INDEX_API_MAX {
 		_unmarshalled.ApiVersion = datastore.INDEX_API_MAX
 	}
-	this.signature = value.NewValue(_unmarshalled.Signature)
 	this.name = _unmarshalled.Name
 	this.encoded_plan = _unmarshalled.EncodedPlan
-	this.text = _unmarshalled.Text
-	this.reqType = _unmarshalled.ReqType
 	this.indexApiVersion = _unmarshalled.ApiVersion
 	this.featureControls = _unmarshalled.FeatureControls
 	this.namespace = _unmarshalled.Namespace
@@ -334,6 +326,15 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 
 	// entries for inline UDF only have UDF subquery plans
 	if !this.inlineUdf {
+		this.signature = value.NewValue(_unmarshalled.Signature)
+		this.reqType = _unmarshalled.ReqType
+		this.text = _unmarshalled.Text
+
+		err = json.Unmarshal(_unmarshalled.Operator, &op_type)
+		if err != nil {
+			return err
+		}
+
 		var subqMap map[string]*subqPlanInfo
 		var subqPlans *algebra.SubqueryPlans
 		hasSubq := false
@@ -1020,7 +1021,7 @@ func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlan
 		PlanVersion  int    `json:"planVersion"`
 		UdfSubqPlans map[string]struct {
 			PlanOp             json.RawMessage `json:"plan"`
-			IndexScanKeyspaces map[string]bool `json:"indexSccanKeyspaces"`
+			IndexScanKeyspaces map[string]bool `json:"indexScanKeyspaces"`
 			SubqText           string          `json:"subquery"`
 		} `json:"udfSubqueryPlans"`
 	}
