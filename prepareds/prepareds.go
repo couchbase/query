@@ -573,7 +573,7 @@ func GetUdfPreparedName(udfName string) string {
 func AddUdfPrepared(prepared *plan.Prepared, lock bool) errors.Error {
 
 	added := true
-	prepareds.add(prepared, false, true, func(ce *CacheEntry) bool {
+	prepareds.add(prepared, false, false, func(ce *CacheEntry) bool {
 		added = ce.Prepared.IsInlineUdf() && ce.Prepared.GetSubqueryPlans(false).IsEquivalent(prepared.GetSubqueryPlans(false), lock)
 		if !added {
 			logging.Infof("Prepared for Inline UDF found mismatching name and subqueries %v", prepared.Name())
@@ -594,11 +594,22 @@ func AddUdfPrepared(prepared *plan.Prepared, lock bool) errors.Error {
 	return nil
 }
 
-func GetUdfPrepared(udfName string, deltaKeyspaces map[string]bool, planStabilityMode settings.PlanStabilityMode,
+func GetUdfPrepared(udfName string, track bool, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, args ...logging.Log) (prepared *plan.Prepared, err errors.Error) {
 
+	var l logging.Log
+	if len(args) > 0 {
+		l = args[0]
+	}
+	var options uint32
+	if track {
+		options = OPT_TRACK
+	}
 	prepName := GetUdfPreparedName(udfName)
-	prepared, err = GetPrepared(prepName, deltaKeyspaces, planStabilityMode, planStabilityErrorPolicy, args...)
+	// the inline UDF entry only holds subquery plans (no statement text), so it can not be reprepared
+	// for transaction delta keyspaces; subquery plans for transactions are handled by the caller
+	prepared, err = getPrepared(prepName, "", nil, options, nil, planStabilityMode, planStabilityErrorPolicy, l,
+		datastore.UNBOUNDED)
 	if prepared == nil && err != nil && err.Code() == errors.E_NO_SUCH_PREPARED {
 		// if not in cache, check disk
 		prepared, err = loadPrepared(prepName, planStabilityMode, planStabilityErrorPolicy)
@@ -614,7 +625,7 @@ func GetUdfPrepared(udfName string, deltaKeyspaces map[string]bool, planStabilit
 
 func (this *preparedCache) DeleteUdfPrepared(udfName string, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) errors.Error {
-	prepared, err := GetUdfPrepared(udfName, nil, planStabilityMode, planStabilityErrorPolicy, nil)
+	prepared, err := GetUdfPrepared(udfName, false, planStabilityMode, planStabilityErrorPolicy, nil)
 	if err != nil && err.Code() != errors.E_NO_SUCH_PREPARED {
 		return err
 	}
@@ -1036,7 +1047,14 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 					}
 				}
 			} else {
-				err = errors.NewUnrecognizedPreparedError(fmt.Errorf("Couldn't find the \"text\" field in the encoded plan"))
+				udf, err1 := json.FindKey(bytes, "inlineUdf")
+				var inlineUdf bool
+				if udf != nil && err1 == nil {
+					err1 = json.Unmarshal(udf, &inlineUdf)
+				}
+				if !inlineUdf {
+					err = errors.NewUnrecognizedPreparedError(fmt.Errorf("Couldn't find the \"text\" field in the encoded plan"))
+				}
 			}
 		}
 		return nil, err, nil
