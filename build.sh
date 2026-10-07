@@ -272,7 +272,6 @@ function repo_setup {
     repo_by_gomod go.mod sigar "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbgt "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbft "" $cbranch $rbranch $defbranch
-    repo_by_gomod go.mod hebrew "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbftx "" $cbranch $rbranch $defbranch
 }
 
@@ -285,7 +284,6 @@ function DevStandaloneSetup {
       ln -s -f $dir/cbgt cbgt;
       ln -s -f $dir/cbft cbft;
       ln -s -f $dir/cbftx cbftx;
-      ln -s -f $dir/hebrew hebrew;
       cd $cwd1)
 
     # OpenSSL setup
