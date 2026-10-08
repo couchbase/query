@@ -1,0 +1,271 @@
+[
+    {
+	"testcase": "Create inline UDF",
+        "statements":"CREATE FUNCTION UDF_PlanStability_inline1() { ( SELECT c21 FROM shellTest WHERE type = \"right\" AND c21 < 5 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Create inline UDF",
+        "statements":"CREATE FUNCTION UDF_PlanStability_inline2() { ( SELECT l.c11, r.c21 FROM shellTest l LEFT JOIN shellTest r ON r.type = \"right\" AND l.c11 = r.c21 AND ANY v IN r.a21 SATISFIES v IN [1,2] END WHERE l.type = \"left\" AND l.c11 <= 3 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to PREPARED_ONLY",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"prepared only\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 4
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 5
+            }
+        ]
+    },
+    {
+	"testcase": "prepare a statement",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "subqueryPlans",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE udf1 FROM SELECT s.c12 FROM shellTest s WHERE s.c11 > 0 AND s.type = \"left\" AND ANY v IN UDF_PlanStability_inline1() SATISFIES v.c21 = s.c11 END",
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "default:shellTest._default._default"
+                ],
+                "name": "udf1",
+                "signature": {
+                    "c12": "json"
+                },
+                "text": "PREPARE udf1 FROM SELECT s.c12 FROM shellTest s WHERE s.c11 > 0 AND s.type = \"left\" AND ANY v IN UDF_PlanStability_inline1() SATISFIES v.c21 = s.c11 END"
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 5
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 6
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory UDF cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING AND inlineUDF = true",
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
+	"testcase": "Execute the prepared statement",
+        "statements":"EXECUTE udf1",
+        "results": [
+            {
+                "c12": 10
+            },
+            {
+                "c12": 20
+            },
+            {
+                "c12": 30
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 6
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 7
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory UDF cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING AND inlineUDF = true",
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Check use count",
+        "statements":"SELECT count(*) AS cnt FROM system:prepareds WHERE (name = 'udf1' OR inlineUDF = true) AND uses > 0",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Execute the prepared statement again",
+        "statements":"EXECUTE udf1",
+        "results": [
+            {
+                "c12": 10
+            },
+            {
+                "c12": 20
+            },
+            {
+                "c12": 30
+            }
+        ]
+    },
+    {
+	"testcase": "Check use count again",
+        "statements":"SELECT count(*) AS cnt FROM system:prepareds WHERE (name = 'udf1' OR inlineUDF = true) AND uses > 1",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Check meta().plan - not present, but should not panic",
+        "statements":"SELECT meta().plan FROM system:prepareds WHERE inlineUDF = true AND uses > 1",
+        "results": [
+            {}
+        ]
+    },
+    {
+	"testcase": "Execute the 2nd inline UDF - this will generate a prepared entry for it",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline2()",
+        "results": [
+        [
+            {
+                "c11": 1,
+                "c21": 1
+            },
+            {
+                "c11": 2,
+                "c21": 2
+            },
+            {
+                "c11": 2,
+                "c21": 2
+            },
+            {
+                "c11": 3
+            }
+        ]
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 7
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 8
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory UDF cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING AND inlineUDF = true",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to OFF (via UNSET)",
+        "statements":"UPDATE system:settings UNSET plan_stability.mode",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Drop Function - inline1",
+        "statements":"DROP FUNCTION UDF_PlanStability_inline1",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Drop Function - inline2",
+        "statements":"DROP FUNCTION UDF_PlanStability_inline2",
+        "results": [
+        ]
+    }
+]
+

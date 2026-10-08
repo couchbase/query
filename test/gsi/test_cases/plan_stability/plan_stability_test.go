@@ -36,7 +36,13 @@ func TestPlanStability(t *testing.T) {
 
 	runMatch("case_plan_stability_simple.json", false, true, qc, t)
 
-	//runMatch("case_plan_stability_subquery.json", false, true, qc, t)
+	runMatch("case_plan_stability_subquery.json", false, true, qc, t)
+
+	// in case the functions are left over from previous runs
+	runStmt(qc, "DROP FUNCTION UDF_PlanStability_inline1 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_PlanStability_inline2 IF EXISTS")
+
+	runMatch("case_plan_stability_inline_udf.json", false, true, qc, t)
 
 	runMatch("case_plan_stability_stop.json", false, false, qc, t)
 

@@ -1,0 +1,186 @@
+[
+    {
+	"testcase": "Set plan stability mode to PREPARED_ONLY",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"prepared only\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 2
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 3
+            }
+        ]
+    },
+    {
+	"testcase": "prepare a statement",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "subqueryPlans",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE subq1 FROM WITH cte1 AS ( SELECT * FROM (SELECT t1.*, t2.* FROM [{\"a\":1}] AS t1 JOIN [{\"b\":1}] AS t2 ON t1.a = t2.b) lhs JOIN shellTest AS c1 USE HASH(build) ON lhs.a = c1.c11 WHERE c1.type = \"left\" ) SELECT count(*) AS cnt FROM cte1",
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "default:shellTest._default._default"
+                ],
+                "name": "subq1",
+                "signature": {
+                    "cnt": "number"
+                },
+                "text": "PREPARE subq1 FROM WITH cte1 AS ( SELECT * FROM (SELECT t1.*, t2.* FROM [{\"a\":1}] AS t1 JOIN [{\"b\":1}] AS t2 ON t1.a = t2.b) lhs JOIN shellTest AS c1 USE HASH(build) ON lhs.a = c1.c11 WHERE c1.type = \"left\" ) SELECT count(*) AS cnt FROM cte1"
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 3
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 4
+            }
+        ]
+    },
+    {
+	"testcase": "Execute the prepared statement",
+        "statements":"EXECUTE subq1",
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "Check subquery plan",
+        "statements":"SELECT true AS present FROM (SELECT meta().plan as qPlan FROM system:prepareds WHERE name = 'subq1') queryPlan WHERE qPlan.`~subqueries` IS NOT MISSING",
+        "results": [
+            {
+                "present": true
+            }
+        ]
+    },
+    {
+	"testcase": "prepare another statement",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "optimizer_hints",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "subqueryPlans",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE subq2 FROM SELECT d1.c21 FROM shellTest d1 JOIN ( SELECT d2.c11 FROM shellTest d2 JOIN ( SELECT d3.c11 FROM shellTest AS d3 WHERE d3.type = \"left\" AND d3.c11 < 3) AS d10 ON d2.c11 = d10.c11 WHERE d2.type = \"left\" AND d2.c11 = 1) AS final USE NL ON d1.c21 = final.c11 WHERE d1.type = \"right\"",
+        "results": [
+            {
+                "keyspaceReferences": [
+                    "default:shellTest._default._default"
+                ],
+                "name": "subq2",
+                "signature": {
+                    "c21": "json"
+                },
+                "text": "PREPARE subq2 FROM SELECT d1.c21 FROM shellTest d1 JOIN ( SELECT d2.c11 FROM shellTest d2 JOIN ( SELECT d3.c11 FROM shellTest AS d3 WHERE d3.type = \"left\" AND d3.c11 < 3) AS d10 ON d2.c11 = d10.c11 WHERE d2.type = \"left\" AND d2.c11 = 1) AS final USE NL ON d1.c21 = final.c11 WHERE d1.type = \"right\""
+            }
+        ]
+    },
+    {
+	"testcase": "Check in-memory cache entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE persist IS MISSING AND planPreparedTime IS NOT MISSING",
+        "results": [
+            {
+                "cnt": 4
+            }
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 5
+            }
+        ]
+    },
+    {
+	"testcase": "Execute the prepared statement",
+        "statements":"EXECUTE subq2",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check subquery plan",
+        "statements":"SELECT true AS present FROM (SELECT meta().plan as qPlan FROM system:prepareds WHERE name = 'subq2') queryPlan WHERE qPlan.`~subqueries` IS NOT MISSING",
+        "results": [
+            {
+                "present": true
+            }
+        ]
+    },
+    {
+	"testcase": "Set plan stability mode to OFF (via UNSET)",
+        "statements":"UPDATE system:settings UNSET plan_stability.mode",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "Check on-disk entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    }
+]
+
