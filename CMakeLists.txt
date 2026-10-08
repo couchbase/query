@@ -80,6 +80,9 @@ IF (NOT CBQ_ONLY)
     GOVERSION ${GOVERSION}
     GOTAGS "${_gotags}")
 
+  # proxy registration for the cbq-engine REST port
+  ADD_SUBDIRECTORY (ui)
+
 ENDIF (NOT CBQ_ONLY)
 
 GoModBuild (TARGET cbq PACKAGE github.com/couchbase/query/shell/cbq
