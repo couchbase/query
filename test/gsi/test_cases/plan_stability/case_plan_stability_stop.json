@@ -22,6 +22,15 @@
         "statements":"DELETE FROM system:prepareds WHERE name = \"p11\"",
         "results": [
         ]
+    },
+    {
+	"testcase": "Drop QUERY_METADATA bucket",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"DROP BUCKET QUERY_METADATA",
+        "results": [
+        ]
     }
 ]
 

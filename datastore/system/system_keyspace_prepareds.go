@@ -117,7 +117,6 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 					remoteValue.SetField("node", node)
 
 					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
-					remoteValue.SetMetaField(value.META_TXPLANS, doc["txPlans"])
 					planVersion := int(-1)
 					if planVer, ok := doc["planVersion"]; ok {
 						switch planVer := planVer.(type) {
@@ -135,25 +134,30 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 						}
 						remoteValue.UnsetField("planVersion")
 					}
-					metaPlan := doc["plan"]
-					if planVersion < util.PLAN_VERSION_85 {
-						newMetaPlan := make(map[string]interface{}, 2)
-						newMetaPlan["plan"] = metaPlan
-						if _, ok := doc["subqueryPlans"]; ok {
-							newMetaPlan["~subqueries"] = doc["subqueryPlans"]
+					if _, ok := doc["inlineUDF"]; !ok {
+						if txPlans, ok := doc["txPlans"]; ok {
+							remoteValue.SetMetaField(value.META_TXPLANS, txPlans)
+							remoteValue.UnsetField("txPlans")
 						}
-						metaPlan = newMetaPlan
-					}
-					remoteValue.SetMetaField(value.META_PLAN, metaPlan)
+						metaPlan := doc["plan"]
+						if planVersion < util.PLAN_VERSION_85 {
+							newMetaPlan := make(map[string]interface{}, 2)
+							newMetaPlan["plan"] = metaPlan
+							if _, ok := doc["subqueryPlans"]; ok {
+								newMetaPlan["~subqueries"] = doc["subqueryPlans"]
+							}
+							metaPlan = newMetaPlan
+						}
+						remoteValue.SetMetaField(value.META_PLAN, metaPlan)
 
-					// Subquery plans
-					if _, ok := doc["subqueryPlans"]; ok {
-						remoteValue.SetMetaField(value.META_SUBQUERY_PLANS, doc["subqueryPlans"])
-						remoteValue.UnsetField("subqueryPlans")
-					}
+						// Subquery plans
+						if _, ok := doc["subqueryPlans"]; ok {
+							remoteValue.SetMetaField(value.META_SUBQUERY_PLANS, doc["subqueryPlans"])
+							remoteValue.UnsetField("subqueryPlans")
+						}
 
-					remoteValue.UnsetField("plan")
-					remoteValue.UnsetField("txPlans")
+						remoteValue.UnsetField("plan")
+					}
 					remoteValue.SetId(key)
 					keysMap[key] = remoteValue
 				},
@@ -172,25 +176,27 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 				itemMap, txPlans := formatPrepared(entry, localKey, node, context)
 				item := value.NewAnnotatedValue(itemMap)
 				item.SetMetaField(value.META_KEYSPACE, b.fullName)
-				if _, ok := itemMap["txPrepareds"]; ok {
-					item.SetMetaField(value.META_TXPLANS, txPlans)
-				}
 				planVersion := entry.Prepared.PlanVersion()
 				if planVersion >= util.MIN_PLAN_VERSION {
 					item.SetMetaField(value.META_PLAN_VERSION, int32(planVersion))
 				} else {
 					planVersion = -1
 				}
-				// meta().plan now contains a "plan" object and a "~subqueries" object
-				metaPlan := make(map[string]interface{}, 2)
-				metaPlan["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
-				sqPlans := entry.Prepared.GetSubqueryPlansEntry()
-				if len(sqPlans) > 0 {
-					// meta().subqueryPlans is left as is
-					item.SetMetaField(value.META_SUBQUERY_PLANS, sqPlans)
-					metaPlan["~subqueries"] = sqPlans
+				if _, ok := itemMap["inlineUDF"]; !ok {
+					if _, ok := itemMap["txPrepareds"]; ok {
+						item.SetMetaField(value.META_TXPLANS, txPlans)
+					}
+					// meta().plan now contains a "plan" object and a "~subqueries" object
+					metaPlan := make(map[string]interface{}, 2)
+					metaPlan["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
+					sqPlans := entry.Prepared.GetSubqueryPlansEntry()
+					if len(sqPlans) > 0 {
+						// meta().subqueryPlans is left as is
+						item.SetMetaField(value.META_SUBQUERY_PLANS, sqPlans)
+						metaPlan["~subqueries"] = sqPlans
+					}
+					item.SetMetaField(value.META_PLAN, metaPlan)
 				}
-				item.SetMetaField(value.META_PLAN, metaPlan)
 
 				item.SetId(key)
 				keysMap[key] = item
@@ -206,7 +212,6 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 	itemMap := map[string]interface{}{
 		"name":            entry.Prepared.Name(),
 		"uses":            entry.Uses,
-		"statement":       entry.Prepared.Text(),
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
 		"featuresControl": entry.Prepared.FeatureControls(),
 	}
@@ -233,6 +238,8 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 	}
 	if entry.Prepared.IsInlineUdf() {
 		itemMap["inlineUDF"] = entry.Prepared.IsInlineUdf()
+	} else {
+		itemMap["statement"] = entry.Prepared.Text()
 	}
 	if entry.Prepared.HasFatalError() {
 		itemMap["verificationFatalError"] = entry.Prepared.HasFatalError()
