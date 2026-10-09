@@ -435,7 +435,7 @@ func directRetryRequest(cfg *NaturalConfig, prompt *prompt, context NaturalConte
 }
 
 func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint string, chatId string,
-	nloutputOpt naturalOutput, explain, advise, useKnowledge bool,
+	nloutputOpt naturalOutput, explain, advise bool,
 	users []string,
 	context NaturalContext, record func(execution.Phases, time.Duration),
 	tokens, chatTokens *LLMTokenUsage) (string, algebra.Statement, errors.Error) {
@@ -493,7 +493,7 @@ func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint stri
 		var samples map[string]map[string]*sampleField
 		inferschema := util.Now()
 		keyspaceInfo, samples, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context, provider == ai_gateway.ProviderSLM,
-			useKnowledge, nlquery)
+			ce.useKnowledge, nlquery)
 		record(execution.INFERSCHEMA, util.Since(inferschema))
 		if err != nil {
 			return "", nil, err

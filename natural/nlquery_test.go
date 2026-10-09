@@ -609,6 +609,34 @@ func TestChatEntryMarshal_RoundTrip(t *testing.T) {
 	}
 }
 
+// TestChatEntryMarshal_KnowledgeRoundTrip guards that the BEGIN CHAT "knowledge" choice survives a
+// PAUSE/RESUME: the prompt is rebuilt from scratch after a resume, so a lost flag would silently drop
+// (or add) knowledge for the rest of the conversation.
+func TestChatEntryMarshal_KnowledgeRoundTrip(t *testing.T) {
+	for _, useKnowledge := range []bool{true, false} {
+		ce := &ChatEntry{
+			users:        []string{"local:tester"},
+			Keyspaces:    testPaths(),
+			useKnowledge: useKnowledge,
+		}
+		b, err := json.Marshal(ce)
+		if err != nil {
+			t.Fatalf("marshal: %v", err)
+		}
+		if !useKnowledge && strings.Contains(string(b), "knowledge") {
+			t.Fatalf("knowledge field persisted for a chat without knowledge: %s", b)
+		}
+
+		var got ChatEntry
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+		if got.useKnowledge != useKnowledge {
+			t.Fatalf("useKnowledge not restored: got %v, want %v", got.useKnowledge, useKnowledge)
+		}
+	}
+}
+
 func TestChatEntryUnmarshal_InvalidTimeout(t *testing.T) {
 	var ce ChatEntry
 	if err := json.Unmarshal([]byte(`{"inactivity_timeout":"not-a-duration"}`), &ce); err == nil {

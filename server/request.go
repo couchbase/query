@@ -2310,14 +2310,16 @@ func decodeJSONOpts(s string) (map[string]interface{}, errors.Error) {
 // the keys listed here. A key outside a statement's set is rejected by
 // applyNaturalWithOpts with E_NL_OPTION_NOT_ALLOWED. The provider/credential
 // keys appear only on the two statements that invoke an LLM: USING AI
-// (generation) and PAUSE CHAT (summarization).
+// (generation) and PAUSE CHAT (summarization). "knowledge" on BEGIN CHAT applies
+// to the whole conversation; on USING AI it only takes effect for a one-shot
+// request and is ignored on a conversational turn (one carrying a chatId).
 var (
 	usingAiWithOpts = map[string]bool{
 		"keyspaces": true, "creds": true, "orgId": true, "execute": true,
 		"output": true, "chatId": true, "hint": true, "vendor": true,
 		"model": true, "config": true, "knowledge": true,
 	}
-	beginChatWithOpts = map[string]bool{"keyspaces": true, "timeout": true}
+	beginChatWithOpts = map[string]bool{"keyspaces": true, "timeout": true, "knowledge": true}
 	pauseChatWithOpts = map[string]bool{
 		"chatId": true, "summarize": true, "vendor": true, "model": true,
 		"creds": true, "orgId": true, "config": true,

@@ -844,7 +844,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		newchatid, err := natural.ProcessBeginChat(naturalcontext,
 			/* deliberately not calling NonAdminUsers() here, that way the chat is populated with the correct users even for an admin */
 			datastore.CredsArray(request.Credentials()),
-			elems, request.NaturalChatTimeout())
+			elems, request.NaturalChatTimeout(), request.NaturalUseKnowledge())
 		if err != nil {
 			request.Fail(err)
 			request.Failed(this)
@@ -988,8 +988,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			stmt, nlAlgebraStmt, err = natural.ProcessCapellaConversationalRequest(request.NaturalCred(),
 				request.NaturalOrganizationId(), request.NaturalVendor(), request.NaturalModel(),
 				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
-				request.NaturalUseKnowledge(), users,
-				request.ExecutionContext(), request.Output().AddPhaseTime)
+				users, request.ExecutionContext(), request.Output().AddPhaseTime)
 		} else {
 			stmt, nlAlgebraStmt, err = natural.ProcessCapellaRequest(request.NaturalCred(),
 				request.NaturalOrganizationId(), request.NaturalVendor(), request.NaturalModel(),
@@ -1016,8 +1015,7 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			users := datastore.NonAdminUsers(request.Credentials())
 			stmt, nlAlgebraStmt, err = natural.ProcessDirectConversationalRequest(cfg,
 				nlquery, request.NaturalHint(), chatId, nloutputOpt, request.NaturalExplain(), request.NaturalAdvise(),
-				request.NaturalUseKnowledge(), users,
-				request.ExecutionContext(), request.Output().AddPhaseTime, &nlReqTokens, &nlChatTokens)
+				users, request.ExecutionContext(), request.Output().AddPhaseTime, &nlReqTokens, &nlChatTokens)
 			request.SetNaturalChatTokens(nlChatTokens.Prompt, nlChatTokens.Completion, nlChatTokens.Total)
 		} else {
 			stmt, nlAlgebraStmt, err = natural.ProcessDirectRequest(cfg,
