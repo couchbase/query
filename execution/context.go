@@ -1019,6 +1019,12 @@ func (this *Context) Release() {
 	if this.memorySession != nil {
 		this.memorySession.Release()
 	}
+
+	// MB-74532 the request is done: drop cached subquery (and CTE) results, so that they are
+	// not held for as long as something still references this context
+	this.mutex.Lock()
+	this.subresults = nil
+	this.mutex.Unlock()
 }
 
 func (this *Context) CurrentQuotaUsage() float64 {
