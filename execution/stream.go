@@ -107,6 +107,7 @@ func (this *Stream) SendAction(action opAction) {
 func (this *Stream) Done() {
 	this.baseDone()
 	if this.isComplete() {
+		this.stopContext = nil // MB-74532 don't pin the request's context in the pool
 		_STREAM_OP_POOL.Put(this)
 	}
 }
