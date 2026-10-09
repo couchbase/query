@@ -234,10 +234,14 @@ func (s *store) HasQueryMetadata() (bool, errors.Error) {
 	}
 	defaultPool := dPool.(*namespace)
 
+	exists := false
 	defaultPool.lock.RLock()
 	entry := defaultPool.keyspaceCache[_QUERY_METADATA_BUCKET]
+	if entry != nil && entry.cbKeyspace != nil && (entry.cbKeyspace.flags&_DELETED) == 0 {
+		exists = true
+	}
 	defaultPool.lock.RUnlock()
-	if entry != nil {
+	if exists {
 		return true, nil
 	}
 
