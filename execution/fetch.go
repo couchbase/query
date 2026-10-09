@@ -396,6 +396,9 @@ func (this *Fetch) Done() {
 		this.hasCache = false
 	}
 	if this.isComplete() {
+		// MB-74532 don't pin the request's context or parent value in the pool
+		this.context = nil
+		this.parentVal = nil
 		_FETCH_OP_POOL.Put(this)
 	}
 }

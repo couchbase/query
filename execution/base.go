@@ -380,7 +380,8 @@ func (this *base) baseDone() {
 	}
 
 	rootContext := this.rootContext
-	if this.opState == _DONE || this.opState == _ENDED {
+	release := this.opState == _DONE || this.opState == _ENDED
+	if release {
 		this.valueExchange.dispose()
 		this.rootContext = nil
 		this.stopChannel = nil
@@ -388,8 +389,16 @@ func (this *base) baseDone() {
 		this.output = nil
 		this.parent = nil
 		this.stop = nil
+
+		// MB-74532 pooled operators outlive the request: drop references to the request's
+		// execution context, so that it (and everything it holds) can be garbage collected
+		this.operatorCtx = opContext{}
+		this.stash = nil
 	}
 	this.activeCond.L.Unlock()
+	if release {
+		this.setExternalStop(nil)
+	}
 	if rootContext != nil {
 		rootContext.done()
 	}
