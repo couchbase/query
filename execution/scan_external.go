@@ -254,6 +254,9 @@ func (this *ExternalScan) Done() {
 	this.baseDone()
 	if this.isComplete() {
 		this.params = nil
+		// MB-74532 don't pin the request's context (via conn) or cached results in the pool
+		this.conn = nil
+		this.results = nil
 		_EXTERNALSCAN_OP_POOL.Put(this)
 	}
 }
