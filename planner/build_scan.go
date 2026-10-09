@@ -299,6 +299,33 @@ func (this *builder) buildSubsetScan(keyspace datastore.Keyspace, node *algebra.
 	// through this function again (in case optimizer hints specified and hints not followed)
 	this.restoreIndexPushDowns(indexPushDowns, true)
 
+	// MB-65773: IN-list whose values are covered by different partial indexes;
+	// try the equivalent OR so a UnionScan can be used instead of a primary scan
+	if !join && !this.hasBuilderFlag(BUILDER_CHK_INDEX_ORDER|BUILDER_JOIN_ON_PRIMARY|BUILDER_OR_SUBTERM) {
+		orPred, err1 := this.expandInForPartialIndexes(pred, baseKeyspace, indexes, formalizer)
+		if err1 != nil {
+			return nil, nil, err1
+		}
+		if orPred != nil {
+			// buildTermScan above already failed on this predicate, so go straight
+			// to the individual OR subterms; the combined scan that buildOrScan()
+			// attempts first would just repeat that same failed call
+			scan, _, hintErr, err1 := this.buildOrScanNoPushdowns(node, id, orPred,
+				indexes, primaryKey, formalizer)
+			if err1 != nil {
+				return nil, nil, err1
+			}
+			if scan != nil {
+				if hintErr {
+					baseKeyspace.SetIndexHintError()
+				}
+				return scan, nil, nil
+			}
+			// UnionScan not possible, restore pushdowns before considering primary scan
+			this.restoreIndexPushDowns(indexPushDowns, true)
+		}
+	}
+
 	doPrimary := !join || hash || node.IsSystem() || nlPrimaryScan
 	if doPrimary && this.hintIndexes {
 		found := false

@@ -1,0 +1,31 @@
+[
+ {
+  "testcase": "A broader partial index covers the remaining IN-list value",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ARRAY_LENGTH(v.scans) = 3 AND ANY v1 WITHIN v.scans SATISFIES v1.`#operator` LIKE 'IndexScan%' AND v1.`index` = 'ix_pu_fr' END AND ANY v2 WITHIN v.scans SATISFIES v2.`#operator` LIKE 'IndexScan%' AND v2.`index` = 'ix_pu_us' END AND ANY v3 WITHIN v.scans SATISFIES v3.`#operator` LIKE 'IndexScan%' AND v3.`index` = 'ix_pu_eu' END END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'PrimaryScan3' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_country IN [\"France\", \"United States\", \"Germany\"] ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Aachen",
+    "pu_country": "Germany"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ }
+]

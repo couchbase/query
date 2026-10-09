@@ -57,3 +57,50 @@ func TestInlist(t *testing.T) {
 	// drop primary indexes
 	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
 }
+
+// MB-65773: an IN-list whose values are covered by different partial indexes
+// should use a UnionScan instead of falling back to a primary scan
+func TestInlistPartialIndexUnion(t *testing.T) {
+	if strings.ToLower(os.Getenv("GSI_TEST")) != "true" {
+		return
+	}
+
+	qc := start_cs()
+
+	fmt.Print("\n\nInserting values into Buckets for partial index IN-list evaluation \n\n")
+	runMatch("insert_partial.json", false, false, qc, t)
+
+	runStmt(qc, "CREATE PRIMARY INDEX ON shellTest")
+
+	fmt.Println("Creating partial indexes")
+	runStmt(qc, "CREATE INDEX ix_pu_fr ON shellTest(pu_city) WHERE pu_country = \"France\"")
+	runStmt(qc, "CREATE INDEX ix_pu_us ON shellTest(pu_city) WHERE pu_country = \"United States\"")
+
+	fmt.Println("Running partial index IN-list test cases")
+	runMatch("case_inlist_partial_index.json", false, true, qc, t)
+	runMatch("case_inlist_partial_index_params.json", true, true, qc, t)
+
+	// an additional, broader partial index covers the remaining IN-list value
+	runStmt(qc, "CREATE INDEX ix_pu_eu ON shellTest(pu_city) WHERE pu_country IN [\"Germany\", \"Spain\", \"Italy\"]")
+	runMatch("case_inlist_partial_index_broad.json", false, true, qc, t)
+	runStmt(qc, "DROP INDEX shellTest.ix_pu_eu")
+
+	// a regular (non-partial) index serves the whole predicate on its own
+	runStmt(qc, "CREATE INDEX ix_pu_country ON shellTest(pu_country, pu_city)")
+	runMatch("case_inlist_partial_index_regular.json", false, true, qc, t)
+	runStmt(qc, "DROP INDEX shellTest.ix_pu_country")
+
+	// a single partial index whose condition covers every IN-list value
+	runStmt(qc, "DROP INDEX shellTest.ix_pu_fr")
+	runStmt(qc, "DROP INDEX shellTest.ix_pu_us")
+	runStmt(qc, "CREATE INDEX ix_pu_eu ON shellTest(pu_city) WHERE pu_country IN [\"Germany\", \"Spain\", \"Italy\"]")
+	runMatch("case_inlist_partial_index_only_broad.json", false, true, qc, t)
+
+	fmt.Println("Dropping indexes")
+	runStmt(qc, "DROP INDEX shellTest.ix_pu_eu")
+
+	// delete the rows inserted by this test
+	runStmt(qc, "DELETE FROM shellTest WHERE test_id = \"inlist_partial\"")
+
+	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
+}

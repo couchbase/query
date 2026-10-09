@@ -1,0 +1,27 @@
+[
+ {
+  "testcase": "A regular index serving the whole predicate is preferred over a UnionScan",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix_pu_country' END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_country IN [\"France\", \"United States\"] ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ }
+]

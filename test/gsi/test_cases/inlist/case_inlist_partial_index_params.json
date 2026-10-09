@@ -1,0 +1,33 @@
+[
+ {
+  "testcase": "IN-list as a named parameter is not expanded",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'PrimaryScan3' END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_country IN $countries ORDER BY pu_country, pu_city",
+  "namedArgs": {
+   "countries": [
+    "France",
+    "United States"
+   ]
+  },
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ }
+]

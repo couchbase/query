@@ -1,0 +1,139 @@
+[
+ {
+  "testcase": "IN-list covered by two different partial indexes uses a UnionScan",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ARRAY_LENGTH(v.scans) = 2 AND ANY v1 WITHIN v.scans SATISFIES v1.`#operator` LIKE 'IndexScan%' AND v1.`index` = 'ix_pu_fr' END AND ANY v2 WITHIN v.scans SATISFIES v2.`#operator` LIKE 'IndexScan%' AND v2.`index` = 'ix_pu_us' END END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'PrimaryScan3' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_country IN [\"France\", \"United States\"] ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ },
+ {
+  "testcase": "Equivalent OR form still uses a UnionScan",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ARRAY_LENGTH(v.scans) = 2 AND ANY v1 WITHIN v.scans SATISFIES v1.`#operator` LIKE 'IndexScan%' AND v1.`index` = 'ix_pu_fr' END AND ANY v2 WITHIN v.scans SATISFIES v2.`#operator` LIKE 'IndexScan%' AND v2.`index` = 'ix_pu_us' END END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'PrimaryScan3' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND (pu_country = \"France\" OR pu_country = \"United States\") ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ },
+ {
+  "testcase": "IN-list with an uncovered value falls back to a primary scan",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'PrimaryScan3' END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_country IN [\"France\", \"United States\", \"Germany\"] ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Aachen",
+    "pu_country": "Germany"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ },
+ {
+  "testcase": "NULL in the IN-list is dropped from the expanded OR",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' AND ARRAY_LENGTH(v.scans) = 2 AND ANY v1 WITHIN v.scans SATISFIES v1.`#operator` LIKE 'IndexScan%' AND v1.`index` = 'ix_pu_fr' END AND ANY v2 WITHIN v.scans SATISFIES v2.`#operator` LIKE 'IndexScan%' AND v2.`index` = 'ix_pu_us' END END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'PrimaryScan3' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_country IN [\"France\", null, \"United States\"] ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ },
+ {
+  "testcase": "IN-list on a field with no partial index falls back to a primary scan",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'PrimaryScan3' END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_stars IN [4, 5] ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Avignon",
+    "pu_country": "France"
+   },
+   {
+    "pu_city": "Assisi",
+    "pu_country": "Italy"
+   },
+   {
+    "pu_city": "Alicante",
+    "pu_country": "Spain"
+   },
+   {
+    "pu_city": "Austin",
+    "pu_country": "United States"
+   }
+  ]
+ }
+]

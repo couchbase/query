@@ -1,0 +1,5 @@
+[
+ {
+  "statements": "UPSERT INTO shellTest (KEY,VALUE) VALUES(\"pu_de1\", {\"pu_city\": \"Aachen\", \"pu_country\": \"Germany\", \"pu_stars\": 3, \"test_id\": \"inlist_partial\"}), VALUES(\"pu_es1\", {\"pu_city\": \"Alicante\", \"pu_country\": \"Spain\", \"pu_stars\": 4, \"test_id\": \"inlist_partial\"}), VALUES(\"pu_fr1\", {\"pu_city\": \"Avignon\", \"pu_country\": \"France\", \"pu_stars\": 4, \"test_id\": \"inlist_partial\"}), VALUES(\"pu_fr2\", {\"pu_city\": \"Paris\", \"pu_country\": \"France\", \"pu_stars\": 5, \"test_id\": \"inlist_partial\"}), VALUES(\"pu_it1\", {\"pu_city\": \"Assisi\", \"pu_country\": \"Italy\", \"pu_stars\": 5, \"test_id\": \"inlist_partial\"}), VALUES(\"pu_us1\", {\"pu_city\": \"Austin\", \"pu_country\": \"United States\", \"pu_stars\": 5, \"test_id\": \"inlist_partial\"}), VALUES(\"pu_us2\", {\"pu_city\": \"Boston\", \"pu_country\": \"United States\", \"pu_stars\": 4, \"test_id\": \"inlist_partial\"})"
+ }
+]

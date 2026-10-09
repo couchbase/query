@@ -1,0 +1,27 @@
+[
+ {
+  "testcase": "A single partial index covering every IN-list value needs no UnionScan",
+  "ignore": "index_id",
+  "explain": {
+   "disabled": false,
+   "results": [
+    {
+     "present": true
+    }
+   ],
+   "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'ix_pu_eu' END AND NOT (ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'UnionScan' END)"
+  },
+  "statements": "SELECT pu_city, pu_country FROM shellTest WHERE pu_city LIKE \"A%\" AND pu_country IN [\"Germany\", \"Spain\"] ORDER BY pu_country, pu_city",
+  "ordered": true,
+  "results": [
+   {
+    "pu_city": "Aachen",
+    "pu_country": "Germany"
+   },
+   {
+    "pu_city": "Alicante",
+    "pu_country": "Spain"
+   }
+  ]
+ }
+]

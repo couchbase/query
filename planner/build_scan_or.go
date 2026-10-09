@@ -17,6 +17,7 @@ import (
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
+	"github.com/couchbase/query/value"
 )
 
 const (
@@ -304,4 +305,147 @@ func (this *builder) buildOrScanNoPushdowns(node *algebra.KeyspaceTerm, id expre
 
 	rv := plan.NewUnionScan(limit, nil, cost, cardinality, size, frCost, scans...)
 	return rv.Streamline(), maxSargLength, hintErr, nil
+}
+
+/*
+MB-65773: an IN-list whose values are covered by different partial indexes
+cannot be served by any single index, but the equivalent OR can be served by
+a UnionScan. If pred contains such IN-lists, rewrite them into ORs of
+equalities, apply DNF, and return the resulting OR. Returns nil if the
+optimization does not apply.
+*/
+func (this *builder) expandInForPartialIndexes(pred expression.Expression,
+	baseKeyspace *base.BaseKeyspace, indexes []datastore.Index,
+	formalizer *expression.Formalizer) (*expression.Or, error) {
+
+	if pred == nil {
+		return nil, nil
+	}
+
+	if this.hintIndexes && baseKeyspace.HasIndexAllHint() {
+		// do not consider UNION scans if INDEX_ALL hint is in effect
+		return nil, nil
+	}
+
+	// gather the conditions of all partial indexes up front, so each IN-clause
+	// below can be checked for relevance without re-formalizing them
+	var conds expression.Expressions
+	for _, idx := range indexes {
+		// FTS indexes do not go through partial index subset checking
+		if idx.Type() == datastore.FTS || idx.IsPrimary() || idx.Condition() == nil {
+			continue
+		}
+		cond, _, err := formalizeExpr(formalizer, idx.Condition(), false)
+		if err != nil {
+			return nil, err
+		}
+		if cond != nil {
+			conds = append(conds, cond)
+		}
+	}
+
+	// at least two partial indexes are needed: with only one it would have to
+	// cover every IN value by itself, in which case buildTermScan would
+	// already have used it (no UnionScan needed)
+	if len(conds) < 2 {
+		return nil, nil
+	}
+
+	// top-level AND terms
+	var terms expression.Expressions
+	if and, ok := pred.(*expression.And); ok {
+		terms = and.Operands()
+	} else {
+		terms = expression.Expressions{pred}
+	}
+
+	// walk the terms once, expanding every relevant IN-clause and copying the
+	// rest; the DNF mapper below maps in place and pred must not be modified
+	newTerms := make(expression.Expressions, len(terms))
+	expanded := false
+	for i, t := range terms {
+		if or := expandInTerm(t, conds); or != nil {
+			newTerms[i] = or
+			expanded = true
+		} else {
+			newTerms[i] = t.Copy()
+		}
+	}
+	if !expanded {
+		return nil, nil
+	}
+
+	var newPred expression.Expression = newTerms[0]
+	if len(newTerms) > 1 {
+		newPred = expression.NewAnd(newTerms...)
+	}
+
+	// distribute AND over the new OR(s)
+	dnf := base.NewDNF(newPred, true, true)
+	out, err := dnf.Map(newPred)
+	if err != nil {
+		return nil, err
+	}
+
+	// require an OR with a bounded number of arms; this also guards against
+	// multiplication with other ORs already present in pred
+	or, ok := out.(*expression.Or)
+	if !ok || len(or.Operands()) > _LARGE_UNIONSCAN_CHILDREN {
+		return nil, nil
+	}
+	return or, nil
+}
+
+/*
+If term is an IN-clause over a constant array whose left-hand side is
+referenced by at least two of the given partial index conditions, return the
+equivalent (lhs = v1 OR lhs = v2 OR ...), otherwise return nil.
+*/
+func expandInTerm(term expression.Expression, conds expression.Expressions) expression.Expression {
+	in, ok := term.(*expression.In)
+	if !ok {
+		return nil
+	}
+
+	v := in.Second().Value()
+	if v == nil {
+		// not a constant, e.g. a named/positional parameter
+		return nil
+	}
+	vals, ok := v.Actual().([]any)
+	if !ok || len(vals) <= 1 || len(vals) > _LARGE_UNIONSCAN_CHILDREN {
+		return nil
+	}
+
+	// at least two partial index conditions must reference the IN's left-hand
+	// side for a UnionScan to be feasible; checked before the values are
+	// walked so no equality is built unless the expansion may be viable
+	lhs := in.First()
+	relevant := 0
+	for _, cond := range conds {
+		if cond.DependsOn(lhs) {
+			relevant++
+			if relevant >= 2 {
+				break
+			}
+		}
+	}
+	if relevant < 2 {
+		return nil
+	}
+
+	// MISSING and NULL can never satisfy an IN and are dropped here; the
+	// original predicate is still evaluated by the Filter
+	eqs := make(expression.Expressions, 0, len(vals))
+	for _, val := range vals {
+		av := value.NewValue(val)
+		if av.Type() <= value.NULL {
+			continue
+		}
+		eqs = append(eqs, expression.NewEq(lhs.Copy(), expression.NewConstant(av)))
+	}
+	if len(eqs) <= 1 {
+		return nil
+	}
+	return expression.NewOr(eqs...)
 }
