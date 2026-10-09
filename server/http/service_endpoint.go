@@ -362,6 +362,8 @@ func (this *HttpEndpoint) ServeHTTP(resp http.ResponseWriter, req *http.Request)
 	*request = httpRequest{}
 	newHttpRequest(request, resp, req, this.bufpool, this.server.RequestSizeCap(), this.server.Namespace())
 	defer func() {
+		// MB-74532 don't keep the finished request (and its execution context) in the pool
+		*request = httpRequest{}
 		requestPool.Put(request)
 	}()
 
