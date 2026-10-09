@@ -137,6 +137,11 @@ func agentConfig(url, options string, rv *Client) (*gocbcore.AgentConfig, error)
 	}
 	config.SecurityConfig.NoTLSSeedNode = true
 	config.SecurityConfig.UseTLS = (rv.TLSRootCAs() != nil)
+	config.SecurityConfig.VerifyPeerCertificateFn = func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+		// Verify the server certificate against the node-to-node CRL policy
+		// Use the node-to-node CRL policy as gocbcore is making an outbound connection to another node in the cluster
+		return cbauth.CRLsValidate(rawCerts, verifiedChains, cbauth.CRLScopeNodeToNode)
+	}
 
 	config.InternalConfig.EnableResourceUnitsTrackingHello = tenant.IsServerless()
 
