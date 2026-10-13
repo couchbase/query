@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Query Service REST API
-  version: '8.0'
+  version: '8.5'
   description: |-
     The Query Service REST API is provided by the Query Service.
     This API enables you to run SQL++ queries and set request-level parameters.
@@ -166,7 +166,7 @@ paths:
         "503":
           $ref: '#/components/responses/ServiceUnavailable'
 
-# Absolute links begin with /server/8.0 -- this must be replaced for every branch.
+# Absolute links begin with /server/8.5 -- this must be replaced for every branch.
 # Relative links point to a location relative to the REST API reference page by default.
 
 # The output of this spec is used in more than one location.
@@ -302,7 +302,7 @@ components:
           The value must be a string in the form `"bucket.scope.collection"` or `"namespace:bucket.scope.collection"`.
           If any part of the path contains a special character, that part of the path must be delimited in backticks &grave;&grave;.
 
-          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.5/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [node-level][atrcollection-srv] `atrcollection` setting specifies the default for this parameter for a single node.
           The request-level parameter overrides the node-level setting.
@@ -355,9 +355,9 @@ components:
         description: |-
           Specifies if there should be a controls section returned with the request results.
 
-          When set to `true`, the query response document includes a controls section with runtime information provided along with the request, such as positional and named parameters or settings.
+          When set to `true`, the query response document includes a controls section with runtime information provided along with the request.
 
-          If the request qualifies for caching, these values will also be cached in the `completed_requests` system keyspace.
+          If the request qualifies for caching, these values will also be cached in the `active_requests` system keyspace.
         x-desc-more: |-
           The [node-level][controls-srv] `controls` setting specifies the default for this parameter for a single node.
           The request-level parameter overrides the node-level setting.
@@ -400,7 +400,7 @@ components:
           If not specified, the default durability level is `"majority"`.
           Set the durability level to `"none"` or `""` to specify no durability.
 
-          [durability]: /server/8.0/learn/data/durability.html
+          [durability]: /server/8.5/learn/data/durability.html
         enum:
           - ""
           - none
@@ -541,7 +541,6 @@ components:
       natural:
         type: string
         x-desc-name: natural
-        x-desc-status: Couchbase Server 8.0
         description: |-
           The prompt for a natural language request.
           The Query Service uses the prompt to generate a SQL++ statement.
@@ -564,7 +563,6 @@ components:
         type: string
         format: password
         x-desc-name: natural_cred
-        x-desc-status: Couchbase Server 8.0
         description: |-
           The Couchbase Capella user account credentials for a natural language request, in the form `username:password`.
           Be careful not to expose the credentials in log files or other output.
@@ -584,7 +582,6 @@ components:
         type: string
         format: uuid
         x-desc-name: natural_orgid
-        x-desc-status: Couchbase Server 8.0
         description: |-
           The Couchbase Capella organization ID for a natural language request.
 
@@ -598,7 +595,7 @@ components:
       natural_config:
         type: object
         x-desc-name: natural_config
-        x-desc-status: Couchbase Server 8.1
+        x-desc-status: Couchbase Server 8.5
         description: |-
           The configuration for a natural language request that talks directly to an LLM provider, instead of using the Couchbase Capella iQ service.
           It selects the LLM provider that generates the SQL++ statement and supplies its credentials and options.
@@ -610,6 +607,8 @@ components:
           provider:
             type: string
             description: The LLM provider. Supported values are `openai`, `bedrock`, `gemini`, and `slm`. Defaults to `openai`. The `slm` provider is for a self-hosted model and always requires `endpoint`.
+            x-has-default: true
+            default: openai
           model:
             type: string
             description: The provider-specific model identifier. Defaults to the provider's default model.
@@ -633,6 +632,8 @@ components:
           moderation:
             type: boolean
             description: Whether to run content moderation on the request before generating the statement. Defaults to `true`. Set to `false` for OpenAI-compatible endpoints that do not implement a moderations API (for example, Amazon Bedrock's OpenAI-compatible surface).
+            x-has-default: true
+            default: true
         x-has-example: true
         example:
           provider: openai
@@ -641,7 +642,6 @@ components:
       natural_context:
         type: string
         x-desc-name: natural_context
-        x-desc-status: Couchbase Server 8.0
         description: |-
           A list of paths specifying keyspaces for a natural language request.
           The Query Service infers the schema of each keyspace, in order to give more precise responses from the natural language request.
@@ -669,7 +669,6 @@ components:
       natural_output:
         type: string
         x-desc-name: natural_output
-        x-desc-status: Couchbase Server 8.0
         description: |-
           Specifies the required output for a natural language request.
 
@@ -1307,7 +1306,6 @@ components:
         description: The client context ID of the request, if one was supplied &mdash; see `client_context_id` in the request parameters.
       generated_statement:
         type: string
-        x-desc-status: Couchbase Server 8.0
         description: |-
           The generated statement, if the request was a natural language prompt.
         x-has-example: true
