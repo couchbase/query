@@ -61,7 +61,7 @@ const (
 var ausCfg ausConfig
 
 // since we fetch documents from _system._query 1 at a time
-var _STRING_ANNOTATED_POOL *util.MapPool[string, value.AnnotatedValue]
+var _STRING_ANNOTATED_POOL = util.NewMapPool[string, value.AnnotatedValue](1)
 
 var defaultKeyspaceSettings = keyspaceSettings{enable: value.NONE, changePercentage: -1, update_stats_timeout: -1}
 
@@ -194,9 +194,6 @@ func startupAus() {
 	}
 
 	logging.Infof("AUS: Initialization started.")
-
-	// Initialize the system:aus_settings Fetch pool
-	_STRING_ANNOTATED_POOL = util.NewMapPool[string, value.AnnotatedValue](1)
 
 	// Initialize the global settings in metakv
 	err := initMetakv()
