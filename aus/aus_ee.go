@@ -61,7 +61,7 @@ const (
 var ausCfg ausConfig
 
 // since we fetch documents from _system._query 1 at a time
-var _STRING_ANNOTATED_POOL *value.StringAnnotatedPool
+var _STRING_ANNOTATED_POOL *util.MapPool[string, value.AnnotatedValue]
 
 var defaultKeyspaceSettings = keyspaceSettings{enable: value.NONE, changePercentage: -1, update_stats_timeout: -1}
 
