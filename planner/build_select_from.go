@@ -1030,6 +1030,25 @@ func (this *builder) buildUnnest(node *algebra.Unnest) error {
 				cost, cardinality, selec, size, frCost)
 		}
 	}
+
+	// perform covering transformation since unnest filter may reference covered keyspaces
+	// (e.g. from a prior join)
+	// 'filter' is a copy already (from getFilter()) and no need to copy again before transform
+	if filter != nil && len(this.coveringScans) > 0 && !this.SkipCoverTransform() {
+		for _, op := range this.coveringScans {
+			coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
+			if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
+				filter, _, _, err = this.renameAnyExpression(arrayKey, filter, nil, nil)
+			}
+			if err == nil {
+				filter, _, _, err = this.coverExpression(coverer, filter, nil, nil)
+			}
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	this.addSubChildren(plan.NewUnnest(node, filter, cost, cardinality, size, frCost))
 	this.addChildren(this.addSubchildrenParallel())
 
