@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Query Admin REST API
-  version: '8.0'
+  version: '8.5'
   description: |-
     The Query Admin REST API is a secondary API provided by the Query Service.
     This API enables you to retrieve statistics about the clusters and nodes running the Query Service; view or specify node-level settings; and view or delete requests.
@@ -48,7 +48,7 @@ tags:
   - name: default
     description: Other operations.
 
-# Absolute links begin with /server/8.0 -- this must be replaced for every branch.
+# Absolute links begin with /server/8.5 -- this must be replaced for every branch.
 # Relative links point to a location relative to the REST API reference page by default.
 
 # The output of this spec is used in more than one location.
@@ -1545,7 +1545,7 @@ components:
           The value must be a string in the form `"bucket.scope.collection"` or `"namespace:bucket.scope.collection"`.
           If any part of the path contains a special character, that part of the path must be delimited in backticks &grave;&grave;.
 
-          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.5/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [request-level][atrcollection_req] `atrcollection` parameter specifies this property per request.
           If a request does not include this parameter, the node-level `atrcollection` setting will be used.
@@ -1623,7 +1623,7 @@ components:
           * `m` (minutes)
           * `h` (hours)
 
-          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.5/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [cluster-level][queryCleanupWindow] `queryCleanupWindow` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
@@ -2138,7 +2138,7 @@ components:
         description: |-
           Specifies the total number of [active transaction records][additional-storage-use].
 
-          [additional-storage-use]: /server/8.0/learn/data/transactions.html#active-transaction-record-entries
+          [additional-storage-use]: /server/8.5/learn/data/transactions.html#active-transaction-record-entries
         x-desc-more: |-
           The [cluster-level][queryNumAtrs] `queryNumAtrs` setting specifies this property for the whole cluster.
           When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
