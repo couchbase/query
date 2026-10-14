@@ -929,9 +929,7 @@ func (this *builder) SkipCoverTransform() bool {
 type CoveringSubqInfo interface {
 	SubqTermPlans() []*subqTermPlan
 	AddSubqTermPlan(subPlan *subqTermPlan)
-	CoveringScans() []plan.CoveringOperator
 	SubqueryTerms() []*algebra.SubqueryTerm
-	Aggregates() algebra.Aggregates
 }
 
 func (this *builder) CoverSubSelect(sub *algebra.Subselect, subqUnderJoin bool) (err error) {
@@ -942,8 +940,10 @@ func (this *builder) CoverSubSelect(sub *algebra.Subselect, subqUnderJoin bool) 
 				(!subqUnderJoin && !subqTermPlan.IsJoinEnum()) {
 				continue
 			}
+			// use the covering scans from the same planning as the plan being transformed,
+			// since the SubqueryTerm may be planned multiple times with different scans
 			err = this.DoCoveringTransformation([]plan.Operator{subqTermPlan.Operator()},
-				info.CoveringScans(), info.Aggregates())
+				subqTermPlan.CoveringScans(), subqTermPlan.Aggregates())
 			if err != nil {
 				return err
 			}
