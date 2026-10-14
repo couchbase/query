@@ -144,6 +144,17 @@ func TestAnsiJoin(t *testing.T) {
 	runStmt(qc, "DROP INDEX shellTest.st_ix31")
 	runStmt(qc, "DROP INDEX review.re_ix01")
 
+	// test cover transformation/retention of join filters and UNNEST filters
+	// (documents inserted here are removed by the DELETE statements at the end)
+	runMatch("insert2.json", false, false, qc, t)
+	runStmt(qc, "CREATE INDEX st_cf_ix1 on shellTest(checkin, room_type, hotel_id, booking_id, room_count) "+
+		"WHERE type = \"cfbooking\"")
+	runStmt(qc, "UPDATE STATISTICS FOR shellTest(type, hotel_id, name, room_type, checkin)")
+
+	runMatch("case_ansijoin_cover_filter.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX shellTest.st_cf_ix1")
+
 	// DELETE optimizer statistics
 	runStmt(qc, "UPDATE STATISTICS FOR purchase DELETE ALL")
 	runStmt(qc, "UPDATE STATISTICS FOR customer DELETE ALL")

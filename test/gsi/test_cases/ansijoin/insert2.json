@@ -1,0 +1,5 @@
+[
+{
+ "statements":"INSERT INTO shellTest (KEY,VALUE) VALUES(\"cf_hotel_h1\", {\"type\": \"cfhotel\", \"hotel_id\": \"h1\", \"name\": \"Sakura Ryokan\", \"room_types\": [{\"name\": \"Garden View\", \"price\": 179.99}, {\"name\": \"Traditional\", \"price\": 120}], \"test_id\": \"ansijoin\"}), VALUES(\"cf_booking_b1\", {\"type\": \"cfbooking\", \"booking_id\": \"b1\", \"hotel_id\": \"h1\", \"room_type\": \"Garden View\", \"room_count\": 1, \"checkin\": \"2023-10-05T15:00:00Z\", \"test_id\": \"ansijoin\"})"
+}
+]

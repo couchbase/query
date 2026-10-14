@@ -634,6 +634,14 @@ func (this *builder) coverIndexGroupAggs() error {
 func prepIndexGroupAggs(op plan.CoveringOperator, aggs algebra.Aggregates) (
 	groupCoverer *expression.Coverer, aggPartialCoverer *PartialAggCoverer, aggFullCoverer *FullAggCoverer, err error) {
 
+	// the same covering operator may be prepared more than once (e.g. a SubqueryTerm planned
+	// both during join enumeration and under nested-loop join for EXPLAIN), in which case the
+	// group/aggregate covers have already been added and the aggregates already transformed;
+	// just regenerate the coverers from the existing covers
+	if groupCoverer, aggPartialCoverer, aggFullCoverer, done := reuseIndexGroupAggs(op, aggs); done {
+		return groupCoverer, aggPartialCoverer, aggFullCoverer, nil
+	}
+
 	// Add cover to the index key expressions inside the aggregates used in group Operators
 	var expr expression.Expression
 
@@ -707,6 +715,35 @@ func prepIndexGroupAggs(op plan.CoveringOperator, aggs algebra.Aggregates) (
 		}
 	}
 
+	return
+}
+
+func reuseIndexGroupAggs(op plan.CoveringOperator, aggs algebra.Aggregates) (
+	groupCoverer *expression.Coverer, aggPartialCoverer *PartialAggCoverer, aggFullCoverer *FullAggCoverer, done bool) {
+
+	var groupCovers, aggCovers expression.Covers
+	for _, c := range op.Covers() {
+		if c.HasExprFlag(expression.EXPR_IS_GROUP_COVER) {
+			groupCovers = append(groupCovers, c)
+		} else if c.HasExprFlag(expression.EXPR_IS_AGG_COVER) {
+			aggCovers = append(aggCovers, c)
+		}
+	}
+	if len(groupCovers) == 0 && len(aggCovers) == 0 {
+		return
+	}
+
+	if len(groupCovers) > 0 {
+		groupCoverer = expression.NewCoverer(groupCovers, nil)
+	}
+	if len(aggCovers) > 0 {
+		if op.GroupAggs().Partial {
+			aggPartialCoverer = NewPartialAggCoverer(aggCovers, aggs)
+		} else {
+			aggFullCoverer = NewFullAggCoverer(aggCovers)
+		}
+	}
+	done = true
 	return
 }
 
