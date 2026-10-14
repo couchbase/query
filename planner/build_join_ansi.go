@@ -426,8 +426,8 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			}
 		}
 
-		scans, newOnclause, cost, cardinality, size, frCost, err :=
-			this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), outer, "join")
+		scans, newOnclause, newFilter, cost, cardinality, size, frCost, err :=
+			this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(), filter, outer, "join")
 		if err != nil {
 			return nil, err
 		}
@@ -449,7 +449,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 				cost, cardinality, selec, size, frCost)
 		}
 
-		return plan.NewNLJoin(node, plan.NewSequence(scans...), filter, cost, cardinality, size, frCost), nil
+		return plan.NewNLJoin(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiJoin: Unexpected right-hand side node type"))
 	}
@@ -764,8 +764,8 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			}
 		}
 
-		scans, newOnclause, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right, node.Onclause(),
-			outer, "nest")
+		scans, newOnclause, newFilter, cost, cardinality, size, frCost, err := this.buildAnsiJoinSimpleFromTerm(right,
+			node.Onclause(), filter, outer, "nest")
 		if err != nil {
 			return nil, err
 		}
@@ -787,7 +787,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 				cost, cardinality, selec, size, frCost)
 		}
 
-		return plan.NewNLNest(node, plan.NewSequence(scans...), filter, cost, cardinality, size, frCost), nil
+		return plan.NewNLNest(node, plan.NewSequence(scans...), newFilter, cost, cardinality, size, frCost), nil
 	default:
 		return nil, errors.NewPlanInternalError(fmt.Sprintf("buildAnsiNest: Unexpected right-hand side node type"))
 	}
@@ -941,12 +941,12 @@ func (this *builder) buildAnsiJoinScan(node *algebra.KeyspaceTerm, onclause, fil
 
 	var newFilter, newOnclause expression.Expression
 
-	if this.joinEnum() {
+	if this.SkipCoverTransform() {
 		// no need to do cover transformation (will be done at the end when the final
 		// plan is chosen); just set newFilter, no need to set newOnclause (will keep
 		// the original onclause if newOnclause is not set).
 		newFilter = filter
-	} else if !this.SkipCoverTransform() {
+	} else {
 		newFilter, newOnclause, primaryJoinKeys, err = this.joinCoverTransformation(coveringScans,
 			this.coveringScans, filter, onclause, primaryJoinKeys, nil, nil, true)
 		if err != nil {
@@ -1279,7 +1279,10 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, nil
 		}
 
-		if !this.SkipCoverTransform() {
+		if this.SkipCoverTransform() {
+			// cover transformation will be done later; keep the original filter
+			newFilter = filter
+		} else {
 			// perform cover transformation of leftExprs and rightExprs and onclause
 			newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
 				this.coveringScans, filter, onclause, nil, leftExprs, rightExprs, false)
@@ -1388,11 +1391,15 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 	return child, buildExprs, probeExprs, buildAliases, newOnclause, newFilter, buildRight, cost, cardinality, size, frCost, nil
 }
 
-func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause expression.Expression,
-	outer bool, op string) ([]plan.Operator, expression.Expression, float64, float64, int64, float64, error) {
+func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, onclause, filter expression.Expression,
+	outer bool, op string) ([]plan.Operator, expression.Expression, expression.Expression,
+	float64, float64, int64, float64, error) {
 
 	var newOnclause expression.Expression
 	var err error
+
+	// 'filter' is a copy (from getFilter()), ok to transform in place
+	newFilter := filter
 
 	baseKeyspace, _ := this.baseKeyspaces[node.Alias()]
 	filters := baseKeyspace.Filters()
@@ -1417,19 +1424,19 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 				newOnclause = onclause.Copy()
 			}
 
-			if newOnclause != nil || fromExpr != nil {
+			if newOnclause != nil || newFilter != nil || fromExpr != nil {
 				for _, op := range this.coveringScans {
 					coverer := expression.NewCoverer(op.Covers(), op.FilterCovers())
 					if arrayKey := op.ImplicitArrayKey(); arrayKey != nil {
-						_, newOnclause, fromExpr, err =
-							this.renameAnyExpression(arrayKey, nil, newOnclause, fromExpr)
+						newFilter, newOnclause, fromExpr, err =
+							this.renameAnyExpression(arrayKey, newFilter, newOnclause, fromExpr)
 					}
 					if err == nil {
-						_, newOnclause, fromExpr, err =
-							this.coverExpression(coverer, nil, newOnclause, fromExpr)
+						newFilter, newOnclause, fromExpr, err =
+							this.coverExpression(coverer, newFilter, newOnclause, fromExpr)
 					}
 					if err != nil {
-						return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL,
+						return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL,
 							OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 					}
 				}
@@ -1460,7 +1467,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 	_, err = node.Accept(this)
 	this.restoreNLInner(nlInner)
 	if err != nil {
-		return nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
+		return nil, nil, nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
 
 	if len(this.subChildren) > 0 {
@@ -1476,7 +1483,7 @@ func (this *builder) buildAnsiJoinSimpleFromTerm(node algebra.SimpleFromTerm, on
 		cost, cardinality, size, frCost = getSimpleFromTermCost(lastOp, this.lastOp, filters, outer, op)
 	}
 
-	return this.children, newOnclause, cost, cardinality, size, frCost, nil
+	return this.children, newOnclause, newFilter, cost, cardinality, size, frCost, nil
 }
 
 const _MAX_PRIMARY_INDEX_CACHE_SIZE = 1000
@@ -1550,7 +1557,10 @@ func (this *builder) buildInnerPrimaryScan(right *algebra.KeyspaceTerm,
 	}
 
 	var newFilter, newOnclause expression.Expression
-	if !this.SkipCoverTransform() {
+	if this.SkipCoverTransform() {
+		// cover transformation will be done later; keep the original filter
+		newFilter = filter
+	} else {
 		newFilter, newOnclause, _, err = this.joinCoverTransformation(coveringScans,
 			this.coveringScans, filter, onclause, nil, nil, nil, true)
 		if err != nil {

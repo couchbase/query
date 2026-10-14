@@ -1,0 +1,72 @@
+[
+    {
+        "testcase": "UNNEST filter referencing covered keyspace on build side of hash join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'HashJoin' AND ANY w WITHIN v.`~child`.`~children` SATISFIES w.`#operator` LIKE 'IndexScan%' AND w.`as` = 'b' AND array_length(w.`covers`) > 0 END END AND ANY u WITHIN p.plan.`~children` SATISFIES u.`#operator` = 'Unnest' AND CONTAINS(u.`filter`, 'cover ((`b`.`room_type`))') END"
+        },
+        "statements":"SELECT b.booking_id, h.name, rt.price * b.room_count AS total FROM shellTest b JOIN shellTest h USE HASH(probe) ON b.hotel_id = h.hotel_id UNNEST h.room_types AS rt WHERE b.type = \"cfbooking\" AND h.type = \"cfhotel\" AND rt.name = b.room_type AND b.checkin >= \"2023-10-01\"",
+        "results": [
+        {
+            "booking_id": "b1",
+            "name": "Sakura Ryokan",
+            "total": 179.99
+        }
+	]
+    },
+    {
+        "testcase": "Join filter of nested-loop join on expression term referencing covered keyspace",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'x' AND CONTAINS(v.`filter`, 'cover ((`b`.`room_type`))') END"
+        },
+        "statements":"SELECT b.booking_id, x.p FROM shellTest b JOIN [{\"n\": \"Garden View\", \"p\": 1}, {\"n\": \"Traditional\", \"p\": 1}] AS x USE NL ON x.p = b.room_count WHERE b.type = \"cfbooking\" AND x.n = b.room_type AND b.checkin >= \"2023-10-01\"",
+        "results": [
+        {
+            "booking_id": "b1",
+            "p": 1
+        }
+	]
+    },
+    {
+        "testcase": "Join filter of nested-loop join with primary scan on inner, during join enumeration",
+        "queryParams": {"use_cbo": true},
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'h2' AND v.`filter` IS NOT MISSING AND ANY w WITHIN v.`~child`.`~children` SATISFIES w.`#operator` LIKE 'PrimaryScan%' END END"
+        },
+        "statements":"SELECT b.booking_id FROM shellTest b JOIN shellTest h2 USE NL ON b.hotel_id = h2.hotel_id WHERE b.type = \"cfbooking\" AND h2.name = b.room_type",
+        "results": [
+	]
+    },
+    {
+        "testcase": "Join filter of nested-loop join inside subquery term on inner of nested-loop join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries` SATISFIES v.`#operator` = 'NestedLoopJoin' AND v.`alias` = 'h2' AND v.`filter` IS NOT MISSING END"
+        },
+        "statements":"SELECT h.name, s.booking_id FROM shellTest h JOIN (SELECT b.booking_id, b.hotel_id FROM shellTest b JOIN shellTest h2 USE NL ON b.hotel_id = h2.hotel_id WHERE b.type = \"cfbooking\" AND h2.name = b.room_type) AS s USE NL ON s.hotel_id = h.hotel_id WHERE h.type = \"cfhotel\"",
+        "results": [
+	]
+    }
+]
