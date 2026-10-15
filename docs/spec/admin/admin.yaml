@@ -1848,9 +1848,9 @@ components:
         description: |-
           Specifies if there should be a controls section returned with the request results.
 
-          When set to `true`, the query response document includes a controls section with runtime information provided along with the request, such as positional and named parameters or settings.
+          When set to `true`, the query response document includes a controls section with runtime information provided along with the request.
 
-          NOTE: If the request qualifies for caching, these values will also be cached in the `completed_requests` system keyspace.
+          If the request qualifies for caching, these values will also be cached in the `active_requests` system keyspace.
         x-desc-more: |-
           The [request-level][controls_req] `controls` parameter specifies this property per request.
           If a request does not include this parameter, the node-level `controls` setting will be used.
