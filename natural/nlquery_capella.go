@@ -748,7 +748,7 @@ func capellaRetryRequest(nlCred, nlOrgId string, prompt *prompt, context Natural
 }
 
 func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, nlquery, nlHint string, chatId string,
-	nloutputOpt naturalOutput, explain, advise, useKnowledge bool,
+	nloutputOpt naturalOutput, explain, advise bool,
 	users []string,
 	context NaturalContext, record func(execution.Phases, time.Duration)) (string, algebra.Statement, errors.Error) {
 
@@ -798,7 +798,7 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 	if ce.prompt == nil {
 		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
 		inferschema := util.Now()
-		keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context, false, useKnowledge, nlquery)
+		keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context, false, ce.useKnowledge, nlquery)
 		record(execution.INFERSCHEMA, util.Since(inferschema))
 		if err != nil {
 			return "", nil, err

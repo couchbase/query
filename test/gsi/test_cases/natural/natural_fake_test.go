@@ -107,8 +107,10 @@ func testNaturalFakeProvider(qc *gsi.MockServer, t *testing.T) {
 	testNaturalUsingAiAndKnowledgeInjectsPrompt(qc, t)
 	testNaturalUsingAiWithoutKnowledgeOmitsPrompt(qc, t)
 	testNaturalUsingAiKnowledgeWithOptOverridesPhrase(qc, t)
+	testNaturalBeginChatKnowledgeInjectsPrompt(qc, t)
+	testNaturalChatTurnKnowledgeIgnored(qc, t)
 
-	// cleanup: this is the last of the three tests that depend on the aiknow1 entry seeded above,
+	// cleanup: this is the last of the tests that depend on the aiknow1 entry seeded above,
 	// so remove it now rather than leaving it behind - qc runs against a real, persistent cluster
 	// bucket (not a fresh one per test run), and a leftover entry would otherwise carry over into
 	// the next run.
@@ -441,6 +443,56 @@ func testNaturalUsingAiWithoutKnowledgeOmitsPrompt(qc *gsi.MockServer, t *testin
 	if strings.Contains(body, "ICAO codes identify airlines uniquely") {
 		t.Errorf("using-ai-without-knowledge: prompt unexpectedly carried the knowledge entry when "+
 			"knowledge was not requested; body: %s", body)
+	}
+}
+
+// testNaturalBeginChatKnowledgeInjectsPrompt verifies that "knowledge":true on BEGIN CHAT enables
+// injection for the conversation: a follow-up turn that does not itself ask for knowledge still
+// carries the CREATE KNOWLEDGE entry in the prompt posted to the LLM.
+func testNaturalBeginChatKnowledgeInjectsPrompt(qc *gsi.MockServer, t *testing.T) {
+	var body string
+	srv := captureBody("```sql\nSELECT name FROM orders\n```", &body)
+	defer srv.Close()
+
+	begin := gsi.Run(qc, nil, `BEGIN CHAT WITH {"keyspaces":["orders"], "knowledge":true}`,
+		gsi.Namespace_CBS, nil, nil, nil)
+	if begin.Err != nil {
+		t.Fatalf("begin-chat-knowledge: BEGIN CHAT failed: %v", begin.Err)
+	}
+
+	rr := runNaturalChat(qc, `USING AI WITH {"keyspaces":"orders", "execute":false} list the character names`,
+		slmConfig(srv.URL), begin.ChatId, nil)
+	if rr.Err != nil {
+		t.Fatalf("begin-chat-knowledge: follow-up turn failed: %v", rr.Err)
+	}
+	if !strings.Contains(body, "ICAO codes identify airlines uniquely") {
+		t.Errorf(`begin-chat-knowledge: prompt did not carry the knowledge entry for a chat begun with `+
+			`"knowledge":true; body: %s`, body)
+	}
+}
+
+// testNaturalChatTurnKnowledgeIgnored is the negative counterpart: in a chat begun without
+// "knowledge", asking for knowledge on a conversational turn (via either the AND KNOWLEDGE phrase
+// or the WITH-option) is ignored - knowledge is decided once, at BEGIN CHAT.
+func testNaturalChatTurnKnowledgeIgnored(qc *gsi.MockServer, t *testing.T) {
+	var body string
+	srv := captureBody("```sql\nSELECT name FROM orders\n```", &body)
+	defer srv.Close()
+
+	begin := beginChat(qc, "orders")
+	if begin.Err != nil {
+		t.Fatalf("chat-turn-knowledge-ignored: BEGIN CHAT failed: %v", begin.Err)
+	}
+
+	rr := runNaturalChat(qc,
+		`USING AI AND KNOWLEDGE WITH {"keyspaces":"orders", "execute":false, "knowledge":true} list the character names`,
+		slmConfig(srv.URL), begin.ChatId, nil)
+	if rr.Err != nil {
+		t.Fatalf("chat-turn-knowledge-ignored: follow-up turn failed: %v", rr.Err)
+	}
+	if strings.Contains(body, "ICAO codes identify airlines uniquely") {
+		t.Errorf("chat-turn-knowledge-ignored: prompt carried the knowledge entry although the chat was "+
+			"begun without knowledge; body: %s", body)
 	}
 }
 

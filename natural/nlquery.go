@@ -136,6 +136,10 @@ type ChatEntry struct {
 	users     []string
 	Paused    bool
 	Summary   string
+	// useKnowledge is fixed at BEGIN CHAT: every prompt built for the conversation
+	// (the first turn, and the rebuild after a summarize or resume) gathers
+	// knowledge iff it is set. A "knowledge" option on a conversational turn is ignored.
+	useKnowledge bool
 	// Tokens accumulates LLM token usage across every request/conversation
 	Tokens LLMTokenUsage
 	// samples caches a representative sample tree per field for the conversation
@@ -269,6 +273,9 @@ func FormatChatEntry(ce *ChatEntry) map[string]interface{} {
 		item["summary"] = summary
 	}
 	item["inactivityTimeout"] = ce.effectiveInactivityTimeout().String()
+	if ce.useKnowledge {
+		item["knowledge"] = true
+	}
 	return item
 }
 
@@ -364,7 +371,8 @@ func completeConversationPromptLocked(content string, ce *ChatEntry, prompt *pro
 	}
 }
 
-func ProcessBeginChat(naturalcontext string, datastorecreds []string, keyspaces []*algebra.Path, timeout time.Duration) (string, errors.Error) {
+func ProcessBeginChat(naturalcontext string, datastorecreds []string, keyspaces []*algebra.Path, timeout time.Duration,
+	useKnowledge bool) (string, errors.Error) {
 
 	if IsChatCacheFull() {
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_CACHE_FULL)
@@ -380,6 +388,7 @@ func ProcessBeginChat(naturalcontext string, datastorecreds []string, keyspaces 
 		Keyspaces:         keyspaces,
 		users:             datastorecreds,
 		inactivityTimeout: timeout,
+		useKnowledge:      useKnowledge,
 	}
 	ce.resetInactivityTimerLocked()
 	AddConversation(ce, chatId)
@@ -1786,6 +1795,9 @@ func (ce *ChatEntry) MarshalJSON() ([]byte, error) {
 	if timeout := ce.inactivityTimeout; timeout > 0 {
 		rv["inactivity_timeout"] = timeout.String()
 	}
+	if ce.useKnowledge {
+		rv["knowledge"] = true
+	}
 	return json.Marshal(rv)
 }
 
@@ -1796,6 +1808,7 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 		Users     []string `json:"users"`
 		Summary   string   `json:"summary"`
 		Timeout   string   `json:"inactivity_timeout"`
+		Knowledge bool     `json:"knowledge"`
 		Tokens    struct {
 			Prompt     int `json:"prompt"`
 			Completion int `json:"completion"`
@@ -1835,6 +1848,7 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 			return fmt.Errorf("invalid inactivity timeout value: %s", timeout)
 		}
 	}
+	ce.useKnowledge = unmarshalledStruct.Knowledge
 	return nil
 }
 
@@ -1848,6 +1862,7 @@ func (ce *ChatEntry) Reset() {
 	ce.Tokens = LLMTokenUsage{}
 	ce.Removed = false
 	ce.Paused = false
+	ce.useKnowledge = false
 }
 
 func GetChatDataFromObjectValue(val value.Value) ([]byte, errors.Error) {
