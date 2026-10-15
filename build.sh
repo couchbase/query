@@ -62,8 +62,14 @@ set -- $args
 GIT=`which git`
 
 cbranch=`$GIT rev-parse --abbrev-ref HEAD`
-rbranch=`$GIT log -n 25 --pretty=format:"%D"|\
-  awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
+# prefer the tracked upstream; otherwise only follow first parents so that an unpushed
+# forward merge doesn't pick up the merged-in branch (e.g. origin/morpheus on totoro)
+rbranch=`$GIT rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null`
+if [[ -z $rbranch ]]
+then
+  rbranch=`$GIT log -n 25 --first-parent --pretty=format:"%D"|\
+    awk '/->/&&NF>=4{p=$4;exit}!/->/&&NF>0{p=$1;exit}END{if (length(p)>0) { gsub(",","",p); print p} }'`
+fi
 defbranch="master"
 defbranch2="main"
 
