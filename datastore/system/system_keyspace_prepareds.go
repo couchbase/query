@@ -571,7 +571,6 @@ func checkCacheEntry(entry *prepareds.CacheEntry, tenantName string) bool {
 func (b *preparedsKeyspace) Update(updates value.Pairs, context datastore.QueryContext, preserveMutations bool) (
 	int, value.Pairs, errors.Errors) {
 
-	var errs errors.Errors
 	var creds distributed.Creds
 	var tenantName string
 
@@ -585,7 +584,7 @@ func (b *preparedsKeyspace) Update(updates value.Pairs, context datastore.QueryC
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	for i, pair := range updates {
+	for _, pair := range updates {
 		name := pair.Name
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 		nodeName := decodeNodeName(node)
@@ -604,36 +603,13 @@ func (b *preparedsKeyspace) Update(updates value.Pairs, context datastore.QueryC
 
 			// local entry
 		} else {
+
+			// the planner only allows UNSET planPreparedTime, so there's nothing to validate
 			prepareds.PreparedDo(localKey, func(ce *prepareds.CacheEntry) {
 				if userName == "" || checkCacheEntry(ce, tenantName) {
-					items, _ := formatPrepared(ce, localKey, node, context)
-					for k, v := range pair.Value.Fields() {
-						if cv, ok := items[k]; !ok || value.NewValue(v).Equals(value.NewValue(cv)) != value.TRUE_VALUE {
-							errs = append(errs, errors.NewUpdateInvalidField(name, k))
-						}
-						delete(items, k)
-					}
-					if _, ok := items["planPreparedTime"]; ok {
-						ce.Prepared.SetPreparedTime(time.Time{})
-						delete(items, "planPreparedTime")
-					}
-					for k, _ := range items {
-						errs = append(errs, errors.NewUpdateInvalidField(name, k))
-					}
+					ce.Prepared.SetPreparedTime(time.Time{})
 				}
 			})
-		}
-
-		if len(errs) > 0 {
-			if preserveMutations {
-				updated := make([]value.Pair, i)
-				if i > 0 {
-					copy(updated, updates[0:i-1])
-				}
-				return i, updated, errs
-			} else {
-				return i, nil, errs
-			}
 		}
 	}
 
