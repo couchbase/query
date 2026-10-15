@@ -941,6 +941,22 @@ components:
         x-has-example: true
         default: ""
         example: 30m
+      scanreport_wait:
+        type: string
+        format: duration
+        x-desc-name: scanreport_wait
+        description: |-
+          Specifies how long each index scan waits, after it finishes, for the Index Service to send its scan report.
+          A value greater than 0 also requests the detailed scan report, with timings and counts for each index node.
+          The report is included in the response only when `profile` is set to `timings`.
+          Index scan reports must be turned on with the `generateScanReport` index setting.
+          Its format includes an amount and a mandatory unit: for example, `10ms` (10 milliseconds) or `0.5s` (half a second).
+          The value must be from `0` to `15s`.
+          Specify `0` to get the concise scan report only.
+        x-has-default: true
+        x-has-example: true
+        default: '0s'
+        example: 100ms
       signature:
         type: boolean
         x-desc-name: signature
