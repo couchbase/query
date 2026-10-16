@@ -385,7 +385,6 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 
 		dec := json.NewDecoder(res.Body)
 
-		tmpb := &Bucket{}
 		for {
 			b.RLock()
 			changed := b.updater != updater
@@ -397,6 +396,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 				return nil
 			}
 
+			tmpb := &Bucket{}
 			err := dec.Decode(&tmpb)
 
 			b.RLock()
@@ -623,7 +623,6 @@ func (p *Pool) UpdatePool2(msgPrefix string, streamingFn PoolStreamingFn) errors
 		p.Unlock()
 
 		dec := json.NewDecoder(res.Body)
-		tmpPool := &Pool{}
 		for {
 			p.RLock()
 			changed := p.updater != updater
@@ -634,7 +633,7 @@ func (p *Pool) UpdatePool2(msgPrefix string, streamingFn PoolStreamingFn) errors
 				logging.Infof("%s Stopping (changed:%v,closed:%v)", msgPrefix, changed, closed)
 				return nil
 			}
-
+			tmpPool := &Pool{}
 			err := dec.Decode(tmpPool)
 
 			p.RLock()
