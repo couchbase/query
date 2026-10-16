@@ -53,7 +53,7 @@ Integration tests need Couchbase Server running at `127.0.0.1:8091` with credent
 For CGO-dependent tests (enterprise features):
 ```bash
 export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/openssl-3.5.5/include $CGO_FLAGS"
-export CGO_LDFLAGS="-L$GOPATH/lib"
+export CGO_LDFLAGS="-L$GOPATH/lib -Wl,-rpath,$GOPATH/lib"  # rpath lets go test binaries find @rpath/libsigar.dylib on macOS
 export DYLD_LIBRARY_PATH=$GOPATH/lib:${DYLD_LIBRARY_PATH}  # macOS
 ```
 
