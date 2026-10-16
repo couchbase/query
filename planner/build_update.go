@@ -10,6 +10,8 @@ package planner
 
 import (
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/plan"
 	base "github.com/couchbase/query/plannerbase"
 )
@@ -23,6 +25,13 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 	keyspace, err := this.getNameKeyspace(ksref, true, true, stmt.Type())
 	if err != nil {
 		return nil, err
+	}
+
+	if algebra.IsSystemId(keyspace.NamespaceId()) && keyspace.Name() == "prepareds" {
+		err = checkPreparedsUpdate(stmt, ksref.Alias())
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	qp := plan.NewQueryPlan(nil)
@@ -108,4 +117,23 @@ func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
 
 	qp.SetPlanOp(plan.NewSequence(this.children...))
 	return qp, nil
+}
+
+// system:prepareds only supports UNSET of the top level planPreparedTime field
+func checkPreparedsUpdate(stmt *algebra.Update, alias string) error {
+	if stmt.Set() != nil {
+		return errors.NewUpdateInvalidField("", stmt.Set().Terms()[0].Path().String(), false)
+	}
+	for _, t := range stmt.Unset().Terms() {
+		ok := false
+		// META() paths aren't formalized, so an alias such as xattrs could otherwise match
+		if f, isField := t.Path().(*expression.Field); isField && t.UpdateFor() == nil && t.Meta() == nil {
+			id, isId := f.First().(*expression.Identifier)
+			ok = isId && id.Identifier() == alias && f.Second().Alias() == "planPreparedTime"
+		}
+		if !ok {
+			return errors.NewUpdateInvalidField("", t.Path().String(), true)
+		}
+	}
+	return nil
 }
