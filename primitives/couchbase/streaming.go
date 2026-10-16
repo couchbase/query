@@ -384,7 +384,6 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 
 		dec := json.NewDecoder(res.Body)
 
-		tmpb := &Bucket{}
 		for {
 			b.RLock()
 			terminate := b.updater != updater || b.closed
@@ -395,6 +394,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 				return nil
 			}
 
+			tmpb := &Bucket{}
 			err := dec.Decode(&tmpb)
 
 			b.RLock()
