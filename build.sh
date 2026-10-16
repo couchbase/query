@@ -11,7 +11,35 @@
 #
 # To build the enterprise version, launch this  AS './build.sh -tags enterprise'
 # To build the enterprise version with latest updates, launch this  AS './build.sh -u -tags enterprise'
-# Add -vuln to run govulncheck on cbq-engine (requires govulncheck in PATH)
+# Add -fix to run go fix (applies modernizing rewrites to the source)
+#   All analyzers run by default. Set GOFIXFLAGS to select some, e.g.
+#     GOFIXFLAGS="-any -rangeint" ./build.sh -fix -tags enterprise    (run only these)
+#     GOFIXFLAGS="-inline=false" ./build.sh -fix -tags enterprise     (run all but these)
+#     GOFIXFLAGS="-diff" ./build.sh -fix -tags enterprise             (print diff, don't rewrite)
+#   Analyzers ('go tool fix help' for the current list):
+#     any              replace interface{} with any
+#     buildtag         check //go:build and // +build directives
+#     fmtappendf       replace []byte(fmt.Sprintf) with fmt.Appendf
+#     forvar           remove redundant re-declaration of loop variables
+#     hostport         check format of addresses passed to net.Dial
+#     inline           apply fixes based on 'go:fix inline' comment directives
+#     mapsloop         replace explicit loops over maps with calls to maps package
+#     minmax           replace if/else statements with calls to min or max
+#     newexpr          simplify code by using go1.26's new(expr)
+#     omitzero         suggest replacing omitempty with omitzero for struct fields
+#     plusbuild        remove obsolete //+build comments
+#     rangeint         replace 3-clause for loops with for-range over integers
+#     reflecttypefor   replace reflect.TypeOf(x) with TypeFor[T]()
+#     slicescontains   replace loops with slices.Contains or slices.ContainsFunc
+#     slicessort       replace sort.Slice with slices.Sort for basic types
+#     stditerators     use iterators instead of Len/At-style APIs
+#     stringsbuilder   replace += with strings.Builder
+#     stringscut       replace strings.Index etc. with strings.Cut
+#     stringscutprefix replace HasPrefix/TrimPrefix with CutPrefix
+#     stringsseq       replace ranging over Split/Fields with SplitSeq/FieldsSeq
+#     testingcontext   replace context.WithCancel with t.Context in tests
+#     waitgroup        replace wg.Add(1)/go/wg.Done() with wg.Go
+# Add -vuln to run govulncheck on cbq-engine and the cbq shell (requires govulncheck in PATH)
 #   go install golang.org/x/vuln/cmd/govulncheck@latest
 # Add -s to fix standalone build issues. Keep indexer generated files in ~/devbld
 # Note standalone build requires libraries from installed server, make sure installed server is
@@ -37,6 +65,7 @@ enterprise=0
 uflag=
 sflag=0
 fflag=1
+fixflag=0
 vflag=0
 vulnflag=0
 while [ $# -gt 0 ]; do
@@ -50,6 +79,7 @@ while [ $# -gt 0 ]; do
     -s) sflag=1 ;;
     -S) sflag=2 ;;
     -nofmt) fflag=0 ;;
+    -fix) fixflag=1 ;;
     -vet) vflag=1 ;;
     -vuln) vulnflag=1 ;;
     *) args="$args $1" ;;
@@ -389,6 +419,23 @@ cd parser/n1ql
 ./build.sh $*
 cd ../..
 
+if [[ ($fixflag != 0) ]]
+then
+  echo go fix $* $GOFIXFLAGS ./...
+  go fix $* $GOFIXFLAGS ./...
+  if [ $? -ne 0 ]
+  then
+    exit 1
+  fi
+  if [[ $enterprise == 1 ]]; then
+    (echo go fix $* $GOFIXFLAGS ../query-ee/...; cd ../query-ee; go fix $* $GOFIXFLAGS ./...)
+    if [ $? -ne 0 ]
+    then
+      exit 1
+    fi
+  fi
+fi
+
 if [[ ($fflag != 0) ]]
 then
   echo go fmt ./...
@@ -417,8 +464,8 @@ fi
 
 if [[ ($vulnflag != 0) ]]
 then
-  echo govulncheck $* ./server/cbq-engine/...
-  govulncheck $* ./server/cbq-engine/...
+  echo govulncheck $* ./server/cbq-engine/... ./shell/cbq/...
+  govulncheck $* ./server/cbq-engine/... ./shell/cbq/...
   if [ $? -ne 0 ]
   then
     exit 1
