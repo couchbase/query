@@ -43,7 +43,8 @@ type Reader struct {
 	ctx              go_context.Context
 	scan             *table.Scan
 	arrowSchema      *arrow.Schema
-	recordIter       iter.Seq2[arrow.RecordBatch, error]
+	nextRecord       func() (arrow.RecordBatch, error, bool) // pull iterator over the scan's record batches
+	stopRecords      func()                                  // releases the pull iterator; safe to call more than once
 	currentRecord    arrow.RecordBatch
 	currentRow       int
 	schema           interface{}
@@ -74,7 +75,10 @@ func NewReader(ctx go_context.Context, scan *table.Scan) (*Reader, error) {
 	}
 
 	reader.arrowSchema = schema
-	reader.recordIter = recordItr
+	// iceberg-go's record iterator is single-use: breaking out of a range over it cancels the
+	// scan and discards the remaining batches, so it must not be re-ranged once per batch.
+	// Pull it instead, keeping one iteration alive across loadNextRecord calls.
+	reader.nextRecord, reader.stopRecords = iter.Pull2(recordItr)
 
 	if schema != nil {
 		logging.Infof("Iceberg Reader initialized with schema: %d fields", len(schema.Fields()))
@@ -155,6 +159,7 @@ func (r *Reader) Next() bool {
 			logging.Errorf("Iceberg Reader.Next(): error loading next record: %v", err)
 		}
 		r.closed = true
+		r.releaseRecords()
 		return false
 	}
 
@@ -173,7 +178,7 @@ func (r *Reader) Next() bool {
 
 // loadNextRecord loads the next record batch from the iterator
 func (r *Reader) loadNextRecord() error {
-	if r.recordIter == nil {
+	if r.nextRecord == nil {
 		logging.Warnf("Iceberg Reader: record iterator is nil, returning EOF")
 		return stdio.EOF
 	}
@@ -185,9 +190,7 @@ func (r *Reader) loadNextRecord() error {
 		r.currentRecord = nil
 	}
 
-	// Get next record from iterator - use range loop
-	recordCount := 0
-	logging.Debugf("Iceberg Reader: starting to iterate over record iterator")
+	logging.Debugf("Iceberg Reader: pulling next record batch")
 
 	// Check if context is canceled before starting iteration
 	select {
@@ -198,7 +201,8 @@ func (r *Reader) loadNextRecord() error {
 		// Continue
 	}
 
-	for rec, err := range r.recordIter {
+	rec, err, ok := r.nextRecord()
+	if ok {
 		logging.Debugf("Iceberg Reader: got record from iterator, checking for error")
 		if err != nil {
 			if r.ctx.Err() != nil {
@@ -212,7 +216,7 @@ func (r *Reader) loadNextRecord() error {
 		return nil
 	}
 
-	logging.Debugf("Iceberg Reader: end of iterator reached, processed %d record batches", recordCount)
+	logging.Debugf("Iceberg Reader: end of iterator reached")
 	return stdio.EOF
 }
 
@@ -586,8 +590,19 @@ func (r *Reader) Close() error {
 		r.currentRecord.Release()
 		r.currentRecord = nil
 	}
+	r.releaseRecords()
 
 	return nil
+}
+
+// releaseRecords stops the pull iterator, which ends iceberg-go's scan and frees its
+// goroutines and any batches it has not yet handed out. Callers must hold r.mu.
+func (r *Reader) releaseRecords() {
+	if r.stopRecords != nil {
+		r.stopRecords()
+		r.stopRecords = nil
+		r.nextRecord = nil
+	}
 }
 
 // Iterator provides a simplified interface for iterating over scan results
