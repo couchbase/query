@@ -226,7 +226,7 @@ func AddConversation(ce *ChatEntry, id string) {
 	naturalchatHistory.Add(ce, id, nil)
 }
 
-func GetConversation(id string) interface{} {
+func GetConversation(id string) any {
 	return naturalchatHistory.Get(id, nil)
 }
 
@@ -235,7 +235,7 @@ func DeleteConversation(id string) {
 }
 
 func ForEachConversation(nonBlocking func(chatId string, entry *ChatEntry) bool, blocking func() bool) {
-	dummyF := func(chatId string, entry interface{}) bool {
+	dummyF := func(chatId string, entry any) bool {
 		ce := entry.(*ChatEntry)
 		return nonBlocking(chatId, ce)
 	}
@@ -246,14 +246,14 @@ func CountCoversations() int {
 	return naturalchatHistory.Size()
 }
 
-func FormatChatEntry(ce *ChatEntry) map[string]interface{} {
-	item := map[string]interface{}{}
+func FormatChatEntry(ce *ChatEntry) map[string]any {
+	item := map[string]any{}
 
 	if ceId := ce.Id; ceId != "" {
 		item["chatId"] = ceId
 	}
 	if cekeyspaces := ce.Keyspaces; len(cekeyspaces) > 0 {
-		keyspaces := make([]interface{}, len(ce.Keyspaces))
+		keyspaces := make([]any, len(ce.Keyspaces))
 		for i, p := range ce.Keyspaces {
 			keyspaces[i] = p.ProtectedString()
 		}
@@ -263,7 +263,7 @@ func FormatChatEntry(ce *ChatEntry) map[string]interface{} {
 		item["prompt"] = value.NewMarshalledValue(pmpt)
 	}
 	if users := ce.users; users != nil {
-		users := make([]interface{}, len(ce.users))
+		users := make([]any, len(ce.users))
 		for i, u := range ce.users {
 			users[i] = u
 		}
@@ -424,7 +424,7 @@ func ProcessEndChat(chatId string, datastorecreds []string, chatTokens *LLMToken
 	return nil
 }
 
-func ParseChatTimeout(v interface{}) (time.Duration, error) {
+func ParseChatTimeout(v any) (time.Duration, error) {
 	var timeout time.Duration
 	switch val := v.(type) {
 	case float64:
@@ -773,9 +773,9 @@ func persistPausedChat(chatId string, ce *ChatEntry, queryMetadata datastore.Key
 	key := fmt.Sprintf("%s%s", CHAT_DOC_PREFIX, chatId)
 	dpairs := make([]value.Pair, 1)
 	dpairs[0].Name = key
-	dpairs[0].Value = value.NewValue(map[string]interface{}{"chat": base64.StdEncoding.EncodeToString(marshalledchat)})
+	dpairs[0].Value = value.NewValue(map[string]any{"chat": base64.StdEncoding.EncodeToString(marshalledchat)})
 	ttltime := time.Now().Add(CHAT_DOC_TTL_DURATION)
-	opt := value.NewValue(map[string]interface{}{})
+	opt := value.NewValue(map[string]any{})
 	opt.SetField("expiration", ttltime.Unix())
 	dpairs[0].Options = opt
 
@@ -975,7 +975,7 @@ const _MAX_SAMPLE_ARRAY_LEN = 5
 // elements and object field values are capped by recursing, so nesting can't
 // smuggle an unbounded value past the top-level cap. Other scalars pass
 // through unchanged.
-func capSampleValue(v interface{}) interface{} {
+func capSampleValue(v any) any {
 	switch t := v.(type) {
 	case string:
 		if len(t) <= _MAX_SAMPLE_STRING_LEN {
@@ -986,18 +986,18 @@ func capSampleValue(v interface{}) interface{} {
 			end--
 		}
 		return t[:end]
-	case []interface{}:
+	case []any:
 		n := len(t)
 		if n > _MAX_SAMPLE_ARRAY_LEN {
 			n = _MAX_SAMPLE_ARRAY_LEN
 		}
-		capped := make([]interface{}, n)
+		capped := make([]any, n)
 		for i := 0; i < n; i++ {
 			capped[i] = capSampleValue(t[i])
 		}
 		return capped
-	case map[string]interface{}:
-		capped := make(map[string]interface{}, len(t))
+	case map[string]any:
+		capped := make(map[string]any, len(t))
 		for k, fv := range t {
 			capped[k] = capSampleValue(fv)
 		}
@@ -1010,8 +1010,8 @@ func capSampleValue(v interface{}) interface{} {
 // capSampleBucket applies capSampleValue to every value in a field's
 // sample-value slice. Runs only on the AI path (includeSamples), after
 // samples are received from INFER.
-func capSampleBucket(arr []interface{}) []interface{} {
-	capped := make([]interface{}, len(arr))
+func capSampleBucket(arr []any) []any {
+	capped := make([]any, len(arr))
 	for i, e := range arr {
 		capped[i] = capSampleValue(value.NewValue(e).Actual())
 	}
@@ -1037,9 +1037,9 @@ type schemaField struct {
 // flattening them together would blur which examples apply when the field
 // takes on which shape.
 type sampleField struct {
-	Samples    map[string][]interface{} `json:"samples,omitempty"`
-	Properties map[string]*sampleField  `json:"properties,omitempty"`
-	Items      []*sampleField           `json:"items,omitempty"`
+	Samples    map[string][]any        `json:"samples,omitempty"`
+	Properties map[string]*sampleField `json:"properties,omitempty"`
+	Items      []*sampleField          `json:"items,omitempty"`
 }
 
 // empty reports whether s carries no sample data anywhere in its subtree, so
@@ -1085,12 +1085,12 @@ func collectProperties(props value.Value, includeSamples bool,
 // with multiple shapes (e.g. "string or number or null") instead reports
 // "samples" as one bucket per shape, in the same order as "type" -- so
 // wantType's bucket is found at the matching index in typeNames.
-func sampleBucket(schema value.Value, typeNames []string, wantType string) []interface{} {
+func sampleBucket(schema value.Value, typeNames []string, wantType string) []any {
 	s, ok := schema.Field("samples")
 	if !ok || s.Type() != value.ARRAY {
 		return nil
 	}
-	arr, ok := s.Actual().([]interface{})
+	arr, ok := s.Actual().([]any)
 	if !ok {
 		return nil
 	}
@@ -1103,7 +1103,7 @@ func sampleBucket(schema value.Value, typeNames []string, wantType string) []int
 	}
 	for i, name := range typeNames {
 		if name == wantType && i < len(arr) {
-			bucket, _ := arr[i].([]interface{})
+			bucket, _ := arr[i].([]any)
 			return bucket
 		}
 	}
@@ -1120,15 +1120,15 @@ func sampleBucket(schema value.Value, typeNames []string, wantType string) []int
 // capSampleBucket bounds their size since, unlike a scalar sample, a
 // whole-instance array sample is copied verbatim from a real document and can
 // be arbitrarily large.
-func leafSamples(schema value.Value, typeNames []string) map[string][]interface{} {
-	var result map[string][]interface{}
+func leafSamples(schema value.Value, typeNames []string) map[string][]any {
+	var result map[string][]any
 	for _, name := range typeNames {
 		if name == "null" || name == "object" {
 			continue
 		}
 		if bucket := sampleBucket(schema, typeNames, name); len(bucket) > 0 {
 			if result == nil {
-				result = map[string][]interface{}{}
+				result = map[string][]any{}
 			}
 			result[name] = capSampleBucket(bucket)
 		}
@@ -1162,7 +1162,7 @@ func collectFields(schema value.Value, includeSamples bool) (typeNode *schemaFie
 		var typestring strings.Builder
 		var typestr string
 
-		if typestrslice, ok := typeinfo.Actual().([]interface{}); ok {
+		if typestrslice, ok := typeinfo.Actual().([]any); ok {
 			for _, s := range typestrslice {
 				if typestr, ok = s.(string); ok {
 					typeNames = append(typeNames, typestr)
@@ -1199,7 +1199,7 @@ func collectFields(schema value.Value, includeSamples bool) (typeNode *schemaFie
 	if slices.Contains(typeNames, "array") {
 		if items, ok := schema.Field("items"); ok {
 			if items.Type() == value.ARRAY {
-				itemArr, _ := items.Actual().([]interface{})
+				itemArr, _ := items.Actual().([]any)
 				for _, item := range itemArr {
 					childType, childSamples := collectFields(value.NewValue(item), includeSamples)
 					typeNode.Items = append(typeNode.Items, childType)
@@ -1309,7 +1309,7 @@ type vectorIndex interface {
 	VectorProbes() int
 }
 
-func vectorFieldInfo(vi vectorIndex) map[string]interface{} {
+func vectorFieldInfo(vi vectorIndex) map[string]any {
 	field := ""
 	vtype := ""
 	for _, k := range vi.RangeKey2() {
@@ -1323,7 +1323,7 @@ func vectorFieldInfo(vi vectorIndex) map[string]interface{} {
 	if field == "" {
 		return nil
 	}
-	info := map[string]interface{}{
+	info := map[string]any{
 		"field":      field,
 		"type":       vtype,
 		"similarity": string(vi.VectorDistanceType()),
@@ -1338,8 +1338,8 @@ func vectorFieldInfo(vi vectorIndex) map[string]interface{} {
 	return info
 }
 
-func collectVectorIndexes(indexes []datastore.Index) []map[string]interface{} {
-	var rv []map[string]interface{}
+func collectVectorIndexes(indexes []datastore.Index) []map[string]any {
+	var rv []map[string]any
 	for _, idx := range indexes {
 		vi, ok := idx.(vectorIndex)
 		if !ok || !vi.IsVector() {
@@ -1352,7 +1352,7 @@ func collectVectorIndexes(indexes []datastore.Index) []map[string]interface{} {
 	return rv
 }
 
-func vectorIndexesForPath(p *algebra.Path) []map[string]interface{} {
+func vectorIndexesForPath(p *algebra.Path) []map[string]any {
 	keyspace, err := datastore.GetKeyspace(p.Parts()...)
 	if err != nil || keyspace == nil {
 		return nil
@@ -1368,9 +1368,9 @@ func vectorIndexesForPath(p *algebra.Path) []map[string]interface{} {
 	return collectVectorIndexes(indexes)
 }
 
-func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebra.Path,
+func keyspacesInfoForPrompt(keyspaceInfo map[string]any, elems []*algebra.Path,
 	context NaturalContext, includeSamples bool,
-	useKnowledge bool, naturalPrompt string) (map[string]interface{},
+	useKnowledge bool, naturalPrompt string) (map[string]any,
 	map[string]map[string]*sampleField, errors.Error) {
 
 	var err errors.Error
@@ -1405,7 +1405,7 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 		if err != nil {
 			return nil, nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_INFER, p.ProtectedString(), err)
 		}
-		info := map[string]interface{}{}
+		info := map[string]any{}
 		info["schema"] = schema
 		fullpath := p.ProtectedString()
 		info["fullpath"] = fullpath[strings.Index(fullpath, ":"):]
@@ -1442,7 +1442,7 @@ func keyspacesInfoForPrompt(keyspaceInfo map[string]interface{}, elems []*algebr
 // direct (non-slm) SQL prompts and appends it to rv. The caller is responsible
 // for the prompt shell (system message, vendor/provider field, temperature,
 // stream). rv.Size is updated in place.
-func appendSQLUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
+func appendSQLUserMessage(rv *prompt, keyspaceInfo map[string]any,
 	naturalPrompt, summary, hint string, forfts bool) errors.Error {
 
 	var userMessage string
@@ -1543,7 +1543,7 @@ func appendSQLIterativeUserMessage(chat *prompt, naturalPrompt string, hint stri
 	return chat
 }
 
-func appendJSUDFUserMessage(rv *prompt, keyspaceInfo map[string]interface{},
+func appendJSUDFUserMessage(rv *prompt, keyspaceInfo map[string]any,
 	naturalPrompt, summary, hint string) errors.Error {
 
 	var userMessage string
@@ -1770,7 +1770,7 @@ func vectorSearchInstructions(forJSUDF bool) string {
 const CHAT_DOC_PREFIX = "aichat::"
 
 func (ce *ChatEntry) MarshalJSON() ([]byte, error) {
-	rv := map[string]interface{}{}
+	rv := map[string]any{}
 	if users := ce.users; users != nil {
 		rv["users"] = users
 	}
@@ -1786,7 +1786,7 @@ func (ce *ChatEntry) MarshalJSON() ([]byte, error) {
 		rv["summary"] = summ
 	}
 	if t := ce.Tokens; t.Prompt != 0 || t.Completion != 0 || t.Total != 0 {
-		rv["tokens"] = map[string]interface{}{
+		rv["tokens"] = map[string]any{
 			"prompt":     t.Prompt,
 			"completion": t.Completion,
 			"total":      t.Total,

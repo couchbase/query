@@ -90,7 +90,7 @@ type openAIChatRequest struct {
 }
 
 type openAIChatResponse struct {
-	Error   map[string]interface{} `json:"error"`
+	Error   map[string]any `json:"error"`
 	Choices []struct {
 		Message struct {
 			Content string `json:"content"`
@@ -229,7 +229,7 @@ func (o *openAIProvider) Moderate(req *Request, cfg *Config, ctx Context) errors
 		return nil
 	}
 
-	payload, e := json.Marshal(map[string]interface{}{"input": inputs})
+	payload, e := json.Marshal(map[string]any{"input": inputs})
 	if e != nil {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_PROMPT_MARSHAL, e)
 	}
@@ -732,7 +732,7 @@ type geminiResponse struct {
 		CandidatesTokenCount int `json:"candidatesTokenCount"`
 		TotalTokenCount      int `json:"totalTokenCount"`
 	} `json:"usageMetadata"`
-	Error map[string]interface{} `json:"error"`
+	Error map[string]any `json:"error"`
 }
 
 // buildGeminiBody renders the neutral Request into the Gemini generateContent

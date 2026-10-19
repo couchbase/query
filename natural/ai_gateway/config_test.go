@@ -56,7 +56,7 @@ func TestParseConfig_NotAnObject(t *testing.T) {
 }
 
 func TestParseConfig_AllFields(t *testing.T) {
-	cfg, err := ParseConfig(value.NewValue(map[string]interface{}{
+	cfg, err := ParseConfig(value.NewValue(map[string]any{
 		"provider":           "bedrock",
 		"model":              "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
 		"cred_id":            "my-cred",
@@ -82,7 +82,7 @@ func TestParseConfig_AllFields(t *testing.T) {
 // default) is distinguishable from an explicit false (moderation skipped).
 func TestParseConfig_Moderation(t *testing.T) {
 	// Absent: the pointer stays nil so moderation runs by default.
-	cfg, err := ParseConfig(value.NewValue(map[string]interface{}{"provider": "openai"}))
+	cfg, err := ParseConfig(value.NewValue(map[string]any{"provider": "openai"}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestParseConfig_Moderation(t *testing.T) {
 
 	// Explicit true / false are each captured distinctly from unset.
 	for _, want := range []bool{true, false} {
-		cfg, err := ParseConfig(value.NewValue(map[string]interface{}{"moderation": want}))
+		cfg, err := ParseConfig(value.NewValue(map[string]any{"moderation": want}))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -104,7 +104,7 @@ func TestParseConfig_Moderation(t *testing.T) {
 	// A wrong-typed value is a caller error rather than a silent fallback: a
 	// string where a boolean is expected would otherwise leave moderation
 	// silently on, the opposite of the caller's apparent intent.
-	if _, err := ParseConfig(value.NewValue(map[string]interface{}{"moderation": "yes"})); err == nil {
+	if _, err := ParseConfig(value.NewValue(map[string]any{"moderation": "yes"})); err == nil {
 		t.Fatalf("wrong-typed moderation must return an error")
 	}
 }
@@ -115,7 +115,7 @@ func TestParseConfig_WrongTypedFieldsError(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
 		field string
-		value interface{}
+		value any
 	}{
 		{"provider not string", "provider", 123},
 		{"model not string", "model", true},
@@ -128,7 +128,7 @@ func TestParseConfig_WrongTypedFieldsError(t *testing.T) {
 		{"moderation not boolean", "moderation", "yes"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := ParseConfig(value.NewValue(map[string]interface{}{tc.field: tc.value})); err == nil {
+			if _, err := ParseConfig(value.NewValue(map[string]any{tc.field: tc.value})); err == nil {
 				t.Fatalf("wrong-typed %q must return an error", tc.field)
 			}
 		})
@@ -138,7 +138,7 @@ func TestParseConfig_WrongTypedFieldsError(t *testing.T) {
 // An explicit JSON null is treated as "not provided" and falls back to the
 // default, not as a type error.
 func TestParseConfig_NullFieldsTreatedAsAbsent(t *testing.T) {
-	cfg, err := ParseConfig(value.NewValue(map[string]interface{}{
+	cfg, err := ParseConfig(value.NewValue(map[string]any{
 		"provider":           nil,
 		"output_token_limit": nil,
 		"moderation":         nil,
@@ -152,7 +152,7 @@ func TestParseConfig_NullFieldsTreatedAsAbsent(t *testing.T) {
 }
 
 func TestParseConfig_EmptyObject(t *testing.T) {
-	cfg, err := ParseConfig(value.NewValue(map[string]interface{}{}))
+	cfg, err := ParseConfig(value.NewValue(map[string]any{}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

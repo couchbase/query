@@ -148,7 +148,7 @@ func refreshDoc(b datastore.Keyspace, key string) {
 // forEachCachedDoc invokes f for every currently-cached, confirmed-existing document. f must not
 // block or call back into the cache.
 func forEachCachedDoc(f func(doc value.AnnotatedValue)) {
-	cache.ForEach(func(id string, entry interface{}) bool {
+	cache.ForEach(func(id string, entry any) bool {
 		if ce, ok := entry.(*cacheEntry); ok && ce.exists && ce.doc != nil {
 			f(ce.doc)
 		}
@@ -164,7 +164,7 @@ func forEachCachedDoc(f func(doc value.AnnotatedValue)) {
 // matches directly against what's already cached, so it works even then.
 func purgeScope(bucket, scope string) {
 	var keys []string
-	cache.ForEach(func(id string, entry interface{}) bool {
+	cache.ForEach(func(id string, entry any) bool {
 		if ce, ok := entry.(*cacheEntry); ok && ce.exists && ce.doc != nil {
 			bk, bok := ce.doc.Field("bucket")
 			sc, sok := ce.doc.Field("scope")

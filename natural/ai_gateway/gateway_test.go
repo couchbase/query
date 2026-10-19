@@ -55,7 +55,7 @@ import (
 // (queried for the cluster allowlist). Tests only set the fields they care
 // about.
 type testContext struct {
-	allowlist map[string]interface{}
+	allowlist map[string]any
 	cred      *cbauth.Credential
 	credErr   error
 }
@@ -67,7 +67,7 @@ var _ expression.CurlContext = (*testContext)(nil)
 
 // allowAllContext returns a context whose cluster allowlist permits every URL.
 func allowAllContext() *testContext {
-	return &testContext{allowlist: map[string]interface{}{util.AllowlistKeyAllAccess: true}}
+	return &testContext{allowlist: map[string]any{util.AllowlistKeyAllAccess: true}}
 }
 
 // expression.Context
@@ -79,18 +79,18 @@ func (c *testContext) ExternalCredential(_ string) (*cbauth.Credential, error) {
 	return c.cred, c.credErr
 }
 func (c *testContext) DatastoreVersion() string                                { return "" }
-func (c *testContext) NewQueryContext(_ string, _ bool) interface{}            { return nil }
-func (c *testContext) AdminContext() (interface{}, error)                      { return nil, nil }
+func (c *testContext) NewQueryContext(_ string, _ bool) any                    { return nil }
+func (c *testContext) AdminContext() (any, error)                              { return nil, nil }
 func (c *testContext) QueryContext() string                                    { return "" }
 func (c *testContext) QueryContextParts() []string                             { return nil }
-func (c *testContext) GetTxContext() interface{}                               { return nil }
-func (c *testContext) SetTxContext(_ interface{})                              {}
+func (c *testContext) GetTxContext() any                                       { return nil }
+func (c *testContext) SetTxContext(_ any)                                      {}
 func (c *testContext) Readonly() bool                                          { return false }
 func (c *testContext) SetAdvisor()                                             {}
 func (c *testContext) IncRecursionCount(_ int) int                             { return 0 }
 func (c *testContext) RecursionCount() int                                     { return 0 }
-func (c *testContext) StoreValue(_ string, _ interface{})                      {}
-func (c *testContext) RetrieveValue(_ string) interface{}                      { return nil }
+func (c *testContext) StoreValue(_ string, _ any)                              {}
+func (c *testContext) RetrieveValue(_ string) any                              { return nil }
 func (c *testContext) ReleaseValue(_ string)                                   {}
 func (c *testContext) SetTracked(_ bool)                                       {}
 func (c *testContext) IsTracked() bool                                         { return false }
@@ -99,9 +99,9 @@ func (c *testContext) SetPreserveProjectionOrder(_ bool) bool                  {
 func (c *testContext) IsAdmin() bool                                           { return false }
 func (c *testContext) IsPrepared() bool                                        { return false }
 func (c *testContext) SanitizeStatement(_ string) (string, value.Value, error) { return "", nil, nil }
-func (c *testContext) Parse(_ string) (interface{}, error)                     { return nil, nil }
+func (c *testContext) Parse(_ string) (any, error)                             { return nil, nil }
 func (c *testContext) Infer(_ value.Value, _ value.Value) (value.Value, error) { return nil, nil }
-func (c *testContext) InferKeyspace(_ interface{}, _ value.Value) (value.Value, error) {
+func (c *testContext) InferKeyspace(_ any, _ value.Value) (value.Value, error) {
 	return nil, nil
 }
 func (c *testContext) EvaluateStatement(_ string, _ map[string]value.Value, _ value.Values,
@@ -153,30 +153,30 @@ func (c *testContext) Users() string                              { return "" }
 func (c *testContext) RemoteAddr() string                         { return "" }
 
 // expression.CurlContext
-func (c *testContext) GetAllowlist() map[string]interface{}      { return c.allowlist }
+func (c *testContext) GetAllowlist() map[string]any              { return c.allowlist }
 func (c *testContext) UrlCredentials(_ string) *auth.Credentials { return nil }
 func (c *testContext) DatastoreURL() string                      { return "" }
-func (c *testContext) LoadX509KeyPair(_, _ string, _ []byte) (interface{}, error) {
+func (c *testContext) LoadX509KeyPair(_, _ string, _ []byte) (any, error) {
 	return nil, nil
 }
 
 // logging.Log no-ops
-func (c *testContext) Loga(_ logging.Level, _ func() string)            {}
-func (c *testContext) Debuga(_ func() string)                           {}
-func (c *testContext) Tracea(_ func() string)                           {}
-func (c *testContext) Infoa(_ func() string)                            {}
-func (c *testContext) Warna(_ func() string)                            {}
-func (c *testContext) Errora(_ func() string)                           {}
-func (c *testContext) Severea(_ func() string)                          {}
-func (c *testContext) Fatala(_ func() string)                           {}
-func (c *testContext) Logf(_ logging.Level, _ string, _ ...interface{}) {}
-func (c *testContext) Debugf(_ string, _ ...interface{})                {}
-func (c *testContext) Tracef(_ string, _ ...interface{})                {}
-func (c *testContext) Infof(_ string, _ ...interface{})                 {}
-func (c *testContext) Warnf(_ string, _ ...interface{})                 {}
-func (c *testContext) Errorf(_ string, _ ...interface{})                {}
-func (c *testContext) Severef(_ string, _ ...interface{})               {}
-func (c *testContext) Fatalf(_ string, _ ...interface{})                {}
+func (c *testContext) Loga(_ logging.Level, _ func() string)    {}
+func (c *testContext) Debuga(_ func() string)                   {}
+func (c *testContext) Tracea(_ func() string)                   {}
+func (c *testContext) Infoa(_ func() string)                    {}
+func (c *testContext) Warna(_ func() string)                    {}
+func (c *testContext) Errora(_ func() string)                   {}
+func (c *testContext) Severea(_ func() string)                  {}
+func (c *testContext) Fatala(_ func() string)                   {}
+func (c *testContext) Logf(_ logging.Level, _ string, _ ...any) {}
+func (c *testContext) Debugf(_ string, _ ...any)                {}
+func (c *testContext) Tracef(_ string, _ ...any)                {}
+func (c *testContext) Infof(_ string, _ ...any)                 {}
+func (c *testContext) Warnf(_ string, _ ...any)                 {}
+func (c *testContext) Errorf(_ string, _ ...any)                {}
+func (c *testContext) Severef(_ string, _ ...any)               {}
+func (c *testContext) Fatalf(_ string, _ ...any)                {}
 
 // shrinkBackoff makes transient-failure retries near-instant for the duration
 // of a test.
@@ -237,9 +237,9 @@ func TestDoProviderRequest_URLNotInAllowlistDenied(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	ctx := &testContext{allowlist: map[string]interface{}{
+	ctx := &testContext{allowlist: map[string]any{
 		util.AllowlistKeyAllAccess:   false,
-		util.AllowlistKeyAllowedURLs: []interface{}{"https://api.openai.com"},
+		util.AllowlistKeyAllowedURLs: []any{"https://api.openai.com"},
 	}}
 	_, err := doProviderRequest(context.Background(), ts.URL+"/v1/chat/completions", []byte("{}"),
 		&openAIProvider{}, &Config{APIKey: "k"}, ctx)
@@ -399,11 +399,11 @@ func openAITestServer(t *testing.T, flag bool) (ts *httptest.Server,
 			t.Errorf("moderation body: %v", err)
 		}
 		inputs = body.Input
-		results := make([]map[string]interface{}, len(body.Input))
+		results := make([]map[string]any, len(body.Input))
 		for i := range results {
-			results[i] = map[string]interface{}{"flagged": flag}
+			results[i] = map[string]any{"flagged": flag}
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+		json.NewEncoder(w).Encode(map[string]any{"results": results})
 	})
 	ts = httptest.NewServer(mux)
 	t.Cleanup(ts.Close)

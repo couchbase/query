@@ -59,7 +59,7 @@ func directFillTemplate(tmpl string, vars map[string]string) string {
 // variant templates. It supports any number of keyspaces: the schema object is
 // keyed by each keyspace's fully-qualified `bucket`.`scope`.`collection` path, so
 // the bucket/scope/collection relationship travels with the schema itself.
-func newDirectSLMSQLPrompt(keyspaceInfo map[string]interface{}, paths []*algebra.Path,
+func newDirectSLMSQLPrompt(keyspaceInfo map[string]any, paths []*algebra.Path,
 	naturalPrompt, summary, hint string, forfts bool, provider, model string) (*prompt, errors.Error) {
 
 	// The slm was trained on a schema object keyed by the fully-qualified
@@ -68,8 +68,8 @@ func newDirectSLMSQLPrompt(keyspaceInfo map[string]interface{}, paths []*algebra
 	// the shared structure keeps its {schema,fullpath} form for the hosted
 	// providers. Each path component is backtick-quoted so a name that itself
 	// contains dots (e.g. `my.bucket`) stays unambiguous.
-	slmSchema := make(map[string]interface{}, len(paths))
-	slmKnowledge := make(map[string]interface{})
+	slmSchema := make(map[string]any, len(paths))
+	slmKnowledge := make(map[string]any)
 	for _, p := range paths {
 		parts := p.Parts()[1:] // drop the namespace component
 		quoted := make([]string, len(parts))
@@ -77,12 +77,12 @@ func newDirectSLMSQLPrompt(keyspaceInfo map[string]interface{}, paths []*algebra
 			quoted[i] = "`" + part + "`"
 		}
 		fqpath := strings.Join(quoted, ".")
-		info, ok := keyspaceInfo[p.Keyspace()].(map[string]interface{})
+		info, ok := keyspaceInfo[p.Keyspace()].(map[string]any)
 		if !ok {
 			return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_PROMPT_SCHEMA_MARSHAL,
 				fmt.Errorf("missing schema for keyspace %q", p.Keyspace()))
 		}
-		schemaEntry := map[string]interface{}{"properties": info["schema"]}
+		schemaEntry := map[string]any{"properties": info["schema"]}
 		if vi, ok := info["vectorIndexes"]; ok {
 			schemaEntry["vectorIndexes"] = vi
 		}
@@ -149,7 +149,7 @@ func newDirectSLMSQLPrompt(keyspaceInfo map[string]interface{}, paths []*algebra
 	return rv, nil
 }
 
-func newDirectSQLPrompt(keyspaceInfo map[string]interface{}, paths []*algebra.Path,
+func newDirectSQLPrompt(keyspaceInfo map[string]any, paths []*algebra.Path,
 	naturalPrompt, summary, hint string, forfts bool,
 	provider string, model string) (*prompt, errors.Error) {
 	if provider == ai_gateway.ProviderSLM {
@@ -180,7 +180,7 @@ func newDirectSQLPrompt(keyspaceInfo map[string]interface{}, paths []*algebra.Pa
 	return rv, nil
 }
 
-func newDirectJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string, provider string, model string) (*prompt, errors.Error) {
+func newDirectJSUDFPrompt(keyspaceInfo map[string]any, naturalPrompt, summary, hint string, provider string, model string) (*prompt, errors.Error) {
 	systemMsg := "You are a Couchbase Server expert. Your task is to write valid Javascript user defined functions" +
 		" based on the provided information." +
 		"\n\nApproach this task step-by-step and take your time."
@@ -272,7 +272,7 @@ func ProcessDirectRequest(cfg *NaturalConfig, nlquery, nlHint string, elems []*a
 	}
 	provider, model := cfg.Provider, cfg.Model
 
-	keyspaceInfo := make(map[string]interface{}, len(elems))
+	keyspaceInfo := make(map[string]any, len(elems))
 	var samples map[string]map[string]*sampleField
 	inferschema := util.Now()
 	keyspaceInfo, samples, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context, provider == ai_gateway.ProviderSLM,
@@ -489,7 +489,7 @@ func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint stri
 
 	var prompt *prompt
 	if ce.prompt == nil {
-		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
+		keyspaceInfo := make(map[string]any, len(ce.Keyspaces))
 		var samples map[string]map[string]*sampleField
 		inferschema := util.Now()
 		keyspaceInfo, samples, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context, provider == ai_gateway.ProviderSLM,
@@ -526,7 +526,7 @@ func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint stri
 		if provider != ai_gateway.ProviderSLM {
 			ce.samples = nil
 		} else if ce.samples == nil {
-			tmp := make(map[string]interface{}, len(ce.Keyspaces))
+			tmp := make(map[string]any, len(ce.Keyspaces))
 			inferschema := util.Now()
 			_, samples, serr := keyspacesInfoForPrompt(tmp, ce.Keyspaces, context, true, false, nlquery)
 			record(execution.INFERSCHEMA, util.Since(inferschema))

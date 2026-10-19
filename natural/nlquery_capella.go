@@ -113,7 +113,7 @@ func capellaV2ErrCauseFromBody(body []byte) error {
 	if len(body) == 0 {
 		return nil
 	}
-	var errRes map[string]interface{}
+	var errRes map[string]any
 	if json.Unmarshal(body, &errRes) == nil {
 		return fmt.Errorf("%v", errRes)
 	}
@@ -183,7 +183,7 @@ func capellaDoV2Request(method, url string, payload []byte, nlCred, jwt string) 
 // organization. It handles JWT acquisition and returns the result as a value
 // ready for use in query results.
 
-func GetCapellaModelProviders(nlCred, nlOrganizationId string, enabledOnly bool) (interface{}, errors.Error) {
+func GetCapellaModelProviders(nlCred, nlOrganizationId string, enabledOnly bool) (any, errors.Error) {
 	jwt, err := getCapellaJWTFromSessionsApi(nlCred, false)
 	if err != nil {
 		return nil, err
@@ -192,13 +192,13 @@ func GetCapellaModelProviders(nlCred, nlOrganizationId string, enabledOnly bool)
 	if err != nil {
 		return nil, err
 	}
-	result := make([]interface{}, len(providers))
+	result := make([]any, len(providers))
 	for i, p := range providers {
-		models := make([]interface{}, len(p.Models))
+		models := make([]any, len(p.Models))
 		for j, m := range p.Models {
 			models[j] = m
 		}
-		result[i] = map[string]interface{}{
+		result[i] = map[string]any{
 			"id":      p.ID,
 			"name":    p.Name,
 			"models":  models,
@@ -419,7 +419,7 @@ func getCapellaJWTFromSessionsApi(nlCred string, refresh bool) (string, errors.E
 
 // Prompt
 
-func newCapellaSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string, forfts bool,
+func newCapellaSQLPrompt(keyspaceInfo map[string]any, naturalPrompt, summary, hint string, forfts bool,
 	provider string, model string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
@@ -447,7 +447,7 @@ func newCapellaSQLPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, sum
 	return rv, nil
 }
 
-func newCapellaJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, summary, hint string, provider string, model string) (*prompt, errors.Error) {
+func newCapellaJSUDFPrompt(keyspaceInfo map[string]any, naturalPrompt, summary, hint string, provider string, model string) (*prompt, errors.Error) {
 	rv := &prompt{
 		InitMessages: []message{
 			message{
@@ -512,8 +512,8 @@ func doCapellaChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt st
 		Code    string `json:"code"`
 	}
 	type ChatCompletionResponse struct {
-		Error   map[string]interface{} `json:"error"`
-		Choices []Choice               `json:"choices"`
+		Error   map[string]any `json:"error"`
+		Choices []Choice       `json:"choices"`
 	}
 
 	url := getCapellaCompletionsApi(nlOrganizationId)
@@ -593,7 +593,7 @@ func ProcessCapellaRequest(nlCred, nlOrgId, nlProvider, nlModel, nlquery, nlHint
 		return "", nil, err
 	}
 
-	keyspaceInfo := make(map[string]interface{}, len(elems))
+	keyspaceInfo := make(map[string]any, len(elems))
 	inferschema := util.Now()
 	keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, elems, context, false, useKnowledge, nlquery)
 	record(execution.INFERSCHEMA, util.Since(inferschema))
@@ -796,7 +796,7 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 
 	var prompt *prompt
 	if ce.prompt == nil {
-		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
+		keyspaceInfo := make(map[string]any, len(ce.Keyspaces))
 		inferschema := util.Now()
 		keyspaceInfo, _, err = keyspacesInfoForPrompt(keyspaceInfo, ce.Keyspaces, context, false, ce.useKnowledge, nlquery)
 		record(execution.INFERSCHEMA, util.Since(inferschema))

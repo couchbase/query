@@ -37,9 +37,9 @@ import (
 
 // unmarshalBody parses a built request body into a generic map so tests can
 // assert the presence or absence of optional keys.
-func unmarshalBody(t *testing.T, body []byte) map[string]interface{} {
+func unmarshalBody(t *testing.T, body []byte) map[string]any {
 	t.Helper()
-	var m map[string]interface{}
+	var m map[string]any
 	if err := json.Unmarshal(body, &m); err != nil {
 		t.Fatalf("built body is not valid JSON: %v\n%s", err, body)
 	}

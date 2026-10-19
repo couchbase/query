@@ -194,7 +194,7 @@ func getSystemCollection(bucket string) (datastore.Keyspace, errors.Error) {
 // is returned as-is, already a full domain error; any other failure (loading or writing the
 // document) is passed through wrap to become one.
 func writeKnowledgeEntries(b datastore.Keyspace, scopeUid, collectionUid string, path *algebra.Path,
-	wrap func(error) errors.Error, build func(existing map[string]interface{}) (map[string]interface{}, errors.Error)) errors.Error {
+	wrap func(error) errors.Error, build func(existing map[string]any) (map[string]any, errors.Error)) errors.Error {
 
 	key := getStorageKey(scopeUid, collectionUid, path)
 
@@ -210,10 +210,10 @@ func writeKnowledgeEntries(b datastore.Keyspace, scopeUid, collectionUid string,
 			return wrap(lerr)
 		}
 
-		var existing map[string]interface{}
+		var existing map[string]any
 		if exists {
 			if obj, ok := av.Field(_FIELD); ok && obj.Type() == value.OBJECT {
-				existing, _ = obj.Actual().(map[string]interface{})
+				existing, _ = obj.Actual().(map[string]any)
 			}
 		}
 
@@ -236,7 +236,7 @@ func writeKnowledgeEntries(b datastore.Keyspace, scopeUid, collectionUid string,
 			pairs[0].Value = newDoc
 			_, _, errs2 = b.Update(pairs, datastore.GetDurableQueryContextFor(b), true)
 		} else {
-			m := map[string]interface{}{
+			m := map[string]any{
 				"namespace":  path.Namespace(),
 				"bucket":     path.Bucket(),
 				"scope":      path.Scope(),
@@ -317,11 +317,11 @@ func CreateKnowledge(path *algebra.Path, name string, val string, replace bool) 
 	wrap := func(cause error) errors.Error {
 		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, name, cause)
 	}
-	return writeKnowledgeEntries(b, scopeUid, collectionUid, path, wrap, func(existing map[string]interface{}) (map[string]interface{}, errors.Error) {
+	return writeKnowledgeEntries(b, scopeUid, collectionUid, path, wrap, func(existing map[string]any) (map[string]any, errors.Error) {
 		if _, dup := existing[name]; dup && !replace {
 			return nil, errors.NewKnowledgeError(errors.E_KNOWLEDGE_ALREADY_EXISTS, name)
 		}
-		entries := make(map[string]interface{}, len(existing)+1)
+		entries := make(map[string]any, len(existing)+1)
 		for k, v := range existing {
 			entries[k] = v
 		}
@@ -347,7 +347,7 @@ func CreateKnowledgeBulk(path *algebra.Path, entries map[string]string, replace 
 	wrap := func(cause error) errors.Error {
 		return errors.NewKnowledgeError(errors.E_KNOWLEDGE_CREATE, path.SimpleString(), cause)
 	}
-	return writeKnowledgeEntries(b, scopeUid, collectionUid, path, wrap, func(existing map[string]interface{}) (map[string]interface{}, errors.Error) {
+	return writeKnowledgeEntries(b, scopeUid, collectionUid, path, wrap, func(existing map[string]any) (map[string]any, errors.Error) {
 		if !replace {
 			for name := range entries {
 				if _, dup := existing[name]; dup {
@@ -355,7 +355,7 @@ func CreateKnowledgeBulk(path *algebra.Path, entries map[string]string, replace 
 				}
 			}
 		}
-		merged := make(map[string]interface{}, len(existing)+len(entries))
+		merged := make(map[string]any, len(existing)+len(entries))
 		for k, v := range existing {
 			merged[k] = v
 		}
@@ -440,9 +440,9 @@ func dropNamedEntries(b datastore.Keyspace, key string, path *algebra.Path, name
 			return errors.NewKnowledgeError(errors.E_KNOWLEDGE_NOT_FOUND, path.SimpleString())
 		}
 
-		var existing map[string]interface{}
+		var existing map[string]any
 		if obj, ok := av.Field(_FIELD); ok && obj.Type() == value.OBJECT {
-			existing, _ = obj.Actual().(map[string]interface{})
+			existing, _ = obj.Actual().(map[string]any)
 		}
 
 		// missing is checked against existing (never mutated), so a name repeated in names is
@@ -457,7 +457,7 @@ func dropNamedEntries(b datastore.Keyspace, key string, path *algebra.Path, name
 			return errors.NewKnowledgeError(errors.E_KNOWLEDGE_NOT_FOUND, strings.Join(missing, ", "))
 		}
 
-		remaining := make(map[string]interface{}, len(existing))
+		remaining := make(map[string]any, len(existing))
 		for k, v := range existing {
 			remaining[k] = v
 		}
@@ -501,7 +501,7 @@ func splitExtKey(key string) (string, string, bool) {
 }
 
 func rowFor(path *algebra.Path, name string, val value.Value) value.AnnotatedValue {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"namespace":  path.Namespace(),
 		"bucket":     path.Bucket(),
 		"scope":      path.Scope(),
@@ -890,8 +890,8 @@ func Scan(bucket string, cb func(string) error) errors.Error {
 // filter, if non-nil, is called with the keyspace's path parts ([namespace, bucket, scope,
 // collection]) and the keyspace is skipped when it returns false - the backup service uses this to
 // apply the request's include/exclude filters, exactly as it does for cbo and plan stability.
-func BackupEntries(namespace, bucket string, filter func([]string) bool) ([]interface{}, errors.Error) {
-	rv := make([]interface{}, 0)
+func BackupEntries(namespace, bucket string, filter func([]string) bool) ([]any, errors.Error) {
+	rv := make([]any, 0)
 
 	process := func(av value.AnnotatedValue) {
 		obj, ok := av.Field(_FIELD)
@@ -924,11 +924,11 @@ func BackupEntries(namespace, bucket string, filter func([]string) bool) ([]inte
 			return
 		}
 
-		entries := make(map[string]interface{}, len(fields))
+		entries := make(map[string]any, len(fields))
 		for name, v := range fields {
 			entries[name] = v
 		}
-		rv = append(rv, map[string]interface{}{
+		rv = append(rv, map[string]any{
 			"identity":  algebra.PathFromParts(path...),
 			"knowledge": entries,
 		})

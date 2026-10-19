@@ -346,7 +346,7 @@ func llmErrCause(body []byte) error {
 	if len(body) == 0 {
 		return nil
 	}
-	var errRes map[string]interface{}
+	var errRes map[string]any
 	if json.Unmarshal(body, &errRes) == nil {
 		return fmt.Errorf("%v", errRes)
 	}

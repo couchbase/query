@@ -80,9 +80,9 @@ func TestNewNaturalOutput(t *testing.T) {
 
 // ─── SQL prompt builders ──────────────────────────────────────────────────────
 
-func testKeyspaceInfo() map[string]interface{} {
-	return map[string]interface{}{
-		"hotel": map[string]interface{}{
+func testKeyspaceInfo() map[string]any {
+	return map[string]any{
+		"hotel": map[string]any{
 			"schema":   map[string]string{"name": "\"string\""},
 			"fullpath": ":`travel-sample`.`inventory`.`hotel`",
 		},
@@ -307,17 +307,17 @@ func TestGetStatement_EmptyContent(t *testing.T) {
 // ─── INFER schema and sample extraction ───────────────────────────────────────
 
 // inferValue builds a value shaped like a single-keyspace INFER result.
-func inferValue(properties map[string]interface{}) value.Value {
-	return value.NewValue([]interface{}{
-		map[string]interface{}{"properties": properties},
+func inferValue(properties map[string]any) value.Value {
+	return value.NewValue([]any{
+		map[string]any{"properties": properties},
 	})
 }
 
 func TestCollectSchemaForPromptFromInfer_Types(t *testing.T) {
-	infer := inferValue(map[string]interface{}{
-		"name":  map[string]interface{}{"type": "string"},
-		"score": map[string]interface{}{"type": []interface{}{"number", "string"}},
-		"~meta": map[string]interface{}{"type": "object"},
+	infer := inferValue(map[string]any{
+		"name":  map[string]any{"type": "string"},
+		"score": map[string]any{"type": []any{"number", "string"}},
+		"~meta": map[string]any{"type": "object"},
 	})
 	schema, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, false)
 	if samples != nil {
@@ -335,9 +335,9 @@ func TestCollectSchemaForPromptFromInfer_Types(t *testing.T) {
 }
 
 func TestCollectSchemaForPromptFromInfer_Samples(t *testing.T) {
-	infer := inferValue(map[string]interface{}{
-		"type":    map[string]interface{}{"type": "string", "samples": []interface{}{"hotel", "airline"}},
-		"ratings": map[string]interface{}{"type": "number"}, // no samples reported
+	infer := inferValue(map[string]any{
+		"type":    map[string]any{"type": "string", "samples": []any{"hotel", "airline"}},
+		"ratings": map[string]any{"type": "number"}, // no samples reported
 	})
 	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
 	if len(samples) != 1 {
@@ -356,8 +356,8 @@ func TestCollectSchemaForPromptFromInfer_Samples(t *testing.T) {
 }
 
 func TestCollectSchemaForPromptFromInfer_NoSamplesReported(t *testing.T) {
-	infer := inferValue(map[string]interface{}{
-		"name": map[string]interface{}{"type": "string"},
+	infer := inferValue(map[string]any{
+		"name": map[string]any{"type": "string"},
 	})
 	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
 	if samples != nil {
@@ -370,11 +370,11 @@ func TestCollectSchemaForPromptFromInfer_NoSamplesReported(t *testing.T) {
 // because a field is nullable would silently hide most optional nested
 // objects, which are common in flexible-schema documents.
 func TestCollectFields_UnionObjectRecursesIntoProperties(t *testing.T) {
-	infer := inferValue(map[string]interface{}{
-		"address": map[string]interface{}{
-			"type": []interface{}{"null", "object"},
-			"properties": map[string]interface{}{
-				"city": map[string]interface{}{"type": "string"},
+	infer := inferValue(map[string]any{
+		"address": map[string]any{
+			"type": []any{"null", "object"},
+			"properties": map[string]any{
+				"city": map[string]any{"type": "string"},
 			},
 		},
 	})
@@ -398,19 +398,19 @@ func TestCollectFields_UnionObjectRecursesIntoProperties(t *testing.T) {
 // leaving them unreachable or split apart into item fields (which would lose
 // which values co-occurred in the same sampled record).
 func TestCollectFields_ArraySamplesAttachToFieldItself(t *testing.T) {
-	infer := inferValue(map[string]interface{}{
-		"reviews": map[string]interface{}{
+	infer := inferValue(map[string]any{
+		"reviews": map[string]any{
 			"type": "array",
-			"items": map[string]interface{}{
+			"items": map[string]any{
 				"type": "object",
-				"properties": map[string]interface{}{
-					"author": map[string]interface{}{"type": "string"},
+				"properties": map[string]any{
+					"author": map[string]any{"type": "string"},
 				},
 			},
-			"samples": []interface{}{
-				[]interface{}{
-					map[string]interface{}{"author": "Alice", "rating": 5},
-					map[string]interface{}{"author": "Bob", "rating": 3},
+			"samples": []any{
+				[]any{
+					map[string]any{"author": "Alice", "rating": 5},
+					map[string]any{"author": "Bob", "rating": 3},
 				},
 			},
 		},
@@ -427,13 +427,13 @@ func TestCollectFields_ArraySamplesAttachToFieldItself(t *testing.T) {
 	if len(got) != 1 {
 		t.Fatalf("reviews array samples: got %+v", got)
 	}
-	instance, ok := got[0].([]interface{})
+	instance, ok := got[0].([]any)
 	if !ok || len(instance) != 2 {
 		t.Fatalf("expected the whole sampled instance intact, got %+v", got[0])
 	}
 	// The instance must survive as one JSON-shaped value, so author/rating pairs
 	// from the same record are still readable together.
-	first, ok := instance[0].(map[string]interface{})
+	first, ok := instance[0].(map[string]any)
 	if !ok || first["author"] != "Alice" || first["rating"] != 5 {
 		t.Fatalf("expected co-occurring fields preserved on one element, got %+v", instance[0])
 	}
@@ -443,22 +443,22 @@ func TestCollectFields_ArraySamplesAttachToFieldItself(t *testing.T) {
 // carry its whole sampled instances intact -- there is no per-shape routing
 // to do since nothing is being decomposed.
 func TestCollectFields_HeterogeneousArraySamplesAttachToFieldItself(t *testing.T) {
-	infer := inferValue(map[string]interface{}{
-		"notes": map[string]interface{}{
+	infer := inferValue(map[string]any{
+		"notes": map[string]any{
 			"type": "array",
-			"items": []interface{}{
-				map[string]interface{}{"type": "string"},
-				map[string]interface{}{
+			"items": []any{
+				map[string]any{"type": "string"},
+				map[string]any{
 					"type": "object",
-					"properties": map[string]interface{}{
-						"author": map[string]interface{}{"type": "string"},
+					"properties": map[string]any{
+						"author": map[string]any{"type": "string"},
 					},
 				},
 			},
-			"samples": []interface{}{
-				[]interface{}{
+			"samples": []any{
+				[]any{
 					"hello",
-					map[string]interface{}{"author": "Alice"},
+					map[string]any{"author": "Alice"},
 				},
 			},
 		},
@@ -472,7 +472,7 @@ func TestCollectFields_HeterogeneousArraySamplesAttachToFieldItself(t *testing.T
 	if len(got) != 1 {
 		t.Fatalf("notes array samples: got %+v", got)
 	}
-	instance, ok := got[0].([]interface{})
+	instance, ok := got[0].([]any)
 	if !ok || len(instance) != 2 || instance[0] != "hello" {
 		t.Fatalf("expected the whole heterogeneous instance intact, got %+v", got[0])
 	}
@@ -485,26 +485,26 @@ func TestCollectFields_HeterogeneousArraySamplesAttachToFieldItself(t *testing.T
 // dumping unabridged into the prompt.
 func TestCollectFields_ArraySamplesAreCapped(t *testing.T) {
 	longString := strings.Repeat("x", _MAX_SAMPLE_STRING_LEN+10)
-	manyElems := []interface{}{}
+	manyElems := []any{}
 	for i := 0; i < _MAX_SAMPLE_ARRAY_LEN+3; i++ {
-		manyElems = append(manyElems, map[string]interface{}{"comment": longString})
+		manyElems = append(manyElems, map[string]any{"comment": longString})
 	}
-	infer := inferValue(map[string]interface{}{
-		"reviews": map[string]interface{}{
+	infer := inferValue(map[string]any{
+		"reviews": map[string]any{
 			"type":    "array",
-			"items":   map[string]interface{}{"type": "object"},
-			"samples": []interface{}{manyElems},
+			"items":   map[string]any{"type": "object"},
+			"samples": []any{manyElems},
 		},
 	})
 	_, samples := collectSchemaFromInfer(map[string]*schemaField{}, infer, true)
-	instance, ok := samples["reviews"].Samples["array"][0].([]interface{})
+	instance, ok := samples["reviews"].Samples["array"][0].([]any)
 	if !ok {
 		t.Fatalf("reviews array sample missing: got %+v", samples["reviews"])
 	}
 	if len(instance) != _MAX_SAMPLE_ARRAY_LEN {
 		t.Fatalf("expected array truncated to %d elements, got %d", _MAX_SAMPLE_ARRAY_LEN, len(instance))
 	}
-	elem, ok := instance[0].(map[string]interface{})
+	elem, ok := instance[0].(map[string]any)
 	if !ok {
 		t.Fatalf("expected element to remain an object, got %+v", instance[0])
 	}
@@ -520,7 +520,7 @@ func TestSlmSamplesBlock(t *testing.T) {
 		t.Fatalf("nil samples: got %q", got)
 	}
 	block := directSLMSamplesBlock(map[string]map[string]*sampleField{
-		"hotel": {"type": {Samples: map[string][]interface{}{"string": {"hotel", "airline"}}}},
+		"hotel": {"type": {Samples: map[string][]any{"string": {"hotel", "airline"}}}},
 	})
 	if !strings.Contains(block, "Representative sample values") ||
 		!strings.Contains(block, `"hotel"`) || !strings.Contains(block, `"airline"`) {
@@ -536,7 +536,7 @@ func TestPromptMarshal_ExcludesSamples(t *testing.T) {
 	p := &prompt{
 		Provider: ai_gateway.ProviderSLM,
 		Messages: []message{{Role: "user", Content: "list hotels"}},
-		samples:  map[string]map[string]*sampleField{"hotel": {"name": {Samples: map[string][]interface{}{"string": {sentinel}}}}},
+		samples:  map[string]map[string]*sampleField{"hotel": {"name": {Samples: map[string][]any{"string": {sentinel}}}}},
 	}
 	b, err := json.Marshal(p)
 	if err != nil {
@@ -552,7 +552,7 @@ func TestPromptMarshal_ExcludesSamples(t *testing.T) {
 
 func TestChatEntryMarshal_ExcludesSamples(t *testing.T) {
 	const sentinel = "SAMPLE-VALUE-MUST-NOT-PERSIST"
-	samples := map[string]map[string]*sampleField{"hotel": {"name": {Samples: map[string][]interface{}{"string": {sentinel}}}}}
+	samples := map[string]map[string]*sampleField{"hotel": {"name": {Samples: map[string][]any{"string": {sentinel}}}}}
 	ce := &ChatEntry{
 		users:     []string{"local:tester"},
 		Keyspaces: testPaths(),
@@ -1168,7 +1168,7 @@ func TestPersistPausedChat(t *testing.T) {
 				return 0, nil, syncWriteAmbiguousError()
 			},
 			fetchBehavior: func(attempt int) (value.AnnotatedValue, errors.Errors) {
-				return value.NewAnnotatedValue(map[string]interface{}{"chat": "b64"}), nil
+				return value.NewAnnotatedValue(map[string]any{"chat": "b64"}), nil
 			},
 			wantPaused:   true,
 			wantAttempts: maxRetry,
@@ -1283,7 +1283,7 @@ func TestClaimChatDocument(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fake := &fakeQueryMetadataKeyspace{updateBehavior: tt.behavior}
-			udpairs := value.Pairs{{Name: "aichat::chat1", Value: value.NewValue(map[string]interface{}{})}}
+			udpairs := value.Pairs{{Name: "aichat::chat1", Value: value.NewValue(map[string]any{})}}
 			claimed, retryClaim, err := claimChatDocument("chat1", "aichat::chat1", fake, datastore.NULL_QUERY_CONTEXT, udpairs)
 
 			if tt.wantErrCode == 0 {
