@@ -244,10 +244,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			}
 		}
 
-		var includeSpans plan.Spans2
-		if tspan, ok := entry.includeSpans.(*TermSpans); ok {
-			includeSpans = tspan.spans
-		}
+		includeSpans := getIncludeSpans(index, entry.includeSpans)
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
 			covers, filterCovers, filter, entry.cost, entry.cardinality,
@@ -579,7 +576,7 @@ func (this *builder) sargableIndexes(indexes []datastore.Index, pred, subset, vp
 				}
 			}
 
-			includes = datastore.GetIndexIncludes(index)
+			includes = getIndexIncludes(baseKeyspace.Name(), index)
 			for i, _ := range includes {
 				if includes[i], _, err = formalizeExpr(formalizer, includes[i], false); err != nil {
 					return
@@ -1585,7 +1582,7 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	if len(includes) > 0 {
 		coverExprs = append(coverExprs, includes...)
 	}
-	if !index.IsPrimary() && id != nil {
+	if !index.IsPrimary() && id != nil && !includesId(index) {
 		coverExprs = append(coverExprs, id)
 	}
 
@@ -1877,6 +1874,8 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 		}
 		indexProjection = this.buildIndexProjection(entry, allFilters, id, true, nil)
 		if indexProjection != nil {
+			// (for Bhive index, meta().id include column is not in EntryKeys,
+			// it is handled as primary key, see buildIndexProjection())
 			covers = make(expression.Covers, 0, len(indexProjection.EntryKeys)+1)
 			for _, i := range indexProjection.EntryKeys {
 				if i < len(keys) {
@@ -1901,7 +1900,7 @@ func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.Bas
 			for _, include := range includes {
 				covers = append(covers, expression.NewIndexKey(include))
 			}
-			if !entry.index.IsPrimary() {
+			if !entry.index.IsPrimary() && !includesId(entry.index) {
 				covers = append(covers, expression.NewIndexKey(id))
 			}
 		}
