@@ -108,7 +108,8 @@ outer:
 		var err error
 
 		// Matches execution.spanScan.RunOnce()
-		if !index.IsPrimary() {
+		// (for Bhive index meta().id is already part of include columns)
+		if !index.IsPrimary() && !includesId(index) {
 			idxKeys = append(idxKeys, &datastore.IndexKey{id, datastore.IK_NONE})
 			keys = append(keys, id)
 		}
@@ -202,17 +203,14 @@ outer:
 	}
 
 	// Include covering expression from index keys
+	// for BHive indexes id is the last key in includes even if the index does not have includes.
+	// for indexes that do not support includes id is the last index key
 	covers := make(expression.Covers, 0, len(keys)+len(includes))
-	size := len(keys)
-	for i, key := range keys {
-		if i == (size-1) && !index.IsPrimary() {
-			for _, include := range includes {
-				covers = append(covers, expression.NewCover(include))
-			}
-			covers = append(covers, expression.NewCover(key.Expr))
-		} else {
-			covers = append(covers, expression.NewCover(key.Expr))
-		}
+	for _, key := range keys {
+		covers = append(covers, expression.NewCover(key.Expr))
+	}
+	for _, include := range includes {
+		covers = append(covers, expression.NewCover(include))
 	}
 
 	return this.buildCreateCoveringScan(coveringEntry.idxEntry, node, id, pred, exprs, keys, false,
@@ -696,10 +694,7 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		}
 	}
 
-	var includeSpans plan.Spans2
-	if tspan, ok := entry.includeSpans.(*TermSpans); ok {
-		includeSpans = tspan.spans
-	}
+	includeSpans := getIncludeSpans(index, entry.includeSpans)
 
 	if indexGroupAggs != nil {
 		indexKeyCovers := make(expression.Covers, len(covers))

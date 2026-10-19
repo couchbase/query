@@ -172,12 +172,23 @@ func (this *builder) buildIndexProjection(entry *indexEntry, exprs expression.Ex
 				}
 				allKeys = allKeys && curKey
 			}
+			// for Bhive index meta().id is the last include column, but it is not an
+			// actual include column in the index, use primary key instead
+			idPos := -1
+			if includesId(entry.index) {
+				idPos = len(entry.includes) - 1
+			}
 			for i, include := range entry.includes {
 				curKey := false
 				keyPos := i + len(entry.idxKeys)
 				for _, expr := range exprs {
 					if expr.DependsOn(include) {
-						indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+						if i == idPos {
+							indexProjection.PrimaryKey = true
+							primaryKey = true
+						} else {
+							indexProjection.EntryKeys = append(indexProjection.EntryKeys, keyPos)
+						}
 						curKey = true
 						break
 					}
@@ -264,6 +275,8 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 	var err error
 	if !index.IsPrimary() {
 		keys = datastore.GetIndexKeys(index)
+		// use actual index include columns only (not getIndexIncludes()); for Bhive index
+		// meta().id is handled as the trailing primary key entry below
 		includes = datastore.GetIndexIncludes(index)
 	}
 	indexKeyNames := make([]string, 0, len(keys)+len(includes)+1)

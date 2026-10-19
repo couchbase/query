@@ -619,6 +619,74 @@ func (this *builder) inheritSubTimes(builderCopy *builder) {
 	}
 }
 
+// for Bhive index, document key (meta().id) is treated as the last include column
+func includesId(index datastore.Index) bool {
+	index6, ok := index.(datastore.Index6)
+	return ok && index6.IsBhive()
+}
+
+// for Bhive index meta().id is treated as the last include column during planning,
+// but it is not an actual include column in the index; remove any range on meta().id
+// from include spans before sending to the indexer (the predicate on meta().id is still
+// part of the index filter, which is pushed to the indexer as inline filter)
+func getIncludeSpans(index datastore.Index, sargIncludes SargSpans) plan.Spans2 {
+	tspan, ok := sargIncludes.(*TermSpans)
+	if !ok {
+		return nil
+	}
+	includeSpans := tspan.spans
+	if len(includeSpans) == 0 || !includesId(index) {
+		return includeSpans
+	}
+
+	nIncludes := len(index.(datastore.Index6).Include())
+	if nIncludes == 0 {
+		return nil
+	}
+	cut := false
+	rv := make(plan.Spans2, 0, len(includeSpans))
+	for _, span := range includeSpans {
+		if len(span.Ranges) > nIncludes {
+			span = span.Copy()
+			span.Ranges = span.Ranges[:nIncludes]
+			span.Exact = false
+			cut = true
+		}
+		// removing range on meta().id may result in identical spans
+		dup := false
+		for _, s := range rv {
+			if s.EquivalentTo(span) {
+				dup = true
+				break
+			}
+		}
+		if !dup {
+			rv = append(rv, span)
+		}
+	}
+	if !cut {
+		return includeSpans
+	}
+	return rv
+}
+
+func getIndexIncludes(alias string, index datastore.Index) expression.Expressions {
+	if index6, ok := index.(datastore.Index6); ok {
+		includes := index6.Include()
+		if len(includes) > 0 {
+			includes = includes.Copy()
+		}
+		if includesId(index) {
+			id := expression.NewField(
+				expression.NewMeta(expression.NewIdentifier(alias)),
+				expression.NewFieldName("id", false))
+			includes = append(includes, id)
+		}
+		return includes
+	}
+	return nil
+}
+
 const (
 	_SUBQPLAN_JOIN_ENUM = 1 << iota
 	_SUBQPLAN_UNDER_JOIN
