@@ -1842,7 +1842,9 @@ func markIndexFlags(index datastore.Index, spans plan.Spans2, filter expression.
 
 	alias := baseKeyspace.Name()
 	if index.IsPrimary() {
-		keys = expression.Expressions{expression.NewMeta(expression.NewIdentifier(alias))}
+		id := expression.NewField(expression.NewMeta(expression.NewIdentifier(alias)),
+			expression.NewFieldName("id", false))
+		keys = expression.Expressions{id}
 	} else {
 		formalizer := expression.NewSelfFormalizer(alias, nil)
 		if index.Condition() != nil {
