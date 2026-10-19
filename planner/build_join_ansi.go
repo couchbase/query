@@ -1912,17 +1912,15 @@ func markIndexFlags(index datastore.Index, spans, includeSpans plan.Spans2, filt
 			}
 			keys[i] = key
 		}
-		if index6, ok := index.(datastore.Index6); ok {
-			includes = index6.Include()
-			for i, include := range includes {
-				formalizer.SetIndexScope()
-				include, err = formalizer.Map(include.Copy())
-				formalizer.ClearIndexScope()
-				if err != nil {
-					return err
-				}
-				includes[i] = include
+		includes = getIndexIncludes(alias, index)
+		for i, include := range includes {
+			formalizer.SetIndexScope()
+			include, err = formalizer.Map(include.Copy())
+			formalizer.ClearIndexScope()
+			if err != nil {
+				return err
 			}
+			includes[i] = include
 		}
 	}
 
