@@ -82,6 +82,18 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 			// for all other keyspaces, we rely on the implementation do deny access
 		}
 
+	case auth.PRIV_QUERY_UPDATE:
+		switch keyspace {
+
+		// same as delete: system read if on prem and open (but limited to the user) for elixir
+		case KEYSPACE_NAME_PREPAREDS:
+			if !tenant.IsServerless() {
+				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+			}
+
+			// for all other keyspaces, we rely on the implementation do deny access
+		}
+
 	// for SELECT previous code specified a target, even though it's not needed
 	// we still specify a target for backward compatibility and to avoid test failures
 	case auth.PRIV_QUERY_SELECT:
