@@ -409,13 +409,13 @@ func (ap *AgentProvider) TxWrite(transaction *gocbcore.Transaction, txnInternal 
 	return prevErr
 }
 
-func ErrorType(err error, rollback bool) (error, interface{}) {
+func ErrorType(err error, rollback bool) (error, any) {
 	if terr, ok := err.(*gocbcore.TransactionOperationFailedError); ok {
 		b, e := terr.MarshalJSON()
 		if e == nil {
-			var iv interface{}
+			var iv any
 			if e = json.Unmarshal(b, &iv); e == nil {
-				if c, ok := iv.(map[string]interface{}); ok {
+				if c, ok := iv.(map[string]any); ok {
 					if !rollback {
 						c["rollback"] = rollback
 					}
@@ -428,7 +428,7 @@ func ErrorType(err error, rollback bool) (error, interface{}) {
 }
 
 func mapStagingError(err error, key, ks string) error {
-	var c interface{}
+	var c any
 	e := err
 	if terr, ok := err.(*gocbcore.TransactionOperationFailedError); ok {
 		_, c = ErrorType(err, false)

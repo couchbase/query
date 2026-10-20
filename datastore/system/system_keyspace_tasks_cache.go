@@ -70,7 +70,7 @@ func (b *tasksCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -81,7 +81,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "tasks_cache", "POST",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
@@ -98,7 +98,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 
 			// local entry
 			scheduler.TaskDo(localKey, func(entry *scheduler.TaskEntry) {
-				itemMap := map[string]interface{}{
+				itemMap := map[string]any{
 					"class":        entry.Class,
 					"subClass":     entry.SubClass,
 					"name":         entry.Name,
@@ -112,7 +112,7 @@ func (b *tasksCacheKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 					itemMap["results"] = entry.Results
 				}
 				if len(entry.Errors) > 0 {
-					errors := make([]interface{}, 0, len(entry.Errors))
+					errors := make([]any, 0, len(entry.Errors))
 					for _, err := range entry.Errors {
 						if err != nil {
 							errors = append(errors, err.Object())

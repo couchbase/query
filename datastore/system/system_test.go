@@ -39,7 +39,7 @@ func (ci *queryContextImpl) GetReqDeadline() time.Time {
 	return time.Time{}
 }
 
-func (ci *queryContextImpl) GetTxContext() interface{} {
+func (ci *queryContextImpl) GetTxContext() any {
 	return nil
 }
 
@@ -51,7 +51,7 @@ func (ci *queryContextImpl) Datastore() datastore.Datastore {
 	return datastore.GetDatastore()
 }
 
-func (ci *queryContextImpl) SetTxContext(tc interface{}) {
+func (ci *queryContextImpl) SetTxContext(tc any) {
 }
 
 func (ci *queryContextImpl) TxDataVal() value.Value {
@@ -145,22 +145,22 @@ func (ci *queryContextImpl) RemoteAddr() string {
 	return ""
 }
 
-func (ci *queryContextImpl) Loga(l logging.Level, f func() string)                   {}
-func (ci *queryContextImpl) Debuga(f func() string)                                  {}
-func (ci *queryContextImpl) Tracea(f func() string)                                  {}
-func (ci *queryContextImpl) Infoa(f func() string)                                   {}
-func (ci *queryContextImpl) Warna(f func() string)                                   {}
-func (ci *queryContextImpl) Errora(f func() string)                                  {}
-func (ci *queryContextImpl) Severea(f func() string)                                 {}
-func (ci *queryContextImpl) Fatala(f func() string)                                  {}
-func (ci *queryContextImpl) Logf(level logging.Level, f string, args ...interface{}) {}
-func (ci *queryContextImpl) Debugf(f string, args ...interface{})                    {}
-func (ci *queryContextImpl) Tracef(f string, args ...interface{})                    {}
-func (ci *queryContextImpl) Infof(f string, args ...interface{})                     {}
-func (ci *queryContextImpl) Warnf(f string, args ...interface{})                     {}
-func (ci *queryContextImpl) Errorf(f string, args ...interface{})                    {}
-func (ci *queryContextImpl) Severef(f string, args ...interface{})                   {}
-func (ci *queryContextImpl) Fatalf(f string, args ...interface{})                    {}
+func (ci *queryContextImpl) Loga(l logging.Level, f func() string)           {}
+func (ci *queryContextImpl) Debuga(f func() string)                          {}
+func (ci *queryContextImpl) Tracea(f func() string)                          {}
+func (ci *queryContextImpl) Infoa(f func() string)                           {}
+func (ci *queryContextImpl) Warna(f func() string)                           {}
+func (ci *queryContextImpl) Errora(f func() string)                          {}
+func (ci *queryContextImpl) Severea(f func() string)                         {}
+func (ci *queryContextImpl) Fatala(f func() string)                          {}
+func (ci *queryContextImpl) Logf(level logging.Level, f string, args ...any) {}
+func (ci *queryContextImpl) Debugf(f string, args ...any)                    {}
+func (ci *queryContextImpl) Tracef(f string, args ...any)                    {}
+func (ci *queryContextImpl) Infof(f string, args ...any)                     {}
+func (ci *queryContextImpl) Warnf(f string, args ...any)                     {}
+func (ci *queryContextImpl) Errorf(f string, args ...any)                    {}
+func (ci *queryContextImpl) Severef(f string, args ...any)                   {}
+func (ci *queryContextImpl) Fatalf(f string, args ...any)                    {}
 
 func (ci *queryContextImpl) ErrorLimit() int {
 	return errors.DEFAULT_REQUEST_ERROR_LIMIT

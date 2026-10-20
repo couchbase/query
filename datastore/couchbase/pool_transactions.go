@@ -54,22 +54,22 @@ type TransactionLogValuesPool struct {
 }
 
 func init() {
-	util.NewFastPool(&_TRANSACTIONMUTATIONS_POOL, func() interface{} {
+	util.NewFastPool(&_TRANSACTIONMUTATIONS_POOL, func() any {
 		return &TransactionMutations{}
 	})
 	_TRANSACTIONMUTATIONS_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
 
-	util.NewFastPool(&_DELTAKEYSPACE_POOL, func() interface{} {
+	util.NewFastPool(&_DELTAKEYSPACE_POOL, func() any {
 		return &DeltaKeyspace{}
 	})
 	_DELTAKEYSPACE_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
 
-	util.NewFastPool(&_MUTATIONVALUE_POOL, func() interface{} {
+	util.NewFastPool(&_MUTATIONVALUE_POOL, func() any {
 		return &MutationValue{}
 	})
 	_MUTATIONVALUE_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH2, _FASTPOOL_DRAIN_INTERVAL)
 
-	util.NewFastPool(&_TRANSACTIONLOGVALUE_POOL, func() interface{} {
+	util.NewFastPool(&_TRANSACTIONLOGVALUE_POOL, func() any {
 		return &TransactionLogValue{}
 	})
 	_TRANSACTIONLOGVALUE_POOL.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH2, _FASTPOOL_DRAIN_INTERVAL)
@@ -84,7 +84,7 @@ func NewDeltaKeyspaceMapPool(size int) *DeltaKeyspaceMapPool {
 	rv := &DeltaKeyspaceMapPool{
 		size: size,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return make(map[string]*DeltaKeyspace, rv.size)
 	})
 	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
@@ -122,7 +122,7 @@ func NewMutationValueMapPool(size int) *MutationValueMapPool {
 	rv := &MutationValueMapPool{
 		size: size,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return make(map[string]*MutationValue, rv.size)
 	})
 	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
@@ -159,7 +159,7 @@ func NewSavepointsMapPool(size int) *SavepointsMapPool {
 	rv := &SavepointsMapPool{
 		size: size,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return make(map[string]uint64, rv.size)
 	})
 	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)
@@ -191,7 +191,7 @@ func NewTransactionLogValuesPool(size int) *TransactionLogValuesPool {
 	rv := &TransactionLogValuesPool{
 		size: size,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return make(TransactionLogValues, 0, rv.size)
 	})
 	rv.pool.Drain(_FASTPOOL_DRAIN_LOW, _FASTPOOL_DRAIN_HIGH, _FASTPOOL_DRAIN_INTERVAL)

@@ -23,7 +23,7 @@ func NewGocbcoreTransactionLogger() *GocbcoreTransactionLogger {
 }
 
 func (tl *GocbcoreTransactionLogger) Log(level gocbcore.LogLevel, offset int, txnID, attemptID, fmt string,
-	args ...interface{}) error {
+	args ...any) error {
 	if level == gocbcore.LogInfo {
 		level = gocbcore.LogDebug
 	}
@@ -36,7 +36,7 @@ type GocbcoreLogger struct {
 var gocbcoreLogger GocbcoreLogger
 
 func (l GocbcoreLogger) Log(level gocbcore.LogLevel, offset int, format string,
-	args ...interface{}) error {
+	args ...any) error {
 	prefixedFormat := "(TXGOCBCORE) " + format
 	switch level {
 	case gocbcore.LogError:

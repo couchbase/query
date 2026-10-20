@@ -74,7 +74,7 @@ type cbPoolServices struct {
 	lastUpdate   util.Time
 	rev          int
 	pool         cb.Pool
-	nodeServices map[string]interface{}
+	nodeServices map[string]any
 }
 
 const _INFO_INTERVAL = time.Second
@@ -263,7 +263,7 @@ func (info *infoImpl) Topology() ([]string, []errors.Error) {
 	return nodes, errs
 }
 
-func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Error) {
+func (info *infoImpl) Services(node string) (map[string]any, []errors.Error) {
 	isReadLock, errs := info.refresh()
 
 	defer func() {
@@ -279,8 +279,8 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 		if ok {
 			// Return a safely writeable copy of the information.  This is not a full value copy since the values themselves can
 			// typically be changed without issue, but the map can't.
-			m := n.(map[string]interface{})
-			ret := make(map[string]interface{}, len(m))
+			m := n.(map[string]any)
+			ret := make(map[string]any, len(m))
 			for k, v := range m {
 				ret[k] = v
 			}
@@ -289,7 +289,7 @@ func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Er
 		}
 		p.RUnlock()
 	}
-	return map[string]interface{}{}, errs
+	return map[string]any{}, errs
 }
 
 func (info *infoImpl) refresh() (bool, []errors.Error) {
@@ -329,13 +329,13 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 				}
 
 				newPoolServices := &cbPoolServices{name: p.Name, rev: poolServices.Rev}
-				nodeServices := make(map[string]interface{}, len(pool.Nodes))
+				nodeServices := make(map[string]any, len(pool.Nodes))
 
 				// go through all the nodes in the pool
 				for _, n := range pool.Nodes {
-					var servicesCopy []interface{}
+					var servicesCopy []any
 
-					newServices := make(map[string]interface{}, 4)
+					newServices := make(map[string]any, 4)
 					newServices["name"] = fullhostName(n.Hostname)
 					newServices["uuid"] = n.NodeUUID
 					newServices["status"] = n.Status
@@ -364,7 +364,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 						// if we can positively match nodeServices and node, add ports
 						if n.Hostname == nsHostname ||
 							(nsHostname == "" && ns.ThisNode && n.ThisNode) {
-							ports := make(map[string]interface{}, len(ns.Services))
+							ports := make(map[string]any, len(ns.Services))
 
 							// only add the ports for those services that are advertised
 							for _, s := range n.Services {
@@ -388,7 +388,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 				// just update the node statuses
 				poolEntry.Lock()
 				for _, n := range pool.Nodes {
-					m := poolEntry.nodeServices[fullhostName(n.Hostname)].(map[string]interface{})
+					m := poolEntry.nodeServices[fullhostName(n.Hostname)].(map[string]any)
 					m["status"] = n.Status
 				}
 				poolEntry.lastUpdate = util.Now()
@@ -657,7 +657,7 @@ func (s *store) AuditInfo() (*datastore.AuditInfo, errors.Error) {
 }
 
 func (s *store) ProcessAuditUpdateStream(callb func(uid string) error) errors.Error {
-	f := func(data interface{}) error {
+	f := func(data any) error {
 		d, ok := data.(*DefaultObject)
 		if !ok {
 			return fmt.Errorf("Unable to convert received object to proper type: %T", data)
@@ -951,10 +951,10 @@ func (s *store) GetGroupInfoAll(context datastore.QueryContext) ([]datastore.Gro
 }
 
 func (s *store) CreateBucket(context datastore.QueryContext, name string, with value.Value) errors.Error {
-	withArg := with.CopyForUpdate().Actual().(map[string]interface{})
+	withArg := with.CopyForUpdate().Actual().(map[string]any)
 	withArg["name"] = name
 	b, _ := json.Marshal(withArg)
-	var param map[string]interface{}
+	var param map[string]any
 	json.Unmarshal(b, &param)
 	cred := context.Credential()
 	ctx, cancel := reqContext(context)
@@ -968,7 +968,7 @@ func (s *store) CreateBucket(context datastore.QueryContext, name string, with v
 
 func (s *store) AlterBucket(context datastore.QueryContext, name string, with value.Value) errors.Error {
 	b, _ := json.Marshal(with)
-	var param map[string]interface{}
+	var param map[string]any
 	json.Unmarshal(b, &param)
 	cred := context.Credential()
 	ctx, cancel := reqContext(context)
@@ -2466,7 +2466,7 @@ func (b *keyspace) MarshalJSON() ([]byte, error) {
 	return json.Marshal(b.cbbucket)
 }
 
-func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless bool, times bool) map[string]interface{} {
+func (b *keyspace) GetIOStats(reset bool, all bool, prometheus bool, serverless bool, times bool) map[string]any {
 	return b.cbbucket.GetIOStats(reset, all, prometheus, serverless, times)
 }
 
@@ -2932,7 +2932,7 @@ func getSubDocXattrFetchResults(k string, fullName string, v *gomemcached.MCResp
 
 	responseIter := 0
 	i := 0
-	xVal := map[string]interface{}{}
+	xVal := map[string]any{}
 
 	for i < len(subPaths) {
 		// For the xattr contents - $document
@@ -2986,7 +2986,7 @@ func getSubDocXattrFetchResults(k string, fullName string, v *gomemcached.MCResp
 		if !ok {
 			logging.Warnf("[%s] Invalid XATTRs: $document not found", k)
 		} else {
-			docMeta, ok := x.(map[string]interface{})
+			docMeta, ok := x.(map[string]any)
 			if !ok {
 				logging.Warnf("[%s] Invalid XATTR $document: %T (%v)", k, x, x)
 			} else {
@@ -3114,11 +3114,11 @@ func isEExistError(err error) bool {
 	return strings.Contains(err.Error(), "KEY_EEXISTS")
 }
 
-func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, txnMeta interface{}, err error) {
+func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, txnMeta any, err error) {
 
 	var av value.AnnotatedValue
 	var ok bool
-	var mv interface{}
+	var mv any
 
 	if av, ok = val.(value.AnnotatedValue); !ok || av == nil {
 		if must {
@@ -3144,7 +3144,7 @@ func getMeta(key string, val value.Value, must bool) (cas uint64, flags uint32, 
 	}
 
 	if mv = av.GetMetaField(value.META_TXNMETA); mv != nil {
-		txnMeta, _ = mv.(interface{})
+		txnMeta, _ = mv.(any)
 	}
 
 	return cas, flags, txnMeta, nil
@@ -3169,15 +3169,15 @@ func getExpiration(options value.Value) (exptime int, present bool) {
 	return
 }
 
-func getMutatableXattrs(options value.Value) map[string]interface{} {
+func getMutatableXattrs(options value.Value) map[string]any {
 	if options != nil && options.Type() == value.OBJECT {
 		if v, ok := options.Field("xattrs"); ok && v.Type() == value.OBJECT {
 			// extract and return non-virtual xattrs only
-			var rv map[string]interface{}
+			var rv map[string]any
 			for k, v := range v.Fields() {
 				if k[0] != '$' {
 					if rv == nil {
-						rv = make(map[string]interface{})
+						rv = make(map[string]any)
 					}
 					rv[k] = v
 				}
@@ -3304,11 +3304,11 @@ func (b *keyspace) singleMutationOp(kv value.Pair, op MutateOp, qualifiedName st
 	var err error
 	var keyError errors.Error
 	var wu uint64
-	var val interface{}
+	var val any
 	var exptime int
 	var present bool
 	var cas, newCas uint64
-	var xattrs map[string]interface{}
+	var xattrs map[string]any
 	casMismatch := false
 
 	// operator has been terminated
@@ -3879,7 +3879,7 @@ func buildSnapshotReqs(cons datastore.ScanConsistency, vector timestamp.Vector, 
 
 func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange, offset int64,
 	limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool, skipKey func(string) bool,
-	cons datastore.ScanConsistency, vector timestamp.Vector) (interface{}, errors.Error) {
+	cons datastore.ScanConsistency, vector timestamp.Vector) (any, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
 	for i := range ranges {
@@ -3912,20 +3912,20 @@ func (ks *keyspace) StartKeyScan(context datastore.QueryContext, ranges []*datas
 		pipelineSize, serverless, context.UseReplica(), skipKey, encryptionKey, snapshotReqs)
 }
 
-func (ks *keyspace) StopScan(scan interface{}) (uint64, errors.Error) {
+func (ks *keyspace) StopScan(scan any) (uint64, errors.Error) {
 	return ks.cbbucket.StopScan(scan)
 }
 
-func (ks *keyspace) FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool) {
+func (ks *keyspace) FetchKeys(scan any, timeout time.Duration) ([]string, errors.Error, bool) {
 	return ks.cbbucket.FetchKeys(scan, timeout)
 }
 
-func (ks *keyspace) FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool) {
+func (ks *keyspace) FetchDocs(scan any, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool) {
 	return ks.cbbucket.FetchDocs(scan, timeout)
 }
 
 func (ks *keyspace) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
-	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (interface{}, errors.Error) {
+	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (any, errors.Error) {
 	encryptionKey, err := context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE,
 		BucketUUID: ks.Uid()})
 	if err != nil {
@@ -4222,7 +4222,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 	//    numIndexNodes == 1    ==> no replicas
 	// for serverless, the number of replicas is determined automatically
 	var with value.Value
-	var replica map[string]interface{}
+	var replica map[string]any
 	num_replica := 0
 	if !tenant.IsServerless() {
 		if numIndexNodes >= 4 {
@@ -4231,7 +4231,7 @@ func (s *store) CreateSysPrimaryIndex(idxName, requestId string, indexer3 datast
 			num_replica = 1
 		}
 		if num_replica > 0 {
-			replica = make(map[string]interface{}, 1)
+			replica = make(map[string]any, 1)
 			replica["num_replica"] = num_replica
 			with = value.NewValue(replica)
 		}
@@ -4344,7 +4344,7 @@ func (s *store) getNumIndexNodes() (int, errors.Errors) {
 		// the nodeServices should have an element named "services" which is
 		// an array of service names on that node, e.g. ["n1ql", "kv", "index"]
 		if services, ok := nodeServices["services"]; ok {
-			if serviceArr, ok := services.([]interface{}); ok {
+			if serviceArr, ok := services.([]any); ok {
 				for _, serv := range serviceArr {
 					if name, ok := serv.(string); ok {
 						if name == "index" {

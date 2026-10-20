@@ -76,7 +76,7 @@ func (b *storeKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedV
 
 func (b *storeKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	if key == b.namespace.store.actualStore.Id() {
-		doc := value.NewAnnotatedValue(map[string]interface{}{
+		doc := value.NewAnnotatedValue(map[string]any{
 			"id":  b.namespace.store.actualStore.Id(),
 			"url": b.namespace.store.actualStore.URL(),
 		})

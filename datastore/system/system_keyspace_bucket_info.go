@@ -39,7 +39,7 @@ func (b *bucketInfoKeyspace) Name() string {
 	return b.name
 }
 
-func getBucketInfoList(context datastore.QueryContext, s *store) ([]interface{}, errors.Error) {
+func getBucketInfoList(context datastore.QueryContext, s *store) ([]any, errors.Error) {
 	val, err := s.BucketInfo(context)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func getBucketInfoList(context datastore.QueryContext, s *store) ([]interface{},
 	//   [{"name":"b1",...},
 	//    {"name":"b2",...}]
 	data := val.Actual()
-	sliceOfBuckets, ok := data.([]interface{})
+	sliceOfBuckets, ok := data.([]any)
 	if !ok {
 		return nil, errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for bucket_info received from server: %v", data))
 	}
@@ -181,10 +181,10 @@ func (pi *bucketInfoIndex) Scan(requestId string, span *datastore.Span, distinct
 	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
-func bucketInfoListToMap(sliceOfBuckets []interface{}) (map[string]value.Value, errors.Error) {
+func bucketInfoListToMap(sliceOfBuckets []any) (map[string]value.Value, errors.Error) {
 	newMap := make(map[string]value.Value, len(sliceOfBuckets))
 	for i, b := range sliceOfBuckets {
-		bucketAsMap, ok := b.(map[string]interface{})
+		bucketAsMap, ok := b.(map[string]any)
 		if !ok {
 			return nil, errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for bucket_info at position %d: %v", i, b))
 		}
@@ -204,7 +204,7 @@ func bucketInfoListToMap(sliceOfBuckets []interface{}) (map[string]value.Value, 
 			return nil, errors.NewInvalidValueError(
 				fmt.Sprintf("Could not find vBucketServerMap in bucket_info data at position %d: %v", i, b))
 		}
-		vBucketServerMap, ok := vBucketServerMapField.(map[string]interface{})
+		vBucketServerMap, ok := vBucketServerMapField.(map[string]any)
 		if !ok {
 			return nil, errors.NewInvalidValueError(
 				fmt.Sprintf("Field vBucketServerMap of unexpected type in bucket_info data at position %d: %v", i, b))
@@ -214,7 +214,7 @@ func bucketInfoListToMap(sliceOfBuckets []interface{}) (map[string]value.Value, 
 			return nil, errors.NewInvalidValueError(
 				fmt.Sprintf("Could not find vBucketServerMap.vBucketMap in bucket_info data at position %d: %v", i, b))
 		}
-		vBucketMap, ok := vBucketMapField.([]interface{})
+		vBucketMap, ok := vBucketMapField.([]any)
 		if !ok {
 			return nil, errors.NewInvalidValueError(
 				fmt.Sprintf("Field vBucketServerMap.vBucketMap of unexpected type in bucket_info data at position %d: %v", i, b))

@@ -95,7 +95,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 		creds = distributed.Creds(userName)
 	}
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -106,7 +106,7 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "active_requests", "POST",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 					t, ok := doc["timings"]
 					if ok {
 						delete(doc, "timings")

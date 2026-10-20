@@ -178,7 +178,7 @@ type UserInfo struct {
 type Info interface {
 	Version() string
 	Topology() ([]string, []errors.Error)
-	Services(node string) (map[string]interface{}, []errors.Error)
+	Services(node string) (map[string]any, []errors.Error)
 }
 
 // Namespace represents a logical boundary that is within a datastore and above
@@ -240,7 +240,7 @@ type Bucket interface {
 }
 type ExtendedBucket interface {
 	Bucket
-	GetIOStats(bool, bool, bool, bool, bool) map[string]interface{} // get an object containing IO stats for the bucket
+	GetIOStats(bool, bool, bool, bool, bool) map[string]any // get an object containing IO stats for the bucket
 	HasCapability(Migration) bool
 	DurabilityPossible() bool
 	MarshalJSON() ([]byte, error)
@@ -451,9 +451,9 @@ func (this *SeqScanRange) String() string {
 type SeqScanner interface {
 	StartKeyScan(context QueryContext, ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration,
 		pipelineSize int, serverless bool, skipKey func(string) bool, cons ScanConsistency,
-		vector timestamp.Vector) (interface{}, errors.Error)
-	StopScan(interface{}) (uint64, errors.Error)
-	FetchKeys(interface{}, time.Duration) ([]string, errors.Error, bool)
+		vector timestamp.Vector) (any, errors.Error)
+	StopScan(any) (uint64, errors.Error)
+	FetchKeys(any, time.Duration) ([]string, errors.Error, bool)
 }
 
 type KeyspaceStats int

@@ -132,11 +132,11 @@ const _CREATE_COLLECTION_MAXTTL = "maxTTL"
 var _CREATE_COLLECTION_OPTIONS = []string{_CREATE_COLLECTION_MAXTTL}
 
 func (sc *scope) CreateCollection(context datastore.QueryContext, name, catalog, credential string, with value.Value) errors.Error {
-	var params map[string]interface{}
+	var params map[string]any
 
 	if with != nil {
 		if catalog != "" {
-			params, _ = with.Actual().(map[string]interface{})
+			params, _ = with.Actual().(map[string]any)
 		} else {
 			// Regular collection - validate regular WITH options and put maxTTL into params
 			err := validateWithOptions(with, _CREATE_COLLECTION_OPTIONS)
@@ -148,7 +148,7 @@ func (sc *scope) CreateCollection(context datastore.QueryContext, name, catalog,
 				return errors.NewCbBucketCreateCollectionError(sc.objectFullName(name), err)
 			}
 			if maxTTL != 0 {
-				params = map[string]interface{}{_CREATE_COLLECTION_MAXTTL: maxTTL}
+				params = map[string]any{_CREATE_COLLECTION_MAXTTL: maxTTL}
 			}
 		}
 	}
@@ -524,7 +524,7 @@ func (coll *collection) IsExternalCollection() bool {
 // credentialAllowlist builds an allowlist map from a credential's URLWhitelist guardrail.
 // Returns nil when the credential is nil or carries no URLWhitelist, which causes
 // ValidateURLInAllowlist to skip this allowlist entry entirely.
-func credentialAllowlist(cred *cbauth.Credential) map[string]interface{} {
+func credentialAllowlist(cred *cbauth.Credential) map[string]any {
 	if cred == nil {
 		return nil
 	}
@@ -532,7 +532,7 @@ func credentialAllowlist(cred *cbauth.Credential) map[string]interface{} {
 	if wl == nil {
 		return nil
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		util.AllowlistKeyAllAccess:      wl.AllAccess,
 		util.AllowlistKeyAllowedURLs:    wl.AllowedURLs,
 		util.AllowlistKeyDisallowedURLs: wl.DisallowedURLs,
@@ -631,7 +631,7 @@ func (coll *collection) ExternalEntry() *extparams.ExternalCollectionEntry {
 func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*datastore.SeqScanRange,
 	offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int, serverless bool,
 	skipKey func(string) bool, cons datastore.ScanConsistency, vector timestamp.Vector) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	r := make([]*cb.SeqScanRange, len(ranges))
 	for i := range ranges {
@@ -654,20 +654,20 @@ func (coll *collection) StartKeyScan(context datastore.QueryContext, ranges []*d
 		pipelineSize, serverless, context.UseReplica(), skipKey, encryptionKey, snapshotReqs)
 }
 
-func (coll *collection) StopScan(scan interface{}) (uint64, errors.Error) {
+func (coll *collection) StopScan(scan any) (uint64, errors.Error) {
 	return coll.bucket.cbbucket.StopScan(scan)
 }
 
-func (coll *collection) FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool) {
+func (coll *collection) FetchKeys(scan any, timeout time.Duration) ([]string, errors.Error, bool) {
 	return coll.bucket.cbbucket.FetchKeys(scan, timeout)
 }
 
-func (coll *collection) FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool) {
+func (coll *collection) FetchDocs(scan any, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool) {
 	return coll.bucket.cbbucket.FetchDocs(scan, timeout)
 }
 
 func (coll *collection) StartRandomScan(context datastore.QueryContext, sampleSize int, timeout time.Duration,
-	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (interface{}, errors.Error) {
+	pipelineSize int, serverless bool, xattrs bool, withDocs bool) (any, errors.Error) {
 	encryptionKey, err := context.GetActiveEncryptionKey(encryption.KeyDataType{TypeName: encryption.BUCKET_KEY_DATATYPE,
 		BucketUUID: coll.bucket.Uid()})
 	if err != nil {

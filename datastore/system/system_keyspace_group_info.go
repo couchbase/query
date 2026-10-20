@@ -39,7 +39,7 @@ func (b *groupInfoKeyspace) Name() string {
 	return b.name
 }
 
-func getGroupInfoList(context datastore.QueryContext, s *store) ([]interface{}, errors.Error) {
+func getGroupInfoList(context datastore.QueryContext, s *store) ([]any, errors.Error) {
 	val, err := s.GroupInfo(context)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func getGroupInfoList(context datastore.QueryContext, s *store) ([]interface{}, 
 	//   [{"id":"g1","description":"one","roles":[{"Name":"query_select","Target":"default:_default:_default"}]
 	//    {"id":"g2","description":"two","roles":[{"Name":"replication_admin", "Target":""}]}]
 	data := val.Actual()
-	sliceOfGroups, ok := data.([]interface{})
+	sliceOfGroups, ok := data.([]any)
 	if !ok {
 		return nil, errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for group_info received from server: %v", data))
 	}
@@ -170,10 +170,10 @@ func (pi *groupInfoIndex) Scan(requestId string, span *datastore.Span, distinct 
 	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
-func groupInfoListToMap(sliceOfGroups []interface{}) (map[string]value.Value, errors.Error) {
+func groupInfoListToMap(sliceOfGroups []any) (map[string]value.Value, errors.Error) {
 	newMap := make(map[string]value.Value, len(sliceOfGroups))
 	for i, g := range sliceOfGroups {
-		groupAsMap, ok := g.(map[string]interface{})
+		groupAsMap, ok := g.(map[string]any)
 		if !ok {
 			return nil, errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for group_info at position %d: %v", i, g))
 		}

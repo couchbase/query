@@ -96,7 +96,7 @@ func (b *awrKeyspace) Update(updates value.Pairs, context datastore.QueryContext
 
 	for i := range updates {
 		v := updates[i].Value.Actual()
-		if m, ok := v.(map[string]interface{}); ok {
+		if m, ok := v.(map[string]any); ok {
 
 			err, warnings := server.AwrCB.SetConfig(m, true)
 

@@ -101,7 +101,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 		creds = distributed.Creds(userName)
 	}
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -112,7 +112,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "prepareds", "POST",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
 
@@ -141,7 +141,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 						}
 						metaPlan := doc["plan"]
 						if planVersion < util.PLAN_VERSION_85 {
-							newMetaPlan := make(map[string]interface{}, 2)
+							newMetaPlan := make(map[string]any, 2)
 							newMetaPlan["plan"] = metaPlan
 							if _, ok := doc["subqueryPlans"]; ok {
 								newMetaPlan["~subqueries"] = doc["subqueryPlans"]
@@ -187,7 +187,7 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 						item.SetMetaField(value.META_TXPLANS, txPlans)
 					}
 					// meta().plan now contains a "plan" object and a "~subqueries" object
-					metaPlan := make(map[string]interface{}, 2)
+					metaPlan := make(map[string]any, 2)
 					metaPlan["plan"] = value.NewMarshalledValue(entry.Prepared.Operator)
 					sqPlans := entry.Prepared.GetSubqueryPlansEntry()
 					if len(sqPlans) > 0 {
@@ -207,9 +207,9 @@ func (b *preparedsKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 }
 
 func formatPrepared(entry *prepareds.CacheEntry, key string, node string, context datastore.QueryContext) (
-	map[string]interface{}, map[string]interface{}) {
+	map[string]any, map[string]any) {
 
-	itemMap := map[string]interface{}{
+	itemMap := map[string]any{
 		"name":            entry.Prepared.Name(),
 		"uses":            entry.Uses,
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
@@ -247,7 +247,7 @@ func formatPrepared(entry *prepareds.CacheEntry, key string, node string, contex
 		itemMap["verificationErrorCount"] = entry.Prepared.ErrorCount()
 	}
 	if ksRefs := entry.Prepared.GetKeyspaceReferences(); len(ksRefs) > 0 {
-		keyspaceRefs := make([]interface{}, len(ksRefs))
+		keyspaceRefs := make([]any, len(ksRefs))
 		for i := range ksRefs {
 			keyspaceRefs[i] = ksRefs[i]
 		}

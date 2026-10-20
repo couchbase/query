@@ -58,7 +58,7 @@ func (b *vitalsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, key := range keys {
@@ -82,7 +82,7 @@ func (b *vitalsKeyspace) Fetch(keys []string, keysMap map[string]value.Annotated
 			keysMap[key] = remoteValue
 		} else {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, "", "vitals", "GET",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", key)
 					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)

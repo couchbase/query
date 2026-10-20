@@ -46,7 +46,7 @@ type EntryExchange struct {
 	writer scanState
 }
 
-var entrySlicePool = sync.Pool{New: func() interface{} {
+var entrySlicePool = sync.Pool{New: func() any {
 	return make([]*IndexEntry, GetScanCap())
 },
 }

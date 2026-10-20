@@ -135,7 +135,7 @@ func (b *bucketKeyspace) fetchOne(ns string, bn string) (value.AnnotatedValue, e
 	if namespace != nil {
 		bucket, err := namespace.BucketById(bn)
 		if bucket != nil {
-			doc := value.NewAnnotatedValue(map[string]interface{}{
+			doc := value.NewAnnotatedValue(map[string]any{
 				"datastore_id": namespace.Datastore().Id(),
 				"namespace_id": namespace.Id(),
 				"namespace":    namespace.Name(),

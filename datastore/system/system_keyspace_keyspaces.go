@@ -207,7 +207,7 @@ func (b *keyspaceKeyspace) fetchOne(ns string, ks string, context datastore.Quer
 	if namespace != nil {
 		keyspace, err := namespace.KeyspaceById(ks)
 		if keyspace != nil {
-			doc := value.NewAnnotatedValue(map[string]interface{}{
+			doc := value.NewAnnotatedValue(map[string]any{
 				"datastore_id": namespace.Datastore().Id(),
 				"namespace_id": namespace.Id(),
 				"namespace":    namespace.Name(),
@@ -273,7 +273,7 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context dat
 			if scope != nil {
 				keyspace, err = scope.KeyspaceById(ks)
 				if keyspace != nil {
-					doc := value.NewAnnotatedValue(map[string]interface{}{
+					doc := value.NewAnnotatedValue(map[string]any{
 						"datastore_id": namespace.Datastore().Id(),
 						"namespace_id": namespace.Id(),
 						"namespace":    namespace.Name(),
@@ -295,7 +295,7 @@ func (b *keyspaceKeyspace) fetchOneCollection(ns, bn, sn, ks string, context dat
 								doc.SetField("catalog", entry.Catalog)
 								doc.SetField("catalogType", entry.CatalogType)
 								doc.SetField("credentialId", entry.CredentialId)
-								with := make(map[string]interface{})
+								with := make(map[string]any)
 								with["namespace"] = entry.Namespace
 								with["tableName"] = entry.TableName
 								if entry.SnapshotId != "" {

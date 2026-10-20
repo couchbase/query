@@ -30,19 +30,19 @@ const (
 )
 
 type DictCacheEntry interface {
-	Target(map[string]interface{})
-	Dictionary(map[string]interface{})
+	Target(map[string]any)
+	Dictionary(map[string]any)
 }
 
 func CountDictCacheEntries() int {
 	return dictionary.CountDictCacheEntries()
 }
 
-func DictCacheEntriesForeach(nB func(string, interface{}) bool, b func() bool) {
+func DictCacheEntriesForeach(nB func(string, any) bool, b func() bool) {
 	dictionary.DictCacheEntriesForeach(nB, b)
 }
 
-func DictCacheEntryDo(k string, f func(interface{})) {
+func DictCacheEntryDo(k string, f func(any)) {
 	dictionary.DictCacheEntryDo(k, f)
 }
 
@@ -106,7 +106,7 @@ func DropDictionaryEntry(keyspace string, isDropBucket bool, locked bool) {
 	}
 }
 
-func DropDictEntryAndAllCache(keyspace string, context interface{}, locked bool) {
+func DropDictEntryAndAllCache(keyspace string, context any, locked bool) {
 	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
 		dictionary.DropDictionaryCache()
 	} else {

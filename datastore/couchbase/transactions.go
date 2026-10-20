@@ -62,14 +62,14 @@ type MutationValue struct {
 	Cas        uint64
 	Expiration uint32
 	Flags      uint32
-	Val        interface{}
-	TxnMeta    interface{}
+	Val        any
+	TxnMeta    any
 	User       string
 	memSize    int64
 }
 
 func (this *MutationValue) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["op"] = this.Op.String()
 	m["kv_cas"] = this.KvCas
 	m["cas"] = this.Cas
@@ -97,7 +97,7 @@ type DeltaKeyspace struct {
 }
 
 func (this *DeltaKeyspace) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["bucket"] = this.bucketName
 	m["scope"] = this.scopeName
 	m["collection"] = this.collectionName
@@ -114,14 +114,14 @@ type TransactionLogValue struct {
 	oldCas        uint64
 	oldExpiration uint32
 	oldFlags      uint32
-	oldVal        interface{}
-	oldTxnMeta    interface{}
+	oldVal        any
+	oldTxnMeta    any
 	oldUser       string
 	oldMemSize    int64
 }
 
 func (this *TransactionLogValue) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["type"] = this.logType
 	m["key"] = this.key
 	m["op"] = this.oldOp.String()
@@ -149,7 +149,7 @@ type TransactionLog struct {
 }
 
 func (this *TransactionLog) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["last_keyspace"] = this.lastKeyspace
 	m["values"] = this.logValues
 	return json.Marshal(m)
@@ -173,7 +173,7 @@ type TransactionMutations struct {
 }
 
 func (this *TransactionMutations) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["deltatables"] = this.keyspaces
 	m["implicit"] = this.tranImplicit
 	if len(this.savepoints) > 0 {
@@ -442,7 +442,7 @@ DELETE   INSERT   ---  UPDATE with cas  *      INSERT
 */
 
 func (this *TransactionMutations) Add(op MutateOp, keyspace, bucketName, scopeName, collectionName, user string,
-	collId uint32, key string, val interface{}, cas uint64, flags, exptime uint32, txnMeta interface{},
+	collId uint32, key string, val any, cas uint64, flags, exptime uint32, txnMeta any,
 	paths []string, ks *keyspace, valSize int64) (retCas uint64, err errors.Error) {
 
 	this.mutex.Lock()

@@ -74,7 +74,7 @@ func (b *requestLogHistoryKeyspace) Count(context datastore.QueryContext) (int64
 	} else {
 		// we have to go load and check every entry
 		for i := 0; i < len(info); i += 2 {
-			server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]interface{}) bool {
+			server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]any) bool {
 				count++
 				return true
 			})
@@ -105,7 +105,7 @@ func (b *requestLogHistoryKeyspace) Fetch(keys []string, keysMap map[string]valu
 	} else {
 		creds = distributed.Creds(userName)
 	}
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	rangeStart := uint64(0)
 	rangeEnd := uint64(0)
@@ -120,7 +120,7 @@ func (b *requestLogHistoryKeyspace) Fetch(keys []string, keysMap map[string]valu
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 
-	local := func(doc map[string]interface{}) bool {
+	local := func(doc map[string]any) bool {
 		if n >= len(rangeKeys) {
 			return false
 		}
@@ -167,7 +167,7 @@ func (b *requestLogHistoryKeyspace) Fetch(keys []string, keysMap map[string]valu
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "completed_requests_history", "GET",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 					docKey, ok := doc["requestId"]
 					if ok {
 						docKey = distributed.RemoteAccess().MakeKey(node, docKey.(string))
@@ -365,7 +365,7 @@ func (pi *requestLogHistoryIndex) Scan(requestId string, span *datastore.Span, d
 				info := server.RequestsFileStreamFileInfo()
 				n := 0
 				for i := 0; i < len(info); i += 2 {
-					server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]interface{}) bool {
+					server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]any) bool {
 						indexEntry := datastore.IndexEntry{
 							PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, fmt.Sprintf("%d-%d", i, n)),
 							EntryKey:   value.Values{value.NewValue(whoAmI)},
@@ -464,7 +464,7 @@ func (pi *requestLogHistoryIndex) ScanEntries(requestId string, limit int64, con
 			info := server.RequestsFileStreamFileInfo()
 			n := 0
 			for i := 0; i < len(info); i += 2 {
-				server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]interface{}) bool {
+				server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]any) bool {
 					indexEntry := datastore.IndexEntry{
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, fmt.Sprintf("%d-%d", info[i], n)),
 					}

@@ -235,7 +235,7 @@ func (this *seqScan) Scan(requestId string, span *datastore.Span, distinct bool,
 	cons datastore.ScanConsistency, vector timestamp.Vector, conn *datastore.IndexConnection) {
 
 	defer conn.Sender().Close()
-	var i interface{}
+	var i any
 	i = this
 	logging.Stackf(logging.DEBUG, "Scan should never see this: %T", i.(datastore.Index3))
 }
@@ -244,7 +244,7 @@ func (this *seqScan) ScanEntries(requestId string, limit int64, cons datastore.S
 	vector timestamp.Vector, conn *datastore.IndexConnection) {
 
 	defer conn.Sender().Close()
-	var i interface{}
+	var i any
 	i = this
 	logging.Stackf(logging.DEBUG, "ScanEntries should never see this: %T", i.(datastore.PrimaryIndex3))
 }
@@ -419,7 +419,7 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 	if offset < 0 {
 		offset = 0
 	}
-	var ss interface{}
+	var ss any
 	var err qe.Error
 	var timeout bool
 	var sk func(string) bool
@@ -515,8 +515,8 @@ func (this *seqScan) doScanEntries(requestId string, ordered bool, offset, limit
 		this.Indexer().BucketId(), this.Indexer().ScopeId(), this.KeyspaceId(), returned)
 }
 
-func (this *seqScan) IndexMetadata() map[string]interface{} {
-	rv := make(map[string]interface{})
+func (this *seqScan) IndexMetadata() map[string]any {
+	rv := make(map[string]any)
 	ts := atomic.LoadUint64(&this.totalScans)
 	tk := atomic.LoadUint64(&this.totalReturnCount)
 	rv["total_scans"] = ts

@@ -72,7 +72,7 @@ func (b *functionsCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error) 
 func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -83,7 +83,7 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "functions_cache", "POST",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetField("node", node)
@@ -100,7 +100,7 @@ func (b *functionsCacheKeyspace) Fetch(keys []string, keysMap map[string]value.A
 
 			// local entry
 			functions.FunctionDo(localKey, func(entry *functions.FunctionEntry) {
-				itemMap := map[string]interface{}{
+				itemMap := map[string]any{
 					"uses": entry.Uses,
 				}
 				if node != "" {

@@ -28,10 +28,10 @@ type RandomEntryProvider interface {
 
 type RandomScanProvider interface {
 	StartRandomScan(context QueryContext, sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, xattrs bool,
-		withDocs bool) (interface{}, errors.Error)
-	StopScan(scan interface{}) (uint64, errors.Error)
-	FetchKeys(scan interface{}, timeout time.Duration) ([]string, errors.Error, bool)
-	FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool)
+		withDocs bool) (any, errors.Error)
+	StopScan(scan any) (uint64, errors.Error)
+	FetchKeys(scan any, timeout time.Duration) ([]string, errors.Error, bool)
+	FetchDocs(scan any, timeout time.Duration) ([]value.AnnotatedValue, errors.Error, bool)
 }
 
 type Inferencer interface {

@@ -161,7 +161,7 @@ func (b *scopeKeyspace) fetchOne(ns, bn, sn string) (value.AnnotatedValue, error
 		if bucket != nil {
 			scope, err = bucket.ScopeById(sn)
 			if scope != nil {
-				doc := value.NewAnnotatedValue(map[string]interface{}{
+				doc := value.NewAnnotatedValue(map[string]any{
 					"datastore_id": namespace.Datastore().Id(),
 					"namespace_id": namespace.Id(),
 					"namespace":    namespace.Name(),

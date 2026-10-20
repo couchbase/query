@@ -92,13 +92,13 @@ type ConnectionSecurityConfig struct {
 }
 
 type IndexConfig interface {
-	SetConfig(KVal map[string]interface{}) errors.Error
-	SetParam(name string, val interface{}) errors.Error
+	SetConfig(KVal map[string]any) errors.Error
+	SetParam(name string, val any) errors.Error
 }
 
 type GsiIndexer interface {
 	Indexer
-	GetGsiClientConfig() map[string]interface{}
+	GetGsiClientConfig() map[string]any
 }
 
 type IndexState string
@@ -621,8 +621,8 @@ type FTSIndex interface {
 		cons ScanConsistency, vector timestamp.Vector, conn *IndexConnection)
 
 	// For given field/query Index is qualified, exact=true when no false positives
-	Sargable(field string, query, options expression.Expression, mappings interface{}) (nkeys int,
-		size int64, exact, knn bool, omappings interface{}, err errors.Error)
+	Sargable(field string, query, options expression.Expression, mappings any) (nkeys int,
+		size int64, exact, knn bool, omappings any, err errors.Error)
 
 	// Pageable is allowed
 	Pageable(order []string, offset, limit int64, query, options expression.Expression) bool
@@ -672,17 +672,17 @@ type SortTerm struct {
 }
 
 type FTSFlexRequest struct {
-	Keyspace      string                 // keyspace alias name
-	Bindings      expression.Bindings    // Unnest bindings depends on this keyspace
-	Pred          expression.Expression  // predicate depends on the keyspace
-	VecPred       expression.Expression  // Vector predicate depends on the keyspace
-	Opaque        map[string]interface{} // opaque
-	Cond          expression.Expression  // DNF index condition
-	OrigCond      expression.Expression  // Original index condition
-	CheckPageable bool                   // Do pageable check
-	Order         []*SortTerm            // Order terms
-	Offset        int64                  // offset (0 in case of none)
-	Limit         int64                  // limit (MaxInt64 in case of none)
+	Keyspace      string                // keyspace alias name
+	Bindings      expression.Bindings   // Unnest bindings depends on this keyspace
+	Pred          expression.Expression // predicate depends on the keyspace
+	VecPred       expression.Expression // Vector predicate depends on the keyspace
+	Opaque        map[string]any        // opaque
+	Cond          expression.Expression // DNF index condition
+	OrigCond      expression.Expression // Original index condition
+	CheckPageable bool                  // Do pageable check
+	Order         []*SortTerm           // Order terms
+	Offset        int64                 // offset (0 in case of none)
+	Limit         int64                 // limit (MaxInt64 in case of none)
 }
 
 const (
@@ -746,7 +746,7 @@ type Statistics interface {
 
 type IndexScanReport struct {
 	sync.RWMutex
-	ScanReport map[string]interface{}
+	ScanReport map[string]any
 }
 
 const (
@@ -755,12 +755,12 @@ const (
 )
 
 func NewIndexScanReport() *IndexScanReport {
-	return &IndexScanReport{ScanReport: make(map[string]interface{}, _INDEX_SCAN_REPORT_SZ)}
+	return &IndexScanReport{ScanReport: make(map[string]any, _INDEX_SCAN_REPORT_SZ)}
 }
 
-type IndexAggregateScanReportFn func(v1, v2 map[string]interface{})
+type IndexAggregateScanReportFn func(v1, v2 map[string]any)
 
-func (this *IndexScanReport) GetScanReport() (rv map[string]interface{}) {
+func (this *IndexScanReport) GetScanReport() (rv map[string]any) {
 	if this != nil {
 		this.RLock()
 		defer this.RUnlock()
@@ -903,7 +903,7 @@ func (this *IndexConnection) WaitScanReport(w time.Duration) {
 	}
 }
 
-func (this *IndexConnection) AggregateScanReport(aggFn IndexAggregateScanReportFn, sr map[string]interface{}) {
+func (this *IndexConnection) AggregateScanReport(aggFn IndexAggregateScanReportFn, sr map[string]any) {
 	if this.indexScanReport != nil && aggFn != nil && len(sr) > 0 {
 		this.indexScanReport.Lock()
 		defer this.indexScanReport.Unlock()

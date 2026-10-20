@@ -65,8 +65,8 @@ func (info *infoImpl) Topology() ([]string, []errors.Error) {
 	return []string{}, nil
 }
 
-func (info *infoImpl) Services(node string) (map[string]interface{}, []errors.Error) {
-	return map[string]interface{}{}, nil
+func (info *infoImpl) Services(node string) (map[string]any, []errors.Error) {
+	return map[string]any{}, nil
 }
 
 func (s *store) NamespaceIds() ([]string, errors.Error) {

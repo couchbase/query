@@ -403,7 +403,7 @@ func genItem(i int, nitems int) (value.AnnotatedValue, errors.Error) {
 			fmt.Sprintf("item out of mock range: %v [0,%v)", i, nitems))
 	}
 	id := strconv.Itoa(i)
-	doc := value.NewAnnotatedValue(map[string]interface{}{"id": id, "i": float64(i)})
+	doc := value.NewAnnotatedValue(map[string]any{"id": id, "i": float64(i)})
 	doc.SetId(id)
 	return doc, nil
 }

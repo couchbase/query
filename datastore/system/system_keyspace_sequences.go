@@ -125,7 +125,7 @@ func (b *sequenceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	nodes := distributed.RemoteAccess().GetNodeNames()
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	for _, key := range keys {
 		av, err := sequences.FetchSequence(key, false)
@@ -139,9 +139,9 @@ func (b *sequenceKeyspace) Fetch(keys []string, keysMap map[string]value.Annotat
 					if node != whoAmI {
 						nodeUUID := distributed.RemoteAccess().NodeUUID(node)
 						distributed.RemoteAccess().GetRemoteDoc(node, key, "sequences_cache", "GET",
-							func(doc map[string]interface{}) {
+							func(doc map[string]any) {
 								if v, ok := doc["value"]; ok {
-									if vm, ok := v.(map[string]interface{}); ok {
+									if vm, ok := v.(map[string]any); ok {
 										if vv, ok := vm[nodeUUID]; ok {
 											val.SetField(nodeUUID, vv)
 										}

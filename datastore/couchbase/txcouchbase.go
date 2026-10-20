@@ -598,7 +598,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 
 	var retCas uint64
 	for _, kv := range pairs {
-		var data interface{}
+		var data any
 		var exptime int
 		var dataSize int64
 
@@ -694,7 +694,7 @@ func (ks *keyspace) txPerformOp(op MutateOp, qualifiedName, scopeName, collectio
 	return
 }
 
-func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta interface{}) {
+func GetTxDataValues(txDataVal value.Value) (kv bool, cas uint64, txnMeta any) {
 	if txDataVal != nil {
 		if v, ok := txDataVal.Field("kv"); ok {
 			kv, _ = v.Actual().(bool)

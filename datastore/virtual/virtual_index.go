@@ -31,7 +31,7 @@ type VirtualIndex struct {
 	bhive        bool
 	vectorPos    int
 	vectorType   string
-	vectorDesc   map[string]interface{}
+	vectorDesc   map[string]any
 	partnExpr    expression.Expressions //partition key expressions
 	storageMode  datastore.IndexStorageMode
 	storageStats []map[datastore.IndexStatType]value.Value
@@ -39,7 +39,7 @@ type VirtualIndex struct {
 
 func NewVirtualIndex(keyspace datastore.Keyspace, name string, condition expression.Expression,
 	indexKeys, includes expression.Expressions, desc []bool, partnExpr expression.Expressions,
-	isPrimary, lkMissing, bhive bool, vectorPos int, vectorType string, vectorDesc map[string]interface{},
+	isPrimary, lkMissing, bhive bool, vectorPos int, vectorType string, vectorDesc map[string]any,
 	sm datastore.IndexStorageMode, storageStats []map[datastore.IndexStatType]value.Value) datastore.Index {
 	rv := &VirtualIndex{
 		keyspace:   keyspace,

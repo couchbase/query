@@ -39,7 +39,7 @@ func (b *userInfoKeyspace) Name() string {
 	return b.name
 }
 
-func getUserInfoList(context datastore.QueryContext, s *store) ([]interface{}, errors.Error) {
+func getUserInfoList(context datastore.QueryContext, s *store) ([]any, errors.Error) {
 	val, err := s.UserInfo(context)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func getUserInfoList(context datastore.QueryContext, s *store) ([]interface{}, e
 	//       {"bucket_name":"default","role":"bucket_admin"}]},
 	//    {"id":"petrpetrov","name":"Petr Petrov","roles":[{"role":"replication_admin"}]}]
 	data := val.Actual()
-	sliceOfUsers, ok := data.([]interface{})
+	sliceOfUsers, ok := data.([]any)
 	if !ok {
 		return nil, errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for user_info received from server: %v", data))
 	}
@@ -171,10 +171,10 @@ func (pi *userInfoIndex) Scan(requestId string, span *datastore.Span, distinct b
 	pi.ScanEntries(requestId, limit, cons, vector, conn)
 }
 
-func userInfoListToMap(sliceOfUsers []interface{}) (map[string]value.Value, errors.Error) {
+func userInfoListToMap(sliceOfUsers []any) (map[string]value.Value, errors.Error) {
 	newMap := make(map[string]value.Value, len(sliceOfUsers))
 	for i, u := range sliceOfUsers {
-		userAsMap, ok := u.(map[string]interface{})
+		userAsMap, ok := u.(map[string]any)
 		if !ok {
 			return nil, errors.NewInvalidValueError(fmt.Sprintf("Unexpected format for user_info at position %d: %v", i, u))
 		}

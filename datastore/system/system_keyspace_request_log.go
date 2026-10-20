@@ -93,7 +93,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	} else {
 		creds = distributed.Creds(userName)
 	}
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -104,7 +104,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "completed_requests", "POST",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 					t, ok := doc["timings"]
 					if ok {
 						delete(doc, "timings")
@@ -140,7 +140,7 @@ func (b *requestLogKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 				if userName != "" && !checkCompleted(entry, userName) {
 					return
 				}
-				doc := entry.Format(true, false, context.DurationStyle()).(map[string]interface{})
+				doc := entry.Format(true, false, context.DurationStyle()).(map[string]any)
 				doc["requestId"] = localKey
 				t, ok := doc["timings"]
 				if ok {

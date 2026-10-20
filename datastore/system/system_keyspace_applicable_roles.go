@@ -79,7 +79,7 @@ func (b *applicableRolesKeyspace) Fetch(keys []string, keysMap map[string]value.
 			errs = append(errs, err)
 			continue
 		}
-		valMap := make(map[string]interface{}, 5)
+		valMap := make(map[string]any, 5)
 		valMap["grantee"] = grantee
 		alias, sourceType := auth.RoleToAliasSource(role)
 		valMap["role"] = alias

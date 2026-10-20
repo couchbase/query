@@ -69,7 +69,7 @@ func (b *transactionsKeyspace) Indexers() ([]datastore.Indexer, errors.Error) {
 func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -80,7 +80,7 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, "transactions", "POST",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 					remoteValue := value.NewAnnotatedValue(doc)
 					remoteValue.SetMetaField(value.META_KEYSPACE, b.fullName)
 					remoteValue.SetField("node", node)
@@ -95,8 +95,8 @@ func (b *transactionsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 		} else {
 
 			// local entry
-			transactions.TransactionEntryDo(localKey, func(d interface{}) {
-				itemMap := map[string]interface{}{}
+			transactions.TransactionEntryDo(localKey, func(d any) {
+				itemMap := map[string]any{}
 				entry := d.(*transactions.TranContext)
 				entry.Content(itemMap, false)
 				if node != "" {
@@ -273,7 +273,7 @@ func (pi *transactionsIndex) Scan(requestId string, span *datastore.Span, distin
 		idx := spanEvaluator.isEquals()
 		if idx >= 0 {
 			if spanEvaluator.key(idx) == whoAmI {
-				transactions.TransactionEntriesForeach(func(name string, d interface{}) bool {
+				transactions.TransactionEntriesForeach(func(name string, d any) bool {
 					entry = &datastore.IndexEntry{
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
@@ -304,7 +304,7 @@ func (pi *transactionsIndex) Scan(requestId string, span *datastore.Span, distin
 				encodedNode := encodeNodeName(node)
 				if spanEvaluator.evaluate(encodedNode) {
 					if encodedNode == whoAmI {
-						transactions.TransactionEntriesForeach(func(name string, d interface{}) bool {
+						transactions.TransactionEntriesForeach(func(name string, d any) bool {
 							entry = &datastore.IndexEntry{
 								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 								EntryKey:   value.Values{value.NewValue(whoAmI)},
@@ -344,7 +344,7 @@ func (pi *transactionsIndex) ScanEntries(requestId string, limit int64, cons dat
 
 	// now that the node name can change in flight, use a consistent one across the scan
 	whoAmI := encodeNodeName(distributed.RemoteAccess().WhoAmI())
-	transactions.TransactionEntriesForeach(func(name string, d interface{}) bool {
+	transactions.TransactionEntriesForeach(func(name string, d any) bool {
 		entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
 		return true
 	}, func() bool {

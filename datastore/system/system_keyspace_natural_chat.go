@@ -40,7 +40,7 @@ func hasChatAccess(item value.Value, users []string) bool {
 	if !ok {
 		return false
 	}
-	userlist, ok := val.Actual().([]interface{})
+	userlist, ok := val.Actual().([]any)
 	if !ok {
 		return false
 	}
@@ -165,7 +165,7 @@ func (b *naturalchatsKeyspace) Fetch(keys []string, keysMap map[string]value.Ann
 			keysMap[key] = item
 		} else {
 			distributed.RemoteAccess().GetRemoteDoc(node, localkey, "natural_chats", "GET",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 					if doc != nil {
 						doc["node"] = node
 						item := value.NewAnnotatedValue(doc)
@@ -329,7 +329,7 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 					allowedpairs = append(allowedpairs, pair)
 				} else {
 					errs = append(errs, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER,
-						map[string]interface{}{"key": pair.Name}))
+						map[string]any{"key": pair.Name}))
 				}
 			}
 
@@ -347,7 +347,7 @@ func (b *naturalchatsKeyspace) Delete(deletes value.Pairs, context datastore.Que
 							item := value.NewAnnotatedValue(b)
 							if !hasChatAccess(item, users) {
 								errs = append(errs, errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_WRONG_USER,
-									map[string]interface{}{"key": key}))
+									map[string]any{"key": key}))
 								continue
 							}
 							allowedpairs = append(allowedpairs, value.Pair{Name: key, Value: item})
@@ -443,7 +443,7 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 				}
 			} else {
 				if t, ok := pair.Value.Field("inactivityTimeout"); ok {
-					data := map[string]interface{}{
+					data := map[string]any{
 						"inactivityTimeout": t.Actual(),
 					}
 					dt, derr := json.Marshal(data)

@@ -85,9 +85,9 @@ func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 			distributions := itemMap["distributions"]
 			delete(itemMap, "distributions")
 			if distributions != nil {
-				dists := distributions.(map[string]interface{})
+				dists := distributions.(map[string]any)
 				if len(dists) > 0 {
-					distKeys := make([]interface{}, 0, len(dists))
+					distKeys := make([]any, 0, len(dists))
 					for n, _ := range dists {
 						distKeys = append(distKeys, n)
 					}
@@ -105,7 +105,7 @@ func (b *dictionaryKeyspace) Fetch(keys []string, keysMap map[string]value.Annot
 	return
 }
 
-func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, errors.Error) {
+func (b *dictionaryKeyspace) fetchOne(key string) (map[string]any, errors.Error) {
 	entry, err := dictionary.Get(key)
 	if err != nil {
 		return nil, errors.NewSystemCollectionError("Fetch from system collection", err)
@@ -121,7 +121,7 @@ func (b *dictionaryKeyspace) fetchOne(key string) (map[string]interface{}, error
 		return nil, nil
 	}
 
-	itemMap := map[string]interface{}{}
+	itemMap := map[string]any{}
 	entry.Target(itemMap)
 	entry.Dictionary(itemMap)
 	return itemMap, nil

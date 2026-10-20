@@ -69,7 +69,7 @@ func (b *dictionaryCacheKeyspace) Indexers() ([]datastore.Indexer, errors.Error)
 func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.AnnotatedValue,
 	context datastore.QueryContext, subPaths []string, projection []string, useSubDoc bool) (errs errors.Errors) {
 
-	formData := map[string]interface{}{"duration_style": context.DurationStyle().String()}
+	formData := map[string]any{"duration_style": context.DurationStyle().String()}
 
 	// now that the node name can change in flight, use a consistent one across fetches
 	whoAmI := distributed.RemoteAccess().WhoAmI()
@@ -80,14 +80,14 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 			distributed.RemoteAccess().GetRemoteDoc(nodeName, localKey, b.name, "POST",
-				func(doc map[string]interface{}) {
+				func(doc map[string]any) {
 
 					distributions := doc["distributions"]
 					delete(doc, "distributions")
 					if distributions != nil {
-						dists := distributions.(map[string]interface{})
+						dists := distributions.(map[string]any)
 						if len(dists) > 0 {
-							distKeys := make([]interface{}, 0, len(dists))
+							distKeys := make([]any, 0, len(dists))
 							for n, _ := range dists {
 								distKeys = append(distKeys, n)
 							}
@@ -109,17 +109,17 @@ func (b *dictionaryCacheKeyspace) Fetch(keys []string, keysMap map[string]value.
 		} else {
 
 			// local entry
-			dictionary.DictCacheEntryDo(localKey, func(d interface{}) {
-				itemMap := map[string]interface{}{}
+			dictionary.DictCacheEntryDo(localKey, func(d any) {
+				itemMap := map[string]any{}
 				entry := d.(dictionary.DictCacheEntry)
 				entry.Target(itemMap)
 				entry.Dictionary(itemMap)
 				distributions := itemMap["distributions"]
 				delete(itemMap, "distributions")
 				if distributions != nil {
-					dists := distributions.(map[string]interface{})
+					dists := distributions.(map[string]any)
 					if len(dists) > 0 {
-						distKeys := make([]interface{}, 0, len(dists))
+						distKeys := make([]any, 0, len(dists))
 						for n, _ := range dists {
 							distKeys = append(distKeys, n)
 						}
@@ -286,7 +286,7 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 		idx := spanEvaluator.isEquals()
 		if idx >= 0 {
 			if spanEvaluator.key(idx) == whoAmI {
-				dictionary.DictCacheEntriesForeach(func(name string, d interface{}) bool {
+				dictionary.DictCacheEntriesForeach(func(name string, d any) bool {
 					entry = &datastore.IndexEntry{
 						PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 						EntryKey:   value.Values{value.NewValue(whoAmI)},
@@ -318,7 +318,7 @@ func (pi *dictionaryCacheIndex) Scan(requestId string, span *datastore.Span, dis
 
 				if spanEvaluator.evaluate(encodedNode) {
 					if encodedNode == whoAmI {
-						dictionary.DictCacheEntriesForeach(func(name string, d interface{}) bool {
+						dictionary.DictCacheEntriesForeach(func(name string, d any) bool {
 							entry = &datastore.IndexEntry{
 								PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name),
 								EntryKey:   value.Values{value.NewValue(whoAmI)},
@@ -358,7 +358,7 @@ func (pi *dictionaryCacheIndex) ScanEntries(requestId string, limit int64, cons 
 
 	// now that the node name can change in flight, use a consistent one across the scan
 	whoAmI := encodeNodeName(distributed.RemoteAccess().WhoAmI())
-	dictionary.DictCacheEntriesForeach(func(name string, d interface{}) bool {
+	dictionary.DictCacheEntriesForeach(func(name string, d any) bool {
 		entry = &datastore.IndexEntry{PrimaryKey: distributed.RemoteAccess().MakeKey(whoAmI, name)}
 		return true
 	}, func() bool {

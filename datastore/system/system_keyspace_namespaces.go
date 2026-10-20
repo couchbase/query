@@ -83,7 +83,7 @@ func (b *namespaceKeyspace) Fetch(keys []string, keysMap map[string]value.Annota
 func (b *namespaceKeyspace) fetchOne(key string) (value.AnnotatedValue, errors.Error) {
 	namespace, excp := b.namespace.store.actualStore.NamespaceById(key)
 	if namespace != nil {
-		doc := value.NewAnnotatedValue(map[string]interface{}{
+		doc := value.NewAnnotatedValue(map[string]any{
 			"id":           namespace.Id(),
 			"name":         namespace.Name(),
 			"datastore_id": b.namespace.store.actualStore.Id(),

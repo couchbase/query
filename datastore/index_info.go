@@ -24,14 +24,14 @@ import (
 // condition, partitioning, WITH options, and metadata/stats). scopeId/bucketId may be ""
 // for a keyspace with no owning scope/bucket path (pre-collections style).
 func IndexInfoDoc(index Index, keyspaceId, scopeId, bucketId, namespaceName, namespaceId, datastoreId string) (
-	map[string]interface{}, errors.Error) {
+	map[string]any, errors.Error) {
 
 	state, msg, err := index.State()
 	if err != nil {
 		return nil, err
 	}
 
-	doc := map[string]interface{}{
+	doc := map[string]any{
 		"id":           index.Id(),
 		"name":         index.Name(),
 		"keyspace_id":  keyspaceId,
@@ -64,13 +64,13 @@ func IndexInfoDoc(index Index, keyspaceId, scopeId, bucketId, namespaceName, nam
 	if include := GetIndexIncludes(index); include != nil {
 		doc["include"] = jsonSafe(indexExprStrings(include))
 	}
-	if ixm, ok := index.(interface{ IndexMetadata() map[string]interface{} }); ok {
-		if md, ok := jsonSafe(ixm.IndexMetadata()).(map[string]interface{}); ok {
+	if ixm, ok := index.(interface{ IndexMetadata() map[string]any }); ok {
+		if md, ok := jsonSafe(ixm.IndexMetadata()).(map[string]any); ok {
 			doc["metadata"] = indexStats(md)
 		}
 	}
-	if ixw, ok := index.(interface{ With() map[string]interface{} }); ok {
-		if w, ok := jsonSafe(ixw.With()).(map[string]interface{}); ok {
+	if ixw, ok := index.(interface{ With() map[string]any }); ok {
+		if w, ok := jsonSafe(ixw.With()).(map[string]any); ok {
 			doc["with"] = w
 		}
 	}
@@ -79,8 +79,8 @@ func IndexInfoDoc(index Index, keyspaceId, scopeId, bucketId, namespaceName, nam
 }
 
 // index info needed for query plan, used in backup/restore of prepared plans
-func IndexInfoPlan(index Index, planVersion int) map[string]interface{} {
-	doc := map[string]interface{}{
+func IndexInfoPlan(index Index, planVersion int) map[string]any {
+	doc := map[string]any{
 		"name":      index.Name(),
 		"index_key": jsonSafe(indexKeyStrings(index)),
 		"using":     jsonSafe(index.Type()),
@@ -98,10 +98,10 @@ func IndexInfoPlan(index Index, planVersion int) map[string]interface{} {
 	if include := GetIndexIncludes(index); include != nil {
 		doc["include"] = jsonSafe(indexExprStrings(include))
 	}
-	if ixw, ok := index.(interface{ With() map[string]interface{} }); ok {
-		if w, ok := jsonSafe(ixw.With()).(map[string]interface{}); ok {
+	if ixw, ok := index.(interface{ With() map[string]any }); ok {
+		if w, ok := jsonSafe(ixw.With()).(map[string]any); ok {
 			// only include certain fields in the WITH clause
-			with := make(map[string]interface{}, len(w))
+			with := make(map[string]any, len(w))
 			if desc, ok := w["description"]; ok {
 				with["description"] = desc
 			}
@@ -201,8 +201,8 @@ func indexExprStrings(exprs expression.Expressions) []string {
 	return rv
 }
 
-func jsonSafe(obj interface{}) interface{} {
-	var rv interface{}
+func jsonSafe(obj any) any {
+	var rv any
 	if bytes, err := json.Marshal(obj); err == nil {
 		json.Unmarshal(bytes, &rv)
 	}
@@ -210,12 +210,12 @@ func jsonSafe(obj interface{}) interface{} {
 }
 
 // indexStats adds a last_scan_time field derived from the raw metadata's stats.
-func indexStats(m map[string]interface{}) map[string]interface{} {
+func indexStats(m map[string]any) map[string]any {
 	if _, ok := m["last_scan_time"]; ok {
 		return m
 	}
 	m["last_scan_time"] = nil
-	stats, ok := m["stats"].(map[string]interface{})
+	stats, ok := m["stats"].(map[string]any)
 	if !ok {
 		return m
 	}
