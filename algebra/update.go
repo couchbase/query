@@ -385,6 +385,60 @@ func (this *Update) Unset() *Unset {
 	return this.unset
 }
 
+// top level fields that can be SET/UNSET on system keyspaces with restricted updates
+type systemUpdateFields struct {
+	set   map[string]bool
+	unset map[string]bool
+}
+
+// system keyspaces not listed here are not restricted (the keyspace implementation decides)
+var _SYSTEM_UPDATE_FIELDS = map[string]systemUpdateFields{
+	"prepareds": {unset: map[string]bool{"planPreparedTime": true}},
+}
+
+/*
+Validate SET/UNSET against system keyspaces that only support restricted updates.
+*/
+func ValidateSystemUpdate(path *Path, alias string, set *Set, unset *Unset) errors.Error {
+	if path == nil || !path.IsSystem() {
+		return nil
+	}
+	fields, ok := _SYSTEM_UPDATE_FIELDS[path.Keyspace()]
+	if !ok {
+		return nil
+	}
+	if set != nil {
+		for _, t := range set.Terms() {
+			if !isSystemUpdateField(t.Path(), t.Meta(), t.UpdateFor(), alias, fields.set) {
+				return errors.NewUpdateInvalidField("", t.Path().String())
+			}
+		}
+	}
+	if unset != nil {
+		for _, t := range unset.Terms() {
+			if !isSystemUpdateField(t.Path(), nil, t.UpdateFor(), alias, fields.unset) {
+				return errors.NewUpdateInvalidField("", t.Path().String())
+			}
+		}
+	}
+	return nil
+}
+
+// path must be alias.field, with field in the allowed list, no META() and no FOR clause
+// META() paths aren't formalized, so an alias such as xattrs could otherwise match
+func isSystemUpdateField(path expression.Path, meta expression.Expression, updateFor *UpdateFor,
+	alias string, allowed map[string]bool) bool {
+	if len(allowed) == 0 || meta != nil || updateFor != nil {
+		return false
+	}
+	f, ok := path.(*expression.Field)
+	if !ok {
+		return false
+	}
+	id, ok := f.First().(*expression.Identifier)
+	return ok && id.Identifier() == alias && allowed[f.Second().Alias()]
+}
+
 /*
 Returns the WHERE clause expression in an UPDATE
 statement.

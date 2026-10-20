@@ -31,7 +31,7 @@ func Build2(plan plan.Operator, context *Context, collector Operator) (Operator,
 		// Collect scanned indexes.
 		m = make(map[scannedIndex]bool, 8)
 	}
-	builder := &builder{context, m, aliasMap, true, collector}
+	builder := &builder{context, m, aliasMap, true, collector, nil, nil}
 	x, err := plan.Accept(builder)
 
 	if err != nil {
@@ -61,6 +61,8 @@ type builder struct {
 	aliasMap         map[string]string
 	dynamicAuthorize bool
 	collector        Operator
+	updateSet        *algebra.Set // SET/UNSET of the UPDATE being built, for SendUpdate validation
+	updateUnset      *algebra.Unset
 }
 
 func (this *builder) setAliasMap(keyspaceTerm *algebra.KeyspaceTerm) {
@@ -460,14 +462,28 @@ func (this *builder) VisitClone(plan *plan.Clone) (interface{}, error) {
 }
 
 func (this *builder) VisitSet(plan *plan.Set) (interface{}, error) {
+	this.updateSet = plan.Node()
 	return checkOp(NewSet(plan, this.context), this.context)
 }
 
 func (this *builder) VisitUnset(plan *plan.Unset) (interface{}, error) {
+	this.updateUnset = plan.Node()
 	return checkOp(NewUnset(plan, this.context), this.context)
 }
 
 func (this *builder) VisitSendUpdate(plan *plan.SendUpdate) (interface{}, error) {
+	set, unset := this.updateSet, this.updateUnset
+	this.updateSet, this.updateUnset = nil, nil
+
+	// static keyspaces are validated by the planner
+	// DML keyspace expression is always a named/positional parameter (param_expr in grammar)
+	if expr := plan.Term().ExpressionTerm(); expr != nil {
+		path, _ := getKeyspacePath(expr, &opContext{nil, this.context})
+		err := algebra.ValidateSystemUpdate(path, plan.Alias(), set, unset)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return checkOp(NewSendUpdate(plan, this.context), this.context)
 }
 
