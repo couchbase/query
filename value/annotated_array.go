@@ -142,6 +142,9 @@ type AnnotatedArray struct {
 	shouldSpill func(uint64, uint64) bool
 	trackMemory func(int64) error
 
+	// sorts the values in memory; ParallelIntrosort unless SetSortAlgorithm changes it
+	sortAlgorithm sort.Algorithm
+
 	mem      AnnotatedValues
 	heapSize int
 	heap     bool
@@ -183,6 +186,9 @@ func NewAnnotatedArray(acquire func(int) AnnotatedValues, release func(Annotated
 		compress:         compressSpill && logging.LogLevel() != logging.DEBUG,
 		parentsMap:       make(map[string]Value),
 		getEncryptionKey: getEncryptionKey,
+		// the same algorithm as query/sort.Sort: equal keys keep their order from earlier
+		// releases (MB-63544)
+		sortAlgorithm: sort.ParallelIntrosort{},
 	}
 	rv.valFunc = func(av AnnotatedValue) bool {
 		p := av.GetAttachment(ATT_PARENT)
@@ -228,6 +234,7 @@ func (this *AnnotatedArray) Copy() *AnnotatedArray {
 		less:                  this.less,
 		shouldSpill:           this.shouldSpill,
 		trackMemory:           this.trackMemory,
+		sortAlgorithm:         this.sortAlgorithm,
 		compress:              this.compress,
 		parentsMap:            make(map[string]Value),
 		encryptionKeyResolved: this.encryptionKeyResolved,
@@ -249,6 +256,19 @@ func (this *AnnotatedArray) Copy() *AnnotatedArray {
 		}
 	}
 	return rv
+}
+
+// SetSortAlgorithm sets the algorithm that sorts the values in memory; nil restores
+// ParallelIntrosort.
+func (this *AnnotatedArray) SetSortAlgorithm(a sort.Algorithm) {
+	if a == nil {
+		a = sort.ParallelIntrosort{}
+	}
+	this.sortAlgorithm = a
+}
+
+func (this *AnnotatedArray) sortMem() {
+	this.sortAlgorithm.Sort(this)
 }
 
 func (this *AnnotatedArray) Length() int {
@@ -358,7 +378,7 @@ func (this *AnnotatedArray) spillToDisk() error {
 	}
 	this.heapSize = 0
 	if this.less != nil {
-		sort.Sort(this)
+		this.sortMem()
 	}
 	start := util.Now()
 	if len(this.spill) > _MAX_SPILL_FILES {
@@ -486,7 +506,7 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 
 	if this.less != nil {
 		this.heapSize = 0
-		sort.Sort(this)
+		this.sortMem()
 
 		heap.Init(&this.spill)
 

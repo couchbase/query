@@ -16,6 +16,7 @@ import (
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/sort"
 	"github.com/couchbase/query/system"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -121,6 +122,11 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 		!plan.ClipValues(),
 		getEncryptionKey,
 	)
+	// with the feature bit set, sort with parallel pdqsort, which uses less CPU but may return rows
+	// with equal sort keys in a different order than earlier releases (MB-63544)
+	if !context.IsFeatureEnabled(util.N1QL_INTROSORT) {
+		rv.values.SetSortAlgorithm(sort.ParallelPDQ{})
+	}
 
 	newBase(&rv.base, context)
 	rv.execPhase = SORT
