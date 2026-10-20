@@ -78,9 +78,14 @@ func TestVectors(t *testing.T) {
 
 	runStmt(qc, "CREATE VECTOR INDEX idx_vec4 on product._default.vectors(vec VECTOR) INCLUDE (brand, size, color) WITH {'dimension': 128, 'train_list': 10000, 'description': 'IVF32,SQ8', 'similarity': 'L2'}")
 
+	// UDF used in filters that should not be pushed to the indexer as inline filter
+	runStmt(qc, "CREATE OR REPLACE FUNCTION default:vec_id_ok(id) { id != \"vec_adidas_7_5209\" }")
+
 	runMatch("case_bhive_include.json", false, true, qc, t)
 
 	runMatch("case_bhive_error.json", false, false, qc, t)
+
+	runStmt(qc, "DROP FUNCTION default:vec_id_ok")
 
 	runStmt(qc, "DROP INDEX idx_vec4 on product._default.vectors")
 

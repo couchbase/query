@@ -628,7 +628,12 @@ func includesId(index datastore.Index) bool {
 // for Bhive index meta().id is treated as the last include column during planning,
 // but it is not an actual include column in the index; remove any range on meta().id
 // from include spans before sending to the indexer (the predicate on meta().id is still
-// part of the index filter, which is pushed to the indexer as inline filter)
+// part of the index filter, which is pushed to the indexer as inline filter).
+// When include spans are present the indexer only uses the include spans for filtering
+// and does not evaluate the inline filter, thus if a meta().id range that is not a whole
+// range is removed, do not send any include spans such that the indexer evaluates the
+// inline filter (which includes the meta().id predicate) instead; otherwise wrong results
+// may be returned, e.g. when LIMIT is pushed down.
 func getIncludeSpans(index datastore.Index, sargIncludes SargSpans) plan.Spans2 {
 	tspan, ok := sargIncludes.(*TermSpans)
 	if !ok {
@@ -647,6 +652,14 @@ func getIncludeSpans(index datastore.Index, sargIncludes SargSpans) plan.Spans2 
 	rv := make(plan.Spans2, 0, len(includeSpans))
 	for _, span := range includeSpans {
 		if len(span.Ranges) > nIncludes {
+			for _, rg := range span.Ranges[nIncludes:] {
+				if !isWholeIdRange(rg) {
+					// if there is a valid range on meta().id, use inline filter
+					// instead of include spans since meta().id filter cannot be
+					// evaluated as include spans.
+					return nil
+				}
+			}
 			span = span.Copy()
 			span.Ranges = span.Ranges[:nIncludes]
 			span.Exact = false
@@ -668,6 +681,12 @@ func getIncludeSpans(index datastore.Index, sargIncludes SargSpans) plan.Spans2 
 		return includeSpans
 	}
 	return rv
+}
+
+// meta().id is always a non-NULL string, so a WHOLE, FULL or VALUED range on it
+// qualifies every document
+func isWholeIdRange(rg *plan.Range2) bool {
+	return rg.HasFlag(plan.RANGE_WHOLE_SPAN | plan.RANGE_FULL_SPAN | plan.RANGE_VALUED_SPAN)
 }
 
 func getIndexIncludes(alias string, index datastore.Index) expression.Expressions {

@@ -180,7 +180,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 					} else {
 						inlineFilter = filter.String()
 					}
-					fltrPushed = true
+					fltrPushed = len(this.plan.IncludeSpans()) == 0
 				}
 			}
 			var indexPartitionSets datastore.IndexPartitionSets
@@ -291,7 +291,7 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 							av.SetField(alias, av)
 
 							// for vector index 'filter' is pushed to the indexer
-							// as 'inlineFilter' (see above)
+							// as 'inlineFilter' if there is no include spans (see above)
 							if filter != nil && !fltrPushed {
 								result, err := filter.Evaluate(av, &this.operatorCtx)
 								if err != nil {
