@@ -436,7 +436,7 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 		origKeyspaces[a] = k
 	}
 
-	subqueries, err := expression.ListSubqueries(expression.Expressions{expr}, false)
+	hasSubq, hasUdf, err := expression.FindExprParts(expr)
 	if err != nil {
 		return nil, err
 	}
@@ -495,11 +495,14 @@ func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{
 			optFilterSelectivity(filter, this.advisorValidate, this.context)
 			filter.SetOptBits(optBits)
 		}
-		if len(subqueries) > 0 {
+		if hasSubq {
 			filter.SetSubq()
 		}
 		if notPushable {
 			filter.SetNotPushable()
+		}
+		if hasUdf {
+			filter.SetUdf()
 		}
 
 		if len(keyspaces) == 1 {

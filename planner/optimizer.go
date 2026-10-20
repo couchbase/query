@@ -276,7 +276,7 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 
 	if join != nil {
 		if hash {
-			joinFilter, selec, err := this.getFilter(join.Alias(), true, true, join.Onclause())
+			joinFilter, selec, err := this.getFilter(join.Alias(), true, true, false, join.Onclause())
 			if err != nil {
 				return nil, nil, nil, nil, err
 			}
@@ -312,7 +312,7 @@ func (this *builder) buildJoinOp(join *algebra.AnsiJoin, nest *algebra.AnsiNest,
 		}
 	} else if nest != nil {
 		if hash {
-			joinFilter, selec, err := this.getFilter(nest.Alias(), true, true, nest.Onclause())
+			joinFilter, selec, err := this.getFilter(nest.Alias(), true, true, false, nest.Onclause())
 			if err != nil {
 				return nil, nil, nil, nil, err
 			}

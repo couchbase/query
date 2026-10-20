@@ -151,7 +151,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
 
-		filter, selec, err := this.getFilter(alias, true, true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, true, false, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -419,7 +419,7 @@ func (this *builder) buildAnsiJoinOp(node *algebra.AnsiJoin) (op plan.Operator, 
 			return nil, err
 		}
 
-		filter, selec, err := this.getFilter(alias, true, true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, true, false, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -529,7 +529,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 			baseKeyspace.Filters().ClearPlanFlags()
 		}
 
-		filter, selec, err := this.getFilter(alias, true, true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, true, false, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -774,7 +774,7 @@ func (this *builder) buildAnsiNestOp(node *algebra.AnsiNest) (op plan.Operator, 
 		return plan.NewNestFromAnsi(keyspace, newKeyspaceTerm, subPaths, outer,
 			onFilter, cost, cardinality, size, frCost), nil
 	case *algebra.ExpressionTerm, *algebra.SubqueryTerm:
-		filter, selec, err := this.getFilter(alias, true, true, node.Onclause())
+		filter, selec, err := this.getFilter(alias, true, true, false, node.Onclause())
 		if err != nil {
 			return nil, err
 		}
@@ -1264,7 +1264,7 @@ func (this *builder) buildHashJoinOp(right algebra.SimpleFromTerm, left algebra.
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
 				errors.NewPlanInternalError("buildHashjoinOp: no plan for inner side")
 		}
-		_, _, err := this.getFilter(alias, true, true, nil)
+		_, _, err := this.getFilter(alias, true, true, false, nil)
 		if err != nil {
 			return nil, nil, nil, nil, nil, nil, nil, false, false,
 				OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err

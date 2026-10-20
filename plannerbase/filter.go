@@ -37,6 +37,7 @@ const (
 	FLTR_IS_VECTOR_FUNC                   // vector search function (ANN)
 	FLTR_HAS_VOLATILE                     // has reference to volatile expression
 	FLTR_HAS_NON_NOW_VOLATILE             // has reference to volatile expression not starting with NOW
+	FLTR_HAS_UDF                          // has User-Defined Functions (UDF) references
 )
 
 const TEMP_PLAN_FLAGS = (FLTR_IN_INDEX_SPAN | FLTR_IN_HASH_JOIN)
@@ -283,6 +284,14 @@ func (this *Filter) HasVolatileExpr() bool {
 
 func (this *Filter) HasNonNowVolatileExpr() bool {
 	return (this.fltrFlags & FLTR_HAS_NON_NOW_VOLATILE) != 0
+}
+
+func (this *Filter) SetUdf() {
+	this.fltrFlags |= FLTR_HAS_UDF
+}
+
+func (this *Filter) HasUdf() bool {
+	return (this.fltrFlags & FLTR_HAS_UDF) != 0
 }
 
 func (this *Filter) FltrExpr() expression.Expression {
