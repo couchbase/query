@@ -157,6 +157,14 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
 		case KEYSPACE_NAME_AWR:
 			privs.Add("", auth.PRIV_SYSTEM_WRITE, auth.PRIV_PROPS_NONE)
+
+		// same as delete: system read if on prem and open (but limited to the user) for elixir
+		case KEYSPACE_NAME_PREPAREDS:
+			if !tenant.IsServerless() {
+				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+			}
+
+			// for all other keyspaces, we rely on the implementation do deny access
 		}
 
 	case auth.PRIV_QUERY_INSERT, auth.PRIV_UPSERT:
