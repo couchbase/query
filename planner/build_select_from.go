@@ -1223,7 +1223,8 @@ func expandOffsetLimit(offset, limit expression.Expression, factor int) expressi
 
 func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans, sargIncludes SargSpans,
 	arrayKey *expression.All, unnestAliases []string, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value, cost, cardinality float64, size int64, frCost float64) (
+	filterCovers map[*expression.Cover]value.Value, cond, origCond expression.Expression,
+	cost, cardinality float64, size int64, frCost float64) (
 	expression.Expression, float64, float64, int64, float64, error) {
 
 	var err error
@@ -1270,7 +1271,14 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		markIndexFlags(index, spans, includeSpans, nil, baseKeyspace)
 	}
 
-	filter, selec, err = this.getFilter(alias, false, allowNow, inline, nil)
+	// for inline filters (pushed to the indexer), skip filters that are implied by the
+	// index condition of a partial index: these are already guaranteed by the index,
+	// and the index condition fields may not be available in the indexer
+	var idxCond, idxOrigCond expression.Expression
+	if inline {
+		idxCond, idxOrigCond = cond, origCond
+	}
+	filter, selec, err = this.getFilterWithCond(alias, false, allowNow, inline, nil, idxCond, idxOrigCond)
 	if err != nil {
 		return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
@@ -1298,6 +1306,16 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 	if filter != nil && (len(covers) > 0 || len(filterCovers) > 0) {
 		coverer := expression.NewCoverer(covers, filterCovers)
 		filter, err = expression.RenameAnyExpr(filter, arrayKey)
+		if err == nil && inline {
+			// filterCovers are not sent to the indexer, replace any remaining reference
+			// to filter covers in inline filters with the corresponding values
+			for c, v := range filterCovers {
+				filter, _, err = expression.ReplaceExpr(filter, c.Covered(), expression.NewConstant(v))
+				if err != nil {
+					break
+				}
+			}
+		}
 		if err == nil {
 			filter, err = coverer.Map(filter)
 		}
@@ -1321,6 +1339,13 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 
 func (this *builder) getFilter(alias string, join, allowNow, inline bool, onclause expression.Expression) (
 	expression.Expression, float64, error) {
+
+	return this.getFilterWithCond(alias, join, allowNow, inline, onclause, nil, nil)
+}
+
+// if cond (index condition) is specified, skip filters that are implied by the index condition
+func (this *builder) getFilterWithCond(alias string, join, allowNow, inline bool, onclause,
+	cond, origCond expression.Expression) (expression.Expression, float64, error) {
 
 	var err error
 	baseKeyspace, _ := this.baseKeyspaces[alias]
@@ -1367,6 +1392,15 @@ func (this *builder) getFilter(alias string, join, allowNow, inline bool, onclau
 
 		fltr := fl.FltrExpr()
 		origFltr := fl.OrigExpr()
+
+		if cond != nil {
+			implied, err := this.impliedByIndexCond(fltr, origFltr, cond, origCond)
+			if err != nil {
+				return nil, OPT_SELEC_NOT_AVAIL, err
+			} else if implied {
+				continue
+			}
+		}
 
 		if origFltr != nil {
 			terms = append(terms, origFltr.Copy())
