@@ -200,7 +200,7 @@ func (this *IntersectSpans) String() string {
 }
 
 func (this *IntersectSpans) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{
+	r := map[string]any{
 		"#":     "IntersectSpans",
 		"spans": this.spans,
 	}

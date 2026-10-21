@@ -71,7 +71,7 @@ func getScope(credentials *auth.Credentials, retry bool, parts ...string) (datas
 	return s, err
 }
 
-func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
+func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (any, error) {
 	scope, err := getScope(this.context.Credentials(), true, stmt.Keyspace().Path().Parts()...)
 	if err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (this *builder) VisitCreateCollection(stmt *algebra.CreateCollection) (inte
 	return plan.NewQueryPlan(plan.NewCreateCollection(scope, stmt)), nil
 }
 
-func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
+func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (any, error) {
 	scope, err := getScope(this.context.Credentials(), false, stmt.Keyspace().Path().Parts()...)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (this *builder) VisitDropCollection(stmt *algebra.DropCollection) (interfac
 	return plan.NewQueryPlan(plan.NewDropCollection(scope, stmt)), nil
 }
 
-func (this *builder) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
+func (this *builder) VisitFlushCollection(stmt *algebra.FlushCollection) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {

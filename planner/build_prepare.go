@@ -17,7 +17,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
+func (this *builder) VisitPrepare(stmt *algebra.Prepare) (any, error) {
 	var prep *plan.Prepared
 	var err error
 

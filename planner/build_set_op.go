@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
+func (this *builder) VisitUnion(node *algebra.Union) (any, error) {
 	// Inject DISTINCT into both terms
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
@@ -67,7 +67,7 @@ func (this *builder) VisitUnion(node *algebra.Union) (interface{}, error) {
 	return plan.NewSequence(unionAll, plan.NewDistinct(cost, cardinality, size, cost)), nil
 }
 
-func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
+func (this *builder) VisitUnionAll(node *algebra.UnionAll) (any, error) {
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
@@ -108,7 +108,7 @@ func (this *builder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) 
 	return plan.NewUnionAll(cost, cardinality, size, frCost, first.(plan.Operator), second.(plan.Operator)), nil
 }
 
-func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+func (this *builder) VisitIntersect(node *algebra.Intersect) (any, error) {
 	// Inject DISTINCT into first term
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
@@ -156,7 +156,7 @@ func (this *builder) VisitIntersect(node *algebra.Intersect) (interface{}, error
 	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator), true, cost, cardinality, size, frCost), nil
 }
 
-func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
+func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (any, error) {
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 
@@ -197,7 +197,7 @@ func (this *builder) VisitIntersectAll(node *algebra.IntersectAll) (interface{},
 	return plan.NewIntersectAll(first.(plan.Operator), second.(plan.Operator), false, cost, cardinality, size, frCost), nil
 }
 
-func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
+func (this *builder) VisitExcept(node *algebra.Except) (any, error) {
 	// Inject DISTINCT into first term
 	setOpDistinct := this.setOpDistinct
 	this.setOpDistinct = true
@@ -245,7 +245,7 @@ func (this *builder) VisitExcept(node *algebra.Except) (interface{}, error) {
 	return plan.NewExceptAll(first.(plan.Operator), second.(plan.Operator), true, cost, cardinality, size, frCost), nil
 }
 
-func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
+func (this *builder) VisitExceptAll(node *algebra.ExceptAll) (any, error) {
 	this.resetOrderOffsetLimit()
 	this.delayProjection = false // Disable ORDER BY non-projected expressions
 

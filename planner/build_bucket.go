@@ -12,14 +12,14 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitCreateBucket(stmt *algebra.CreateBucket) (interface{}, error) {
+func (this *builder) VisitCreateBucket(stmt *algebra.CreateBucket) (any, error) {
 	return plan.NewQueryPlan(plan.NewCreateBucket(stmt)), nil
 }
 
-func (this *builder) VisitAlterBucket(stmt *algebra.AlterBucket) (interface{}, error) {
+func (this *builder) VisitAlterBucket(stmt *algebra.AlterBucket) (any, error) {
 	return plan.NewQueryPlan(plan.NewAlterBucket(stmt)), nil
 }
 
-func (this *builder) VisitDropBucket(stmt *algebra.DropBucket) (interface{}, error) {
+func (this *builder) VisitDropBucket(stmt *algebra.DropBucket) (any, error) {
 	return plan.NewQueryPlan(plan.NewDropBucket(stmt)), nil
 }

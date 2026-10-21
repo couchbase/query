@@ -14,7 +14,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *builder) VisitUpdate(stmt *algebra.Update) (interface{}, error) {
+func (this *builder) VisitUpdate(stmt *algebra.Update) (any, error) {
 	this.where = stmt.Where()
 	this.node = stmt
 

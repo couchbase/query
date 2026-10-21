@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
+func (this *sargable) VisitAnyEvery(pred *expression.AnyEvery) (any, error) {
 	if this.vectorType != "" {
 		return false, nil
 	} else if this.defaultSargable(pred) {

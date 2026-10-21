@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
+func (this *builder) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {

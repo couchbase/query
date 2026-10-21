@@ -14,7 +14,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *sargable) VisitOr(pred *expression.Or) (interface{}, error) {
+func (this *sargable) VisitOr(pred *expression.Or) (any, error) {
 	if this.vectorType == "" && base.SubsetOf(pred, this.key) {
 		return true, nil
 	}

@@ -350,7 +350,7 @@ func addExternalPrivilages(node *algebra.KeyspaceTerm, keyspace datastore.Keyspa
 	}
 }
 
-func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
+func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (any, error) {
 	node.SetDefaultNamespace(this.namespace)
 	keyspace, err := this.getTermKeyspace(node)
 	if err != nil {
@@ -643,7 +643,7 @@ func (this *builder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{},
 	return nil, nil
 }
 
-func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (any, error) {
 	alias := node.Alias()
 	var err error
 
@@ -741,7 +741,7 @@ func (this *builder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{},
 	return nil, nil
 }
 
-func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
+func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (any, error) {
 	if node.IsKeyspace() {
 		return node.KeyspaceTerm().Accept(this)
 	}
@@ -805,7 +805,7 @@ func (this *builder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interfac
 	return nil, nil
 }
 
-func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
+func (this *builder) VisitJoin(node *algebra.Join) (any, error) {
 	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil &&
 		this.group == nil {
 		this.resetProjection()
@@ -865,7 +865,7 @@ func (this *builder) VisitJoin(node *algebra.Join) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
+func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (any, error) {
 	this.requirePrimaryKey = true
 	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil &&
 		this.group == nil {
@@ -913,7 +913,7 @@ func (this *builder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error
 	return nil, nil
 }
 
-func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
+func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (any, error) {
 	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil &&
 		this.group == nil {
 		this.resetProjection()
@@ -953,7 +953,7 @@ func (this *builder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) 
 	return nil, nil
 }
 
-func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
+func (this *builder) VisitNest(node *algebra.Nest) (any, error) {
 	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil && this.group == nil {
 		this.resetProjection()
 		this.resetIndexGroupAggs()
@@ -1009,7 +1009,7 @@ func (this *builder) VisitNest(node *algebra.Nest) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+func (this *builder) VisitIndexNest(node *algebra.IndexNest) (any, error) {
 	this.requirePrimaryKey = true
 	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil && this.group == nil {
 		this.resetProjection()
@@ -1053,7 +1053,7 @@ func (this *builder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error
 	return nil, nil
 }
 
-func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (any, error) {
 	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) != nil && this.group == nil {
 		this.resetProjection()
 		this.resetIndexGroupAggs()
@@ -1095,7 +1095,7 @@ func (this *builder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) 
 	return nil, nil
 }
 
-func (this *builder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
+func (this *builder) VisitUnnest(node *algebra.Unnest) (any, error) {
 	if algebra.GetKeyspaceTerm(node.PrimaryTerm()) == nil {
 		this.resetPushDowns()
 	}

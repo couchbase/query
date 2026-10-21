@@ -93,7 +93,7 @@ func newPattern(suffixes, tokens map[string]string) *pattern {
 	return rv
 }
 
-func (this *pattern) VisitLike(expr *expression.Like) (interface{}, error) {
+func (this *pattern) VisitLike(expr *expression.Like) (any, error) {
 	source := expr.First()
 	variable, ok := this.suffixes[source.String()]
 	if !ok {
@@ -108,7 +108,7 @@ func (this *pattern) VisitLike(expr *expression.Like) (interface{}, error) {
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *pattern) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *pattern) VisitFunction(expr expression.Function) (any, error) {
 	switch expr := expr.(type) {
 	case *expression.Contains:
 		return this.visitContains(expr)
@@ -127,7 +127,7 @@ func (this *pattern) VisitFunction(expr expression.Function) (interface{}, error
 	}
 }
 
-func (this *pattern) visitContains(expr *expression.Contains) (interface{}, error) {
+func (this *pattern) visitContains(expr *expression.Contains) (any, error) {
 	source := expr.First()
 	variable, ok := this.suffixes[source.String()]
 	if !ok {
@@ -142,7 +142,7 @@ func (this *pattern) visitContains(expr *expression.Contains) (interface{}, erro
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *pattern) visitContainsToken(expr *expression.ContainsToken) (interface{}, error) {
+func (this *pattern) visitContainsToken(expr *expression.ContainsToken) (any, error) {
 	operands := expr.Operands()
 	source := operands[0]
 	variable, ok := this.tokens[source.String()]
@@ -163,7 +163,7 @@ func (this *pattern) visitContainsToken(expr *expression.ContainsToken) (interfa
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *pattern) visitContainsTokenLike(expr *expression.ContainsTokenLike) (interface{}, error) {
+func (this *pattern) visitContainsTokenLike(expr *expression.ContainsTokenLike) (any, error) {
 	operands := expr.Operands()
 	source := operands[0]
 	variable, ok := this.tokens[source.String()]
@@ -184,7 +184,7 @@ func (this *pattern) visitContainsTokenLike(expr *expression.ContainsTokenLike) 
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *pattern) visitContainsTokenRegexp(expr *expression.ContainsTokenRegexp) (interface{}, error) {
+func (this *pattern) visitContainsTokenRegexp(expr *expression.ContainsTokenRegexp) (any, error) {
 	operands := expr.Operands()
 	source := operands[0]
 	variable, ok := this.tokens[source.String()]
@@ -205,7 +205,7 @@ func (this *pattern) visitContainsTokenRegexp(expr *expression.ContainsTokenRege
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *pattern) visitRegexpContains(expr *expression.RegexpContains) (interface{}, error) {
+func (this *pattern) visitRegexpContains(expr *expression.RegexpContains) (any, error) {
 	source := expr.First()
 	variable, ok := this.suffixes[source.String()]
 	if !ok {
@@ -220,7 +220,7 @@ func (this *pattern) visitRegexpContains(expr *expression.RegexpContains) (inter
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *pattern) visitRegexpLike(expr *expression.RegexpLike) (interface{}, error) {
+func (this *pattern) visitRegexpLike(expr *expression.RegexpLike) (any, error) {
 	source := expr.First()
 	variable, ok := this.suffixes[source.String()]
 	if !ok {

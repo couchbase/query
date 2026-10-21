@@ -13,10 +13,10 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
+func (this *builder) VisitGrantRole(stmt *algebra.GrantRole) (any, error) {
 	return plan.NewQueryPlan(plan.NewGrantRole(stmt)), nil
 }
 
-func (this *builder) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, error) {
+func (this *builder) VisitRevokeRole(stmt *algebra.RevokeRole) (any, error) {
 	return plan.NewQueryPlan(plan.NewRevokeRole(stmt)), nil
 }

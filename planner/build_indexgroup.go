@@ -83,11 +83,11 @@ func (this *PartialAggCoverer) Covers() []*expression.Cover {
 
 // Parameters
 
-func (this *PartialAggCoverer) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
+func (this *PartialAggCoverer) VisitNamedParameter(expr expression.NamedParameter) (any, error) {
 	return expr, nil
 }
 
-func (this *PartialAggCoverer) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
+func (this *PartialAggCoverer) VisitPositionalParameter(expr expression.PositionalParameter) (any, error) {
 	return expr, nil
 }
 
@@ -131,10 +131,10 @@ func NewFullAggCoverer(covers []*expression.Cover) *FullAggCoverer {
 	return rv
 }
 
-func (this *FullAggCoverer) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
+func (this *FullAggCoverer) VisitNamedParameter(expr expression.NamedParameter) (any, error) {
 	return expr, nil
 }
 
-func (this *FullAggCoverer) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
+func (this *FullAggCoverer) VisitPositionalParameter(expr expression.PositionalParameter) (any, error) {
 	return expr, nil
 }

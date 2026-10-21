@@ -275,7 +275,7 @@ func (this *builder) sargableSearchIndexes(indexes []datastore.Index, pred expre
 			continue
 		}
 
-		var mappings interface{}
+		var mappings any
 		var n, en int
 		var size, esize int64
 		var exact, knn bool
@@ -423,7 +423,7 @@ func (this *builder) buildFTSFlexRequest(alias string, pred, vpred expression.Ex
 	flexRequest = &datastore.FTSFlexRequest{
 		Keyspace:      alias,
 		Bindings:      ubs,
-		Opaque:        make(map[string]interface{}, 4),
+		Opaque:        make(map[string]any, 4),
 		CheckPageable: pageable,
 	}
 	if pred != nil {

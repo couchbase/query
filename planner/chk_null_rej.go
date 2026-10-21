@@ -53,7 +53,7 @@ func newChkNullRej() *chkNullRej {
 
 // Logic
 
-func (this *chkNullRej) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *chkNullRej) VisitAnd(expr *expression.And) (any, error) {
 	for _, op := range expr.Operands() {
 		if op == nil {
 			continue
@@ -78,7 +78,7 @@ func (this *chkNullRej) VisitAnd(expr *expression.And) (interface{}, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *chkNullRej) VisitOr(expr *expression.Or) (any, error) {
 	hasRef := false
 	for _, op := range expr.Operands() {
 		if op == nil {
@@ -105,7 +105,7 @@ func (this *chkNullRej) VisitOr(expr *expression.Or) (interface{}, error) {
 	return hasRef, nil
 }
 
-func (this *chkNullRej) VisitNot(expr *expression.Not) (interface{}, error) {
+func (this *chkNullRej) VisitNot(expr *expression.Not) (any, error) {
 	op := expr.Operand()
 	res, err := op.Accept(this)
 	if err != nil {
@@ -125,7 +125,7 @@ func (this *chkNullRej) VisitNot(expr *expression.Not) (interface{}, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) visitOperands(args ...expression.Expression) (interface{}, error) {
+func (this *chkNullRej) visitOperands(args ...expression.Expression) (any, error) {
 	hasRef := false
 	for _, arg := range args {
 		if !expression.HasKeyspaceReferences(arg, this.keyspaceNames) {
@@ -149,43 +149,43 @@ func (this *chkNullRej) visitOperands(args ...expression.Expression) (interface{
 
 // Arithmetic
 
-func (this *chkNullRej) VisitAdd(pred *expression.Add) (interface{}, error) {
+func (this *chkNullRej) VisitAdd(pred *expression.Add) (any, error) {
 	return this.visitOperands((pred.Operands())...)
 }
 
-func (this *chkNullRej) VisitDiv(pred *expression.Div) (interface{}, error) {
+func (this *chkNullRej) VisitDiv(pred *expression.Div) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitMod(pred *expression.Mod) (interface{}, error) {
+func (this *chkNullRej) VisitMod(pred *expression.Mod) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitMult(pred *expression.Mult) (interface{}, error) {
+func (this *chkNullRej) VisitMult(pred *expression.Mult) (any, error) {
 	return this.visitOperands((pred.Operands())...)
 }
 
-func (this *chkNullRej) VisitNeg(pred *expression.Neg) (interface{}, error) {
+func (this *chkNullRej) VisitNeg(pred *expression.Neg) (any, error) {
 	return this.visitOperands(pred.Operand())
 }
 
-func (this *chkNullRej) VisitSub(pred *expression.Sub) (interface{}, error) {
+func (this *chkNullRej) VisitSub(pred *expression.Sub) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
 // Case
 
-func (this *chkNullRej) VisitSearchedCase(pred *expression.SearchedCase) (interface{}, error) {
+func (this *chkNullRej) VisitSearchedCase(pred *expression.SearchedCase) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitSimpleCase(pred *expression.SimpleCase) (interface{}, error) {
+func (this *chkNullRej) VisitSimpleCase(pred *expression.SimpleCase) (any, error) {
 	return false, nil
 }
 
 // Collection
 
-func (this *chkNullRej) visitAnyAndEvery(coll expression.CollPredicate) (interface{}, error) {
+func (this *chkNullRej) visitAnyAndEvery(coll expression.CollPredicate) (any, error) {
 	keyspaceNames := this.keyspaceNames
 	this.keyspaceNames = _KEYSPACE_NAMES_POOL.Get()
 	defer func() {
@@ -217,144 +217,144 @@ outer:
 	return false, nil
 }
 
-func (this *chkNullRej) VisitAny(pred *expression.Any) (interface{}, error) {
+func (this *chkNullRej) VisitAny(pred *expression.Any) (any, error) {
 	return this.visitAnyAndEvery(pred)
 }
 
-func (this *chkNullRej) VisitEvery(pred *expression.Every) (interface{}, error) {
+func (this *chkNullRej) VisitEvery(pred *expression.Every) (any, error) {
 	return this.visitAnyAndEvery(pred)
 }
 
-func (this *chkNullRej) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
+func (this *chkNullRej) VisitAnyEvery(pred *expression.AnyEvery) (any, error) {
 	return this.visitAnyAndEvery(pred)
 }
 
-func (this *chkNullRej) VisitArray(pred *expression.Array) (interface{}, error) {
+func (this *chkNullRej) VisitArray(pred *expression.Array) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitFirst(pred *expression.First) (interface{}, error) {
+func (this *chkNullRej) VisitFirst(pred *expression.First) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitObject(pred *expression.Object) (interface{}, error) {
+func (this *chkNullRej) VisitObject(pred *expression.Object) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitExists(pred *expression.Exists) (interface{}, error) {
+func (this *chkNullRej) VisitExists(pred *expression.Exists) (any, error) {
 	return pred.Operand().Accept(this)
 }
 
 /* IN, WITHIN expressions are null rejecting */
-func (this *chkNullRej) VisitIn(pred *expression.In) (interface{}, error) {
+func (this *chkNullRej) VisitIn(pred *expression.In) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitWithin(pred *expression.Within) (interface{}, error) {
+func (this *chkNullRej) VisitWithin(pred *expression.Within) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
 // Comparison
 
 /* all relational comparison operations are null rejecting */
-func (this *chkNullRej) VisitBetween(pred *expression.Between) (interface{}, error) {
+func (this *chkNullRej) VisitBetween(pred *expression.Between) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitEq(pred *expression.Eq) (interface{}, error) {
+func (this *chkNullRej) VisitEq(pred *expression.Eq) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitLE(pred *expression.LE) (interface{}, error) {
+func (this *chkNullRej) VisitLE(pred *expression.LE) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitLike(pred *expression.Like) (interface{}, error) {
+func (this *chkNullRej) VisitLike(pred *expression.Like) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitLT(pred *expression.LT) (interface{}, error) {
+func (this *chkNullRej) VisitLT(pred *expression.LT) (any, error) {
 	return this.visitOperands(pred.First(), pred.Second())
 }
 
-func (this *chkNullRej) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
+func (this *chkNullRej) VisitIsMissing(pred *expression.IsMissing) (any, error) {
 	return false, nil
 }
 
 /* IS NOT MISSING is null rejecting */
-func (this *chkNullRej) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
+func (this *chkNullRej) VisitIsNotMissing(pred *expression.IsNotMissing) (any, error) {
 	return this.visitOperands(pred.Operand())
 }
 
 /* IS NOT NULL is null rejecting */
-func (this *chkNullRej) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
+func (this *chkNullRej) VisitIsNotNull(pred *expression.IsNotNull) (any, error) {
 	return this.visitOperands(pred.Operand())
 }
 
-func (this *chkNullRej) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
+func (this *chkNullRej) VisitIsNotValued(pred *expression.IsNotValued) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
+func (this *chkNullRej) VisitIsNull(pred *expression.IsNull) (any, error) {
 	return false, nil
 }
 
 /* IS VALUED is null rejecting */
-func (this *chkNullRej) VisitIsValued(pred *expression.IsValued) (interface{}, error) {
+func (this *chkNullRej) VisitIsValued(pred *expression.IsValued) (any, error) {
 	return this.visitOperands(pred.Operand())
 }
 
 // Concat
-func (this *chkNullRej) VisitConcat(pred *expression.Concat) (interface{}, error) {
+func (this *chkNullRej) VisitConcat(pred *expression.Concat) (any, error) {
 	return this.visitOperands((pred.Operands())...)
 }
 
 // Constant
-func (this *chkNullRej) VisitConstant(pred *expression.Constant) (interface{}, error) {
+func (this *chkNullRej) VisitConstant(pred *expression.Constant) (any, error) {
 	return false, nil
 }
 
 // Identifier
-func (this *chkNullRej) VisitIdentifier(pred *expression.Identifier) (interface{}, error) {
+func (this *chkNullRej) VisitIdentifier(pred *expression.Identifier) (any, error) {
 	_, ok := this.keyspaceNames[pred.Identifier()]
 	return ok, nil
 }
 
 // Construction
 
-func (this *chkNullRej) VisitArrayConstruct(pred *expression.ArrayConstruct) (interface{}, error) {
+func (this *chkNullRej) VisitArrayConstruct(pred *expression.ArrayConstruct) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitObjectConstruct(pred *expression.ObjectConstruct) (interface{}, error) {
+func (this *chkNullRej) VisitObjectConstruct(pred *expression.ObjectConstruct) (any, error) {
 	return false, nil
 }
 
 // Navigation
 
-func (this *chkNullRej) VisitElement(pred *expression.Element) (interface{}, error) {
+func (this *chkNullRej) VisitElement(pred *expression.Element) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitField(pred *expression.Field) (interface{}, error) {
+func (this *chkNullRej) VisitField(pred *expression.Field) (any, error) {
 	return this.visitOperands(pred.First())
 }
 
-func (this *chkNullRej) VisitFieldName(pred *expression.FieldName) (interface{}, error) {
+func (this *chkNullRej) VisitFieldName(pred *expression.FieldName) (any, error) {
 	return false, nil
 }
 
-func (this *chkNullRej) VisitSlice(pred *expression.Slice) (interface{}, error) {
+func (this *chkNullRej) VisitSlice(pred *expression.Slice) (any, error) {
 	return false, nil
 }
 
 // Self
-func (this *chkNullRej) VisitSelf(pred *expression.Self) (interface{}, error) {
+func (this *chkNullRej) VisitSelf(pred *expression.Self) (any, error) {
 	return false, nil
 }
 
 // Function
-func (this *chkNullRej) VisitFunction(pred expression.Function) (interface{}, error) {
+func (this *chkNullRej) VisitFunction(pred expression.Function) (any, error) {
 	operands := pred.Operands()
 	switch pred.(type) {
 	case *expression.Meta:
@@ -369,32 +369,32 @@ func (this *chkNullRej) VisitFunction(pred expression.Function) (interface{}, er
 }
 
 // Subquery
-func (this *chkNullRej) VisitSubquery(pred expression.Subquery) (interface{}, error) {
+func (this *chkNullRej) VisitSubquery(pred expression.Subquery) (any, error) {
 	return false, nil
 }
 
 // InferUnderParenthesis
-func (this *chkNullRej) VisitParenInfer(pred expression.ParenInfer) (interface{}, error) {
+func (this *chkNullRej) VisitParenInfer(pred expression.ParenInfer) (any, error) {
 	return false, nil
 }
 
 // NamedParameter
-func (this *chkNullRej) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
+func (this *chkNullRej) VisitNamedParameter(pred expression.NamedParameter) (any, error) {
 	return false, nil
 }
 
 // PositionalParameter
-func (this *chkNullRej) VisitPositionalParameter(pred expression.PositionalParameter) (interface{}, error) {
+func (this *chkNullRej) VisitPositionalParameter(pred expression.PositionalParameter) (any, error) {
 	return false, nil
 }
 
 // Cover
-func (this *chkNullRej) VisitCover(pred *expression.Cover) (interface{}, error) {
+func (this *chkNullRej) VisitCover(pred *expression.Cover) (any, error) {
 	return false, nil
 }
 
 // All
-func (this *chkNullRej) VisitAll(pred *expression.All) (interface{}, error) {
+func (this *chkNullRej) VisitAll(pred *expression.All) (any, error) {
 	return false, nil
 }
 

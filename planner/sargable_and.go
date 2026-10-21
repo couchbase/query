@@ -14,7 +14,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *sargable) VisitAnd(pred *expression.And) (interface{}, error) {
+func (this *sargable) VisitAnd(pred *expression.And) (any, error) {
 	if this.vectorType == "" && base.SubsetOf(pred, this.key) {
 		return true, nil
 	}

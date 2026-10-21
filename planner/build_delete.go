@@ -14,7 +14,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *builder) VisitDelete(stmt *algebra.Delete) (interface{}, error) {
+func (this *builder) VisitDelete(stmt *algebra.Delete) (any, error) {
 	this.cover = stmt
 	this.node = stmt
 	this.where = stmt.Where()

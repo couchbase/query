@@ -101,22 +101,22 @@ func (this *keyspaceFinder) visitSetop(first algebra.Subresult, second algebra.S
 	return errors.NewPlanInternalError("keyspaceFinder.visitSetop: unexpected code path")
 }
 
-func (this *keyspaceFinder) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
+func (this *keyspaceFinder) VisitSelectTerm(node *algebra.SelectTerm) (any, error) {
 	return nil, errors.NewPlanInternalError("keyspaceFinder.visitSelectTerm: unexpected code path")
 }
 
-func (this *keyspaceFinder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+func (this *keyspaceFinder) VisitSubselect(node *algebra.Subselect) (any, error) {
 	if node.From() != nil {
 		return node.From().Accept(this)
 	}
 	return nil, nil
 }
 
-func (this *keyspaceFinder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
+func (this *keyspaceFinder) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (any, error) {
 	return nil, this.addKeyspaceAlias(node.Alias(), node.Path(), node)
 }
 
-func (this *keyspaceFinder) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
+func (this *keyspaceFinder) VisitExpressionTerm(node *algebra.ExpressionTerm) (any, error) {
 	if node.IsKeyspace() {
 		return node.KeyspaceTerm().Accept(this)
 	}
@@ -124,19 +124,19 @@ func (this *keyspaceFinder) VisitExpressionTerm(node *algebra.ExpressionTerm) (i
 	return nil, this.addKeyspaceAlias(node.Alias(), nil, node)
 }
 
-func (this *keyspaceFinder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+func (this *keyspaceFinder) VisitSubqueryTerm(node *algebra.SubqueryTerm) (any, error) {
 	return nil, this.addKeyspaceAlias(node.Alias(), nil, node)
 }
 
-func (this *keyspaceFinder) VisitJoin(node *algebra.Join) (interface{}, error) {
+func (this *keyspaceFinder) VisitJoin(node *algebra.Join) (any, error) {
 	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
-func (this *keyspaceFinder) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
+func (this *keyspaceFinder) VisitIndexJoin(node *algebra.IndexJoin) (any, error) {
 	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
-func (this *keyspaceFinder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
+func (this *keyspaceFinder) VisitAnsiJoin(node *algebra.AnsiJoin) (any, error) {
 	err := this.visitJoin(node.Left(), node.Right(), node.Outer())
 
 	onclause := node.Onclause()
@@ -154,15 +154,15 @@ func (this *keyspaceFinder) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, 
 	return nil, err
 }
 
-func (this *keyspaceFinder) VisitNest(node *algebra.Nest) (interface{}, error) {
+func (this *keyspaceFinder) VisitNest(node *algebra.Nest) (any, error) {
 	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
-func (this *keyspaceFinder) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+func (this *keyspaceFinder) VisitIndexNest(node *algebra.IndexNest) (any, error) {
 	return nil, this.visitJoin(node.Left(), node.Right(), false)
 }
 
-func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (any, error) {
 	err := this.visitJoin(node.Left(), node.Right(), node.Outer())
 
 	onclause := node.Onclause()
@@ -180,7 +180,7 @@ func (this *keyspaceFinder) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, 
 	return nil, err
 }
 
-func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
+func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (any, error) {
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err
@@ -209,27 +209,27 @@ func (this *keyspaceFinder) VisitUnnest(node *algebra.Unnest) (interface{}, erro
 	return nil, nil
 }
 
-func (this *keyspaceFinder) VisitUnion(node *algebra.Union) (interface{}, error) {
+func (this *keyspaceFinder) VisitUnion(node *algebra.Union) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *keyspaceFinder) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
+func (this *keyspaceFinder) VisitUnionAll(node *algebra.UnionAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *keyspaceFinder) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+func (this *keyspaceFinder) VisitIntersect(node *algebra.Intersect) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *keyspaceFinder) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
+func (this *keyspaceFinder) VisitIntersectAll(node *algebra.IntersectAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *keyspaceFinder) VisitExcept(node *algebra.Except) (interface{}, error) {
+func (this *keyspaceFinder) VisitExcept(node *algebra.Except) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *keyspaceFinder) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
+func (this *keyspaceFinder) VisitExceptAll(node *algebra.ExceptAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 

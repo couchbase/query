@@ -70,7 +70,7 @@ func (this *scanIdxCol) addIndexInfo(indexInfo *iaplan.IndexInfo) {
 	this.indexInfos = append(this.indexInfos, indexInfo)
 }
 
-func (this *scanIdxCol) VisitPrimaryScan(op *plan.PrimaryScan) (interface{}, error) {
+func (this *scanIdxCol) VisitPrimaryScan(op *plan.PrimaryScan) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
@@ -79,7 +79,7 @@ func (this *scanIdxCol) VisitPrimaryScan(op *plan.PrimaryScan) (interface{}, err
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitPrimaryScan3(op *plan.PrimaryScan3) (interface{}, error) {
+func (this *scanIdxCol) VisitPrimaryScan3(op *plan.PrimaryScan3) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
@@ -88,7 +88,7 @@ func (this *scanIdxCol) VisitPrimaryScan3(op *plan.PrimaryScan3) (interface{}, e
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexScan(op *plan.IndexScan) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexScan(op *plan.IndexScan) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
@@ -97,7 +97,7 @@ func (this *scanIdxCol) VisitIndexScan(op *plan.IndexScan) (interface{}, error) 
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexScan2(op *plan.IndexScan2) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexScan2(op *plan.IndexScan2) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
@@ -106,7 +106,7 @@ func (this *scanIdxCol) VisitIndexScan2(op *plan.IndexScan2) (interface{}, error
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCovering(len(op.Covers()) > 0)
@@ -120,27 +120,27 @@ func (this *scanIdxCol) VisitIndexScan3(op *plan.IndexScan3) (interface{}, error
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitKeyScan(op *plan.KeyScan) (interface{}, error) {
+func (this *scanIdxCol) VisitKeyScan(op *plan.KeyScan) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitValueScan(op *plan.ValueScan) (interface{}, error) {
+func (this *scanIdxCol) VisitValueScan(op *plan.ValueScan) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDummyScan(op *plan.DummyScan) (interface{}, error) {
+func (this *scanIdxCol) VisitDummyScan(op *plan.DummyScan) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitExternalScan(op *plan.ExternalScan) (interface{}, error) {
+func (this *scanIdxCol) VisitExternalScan(op *plan.ExternalScan) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitCountScan(op *plan.CountScan) (interface{}, error) {
+func (this *scanIdxCol) VisitCountScan(op *plan.CountScan) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexCountScan(op *plan.IndexCountScan) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexCountScan(op *plan.IndexCountScan) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
@@ -149,7 +149,7 @@ func (this *scanIdxCol) VisitIndexCountScan(op *plan.IndexCountScan) (interface{
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexCountScan2(op *plan.IndexCountScan2) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexCountScan2(op *plan.IndexCountScan2) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
@@ -158,7 +158,7 @@ func (this *scanIdxCol) VisitIndexCountScan2(op *plan.IndexCountScan2) (interfac
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexCountDistinctScan2(op *plan.IndexCountDistinctScan2) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexCountDistinctScan2(op *plan.IndexCountDistinctScan2) (any, error) {
 	info := extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase)
 	if info != nil {
 		info.SetCostBased(op.Cost() > 0 && op.Cardinality() > 0)
@@ -167,258 +167,258 @@ func (this *scanIdxCol) VisitIndexCountDistinctScan2(op *plan.IndexCountDistinct
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDistinctScan(op *plan.DistinctScan) (interface{}, error) {
+func (this *scanIdxCol) VisitDistinctScan(op *plan.DistinctScan) (any, error) {
 	op.Scan().Accept(this)
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitUnionScan(op *plan.UnionScan) (interface{}, error) {
+func (this *scanIdxCol) VisitUnionScan(op *plan.UnionScan) (any, error) {
 	for _, scan := range op.Scans() {
 		scan.Accept(this)
 	}
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIntersectScan(op *plan.IntersectScan) (interface{}, error) {
+func (this *scanIdxCol) VisitIntersectScan(op *plan.IntersectScan) (any, error) {
 	for _, scan := range op.Scans() {
 		scan.Accept(this)
 	}
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitOrderedIntersectScan(op *plan.OrderedIntersectScan) (interface{}, error) {
+func (this *scanIdxCol) VisitOrderedIntersectScan(op *plan.OrderedIntersectScan) (any, error) {
 	for _, scan := range op.Scans() {
 		scan.Accept(this)
 	}
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitExpressionScan(op *plan.ExpressionScan) (interface{}, error) {
+func (this *scanIdxCol) VisitExpressionScan(op *plan.ExpressionScan) (any, error) {
 	return nil, nil
 }
 
 // Fetch
-func (this *scanIdxCol) VisitFetch(op *plan.Fetch) (interface{}, error) {
+func (this *scanIdxCol) VisitFetch(op *plan.Fetch) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDummyFetch(op *plan.DummyFetch) (interface{}, error) {
+func (this *scanIdxCol) VisitDummyFetch(op *plan.DummyFetch) (any, error) {
 	return nil, nil
 }
 
 // Join
-func (this *scanIdxCol) VisitJoin(op *plan.Join) (interface{}, error) {
+func (this *scanIdxCol) VisitJoin(op *plan.Join) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexJoin(op *plan.IndexJoin) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexJoin(op *plan.IndexJoin) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitNest(op *plan.Nest) (interface{}, error) {
+func (this *scanIdxCol) VisitNest(op *plan.Nest) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexNest(op *plan.IndexNest) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexNest(op *plan.IndexNest) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitUnnest(op *plan.Unnest) (interface{}, error) {
+func (this *scanIdxCol) VisitUnnest(op *plan.Unnest) (any, error) {
 	return nil, nil
 }
-func (this *scanIdxCol) VisitNLJoin(op *plan.NLJoin) (interface{}, error) {
+func (this *scanIdxCol) VisitNLJoin(op *plan.NLJoin) (any, error) {
 	return nil, nil
 }
-func (this *scanIdxCol) VisitNLNest(op *plan.NLNest) (interface{}, error) {
-	return nil, nil
-}
-
-func (this *scanIdxCol) VisitHashJoin(op *plan.HashJoin) (interface{}, error) {
+func (this *scanIdxCol) VisitNLNest(op *plan.NLNest) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitHashNest(op *plan.HashNest) (interface{}, error) {
+func (this *scanIdxCol) VisitHashJoin(op *plan.HashJoin) (any, error) {
+	return nil, nil
+}
+
+func (this *scanIdxCol) VisitHashNest(op *plan.HashNest) (any, error) {
 	return nil, nil
 }
 
 // Let + Letting, With
-func (this *scanIdxCol) VisitLet(op *plan.Let) (interface{}, error) {
+func (this *scanIdxCol) VisitLet(op *plan.Let) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitWith(op *plan.With) (interface{}, error) {
+func (this *scanIdxCol) VisitWith(op *plan.With) (any, error) {
 	return nil, nil
 }
 
 // Filter
-func (this *scanIdxCol) VisitFilter(op *plan.Filter) (interface{}, error) {
+func (this *scanIdxCol) VisitFilter(op *plan.Filter) (any, error) {
 	return nil, nil
 }
 
 // Group
-func (this *scanIdxCol) VisitInitialGroup(op *plan.InitialGroup) (interface{}, error) {
+func (this *scanIdxCol) VisitInitialGroup(op *plan.InitialGroup) (any, error) {
 	return nil, nil
 }
-func (this *scanIdxCol) VisitIntermediateGroup(op *plan.IntermediateGroup) (interface{}, error) {
+func (this *scanIdxCol) VisitIntermediateGroup(op *plan.IntermediateGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitFinalGroup(op *plan.FinalGroup) (interface{}, error) {
+func (this *scanIdxCol) VisitFinalGroup(op *plan.FinalGroup) (any, error) {
 	return nil, nil
 }
 
 // Window functions
-func (this *scanIdxCol) VisitWindowAggregate(op *plan.WindowAggregate) (interface{}, error) {
+func (this *scanIdxCol) VisitWindowAggregate(op *plan.WindowAggregate) (any, error) {
 	return nil, nil
 }
 
 // Project
-func (this *scanIdxCol) VisitInitialProject(op *plan.InitialProject) (interface{}, error) {
+func (this *scanIdxCol) VisitInitialProject(op *plan.InitialProject) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexCountProject(op *plan.IndexCountProject) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexCountProject(op *plan.IndexCountProject) (any, error) {
 	return nil, nil
 }
 
 // Distinct
-func (this *scanIdxCol) VisitDistinct(op *plan.Distinct) (interface{}, error) {
+func (this *scanIdxCol) VisitDistinct(op *plan.Distinct) (any, error) {
 	return nil, nil
 }
 
 // All
-func (this *scanIdxCol) VisitAll(op *plan.All) (interface{}, error) {
+func (this *scanIdxCol) VisitAll(op *plan.All) (any, error) {
 	return nil, nil
 }
 
 // Set operators
-func (this *scanIdxCol) VisitUnionAll(op *plan.UnionAll) (interface{}, error) {
+func (this *scanIdxCol) VisitUnionAll(op *plan.UnionAll) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIntersectAll(op *plan.IntersectAll) (interface{}, error) {
+func (this *scanIdxCol) VisitIntersectAll(op *plan.IntersectAll) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitExceptAll(op *plan.ExceptAll) (interface{}, error) {
+func (this *scanIdxCol) VisitExceptAll(op *plan.ExceptAll) (any, error) {
 	return nil, nil
 }
 
 // Order
-func (this *scanIdxCol) VisitOrder(op *plan.Order) (interface{}, error) {
+func (this *scanIdxCol) VisitOrder(op *plan.Order) (any, error) {
 	return nil, nil
 }
 
 // Paging
-func (this *scanIdxCol) VisitOffset(op *plan.Offset) (interface{}, error) {
+func (this *scanIdxCol) VisitOffset(op *plan.Offset) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitLimit(op *plan.Limit) (interface{}, error) {
+func (this *scanIdxCol) VisitLimit(op *plan.Limit) (any, error) {
 	return nil, nil
 }
 
 // Insert
-func (this *scanIdxCol) VisitSendInsert(op *plan.SendInsert) (interface{}, error) {
+func (this *scanIdxCol) VisitSendInsert(op *plan.SendInsert) (any, error) {
 	return nil, nil
 }
 
 // Upsert
-func (this *scanIdxCol) VisitSendUpsert(op *plan.SendUpsert) (interface{}, error) {
+func (this *scanIdxCol) VisitSendUpsert(op *plan.SendUpsert) (any, error) {
 	return nil, nil
 }
 
 // Delete
-func (this *scanIdxCol) VisitSendDelete(op *plan.SendDelete) (interface{}, error) {
+func (this *scanIdxCol) VisitSendDelete(op *plan.SendDelete) (any, error) {
 	return nil, nil
 }
 
 // Update
-func (this *scanIdxCol) VisitClone(op *plan.Clone) (interface{}, error) {
+func (this *scanIdxCol) VisitClone(op *plan.Clone) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitSet(op *plan.Set) (interface{}, error) {
+func (this *scanIdxCol) VisitSet(op *plan.Set) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitUnset(op *plan.Unset) (interface{}, error) {
+func (this *scanIdxCol) VisitUnset(op *plan.Unset) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitSendUpdate(op *plan.SendUpdate) (interface{}, error) {
+func (this *scanIdxCol) VisitSendUpdate(op *plan.SendUpdate) (any, error) {
 	return nil, nil
 }
 
 // Merge
-func (this *scanIdxCol) VisitMerge(op *plan.Merge) (interface{}, error) {
+func (this *scanIdxCol) VisitMerge(op *plan.Merge) (any, error) {
 	return nil, nil
 }
 
 // Framework
-func (this *scanIdxCol) VisitAlias(op *plan.Alias) (interface{}, error) {
+func (this *scanIdxCol) VisitAlias(op *plan.Alias) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitAuthorize(op *plan.Authorize) (interface{}, error) {
+func (this *scanIdxCol) VisitAuthorize(op *plan.Authorize) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitParallel(op *plan.Parallel) (interface{}, error) {
+func (this *scanIdxCol) VisitParallel(op *plan.Parallel) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitSequence(op *plan.Sequence) (interface{}, error) {
+func (this *scanIdxCol) VisitSequence(op *plan.Sequence) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDiscard(op *plan.Discard) (interface{}, error) {
+func (this *scanIdxCol) VisitDiscard(op *plan.Discard) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitStream(op *plan.Stream) (interface{}, error) {
+func (this *scanIdxCol) VisitStream(op *plan.Stream) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitCollect(op *plan.Collect) (interface{}, error) {
+func (this *scanIdxCol) VisitCollect(op *plan.Collect) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitReceive(op *plan.Receive) (interface{}, error) {
+func (this *scanIdxCol) VisitReceive(op *plan.Receive) (any, error) {
 	return nil, nil
 }
 
 // Index DDL
-func (this *scanIdxCol) VisitCreatePrimaryIndex(op *plan.CreatePrimaryIndex) (interface{}, error) {
+func (this *scanIdxCol) VisitCreatePrimaryIndex(op *plan.CreatePrimaryIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitCreateIndex(op *plan.CreateIndex) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateIndex(op *plan.CreateIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropIndex(op *plan.DropIndex) (interface{}, error) {
+func (this *scanIdxCol) VisitDropIndex(op *plan.DropIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitAlterIndex(op *plan.AlterIndex) (interface{}, error) {
+func (this *scanIdxCol) VisitAlterIndex(op *plan.AlterIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitBuildIndexes(op *plan.BuildIndexes) (interface{}, error) {
+func (this *scanIdxCol) VisitBuildIndexes(op *plan.BuildIndexes) (any, error) {
 	return nil, nil
 }
 
 // Bucket DDL
-func (this *scanIdxCol) VisitCreateBucket(op *plan.CreateBucket) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateBucket(op *plan.CreateBucket) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitAlterBucket(op *plan.AlterBucket) (interface{}, error) {
+func (this *scanIdxCol) VisitAlterBucket(op *plan.AlterBucket) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropBucket(op *plan.DropBucket) (interface{}, error) {
+func (this *scanIdxCol) VisitDropBucket(op *plan.DropBucket) (any, error) {
 	return nil, nil
 }
 
@@ -441,134 +441,134 @@ func (this *scanIdxCol) VisitAlterCollection(op *plan.AlterCollection) (any, err
 }
 
 // Scope and Collection DDL
-func (this *scanIdxCol) VisitCreateScope(op *plan.CreateScope) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateScope(op *plan.CreateScope) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropScope(op *plan.DropScope) (interface{}, error) {
+func (this *scanIdxCol) VisitDropScope(op *plan.DropScope) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitCreateCollection(op *plan.CreateCollection) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateCollection(op *plan.CreateCollection) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropCollection(op *plan.DropCollection) (interface{}, error) {
+func (this *scanIdxCol) VisitDropCollection(op *plan.DropCollection) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitFlushCollection(op *plan.FlushCollection) (interface{}, error) {
+func (this *scanIdxCol) VisitFlushCollection(op *plan.FlushCollection) (any, error) {
 	return nil, nil
 }
 
 // Users
-func (this *scanIdxCol) VisitCreateUser(op *plan.CreateUser) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateUser(op *plan.CreateUser) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitAlterUser(op *plan.AlterUser) (interface{}, error) {
+func (this *scanIdxCol) VisitAlterUser(op *plan.AlterUser) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropUser(op *plan.DropUser) (interface{}, error) {
+func (this *scanIdxCol) VisitDropUser(op *plan.DropUser) (any, error) {
 	return nil, nil
 }
 
 // Groups
-func (this *scanIdxCol) VisitCreateGroup(op *plan.CreateGroup) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateGroup(op *plan.CreateGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitAlterGroup(op *plan.AlterGroup) (interface{}, error) {
+func (this *scanIdxCol) VisitAlterGroup(op *plan.AlterGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropGroup(op *plan.DropGroup) (interface{}, error) {
+func (this *scanIdxCol) VisitDropGroup(op *plan.DropGroup) (any, error) {
 	return nil, nil
 }
 
 // Roles
-func (this *scanIdxCol) VisitGrantRole(op *plan.GrantRole) (interface{}, error) {
+func (this *scanIdxCol) VisitGrantRole(op *plan.GrantRole) (any, error) {
 	return nil, nil
 }
-func (this *scanIdxCol) VisitRevokeRole(op *plan.RevokeRole) (interface{}, error) {
+func (this *scanIdxCol) VisitRevokeRole(op *plan.RevokeRole) (any, error) {
 	return nil, nil
 }
 
 // Explain
-func (this *scanIdxCol) VisitExplain(op *plan.Explain) (interface{}, error) {
+func (this *scanIdxCol) VisitExplain(op *plan.Explain) (any, error) {
 	return nil, nil
 }
 
 // Explain Function
-func (this *scanIdxCol) VisitExplainFunction(op *plan.ExplainFunction) (interface{}, error) {
+func (this *scanIdxCol) VisitExplainFunction(op *plan.ExplainFunction) (any, error) {
 	return nil, nil
 }
 
 // Prepare
-func (this *scanIdxCol) VisitPrepare(op *plan.Prepare) (interface{}, error) {
+func (this *scanIdxCol) VisitPrepare(op *plan.Prepare) (any, error) {
 	return nil, nil
 }
 
 // Infer
-func (this *scanIdxCol) VisitInferKeyspace(op *plan.InferKeyspace) (interface{}, error) {
+func (this *scanIdxCol) VisitInferKeyspace(op *plan.InferKeyspace) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitInferExpression(op *plan.InferExpression) (interface{}, error) {
+func (this *scanIdxCol) VisitInferExpression(op *plan.InferExpression) (any, error) {
 	return nil, nil
 }
 
 // Function statements
-func (this *scanIdxCol) VisitCreateFunction(op *plan.CreateFunction) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateFunction(op *plan.CreateFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropFunction(op *plan.DropFunction) (interface{}, error) {
+func (this *scanIdxCol) VisitDropFunction(op *plan.DropFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitExecuteFunction(op *plan.ExecuteFunction) (interface{}, error) {
+func (this *scanIdxCol) VisitExecuteFunction(op *plan.ExecuteFunction) (any, error) {
 	return nil, nil
 }
 
 // IndexFtsSearch
-func (this *scanIdxCol) VisitIndexFtsSearch(op *plan.IndexFtsSearch) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexFtsSearch(op *plan.IndexFtsSearch) (any, error) {
 	this.addIndexInfo(extractInfo(op.Index(), this.alias, this.keyspace, false, this.validatePhase))
 	return nil, nil
 }
 
 // Index Advisor
-func (this *scanIdxCol) VisitAdvise(op *plan.Advise) (interface{}, error) {
+func (this *scanIdxCol) VisitAdvise(op *plan.Advise) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitIndexAdvice(op *plan.IndexAdvice) (interface{}, error) {
+func (this *scanIdxCol) VisitIndexAdvice(op *plan.IndexAdvice) (any, error) {
 	return nil, nil
 }
 
 // Update Statistics
-func (this *scanIdxCol) VisitUpdateStatistics(op *plan.UpdateStatistics) (interface{}, error) {
+func (this *scanIdxCol) VisitUpdateStatistics(op *plan.UpdateStatistics) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitStartTransaction(op *plan.StartTransaction) (interface{}, error) {
+func (this *scanIdxCol) VisitStartTransaction(op *plan.StartTransaction) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitCommitTransaction(op *plan.CommitTransaction) (interface{}, error) {
+func (this *scanIdxCol) VisitCommitTransaction(op *plan.CommitTransaction) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitRollbackTransaction(op *plan.RollbackTransaction) (interface{}, error) {
+func (this *scanIdxCol) VisitRollbackTransaction(op *plan.RollbackTransaction) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitTransactionIsolation(op *plan.TransactionIsolation) (interface{}, error) {
+func (this *scanIdxCol) VisitTransactionIsolation(op *plan.TransactionIsolation) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitSavepoint(op *plan.Savepoint) (interface{}, error) {
+func (this *scanIdxCol) VisitSavepoint(op *plan.Savepoint) (any, error) {
 	return nil, nil
 }
 
@@ -685,23 +685,23 @@ func getIndexPartitionToString(index datastore.Index) (rv string) {
 	return
 }
 
-func (this *scanIdxCol) VisitCreateSequence(op *plan.CreateSequence) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateSequence(op *plan.CreateSequence) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitCreateKnowledge(op *plan.CreateKnowledge) (interface{}, error) {
+func (this *scanIdxCol) VisitCreateKnowledge(op *plan.CreateKnowledge) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropKnowledge(op *plan.DropKnowledge) (interface{}, error) {
+func (this *scanIdxCol) VisitDropKnowledge(op *plan.DropKnowledge) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitDropSequence(op *plan.DropSequence) (interface{}, error) {
+func (this *scanIdxCol) VisitDropSequence(op *plan.DropSequence) (any, error) {
 	return nil, nil
 }
 
-func (this *scanIdxCol) VisitAlterSequence(op *plan.AlterSequence) (interface{}, error) {
+func (this *scanIdxCol) VisitAlterSequence(op *plan.AlterSequence) (any, error) {
 	return nil, nil
 }
 

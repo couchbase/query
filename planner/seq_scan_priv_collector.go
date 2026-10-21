@@ -27,7 +27,7 @@ type collector struct {
 	privs *auth.Privileges
 }
 
-func (this *collector) VisitPrimaryScan(plop *plan.PrimaryScan) (interface{}, error) {
+func (this *collector) VisitPrimaryScan(plop *plan.PrimaryScan) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -38,7 +38,7 @@ func (this *collector) VisitPrimaryScan(plop *plan.PrimaryScan) (interface{}, er
 	return nil, nil
 }
 
-func (this *collector) VisitPrimaryScan3(plop *plan.PrimaryScan3) (interface{}, error) {
+func (this *collector) VisitPrimaryScan3(plop *plan.PrimaryScan3) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -49,7 +49,7 @@ func (this *collector) VisitPrimaryScan3(plop *plan.PrimaryScan3) (interface{}, 
 	return nil, nil
 }
 
-func (this *collector) VisitIndexScan(plop *plan.IndexScan) (interface{}, error) {
+func (this *collector) VisitIndexScan(plop *plan.IndexScan) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -60,7 +60,7 @@ func (this *collector) VisitIndexScan(plop *plan.IndexScan) (interface{}, error)
 	return nil, nil
 }
 
-func (this *collector) VisitIndexScan2(plop *plan.IndexScan2) (interface{}, error) {
+func (this *collector) VisitIndexScan2(plop *plan.IndexScan2) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -71,7 +71,7 @@ func (this *collector) VisitIndexScan2(plop *plan.IndexScan2) (interface{}, erro
 	return nil, nil
 }
 
-func (this *collector) VisitIndexScan3(plop *plan.IndexScan3) (interface{}, error) {
+func (this *collector) VisitIndexScan3(plop *plan.IndexScan3) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -82,7 +82,7 @@ func (this *collector) VisitIndexScan3(plop *plan.IndexScan3) (interface{}, erro
 	return nil, nil
 }
 
-func (this *collector) VisitIndexCountScan(plop *plan.IndexCountScan) (interface{}, error) {
+func (this *collector) VisitIndexCountScan(plop *plan.IndexCountScan) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -93,7 +93,7 @@ func (this *collector) VisitIndexCountScan(plop *plan.IndexCountScan) (interface
 	return nil, nil
 }
 
-func (this *collector) VisitIndexCountScan2(plop *plan.IndexCountScan2) (interface{}, error) {
+func (this *collector) VisitIndexCountScan2(plop *plan.IndexCountScan2) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -104,7 +104,7 @@ func (this *collector) VisitIndexCountScan2(plop *plan.IndexCountScan2) (interfa
 	return nil, nil
 }
 
-func (this *collector) VisitIndexCountDistinctScan2(plop *plan.IndexCountDistinctScan2) (interface{}, error) {
+func (this *collector) VisitIndexCountDistinctScan2(plop *plan.IndexCountDistinctScan2) (any, error) {
 	if plop.Index().Type() == datastore.SEQ_SCAN {
 		pp := auth.PrivilegePair{
 			Target: plop.Term().PathString(),
@@ -115,11 +115,11 @@ func (this *collector) VisitIndexCountDistinctScan2(plop *plan.IndexCountDistinc
 	return nil, nil
 }
 
-func (this *collector) VisitKeyScan(plop *plan.KeyScan) (interface{}, error) {
+func (this *collector) VisitKeyScan(plop *plan.KeyScan) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitExpressionScan(plop *plan.ExpressionScan) (interface{}, error) {
+func (this *collector) VisitExpressionScan(plop *plan.ExpressionScan) (any, error) {
 	if plop.SubqueryPlan() != nil {
 		_, err := plop.SubqueryPlan().Accept(this)
 		if err != nil {
@@ -129,23 +129,23 @@ func (this *collector) VisitExpressionScan(plop *plan.ExpressionScan) (interface
 	return nil, nil
 }
 
-func (this *collector) VisitValueScan(plop *plan.ValueScan) (interface{}, error) {
+func (this *collector) VisitValueScan(plop *plan.ValueScan) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDummyScan(plop *plan.DummyScan) (interface{}, error) {
+func (this *collector) VisitDummyScan(plop *plan.DummyScan) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitExternalScan(plop *plan.ExternalScan) (interface{}, error) {
+func (this *collector) VisitExternalScan(plop *plan.ExternalScan) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCountScan(plop *plan.CountScan) (interface{}, error) {
+func (this *collector) VisitCountScan(plop *plan.CountScan) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDistinctScan(plop *plan.DistinctScan) (interface{}, error) {
+func (this *collector) VisitDistinctScan(plop *plan.DistinctScan) (any, error) {
 	_, err := plop.Scan().Accept(this)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func (this *collector) VisitDistinctScan(plop *plan.DistinctScan) (interface{}, 
 	return nil, nil
 }
 
-func (this *collector) VisitUnionScan(plop *plan.UnionScan) (interface{}, error) {
+func (this *collector) VisitUnionScan(plop *plan.UnionScan) (any, error) {
 	for _, child := range plop.Scans() {
 		_, e := child.Accept(this)
 		if e != nil {
@@ -163,7 +163,7 @@ func (this *collector) VisitUnionScan(plop *plan.UnionScan) (interface{}, error)
 	return nil, nil
 }
 
-func (this *collector) VisitIntersectScan(plop *plan.IntersectScan) (interface{}, error) {
+func (this *collector) VisitIntersectScan(plop *plan.IntersectScan) (any, error) {
 	for _, child := range plop.Scans() {
 		_, e := child.Accept(this)
 		if e != nil {
@@ -173,7 +173,7 @@ func (this *collector) VisitIntersectScan(plop *plan.IntersectScan) (interface{}
 	return nil, nil
 }
 
-func (this *collector) VisitOrderedIntersectScan(plop *plan.OrderedIntersectScan) (interface{}, error) {
+func (this *collector) VisitOrderedIntersectScan(plop *plan.OrderedIntersectScan) (any, error) {
 	for _, child := range plop.Scans() {
 		_, e := child.Accept(this)
 		if e != nil {
@@ -183,23 +183,23 @@ func (this *collector) VisitOrderedIntersectScan(plop *plan.OrderedIntersectScan
 	return nil, nil
 }
 
-func (this *collector) VisitFetch(plop *plan.Fetch) (interface{}, error) {
+func (this *collector) VisitFetch(plop *plan.Fetch) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDummyFetch(plop *plan.DummyFetch) (interface{}, error) {
+func (this *collector) VisitDummyFetch(plop *plan.DummyFetch) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitJoin(plop *plan.Join) (interface{}, error) {
+func (this *collector) VisitJoin(plop *plan.Join) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitIndexJoin(plop *plan.IndexJoin) (interface{}, error) {
+func (this *collector) VisitIndexJoin(plop *plan.IndexJoin) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitNLJoin(plop *plan.NLJoin) (interface{}, error) {
+func (this *collector) VisitNLJoin(plop *plan.NLJoin) (any, error) {
 	_, err := plop.Child().Accept(this)
 	if err != nil {
 		return nil, err
@@ -207,7 +207,7 @@ func (this *collector) VisitNLJoin(plop *plan.NLJoin) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitHashJoin(plop *plan.HashJoin) (interface{}, error) {
+func (this *collector) VisitHashJoin(plop *plan.HashJoin) (any, error) {
 	_, err := plop.Child().Accept(this)
 	if err != nil {
 		return nil, err
@@ -215,15 +215,15 @@ func (this *collector) VisitHashJoin(plop *plan.HashJoin) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitNest(plop *plan.Nest) (interface{}, error) {
+func (this *collector) VisitNest(plop *plan.Nest) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitIndexNest(plop *plan.IndexNest) (interface{}, error) {
+func (this *collector) VisitIndexNest(plop *plan.IndexNest) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitNLNest(plop *plan.NLNest) (interface{}, error) {
+func (this *collector) VisitNLNest(plop *plan.NLNest) (any, error) {
 	_, err := plop.Child().Accept(this)
 	if err != nil {
 		return nil, err
@@ -231,7 +231,7 @@ func (this *collector) VisitNLNest(plop *plan.NLNest) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitHashNest(plop *plan.HashNest) (interface{}, error) {
+func (this *collector) VisitHashNest(plop *plan.HashNest) (any, error) {
 	_, err := plop.Child().Accept(this)
 	if err != nil {
 		return nil, err
@@ -239,15 +239,15 @@ func (this *collector) VisitHashNest(plop *plan.HashNest) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitUnnest(plop *plan.Unnest) (interface{}, error) {
+func (this *collector) VisitUnnest(plop *plan.Unnest) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitLet(plop *plan.Let) (interface{}, error) {
+func (this *collector) VisitLet(plop *plan.Let) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitWith(plop *plan.With) (interface{}, error) {
+func (this *collector) VisitWith(plop *plan.With) (any, error) {
 	_, err := plop.Child().Accept(this)
 	if err != nil {
 		return nil, err
@@ -255,43 +255,43 @@ func (this *collector) VisitWith(plop *plan.With) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitFilter(plop *plan.Filter) (interface{}, error) {
+func (this *collector) VisitFilter(plop *plan.Filter) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitInitialGroup(plop *plan.InitialGroup) (interface{}, error) {
+func (this *collector) VisitInitialGroup(plop *plan.InitialGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitIntermediateGroup(plop *plan.IntermediateGroup) (interface{}, error) {
+func (this *collector) VisitIntermediateGroup(plop *plan.IntermediateGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitFinalGroup(plop *plan.FinalGroup) (interface{}, error) {
+func (this *collector) VisitFinalGroup(plop *plan.FinalGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitWindowAggregate(plop *plan.WindowAggregate) (interface{}, error) {
+func (this *collector) VisitWindowAggregate(plop *plan.WindowAggregate) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitInitialProject(plop *plan.InitialProject) (interface{}, error) {
+func (this *collector) VisitInitialProject(plop *plan.InitialProject) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitIndexCountProject(plop *plan.IndexCountProject) (interface{}, error) {
+func (this *collector) VisitIndexCountProject(plop *plan.IndexCountProject) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDistinct(plop *plan.Distinct) (interface{}, error) {
+func (this *collector) VisitDistinct(plop *plan.Distinct) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAll(plop *plan.All) (interface{}, error) {
+func (this *collector) VisitAll(plop *plan.All) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitUnionAll(plop *plan.UnionAll) (interface{}, error) {
+func (this *collector) VisitUnionAll(plop *plan.UnionAll) (any, error) {
 	for _, child := range plop.Children() {
 		_, e := child.Accept(this)
 		if e != nil {
@@ -301,7 +301,7 @@ func (this *collector) VisitUnionAll(plop *plan.UnionAll) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitIntersectAll(plop *plan.IntersectAll) (interface{}, error) {
+func (this *collector) VisitIntersectAll(plop *plan.IntersectAll) (any, error) {
 	_, e := plop.First().Accept(this)
 	if e != nil {
 		return nil, e
@@ -313,7 +313,7 @@ func (this *collector) VisitIntersectAll(plop *plan.IntersectAll) (interface{}, 
 	return nil, nil
 }
 
-func (this *collector) VisitExceptAll(plop *plan.ExceptAll) (interface{}, error) {
+func (this *collector) VisitExceptAll(plop *plan.ExceptAll) (any, error) {
 	_, e := plop.First().Accept(this)
 	if e != nil {
 		return nil, e
@@ -325,47 +325,47 @@ func (this *collector) VisitExceptAll(plop *plan.ExceptAll) (interface{}, error)
 	return nil, nil
 }
 
-func (this *collector) VisitOrder(plop *plan.Order) (interface{}, error) {
+func (this *collector) VisitOrder(plop *plan.Order) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitOffset(plop *plan.Offset) (interface{}, error) {
+func (this *collector) VisitOffset(plop *plan.Offset) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitLimit(plop *plan.Limit) (interface{}, error) {
+func (this *collector) VisitLimit(plop *plan.Limit) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitSendInsert(plop *plan.SendInsert) (interface{}, error) {
+func (this *collector) VisitSendInsert(plop *plan.SendInsert) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitSendUpsert(plop *plan.SendUpsert) (interface{}, error) {
+func (this *collector) VisitSendUpsert(plop *plan.SendUpsert) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitSendDelete(plop *plan.SendDelete) (interface{}, error) {
+func (this *collector) VisitSendDelete(plop *plan.SendDelete) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitClone(plop *plan.Clone) (interface{}, error) {
+func (this *collector) VisitClone(plop *plan.Clone) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitSet(plop *plan.Set) (interface{}, error) {
+func (this *collector) VisitSet(plop *plan.Set) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitUnset(plop *plan.Unset) (interface{}, error) {
+func (this *collector) VisitUnset(plop *plan.Unset) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitSendUpdate(plop *plan.SendUpdate) (interface{}, error) {
+func (this *collector) VisitSendUpdate(plop *plan.SendUpdate) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitMerge(plop *plan.Merge) (interface{}, error) {
+func (this *collector) VisitMerge(plop *plan.Merge) (any, error) {
 	if plop.Update() != nil {
 		_, e := plop.Update().Accept(this)
 		if e != nil {
@@ -387,11 +387,11 @@ func (this *collector) VisitMerge(plop *plan.Merge) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAlias(plop *plan.Alias) (interface{}, error) {
+func (this *collector) VisitAlias(plop *plan.Alias) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAuthorize(plop *plan.Authorize) (interface{}, error) {
+func (this *collector) VisitAuthorize(plop *plan.Authorize) (any, error) {
 	_, err := plop.Child().Accept(this)
 	if err != nil {
 		return nil, err
@@ -399,7 +399,7 @@ func (this *collector) VisitAuthorize(plop *plan.Authorize) (interface{}, error)
 	return nil, nil
 }
 
-func (this *collector) VisitParallel(plop *plan.Parallel) (interface{}, error) {
+func (this *collector) VisitParallel(plop *plan.Parallel) (any, error) {
 	_, err := plop.Child().Accept(this)
 	if err != nil {
 		return nil, err
@@ -407,7 +407,7 @@ func (this *collector) VisitParallel(plop *plan.Parallel) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitSequence(plop *plan.Sequence) (interface{}, error) {
+func (this *collector) VisitSequence(plop *plan.Sequence) (any, error) {
 	for _, pchild := range plop.Children() {
 		_, err := pchild.Accept(this)
 		if err != nil {
@@ -417,71 +417,71 @@ func (this *collector) VisitSequence(plop *plan.Sequence) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDiscard(plop *plan.Discard) (interface{}, error) {
+func (this *collector) VisitDiscard(plop *plan.Discard) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitStream(plop *plan.Stream) (interface{}, error) {
+func (this *collector) VisitStream(plop *plan.Stream) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCollect(plop *plan.Collect) (interface{}, error) {
+func (this *collector) VisitCollect(plop *plan.Collect) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitReceive(plop *plan.Receive) (interface{}, error) {
+func (this *collector) VisitReceive(plop *plan.Receive) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreatePrimaryIndex(plop *plan.CreatePrimaryIndex) (interface{}, error) {
+func (this *collector) VisitCreatePrimaryIndex(plop *plan.CreatePrimaryIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitGrantRole(plop *plan.GrantRole) (interface{}, error) {
+func (this *collector) VisitGrantRole(plop *plan.GrantRole) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitRevokeRole(plop *plan.RevokeRole) (interface{}, error) {
+func (this *collector) VisitRevokeRole(plop *plan.RevokeRole) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreateIndex(plop *plan.CreateIndex) (interface{}, error) {
+func (this *collector) VisitCreateIndex(plop *plan.CreateIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropIndex(plop *plan.DropIndex) (interface{}, error) {
+func (this *collector) VisitDropIndex(plop *plan.DropIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAlterIndex(plop *plan.AlterIndex) (interface{}, error) {
+func (this *collector) VisitAlterIndex(plop *plan.AlterIndex) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitBuildIndexes(plop *plan.BuildIndexes) (interface{}, error) {
+func (this *collector) VisitBuildIndexes(plop *plan.BuildIndexes) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreateScope(plop *plan.CreateScope) (interface{}, error) {
+func (this *collector) VisitCreateScope(plop *plan.CreateScope) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropScope(plop *plan.DropScope) (interface{}, error) {
+func (this *collector) VisitDropScope(plop *plan.DropScope) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreateCollection(plop *plan.CreateCollection) (interface{}, error) {
+func (this *collector) VisitCreateCollection(plop *plan.CreateCollection) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropCollection(plop *plan.DropCollection) (interface{}, error) {
+func (this *collector) VisitDropCollection(plop *plan.DropCollection) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitFlushCollection(plop *plan.FlushCollection) (interface{}, error) {
+func (this *collector) VisitFlushCollection(plop *plan.FlushCollection) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitPrepare(plop *plan.Prepare) (interface{}, error) {
+func (this *collector) VisitPrepare(plop *plan.Prepare) (any, error) {
 	_, err := plop.Plan().Accept(this)
 	if err != nil {
 		return nil, err
@@ -489,7 +489,7 @@ func (this *collector) VisitPrepare(plop *plan.Prepare) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitExplain(plop *plan.Explain) (interface{}, error) {
+func (this *collector) VisitExplain(plop *plan.Explain) (any, error) {
 	op := plop.Plan()
 	if op != nil {
 		return op.Accept(this)
@@ -497,83 +497,83 @@ func (this *collector) VisitExplain(plop *plan.Explain) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitExplainFunction(plop *plan.ExplainFunction) (interface{}, error) {
+func (this *collector) VisitExplainFunction(plop *plan.ExplainFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitInferKeyspace(plop *plan.InferKeyspace) (interface{}, error) {
+func (this *collector) VisitInferKeyspace(plop *plan.InferKeyspace) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitInferExpression(plop *plan.InferExpression) (interface{}, error) {
+func (this *collector) VisitInferExpression(plop *plan.InferExpression) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreateFunction(plop *plan.CreateFunction) (interface{}, error) {
+func (this *collector) VisitCreateFunction(plop *plan.CreateFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropFunction(plop *plan.DropFunction) (interface{}, error) {
+func (this *collector) VisitDropFunction(plop *plan.DropFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitExecuteFunction(plop *plan.ExecuteFunction) (interface{}, error) {
+func (this *collector) VisitExecuteFunction(plop *plan.ExecuteFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitIndexFtsSearch(plop *plan.IndexFtsSearch) (interface{}, error) {
+func (this *collector) VisitIndexFtsSearch(plop *plan.IndexFtsSearch) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitIndexAdvice(plop *plan.IndexAdvice) (interface{}, error) {
+func (this *collector) VisitIndexAdvice(plop *plan.IndexAdvice) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAdvise(plop *plan.Advise) (interface{}, error) {
+func (this *collector) VisitAdvise(plop *plan.Advise) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitUpdateStatistics(plop *plan.UpdateStatistics) (interface{}, error) {
+func (this *collector) VisitUpdateStatistics(plop *plan.UpdateStatistics) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitStartTransaction(plop *plan.StartTransaction) (interface{}, error) {
+func (this *collector) VisitStartTransaction(plop *plan.StartTransaction) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCommitTransaction(plop *plan.CommitTransaction) (interface{}, error) {
+func (this *collector) VisitCommitTransaction(plop *plan.CommitTransaction) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitRollbackTransaction(plop *plan.RollbackTransaction) (interface{}, error) {
+func (this *collector) VisitRollbackTransaction(plop *plan.RollbackTransaction) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitTransactionIsolation(plop *plan.TransactionIsolation) (interface{}, error) {
+func (this *collector) VisitTransactionIsolation(plop *plan.TransactionIsolation) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitSavepoint(plop *plan.Savepoint) (interface{}, error) {
+func (this *collector) VisitSavepoint(plop *plan.Savepoint) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreateSequence(plop *plan.CreateSequence) (interface{}, error) {
+func (this *collector) VisitCreateSequence(plop *plan.CreateSequence) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreateKnowledge(plop *plan.CreateKnowledge) (interface{}, error) {
+func (this *collector) VisitCreateKnowledge(plop *plan.CreateKnowledge) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropKnowledge(plop *plan.DropKnowledge) (interface{}, error) {
+func (this *collector) VisitDropKnowledge(plop *plan.DropKnowledge) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropSequence(plop *plan.DropSequence) (interface{}, error) {
+func (this *collector) VisitDropSequence(plop *plan.DropSequence) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAlterSequence(plop *plan.AlterSequence) (interface{}, error) {
+func (this *collector) VisitAlterSequence(plop *plan.AlterSequence) (any, error) {
 	return nil, nil
 }
 
@@ -589,15 +589,15 @@ func (this *collector) VisitDropCredentialStore(plop *plan.DropCredentialStore) 
 	return nil, nil
 }
 
-func (this *collector) VisitCreateBucket(plop *plan.CreateBucket) (interface{}, error) {
+func (this *collector) VisitCreateBucket(plop *plan.CreateBucket) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAlterBucket(plop *plan.AlterBucket) (interface{}, error) {
+func (this *collector) VisitAlterBucket(plop *plan.AlterBucket) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropBucket(plop *plan.DropBucket) (interface{}, error) {
+func (this *collector) VisitDropBucket(plop *plan.DropBucket) (any, error) {
 	return nil, nil
 }
 
@@ -617,26 +617,26 @@ func (this *collector) VisitAlterCollection(plop *plan.AlterCollection) (any, er
 	return nil, nil
 }
 
-func (this *collector) VisitCreateUser(plop *plan.CreateUser) (interface{}, error) {
+func (this *collector) VisitCreateUser(plop *plan.CreateUser) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAlterUser(plop *plan.AlterUser) (interface{}, error) {
+func (this *collector) VisitAlterUser(plop *plan.AlterUser) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropUser(plop *plan.DropUser) (interface{}, error) {
+func (this *collector) VisitDropUser(plop *plan.DropUser) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitCreateGroup(plop *plan.CreateGroup) (interface{}, error) {
+func (this *collector) VisitCreateGroup(plop *plan.CreateGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitAlterGroup(plop *plan.AlterGroup) (interface{}, error) {
+func (this *collector) VisitAlterGroup(plop *plan.AlterGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *collector) VisitDropGroup(plop *plan.DropGroup) (interface{}, error) {
+func (this *collector) VisitDropGroup(plop *plan.DropGroup) (any, error) {
 	return nil, nil
 }

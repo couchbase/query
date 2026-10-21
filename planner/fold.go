@@ -42,7 +42,7 @@ func newFold() *fold {
 
 // Logic
 
-func (this *fold) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *fold) VisitAnd(expr *expression.And) (any, error) {
 	operands := expr.Operands()
 	found := false
 
@@ -87,7 +87,7 @@ outer:
 	}
 }
 
-func (this *fold) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *fold) VisitOr(expr *expression.Or) (any, error) {
 	operands := expr.Operands()
 	found := false
 

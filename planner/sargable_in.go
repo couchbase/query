@@ -13,7 +13,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *sargable) VisitIn(pred *expression.In) (interface{}, error) {
+func (this *sargable) VisitIn(pred *expression.In) (any, error) {
 	return this.vectorType == "" && (base.SubsetOf(pred.First(), this.key) ||
 			this.defaultSargable(pred)),
 		nil

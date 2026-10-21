@@ -15,7 +15,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *sarg) VisitEq(pred *expression.Eq) (interface{}, error) {
+func (this *sarg) VisitEq(pred *expression.Eq) (any, error) {
 	if this.isVector {
 		return nil, nil
 	} else if base.SubsetOf(pred, this.key) {

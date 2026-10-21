@@ -84,7 +84,7 @@ func (this *exprClassifier) addConstant(expr expression.Expression) {
 	}
 }
 
-func (this *exprClassifier) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *exprClassifier) VisitAnd(expr *expression.And) (any, error) {
 
 	var err error
 	for _, op := range expr.Operands() {
@@ -104,7 +104,7 @@ func (this *exprClassifier) VisitAnd(expr *expression.And) (interface{}, error) 
 	return expr, nil
 }
 
-func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *exprClassifier) VisitOr(expr *expression.Or) (any, error) {
 
 	or, truth := expression.FlattenOr(expr)
 	if truth {
@@ -161,214 +161,214 @@ func (this *exprClassifier) VisitOr(expr *expression.Or) (interface{}, error) {
 
 // Arithmetic
 
-func (this *exprClassifier) VisitAdd(pred *expression.Add) (interface{}, error) {
+func (this *exprClassifier) VisitAdd(pred *expression.Add) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitDiv(pred *expression.Div) (interface{}, error) {
+func (this *exprClassifier) VisitDiv(pred *expression.Div) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitMod(pred *expression.Mod) (interface{}, error) {
+func (this *exprClassifier) VisitMod(pred *expression.Mod) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitMult(pred *expression.Mult) (interface{}, error) {
+func (this *exprClassifier) VisitMult(pred *expression.Mult) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitNeg(pred *expression.Neg) (interface{}, error) {
+func (this *exprClassifier) VisitNeg(pred *expression.Neg) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitSub(pred *expression.Sub) (interface{}, error) {
+func (this *exprClassifier) VisitSub(pred *expression.Sub) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Case
 
-func (this *exprClassifier) VisitSearchedCase(pred *expression.SearchedCase) (interface{}, error) {
+func (this *exprClassifier) VisitSearchedCase(pred *expression.SearchedCase) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitSimpleCase(pred *expression.SimpleCase) (interface{}, error) {
+func (this *exprClassifier) VisitSimpleCase(pred *expression.SimpleCase) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Collection
 
-func (this *exprClassifier) VisitAny(pred *expression.Any) (interface{}, error) {
+func (this *exprClassifier) VisitAny(pred *expression.Any) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitEvery(pred *expression.Every) (interface{}, error) {
+func (this *exprClassifier) VisitEvery(pred *expression.Every) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
+func (this *exprClassifier) VisitAnyEvery(pred *expression.AnyEvery) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitArray(pred *expression.Array) (interface{}, error) {
+func (this *exprClassifier) VisitArray(pred *expression.Array) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitFirst(pred *expression.First) (interface{}, error) {
+func (this *exprClassifier) VisitFirst(pred *expression.First) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitObject(pred *expression.Object) (interface{}, error) {
+func (this *exprClassifier) VisitObject(pred *expression.Object) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitExists(pred *expression.Exists) (interface{}, error) {
+func (this *exprClassifier) VisitExists(pred *expression.Exists) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitIn(pred *expression.In) (interface{}, error) {
+func (this *exprClassifier) VisitIn(pred *expression.In) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitWithin(pred *expression.Within) (interface{}, error) {
+func (this *exprClassifier) VisitWithin(pred *expression.Within) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Comparison
 
-func (this *exprClassifier) VisitBetween(pred *expression.Between) (interface{}, error) {
+func (this *exprClassifier) VisitBetween(pred *expression.Between) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitEq(pred *expression.Eq) (interface{}, error) {
+func (this *exprClassifier) VisitEq(pred *expression.Eq) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitLE(pred *expression.LE) (interface{}, error) {
+func (this *exprClassifier) VisitLE(pred *expression.LE) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitLike(pred *expression.Like) (interface{}, error) {
+func (this *exprClassifier) VisitLike(pred *expression.Like) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitLT(pred *expression.LT) (interface{}, error) {
+func (this *exprClassifier) VisitLT(pred *expression.LT) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
+func (this *exprClassifier) VisitIsMissing(pred *expression.IsMissing) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
+func (this *exprClassifier) VisitIsNotMissing(pred *expression.IsNotMissing) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
+func (this *exprClassifier) VisitIsNotNull(pred *expression.IsNotNull) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
+func (this *exprClassifier) VisitIsNotValued(pred *expression.IsNotValued) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
+func (this *exprClassifier) VisitIsNull(pred *expression.IsNull) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitIsValued(pred *expression.IsValued) (interface{}, error) {
+func (this *exprClassifier) VisitIsValued(pred *expression.IsValued) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Concat
-func (this *exprClassifier) VisitConcat(pred *expression.Concat) (interface{}, error) {
+func (this *exprClassifier) VisitConcat(pred *expression.Concat) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Constant
-func (this *exprClassifier) VisitConstant(pred *expression.Constant) (interface{}, error) {
+func (this *exprClassifier) VisitConstant(pred *expression.Constant) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Identifier
-func (this *exprClassifier) VisitIdentifier(pred *expression.Identifier) (interface{}, error) {
+func (this *exprClassifier) VisitIdentifier(pred *expression.Identifier) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Construction
 
-func (this *exprClassifier) VisitArrayConstruct(pred *expression.ArrayConstruct) (interface{}, error) {
+func (this *exprClassifier) VisitArrayConstruct(pred *expression.ArrayConstruct) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitObjectConstruct(pred *expression.ObjectConstruct) (interface{}, error) {
+func (this *exprClassifier) VisitObjectConstruct(pred *expression.ObjectConstruct) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Logic
 
-func (this *exprClassifier) VisitNot(pred *expression.Not) (interface{}, error) {
+func (this *exprClassifier) VisitNot(pred *expression.Not) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Navigation
 
-func (this *exprClassifier) VisitElement(pred *expression.Element) (interface{}, error) {
+func (this *exprClassifier) VisitElement(pred *expression.Element) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitField(pred *expression.Field) (interface{}, error) {
+func (this *exprClassifier) VisitField(pred *expression.Field) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitFieldName(pred *expression.FieldName) (interface{}, error) {
+func (this *exprClassifier) VisitFieldName(pred *expression.FieldName) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) VisitSlice(pred *expression.Slice) (interface{}, error) {
+func (this *exprClassifier) VisitSlice(pred *expression.Slice) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Self
-func (this *exprClassifier) VisitSelf(pred *expression.Self) (interface{}, error) {
+func (this *exprClassifier) VisitSelf(pred *expression.Self) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Function
-func (this *exprClassifier) VisitFunction(pred expression.Function) (interface{}, error) {
+func (this *exprClassifier) VisitFunction(pred expression.Function) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Subquery
-func (this *exprClassifier) VisitSubquery(pred expression.Subquery) (interface{}, error) {
+func (this *exprClassifier) VisitSubquery(pred expression.Subquery) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // InferUnderParenthesis
-func (this *exprClassifier) VisitParenInfer(pred expression.ParenInfer) (interface{}, error) {
+func (this *exprClassifier) VisitParenInfer(pred expression.ParenInfer) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // NamedParameter
-func (this *exprClassifier) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
+func (this *exprClassifier) VisitNamedParameter(pred expression.NamedParameter) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // PositionalParameter
-func (this *exprClassifier) VisitPositionalParameter(pred expression.PositionalParameter) (interface{}, error) {
+func (this *exprClassifier) VisitPositionalParameter(pred expression.PositionalParameter) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Cover
-func (this *exprClassifier) VisitCover(pred *expression.Cover) (interface{}, error) {
+func (this *exprClassifier) VisitCover(pred *expression.Cover) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // All
-func (this *exprClassifier) VisitAll(pred *expression.All) (interface{}, error) {
+func (this *exprClassifier) VisitAll(pred *expression.All) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *exprClassifier) visitDefault(expr expression.Expression) (interface{}, error) {
+func (this *exprClassifier) visitDefault(expr expression.Expression) (any, error) {
 	keyspaces, err := expression.CountKeySpaces(expr, this.keyspaceNames)
 	if err != nil {
 		return nil, err

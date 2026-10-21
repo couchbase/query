@@ -104,40 +104,40 @@ func (this *ansijoinOuterToInner) visitSetop(first algebra.Subresult, second alg
 	return errors.NewPlanInternalError("ansijoinOuterToInner.visitSetop: unexpected code path")
 }
 
-func (this *ansijoinOuterToInner) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitSelectTerm(node *algebra.SelectTerm) (any, error) {
 	return nil, errors.NewPlanInternalError("ansijoinOuterToInner.VisitSelectTerm: unexpected code path")
 }
 
-func (this *ansijoinOuterToInner) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitSubselect(node *algebra.Subselect) (any, error) {
 	if node.From() != nil {
 		return node.From().Accept(this)
 	}
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (any, error) {
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitExpressionTerm(node *algebra.ExpressionTerm) (any, error) {
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitSubqueryTerm(node *algebra.SubqueryTerm) (any, error) {
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitJoin(node *algebra.Join) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitJoin(node *algebra.Join) (any, error) {
 	// no mixing of lookup join and ANSI JOIN/NEST
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitIndexJoin(node *algebra.IndexJoin) (any, error) {
 	// no mixing of index join and ANSI JOIN/NEST
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitAnsiJoin(node *algebra.AnsiJoin) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitAnsiJoin(node *algebra.AnsiJoin) (any, error) {
 	aoj2aij, err := this.visitAnsiJoin(node.Left(), node.Outer(), node.Alias())
 	if err != nil {
 		return nil, err
@@ -150,17 +150,17 @@ func (this *ansijoinOuterToInner) VisitAnsiJoin(node *algebra.AnsiJoin) (interfa
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitNest(node *algebra.Nest) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitNest(node *algebra.Nest) (any, error) {
 	// no mixing of lookup nest and ANSI JOIN/NEST
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitIndexNest(node *algebra.IndexNest) (any, error) {
 	// no mixing of index nest and ANSI JOIN/NEST
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitAnsiNest(node *algebra.AnsiNest) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitAnsiNest(node *algebra.AnsiNest) (any, error) {
 	aoj2aij, err := this.visitAnsiJoin(node.Left(), node.Outer(), node.Alias())
 	if err != nil {
 		return nil, err
@@ -173,30 +173,30 @@ func (this *ansijoinOuterToInner) VisitAnsiNest(node *algebra.AnsiNest) (interfa
 	return nil, nil
 }
 
-func (this *ansijoinOuterToInner) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitUnnest(node *algebra.Unnest) (any, error) {
 	return node.Left().Accept(this)
 }
 
-func (this *ansijoinOuterToInner) VisitUnion(node *algebra.Union) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitUnion(node *algebra.Union) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *ansijoinOuterToInner) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitUnionAll(node *algebra.UnionAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *ansijoinOuterToInner) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitIntersect(node *algebra.Intersect) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *ansijoinOuterToInner) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitIntersectAll(node *algebra.IntersectAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *ansijoinOuterToInner) VisitExcept(node *algebra.Except) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitExcept(node *algebra.Except) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *ansijoinOuterToInner) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
+func (this *ansijoinOuterToInner) VisitExceptAll(node *algebra.ExceptAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }

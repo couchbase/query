@@ -72,43 +72,43 @@ type covers struct {
 
 // Arithmetic
 
-func (this *covers) VisitAdd(expr *expression.Add) (interface{}, error) {
+func (this *covers) VisitAdd(expr *expression.Add) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitDiv(expr *expression.Div) (interface{}, error) {
+func (this *covers) VisitDiv(expr *expression.Div) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitMod(expr *expression.Mod) (interface{}, error) {
+func (this *covers) VisitMod(expr *expression.Mod) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitMult(expr *expression.Mult) (interface{}, error) {
+func (this *covers) VisitMult(expr *expression.Mult) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitNeg(expr *expression.Neg) (interface{}, error) {
+func (this *covers) VisitNeg(expr *expression.Neg) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitSub(expr *expression.Sub) (interface{}, error) {
+func (this *covers) VisitSub(expr *expression.Sub) (any, error) {
 	return nil, nil
 }
 
 // Case
 
-func (this *covers) VisitSearchedCase(expr *expression.SearchedCase) (interface{}, error) {
+func (this *covers) VisitSearchedCase(expr *expression.SearchedCase) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, error) {
+func (this *covers) VisitSimpleCase(expr *expression.SimpleCase) (any, error) {
 	return nil, nil
 }
 
 // Collection
 
-func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
+func (this *covers) VisitAny(expr *expression.Any) (any, error) {
 
 	for i, k := range this.keys {
 		if _, ok := k.Expr.(*expression.All); ok {
@@ -125,113 +125,113 @@ func (this *covers) VisitAny(expr *expression.Any) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitArray(expr *expression.Array) (interface{}, error) {
+func (this *covers) VisitArray(expr *expression.Array) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitEvery(expr *expression.Every) (interface{}, error) {
+func (this *covers) VisitEvery(expr *expression.Every) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+func (this *covers) VisitAnyEvery(expr *expression.AnyEvery) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitExists(expr *expression.Exists) (interface{}, error) {
+func (this *covers) VisitExists(expr *expression.Exists) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitFirst(expr *expression.First) (interface{}, error) {
+func (this *covers) VisitFirst(expr *expression.First) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitObject(expr *expression.Object) (interface{}, error) {
+func (this *covers) VisitObject(expr *expression.Object) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitIn(expr *expression.In) (interface{}, error) {
+func (this *covers) VisitIn(expr *expression.In) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitWithin(expr *expression.Within) (interface{}, error) {
+func (this *covers) VisitWithin(expr *expression.Within) (any, error) {
 	return nil, nil
 }
 
 // Comparison
 
-func (this *covers) VisitBetween(expr *expression.Between) (interface{}, error) {
+func (this *covers) VisitBetween(expr *expression.Between) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitEq(expr *expression.Eq) (interface{}, error) {
+func (this *covers) VisitEq(expr *expression.Eq) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitLE(expr *expression.LE) (interface{}, error) {
+func (this *covers) VisitLE(expr *expression.LE) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitLike(expr *expression.Like) (interface{}, error) {
+func (this *covers) VisitLike(expr *expression.Like) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitLT(expr *expression.LT) (interface{}, error) {
+func (this *covers) VisitLT(expr *expression.LT) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
+func (this *covers) VisitIsMissing(expr *expression.IsMissing) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
+func (this *covers) VisitIsNotMissing(expr *expression.IsNotMissing) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
+func (this *covers) VisitIsNotNull(expr *expression.IsNotNull) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
+func (this *covers) VisitIsNotValued(expr *expression.IsNotValued) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
+func (this *covers) VisitIsNull(expr *expression.IsNull) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
+func (this *covers) VisitIsValued(expr *expression.IsValued) (any, error) {
 	return nil, nil
 }
 
 // Concat
-func (this *covers) VisitConcat(expr *expression.Concat) (interface{}, error) {
+func (this *covers) VisitConcat(expr *expression.Concat) (any, error) {
 	return nil, nil
 }
 
 // Constant
-func (this *covers) VisitConstant(expr *expression.Constant) (interface{}, error) {
+func (this *covers) VisitConstant(expr *expression.Constant) (any, error) {
 	return nil, nil
 }
 
 // Identifier
-func (this *covers) VisitIdentifier(expr *expression.Identifier) (interface{}, error) {
+func (this *covers) VisitIdentifier(expr *expression.Identifier) (any, error) {
 	return nil, nil
 }
 
 // Construction
 
-func (this *covers) VisitArrayConstruct(expr *expression.ArrayConstruct) (interface{}, error) {
+func (this *covers) VisitArrayConstruct(expr *expression.ArrayConstruct) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitObjectConstruct(expr *expression.ObjectConstruct) (interface{}, error) {
+func (this *covers) VisitObjectConstruct(expr *expression.ObjectConstruct) (any, error) {
 	return nil, nil
 }
 
 // Logic
 
 // For AND, return the union over the children
-func (this *covers) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *covers) VisitAnd(expr *expression.And) (any, error) {
 	var fc map[string]*expression.Cover
 
 	for _, op := range expr.Operands() {
@@ -252,12 +252,12 @@ func (this *covers) VisitAnd(expr *expression.And) (interface{}, error) {
 	return fc, nil
 }
 
-func (this *covers) VisitNot(expr *expression.Not) (interface{}, error) {
+func (this *covers) VisitNot(expr *expression.Not) (any, error) {
 	return nil, nil
 }
 
 // For OR, return the intersection over the children
-func (this *covers) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *covers) VisitOr(expr *expression.Or) (any, error) {
 	var fc map[string]*expression.Cover
 
 	for _, op := range expr.Operands() {
@@ -290,58 +290,58 @@ func (this *covers) VisitOr(expr *expression.Or) (interface{}, error) {
 
 // Navigation
 
-func (this *covers) VisitElement(expr *expression.Element) (interface{}, error) {
+func (this *covers) VisitElement(expr *expression.Element) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitField(expr *expression.Field) (interface{}, error) {
+func (this *covers) VisitField(expr *expression.Field) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitFieldName(expr *expression.FieldName) (interface{}, error) {
+func (this *covers) VisitFieldName(expr *expression.FieldName) (any, error) {
 	return nil, nil
 }
 
-func (this *covers) VisitSlice(expr *expression.Slice) (interface{}, error) {
+func (this *covers) VisitSlice(expr *expression.Slice) (any, error) {
 	return nil, nil
 }
 
 // Self
-func (this *covers) VisitSelf(expr *expression.Self) (interface{}, error) {
+func (this *covers) VisitSelf(expr *expression.Self) (any, error) {
 	return nil, nil
 }
 
 // Function
-func (this *covers) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *covers) VisitFunction(expr expression.Function) (any, error) {
 	return nil, nil
 }
 
 // Subquery
-func (this *covers) VisitSubquery(expr expression.Subquery) (interface{}, error) {
+func (this *covers) VisitSubquery(expr expression.Subquery) (any, error) {
 	return nil, nil
 }
 
 // InferUnderParenthesis
-func (this *covers) VisitParenInfer(expr expression.ParenInfer) (interface{}, error) {
+func (this *covers) VisitParenInfer(expr expression.ParenInfer) (any, error) {
 	return nil, nil
 }
 
 // NamedParameter
-func (this *covers) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
+func (this *covers) VisitNamedParameter(expr expression.NamedParameter) (any, error) {
 	return nil, nil
 }
 
 // PositionalParameter
-func (this *covers) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
+func (this *covers) VisitPositionalParameter(expr expression.PositionalParameter) (any, error) {
 	return nil, nil
 }
 
 // Cover
-func (this *covers) VisitCover(expr *expression.Cover) (interface{}, error) {
+func (this *covers) VisitCover(expr *expression.Cover) (any, error) {
 	return expr.Covered().Accept(this)
 }
 
 // All
-func (this *covers) VisitAll(expr *expression.All) (interface{}, error) {
+func (this *covers) VisitAll(expr *expression.All) (any, error) {
 	return nil, nil
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
+func (this *builder) VisitInsert(stmt *algebra.Insert) (any, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 

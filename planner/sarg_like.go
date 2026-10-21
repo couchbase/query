@@ -17,7 +17,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *sarg) visitLike(pred expression.LikeFunction) (interface{}, error) {
+func (this *sarg) visitLike(pred expression.LikeFunction) (any, error) {
 	if this.isVector {
 		return nil, nil
 	}

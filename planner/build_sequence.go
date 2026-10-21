@@ -35,7 +35,7 @@ func validateSequencePath(credentials *auth.Credentials, path *algebra.Path) err
 	return err
 }
 
-func (this *builder) VisitCreateSequence(stmt *algebra.CreateSequence) (interface{}, error) {
+func (this *builder) VisitCreateSequence(stmt *algebra.CreateSequence) (any, error) {
 	err := validateSequencePath(this.context.Credentials(), stmt.Name())
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (this *builder) VisitCreateSequence(stmt *algebra.CreateSequence) (interfac
 	return plan.NewQueryPlan(plan.NewCreateSequence(stmt)), nil
 }
 
-func (this *builder) VisitDropSequence(stmt *algebra.DropSequence) (interface{}, error) {
+func (this *builder) VisitDropSequence(stmt *algebra.DropSequence) (any, error) {
 	err := validateSequencePath(this.context.Credentials(), stmt.Name())
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (this *builder) VisitDropSequence(stmt *algebra.DropSequence) (interface{},
 	return plan.NewQueryPlan(plan.NewDropSequence(stmt)), nil
 }
 
-func (this *builder) VisitAlterSequence(stmt *algebra.AlterSequence) (interface{}, error) {
+func (this *builder) VisitAlterSequence(stmt *algebra.AlterSequence) (any, error) {
 	err := validateSequencePath(this.context.Credentials(), stmt.Name())
 	if err != nil {
 		return nil, err

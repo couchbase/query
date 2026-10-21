@@ -41,7 +41,7 @@ var pushdownMap = map[PushDownProperties]string{
 	_PUSHDOWN_FULLGROUPAGGS: "FULL GROUPBY & AGGREGATES pushdown",
 }
 
-func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
+func (this *builder) VisitAdvise(stmt *algebra.Advise) (any, error) {
 	this.setAdvisePhase(_RECOMMEND)
 	//Temporarily turn off CBO for rule-based advisor
 	considerCBO := false
@@ -74,7 +74,7 @@ func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 }
 
 func (this *builder) advise(considerCBO bool, queryInfos map[expression.HasExpressions]*advisor.QueryInfo,
-	stmt algebra.Statement, context interface{}) {
+	stmt algebra.Statement, context any) {
 	if considerCBO {
 		for _, queryInfo := range queryInfos {
 			keyspaceInfos := queryInfo.GetKeyspaceInfos()

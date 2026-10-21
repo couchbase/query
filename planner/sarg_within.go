@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
+func (this *sarg) VisitWithin(pred *expression.Within) (any, error) {
 	if this.isVector {
 		return nil, nil
 	} else if base.SubsetOf(pred, this.key) {
@@ -41,7 +41,7 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 		return _VALUED_SPANS, nil
 	}
 
-	array, ok := aval.Actual().([]interface{})
+	array, ok := aval.Actual().([]any)
 	if ok {
 		array = _WITHIN_POOL.GetCapped(len(array))
 	} else {
@@ -84,4 +84,4 @@ func (this *sarg) VisitWithin(pred *expression.Within) (interface{}, error) {
 
 const _WITHIN_POOL_SIZE = 64
 
-var _WITHIN_POOL = util.NewSlicePool[interface{}](_WITHIN_POOL_SIZE)
+var _WITHIN_POOL = util.NewSlicePool[any](_WITHIN_POOL_SIZE)

@@ -102,7 +102,7 @@ func getBucket(credentials *auth.Credentials, retry bool, parts ...string) (data
 	return bucket, err
 }
 
-func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
+func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (any, error) {
 	bucket, err := getBucket(this.context.Credentials(), true, stmt.Scope().Path().Namespace(),
 		stmt.Scope().Path().Bucket())
 	if err != nil {
@@ -112,7 +112,7 @@ func (this *builder) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, e
 	return plan.NewQueryPlan(plan.NewCreateScope(bucket, stmt)), nil
 }
 
-func (this *builder) VisitDropScope(stmt *algebra.DropScope) (interface{}, error) {
+func (this *builder) VisitDropScope(stmt *algebra.DropScope) (any, error) {
 	bucket, err := getBucket(this.context.Credentials(), false, stmt.Scope().Path().Namespace(),
 		stmt.Scope().Path().Bucket())
 	if err != nil {

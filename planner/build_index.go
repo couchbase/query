@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
+func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
@@ -47,7 +47,7 @@ func (this *builder) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (
 	return plan.NewQueryPlan(plan.NewCreatePrimaryIndex(keyspace, stmt)), nil
 }
 
-func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
+func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
@@ -94,7 +94,7 @@ func (this *builder) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, e
 	return plan.NewQueryPlan(plan.NewCreateIndex(keyspace, stmt)), nil
 }
 
-func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
+func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
@@ -119,7 +119,7 @@ func (this *builder) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error
 	return plan.NewQueryPlan(plan.NewDropIndex(index, ierr, indexer, stmt)), nil
 }
 
-func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
+func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
@@ -144,7 +144,7 @@ func (this *builder) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, err
 	return plan.NewQueryPlan(plan.NewAlterIndex(index, ierr, indexer, stmt, keyspace)), nil
 }
 
-func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
+func (this *builder) VisitBuildIndexes(stmt *algebra.BuildIndexes) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {

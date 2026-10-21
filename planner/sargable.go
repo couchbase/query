@@ -146,85 +146,85 @@ type sargable struct {
 
 // Arithmetic
 
-func (this *sargable) VisitAdd(pred *expression.Add) (interface{}, error) {
+func (this *sargable) VisitAdd(pred *expression.Add) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitDiv(pred *expression.Div) (interface{}, error) {
+func (this *sargable) VisitDiv(pred *expression.Div) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitMod(pred *expression.Mod) (interface{}, error) {
+func (this *sargable) VisitMod(pred *expression.Mod) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitMult(pred *expression.Mult) (interface{}, error) {
+func (this *sargable) VisitMult(pred *expression.Mult) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitNeg(pred *expression.Neg) (interface{}, error) {
+func (this *sargable) VisitNeg(pred *expression.Neg) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitSub(pred *expression.Sub) (interface{}, error) {
+func (this *sargable) VisitSub(pred *expression.Sub) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Case
 
-func (this *sargable) VisitSearchedCase(pred *expression.SearchedCase) (interface{}, error) {
+func (this *sargable) VisitSearchedCase(pred *expression.SearchedCase) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitSimpleCase(pred *expression.SimpleCase) (interface{}, error) {
+func (this *sargable) VisitSimpleCase(pred *expression.SimpleCase) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Collection
 
-func (this *sargable) VisitArray(pred *expression.Array) (interface{}, error) {
+func (this *sargable) VisitArray(pred *expression.Array) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitEvery(pred *expression.Every) (interface{}, error) {
+func (this *sargable) VisitEvery(pred *expression.Every) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitExists(pred *expression.Exists) (interface{}, error) {
+func (this *sargable) VisitExists(pred *expression.Exists) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitFirst(pred *expression.First) (interface{}, error) {
+func (this *sargable) VisitFirst(pred *expression.First) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitObject(pred *expression.Object) (interface{}, error) {
+func (this *sargable) VisitObject(pred *expression.Object) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Comparison
 
-func (this *sargable) VisitBetween(pred *expression.Between) (interface{}, error) {
+func (this *sargable) VisitBetween(pred *expression.Between) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitEq(pred *expression.Eq) (interface{}, error) {
+func (this *sargable) VisitEq(pred *expression.Eq) (any, error) {
 	return this.visitBinary(pred)
 }
 
-func (this *sargable) VisitLE(pred *expression.LE) (interface{}, error) {
+func (this *sargable) VisitLE(pred *expression.LE) (any, error) {
 	return this.visitBinary(pred)
 }
 
-func (this *sargable) VisitLike(pred *expression.Like) (interface{}, error) {
+func (this *sargable) VisitLike(pred *expression.Like) (any, error) {
 	return this.visitLike(pred)
 }
 
-func (this *sargable) VisitLT(pred *expression.LT) (interface{}, error) {
+func (this *sargable) VisitLT(pred *expression.LT) (any, error) {
 	return this.visitBinary(pred)
 }
 
-func (this *sargable) VisitIsMissing(pred *expression.IsMissing) (interface{}, error) {
+func (this *sargable) VisitIsMissing(pred *expression.IsMissing) (any, error) {
 	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
 		return true, nil
 	}
@@ -232,85 +232,85 @@ func (this *sargable) VisitIsMissing(pred *expression.IsMissing) (interface{}, e
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitIsNotMissing(pred *expression.IsNotMissing) (interface{}, error) {
+func (this *sargable) VisitIsNotMissing(pred *expression.IsNotMissing) (any, error) {
 	return this.visitUnary(pred)
 }
 
-func (this *sargable) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
+func (this *sargable) VisitIsNotNull(pred *expression.IsNotNull) (any, error) {
 	return this.visitUnary(pred)
 }
 
-func (this *sargable) VisitIsNotValued(pred *expression.IsNotValued) (interface{}, error) {
+func (this *sargable) VisitIsNotValued(pred *expression.IsNotValued) (any, error) {
 	if this.missing && !this.array && pred.Operand().EquivalentTo(this.key) {
 		return true, nil
 	}
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
+func (this *sargable) VisitIsNull(pred *expression.IsNull) (any, error) {
 	return this.visitUnary(pred)
 }
 
-func (this *sargable) VisitIsValued(pred *expression.IsValued) (interface{}, error) {
+func (this *sargable) VisitIsValued(pred *expression.IsValued) (any, error) {
 	return this.visitUnary(pred)
 }
 
 // Concat
-func (this *sargable) VisitConcat(pred *expression.Concat) (interface{}, error) {
+func (this *sargable) VisitConcat(pred *expression.Concat) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Constant
-func (this *sargable) VisitConstant(pred *expression.Constant) (interface{}, error) {
+func (this *sargable) VisitConstant(pred *expression.Constant) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Identifier
-func (this *sargable) VisitIdentifier(pred *expression.Identifier) (interface{}, error) {
+func (this *sargable) VisitIdentifier(pred *expression.Identifier) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Construction
 
-func (this *sargable) VisitArrayConstruct(pred *expression.ArrayConstruct) (interface{}, error) {
+func (this *sargable) VisitArrayConstruct(pred *expression.ArrayConstruct) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitObjectConstruct(pred *expression.ObjectConstruct) (interface{}, error) {
+func (this *sargable) VisitObjectConstruct(pred *expression.ObjectConstruct) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Logic
 
-func (this *sargable) VisitNot(pred *expression.Not) (interface{}, error) {
+func (this *sargable) VisitNot(pred *expression.Not) (any, error) {
 	return this.visitUnary(pred)
 }
 
 // Navigation
 
-func (this *sargable) VisitElement(pred *expression.Element) (interface{}, error) {
+func (this *sargable) VisitElement(pred *expression.Element) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitField(pred *expression.Field) (interface{}, error) {
+func (this *sargable) VisitField(pred *expression.Field) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitFieldName(pred *expression.FieldName) (interface{}, error) {
+func (this *sargable) VisitFieldName(pred *expression.FieldName) (any, error) {
 	return this.visitDefault(pred)
 }
 
-func (this *sargable) VisitSlice(pred *expression.Slice) (interface{}, error) {
+func (this *sargable) VisitSlice(pred *expression.Slice) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Self
-func (this *sargable) VisitSelf(pred *expression.Self) (interface{}, error) {
+func (this *sargable) VisitSelf(pred *expression.Self) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Function
-func (this *sargable) VisitFunction(pred expression.Function) (interface{}, error) {
+func (this *sargable) VisitFunction(pred expression.Function) (any, error) {
 	switch pred := pred.(type) {
 	case *expression.RegexpLike:
 		return this.visitLike(pred)
@@ -338,32 +338,32 @@ func (this *sargable) VisitFunction(pred expression.Function) (interface{}, erro
 }
 
 // Subquery
-func (this *sargable) VisitSubquery(pred expression.Subquery) (interface{}, error) {
+func (this *sargable) VisitSubquery(pred expression.Subquery) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // InferUnderParenthesis
-func (this *sargable) VisitParenInfer(pred expression.ParenInfer) (interface{}, error) {
+func (this *sargable) VisitParenInfer(pred expression.ParenInfer) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // NamedParameter
-func (this *sargable) VisitNamedParameter(pred expression.NamedParameter) (interface{}, error) {
+func (this *sargable) VisitNamedParameter(pred expression.NamedParameter) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // PositionalParameter
-func (this *sargable) VisitPositionalParameter(pred expression.PositionalParameter) (interface{}, error) {
+func (this *sargable) VisitPositionalParameter(pred expression.PositionalParameter) (any, error) {
 	return this.visitDefault(pred)
 }
 
 // Cover
-func (this *sargable) VisitCover(pred *expression.Cover) (interface{}, error) {
+func (this *sargable) VisitCover(pred *expression.Cover) (any, error) {
 	return pred.Covered().Accept(this)
 }
 
 // All
-func (this *sargable) VisitAll(pred *expression.All) (interface{}, error) {
+func (this *sargable) VisitAll(pred *expression.All) (any, error) {
 	return pred.Array().Accept(this)
 }
 

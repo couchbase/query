@@ -13,7 +13,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
+func (this *sarg) VisitIsNull(pred *expression.IsNull) (any, error) {
 	if this.isVector {
 		return nil, nil
 	} else if base.SubsetOf(pred, this.key) {
@@ -39,7 +39,7 @@ func (this *sarg) VisitIsNull(pred *expression.IsNull) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *sarg) VisitIsNotNull(pred *expression.IsNotNull) (interface{}, error) {
+func (this *sarg) VisitIsNotNull(pred *expression.IsNotNull) (any, error) {
 	if this.isVector {
 		return nil, nil
 	} else if base.SubsetOf(pred, this.key) {

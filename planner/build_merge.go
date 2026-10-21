@@ -16,7 +16,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
+func (this *builder) VisitMerge(stmt *algebra.Merge) (any, error) {
 	var path *algebra.Path
 
 	this.node = stmt

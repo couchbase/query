@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
+func (this *builder) VisitSelectTerm(node *algebra.SelectTerm) (any, error) {
 	qp, err := node.Select().Accept(this)
 	if err != nil {
 		return nil, err

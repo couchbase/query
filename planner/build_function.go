@@ -13,14 +13,14 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitCreateFunction(stmt *algebra.CreateFunction) (interface{}, error) {
+func (this *builder) VisitCreateFunction(stmt *algebra.CreateFunction) (any, error) {
 	return plan.NewQueryPlan(plan.NewCreateFunction(stmt)), nil
 }
 
-func (this *builder) VisitDropFunction(stmt *algebra.DropFunction) (interface{}, error) {
+func (this *builder) VisitDropFunction(stmt *algebra.DropFunction) (any, error) {
 	return plan.NewQueryPlan(plan.NewDropFunction(stmt)), nil
 }
 
-func (this *builder) VisitExecuteFunction(stmt *algebra.ExecuteFunction) (interface{}, error) {
+func (this *builder) VisitExecuteFunction(stmt *algebra.ExecuteFunction) (any, error) {
 	return plan.NewQueryPlan(plan.NewExecuteFunction(stmt)), nil
 }

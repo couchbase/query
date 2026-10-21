@@ -29,7 +29,7 @@ func validateKnowledgePath(credentials *auth.Credentials, path *algebra.Path) er
 	return err
 }
 
-func (this *builder) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (interface{}, error) {
+func (this *builder) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (any, error) {
 	err := validateKnowledgePath(this.context.Credentials(), stmt.Keyspace())
 	if err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (this *builder) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (interf
 	return plan.NewQueryPlan(plan.NewCreateKnowledge(stmt)), nil
 }
 
-func (this *builder) VisitDropKnowledge(stmt *algebra.DropKnowledge) (interface{}, error) {
+func (this *builder) VisitDropKnowledge(stmt *algebra.DropKnowledge) (any, error) {
 	err := validateKnowledgePath(this.context.Credentials(), stmt.Keyspace())
 	if err != nil {
 		return nil, err

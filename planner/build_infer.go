@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{}, error) {
+func (this *builder) VisitInferKeyspace(stmt *algebra.InferKeyspace) (any, error) {
 	ksref := stmt.Keyspace()
 	keyspace, err := this.getNameKeyspace(ksref, false, true, stmt.Type())
 	if err != nil {
@@ -23,6 +23,6 @@ func (this *builder) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{
 	return plan.NewQueryPlan(plan.NewInferKeyspace(keyspace, stmt)), nil
 }
 
-func (this *builder) VisitInferExpression(stmt *algebra.InferExpression) (interface{}, error) {
+func (this *builder) VisitInferExpression(stmt *algebra.InferExpression) (any, error) {
 	return plan.NewQueryPlan(plan.NewInferExpression(stmt)), nil
 }

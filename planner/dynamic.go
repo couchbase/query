@@ -71,7 +71,7 @@ func newDynamic(variable *expression.Identifier, pairs *expression.Pairs) *dynam
 
 // Collection
 
-func (this *dynamic) VisitAny(expr *expression.Any) (rv interface{}, err error) {
+func (this *dynamic) VisitAny(expr *expression.Any) (rv any, err error) {
 	rsat := expr.Satisfies().Copy()
 
 	for _, binding := range expr.Bindings() {
@@ -86,7 +86,7 @@ func (this *dynamic) VisitAny(expr *expression.Any) (rv interface{}, err error) 
 	return rsat.Accept(this)
 }
 
-func (this *dynamic) VisitAnyEvery(expr *expression.AnyEvery) (rv interface{}, err error) {
+func (this *dynamic) VisitAnyEvery(expr *expression.AnyEvery) (rv any, err error) {
 	rsat := expr.Satisfies().Copy()
 
 	for _, binding := range expr.Bindings() {
@@ -101,7 +101,7 @@ func (this *dynamic) VisitAnyEvery(expr *expression.AnyEvery) (rv interface{}, e
 	return rsat.Accept(this)
 }
 
-func (this *dynamic) VisitExists(expr *expression.Exists) (interface{}, error) {
+func (this *dynamic) VisitExists(expr *expression.Exists) (any, error) {
 	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
@@ -121,7 +121,7 @@ func (this *dynamic) VisitExists(expr *expression.Exists) (interface{}, error) {
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitIn(expr *expression.In) (interface{}, error) {
+func (this *dynamic) VisitIn(expr *expression.In) (any, error) {
 	alias := fieldName(expr.First())
 	cons, ok := expr.Second().(*expression.ArrayConstruct)
 
@@ -152,7 +152,7 @@ func (this *dynamic) VisitIn(expr *expression.In) (interface{}, error) {
 
 // Comparison
 
-func (this *dynamic) VisitBetween(expr *expression.Between) (interface{}, error) {
+func (this *dynamic) VisitBetween(expr *expression.Between) (any, error) {
 	alias := fieldName(expr.First())
 	low := expr.Second().Static()
 	high := expr.Third().Static()
@@ -175,7 +175,7 @@ func (this *dynamic) VisitBetween(expr *expression.Between) (interface{}, error)
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitEq(expr *expression.Eq) (interface{}, error) {
+func (this *dynamic) VisitEq(expr *expression.Eq) (any, error) {
 	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
@@ -196,7 +196,7 @@ func (this *dynamic) VisitEq(expr *expression.Eq) (interface{}, error) {
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitLE(expr *expression.LE) (interface{}, error) {
+func (this *dynamic) VisitLE(expr *expression.LE) (any, error) {
 	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
@@ -227,7 +227,7 @@ func (this *dynamic) VisitLE(expr *expression.LE) (interface{}, error) {
 }
 
 func (this *dynamic) visitGE(expr *expression.LE, alias string, static expression.Expression) (
-	interface{}, error) {
+	any, error) {
 
 	sat := expression.NewAnd(
 		expression.NewGE(
@@ -243,7 +243,7 @@ func (this *dynamic) visitGE(expr *expression.LE, alias string, static expressio
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitLike(expr *expression.Like) (interface{}, error) {
+func (this *dynamic) VisitLike(expr *expression.Like) (any, error) {
 	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 	escape := expr.Escape().Static()
@@ -266,7 +266,7 @@ func (this *dynamic) VisitLike(expr *expression.Like) (interface{}, error) {
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitLT(expr *expression.LT) (interface{}, error) {
+func (this *dynamic) VisitLT(expr *expression.LT) (any, error) {
 	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
@@ -297,7 +297,7 @@ func (this *dynamic) VisitLT(expr *expression.LT) (interface{}, error) {
 }
 
 func (this *dynamic) visitGT(expr *expression.LT, alias string, static expression.Expression) (
-	interface{}, error) {
+	any, error) {
 
 	sat := expression.NewAnd(
 		expression.NewGT(
@@ -313,7 +313,7 @@ func (this *dynamic) visitGT(expr *expression.LT, alias string, static expressio
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
+func (this *dynamic) VisitIsNotMissing(expr *expression.IsNotMissing) (any, error) {
 	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
@@ -333,7 +333,7 @@ func (this *dynamic) VisitIsNotMissing(expr *expression.IsNotMissing) (interface
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
+func (this *dynamic) VisitIsNotNull(expr *expression.IsNotNull) (any, error) {
 	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
@@ -353,7 +353,7 @@ func (this *dynamic) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, er
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
+func (this *dynamic) VisitIsNull(expr *expression.IsNull) (any, error) {
 	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
@@ -373,7 +373,7 @@ func (this *dynamic) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
+func (this *dynamic) VisitIsValued(expr *expression.IsValued) (any, error) {
 	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
@@ -395,11 +395,11 @@ func (this *dynamic) VisitIsValued(expr *expression.IsValued) (interface{}, erro
 
 // Logic
 
-func (this *dynamic) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *dynamic) VisitAnd(expr *expression.And) (any, error) {
 	return expr, expr.MapChildren(this)
 }
 
-func (this *dynamic) VisitNot(expr *expression.Not) (interface{}, error) {
+func (this *dynamic) VisitNot(expr *expression.Not) (any, error) {
 	alias := fieldName(expr.Operand())
 	if alias == "" {
 		return expr, nil
@@ -420,11 +420,11 @@ func (this *dynamic) VisitNot(expr *expression.Not) (interface{}, error) {
 	return expression.NewAnd(expr, any), nil
 }
 
-func (this *dynamic) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *dynamic) VisitOr(expr *expression.Or) (any, error) {
 	return expr, expr.MapChildren(this)
 }
 
-func (this *dynamic) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *dynamic) VisitFunction(expr expression.Function) (any, error) {
 	switch expr := expr.(type) {
 	case *expression.RegexpLike:
 		return this.visitRegexpLike(expr)
@@ -433,7 +433,7 @@ func (this *dynamic) VisitFunction(expr expression.Function) (interface{}, error
 	}
 }
 
-func (this *dynamic) visitRegexpLike(expr *expression.RegexpLike) (interface{}, error) {
+func (this *dynamic) visitRegexpLike(expr *expression.RegexpLike) (any, error) {
 	alias := fieldName(expr.First())
 	static := expr.Second().Static()
 
@@ -469,7 +469,7 @@ func (this *dynamic) NewBindings() expression.Bindings {
 	return expression.Bindings{binding}
 }
 
-func (this *dynamic) NewArray(items ...interface{}) expression.Expression {
+func (this *dynamic) NewArray(items ...any) expression.Expression {
 	exprs := make([]expression.Expression, len(items))
 	for i, item := range items {
 		switch item := item.(type) {

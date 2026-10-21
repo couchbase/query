@@ -16,7 +16,7 @@ import (
 	base "github.com/couchbase/query/plannerbase"
 )
 
-func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (interface{}, error) {
+func (this *sarg) VisitAnyEvery(pred *expression.AnyEvery) (any, error) {
 	if this.isVector {
 		return nil, nil
 	}

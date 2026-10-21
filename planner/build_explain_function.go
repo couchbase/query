@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitExplainFunction(stmt *algebra.ExplainFunction) (interface{}, error) {
+func (this *builder) VisitExplainFunction(stmt *algebra.ExplainFunction) (any, error) {
 	op := plan.NewExplainFunction(stmt.FuncName())
 	return plan.NewQueryPlan(op), nil
 }

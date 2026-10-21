@@ -13,27 +13,27 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitStartTransaction(stmt *algebra.StartTransaction) (interface{}, error) {
+func (this *builder) VisitStartTransaction(stmt *algebra.StartTransaction) (any, error) {
 	this.maxParallelism = 1
 	return plan.NewQueryPlan(plan.NewSequence(plan.NewStartTransaction(stmt))), nil
 }
 
-func (this *builder) VisitCommitTransaction(stmt *algebra.CommitTransaction) (interface{}, error) {
+func (this *builder) VisitCommitTransaction(stmt *algebra.CommitTransaction) (any, error) {
 	this.maxParallelism = 1
 	return plan.NewQueryPlan(plan.NewSequence(plan.NewCommitTransaction(stmt))), nil
 }
 
-func (this *builder) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (interface{}, error) {
+func (this *builder) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (any, error) {
 	this.maxParallelism = 1
 	return plan.NewQueryPlan(plan.NewSequence(plan.NewRollbackTransaction(stmt))), nil
 }
 
-func (this *builder) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (interface{}, error) {
+func (this *builder) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (any, error) {
 	this.maxParallelism = 1
 	return plan.NewQueryPlan(plan.NewSequence(plan.NewTransactionIsolation(stmt))), nil
 }
 
-func (this *builder) VisitSavepoint(stmt *algebra.Savepoint) (interface{}, error) {
+func (this *builder) VisitSavepoint(stmt *algebra.Savepoint) (any, error) {
 	this.maxParallelism = 1
 	return plan.NewQueryPlan(plan.NewSequence(plan.NewSavepoint(stmt))), nil
 }

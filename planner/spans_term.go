@@ -326,7 +326,7 @@ func (this *TermSpans) String() string {
 }
 
 func (this *TermSpans) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{
+	r := map[string]any{
 		"#":     "TermSpans",
 		"spans": this.spans,
 	}

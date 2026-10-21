@@ -17,7 +17,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
+func (this *sarg) VisitIn(pred *expression.In) (any, error) {
 	if this.isVector {
 		return nil, nil
 	} else if base.SubsetOf(pred, this.key) {
@@ -62,7 +62,7 @@ func (this *sarg) VisitIn(pred *expression.In) (interface{}, error) {
 	second := pred.Second()
 	aval := second.Value()
 	if aval != nil {
-		vals, ok := aval.Actual().([]interface{})
+		vals, ok := aval.Actual().([]any)
 		if !ok || len(vals) == 0 {
 			return _EMPTY_SPANS, nil
 		}

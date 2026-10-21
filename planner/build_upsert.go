@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
+func (this *builder) VisitUpsert(stmt *algebra.Upsert) (any, error) {
 	ksref := stmt.KeyspaceRef()
 	ksref.SetDefaultNamespace(this.namespace)
 

@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-func (this *sarg) VisitAnd(pred *expression.And) (rv interface{}, err error) {
+func (this *sarg) VisitAnd(pred *expression.And) (rv any, err error) {
 	if base.SubsetOf(pred, this.key) {
 		if expression.Equivalent(pred, this.key) {
 			return _EXACT_SELF_SPANS, nil

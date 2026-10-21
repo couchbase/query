@@ -19,7 +19,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *sarg) VisitAny(pred *expression.Any) (interface{}, error) {
+func (this *sarg) VisitAny(pred *expression.Any) (any, error) {
 	if this.isVector {
 		return nil, nil
 	}

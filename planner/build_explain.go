@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/plan"
 )
 
-func (this *builder) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
+func (this *builder) VisitExplain(stmt *algebra.Explain) (any, error) {
 	qp, err := stmt.Statement().Accept(this)
 	if err != nil {
 		return nil, err

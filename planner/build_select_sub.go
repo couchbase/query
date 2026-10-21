@@ -21,7 +21,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error) {
+func (this *builder) VisitSubselect(node *algebra.Subselect) (any, error) {
 	prevCover := this.cover
 	prevWhere := this.where
 	prevFilter := this.filter
@@ -228,7 +228,7 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 	if group != nil {
 		this.setBuilderFlag(BUILDER_HAS_GROUP)
 		proj := node.Projection().Terms()
-		allowed := value.NewScopeValue(make(map[string]interface{}, len(proj)), nil)
+		allowed := value.NewScopeValue(make(map[string]any, len(proj)), nil)
 
 		groupKeys := group.By()
 

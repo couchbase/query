@@ -21,7 +21,7 @@ import (
 
 // SELECT
 
-func (this *builder) VisitSelect(stmt *algebra.Select) (interface{}, error) {
+func (this *builder) VisitSelect(stmt *algebra.Select) (any, error) {
 	// Restore previous values when exiting. VisitSelect()
 	// can be called multiple times by set operators
 	prevNode := this.node

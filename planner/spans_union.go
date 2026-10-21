@@ -228,7 +228,7 @@ func (this *UnionSpans) String() string {
 }
 
 func (this *UnionSpans) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{
+	r := map[string]any{
 		"#":     "UnionSpans",
 		"spans": this.spans,
 	}
