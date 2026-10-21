@@ -1397,13 +1397,13 @@ func expandOffsetLimit(offset, limit expression.Expression, factor int) expressi
 	return nil
 }
 
-func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpans, sargIncludes SargSpans,
-	arrayKey *expression.All, unnestAliases []string, covers expression.Covers,
-	filterCovers map[*expression.Cover]value.Value, cond, origCond expression.Expression,
-	cost, cardinality float64, size int64, frCost float64) (
+func (this *builder) getIndexFilter(entry *indexEntry, alias string, arrayKey *expression.All,
+	unnestAliases []string, covers expression.Covers, filterCovers map[*expression.Cover]value.Value) (
 	expression.Expression, float64, float64, int64, float64, error) {
 
 	var err error
+	index := entry.index
+	cost, cardinality, size, frCost := entry.cost, entry.cardinality, entry.size, entry.frCost
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 
 	// cannot do early filtering on subservient side of outer join
@@ -1414,15 +1414,15 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 	var filter expression.Expression
 	var selec float64
 	var spans, includeSpans plan.Spans2
-	if sargSpans != nil {
+	if entry.spans != nil {
 		// since we call this function only from covering index scans,
 		// we expect only TermSpans
-		if termSpans, ok := sargSpans.(*TermSpans); ok {
+		if termSpans, ok := entry.spans.(*TermSpans); ok {
 			spans = termSpans.Spans()
 		}
 	}
-	if sargIncludes != nil {
-		if termIncludes, ok := sargIncludes.(*TermSpans); ok {
+	if entry.includeSpans != nil {
+		if termIncludes, ok := entry.includeSpans.(*TermSpans); ok {
 			includeSpans = termIncludes.Spans()
 		}
 	}
@@ -1447,14 +1447,7 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 		markIndexFlags(index, spans, includeSpans, nil, baseKeyspace)
 	}
 
-	// for inline filters (pushed to the indexer), skip filters that are implied by the
-	// index condition of a partial index: these are already guaranteed by the index,
-	// and the index condition fields may not be available in the indexer
-	var idxCond, idxOrigCond expression.Expression
-	if inline {
-		idxCond, idxOrigCond = cond, origCond
-	}
-	filter, selec, err = this.getFilterWithCond(alias, false, allowNow, inline, nil, idxCond, idxOrigCond)
+	filter, selec, err = this.getFilterForIndex(alias, false, allowNow, inline, nil, entry)
 	if err != nil {
 		return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
@@ -1516,12 +1509,20 @@ func (this *builder) getIndexFilter(index datastore.Index, alias string, sargSpa
 func (this *builder) getFilter(alias string, join, allowNow, inline bool, onclause expression.Expression) (
 	expression.Expression, float64, error) {
 
-	return this.getFilterWithCond(alias, join, allowNow, inline, onclause, nil, nil)
+	return this.getFilterForIndex(alias, join, allowNow, inline, onclause, nil)
 }
 
-// if cond (index condition) is specified, skip filters that are implied by the index condition
-func (this *builder) getFilterWithCond(alias string, join, allowNow, inline bool, onclause,
-	cond, origCond expression.Expression) (expression.Expression, float64, error) {
+// get filters for an index scan (entry is nil when not called for an index scan)
+func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool, onclause expression.Expression,
+	entry *indexEntry) (expression.Expression, float64, error) {
+
+	// for inline filters (pushed to the indexer), skip filters that are implied by the
+	// index condition of a partial index: these are already guaranteed by the index,
+	// and the index condition fields may not be available in the indexer
+	var cond, origCond expression.Expression
+	if entry != nil && inline {
+		cond, origCond = entry.cond, entry.origCond
+	}
 
 	var err error
 	baseKeyspace, _ := this.baseKeyspaces[alias]
