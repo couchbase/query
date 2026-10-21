@@ -215,12 +215,12 @@ type Value interface {
 	/*
 	   N1QL to native Go representation.
 	*/
-	Actual() interface{}
+	Actual() any
 
 	/*
 	   N1QL to native Go representation. Exact for indexing.
 	*/
-	ActualForIndex() interface{}
+	ActualForIndex() any
 
 	/*
 	   Equality comparison. It is faster than Collate().
@@ -288,7 +288,7 @@ type Value interface {
 	   Unsettable is called since this method is not valid for
 	   those types.
 	*/
-	SetField(field string, val interface{}) error
+	SetField(field string, val any) error
 
 	/*
 	   It deletes the input field for an object. For types other
@@ -311,7 +311,7 @@ type Value interface {
 	   length. For any attempt to set an index that is greater
 	   than length, Unsettable is called.
 	*/
-	SetIndex(index int, val interface{}) error
+	SetIndex(index int, val any) error
 
 	/*
 	   Array slicing. Takes a start and end index and returns a
@@ -333,20 +333,20 @@ type Value interface {
 	   Appending to an array. For all non array/slice values it
 	   returns a NULL_VALUE and false.
 	*/
-	Append(elems []interface{}) (Value, bool)
+	Append(elems []any) (Value, bool)
 
 	/*
 	   Lists the descendants of an array or object in depth first
 	   order (multilevel list flattening) by appending to an input
 	   buffer and returning it.
 	*/
-	Descendants(buffer []interface{}) []interface{}
+	Descendants(buffer []any) []any
 
 	/*
 	   Lists the name-value fields in this value. Nil for
 	   non-object values.
 	*/
-	Fields() map[string]interface{}
+	Fields() map[string]any
 
 	/*
 	   Lists the field names in this value. Nil for non-object
@@ -420,7 +420,7 @@ var _CONVERSIONS = []reflect.Type{
 /*
 Bring a data object into the Value type system from a Go Type.
 */
-func NewValue(val interface{}) Value {
+func NewValue(val any) Value {
 	if val == nil {
 		return NULL_VALUE
 	}
@@ -450,34 +450,34 @@ func NewValue(val interface{}) Value {
 		return NULL_VALUE
 	case []byte:
 		return NewParsedValue(val, false)
-	case []interface{}:
+	case []any:
 		return sliceValue(val)
-	case map[string]interface{}:
+	case map[string]any:
 		return objectValue(val)
 	case *parsedValue:
 		return val
 	case int:
 		return intValue(val)
 	case Values:
-		rv := make([]interface{}, len(val))
+		rv := make([]any, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
 		return sliceValue(rv)
 	case []Value:
-		rv := make([]interface{}, len(val))
+		rv := make([]any, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
 		return sliceValue(rv)
 	case []AnnotatedValue:
-		rv := make([]interface{}, len(val))
+		rv := make([]any, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
 		return sliceValue(rv)
 	case map[string]Value:
-		rv := make(map[string]interface{}, len(val))
+		rv := make(map[string]any, len(val))
 		for i, v := range val {
 			rv[i] = v
 		}
@@ -493,11 +493,11 @@ func NewValue(val interface{}) Value {
 	}
 }
 
-func NewTrackedValue(val interface{}) Value {
+func NewTrackedValue(val any) Value {
 	switch val := val.(type) {
-	case []interface{}:
+	case []any:
 		return newTrackedSliceValue(val)
-	case map[string]interface{}:
+	case map[string]any:
 		return newTrackedObjectValue(val)
 	default:
 		panic(fmt.Sprintf("Cannot create trackedValue for type %T.", val))
@@ -525,7 +525,7 @@ func mapBaseSize(l int) uint64 {
 /*
 Used by some Value.Size() functions to obtain the size of elements.
 */
-func AnySize(v interface{}) uint64 {
+func AnySize(v any) uint64 {
 	switch v := v.(type) {
 	case nil:
 		return _INTERFACE_SIZE
@@ -533,28 +533,28 @@ func AnySize(v interface{}) uint64 {
 		return v.Size()
 	case string:
 		return uint64(len(v) + _INTERFACE_SIZE)
-	case map[string]interface{}:
+	case map[string]any:
 		s := mapBaseSize(len(v))
 		for k, vv := range v {
 			s += AnySize(k)
 			s += AnySize(vv)
 		}
 		return s
-	case map[int]interface{}:
+	case map[int]any:
 		s := mapBaseSize(len(v))
 		for _, vv := range v {
 			s += 8
 			s += AnySize(vv)
 		}
 		return s
-	case map[int16]interface{}:
+	case map[int16]any:
 		s := mapBaseSize(len(v))
 		for _, vv := range v {
 			s += 2
 			s += AnySize(vv)
 		}
 		return s
-	case map[byte]interface{}:
+	case map[byte]any:
 		s := mapBaseSize(len(v))
 		for _, vv := range v {
 			s += 1
@@ -568,7 +568,7 @@ func AnySize(v interface{}) uint64 {
 			s += vv.Size()
 		}
 		return s
-	case []interface{}:
+	case []any:
 		s := uint64(_INTERFACE_SIZE * cap(v))
 		for i := range v {
 			if v[i] != nil {
@@ -614,18 +614,18 @@ func AnySize(v interface{}) uint64 {
 /*
 For token search.
 */
-type MatchFunc func(token interface{}) bool
+type MatchFunc func(token any) bool
 
 /*
 Function takes an input interface and returns an interface.
 */
-type copyFunc func(interface{}) interface{}
+type copyFunc func(any) any
 
 /*
 It is passed an interface and returns itself. It allows us to
 access the input object.
 */
-func self(val interface{}) interface{} {
+func self(val any) any {
 	return val
 }
 
@@ -635,7 +635,7 @@ and returns the interface returned by that call. This is used
 by array.go, when there is a necessity to copy all the elements
 of the array, which can have any JSON type.
 */
-func copyForUpdate(val interface{}) interface{} {
+func copyForUpdate(val any) any {
 	return NewValue(val).CopyForUpdate()
 }
 

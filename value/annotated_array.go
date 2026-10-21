@@ -121,8 +121,8 @@ type spillFileHeap []*spillFile
 func (this *spillFileHeap) Len() int           { return len(*this) }
 func (this *spillFileHeap) Less(i, j int) bool { return (*this)[i].less((*this)[j]) }
 func (this *spillFileHeap) Swap(i, j int)      { (*this)[i], (*this)[j] = (*this)[j], (*this)[i] }
-func (this *spillFileHeap) Push(x interface{}) { *this = append(*this, x.(*spillFile)) }
-func (this *spillFileHeap) Pop() interface{} {
+func (this *spillFileHeap) Push(x any)         { *this = append(*this, x.(*spillFile)) }
+func (this *spillFileHeap) Pop() any {
 	i := len(*this) - 1
 	last := (*this)[i]
 	*this = (*this)[:i]
@@ -591,14 +591,14 @@ func (this *AnnotatedArray) Swap(i, j int) {
 	this.mem[i], this.mem[j] = this.mem[j], this.mem[i]
 }
 
-func (this *AnnotatedArray) Push(i interface{}) {
+func (this *AnnotatedArray) Push(i any) {
 	if this.heapSize > 0 {
 		this.mem = append(this.mem, i.(AnnotatedValue))
 	}
 }
 
-func (this *AnnotatedArray) Pop() interface{} {
-	var rv interface{}
+func (this *AnnotatedArray) Pop() any {
+	var rv any
 	if this.heapSize > 0 {
 		rv = this.mem[len(this.mem)-1]
 		this.mem = this.mem[:len(this.mem)-1]

@@ -100,11 +100,11 @@ func (this missingValue) Type() Type {
 /*
 Returns nil.
 */
-func (this missingValue) Actual() interface{} {
+func (this missingValue) Actual() any {
 	return nil
 }
 
-func (this missingValue) ActualForIndex() interface{} {
+func (this missingValue) ActualForIndex() any {
 	return nil
 }
 
@@ -164,7 +164,7 @@ func (this missingValue) Field(field string) (Value, bool) {
 /*
 Invalid for missing.
 */
-func (this missingValue) SetField(field string, val interface{}) error {
+func (this missingValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -185,7 +185,7 @@ func (this missingValue) Index(index int) (Value, bool) {
 /*
 Invalid for missing.
 */
-func (this missingValue) SetIndex(index int, val interface{}) error {
+func (this missingValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -206,21 +206,21 @@ func (this missingValue) SliceTail(start int) (Value, bool) {
 /*
 Returns MISSING_VALUE.
 */
-func (this missingValue) Append(elems []interface{}) (Value, bool) {
+func (this missingValue) Append(elems []any) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
 /*
 Returns the input buffer as is.
 */
-func (this missingValue) Descendants(buffer []interface{}) []interface{} {
+func (this missingValue) Descendants(buffer []any) []any {
 	return buffer
 }
 
 /*
 MISSING has no fields to list. Hence return nil.
 */
-func (this missingValue) Fields() map[string]interface{} {
+func (this missingValue) Fields() map[string]any {
 	return nil
 }
 

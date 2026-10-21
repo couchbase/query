@@ -22,9 +22,9 @@ import (
 /*
 objectValue is a type of map from string to interface.
 */
-type objectValue map[string]interface{}
+type objectValue map[string]any
 
-var EMPTY_OBJECT_VALUE = objectValue(map[string]interface{}{})
+var EMPTY_OBJECT_VALUE = objectValue(map[string]any{})
 
 func (this objectValue) String() string {
 	return marshalString(this)
@@ -340,7 +340,7 @@ func (this objectValue) WriteSpill(w io.Writer, buf []byte) error {
 	b := []byte{_SPILL_TYPE_VALUE}
 	_, err := w.Write([]byte(b))
 	if err == nil {
-		err = writeSpillValue(w, (map[string]interface{})(this), buf)
+		err = writeSpillValue(w, (map[string]any)(this), buf)
 	}
 	return err
 }
@@ -348,7 +348,7 @@ func (this objectValue) WriteSpill(w io.Writer, buf []byte) error {
 func (this objectValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
-		this = objectValue(v.(map[string]interface{}))
+		this = objectValue(v.(map[string]any))
 	} else {
 		this = nil
 	}
@@ -362,12 +362,12 @@ func (this objectValue) Type() Type {
 	return OBJECT
 }
 
-func (this objectValue) Actual() interface{} {
-	return (map[string]interface{})(this)
+func (this objectValue) Actual() any {
+	return (map[string]any)(this)
 }
 
-func (this objectValue) ActualForIndex() interface{} {
-	return (map[string]interface{})(this)
+func (this objectValue) ActualForIndex() any {
+	return (map[string]any)(this)
 }
 
 func (this objectValue) Equals(other Value) Value {
@@ -458,11 +458,11 @@ func (this objectValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }
 
-func (this objectValue) SetField(field string, val interface{}) error {
+func (this objectValue) SetField(field string, val any) error {
 	return this.setField(field, val, false)
 }
 
-func (this objectValue) setField(field string, val interface{}, track bool) error {
+func (this objectValue) setField(field string, val any, track bool) error {
 	switch val := val.(type) {
 	case missingValue:
 		curVal, ok := this[field]
@@ -516,7 +516,7 @@ func (this objectValue) Index(index int) (Value, bool) {
 /*
 Not valid for objects.
 */
-func (this objectValue) SetIndex(index int, val interface{}) error {
+func (this objectValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -537,11 +537,11 @@ func (this objectValue) SliceTail(start int) (Value, bool) {
 /*
 Returns NULL_VALUE.
 */
-func (this objectValue) Append(elems []interface{}) (Value, bool) {
+func (this objectValue) Append(elems []any) (Value, bool) {
 	return NULL_VALUE, false
 }
 
-func (this objectValue) Descendants(buffer []interface{}) []interface{} {
+func (this objectValue) Descendants(buffer []any) []any {
 	var nameBuf [_NAME_CAP]string
 	var names []string
 	if len(this) <= len(nameBuf) {
@@ -555,7 +555,7 @@ func (this objectValue) Descendants(buffer []interface{}) []interface{} {
 	names = sortedNames(this, names)
 
 	if cap(buffer) < len(buffer)+len(this) {
-		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
+		buf2 := make([]any, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
@@ -569,7 +569,7 @@ func (this objectValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
 
-func (this objectValue) Fields() map[string]interface{} {
+func (this objectValue) Fields() map[string]any {
 	return this
 }
 
@@ -702,21 +702,21 @@ func (this objectValue) ContainsMatchingToken(matcher MatchFunc, options Value) 
 }
 
 func (this objectValue) Size() uint64 {
-	return AnySize(map[string]interface{}(this))
+	return AnySize(map[string]any(this))
 }
 
 func (this objectValue) unwrap() Value {
 	return this
 }
 
-var _SMALL_OBJECT_VALUE = objectValue(map[string]interface{}{"": nil})
+var _SMALL_OBJECT_VALUE = objectValue(map[string]any{"": nil})
 
 // trackedObjectValue is just like objectValue, except it does extra Track()/Recycle() for its subelements
 type trackedObjectValue struct {
 	objectValue
 }
 
-func newTrackedObjectValue(obj map[string]interface{}) *trackedObjectValue {
+func newTrackedObjectValue(obj map[string]any) *trackedObjectValue {
 	return &trackedObjectValue{objectValue: objectValue(obj)}
 }
 
@@ -724,7 +724,7 @@ func (this *trackedObjectValue) CopyForUpdate() Value {
 	return &trackedObjectValue{objectValue: objectValue(copyMap(this.objectValue, copyForUpdate))}
 }
 
-func (this *trackedObjectValue) SetField(field string, val interface{}) error {
+func (this *trackedObjectValue) SetField(field string, val any) error {
 	return this.objectValue.setField(field, val, true)
 }
 
@@ -752,7 +752,7 @@ func (this *trackedObjectValue) WriteSpill(w io.Writer, buf []byte) error {
 	b := []byte{_SPILL_TYPE_VALUE_TRACKED_OBJECT}
 	_, err := w.Write([]byte(b))
 	if err == nil {
-		err = writeSpillValue(w, (map[string]interface{})(this.objectValue), buf)
+		err = writeSpillValue(w, (map[string]any)(this.objectValue), buf)
 	}
 	return err
 }
@@ -760,14 +760,14 @@ func (this *trackedObjectValue) WriteSpill(w io.Writer, buf []byte) error {
 func (this *trackedObjectValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
-		this.objectValue = objectValue(v.(map[string]interface{}))
+		this.objectValue = objectValue(v.(map[string]any))
 	} else {
 		this.objectValue = nil
 	}
 	return err
 }
 
-func objectEquals(obj1, obj2 map[string]interface{}) Value {
+func objectEquals(obj1, obj2 map[string]any) Value {
 	if len(obj1) != len(obj2) {
 		return FALSE_VALUE
 	}
@@ -799,7 +799,7 @@ func objectEquals(obj1, obj2 map[string]interface{}) Value {
 	}
 }
 
-func objectEquivalent(obj1, obj2 map[string]interface{}) bool {
+func objectEquivalent(obj1, obj2 map[string]any) bool {
 	if len(obj1) != len(obj2) {
 		return false
 	}
@@ -821,7 +821,7 @@ func objectEquivalent(obj1, obj2 map[string]interface{}) bool {
 /*
 This code originally taken from https://github.com/couchbaselabs/walrus.
 */
-func objectCollate(obj1, obj2 map[string]interface{}) int {
+func objectCollate(obj1, obj2 map[string]any) int {
 	// first see if one object is longer than the other
 	delta := len(obj1) - len(obj2)
 	if delta != 0 {
@@ -868,7 +868,7 @@ func objectCollate(obj1, obj2 map[string]interface{}) int {
 	return 0
 }
 
-func objectCompare(obj1, obj2 map[string]interface{}) Value {
+func objectCompare(obj1, obj2 map[string]any) Value {
 	// first see if one object is longer than the other
 	delta := len(obj1) - len(obj2)
 	if delta != 0 {
@@ -915,12 +915,12 @@ func objectCompare(obj1, obj2 map[string]interface{}) Value {
 	return ZERO_VALUE
 }
 
-func copyMap(source map[string]interface{}, copier copyFunc) map[string]interface{} {
+func copyMap(source map[string]any, copier copyFunc) map[string]any {
 	if source == nil {
 		return nil
 	}
 
-	result := make(map[string]interface{}, len(source))
+	result := make(map[string]any, len(source))
 	for n, v := range source {
 		result[n] = copier(v)
 	}
@@ -928,7 +928,7 @@ func copyMap(source map[string]interface{}, copier copyFunc) map[string]interfac
 	return result
 }
 
-func sortedNames(obj map[string]interface{}, buffer []string) []string {
+func sortedNames(obj map[string]any, buffer []string) []string {
 	i := 0
 	for name, _ := range obj {
 		buffer[i] = name
@@ -939,13 +939,13 @@ func sortedNames(obj map[string]interface{}, buffer []string) []string {
 	return buffer
 }
 
-func combineNames(objs ...map[string]interface{}) map[string]interface{} {
+func combineNames(objs ...map[string]any) map[string]any {
 	n := 0
 	for _, obj := range objs {
 		n += len(obj)
 	}
 
-	all := make(map[string]interface{}, n)
+	all := make(map[string]any, n)
 
 	for _, obj := range objs {
 		for k, _ := range obj {

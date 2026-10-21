@@ -107,11 +107,11 @@ func (this floatValue) Type() Type {
 	return NUMBER
 }
 
-func (this floatValue) Actual() interface{} {
+func (this floatValue) Actual() any {
 	return float64(this)
 }
 
-func (this floatValue) ActualForIndex() interface{} {
+func (this floatValue) ActualForIndex() any {
 	return float64(this)
 }
 
@@ -259,7 +259,7 @@ func (this floatValue) Field(field string) (Value, bool) {
 /*
 Not valid for NUMBER.
 */
-func (this floatValue) SetField(field string, val interface{}) error {
+func (this floatValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -280,7 +280,7 @@ func (this floatValue) Index(index int) (Value, bool) {
 /*
 Not valid for NUMBER.
 */
-func (this floatValue) SetIndex(index int, val interface{}) error {
+func (this floatValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -301,21 +301,21 @@ func (this floatValue) SliceTail(start int) (Value, bool) {
 /*
 Returns NULL_VALUE
 */
-func (this floatValue) Append(elems []interface{}) (Value, bool) {
+func (this floatValue) Append(elems []any) (Value, bool) {
 	return NULL_VALUE, false
 }
 
 /*
 Returns the input buffer as is.
 */
-func (this floatValue) Descendants(buffer []interface{}) []interface{} {
+func (this floatValue) Descendants(buffer []any) []any {
 	return buffer
 }
 
 /*
 As number has no fields, return nil.
 */
-func (this floatValue) Fields() map[string]interface{} {
+func (this floatValue) Fields() map[string]any {
 	return nil
 }
 

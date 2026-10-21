@@ -89,14 +89,14 @@ func (this intValue) Type() Type {
 Cast receiver to float64. We cannot use int64 unless all Expressions
 can handle both float64 and int64.
 */
-func (this intValue) Actual() interface{} {
+func (this intValue) Actual() any {
 	return float64(this)
 }
 
 /*
 Return int64 and avoid any lossiness due to rounding / representation.
 */
-func (this intValue) ActualForIndex() interface{} {
+func (this intValue) ActualForIndex() any {
 	return int64(this)
 }
 
@@ -196,7 +196,7 @@ func (this intValue) Field(field string) (Value, bool) {
 /*
 Not valid for NUMBER.
 */
-func (this intValue) SetField(field string, val interface{}) error {
+func (this intValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -217,7 +217,7 @@ func (this intValue) Index(index int) (Value, bool) {
 /*
 Not valid for NUMBER.
 */
-func (this intValue) SetIndex(index int, val interface{}) error {
+func (this intValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -238,21 +238,21 @@ func (this intValue) SliceTail(start int) (Value, bool) {
 /*
 Returns NULL_VALUE
 */
-func (this intValue) Append(elems []interface{}) (Value, bool) {
+func (this intValue) Append(elems []any) (Value, bool) {
 	return NULL_VALUE, false
 }
 
 /*
 Returns the input buffer as is.
 */
-func (this intValue) Descendants(buffer []interface{}) []interface{} {
+func (this intValue) Descendants(buffer []any) []any {
 	return buffer
 }
 
 /*
 As number has no fields, return nil.
 */
-func (this intValue) Fields() map[string]interface{} {
+func (this intValue) Fields() map[string]any {
 	return nil
 }
 

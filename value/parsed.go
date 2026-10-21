@@ -47,7 +47,7 @@ type parsedValue struct {
 var parsedPool util.FastPool
 
 func init() {
-	util.NewFastPool(&parsedPool, func() interface{} {
+	util.NewFastPool(&parsedPool, func() any {
 		return &parsedValue{}
 	})
 }
@@ -266,11 +266,11 @@ func (this *parsedValue) Type() Type {
 	return this.parsedType
 }
 
-func (this *parsedValue) Actual() interface{} {
+func (this *parsedValue) Actual() any {
 	return this.unwrap().Actual()
 }
 
-func (this *parsedValue) ActualForIndex() interface{} {
+func (this *parsedValue) ActualForIndex() any {
 	return this.unwrap().ActualForIndex()
 }
 
@@ -381,7 +381,7 @@ func (this *parsedValue) Field(field string) (Value, bool) {
 Return Unsettable if parsedType is not OBJECT. If it is then parse
 the receiver and call the values corresponding SetField.
 */
-func (this *parsedValue) SetField(field string, val interface{}) error {
+func (this *parsedValue) SetField(field string, val any) error {
 	if this.parsedType != OBJECT {
 		return Unsettable(field)
 	}
@@ -490,7 +490,7 @@ Return Unsettable if parsedType is not ARRAY. If it is then parse
 the receiver and call the values corresponding SetIndex with the
 index and value as input arguments.
 */
-func (this *parsedValue) SetIndex(index int, val interface{}) error {
+func (this *parsedValue) SetIndex(index int, val any) error {
 	if this.parsedType != ARRAY {
 		return Unsettable(strconv.Itoa(index))
 	}
@@ -529,7 +529,7 @@ Return NULL_VALUE if parsedType is not ARRAY. If it is then parse
 the receiver and call the values corresponding Append with the
 elements as input arguments.
 */
-func (this *parsedValue) Append(elems []interface{}) (Value, bool) {
+func (this *parsedValue) Append(elems []any) (Value, bool) {
 	if this.parsedType != ARRAY {
 		return NULL_VALUE, false
 	}
@@ -541,7 +541,7 @@ func (this *parsedValue) Append(elems []interface{}) (Value, bool) {
 Return the buffer if the parsedType is binary. If not call parse and
 then the Descendants method on that value with the input buffer.
 */
-func (this *parsedValue) Descendants(buffer []interface{}) []interface{} {
+func (this *parsedValue) Descendants(buffer []any) []any {
 	if this.parsedType == BINARY {
 		return buffer
 	}
@@ -559,7 +559,7 @@ func (this *parsedValue) pfSize() int {
 	return _NUM_PARSED_FIELDS
 }
 
-func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interface{} {
+func (this *parsedValue) ParsedFields(min, max string, re any) []any {
 	this.RLock()
 	raw := this.raw
 	parsed := this.parsed
@@ -570,7 +570,7 @@ func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interfa
 		rex, _ = re.(*regexp.Regexp)
 	}
 
-	rv := make([]interface{}, 0, this.pfSize())
+	rv := make([]any, 0, this.pfSize())
 	if raw != nil {
 		var ss json.ScanState
 		json.SetScanState(&ss, raw)
@@ -589,7 +589,7 @@ func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interfa
 					if err != nil {
 						return nil
 					}
-					rv = append(rv, map[string]interface{}{"name": string(key), "val": NewParsedValue(val, true)})
+					rv = append(rv, map[string]any{"name": string(key), "val": NewParsedValue(val, true)})
 				}
 			}
 		} else if len(min) != 0 || len(max) != 0 {
@@ -608,7 +608,7 @@ func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interfa
 					if err != nil {
 						return nil
 					}
-					rv = append(rv, map[string]interface{}{"name": string(key), "val": NewParsedValue(val, true)})
+					rv = append(rv, map[string]any{"name": string(key), "val": NewParsedValue(val, true)})
 				}
 			}
 		} else {
@@ -624,33 +624,33 @@ func (this *parsedValue) ParsedFields(min, max string, re interface{}) []interfa
 				if err != nil {
 					return nil
 				}
-				rv = append(rv, map[string]interface{}{"name": string(key), "val": NewParsedValue(val, true)})
+				rv = append(rv, map[string]any{"name": string(key), "val": NewParsedValue(val, true)})
 			}
 		}
 	} else if parsed != nil && parsed.Type() == OBJECT {
 		if re != nil {
 			for key, val := range parsed.Fields() {
 				if rex.FindStringSubmatchIndex(string(key)) != nil {
-					rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
+					rv = append(rv, map[string]any{"name": string(key), "val": val})
 				}
 			}
 		} else if len(min) != 0 || len(max) != 0 {
 			for key, val := range parsed.Fields() {
 				if (len(min) == 0 || strings.Compare(min, string(key)) <= 0) &&
 					(len(max) == 0 || strings.Compare(max, string(key)) == 1) {
-					rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
+					rv = append(rv, map[string]any{"name": string(key), "val": val})
 				}
 			}
 		} else {
 			for key, val := range parsed.Fields() {
-				rv = append(rv, map[string]interface{}{"name": string(key), "val": val})
+				rv = append(rv, map[string]any{"name": string(key), "val": val})
 			}
 		}
 	}
 	return rv
 }
 
-func (this *parsedValue) Fields() map[string]interface{} {
+func (this *parsedValue) Fields() map[string]any {
 	return this.unwrap().Fields()
 }
 

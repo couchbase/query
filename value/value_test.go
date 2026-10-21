@@ -144,7 +144,7 @@ func TestIndexAccess(t *testing.T) {
 		}
 	}
 
-	val = NewValue([]interface{}{"marty", map[string]interface{}{"type": "contact"}})
+	val = NewValue([]any{"marty", map[string]any{"type": "contact"}})
 
 	tests = []struct {
 		index  int
@@ -152,7 +152,7 @@ func TestIndexAccess(t *testing.T) {
 		ok     bool
 	}{
 		{0, stringValue("marty"), true},
-		{1, objectValue(map[string]interface{}{"type": "contact"}), true},
+		{1, objectValue(map[string]any{"type": "contact"}), true},
 		{2, missingIndex(2), false},
 	}
 
@@ -217,7 +217,7 @@ func TestRealWorkflow(t *testing.T) {
 	}
 
 	// create a reference to doc
-	top := NewValue(map[string]interface{}{"bucket": doc, "another": "rad"})
+	top := NewValue(map[string]any{"bucket": doc, "another": "rad"})
 
 	testDoc, ok := top.Field("bucket")
 	if !ok {
@@ -282,7 +282,7 @@ func TestMissing(t *testing.T) {
 func TestValue(t *testing.T) {
 	var tests = []struct {
 		input         Value
-		expectedValue interface{}
+		expectedValue any
 	}{
 		{NewValue(nil), nil},
 		{NewValue(true), true},
@@ -292,10 +292,10 @@ func TestValue(t *testing.T) {
 		{NewValue(-7.0), -7.0},
 		{NewValue(""), ""},
 		{NewValue("marty"), "marty"},
-		{NewValue([]interface{}{"marty"}), []interface{}{"marty"}},
-		{NewValue([]interface{}{NewValue("marty2")}), []interface{}{stringValue("marty2")}},
-		{NewValue(map[string]interface{}{"marty": "cool"}), map[string]interface{}{"marty": "cool"}},
-		{NewValue(map[string]interface{}{"marty3": NewValue("cool")}), map[string]interface{}{"marty3": stringValue("cool")}},
+		{NewValue([]any{"marty"}), []any{"marty"}},
+		{NewValue([]any{NewValue("marty2")}), []any{stringValue("marty2")}},
+		{NewValue(map[string]any{"marty": "cool"}), map[string]any{"marty": "cool"}},
+		{NewValue(map[string]any{"marty3": NewValue("cool")}), map[string]any{"marty3": stringValue("cool")}},
 		{NewValue([]byte("null")), nil},
 		{NewValue([]byte("true")), true},
 		{NewValue([]byte("false")), false},
@@ -304,8 +304,8 @@ func TestValue(t *testing.T) {
 		{NewValue([]byte("-7")), -7.0},
 		{NewValue([]byte("\"\"")), ""},
 		{NewValue([]byte("\"marty\"")), "marty"},
-		{NewValue([]byte("[\"marty\"]")), []interface{}{"marty"}},
-		{NewValue([]byte("{\"marty\": \"cool\"}")), map[string]interface{}{"marty": "cool"}},
+		{NewValue([]byte("[\"marty\"]")), []any{"marty"}},
+		{NewValue([]byte("{\"marty\": \"cool\"}")), map[string]any{"marty": "cool"}},
 		{NewValue([]byte("abc")), []byte("abc")},
 		// new value from existing value
 		{NewValue(NewValue(true)), true},
@@ -322,13 +322,13 @@ func TestValue(t *testing.T) {
 func TestValueOverlay(t *testing.T) {
 	val := NewValue([]byte("{\"marty\": \"cool\"}"))
 	val.SetField("marty", "ok")
-	expectedVal := map[string]interface{}{"marty": "ok"}
+	expectedVal := map[string]any{"marty": "ok"}
 	actualVal := val.Actual()
 	if !reflect.DeepEqual(expectedVal, actualVal) {
 		t.Errorf("Expected %v, got %v, for value of %v", expectedVal, actualVal, val)
 	}
 
-	val = NewValue(map[string]interface{}{"marty": "cool"})
+	val = NewValue(map[string]any{"marty": "cool"})
 	val.SetField("marty", "ok")
 	actualVal = val.Actual()
 	if !reflect.DeepEqual(expectedVal, actualVal) {
@@ -337,13 +337,13 @@ func TestValueOverlay(t *testing.T) {
 
 	val = NewValue([]byte("[\"marty\"]"))
 	val.SetIndex(0, "gerald")
-	expectedVal2 := []interface{}{"gerald"}
+	expectedVal2 := []any{"gerald"}
 	actualVal = val.Actual()
 	if !reflect.DeepEqual(expectedVal2, actualVal) {
 		t.Errorf("Expected %v, got %v, for value of %v", expectedVal2, actualVal, val)
 	}
 
-	val = NewValue([]interface{}{"marty"})
+	val = NewValue([]any{"marty"})
 	val.SetIndex(0, "gerald")
 	actualVal = val.Actual()
 	if !reflect.DeepEqual(expectedVal2, actualVal) {
@@ -358,7 +358,7 @@ func TestComplexOverlay(t *testing.T) {
 	// then call value again, which goes through a different field with the already parsed data
 	val := NewValue([]byte("{\"marty\": \"cool\"}"))
 	val.SetField("marty", "ok")
-	expectedVal := map[string]interface{}{"marty": "ok"}
+	expectedVal := map[string]any{"marty": "ok"}
 	actualVal := val.Actual()
 	if !reflect.DeepEqual(expectedVal, actualVal) {
 		t.Errorf("Expected %v, got %v, for value of %v", expectedVal, actualVal, val)
@@ -402,8 +402,8 @@ func TestUnmodifiedValuesBackToBytes(t *testing.T) {
 		{NewValue(3.65), []byte(`3.65`)},
 		{NewValue(-3.65), []byte(`-3.65`)},
 		{NewValue("hello"), []byte(`"hello"`)},
-		{NewValue([]interface{}{"hello"}), []byte(`["hello"]`)},
-		{NewValue(map[string]interface{}{"hello": 7.0}), []byte(`{"hello":7}`)},
+		{NewValue([]any{"hello"}), []byte(`["hello"]`)},
+		{NewValue(map[string]any{"hello": 7.0}), []byte(`{"hello":7}`)},
 	}
 
 	for _, test := range tests {
@@ -417,7 +417,7 @@ func TestUnmodifiedValuesBackToBytes(t *testing.T) {
 func BenchmarkLargeValue(b *testing.B) {
 	b.SetBytes(int64(len(codeJSON)))
 
-	keys := []interface{}{
+	keys := []any{
 		"tree", "kids", 0, "kids", 0, "kids", 0, "kids", 0, "kids", 0, "name",
 	}
 
@@ -455,16 +455,16 @@ func BenchmarkProcessing(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		for j := 0; j < len(vals); j++ {
-			val := make(map[string]interface{})
+			val := make(map[string]any)
 
 			val["str"] = NewValue("string")
 			val["boolv"] = NewValue(true)
 			val["num"] = NewValue(1.0)
 			val["null"] = NewValue(nil)
-			arr := NewValue([]interface{}{"string", true, 1.0, nil})
+			arr := NewValue([]any{"string", true, 1.0, nil})
 			arr.SetIndex(2, 1.0)
 			val["arr"] = arr
-			m := NewValue(map[string]interface{}{"string": "string", "bool": true, "num": 1.0, "null": nil})
+			m := NewValue(map[string]any{"string": "string", "bool": true, "num": 1.0, "null": nil})
 			m.SetField("string", "string")
 			val["map"] = m
 
@@ -487,7 +487,7 @@ func BenchmarkLargeMap(b *testing.B) {
 	b.SetBytes(int64(len(codeJSON)))
 
 	for i := 0; i < b.N; i++ {
-		m := map[string]interface{}{}
+		m := map[string]any{}
 		err := json.Unmarshal(codeJSON, &m)
 		if err != nil {
 			b.Fatalf("Error parsing JSON: %v", err)
@@ -533,10 +533,10 @@ func TestCopyValueFromBytes(t *testing.T) {
 
 func TestCopyValueFromValue(t *testing.T) {
 
-	val := NewValue(map[string]interface{}{
+	val := NewValue(map[string]any{
 		"name": "marty",
 		"type": "contact",
-		"address": map[string]interface{}{
+		"address": map[string]any{
 			"street": "sutton oaks",
 		},
 	})
@@ -575,7 +575,7 @@ func TestArraySetIndexLongerThanExistingArray(t *testing.T) {
 	val.SetIndex(0, "gerald")
 
 	valval := val.Actual()
-	if !reflect.DeepEqual(valval, []interface{}{"gerald"}) {
+	if !reflect.DeepEqual(valval, []any{"gerald"}) {
 		t.Errorf("Expected [gerald] got %v", valval)
 	}
 }
@@ -649,7 +649,7 @@ func TestValueSpilling(t *testing.T) {
 
 	type pair struct {
 		name  string
-		value interface{}
+		value any
 	}
 
 	list := make([]*pair, 0, 32)
@@ -668,13 +668,13 @@ func TestValueSpilling(t *testing.T) {
 	list = append(list, &pair{"float64", float64(32.5)})
 	list = append(list, &pair{"string", "correct"})
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["test"] = "correct"
 	list = append(list, &pair{"map[string]interface{}", m})
 	mv := make(map[string]Value)
 	mv["test"] = NewValue("correct")
 	list = append(list, &pair{"map[string]Value", mv})
-	a := make([]interface{}, 1)
+	a := make([]any, 1)
 	a[0] = "correct"
 	list = append(list, &pair{"[]interface", a})
 	a2 := make([]Value, 1)
@@ -683,18 +683,18 @@ func TestValueSpilling(t *testing.T) {
 	a3 := make(Values, 1)
 	a3[0] = NewValue("correct")
 	list = append(list, &pair{"Values", a3})
-	a4 := make([]interface{}, 2)
+	a4 := make([]any, 2)
 	a4[0] = NewValue("correct")
 	a4[1] = NewMissingValue()
 	list = append(list, &pair{"sliceValue", NewValue(a4)})
-	list = append(list, &pair{"listValue", &listValue{NewValue(make([]interface{}, 1)).(sliceValue)}})
+	list = append(list, &pair{"listValue", &listValue{NewValue(make([]any, 1)).(sliceValue)}})
 	list = append(list, &pair{"binaryValue", NewValue(make([]byte, 1))})
 	list = append(list, &pair{"boolValue", NewValue(true)})
 	list = append(list, &pair{"floatValue", NewValue(32.5)})
 	list = append(list, &pair{"intValue", NewValue(64)})
 	list = append(list, &pair{"missingValue", NewMissingValue()})
 	list = append(list, &pair{"nullValue", NewNullValue()})
-	list = append(list, &pair{"objectValue", NewValue(make(map[string]interface{}))})
+	list = append(list, &pair{"objectValue", NewValue(make(map[string]any))})
 	list = append(list, &pair{"stringValue", NewValue("correct")})
 	m2 := make(map[string]Value)
 	m2["test"] = NewValue("correct")
@@ -824,8 +824,8 @@ func TestSpillingArray(t *testing.T) {
 			return nil
 		}
 		lessThan := func(v1 AnnotatedValue, v2 AnnotatedValue) bool {
-			m1 := v1.GetValue().Actual().(map[string]interface{})
-			m2 := v2.GetValue().Actual().(map[string]interface{})
+			m1 := v1.GetValue().Actual().(map[string]any)
+			m2 := v2.GetValue().Actual().(map[string]any)
 			n1 := m1["name"].(string) + m1["surname"].(string)
 			n2 := m2["name"].(string) + m2["surname"].(string)
 			return strings.Compare(n1, n2) < 0

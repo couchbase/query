@@ -36,8 +36,8 @@ import (
 //	  },
 //	  "x1": "x1",
 //	}
-func BuildObjectFromDottedPaths(paths []string) map[string]interface{} {
-	result := make(map[string]interface{})
+func BuildObjectFromDottedPaths(paths []string) map[string]any {
+	result := make(map[string]any)
 
 	for _, path := range paths {
 		segments := parseDottedPath(path)
@@ -52,11 +52,11 @@ func BuildObjectFromDottedPaths(paths []string) map[string]interface{} {
 		for i := 0; i < len(segments)-1; i++ {
 			segment := segments[i]
 			if _, exists := current[segment]; !exists {
-				current[segment] = make(map[string]interface{})
+				current[segment] = make(map[string]any)
 			}
 
 			// Assert that the existing value is a map
-			if nestedMap, ok := current[segment].(map[string]interface{}); ok {
+			if nestedMap, ok := current[segment].(map[string]any); ok {
 				current = nestedMap
 			} else {
 				// If there's already a leaf value at this path, we can't continue nesting
@@ -186,18 +186,18 @@ func parseDottedPath(path string) []string {
 //	//   },
 //	//   "x1": 50,
 //	// }
-func ObjectPopulate(template, values map[string]interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
+func ObjectPopulate(template, values map[string]any) map[string]any {
+	result := make(map[string]any)
 	objectPopulateRecursive(template, values, result)
 	return result
 }
 
 // objectPopulateRecursive recursively populates the template structure
-func objectPopulateRecursive(template, values, result map[string]interface{}) {
+func objectPopulateRecursive(template, values, result map[string]any) {
 	for key, value := range template {
-		if nestedMap, ok := value.(map[string]interface{}); ok {
+		if nestedMap, ok := value.(map[string]any); ok {
 			// This is a nested map, recurse into it
-			nestedResult := make(map[string]interface{})
+			nestedResult := make(map[string]any)
 			objectPopulateRecursive(nestedMap, values, nestedResult)
 			// Only add the nested map if it's not empty (or if we want to include empty maps)
 			result[key] = nestedResult
@@ -228,7 +228,7 @@ func objectPopulateRecursive(template, values, result map[string]interface{}) {
 // before reaching the final segment. Note that a nil return is ambiguous: it cannot
 // distinguish "path absent" from "path present with a null value" - callers that need
 // that distinction should use GetNestedValueExists.
-func GetNestedValue(m map[string]interface{}, path string) interface{} {
+func GetNestedValue(m map[string]any, path string) any {
 	v, _ := GetNestedValueExists(m, path)
 	return v
 }
@@ -239,7 +239,7 @@ func GetNestedValue(m map[string]interface{}, path string) interface{} {
 // column in a fixed-schema source), and false when any segment is absent or an
 // intermediate segment is not a map. This lets callers keep present-but-null values
 // (-> N1QL NULL) distinct from absent paths (-> N1QL MISSING).
-func GetNestedValueExists(m map[string]interface{}, path string) (interface{}, bool) {
+func GetNestedValueExists(m map[string]any, path string) (any, bool) {
 	segments := parseDottedPath(path)
 	if len(segments) == 0 {
 		return nil, false
@@ -251,7 +251,7 @@ func GetNestedValueExists(m map[string]interface{}, path string) (interface{}, b
 		if current == nil {
 			return nil, false
 		}
-		nestedMap, ok := current[segment].(map[string]interface{})
+		nestedMap, ok := current[segment].(map[string]any)
 		if !ok {
 			return nil, false
 		}
@@ -265,13 +265,13 @@ func GetNestedValueExists(m map[string]interface{}, path string) (interface{}, b
 	return v, ok
 }
 
-func ObjectToValue(row, resultObject map[string]interface{}) (Value, error) {
+func ObjectToValue(row, resultObject map[string]any) (Value, error) {
 	if row == nil {
 		return NULL_VALUE, nil
 	}
 
 	// If resultObject is present, use it as a template and populate with row data
-	var finalRow map[string]interface{}
+	var finalRow map[string]any
 	if resultObject != nil {
 		finalRow = ObjectPopulate(resultObject, row)
 	} else {

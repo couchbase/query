@@ -21,7 +21,7 @@ func NewBagPool(objectCap int) *BagPool {
 	rv := &BagPool{
 		objectCap: objectCap,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return NewBag(objectCap)
 	})
 	return rv

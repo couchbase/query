@@ -15,12 +15,12 @@ import (
 	"testing"
 )
 
-func getSecondLevel(m interface{}, first string, second string) string {
+func getSecondLevel(m any, first string, second string) string {
 	mValue, ok := m.(Value)
 	if ok {
 		m = mValue.Actual()
 	}
-	topMap, ok := m.(map[string]interface{})
+	topMap, ok := m.(map[string]any)
 	if !ok {
 		return "BAD_FIRST_INTERFACE"
 	}
@@ -30,7 +30,7 @@ func getSecondLevel(m interface{}, first string, second string) string {
 	if ok {
 		s = sValue.Actual()
 	}
-	bottomMap, ok := s.(map[string]interface{})
+	bottomMap, ok := s.(map[string]any)
 	if !ok {
 		return "BAD_SECOND_INTERFACE"
 	}
@@ -50,9 +50,9 @@ func getSecondLevel(m interface{}, first string, second string) string {
 }
 
 func TestShallowCopySharesObjects(t *testing.T) {
-	lowMap := make(map[string]interface{})
+	lowMap := make(map[string]any)
 	lowMap["element"] = "originalvalue"
-	highMap := make(map[string]interface{})
+	highMap := make(map[string]any)
 	highMap["where"] = lowMap
 
 	ov := NewValue(highMap)
@@ -89,9 +89,9 @@ func TestShallowCopySharesObjects(t *testing.T) {
 }
 
 func TestDeepCopyDoesNotShareObjects(t *testing.T) {
-	lowMap := make(map[string]interface{})
+	lowMap := make(map[string]any)
 	lowMap["element"] = "originalvalue"
-	highMap := make(map[string]interface{})
+	highMap := make(map[string]any)
 	highMap["where"] = lowMap
 
 	ov := NewValue(highMap)

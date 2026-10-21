@@ -100,7 +100,7 @@ func init() {
 	av := newAnnotatedValue()
 	av.flags |= _NO_RECYCLE
 	av.refCnt = 2 // should ensure it is copied and not directly modified by LET etc.
-	av.Value = NewValue(map[string]interface{}{})
+	av.Value = NewValue(map[string]any{})
 	EMPTY_ANNOTATED_OBJECT = av
 }
 
@@ -142,17 +142,17 @@ type AnnotatedValue interface {
 	GetValue() Value
 	GetParent() Value
 	SetParent(Value) Value
-	Attachments() map[int16]interface{}
-	GetAttachment(key int16) interface{}
-	SetAttachment(key int16, val interface{})
+	Attachments() map[int16]any
+	GetAttachment(key int16) any
+	SetAttachment(key int16, val any)
 	RemoveAttachment(key int16)
 	ResetAttachments()
-	GetId() interface{}
-	SetId(id interface{})
-	GetMetaMap() map[string]interface{} // only intended for returning metadata in the Meta() expression function
+	GetId() any
+	SetId(id any)
+	GetMetaMap() map[string]any // only intended for returning metadata in the Meta() expression function
 	CopyMeta(AnnotatedValue)
-	GetMetaField(id int) interface{}
-	SetMetaField(id int, v interface{})
+	GetMetaField(id int) any
+	SetMetaField(id int, v any)
 	ResetMeta()
 	Covers() Value
 	GetCover(key string) Value
@@ -173,7 +173,7 @@ type AnnotatedValue interface {
 	RecalculateSize() uint64
 }
 
-func NewAnnotatedValue(val interface{}) AnnotatedValue {
+func NewAnnotatedValue(val any) AnnotatedValue {
 	switch val := val.(type) {
 	case AnnotatedValue:
 		return val
@@ -201,14 +201,14 @@ const (
 )
 
 type metaData struct {
-	id            interface{}
-	xAttrs        interface{}
-	txnMeta       interface{}
-	txPlans       interface{}
-	sqPlans       interface{}
-	plan          interface{}
-	optEst        interface{}
-	distributions interface{}
+	id            any
+	xAttrs        any
+	txnMeta       any
+	txPlans       any
+	sqPlans       any
+	plan          any
+	optEst        any
+	distributions any
 	keyspace      string
 	typ           string
 	cas           uint64
@@ -513,7 +513,7 @@ func (this *metaData) readSpill(trackMem func(int64) error, r io.Reader, buf []b
 
 type annotatedValue struct {
 	Value
-	attachments     map[int16]interface{}
+	attachments     map[int16]any
 	meta            *metaData
 	covers          Value
 	original        Value
@@ -528,11 +528,11 @@ type annotatedValue struct {
 
 const _DEF_META_SIZE = 18
 
-func (this *annotatedValue) GetMetaMap() map[string]interface{} {
+func (this *annotatedValue) GetMetaMap() map[string]any {
 	if this.meta == nil {
 		return nil
 	}
-	out := make(map[string]interface{}, _DEF_META_SIZE)
+	out := make(map[string]any, _DEF_META_SIZE)
 	for id := 1; id <= META_NRU; id <<= 1 {
 		if this.meta.valid&id == id {
 			v := this.GetMetaField(id)
@@ -630,7 +630,7 @@ func (this *annotatedValue) UnsetField(field string) error {
 	return this.Value.UnsetField(field)
 }
 
-func (this *annotatedValue) SetField(field string, val interface{}) error {
+func (this *annotatedValue) SetField(field string, val any) error {
 	var err error
 	if val == this {
 		selfRef := (*annotatedValueSelfReference)(val.(*annotatedValue))
@@ -714,20 +714,20 @@ func (this *annotatedValue) ResetAttachments() {
 	this.attachments = nil
 }
 
-func (this *annotatedValue) Attachments() map[int16]interface{} {
+func (this *annotatedValue) Attachments() map[int16]any {
 	return this.attachments
 }
 
-func (this *annotatedValue) GetAttachment(key int16) interface{} {
+func (this *annotatedValue) GetAttachment(key int16) any {
 	if this.attachments != nil {
 		return this.attachments[key]
 	}
 	return nil
 }
 
-func (this *annotatedValue) SetAttachment(key int16, val interface{}) {
+func (this *annotatedValue) SetAttachment(key int16, val any) {
 	if this.attachments == nil {
-		this.attachments = make(map[int16]interface{}, _DEFAULT_ATTACHMENT_SIZE)
+		this.attachments = make(map[int16]any, _DEFAULT_ATTACHMENT_SIZE)
 	}
 	this.attachments[key] = val
 }
@@ -738,7 +738,7 @@ func (this *annotatedValue) RemoveAttachment(key int16) {
 	}
 }
 
-func (this *annotatedValue) GetMetaField(id int) interface{} {
+func (this *annotatedValue) GetMetaField(id int) any {
 	if this.meta == nil {
 		return nil
 	}
@@ -787,7 +787,7 @@ func (this *annotatedValue) GetMetaField(id int) interface{} {
 	}
 }
 
-func (this *annotatedValue) SetMetaField(id int, v interface{}) {
+func (this *annotatedValue) SetMetaField(id int, v any) {
 	if this.meta == nil {
 		this.meta = &metaData{}
 	}
@@ -860,7 +860,7 @@ func (this *annotatedValue) GetCover(key string) Value {
 
 func (this *annotatedValue) SetCover(key string, val Value) {
 	if this.covers == nil {
-		this.covers = NewScopeValue(make(map[string]interface{}), nil)
+		this.covers = NewScopeValue(make(map[string]any), nil)
 	}
 	this.covers.SetField(key, val)
 }
@@ -886,7 +886,7 @@ func (this *annotatedValue) InheritCovers(val Value) {
 
 	switch val := val.(type) {
 	case AnnotatedValue:
-		this.covers = NewScopeValue(map[string]interface{}{}, val.Covers())
+		this.covers = NewScopeValue(map[string]any{}, val.Covers())
 	case *ScopeValue:
 		// Find the first ancestor that is not a ScopeValue
 		var parent Value = val
@@ -899,7 +899,7 @@ func (this *annotatedValue) InheritCovers(val Value) {
 
 		// Inherit covers from parent / ancestor
 		if pv, ok := parent.(AnnotatedValue); ok && pv.Covers() != nil {
-			this.covers = NewScopeValue(map[string]interface{}{}, pv.Covers())
+			this.covers = NewScopeValue(map[string]any{}, pv.Covers())
 		}
 	}
 }
@@ -959,12 +959,12 @@ func (this *annotatedValue) ShareAnnotations(sv AnnotatedValue) {
 	this.flags |= _SHARED_ANNOTATIONS
 }
 
-func copyAttachments(source map[int16]interface{}, dest *annotatedValue) {
+func copyAttachments(source map[int16]any, dest *annotatedValue) {
 	if len(source) == 0 {
 		return
 	}
 	if dest.attachments == nil {
-		dest.attachments = make(map[int16]interface{}, len(source))
+		dest.attachments = make(map[int16]any, len(source))
 	}
 	for k := range source {
 		dest.attachments[k] = source[k]
@@ -1002,11 +1002,11 @@ func (this *annotatedValue) SetSelf(s bool) {
 	}
 }
 
-func (this *annotatedValue) GetId() interface{} {
+func (this *annotatedValue) GetId() any {
 	return this.GetMetaField(META_ID)
 }
 
-func (this *annotatedValue) SetId(id interface{}) {
+func (this *annotatedValue) SetId(id any) {
 	this.SetMetaField(META_ID, id)
 }
 
@@ -1276,7 +1276,7 @@ func (this *annotatedValue) ReadSpill(trackMemActual func(int64) error, r io.Rea
 			return err
 		}
 	}
-	var v interface{}
+	var v any
 	v, err = readSpillValue(trackMem, r, buf)
 	if err != nil {
 		if free {
@@ -1339,7 +1339,7 @@ func (this *annotatedValue) ReadSpill(trackMemActual func(int64) error, r io.Rea
 		return err
 	}
 	if v != nil {
-		this.attachments = v.(map[int16]interface{})
+		this.attachments = v.(map[int16]any)
 	} else {
 		this.attachments = nil
 	}
@@ -1450,7 +1450,7 @@ func (this *annotatedValueSelfReference) Collate(other Value) int {
 	return 0
 }
 
-func (this *annotatedValueSelfReference) Descendants(buffer []interface{}) []interface{} {
+func (this *annotatedValueSelfReference) Descendants(buffer []any) []any {
 	return buffer
 }
 
@@ -1510,15 +1510,15 @@ func (this *annotatedValueSelfReference) SetParent(p Value) Value {
 	return (*annotatedValue)(this).SetParent(p)
 }
 
-func (this *annotatedValueSelfReference) Attachments() map[int16]interface{} {
+func (this *annotatedValueSelfReference) Attachments() map[int16]any {
 	return (*annotatedValue)(this).Attachments()
 }
 
-func (this *annotatedValueSelfReference) GetAttachment(key int16) interface{} {
+func (this *annotatedValueSelfReference) GetAttachment(key int16) any {
 	return (*annotatedValue)(this).GetAttachment(key)
 }
 
-func (this *annotatedValueSelfReference) SetAttachment(key int16, val interface{}) {
+func (this *annotatedValueSelfReference) SetAttachment(key int16, val any) {
 	(*annotatedValue)(this).SetAttachment(key, val)
 }
 
@@ -1530,23 +1530,23 @@ func (this *annotatedValueSelfReference) ResetAttachments() {
 	(*annotatedValue)(this).ResetAttachments()
 }
 
-func (this *annotatedValueSelfReference) GetId() interface{} {
+func (this *annotatedValueSelfReference) GetId() any {
 	return (*annotatedValue)(this).GetId()
 }
 
-func (this *annotatedValueSelfReference) SetId(id interface{}) {
+func (this *annotatedValueSelfReference) SetId(id any) {
 	(*annotatedValue)(this).SetId(id)
 }
 
-func (this *annotatedValueSelfReference) GetMetaMap() map[string]interface{} {
+func (this *annotatedValueSelfReference) GetMetaMap() map[string]any {
 	return (*annotatedValue)(this).GetMetaMap()
 }
 
-func (this *annotatedValueSelfReference) GetMetaField(id int) interface{} {
+func (this *annotatedValueSelfReference) GetMetaField(id int) any {
 	return (*annotatedValue)(this).GetMetaField(id)
 }
 
-func (this *annotatedValueSelfReference) SetMetaField(id int, v interface{}) {
+func (this *annotatedValueSelfReference) SetMetaField(id int, v any) {
 	(*annotatedValue)(this).SetMetaField(id, v)
 }
 

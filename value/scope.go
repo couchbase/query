@@ -40,7 +40,7 @@ func init() {
 		return unsafe.Pointer(&ScopeValue{})
 	})
 	util.NewLocklessPool(&nestedPool, func() unsafe.Pointer {
-		return unsafe.Pointer(&ScopeValue{Value: objectValue(make(map[string]interface{}, _DEFAULT_OBJECT_SIZE))})
+		return unsafe.Pointer(&ScopeValue{Value: objectValue(make(map[string]any, _DEFAULT_OBJECT_SIZE))})
 	})
 }
 
@@ -56,7 +56,7 @@ func newScopeValue(nested bool) *ScopeValue {
 	return rv
 }
 
-func NewScopeValue(val map[string]interface{}, parent Value) *ScopeValue {
+func NewScopeValue(val map[string]any, parent Value) *ScopeValue {
 	rv := newScopeValue(false)
 	rv.Value = objectValue(val)
 	rv.parent = parent
@@ -137,7 +137,7 @@ func (this *ScopeValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf [
 	if err == nil {
 		this.nested = (buf[0] != 0)
 		this.refCnt = int32(binary.BigEndian.Uint32(buf[1:]))
-		var v interface{}
+		var v any
 		v, err = readSpillValue(trackMem, r, buf)
 		if err == nil && v != nil {
 			this.Value = v.(Value)
@@ -207,7 +207,7 @@ func (this *ScopeValue) CopyForUpdate() Value {
 	return rv
 }
 
-func (this *ScopeValue) SetField(field string, val interface{}) error {
+func (this *ScopeValue) SetField(field string, val any) error {
 	err := this.Value.SetField(field, val)
 	if err == nil {
 		v, ok := val.(Value)
@@ -238,13 +238,13 @@ func (this *ScopeValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }
 
-func (this *ScopeValue) Fields() map[string]interface{} {
+func (this *ScopeValue) Fields() map[string]any {
 	if parent := this.parent; parent == nil {
 		return this.Value.Fields()
 	} else {
 		p := parent.Fields()
 		v := this.Value.Fields()
-		rv := make(map[string]interface{}, len(p)+len(v))
+		rv := make(map[string]any, len(p)+len(v))
 
 		for pf, pv := range p {
 			rv[pf] = pv
@@ -291,7 +291,7 @@ func (this *ScopeValue) ResetParent(newParent Value) Value {
 /*
 Return the immediate map.
 */
-func (this *ScopeValue) Map() map[string]interface{} {
+func (this *ScopeValue) Map() map[string]any {
 	return this.Value.(objectValue)
 }
 

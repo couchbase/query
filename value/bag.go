@@ -54,7 +54,7 @@ func (this *Bag) Add(item Value) {
 	this.Put(item, item)
 }
 
-func (this *Bag) AddAll(items []interface{}) {
+func (this *Bag) AddAll(items []any) {
 	for _, item := range items {
 		this.Add(NewValue(item))
 	}

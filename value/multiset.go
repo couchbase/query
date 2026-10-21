@@ -104,7 +104,7 @@ func (this *MultiSet) Add(item Value) {
 	this.Put(item, item, 1)
 }
 
-func (this *MultiSet) AddAll(items []interface{}) {
+func (this *MultiSet) AddAll(items []any) {
 	for _, item := range items {
 		this.Add(NewValue(item))
 	}
@@ -384,12 +384,12 @@ func (this *MultiSet) Values() []Value {
 	return rv
 }
 
-func (this *MultiSet) Actuals() []interface{} {
+func (this *MultiSet) Actuals() []any {
 	if !this.collect {
 		return nil
 	}
 
-	rv := make([]interface{}, 0, this.Len())
+	rv := make([]any, 0, this.Len())
 
 	if !this.numeric {
 		if this.nills != nil || this.missings != nil || this.nulls != nil {
@@ -430,12 +430,12 @@ func (this *MultiSet) Actuals() []interface{} {
 	return rv
 }
 
-func (this *MultiSet) Items() []interface{} {
+func (this *MultiSet) Items() []any {
 	if !this.collect {
 		return nil
 	}
 
-	rv := make([]interface{}, 0, this.Len())
+	rv := make([]any, 0, this.Len())
 
 	if !this.numeric {
 		if this.nills != nil {

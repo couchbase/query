@@ -85,11 +85,11 @@ func (this *nullValue) Type() Type {
 /*
 Returns nil.
 */
-func (this *nullValue) Actual() interface{} {
+func (this *nullValue) Actual() any {
 	return nil
 }
 
-func (this *nullValue) ActualForIndex() interface{} {
+func (this *nullValue) ActualForIndex() any {
 	return nil
 }
 
@@ -158,7 +158,7 @@ func (this *nullValue) Field(field string) (Value, bool) {
 /*
 Not valid for NULL.
 */
-func (this *nullValue) SetField(field string, val interface{}) error {
+func (this *nullValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -179,7 +179,7 @@ func (this *nullValue) Index(index int) (Value, bool) {
 /*
 Not valid for NULL.
 */
-func (this *nullValue) SetIndex(index int, val interface{}) error {
+func (this *nullValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -200,21 +200,21 @@ func (this *nullValue) SliceTail(start int) (Value, bool) {
 /*
 Returns NULL_VALUE
 */
-func (this *nullValue) Append(elems []interface{}) (Value, bool) {
+func (this *nullValue) Append(elems []any) (Value, bool) {
 	return NULL_VALUE, false
 }
 
 /*
 Returns the input buffer as is.
 */
-func (this *nullValue) Descendants(buffer []interface{}) []interface{} {
+func (this *nullValue) Descendants(buffer []any) []any {
 	return buffer
 }
 
 /*
 Null has no fields to list. Hence return nil.
 */
-func (this *nullValue) Fields() map[string]interface{} {
+func (this *nullValue) Fields() map[string]any {
 	return nil
 }
 

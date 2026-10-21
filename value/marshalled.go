@@ -20,13 +20,13 @@ import (
 
 // A Value with delayed parsing.
 type marshalledValue struct {
-	raw        interface{}
+	raw        any
 	marshalled Value
 	refCnt     int32 // to check for recycling
 	sync.RWMutex
 }
 
-func NewMarshalledValue(raw interface{}) Value {
+func NewMarshalledValue(raw any) Value {
 
 	rv := &marshalledValue{}
 	rv.raw = raw
@@ -66,11 +66,11 @@ func (this *marshalledValue) Type() Type {
 	return this.unwrap().Type()
 }
 
-func (this *marshalledValue) Actual() interface{} {
+func (this *marshalledValue) Actual() any {
 	return this.unwrap().Actual()
 }
 
-func (this *marshalledValue) ActualForIndex() interface{} {
+func (this *marshalledValue) ActualForIndex() any {
 	return this.unwrap().ActualForIndex()
 }
 
@@ -107,7 +107,7 @@ func (this *marshalledValue) Field(field string) (Value, bool) {
 	return this.unwrap().Field(field)
 }
 
-func (this *marshalledValue) SetField(field string, val interface{}) error {
+func (this *marshalledValue) SetField(field string, val any) error {
 	return this.unwrap().SetField(field, val)
 }
 
@@ -119,7 +119,7 @@ func (this *marshalledValue) Index(index int) (Value, bool) {
 	return this.unwrap().Index(index)
 }
 
-func (this *marshalledValue) SetIndex(index int, val interface{}) error {
+func (this *marshalledValue) SetIndex(index int, val any) error {
 	return this.unwrap().SetIndex(index, val)
 }
 
@@ -131,17 +131,17 @@ func (this *marshalledValue) SliceTail(start int) (Value, bool) {
 	return this.unwrap().SliceTail(start)
 }
 
-func (this *marshalledValue) Append(elems []interface{}) (Value, bool) {
+func (this *marshalledValue) Append(elems []any) (Value, bool) {
 	return this.unwrap().Append(elems)
 }
 
-func (this *marshalledValue) Descendants(buffer []interface{}) []interface{} {
+func (this *marshalledValue) Descendants(buffer []any) []any {
 	return this.unwrap().Descendants(buffer)
 }
 
-func (this *marshalledValue) ParsedFields(min, max string, re interface{}) []interface{} {
+func (this *marshalledValue) ParsedFields(min, max string, re any) []any {
 	parsed, ok := this.unwrap().(interface {
-		ParsedFields(string, string, interface{}) []interface{}
+		ParsedFields(string, string, any) []any
 	})
 	if ok {
 		return parsed.ParsedFields(min, max, re)
@@ -149,7 +149,7 @@ func (this *marshalledValue) ParsedFields(min, max string, re interface{}) []int
 	return nil
 }
 
-func (this *marshalledValue) Fields() map[string]interface{} {
+func (this *marshalledValue) Fields() map[string]any {
 	return this.unwrap().Fields()
 }
 

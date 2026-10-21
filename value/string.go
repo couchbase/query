@@ -108,11 +108,11 @@ func (this stringValue) Type() Type {
 	return STRING
 }
 
-func (this stringValue) Actual() interface{} {
+func (this stringValue) Actual() any {
 	return string(this)
 }
 
-func (this stringValue) ActualForIndex() interface{} {
+func (this stringValue) ActualForIndex() any {
 	return string(this)
 }
 
@@ -208,7 +208,7 @@ func (this stringValue) Field(field string) (Value, bool) {
 /*
 Not valid for string.
 */
-func (this stringValue) SetField(field string, val interface{}) error {
+func (this stringValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -229,7 +229,7 @@ func (this stringValue) Index(index int) (Value, bool) {
 /*
 Not valid for string.
 */
-func (this stringValue) SetIndex(index int, val interface{}) error {
+func (this stringValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -250,21 +250,21 @@ func (this stringValue) SliceTail(start int) (Value, bool) {
 /*
 Returns NULL_VALUE
 */
-func (this stringValue) Append(elems []interface{}) (Value, bool) {
+func (this stringValue) Append(elems []any) (Value, bool) {
 	return NULL_VALUE, false
 }
 
 /*
 Returns the input buffer as is.
 */
-func (this stringValue) Descendants(buffer []interface{}) []interface{} {
+func (this stringValue) Descendants(buffer []any) []any {
 	return buffer
 }
 
 /*
 No fields to list. Hence return nil.
 */
-func (this stringValue) Fields() map[string]interface{} {
+func (this stringValue) Fields() map[string]any {
 	return nil
 }
 

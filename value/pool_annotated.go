@@ -21,7 +21,7 @@ func NewAnnotatedPool(size int) *AnnotatedPool {
 	rv := &AnnotatedPool{
 		size: size,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return make(AnnotatedValues, 0, size)
 	})
 	return rv

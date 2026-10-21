@@ -21,7 +21,7 @@ func NewAnnotatedJoinPairPool(size int) *AnnotatedJoinPairPool {
 	rv := &AnnotatedJoinPairPool{
 		size: size,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return make(AnnotatedJoinPairs, 0, size)
 	})
 	return rv

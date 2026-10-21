@@ -19,13 +19,13 @@ import (
 /*
 sliceValue is defined as a slice of interfaces.
 */
-type sliceValue []interface{}
+type sliceValue []any
 
 /*
 EMPTY_ARRAY_VALUE is initialized as a slice of interface.
 */
-var EMPTY_ARRAY_VALUE Value = sliceValue([]interface{}{})
-var TRUE_ARRAY_VALUE Value = sliceValue([]interface{}{true})
+var EMPTY_ARRAY_VALUE Value = sliceValue([]any{})
+var TRUE_ARRAY_VALUE Value = sliceValue([]any{true})
 
 func (this sliceValue) String() string {
 	return marshalString(this)
@@ -43,7 +43,7 @@ func (this sliceValue) WriteSpill(w io.Writer, buf []byte) error {
 	b := []byte{_SPILL_TYPE_VALUE}
 	_, err := w.Write(b)
 	if err == nil {
-		err = writeSpillValue(w, ([]interface{})(this), buf)
+		err = writeSpillValue(w, ([]any)(this), buf)
 	}
 	return err
 }
@@ -51,7 +51,7 @@ func (this sliceValue) WriteSpill(w io.Writer, buf []byte) error {
 func (this sliceValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
-		this = sliceValue(v.([]interface{}))
+		this = sliceValue(v.([]any))
 	} else {
 		this = nil
 	}
@@ -167,12 +167,12 @@ func (this sliceValue) Type() Type {
 	return ARRAY
 }
 
-func (this sliceValue) Actual() interface{} {
-	return ([]interface{})(this)
+func (this sliceValue) Actual() any {
+	return ([]any)(this)
 }
 
-func (this sliceValue) ActualForIndex() interface{} {
-	return ([]interface{})(this)
+func (this sliceValue) ActualForIndex() any {
+	return ([]any)(this)
 }
 
 func (this sliceValue) Equals(other Value) Value {
@@ -283,7 +283,7 @@ func (this sliceValue) Field(field string) (Value, bool) {
 /*
 Not valid for array/slice.
 */
-func (this sliceValue) SetField(field string, val interface{}) error {
+func (this sliceValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -320,11 +320,11 @@ missing value, set it to nil (do not add this field) and
 if anything else, add the value at the particular index.
 For all other cases, return a nil.
 */
-func (this sliceValue) SetIndex(index int, val interface{}) error {
+func (this sliceValue) SetIndex(index int, val any) error {
 	return this.setIndex(index, val, false)
 }
 
-func (this sliceValue) setIndex(index int, val interface{}, track bool) error {
+func (this sliceValue) setIndex(index int, val any, track bool) error {
 	if index < 0 {
 		index = len(this) + index
 	}
@@ -399,13 +399,13 @@ func (this sliceValue) SliceTail(start int) (Value, bool) {
 	return MISSING_VALUE, false
 }
 
-func (this sliceValue) Append(elems []interface{}) (Value, bool) {
+func (this sliceValue) Append(elems []any) (Value, bool) {
 	return sliceValue(append(this, elems...)), true
 }
 
-func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
+func (this sliceValue) Descendants(buffer []any) []any {
 	if cap(buffer) < len(buffer)+len(this) {
-		buf2 := make([]interface{}, len(buffer), (len(buffer)+len(this)+1)<<1)
+		buf2 := make([]any, len(buffer), (len(buffer)+len(this)+1)<<1)
 		copy(buf2, buffer)
 		buffer = buf2
 	}
@@ -418,7 +418,7 @@ func (this sliceValue) Descendants(buffer []interface{}) []interface{} {
 	return buffer
 }
 
-func (this sliceValue) Fields() map[string]interface{} {
+func (this sliceValue) Fields() map[string]any {
 	return nil
 }
 
@@ -498,7 +498,7 @@ func (this sliceValue) unwrap() Value {
 	return this
 }
 
-var _SMALL_ARRAY_VALUE = sliceValue([]interface{}{nil})
+var _SMALL_ARRAY_VALUE = sliceValue([]any{nil})
 
 /*
 Wrap a sliceValue that can be reallocated for resizing.
@@ -531,7 +531,7 @@ func (this *listValue) WriteSpill(w io.Writer, buf []byte) error {
 	b := []byte{_SPILL_TYPE_VALUE_LIST}
 	_, err := w.Write(b)
 	if err == nil {
-		err = writeSpillValue(w, ([]interface{})(this.slice), buf)
+		err = writeSpillValue(w, ([]any)(this.slice), buf)
 	}
 	return err
 }
@@ -539,7 +539,7 @@ func (this *listValue) WriteSpill(w io.Writer, buf []byte) error {
 func (this *listValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
-		this.slice = sliceValue(v.([]interface{}))
+		this.slice = sliceValue(v.([]any))
 	} else {
 		this.slice = nil
 	}
@@ -551,11 +551,11 @@ Type ARRAY.
 */
 func (this *listValue) Type() Type { return ARRAY }
 
-func (this *listValue) Actual() interface{} {
+func (this *listValue) Actual() any {
 	return this.slice.Actual()
 }
 
-func (this *listValue) ActualForIndex() interface{} {
+func (this *listValue) ActualForIndex() any {
 	return this.slice.ActualForIndex()
 }
 
@@ -591,7 +591,7 @@ func (this *listValue) Field(field string) (Value, bool) {
 	return this.slice.Field(field)
 }
 
-func (this *listValue) SetField(field string, val interface{}) error {
+func (this *listValue) SetField(field string, val any) error {
 	return this.slice.SetField(field, val)
 }
 
@@ -603,7 +603,7 @@ func (this *listValue) Index(index int) (Value, bool) {
 	return this.slice.Index(index)
 }
 
-func (this *listValue) SetIndex(index int, val interface{}) error {
+func (this *listValue) SetIndex(index int, val any) error {
 	if index >= len(this.slice) {
 		if index < cap(this.slice) {
 			this.slice = this.slice[0 : index+1]
@@ -625,15 +625,15 @@ func (this *listValue) SliceTail(start int) (Value, bool) {
 	return this.slice.SliceTail(start)
 }
 
-func (this *listValue) Append(elems []interface{}) (Value, bool) {
+func (this *listValue) Append(elems []any) (Value, bool) {
 	return this.slice.Append(elems)
 }
 
-func (this *listValue) Descendants(buffer []interface{}) []interface{} {
+func (this *listValue) Descendants(buffer []any) []any {
 	return this.slice.Descendants(buffer)
 }
 
-func (this *listValue) Fields() map[string]interface{} {
+func (this *listValue) Fields() map[string]any {
 	return this.slice.Fields()
 }
 
@@ -686,7 +686,7 @@ type trackedSliceValue struct {
 	sliceValue
 }
 
-func newTrackedSliceValue(sl []interface{}) *trackedSliceValue {
+func newTrackedSliceValue(sl []any) *trackedSliceValue {
 	for _, v := range sl {
 		if val, ok := v.(Value); ok {
 			val.Track()
@@ -699,11 +699,11 @@ func (this *trackedSliceValue) CopyForUpdate() Value {
 	return &trackedSliceValue{sliceValue: sliceValue(copySlice(this.sliceValue, copyForUpdate))}
 }
 
-func (this *trackedSliceValue) SetIndex(index int, val interface{}) error {
+func (this *trackedSliceValue) SetIndex(index int, val any) error {
 	return this.sliceValue.setIndex(index, val, true)
 }
 
-func (this *trackedSliceValue) Append(elems []interface{}) (Value, bool) {
+func (this *trackedSliceValue) Append(elems []any) (Value, bool) {
 	// track new additions
 	for _, elem := range elems {
 		if val, ok := elem.(Value); ok {
@@ -733,7 +733,7 @@ func (this *trackedSliceValue) WriteSpill(w io.Writer, buf []byte) error {
 	b := []byte{_SPILL_TYPE_VALUE_TRACKED_SLICE}
 	_, err := w.Write(b)
 	if err == nil {
-		err = writeSpillValue(w, ([]interface{})(this.sliceValue), buf)
+		err = writeSpillValue(w, ([]any)(this.sliceValue), buf)
 	}
 	return err
 }
@@ -741,14 +741,14 @@ func (this *trackedSliceValue) WriteSpill(w io.Writer, buf []byte) error {
 func (this *trackedSliceValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf []byte) error {
 	v, err := readSpillValue(trackMem, r, buf)
 	if err == nil && v != nil {
-		this.sliceValue = sliceValue(v.([]interface{}))
+		this.sliceValue = sliceValue(v.([]any))
 	} else {
 		this.sliceValue = nil
 	}
 	return err
 }
 
-func arrayEquals(array1, array2 []interface{}) Value {
+func arrayEquals(array1, array2 []any) Value {
 	if len(array1) != len(array2) {
 		return FALSE_VALUE
 	}
@@ -777,7 +777,7 @@ func arrayEquals(array1, array2 []interface{}) Value {
 	}
 }
 
-func arrayEquivalent(array1, array2 []interface{}) bool {
+func arrayEquivalent(array1, array2 []any) bool {
 	if len(array1) != len(array2) {
 		return false
 	}
@@ -794,7 +794,7 @@ func arrayEquivalent(array1, array2 []interface{}) bool {
 /*
 This code originally taken from https://github.com/couchbaselabs/walrus
 */
-func arrayCollate(array1, array2 []interface{}) int {
+func arrayCollate(array1, array2 []any) int {
 	for i, item1 := range array1 {
 		if i >= len(array2) {
 			return 1
@@ -809,7 +809,7 @@ func arrayCollate(array1, array2 []interface{}) int {
 	return len(array1) - len(array2)
 }
 
-func arrayCompare(array1, array2 []interface{}) Value {
+func arrayCompare(array1, array2 []any) Value {
 	for i, item1 := range array1 {
 		if i >= len(array2) {
 			return ONE_VALUE
@@ -824,12 +824,12 @@ func arrayCompare(array1, array2 []interface{}) Value {
 	return intValue(len(array1) - len(array2))
 }
 
-func copySlice(source []interface{}, copier copyFunc) []interface{} {
+func copySlice(source []any, copier copyFunc) []any {
 	if source == nil {
 		return nil
 	}
 
-	result := make([]interface{}, len(source))
+	result := make([]any, len(source))
 	for i, v := range source {
 		result[i] = copier(v)
 	}
@@ -837,7 +837,7 @@ func copySlice(source []interface{}, copier copyFunc) []interface{} {
 	return result
 }
 
-func marshalArray(slice []interface{}) (b []byte, err error) {
+func marshalArray(slice []any) (b []byte, err error) {
 	if slice == nil {
 		return _NULL_BYTES, nil
 	}

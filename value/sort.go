@@ -22,7 +22,7 @@ func NewSorter(value Value) *Sorter {
 func (this *Sorter) Len() int {
 	actual := this.value.Actual()
 	switch actual := actual.(type) {
-	case []interface{}:
+	case []any:
 		return len(actual)
 	default:
 		return 0
@@ -32,7 +32,7 @@ func (this *Sorter) Len() int {
 func (this *Sorter) Less(i, j int) bool {
 	actual := this.value.Actual()
 	switch actual := actual.(type) {
-	case []interface{}:
+	case []any:
 		return NewValue(actual[i]).Collate(NewValue(actual[j])) < 0
 	default:
 		return false
@@ -45,7 +45,7 @@ Swap elements in index i and j.
 func (this *Sorter) Swap(i, j int) {
 	actual := this.value.Actual()
 	switch actual := actual.(type) {
-	case []interface{}:
+	case []any:
 		actual[i], actual[j] = actual[j], actual[i]
 	}
 }

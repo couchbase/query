@@ -15,12 +15,12 @@ import (
 	"testing"
 )
 
-func getSecondLevelArray(m interface{}, first int, second int) string {
+func getSecondLevelArray(m any, first int, second int) string {
 	mValue, ok := m.(Value)
 	if ok {
 		m = mValue.Actual()
 	}
-	topArr, ok := m.([]interface{})
+	topArr, ok := m.([]any)
 	if !ok {
 		return "BAD_FIRST_INTERFACE"
 	}
@@ -30,7 +30,7 @@ func getSecondLevelArray(m interface{}, first int, second int) string {
 	if ok {
 		s = sValue.Actual()
 	}
-	bottomArr, ok := s.([]interface{})
+	bottomArr, ok := s.([]any)
 	if !ok {
 		return "BAD_SECOND_INTERFACE"
 	}
@@ -50,12 +50,12 @@ func getSecondLevelArray(m interface{}, first int, second int) string {
 }
 
 func TestShallowCopiedArraySharesElements(t *testing.T) {
-	lowArr := make([]interface{}, 3)
+	lowArr := make([]any, 3)
 	lowArr[0] = "lowval0"
 	lowArr[1] = "lowval1"
 	lowArr[2] = "originalvalue"
 
-	highArr := make([]interface{}, 2)
+	highArr := make([]any, 2)
 	highArr[0] = "highval0"
 	highArr[1] = lowArr
 
@@ -92,12 +92,12 @@ func TestShallowCopiedArraySharesElements(t *testing.T) {
 }
 
 func TestDeepCopiedArrayDoesNotShareElements(t *testing.T) {
-	lowArr := make([]interface{}, 3)
+	lowArr := make([]any, 3)
 	lowArr[0] = "lowval0"
 	lowArr[1] = "lowval1"
 	lowArr[2] = "originalvalue"
 
-	highArr := make([]interface{}, 2)
+	highArr := make([]any, 2)
 	highArr[0] = "highval0"
 	highArr[1] = lowArr
 

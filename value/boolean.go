@@ -110,11 +110,11 @@ func (this boolValue) Type() Type {
 	return BOOLEAN
 }
 
-func (this boolValue) Actual() interface{} {
+func (this boolValue) Actual() any {
 	return bool(this)
 }
 
-func (this boolValue) ActualForIndex() interface{} {
+func (this boolValue) ActualForIndex() any {
 	return bool(this)
 }
 
@@ -203,7 +203,7 @@ func (this boolValue) Field(field string) (Value, bool) {
 /*
 Not valid for bool.
 */
-func (this boolValue) SetField(field string, val interface{}) error {
+func (this boolValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -224,7 +224,7 @@ func (this boolValue) Index(index int) (Value, bool) {
 /*
 Not valid for bool.
 */
-func (this boolValue) SetIndex(index int, val interface{}) error {
+func (this boolValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -245,21 +245,21 @@ func (this boolValue) SliceTail(start int) (Value, bool) {
 /*
 Returns NULL_VALUE
 */
-func (this boolValue) Append(elems []interface{}) (Value, bool) {
+func (this boolValue) Append(elems []any) (Value, bool) {
 	return NULL_VALUE, false
 }
 
 /*
 Returns the input buffer as is.
 */
-func (this boolValue) Descendants(buffer []interface{}) []interface{} {
+func (this boolValue) Descendants(buffer []any) []any {
 	return buffer
 }
 
 /*
 Bool has no fields to list. Hence return nil.
 */
-func (this boolValue) Fields() map[string]interface{} {
+func (this boolValue) Fields() map[string]any {
 	return nil
 }
 

@@ -52,7 +52,7 @@ func (this *Set) Add(item Value) {
 	this.Put(item, item)
 }
 
-func (this *Set) AddAll(items []interface{}) {
+func (this *Set) AddAll(items []any) {
 	for _, item := range items {
 		this.Add(NewValue(item))
 	}
@@ -303,12 +303,12 @@ func (this *Set) Values() []Value {
 	return rv
 }
 
-func (this *Set) Actuals() []interface{} {
+func (this *Set) Actuals() []any {
 	if !this.collect {
 		return nil
 	}
 
-	rv := make([]interface{}, 0, this.Len())
+	rv := make([]any, 0, this.Len())
 
 	if !this.numeric {
 		if this.nills || this.missings != nil || this.nulls != nil {
@@ -349,12 +349,12 @@ func (this *Set) Actuals() []interface{} {
 	return rv
 }
 
-func (this *Set) Items() []interface{} {
+func (this *Set) Items() []any {
 	if !this.collect {
 		return nil
 	}
 
-	rv := make([]interface{}, 0, this.Len())
+	rv := make([]any, 0, this.Len())
 
 	if !this.numeric {
 		if this.nills {

@@ -61,20 +61,20 @@ const _SPILL_TYPED_NIL_INDICATOR = -1
 
 var _SPILL_POOL = util.NewBytePool(128)
 
-func writeSpillValue(w io.Writer, v interface{}, buf []byte) error {
+func writeSpillValue(w io.Writer, v any, buf []byte) error {
 	var err error
 	switch v := v.(type) {
 	case Value:
 		err = v.WriteSpill(w, buf)
-	case map[string]interface{}:
+	case map[string]any:
 		err = writeSpillMap(w, v, buf)
 	case map[string]Value:
 		err = writeSpillVMap(w, v, buf)
 	case map[int]Value:
 		err = writeSpillIntVMap(w, v, buf)
-	case map[int16]interface{}:
+	case map[int16]any:
 		err = writeSpillInt16Map(w, v, buf)
-	case []interface{}:
+	case []any:
 		err = writeSpillSlice(w, v, buf)
 	case []string:
 		err = writeSpillSSlice(w, v, buf)
@@ -190,7 +190,7 @@ func writeSpillTypeAndLength(typ byte, length int, w io.Writer, buf []byte) erro
 	return err
 }
 
-func writeSpillMap(w io.Writer, m map[string]interface{}, buf []byte) error {
+func writeSpillMap(w io.Writer, m map[string]any, buf []byte) error {
 	l := len(m)
 	if m == nil {
 		l = _SPILL_TYPED_NIL_INDICATOR
@@ -212,7 +212,7 @@ func writeSpillMap(w io.Writer, m map[string]interface{}, buf []byte) error {
 	return nil
 }
 
-func writeSpillInt16Map(w io.Writer, m map[int16]interface{}, buf []byte) error {
+func writeSpillInt16Map(w io.Writer, m map[int16]any, buf []byte) error {
 	l := len(m)
 	if m == nil {
 		l = _SPILL_TYPED_NIL_INDICATOR
@@ -278,7 +278,7 @@ func writeSpillIntVMap(w io.Writer, m map[int]Value, buf []byte) error {
 	return nil
 }
 
-func writeSpillSlice(w io.Writer, s []interface{}, buf []byte) error {
+func writeSpillSlice(w io.Writer, s []any, buf []byte) error {
 	l := len(s)
 	if s == nil {
 		l = _SPILL_TYPED_NIL_INDICATOR
@@ -347,9 +347,9 @@ func writeSpillVSlice(typ byte, w io.Writer, s []Value, buf []byte) error {
 	return nil
 }
 
-func readSpillValue(trackMem func(int64) error, r io.Reader, buf []byte) (interface{}, error) {
+func readSpillValue(trackMem func(int64) error, r io.Reader, buf []byte) (any, error) {
 	var err error
-	var v interface{}
+	var v any
 	var n int
 	var track int64
 	free := false
@@ -398,7 +398,7 @@ func readSpillValue(trackMem func(int64) error, r io.Reader, buf []byte) (interf
 		err = val.ReadSpill(trackMem, r, buf)
 		v = val
 	case _SPILL_TYPE_VALUE:
-		var val interface{}
+		var val any
 		val, err = readSpillValue(trackMem, r, buf)
 		if err == nil {
 			v = NewValue(val)
@@ -659,21 +659,21 @@ func readSpillLength(r io.Reader, buf []byte) (int, error) {
 	return length, err
 }
 
-func readSpillMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[string]interface{}, error) {
+func readSpillMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[string]any, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
 	}
 	if length == _SPILL_TYPED_NIL_INDICATOR {
-		return (map[string]interface{})(nil), nil
+		return (map[string]any)(nil), nil
 	}
 	if trackMem != nil {
 		if err := trackMem(int64(mapBaseSize(length))); err != nil {
 			return nil, err
 		}
 	}
-	m := make(map[string]interface{}, length)
-	var k, v interface{}
+	m := make(map[string]any, length)
+	var k, v any
 	for i := 0; i < length; i++ {
 		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
@@ -688,21 +688,21 @@ func readSpillMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[stri
 	return m, nil
 }
 
-func readSpillInt16Map(trackMem func(int64) error, r io.Reader, buf []byte) (map[int16]interface{}, error) {
+func readSpillInt16Map(trackMem func(int64) error, r io.Reader, buf []byte) (map[int16]any, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
 	}
 	if length == _SPILL_TYPED_NIL_INDICATOR {
-		return (map[int16]interface{})(nil), nil
+		return (map[int16]any)(nil), nil
 	}
 	if trackMem != nil {
 		if err := trackMem(int64(mapBaseSize(length))); err != nil {
 			return nil, err
 		}
 	}
-	m := make(map[int16]interface{}, length)
-	var k, v interface{}
+	m := make(map[int16]any, length)
+	var k, v any
 	for i := 0; i < length; i++ {
 		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
@@ -731,7 +731,7 @@ func readSpillVMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[str
 		}
 	}
 	m := make(map[string]Value)
-	var k, v interface{}
+	var k, v any
 	for i := 0; i < length; i++ {
 		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
@@ -760,7 +760,7 @@ func readSpillIntVMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[
 		}
 	}
 	m := make(map[int]Value)
-	var k, v interface{}
+	var k, v any
 	for i := 0; i < length; i++ {
 		k, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
@@ -775,20 +775,20 @@ func readSpillIntVMap(trackMem func(int64) error, r io.Reader, buf []byte) (map[
 	return m, nil
 }
 
-func readSpillSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]interface{}, error) {
+func readSpillSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]any, error) {
 	length, err := readSpillLength(r, buf)
 	if err != nil {
 		return nil, err
 	}
 	if length == _SPILL_TYPED_NIL_INDICATOR {
-		return ([]interface{})(nil), nil
+		return ([]any)(nil), nil
 	}
 	if trackMem != nil {
 		if err := trackMem(int64(_INTERFACE_SIZE * length)); err != nil {
 			return nil, err
 		}
 	}
-	s := make([]interface{}, length)
+	s := make([]any, length)
 	for i := 0; i < length; i++ {
 		s[i], err = readSpillValue(trackMem, r, buf)
 		if err != nil {
@@ -812,7 +812,7 @@ func readSpillSSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]str
 		}
 	}
 	s := make([]string, length)
-	var v interface{}
+	var v any
 	for i := 0; i < length; i++ {
 		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
@@ -837,7 +837,7 @@ func readSpillVSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]Val
 		}
 	}
 	s := make([]Value, length)
-	var v interface{}
+	var v any
 	for i := 0; i < length; i++ {
 		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {
@@ -862,7 +862,7 @@ func readSpillAVSlice(trackMem func(int64) error, r io.Reader, buf []byte) ([]An
 		}
 	}
 	s := make([]AnnotatedValue, length)
-	var v interface{}
+	var v any
 	for i := 0; i < length; i++ {
 		v, err = readSpillValue(trackMem, r, buf)
 		if err != nil {

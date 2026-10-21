@@ -17,17 +17,17 @@ func TestBuildObjectFromDottedPaths(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    []string
-		expected map[string]interface{}
+		expected map[string]any
 	}{
 		{
 			name:  "basic nested paths",
 			input: []string{"x.y.z", "x.y1.z1", "x.y1.z2", "x.y2", "`x`.`y3`.`z`", "x1"},
-			expected: map[string]interface{}{
-				"x": map[string]interface{}{
-					"y":  map[string]interface{}{"z": "x.y.z"},
-					"y1": map[string]interface{}{"z1": "x.y1.z1", "z2": "x.y1.z2"},
+			expected: map[string]any{
+				"x": map[string]any{
+					"y":  map[string]any{"z": "x.y.z"},
+					"y1": map[string]any{"z1": "x.y1.z1", "z2": "x.y1.z2"},
 					"y2": "x.y2",
-					"y3": map[string]interface{}{"z": "x.y3.z"},
+					"y3": map[string]any{"z": "x.y3.z"},
 				},
 				"x1": "x1",
 			},
@@ -35,9 +35,9 @@ func TestBuildObjectFromDottedPaths(t *testing.T) {
 		{
 			name:  "single path",
 			input: []string{"a.b.c"},
-			expected: map[string]interface{}{
-				"a": map[string]interface{}{
-					"b": map[string]interface{}{
+			expected: map[string]any{
+				"a": map[string]any{
+					"b": map[string]any{
 						"c": "a.b.c",
 					},
 				},
@@ -46,9 +46,9 @@ func TestBuildObjectFromDottedPaths(t *testing.T) {
 		{
 			name:  "path with spaces in backticks",
 			input: []string{"x.`y with space`.z"},
-			expected: map[string]interface{}{
-				"x": map[string]interface{}{
-					"y with space": map[string]interface{}{
+			expected: map[string]any{
+				"x": map[string]any{
+					"y with space": map[string]any{
 						"z": "x.y with space.z",
 					},
 				},
@@ -57,9 +57,9 @@ func TestBuildObjectFromDottedPaths(t *testing.T) {
 		{
 			name:  "empty backtick field",
 			input: []string{"x.``.y"},
-			expected: map[string]interface{}{
-				"x": map[string]interface{}{
-					"": map[string]interface{}{
+			expected: map[string]any{
+				"x": map[string]any{
+					"": map[string]any{
 						"y": "x..y",
 					},
 				},
@@ -68,14 +68,14 @@ func TestBuildObjectFromDottedPaths(t *testing.T) {
 		{
 			name:  "mixed backticks and regular",
 			input: []string{"`a`.b.c", "d.`e`.f"},
-			expected: map[string]interface{}{
-				"a": map[string]interface{}{
-					"b": map[string]interface{}{
+			expected: map[string]any{
+				"a": map[string]any{
+					"b": map[string]any{
 						"c": "a.b.c",
 					},
 				},
-				"d": map[string]interface{}{
-					"e": map[string]interface{}{
+				"d": map[string]any{
+					"e": map[string]any{
 						"f": "d.e.f",
 					},
 				},
@@ -84,12 +84,12 @@ func TestBuildObjectFromDottedPaths(t *testing.T) {
 		{
 			name:     "empty input",
 			input:    []string{},
-			expected: map[string]interface{}{},
+			expected: map[string]any{},
 		},
 		{
 			name:  "single field",
 			input: []string{"x"},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"x": "x",
 			},
 		},
@@ -132,7 +132,7 @@ func TestParseDottedPath(t *testing.T) {
 }
 
 // Helper function to compare maps for testing
-func mapsEqual(a, b map[string]interface{}) bool {
+func mapsEqual(a, b map[string]any) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -162,7 +162,7 @@ func slicesEqual(a, b []string) bool {
 }
 
 // Helper function to compare arbitrary interface values for testing
-func interfaceEqual(a, b interface{}) bool {
+func interfaceEqual(a, b any) bool {
 	switch av := a.(type) {
 	case string:
 		bv, ok := b.(string)
@@ -178,8 +178,8 @@ func interfaceEqual(a, b interface{}) bool {
 		return ok && av == bv
 	case nil:
 		return b == nil
-	case map[string]interface{}:
-		bv, ok := b.(map[string]interface{})
+	case map[string]any:
+		bv, ok := b.(map[string]any)
 		return ok && mapsEqual(av, bv)
 	default:
 		return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
@@ -187,36 +187,36 @@ func interfaceEqual(a, b interface{}) bool {
 }
 
 func TestObjectPopulate(t *testing.T) {
-	template := map[string]interface{}{
-		"x": map[string]interface{}{
-			"y":  map[string]interface{}{"z": "x.y.z"},
-			"y1": map[string]interface{}{"z1": "x.y1.z1", "z2": "x.y1.z2"},
+	template := map[string]any{
+		"x": map[string]any{
+			"y":  map[string]any{"z": "x.y.z"},
+			"y1": map[string]any{"z1": "x.y1.z1", "z2": "x.y1.z2"},
 			"y2": "x.y2",
-			"y3": map[string]interface{}{"z": "x.y3.z"},
+			"y3": map[string]any{"z": "x.y3.z"},
 		},
 		"x1": "x1",
 	}
 
-	values := map[string]interface{}{
+	values := map[string]any{
 		"x.y.z":   "abc",
 		"x.y1.z1": 1,
-		"x.y1.z2": map[string]interface{}{"a": 1},
+		"x.y1.z2": map[string]any{"a": 1},
 		"x.y2":    true,
 		"x.y3.z":  1.2,
 		"x1":      50,
 	}
 
-	expected := map[string]interface{}{
-		"x": map[string]interface{}{
-			"y": map[string]interface{}{
+	expected := map[string]any{
+		"x": map[string]any{
+			"y": map[string]any{
 				"z": "abc",
 			},
-			"y1": map[string]interface{}{
+			"y1": map[string]any{
 				"z1": 1,
-				"z2": map[string]interface{}{"a": 1},
+				"z2": map[string]any{"a": 1},
 			},
 			"y2": true,
-			"y3": map[string]interface{}{
+			"y3": map[string]any{
 				"z": 1.2,
 			},
 		},
@@ -230,20 +230,20 @@ func TestObjectPopulate(t *testing.T) {
 }
 
 func TestObjectPopulateMissingValues(t *testing.T) {
-	template := map[string]interface{}{
-		"x": map[string]interface{}{
+	template := map[string]any{
+		"x": map[string]any{
 			"y":  "x.y",
 			"y1": "x.y1",
 		},
 	}
 
-	values := map[string]interface{}{
+	values := map[string]any{
 		"x.y": "present",
 		// x.y1 is missing
 	}
 
-	expected := map[string]interface{}{
-		"x": map[string]interface{}{
+	expected := map[string]any{
+		"x": map[string]any{
 			"y": "present",
 			// y1 is removed when value is missing
 		},
@@ -256,28 +256,28 @@ func TestObjectPopulateMissingValues(t *testing.T) {
 }
 
 func TestObjectPopulateEmpty(t *testing.T) {
-	result := ObjectPopulate(map[string]interface{}{}, map[string]interface{}{})
-	if !mapsEqual(result, map[string]interface{}{}) {
+	result := ObjectPopulate(map[string]any{}, map[string]any{})
+	if !mapsEqual(result, map[string]any{}) {
 		t.Errorf("ObjectPopulate with empty maps = %v, want empty map", result)
 	}
 }
 
 func TestObjectPopulateNestedMaps(t *testing.T) {
-	template := map[string]interface{}{
-		"a": map[string]interface{}{
-			"b": map[string]interface{}{
+	template := map[string]any{
+		"a": map[string]any{
+			"b": map[string]any{
 				"c": "a.b.c",
 			},
 		},
 	}
 
-	values := map[string]interface{}{
+	values := map[string]any{
 		"a.b.c": "deep_value",
 	}
 
-	expected := map[string]interface{}{
-		"a": map[string]interface{}{
-			"b": map[string]interface{}{
+	expected := map[string]any{
+		"a": map[string]any{
+			"b": map[string]any{
 				"c": "deep_value",
 			},
 		},
@@ -292,15 +292,15 @@ func TestObjectPopulateNestedMaps(t *testing.T) {
 func TestGetNestedValue(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    map[string]interface{}
+		input    map[string]any
 		path     string
-		expected interface{}
+		expected any
 	}{
 		{
 			name: "simple nested path",
-			input: map[string]interface{}{
-				"x": map[string]interface{}{
-					"y": map[string]interface{}{
+			input: map[string]any{
+				"x": map[string]any{
+					"y": map[string]any{
 						"z": "value",
 					},
 				},
@@ -310,9 +310,9 @@ func TestGetNestedValue(t *testing.T) {
 		},
 		{
 			name: "path with backticks",
-			input: map[string]interface{}{
-				"x": map[string]interface{}{
-					"y with space": map[string]interface{}{
+			input: map[string]any{
+				"x": map[string]any{
+					"y with space": map[string]any{
 						"z": "value",
 					},
 				},
@@ -322,9 +322,9 @@ func TestGetNestedValue(t *testing.T) {
 		},
 		{
 			name: "nonexistent path",
-			input: map[string]interface{}{
-				"x": map[string]interface{}{
-					"y": map[string]interface{}{
+			input: map[string]any{
+				"x": map[string]any{
+					"y": map[string]any{
 						"a": "value",
 					},
 				},
@@ -334,7 +334,7 @@ func TestGetNestedValue(t *testing.T) {
 		},
 		{
 			name: "intermediate non-map value",
-			input: map[string]interface{}{
+			input: map[string]any{
 				"x": "string_value",
 			},
 			path:     "x.y.z",
@@ -353,38 +353,38 @@ func TestGetNestedValue(t *testing.T) {
 }
 
 func TestObjectPopulateNestedValues(t *testing.T) {
-	template := map[string]interface{}{
-		"x": map[string]interface{}{
-			"y": map[string]interface{}{
+	template := map[string]any{
+		"x": map[string]any{
+			"y": map[string]any{
 				"z": "x.y.z",
 			},
-			"y1": map[string]interface{}{
+			"y1": map[string]any{
 				"z1": "x.y1.z1",
 				"z2": "x.y1.z2",
 			},
 		},
 	}
 
-	values := map[string]interface{}{
-		"x": map[string]interface{}{
-			"y": map[string]interface{}{
+	values := map[string]any{
+		"x": map[string]any{
+			"y": map[string]any{
 				"z": "nested_value",
 			},
-			"y1": map[string]interface{}{
+			"y1": map[string]any{
 				"z1": 1,
-				"z2": map[string]interface{}{"a": 1},
+				"z2": map[string]any{"a": 1},
 			},
 		},
 	}
 
-	expected := map[string]interface{}{
-		"x": map[string]interface{}{
-			"y": map[string]interface{}{
+	expected := map[string]any{
+		"x": map[string]any{
+			"y": map[string]any{
 				"z": "nested_value",
 			},
-			"y1": map[string]interface{}{
+			"y1": map[string]any{
 				"z1": 1,
-				"z2": map[string]interface{}{"a": 1},
+				"z2": map[string]any{"a": 1},
 			},
 		},
 	}
@@ -399,9 +399,9 @@ func TestObjectPopulateNestedValues(t *testing.T) {
 // kept as a present null (-> N1QL NULL), distinct from a genuinely absent path
 // (-> N1QL MISSING). This applies whether the null value is top-level or nested.
 func TestObjectPopulateNullVsMissing(t *testing.T) {
-	template := map[string]interface{}{
+	template := map[string]any{
 		"country": "country",
-		"address": map[string]interface{}{
+		"address": map[string]any{
 			"city": "address.city",
 			"zip":  "address.zip",
 		},
@@ -409,16 +409,16 @@ func TestObjectPopulateNullVsMissing(t *testing.T) {
 
 	// country: present, null. address.city: present, null.
 	// address.zip: absent from the values structure entirely.
-	values := map[string]interface{}{
+	values := map[string]any{
 		"country": nil,
-		"address": map[string]interface{}{
+		"address": map[string]any{
 			"city": nil,
 		},
 	}
 
-	expected := map[string]interface{}{
+	expected := map[string]any{
 		"country": nil, // present-but-null -> kept -> NULL
-		"address": map[string]interface{}{
+		"address": map[string]any{
 			"city": nil, // present-but-null nested -> kept -> NULL
 			// zip is absent from values -> dropped -> MISSING
 		},

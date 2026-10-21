@@ -75,11 +75,11 @@ func (this binaryValue) Type() Type {
 	return BINARY
 }
 
-func (this binaryValue) Actual() interface{} {
+func (this binaryValue) Actual() any {
 	return []byte(this)
 }
 
-func (this binaryValue) ActualForIndex() interface{} {
+func (this binaryValue) ActualForIndex() any {
 	return []byte(this)
 }
 
@@ -147,7 +147,7 @@ func (this binaryValue) Field(field string) (Value, bool) {
 	return missingField(field), false
 }
 
-func (this binaryValue) SetField(field string, val interface{}) error {
+func (this binaryValue) SetField(field string, val any) error {
 	return Unsettable(field)
 }
 
@@ -159,7 +159,7 @@ func (this binaryValue) Index(index int) (Value, bool) {
 	return missingIndex(index), false
 }
 
-func (this binaryValue) SetIndex(index int, val interface{}) error {
+func (this binaryValue) SetIndex(index int, val any) error {
 	return Unsettable(strconv.Itoa(index))
 }
 
@@ -171,15 +171,15 @@ func (this binaryValue) SliceTail(start int) (Value, bool) {
 	return NULL_VALUE, false
 }
 
-func (this binaryValue) Append(elems []interface{}) (Value, bool) {
+func (this binaryValue) Append(elems []any) (Value, bool) {
 	return NULL_VALUE, false
 }
 
-func (this binaryValue) Descendants(buffer []interface{}) []interface{} {
+func (this binaryValue) Descendants(buffer []any) []any {
 	return buffer
 }
 
-func (this binaryValue) Fields() map[string]interface{} {
+func (this binaryValue) Fields() map[string]any {
 	return nil
 }
 
