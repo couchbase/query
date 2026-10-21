@@ -19,7 +19,7 @@ type Index struct {
 	defn string
 }
 
-func NewIndex(i interface{}) (*Index, error) {
+func NewIndex(i any) (*Index, error) {
 	logging.Tracef("%v", i)
 	s, ok := i.(string)
 	if !ok {

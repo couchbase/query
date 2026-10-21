@@ -42,10 +42,10 @@ func (this *EncryptionAtRest) recordFailure(msg string) {
 // rest enabled and, if so, locates (creating it if necessary) the encryption key to use.
 //
 // "encryptionAtRest": { "every": N } means every Nth iteration is run with encryption at rest enabled.
-func setupEncryptionAtRest(config map[string]interface{}, iter uint64) *EncryptionAtRest {
+func setupEncryptionAtRest(config map[string]any, iter uint64) *EncryptionAtRest {
 	enc := &EncryptionAtRest{iteration: iter}
 
-	ear, ok := config["encryptionAtRest"].(map[string]interface{})
+	ear, ok := config["encryptionAtRest"].(map[string]any)
 	if !ok {
 		return enc
 	}
@@ -102,7 +102,7 @@ func getEncryptionKeyId() (int, error) {
 		b, _ := io.ReadAll(resp.Body)
 		return -1, fmt.Errorf("%v: %s", resp.Status, string(b))
 	}
-	var keys []map[string]interface{}
+	var keys []map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&keys); err != nil {
 		return -1, err
 	}
@@ -116,10 +116,10 @@ func getEncryptionKeyId() (int, error) {
 }
 
 func createEncryptionKey() error {
-	body := map[string]interface{}{
+	body := map[string]any{
 		"name": "key-1",
 		"type": "cb-server-managed-aes-key-256",
-		"data": map[string]interface{}{
+		"data": map[string]any{
 			"canBeCached":  true,
 			"autoRotation": false,
 		},
@@ -132,13 +132,13 @@ func createEncryptionKey() error {
 // Enables encryption at rest, using the given key id, for the given bucket.  A keyId of -1 disables it.
 func setBucketEncryption(bucket string, keyId int) error {
 	target := fmt.Sprintf("/pools/default/buckets/%s", url.PathEscape(bucket))
-	_, _, err := doNodePost(target, map[string]interface{}{"encryptionAtRestKeyId": keyId}, false)
+	_, _, err := doNodePost(target, map[string]any{"encryptionAtRestKeyId": keyId}, false)
 	return err
 }
 
 func setOtherEncryption(keyId int) error {
-	body := map[string]interface{}{
-		"other": map[string]interface{}{
+	body := map[string]any{
+		"other": map[string]any{
 			"encryptionMethod": "encryptionKey",
 			"encryptionKeyId":  keyId,
 		},
@@ -149,7 +149,7 @@ func setOtherEncryption(keyId int) error {
 
 func disableOtherEncryption() error {
 	_, _, err := doNodePost("/settings/security/encryptionAtRest",
-		map[string]interface{}{"other.encryptionMethod": "disabled"}, false)
+		map[string]any{"other.encryptionMethod": "disabled"}, false)
 	return err
 }
 
@@ -197,11 +197,11 @@ func applyEncryptionAtRest(bucketNew map[string]bool) {
 
 // Builds the e-mail content describing the current Encryption state's failure, prefixed with the iteration number it
 // applies to.  Returns nil if there is nothing (new) to report.
-func encryptionFailureContent() []interface{} {
+func encryptionFailureContent() []any {
 	if Encryption == nil || !Encryption.failed || Encryption.reported {
 		return nil
 	}
-	content := make([]interface{}, 0, len(Encryption.failureNotes)+1)
+	content := make([]any, 0, len(Encryption.failureNotes)+1)
 	if Encryption.enabled {
 		content = append(content, fmt.Sprintf("Iteration %d: Encryption at rest initialisation failed for one or more "+
 			"steps; the iteration ran without full encryption at rest coverage.", Encryption.iteration))

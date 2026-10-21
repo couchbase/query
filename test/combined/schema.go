@@ -24,9 +24,9 @@ type Schema struct {
 	fields []Field
 }
 
-func NewSchema(i interface{}) (*Schema, error) {
+func NewSchema(i any) (*Schema, error) {
 	logging.Tracef("%v", i)
-	elem, ok := i.(map[string]interface{})
+	elem, ok := i.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("Schema is not an object.")
 	}
@@ -36,7 +36,7 @@ func NewSchema(i interface{}) (*Schema, error) {
 	if !ok {
 		return nil, fmt.Errorf("Schema missing \"count\" field.")
 	}
-	if m, ok := v.(map[string]interface{}); !ok {
+	if m, ok := v.(map[string]any); !ok {
 		return nil, fmt.Errorf("Schema \"count\" field is not valid.")
 	} else {
 		schema.count = NewRandomRange(m, 0).get()
@@ -47,7 +47,7 @@ func NewSchema(i interface{}) (*Schema, error) {
 		schema.typ = fmt.Sprintf("type_%d", nextSerial())
 	}
 
-	fields, ok := elem["fields"].([]interface{})
+	fields, ok := elem["fields"].([]any)
 	if !ok {
 		return nil, fmt.Errorf("Schema \"fields\" field is missing or not valid.")
 	}
@@ -74,7 +74,7 @@ func NewRandomSchema(typ string, docs *RandomRange, fields *RandomRange) (*Schem
 // ---------------------------------------------------------------------------------------------------------------------------------
 
 func (this *Schema) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"type":   this.typ,
 		"count":  this.count,
 		"fields": this.fields,
@@ -83,7 +83,7 @@ func (this *Schema) MarshalJSON() ([]byte, error) {
 }
 
 func (this *Schema) generateData(w io.Writer) error {
-	doc := make(map[string]interface{}, len(this.fields)+1)
+	doc := make(map[string]any, len(this.fields)+1)
 	logging.Debugf("Generating %v documents.", this.count)
 	for i := uint(0); i < this.count; i++ {
 		clear(doc)

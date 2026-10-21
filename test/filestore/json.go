@@ -56,7 +56,7 @@ func init() {
 }
 
 type RunResult struct {
-	Results   []interface{}
+	Results   []any
 	Warnings  []errors.Error
 	Err       errors.Error
 	SortCount int
@@ -141,7 +141,7 @@ func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 
 	this.resultCount++
 
-	var resultLine map[string]interface{}
+	var resultLine map[string]any
 	json.Unmarshal(bytes, &resultLine)
 
 	this.response.results = append(this.response.results, resultLine)
@@ -164,7 +164,7 @@ func (this *MockQuery) AdmissionWaitTime() time.Duration {
 
 type MockResponse struct {
 	err           errors.Error
-	results       []interface{}
+	results       []any
 	generatedStmt string
 	warnings      []errors.Error
 	done          chan bool
@@ -187,7 +187,7 @@ func (this *scanConfigImpl) ScanWait() time.Duration {
 	return 0
 }
 
-func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) interface{} {
+func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) any {
 	return this
 }
 
@@ -223,7 +223,7 @@ func run(mockServer *MockServer, p bool, q string, namedArgs map[string]value.Va
 	}
 
 	mr := &MockResponse{
-		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
+		results: []any{}, warnings: []errors.Error{}, done: make(chan bool),
 	}
 	query := &MockQuery{
 		response: mr,
@@ -311,33 +311,33 @@ func Start(site, pool, namespace string) *MockServer {
 	return mockServer
 }
 
-func dropResultEntry(result interface{}, e string) {
+func dropResultEntry(result any, e string) {
 	switch v := result.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		delete(v, e)
 		for _, f := range v {
 			dropResultEntry(f, e)
 		}
-	case []interface{}:
+	case []any:
 		for _, f := range v {
 			dropResultEntry(f, e)
 		}
 	}
 }
 
-func dropResultsEntry(results []interface{}, entry interface{}) {
+func dropResultsEntry(results []any, entry any) {
 	e := fmt.Sprintf("%v", entry)
 	for _, r := range results {
 		dropResultEntry(r, e)
 	}
 }
 
-func addResultsEntry(newResults, results []interface{}, entry interface{}) {
+func addResultsEntry(newResults, results []any, entry any) {
 	e := fmt.Sprintf("%v", entry)
 	for i, r := range results {
-		v, ok := r.(map[string]interface{})
+		v, ok := r.(map[string]any)
 		if ok {
-			newV, ok := newResults[i].(map[string]interface{})
+			newV, ok := newResults[i].(map[string]any)
 			if ok {
 				newV[e] = v[e]
 			}
@@ -362,7 +362,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		return
 	}
 
-	var cases []map[string]interface{}
+	var cases []map[string]any
 
 	err = json.Unmarshal(b, &cases)
 	if err != nil {
@@ -405,7 +405,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		}
 
 		if p, ok2 := c["positionalArgs"]; ok2 {
-			if pa, ok3 := p.([]interface{}); ok3 {
+			if pa, ok3 := p.([]any); ok3 {
 				for _, v := range pa {
 					positionalArgs = append(positionalArgs, value.NewValue(v))
 				}
@@ -554,16 +554,16 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		ignore, ok := c["ignore"]
 		if ok {
 			switch ignore.(type) {
-			case []interface{}:
-				for _, v := range ignore.([]interface{}) {
+			case []any:
+				for _, v := range ignore.([]any) {
 					switch v.(type) {
-					case []interface{}:
-					case map[string]interface{}:
+					case []any:
+					case map[string]any:
 					default:
 						dropResultsEntry(rr.Results, v)
 					}
 				}
-			case map[string]interface{}:
+			case map[string]any:
 			default:
 				dropResultsEntry(rr.Results, ignore)
 			}
@@ -573,24 +573,24 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 		// again, we handle scalars and the scalars in an array
 		accept, ok := c["accept"]
 		if ok {
-			newResults := make([]interface{}, len(rr.Results))
+			newResults := make([]any, len(rr.Results))
 			switch accept.(type) {
-			case []interface{}:
+			case []any:
 				for i, _ := range rr.Results {
-					newResults[i] = make(map[string]interface{}, len(accept.([]interface{})))
+					newResults[i] = make(map[string]any, len(accept.([]any)))
 				}
-				for _, v := range accept.([]interface{}) {
+				for _, v := range accept.([]any) {
 					switch v.(type) {
-					case []interface{}:
-					case map[string]interface{}:
+					case []any:
+					case map[string]any:
 					default:
 						addResultsEntry(newResults, rr.Results, v)
 					}
 				}
-			case map[string]interface{}:
+			case map[string]any:
 			default:
 				for i, _ := range rr.Results {
-					newResults[i] = make(map[string]interface{}, 1)
+					newResults[i] = make(map[string]any, 1)
 				}
 				addResultsEntry(newResults, rr.Results, accept)
 			}
@@ -599,7 +599,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 
 		v, ok = c["results"]
 		if ok {
-			resultsExpected := v.([]interface{})
+			resultsExpected := v.([]any)
 			okres := doResultsMatch(rr.Results, resultsExpected, fname, i, b, statements)
 			if okres != nil {
 				errstring = okres
@@ -614,7 +614,7 @@ func FtestCaseFile(fname string, qc *MockServer, namespace string) (fin_stmt str
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, i int, content []byte, s string) (errstring error) {
+func doResultsMatch(resultsActual, resultsExpected []any, fname string, i int, content []byte, s string) (errstring error) {
 	ffname, e := filepath.Abs(fname)
 	if e != nil {
 		ffname = fname
@@ -636,11 +636,11 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, fname string, 
 	return nil
 }
 
-func diff(a interface{}, b interface{}) string {
+func diff(a any, b any) string {
 	return diffpkg.Diff(prettyPrint(a), prettyPrint(b))
 }
 
-func prettyPrint(what interface{}) string {
+func prettyPrint(what any) string {
 	res, err := json.MarshalIndent(what, "", "  ")
 	if err != nil {
 		res = []byte(fmt.Sprintf("%v", what))

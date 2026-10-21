@@ -44,7 +44,7 @@ func nodeQuotaEnabled() bool {
 }
 
 // issues a GET to /admin/vitals and returns the decoded response
-func getVitals() (map[string]interface{}, error) {
+func getVitals() (map[string]any, error) {
 	resp, err := doQueryGet("/admin/vitals", nil)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func getVitals() (map[string]interface{}, error) {
 	}
 	dec := json.NewDecoder(resp.Body)
 	dec.UseNumber()
-	var vitals map[string]interface{}
+	var vitals map[string]any
 	if err = dec.Decode(&vitals); err != nil {
 		return nil, fmt.Errorf("Failed to decode vitals: %v", err)
 	}
@@ -64,7 +64,7 @@ func getVitals() (map[string]interface{}, error) {
 }
 
 // extracts a non-negative integer field from the vitals
-func vitalsUint(vitals map[string]interface{}, field string) (uint64, error) {
+func vitalsUint(vitals map[string]any, field string) (uint64, error) {
 	v, ok := vitals[field]
 	if !ok {
 		return 0, fmt.Errorf("\"%s\" not present in vitals", field)

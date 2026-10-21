@@ -39,7 +39,7 @@ func (this *RandomRange) get() uint {
 	return uint(rand.Intn(int(this.max-this.min))) + this.min
 }
 
-func NewRandomRange(m map[string]interface{}, def uint) *RandomRange {
+func NewRandomRange(m map[string]any, def uint) *RandomRange {
 	var minOK bool
 	var maxOK bool
 	var f float64
@@ -74,27 +74,27 @@ type Database struct {
 	purge           bool
 	forceCreate     bool
 	keyspaces       []*Keyspace
-	bucketConfig    map[string]map[string]interface{}
-	queryConfig     map[string]interface{}
+	bucketConfig    map[string]map[string]any
+	queryConfig     map[string]any
 	updateStats     bool
 	createIndexes   bool
 	randomKeyspaces *RandomRange
 	rkSchemaDocs    *RandomRange
 	rkSchemas       *RandomRange
 	rkSchemaFields  *RandomRange
-	awrConfig       map[string]interface{} // Settings to be updated in system:awr.
-	awrKeyspace     *Keyspace              // The keyspace where AWR data will be stored.
-	testStartTime   time.Time              // The time that the iteration started executing the test queries.
-	nodeQuotaBase   *uint64                // Node-wide memory pool usage before any statements were issued; nil if not captured.
+	awrConfig       map[string]any // Settings to be updated in system:awr.
+	awrKeyspace     *Keyspace      // The keyspace where AWR data will be stored.
+	testStartTime   time.Time      // The time that the iteration started executing the test queries.
+	nodeQuotaBase   *uint64        // Node-wide memory pool usage before any statements were issued; nil if not captured.
 }
 
-func NewDatabase(i interface{}) (*Database, error) {
-	database, ok := i.(map[string]interface{})
+func NewDatabase(i any) (*Database, error) {
+	database, ok := i.(map[string]any)
 	if !ok {
 		logging.Fatalf("Database element is not an object")
 		return nil, os.ErrNotExist
 	}
-	db := &Database{bucketConfig: make(map[string]map[string]interface{})}
+	db := &Database{bucketConfig: make(map[string]map[string]any)}
 
 	v, ok := database["purge"]
 	if ok {
@@ -114,22 +114,22 @@ func NewDatabase(i interface{}) (*Database, error) {
 
 	v, ok = database["random_keyspaces"]
 	if ok {
-		if m, ok := v.(map[string]interface{}); !ok {
+		if m, ok := v.(map[string]any); !ok {
 			logging.Fatalf("\"random_keyspaces\" is not an object.")
 			return nil, os.ErrNotExist
 		} else {
 			db.randomKeyspaces = NewRandomRange(m, 0)
-			if m, ok := m["size"].(map[string]interface{}); ok {
+			if m, ok := m["size"].(map[string]any); ok {
 				db.rkSchemaDocs = NewRandomRange(m, 100)
 			} else {
 				db.rkSchemaDocs = NewFixedRange(100)
 			}
-			if m, ok := m["schemas"].(map[string]interface{}); ok {
+			if m, ok := m["schemas"].(map[string]any); ok {
 				db.rkSchemas = NewRandomRange(m, 1)
 			} else {
 				db.rkSchemas = NewFixedRange(1)
 			}
-			if m, ok := m["fields"].(map[string]interface{}); ok {
+			if m, ok := m["fields"].(map[string]any); ok {
 				db.rkSchemaFields = NewRandomRange(m, 10)
 			} else {
 				db.rkSchemaFields = NewFixedRange(10)
@@ -143,8 +143,8 @@ func NewDatabase(i interface{}) (*Database, error) {
 
 	v, ok = database["config"]
 	if ok {
-		if m, ok := v.(map[string]interface{}); ok {
-			db.queryConfig = make(map[string]interface{}, len(m))
+		if m, ok := v.(map[string]any); ok {
+			db.queryConfig = make(map[string]any, len(m))
 			for k, v := range m {
 				if k[0] != '#' {
 					db.queryConfig[k] = v
@@ -173,7 +173,7 @@ func NewDatabase(i interface{}) (*Database, error) {
 
 	v, ok = database["awr"]
 	if ok {
-		if m, ok := v.(map[string]interface{}); ok {
+		if m, ok := v.(map[string]any); ok {
 			db.awrConfig = m
 
 			// Configure the keyspace location for AWR data
@@ -199,13 +199,13 @@ func NewDatabase(i interface{}) (*Database, error) {
 		logging.Warnf("AWR: Not configured for the iteration.")
 	}
 
-	keyspaces, ok := database["keyspaces"].([]interface{})
+	keyspaces, ok := database["keyspaces"].([]any)
 	if !ok {
 		return nil, fmt.Errorf("No keyspaces found in the configuration.")
 	}
 
 	for i := range keyspaces {
-		keyspace, ok := keyspaces[i].(map[string]interface{})
+		keyspace, ok := keyspaces[i].(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("Keyspaces element %d is not an object (%T).", i, keyspaces[i])
 		}
@@ -225,7 +225,7 @@ func NewDatabase(i interface{}) (*Database, error) {
 // ---------------------------------------------------------------------------------------------------------------------------------
 
 func (this *Database) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"purge":     this.purge,
 		"force":     this.forceCreate,
 		"keyspaces": this.keyspaces,
@@ -356,7 +356,7 @@ func getOthers(skip int, num int) []int {
 	return res
 }
 
-func (this *Database) addBucketConfig(bucket string, config map[string]interface{}) {
+func (this *Database) addBucketConfig(bucket string, config map[string]any) {
 	m, ok := this.bucketConfig[bucket]
 	if !ok {
 		this.bucketConfig[bucket] = config
@@ -367,12 +367,12 @@ func (this *Database) addBucketConfig(bucket string, config map[string]interface
 	}
 }
 
-func (this *Database) getBucketConfig(bucket string) (map[string]interface{}, bool) {
+func (this *Database) getBucketConfig(bucket string) (map[string]any, bool) {
 	m, ok := this.bucketConfig[bucket]
 	if !ok {
-		return make(map[string]interface{}, 2), false
+		return make(map[string]any, 2), false
 	}
-	res := make(map[string]interface{}, 2+len(m))
+	res := make(map[string]any, 2+len(m))
 	for k, v := range m {
 		res[k] = v
 	}

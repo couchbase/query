@@ -107,7 +107,7 @@ func doNodeGet(uri string) (*http.Response, error) {
 }
 
 // handles posting to a management REST endpoint (application/x-www-form-urlencoded)
-func doNodePost(uri string, params map[string]interface{}, body bool) (int, []byte, error) {
+func doNodePost(uri string, params map[string]any, body bool) (int, []byte, error) {
 	postData := url.Values{}
 	for k, v := range params {
 		if v == nil {
@@ -152,7 +152,7 @@ func doNodePost(uri string, params map[string]interface{}, body bool) (int, []by
 }
 
 // handles a GET request to a Query endpoint that requires authorization
-func doQueryGet(uri string, params map[string]interface{}) (*http.Response, error) {
+func doQueryGet(uri string, params map[string]any) (*http.Response, error) {
 	args := url.Values{}
 	for k, v := range params {
 		args.Set(k, fmt.Sprintf("%v", v))
@@ -171,7 +171,7 @@ func doQueryGet(uri string, params map[string]interface{}) (*http.Response, erro
 }
 
 // handles posting to a query REST endpoint (application/json)
-func doQueryPost(uri string, data map[string]interface{}, body bool) (int, []byte, error) {
+func doQueryPost(uri string, data map[string]any, body bool) (int, []byte, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return -1, nil, err
@@ -212,7 +212,7 @@ func doQueryPost(uri string, data map[string]interface{}, body bool) (int, []byt
 }
 
 // handles posting JSON to a management REST endpoint (application/json)
-func doNodePostJSON(uri string, data interface{}) (int, []byte, error) {
+func doNodePostJSON(uri string, data any) (int, []byte, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return -1, nil, err
@@ -277,7 +277,7 @@ func checkWait(uri string, msg string) bool {
 }
 
 // uses the bucket management REST API to create a bucket
-func createBucket(name string, config map[string]interface{}) error {
+func createBucket(name string, config map[string]any) error {
 	var err error
 	var resp *http.Response
 	config["name"] = name
@@ -308,7 +308,7 @@ func createBucket(name string, config map[string]interface{}) error {
 }
 
 // uses the bucket management REST API to alter a bucket
-func alterBucket(name string, config map[string]interface{}) error {
+func alterBucket(name string, config map[string]any) error {
 	var err error
 	var resp *http.Response
 	status, _, err := doNodePost(fmt.Sprintf("/pools/default/buckets/%s", url.PathEscape(name)), config, false)
@@ -379,7 +379,7 @@ func createScope(bucket string, name string) error {
 	var err error
 	var resp *http.Response
 	target := fmt.Sprintf("/pools/default/buckets/%s/scopes", url.PathEscape(bucket))
-	status, _, err := doNodePost(target, map[string]interface{}{"name": name}, false)
+	status, _, err := doNodePost(target, map[string]any{"name": name}, false)
 	if status == http.StatusAccepted || status == http.StatusOK {
 		// check availability before returning
 		time.Sleep(_RETRY_WAIT) // less initial waiting that for a bucket
@@ -399,11 +399,11 @@ func createScope(bucket string, name string) error {
 				}
 				resp.Body.Close()
 				if b != nil {
-					var res map[string]interface{}
+					var res map[string]any
 					if json.Unmarshal(b, &res) == nil {
-						if s, ok := res["scopes"].([]interface{}); ok {
+						if s, ok := res["scopes"].([]any); ok {
 							for i := range s {
-								if sc, ok := s[i].(map[string]interface{}); ok {
+								if sc, ok := s[i].(map[string]any); ok {
 									if sc["name"] == name {
 										return nil
 									}
@@ -425,7 +425,7 @@ func createCollection(bucket string, scope string, name string) error {
 	var resp *http.Response
 	target := fmt.Sprintf("/pools/default/buckets/%s/scopes/%s/collections", url.PathEscape(bucket),
 		url.PathEscape(scope))
-	status, _, err := doNodePost(target, map[string]interface{}{"name": name}, false)
+	status, _, err := doNodePost(target, map[string]any{"name": name}, false)
 	if status == http.StatusAccepted || status == http.StatusOK {
 		// check availability before returning
 		time.Sleep(_RETRY_WAIT) // less initial waiting that for a bucket
@@ -446,15 +446,15 @@ func createCollection(bucket string, scope string, name string) error {
 				}
 				resp.Body.Close()
 				if b != nil {
-					var res map[string]interface{}
+					var res map[string]any
 					if json.Unmarshal(b, &res) == nil {
-						if s, ok := res["scopes"].([]interface{}); ok {
+						if s, ok := res["scopes"].([]any); ok {
 							for i := range s {
-								if sc, ok := s[i].(map[string]interface{}); ok {
+								if sc, ok := s[i].(map[string]any); ok {
 									if sc["name"] == scope {
-										if c, ok := sc["collections"].([]interface{}); ok {
+										if c, ok := sc["collections"].([]any); ok {
 											for j := range c {
-												if col, ok := c[j].(map[string]interface{}); ok {
+												if col, ok := c[j].(map[string]any); ok {
 													if col["name"] == name {
 														return nil
 													}
@@ -499,7 +499,7 @@ func purgeKeyspaces() error {
 		return fmt.Errorf("Unexpected JSON content.")
 	}
 	for dec.More() {
-		var m map[string]interface{}
+		var m map[string]any
 		err = dec.Decode(&m)
 		if err != nil {
 			return err
@@ -585,7 +585,7 @@ func importData(keyspace string, file string) error {
 // deletes all data from a keyspace using SQL++
 func cleanupKeyspace(name string) error {
 	logging.Debugf("Deleting data from %s.", name)
-	params := map[string]interface{}{
+	params := map[string]any{
 		"statement": fmt.Sprintf("DELETE FROM %s", name),
 	}
 	if _, _, err := doNodePost("/_p/query/query/service", params, false); err != nil {
@@ -603,14 +603,14 @@ func cleanupKeyspace(name string) error {
 		return err
 	}
 
-	var m map[string]interface{}
+	var m map[string]any
 	err = json.Unmarshal(b, &m)
 	if err != nil {
 		return err
 	}
 	if res, ok := m["results"]; !ok {
 		return fmt.Errorf("Invalid response - no \"results\" field.")
-	} else if ra, ok := res.([]interface{}); !ok {
+	} else if ra, ok := res.([]any); !ok {
 		return fmt.Errorf("Invalid response - \"results\" field is not an array.")
 	} else {
 		for i := range ra {
@@ -627,10 +627,10 @@ func cleanupKeyspace(name string) error {
 }
 
 // issues an SQL statement and doesn't care about the returned results (only the succes/failure)
-func executeSQLWithoutResults(stmt string, params map[string]interface{}, logResults bool) error {
+func executeSQLWithoutResults(stmt string, params map[string]any, logResults bool) error {
 	logging.Infof("%s", stmt)
 	if params == nil {
-		params = make(map[string]interface{})
+		params = make(map[string]any)
 	}
 	params["statement"] = stmt
 	// using the proxy here just to test another aspect
@@ -645,7 +645,7 @@ func executeSQLWithoutResults(stmt string, params map[string]interface{}, logRes
 }
 
 // issues an SQL statement and streams the results; returns the resultCount, elapsedTime and an array of error codes (may be empty)
-func executeSQLProcessingResults(stmt string, params map[string]interface{}, processResults func(respBody io.ReadCloser) error) error {
+func executeSQLProcessingResults(stmt string, params map[string]any, processResults func(respBody io.ReadCloser) error) error {
 	//logging.Debugf("%s", stmt)
 	postData := url.Values{}
 	postData.Set("signature", "false")
@@ -727,7 +727,7 @@ func logVitals() {
 		logging.Debugf("Failed to gather vitals information before run.")
 	}
 	*/
-	params := map[string]interface{}{"pretty": true}
+	params := map[string]any{"pretty": true}
 	resp, err := doQueryGet("/admin/vitals", params)
 	if err != nil || resp == nil || resp.Body == nil {
 		logging.Debugf("Failed to read vitals: %v", err)
@@ -746,7 +746,7 @@ func logVitals() {
 	}
 }
 
-func notify(bodyContent ...interface{}) {
+func notify(bodyContent ...any) {
 	if len(Notifications) == 0 {
 		return
 	}
@@ -786,12 +786,12 @@ func notify(bodyContent ...interface{}) {
 	if !ok {
 		return
 	}
-	ra, ok := r.([]interface{})
+	ra, ok := r.([]any)
 	if !ok {
 		if _, ok = r.(string); !ok {
 			return
 		}
-		ra = []interface{}{r}
+		ra = []any{r}
 	}
 	to := make([]string, 0, len(ra))
 	for i := range ra {

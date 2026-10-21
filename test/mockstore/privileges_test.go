@@ -368,7 +368,7 @@ func TestStatementPrivileges(t *testing.T) {
 			}}},
 	}
 
-	n1ql.SetNamespaces(map[string]interface{}{"default": true, "system": true})
+	n1ql.SetNamespaces(map[string]any{"default": true, "system": true})
 
 	// technically this is not needed, but for completeness...
 	m, err := mock.NewDatastore("mock:namespaces=2,keyspaces=5,items=5000")

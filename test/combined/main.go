@@ -39,7 +39,7 @@ var IgnoredErrors map[int]bool
 
 var Iterations uint64 = math.MaxUint64
 
-var Notifications map[string]interface{}
+var Notifications map[string]any
 var LastNotification = time.Now()
 var lastFailure time.Time
 var failureCount int
@@ -63,13 +63,13 @@ func setLogger() {
 
 // to keep the maintenance overhead as low as possible, we just use the JSON directly rather than building and populating
 // native types from the configuration, even though this is less efficient at run time
-func loadConfig(config map[string]interface{}, configFile string) (map[string]interface{}, error) {
+func loadConfig(config map[string]any, configFile string) (map[string]any, error) {
 	f, err := os.Open(configFile)
 	if err != nil {
 		logging.Errorf("Error opening config.json: %v", err)
 		return nil, err
 	}
-	var c map[string]interface{}
+	var c map[string]any
 	d := json.NewDecoder(f)
 	for d.More() {
 		if err = d.Decode(&c); err != nil {
@@ -88,17 +88,17 @@ func loadConfig(config map[string]interface{}, configFile string) (map[string]in
 }
 
 // Two objects are merged on a field-by-field basis; two arrays are combined.  All others/other combinations add or replace.
-func mergeMaps(dst map[string]interface{}, src map[string]interface{}) map[string]interface{} {
+func mergeMaps(dst map[string]any, src map[string]any) map[string]any {
 	for k, v := range src {
 		switch t := v.(type) {
-		case map[string]interface{}:
-			if existing, ok := dst[k].(map[string]interface{}); ok {
+		case map[string]any:
+			if existing, ok := dst[k].(map[string]any); ok {
 				dst[k] = mergeMaps(existing, t)
 			} else {
 				dst[k] = t
 			}
-		case []interface{}:
-			if existing, ok := dst[k].([]interface{}); ok {
+		case []any:
+			if existing, ok := dst[k].([]any); ok {
 				dst[k] = append(existing, t...)
 			} else {
 				dst[k] = t
@@ -110,7 +110,7 @@ func mergeMaps(dst map[string]interface{}, src map[string]interface{}) map[strin
 	return dst
 }
 
-func processConfig(config map[string]interface{}) error {
+func processConfig(config map[string]any) error {
 	var err error
 	if lf, ok := config["logfile"].(string); ok {
 		f, err := os.OpenFile(lf, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
@@ -141,7 +141,7 @@ func processConfig(config map[string]interface{}) error {
 		logging.Errorf("%v", err)
 		return err
 	} else {
-		if database, ok := v.(map[string]interface{}); !ok {
+		if database, ok := v.(map[string]any); !ok {
 			err := fmt.Errorf("Invalid configuration: \"database\" element is not an object.")
 			logging.Errorf("%v", err)
 			return err
@@ -159,7 +159,7 @@ func processConfig(config map[string]interface{}) error {
 		logging.Errorf("%v", err)
 		return err
 	} else {
-		if rt, ok := v.(map[string]interface{}); !ok {
+		if rt, ok := v.(map[string]any); !ok {
 			err := fmt.Errorf("Invalid configuration: \"runtime\" element is not an object.")
 			logging.Errorf("%v", err)
 			return err
@@ -171,12 +171,12 @@ func processConfig(config map[string]interface{}) error {
 	}
 
 	if v, ok := config["notifications"]; ok {
-		if m, ok := v.(map[string]interface{}); !ok {
+		if m, ok := v.(map[string]any); !ok {
 			err := fmt.Errorf("Invalid configuration: \"notifications\" element is not an object.")
 			logging.Errorf("%v", err)
 			return err
 		} else {
-			Notifications = make(map[string]interface{})
+			Notifications = make(map[string]any)
 			for k, v := range m {
 				if k[0] != '#' {
 					Notifications[k] = v
@@ -188,13 +188,13 @@ func processConfig(config map[string]interface{}) error {
 }
 
 // loads queries from "location" (if present) and invoked database random query generation if need be
-func getQueries(config map[string]interface{}) error {
+func getQueries(config map[string]any) error {
 	if Queries == nil {
 		Queries = make([]*Query, 0, 100)
 	} else {
 		Queries = Queries[:0]
 	}
-	stmts, ok := config["statements"].(map[string]interface{})
+	stmts, ok := config["statements"].(map[string]any)
 	if !ok {
 		err := fmt.Errorf("Invalid configuration: \"statements\" field not found or is not an object.")
 		logging.Errorf("%v", err)
@@ -223,7 +223,7 @@ func getQueries(config map[string]interface{}) error {
 		logging.Debugf("\"initial_statements\" not found or is not a string.")
 	}
 
-	rs, ok := stmts["random_statements"].(map[string]interface{})
+	rs, ok := stmts["random_statements"].(map[string]any)
 	if ok {
 		// Directly adds to the Queries list so generated entries can be used as sub-queries by subsequent generations
 		DB.generateQueries(NewRandomRange(rs, 0).get())
@@ -243,7 +243,7 @@ func getQueries(config map[string]interface{}) error {
 	}
 
 	IgnoredErrors = make(map[int]bool)
-	ie, ok := stmts["ignore_errors"].([]interface{})
+	ie, ok := stmts["ignore_errors"].([]any)
 	if ok {
 		for i := range ie {
 			if f, ok := ie[i].(float64); ok {
@@ -312,7 +312,7 @@ func main() {
 		Queries = nil
 		// load the config every time so that changes are dynamically picked up
 		// merge the listed configuration files, in order
-		c := make(map[string]interface{}, 5)
+		c := make(map[string]any, 5)
 		for _, cf := range configFiles {
 			var err error
 			c, err = loadConfig(c, cf)
@@ -401,7 +401,7 @@ func main() {
 			continue
 		}
 		logging.Infof("Iteration %v complete.", iter)
-		var report []interface{}
+		var report []any
 		for i := range Queries {
 			b, _ := json.MarshalIndent(Queries[i], "  ", "  ")
 			if Queries[i].reportAsFailed() {
@@ -429,7 +429,7 @@ func main() {
 	notify("Testing complete.")
 }
 
-func reportRunFailure(iter uint64, args ...interface{}) {
+func reportRunFailure(iter uint64, args ...any) {
 	logging.Fatalf("Iteration %d failed ======================================================", iter)
 
 	files := make([]string, 10)
@@ -462,7 +462,7 @@ func reportRunFailure(iter uint64, args ...interface{}) {
 		logging.Errorf("Failure when running cbqueryreportgen: %v", err)
 	}
 
-	content := make([]interface{}, len(args)+1, len(args)+3)
+	content := make([]any, len(args)+1, len(args)+3)
 	content[0] = fmt.Sprintf("Iteration %d failed.", iter)
 	copy(content[1:], args)
 

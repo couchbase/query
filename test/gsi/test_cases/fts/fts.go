@@ -54,14 +54,14 @@ func isFTSPresent() bool {
 		return false
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return false
 	}
 
-	_, ok := data["nodesExt"].([]interface{})[0].(map[string]interface{})["services"].(map[string]interface{})["fts"]
+	_, ok := data["nodesExt"].([]any)[0].(map[string]any)["services"].(map[string]any)["fts"]
 
 	return ok
 }
@@ -148,7 +148,7 @@ func setupftsIndex() error {
 		return err
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 
 	err = json.Unmarshal(respbody, &data)
 	if err != nil {
@@ -179,7 +179,7 @@ func deleteFTSIndex() error {
 		return err
 	}
 
-	var data map[string]interface{}
+	var data map[string]any
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {

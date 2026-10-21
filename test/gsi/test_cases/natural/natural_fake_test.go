@@ -36,11 +36,11 @@ import (
 // carrying the given assistant content and canned token usage.
 func writeChatCompletion(w http.ResponseWriter, content string) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"choices": []map[string]interface{}{
-			{"message": map[string]interface{}{"content": content}},
+	json.NewEncoder(w).Encode(map[string]any{
+		"choices": []map[string]any{
+			{"message": map[string]any{"content": content}},
 		},
-		"usage": map[string]interface{}{
+		"usage": map[string]any{
 			"prompt_tokens":     11,
 			"completion_tokens": 7,
 			"total_tokens":      18,
@@ -50,8 +50,8 @@ func writeChatCompletion(w http.ResponseWriter, content string) {
 
 // slmConfig builds a natural_config object targeting the fake server via the slm
 // provider.
-func slmConfig(endpoint string) map[string]interface{} {
-	return map[string]interface{}{
+func slmConfig(endpoint string) map[string]any {
+	return map[string]any{
 		"provider": "slm",
 		"endpoint": endpoint,
 		"model":    "test-model",
@@ -59,8 +59,8 @@ func slmConfig(endpoint string) map[string]interface{} {
 }
 
 // runNatural runs a natural-language statement with the given natural_config.
-func runNatural(qc *gsi.MockServer, stmt string, cfg map[string]interface{}) *gsi.RunResult {
-	qp := map[string]interface{}{"natural_config": cfg}
+func runNatural(qc *gsi.MockServer, stmt string, cfg map[string]any) *gsi.RunResult {
+	qp := map[string]any{"natural_config": cfg}
 	return gsi.Run(qc, qp, stmt, gsi.Namespace_CBS, nil, nil, nil)
 }
 
@@ -80,9 +80,9 @@ func beginChatAs(qc *gsi.MockServer, keyspace string, userArgs map[string]string
 
 // runNaturalChat runs a conversational natural-language turn against an existing
 // chat id, optionally as a specific user (nil uses the default all-users creds).
-func runNaturalChat(qc *gsi.MockServer, stmt string, cfg map[string]interface{}, chatId string,
+func runNaturalChat(qc *gsi.MockServer, stmt string, cfg map[string]any, chatId string,
 	userArgs map[string]string) *gsi.RunResult {
-	qp := map[string]interface{}{"natural_config": cfg, "natural_chatid": chatId}
+	qp := map[string]any{"natural_config": cfg, "natural_chatid": chatId}
 	return gsi.Run(qc, qp, stmt, gsi.Namespace_CBS, nil, nil, userArgs)
 }
 

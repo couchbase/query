@@ -410,8 +410,8 @@ func isSameBuild(uri string, bld int) bool {
 
 // checks to see if the currently installed build can and should be updated
 // does nothing if the process isn't running as root
-func installServer(c map[string]interface{}, force bool) error {
-	cs, ok := c["cluster_setup"].(map[string]interface{})
+func installServer(c map[string]any, force bool) error {
+	cs, ok := c["cluster_setup"].(map[string]any)
 	if !ok {
 		logging.Errorf("Configuration element \"cluster_setup\" not found or not an object.")
 		return os.ErrNotExist
@@ -460,14 +460,14 @@ func installServer(c map[string]interface{}, force bool) error {
 }
 
 // creates the couchbase server instance and specified keyspaces
-func configureInstance(c map[string]interface{}) error {
+func configureInstance(c map[string]any) error {
 	//logging.Debugf("%v", c)
 	var clusterInitArgs string
 	var nodeInitArgs string
 	var ok bool
 	var err error
 
-	cs, ok := c["cluster_setup"].(map[string]interface{})
+	cs, ok := c["cluster_setup"].(map[string]any)
 	if !ok {
 		logging.Fatalf("Configuration element \"cluster_setup\" not found or not an object.")
 		return os.ErrNotExist

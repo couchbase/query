@@ -408,7 +408,7 @@ func (this *Query) AsSubQuery() string {
 	return "(" + sql + ")"
 }
 
-func (this *Query) Execute(requestParams map[string]interface{}) error {
+func (this *Query) Execute(requestParams map[string]any) error {
 	atomic.AddUint64(&this.executions, 1)
 	var results int
 	var elapsed time.Duration
@@ -437,15 +437,15 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 			switch fn {
 			case "errors":
 				// read the errors as a single object
-				var i interface{}
+				var i any
 				if derr = dec.Decode(&i); derr != nil {
 					return fmt.Errorf("JSON decode of errors failed: (%T) %v", derr, derr)
 				}
-				if ai, ok := i.([]interface{}); !ok {
+				if ai, ok := i.([]any); !ok {
 					return fmt.Errorf("Invalid type for errors field: %T", i)
 				} else {
 					for n := range ai {
-						if m, ok := ai[n].(map[string]interface{}); ok {
+						if m, ok := ai[n].(map[string]any); ok {
 							if c, ok := m["code"].(float64); ok {
 								errs = append(errs, int(c))
 							}
@@ -531,7 +531,7 @@ func (this *Query) Execute(requestParams map[string]interface{}) error {
 
 func (this *Query) MarshalJSON() ([]byte, error) {
 	this.Lock()
-	m := map[string]interface{}{
+	m := map[string]any{
 		"statement":     this.doSQL("", false),
 		"executions":    this.executions,
 		"failed":        this.failed,

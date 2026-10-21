@@ -39,9 +39,9 @@ func newKeyspace(name string) (*Keyspace, error) {
 	return ks, nil
 }
 
-func NewKeyspace(i interface{}, createIndexes bool) (*Keyspace, map[string]interface{}, error) {
+func NewKeyspace(i any, createIndexes bool) (*Keyspace, map[string]any, error) {
 	logging.Tracef("%v", i)
-	keyspace, ok := i.(map[string]interface{})
+	keyspace, ok := i.(map[string]any)
 	if !ok {
 		return nil, nil, fmt.Errorf("Keyspace is not an object.")
 	}
@@ -55,7 +55,7 @@ func NewKeyspace(i interface{}, createIndexes bool) (*Keyspace, map[string]inter
 		return nil, nil, err
 	}
 
-	schemas, ok := keyspace["schemas"].([]interface{})
+	schemas, ok := keyspace["schemas"].([]any)
 	if !ok {
 		return nil, nil, fmt.Errorf("Keyspace %s lacks valid \"schemas\" field.", ks.name)
 	}
@@ -69,7 +69,7 @@ func NewKeyspace(i interface{}, createIndexes bool) (*Keyspace, map[string]inter
 	}
 
 	if createIndexes {
-		indexes, ok := keyspace["indexes"].([]interface{})
+		indexes, ok := keyspace["indexes"].([]any)
 		if ok {
 			for j := range indexes {
 				idx, err := NewIndex(indexes[j])
@@ -81,7 +81,7 @@ func NewKeyspace(i interface{}, createIndexes bool) (*Keyspace, map[string]inter
 		}
 	}
 
-	joins, ok := keyspace["joins"].([]interface{})
+	joins, ok := keyspace["joins"].([]any)
 	if ok {
 		for j := range joins {
 			join, err := NewJoin(joins[j])
@@ -92,9 +92,9 @@ func NewKeyspace(i interface{}, createIndexes bool) (*Keyspace, map[string]inter
 		}
 	}
 
-	var bucketConfig map[string]interface{}
+	var bucketConfig map[string]any
 	if c, ok := keyspace["bucket-config"]; ok {
-		if bucketConfig, ok = c.(map[string]interface{}); !ok {
+		if bucketConfig, ok = c.(map[string]any); !ok {
 			logging.Warnf("Invalid \"bucket-config\" element for keyspace %s.", ks.name)
 		}
 	}
@@ -121,7 +121,7 @@ func NewRandomKeyspace(name string, docs *RandomRange, schemas *RandomRange, fie
 // ---------------------------------------------------------------------------------------------------------------------------------
 
 func (this *Keyspace) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"name":    this.name,
 		"schemas": this.schemas,
 		"indexes": this.indexes,

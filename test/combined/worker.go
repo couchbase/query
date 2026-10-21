@@ -21,7 +21,7 @@ import (
 )
 
 // runs random queries until signalled to stop
-func worker(id uint, stop chan bool, requestParams map[string]interface{}) {
+func worker(id uint, stop chan bool, requestParams map[string]any) {
 	var failed int
 	for rn := 0; ; rn++ {
 		select {
@@ -43,7 +43,7 @@ func worker(id uint, stop chan bool, requestParams map[string]interface{}) {
 
 var wg sync.WaitGroup
 
-func runWorkers(num uint, duration time.Duration, requestParams map[string]interface{}) error {
+func runWorkers(num uint, duration time.Duration, requestParams map[string]any) error {
 	var err error
 	var queryPID int
 	// get the current Query service PID for monitoring
@@ -92,8 +92,8 @@ loop:
 	return err
 }
 
-func RunTest(config map[string]interface{}) error {
-	rt, ok := config["runtime"].(map[string]interface{})
+func RunTest(config map[string]any) error {
+	rt, ok := config["runtime"].(map[string]any)
 	if !ok {
 		err := fmt.Errorf("Invalid configuration: \"runtime\" field not found or is not an object.")
 		logging.Errorf("%v", err)
@@ -103,12 +103,12 @@ func RunTest(config map[string]interface{}) error {
 	numClients := uint(1)
 	var err error
 	var duration time.Duration
-	var requestParams map[string]interface{}
+	var requestParams map[string]any
 
 	for k, v := range rt {
 		switch k {
 		case "clients":
-			m, ok := v.(map[string]interface{})
+			m, ok := v.(map[string]any)
 			if !ok {
 				err := fmt.Errorf("\"runtime\".\"clients\" is not an object.")
 				logging.Errorf("%v", err)
@@ -128,7 +128,7 @@ func RunTest(config map[string]interface{}) error {
 				return err
 			}
 		case "request":
-			m, ok := v.(map[string]interface{})
+			m, ok := v.(map[string]any)
 			if !ok {
 				err := fmt.Errorf("\"runtime\".\"request\" is not an object.")
 				logging.Errorf("%v", err)
@@ -137,7 +137,7 @@ func RunTest(config map[string]interface{}) error {
 			for k, v := range m {
 				if k[0] != '#' { // allow for "commenting out" elements
 					if requestParams == nil {
-						requestParams = make(map[string]interface{})
+						requestParams = make(map[string]any)
 					}
 					requestParams[k] = v
 				}

@@ -44,7 +44,7 @@ func gocb_SetupXattr() {
 	bucket := cluster.Bucket("product")
 
 	bucket.WaitUntilReady(2*time.Second, nil)
-	var _sync = map[string]interface{}{"name": "Information about products", "id": 23}
+	var _sync = map[string]any{"name": "Information about products", "id": 23}
 	var userAttr = [2]string{"Product 1", "Product 10"}
 
 	// Add key-value pairs to hotel_10138, representing traveller-Ids and associated discount percentages

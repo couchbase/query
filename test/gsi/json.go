@@ -68,7 +68,7 @@ var Query_CBS = "127.0.0.1:6093" // so we can start a test instance with a liste
 var FTS_API_PATH = "api/index/"
 var Namespace_CBS = "default"
 var Consistency_parameter = datastore.SCAN_PLUS
-var curlAllowlist = map[string]interface{}{"all_access": true}
+var curlAllowlist = map[string]any{"all_access": true}
 var NodeServices = "pools/default/nodeServices"
 var Subpath_advise = []string{"indexes", "covering_indexes"}
 
@@ -82,7 +82,7 @@ func init() {
 }
 
 type RunResult struct {
-	Results            []interface{}
+	Results            []any
 	Warnings           []errors.Error
 	Err                errors.Error
 	SortCount          int
@@ -100,11 +100,11 @@ type RunResult struct {
 	// (promptTokens/completionTokens/totalTokens), mirroring the "requestTokens"
 	// response field. Nil when none was spent (non-natural request, Capella path,
 	// or a lifecycle command that made no LLM call), matching FmtNaturalRequestTokens.
-	RequestTokens map[string]interface{}
+	RequestTokens map[string]any
 	// ChatTokens is the running conversation total, mirroring the "chatTokens"
 	// response field. Nil for a non-chat request or a Capella-path chat, matching
 	// FmtNaturalChatTokens.
-	ChatTokens map[string]interface{}
+	ChatTokens map[string]any
 }
 
 type MockQuery struct {
@@ -223,7 +223,7 @@ func (this *MockQuery) Result(item value.AnnotatedValue) bool {
 
 	this.resultCount++
 
-	var resultLine interface{}
+	var resultLine any
 
 	json.Unmarshal(bytes, &resultLine)
 
@@ -247,7 +247,7 @@ func (this *MockQuery) AdmissionWaitTime() time.Duration {
 
 type MockResponse struct {
 	err           errors.Error
-	results       []interface{}
+	results       []any
 	generatedStmt bool
 	warnings      []errors.Error
 	done          chan bool
@@ -278,7 +278,7 @@ func (this *scanConfigImpl) ScanVectorSource() timestamp.ScanVectorSource {
 	return &http.ZeroScanVectorSource{}
 }
 
-func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) interface{} {
+func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) any {
 	return this
 }
 
@@ -303,12 +303,12 @@ func (this *MockServer) setTxId(group int, txId string) {
 	}
 }
 
-func (this *MockServer) saveTxId(group int, reqType string, res []interface{}) {
+func (this *MockServer) saveTxId(group int, reqType string, res []any) {
 	var txId string
 	switch reqType {
 	case "START_TRANSACTION":
 		if len(res) > 0 {
-			if fields, ok := res[0].(map[string]interface{}); ok {
+			if fields, ok := res[0].(map[string]any); ok {
 				txId, _ = fields["txid"].(string)
 			}
 		}
@@ -336,17 +336,17 @@ This method is used to execute the N1QL query represented by
 the input argument (q) string using the NewBaseRequest method
 as defined in the server request.go.
 */
-func Run(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
+func Run(mockServer *MockServer, queryParams map[string]any, q, namespace string, namedArgs map[string]value.Value,
 	positionalArgs value.Values, userArgs map[string]string) *RunResult {
 	return run(mockServer, queryParams, q, namespace, namedArgs, positionalArgs, userArgs, false)
 }
 
-func RunPrepared(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
+func RunPrepared(mockServer *MockServer, queryParams map[string]any, q, namespace string, namedArgs map[string]value.Value,
 	positionalArgs value.Values) *RunResult {
 	return run(mockServer, queryParams, q, namespace, namedArgs, positionalArgs, nil, true)
 }
 
-func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespace string, namedArgs map[string]value.Value,
+func run(mockServer *MockServer, queryParams map[string]any, q, namespace string, namedArgs map[string]value.Value,
 	positionalArgs value.Values, userArgs map[string]string, prepare bool) *RunResult {
 
 	var metrics value.Tristate
@@ -368,7 +368,7 @@ func run(mockServer *MockServer, queryParams map[string]interface{}, q, namespac
 	consistency := &scanConfigImpl{scan_level: scan_consistency}
 
 	mr := &MockResponse{
-		results: []interface{}{}, warnings: []errors.Error{}, done: make(chan bool),
+		results: []any{}, warnings: []errors.Error{}, done: make(chan bool),
 	}
 	query := &MockQuery{
 		response: mr,
@@ -634,33 +634,33 @@ func Start(site, pool, namespace string, setGlobals, startHttpServer bool) *Mock
 	return mockServer
 }
 
-func dropResultEntry(result interface{}, e string) {
+func dropResultEntry(result any, e string) {
 	switch v := result.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		delete(v, e)
 		for _, f := range v {
 			dropResultEntry(f, e)
 		}
-	case []interface{}:
+	case []any:
 		for _, f := range v {
 			dropResultEntry(f, e)
 		}
 	}
 }
 
-func dropResultsEntry(results []interface{}, entry interface{}) {
+func dropResultsEntry(results []any, entry any) {
 	e := fmt.Sprintf("%v", entry)
 	for _, r := range results {
 		dropResultEntry(r, e)
 	}
 }
 
-func addResultsEntry(newResults, results []interface{}, entry interface{}) {
+func addResultsEntry(newResults, results []any, entry any) {
 	e := fmt.Sprintf("%v", entry)
 	for i, r := range results {
-		v, ok := r.(map[string]interface{})
+		v, ok := r.(map[string]any)
 		if ok {
-			newV, ok := newResults[i].(map[string]interface{})
+			newV, ok := newResults[i].(map[string]any)
 			if ok {
 				newV[e] = v[e]
 			}
@@ -685,7 +685,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		return
 	}
 
-	var cases []map[string]interface{}
+	var cases []map[string]any
 
 	err = json.Unmarshal(b, &cases)
 	if err != nil {
@@ -728,7 +728,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		var namedArgs map[string]value.Value
 		var positionalArgs value.Values
 		var userArgs map[string]string
-		var queryParams map[string]interface{}
+		var queryParams map[string]any
 		if n, ok1 := c["namedArgs"]; ok1 {
 			nv := value.NewValue(n)
 			size := len(nv.Fields())
@@ -741,17 +741,17 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 			}
 		}
 		if p, ok2 := c["positionalArgs"]; ok2 {
-			if pa, ok3 := p.([]interface{}); ok3 {
+			if pa, ok3 := p.([]any); ok3 {
 				for _, v := range pa {
 					positionalArgs = append(positionalArgs, value.NewValue(v))
 				}
 			}
 		}
 		if qp, ok := c["queryParams"]; ok {
-			queryParams, _ = qp.(map[string]interface{})
+			queryParams, _ = qp.(map[string]any)
 		}
 		if u, ok_u := c["userArgs"]; ok_u {
-			uv, ok_uv := value.NewValue(u).Actual().(map[string]interface{})
+			uv, ok_uv := value.NewValue(u).Actual().(map[string]any)
 			if ok_uv {
 				userArgs = make(map[string]string, len(uv))
 				for user, password := range uv {
@@ -768,19 +768,19 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		_, hasNaturalConfig := queryParams["natural_config"]
 		if naturalCred := os.Getenv("natural_cred"); naturalCred != "" && !hasNaturalConfig {
 			if queryParams == nil {
-				queryParams = map[string]interface{}{}
+				queryParams = map[string]any{}
 			}
 			queryParams["natural_cred"] = naturalCred
 		}
 		if naturalOrgID := os.Getenv("natural_orgid"); naturalOrgID != "" && !hasNaturalConfig {
 			if queryParams == nil {
-				queryParams = map[string]interface{}{}
+				queryParams = map[string]any{}
 			}
 			queryParams["natural_orgid"] = naturalOrgID
 		}
 		if naturalHint := os.Getenv("natural_hint"); naturalHint != "" {
 			if queryParams == nil {
-				queryParams = map[string]interface{}{}
+				queryParams = map[string]any{}
 			}
 			queryParams["natural_hint"] = naturalHint
 		}
@@ -900,16 +900,16 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		ignore, ok := c["ignore"]
 		if ok {
 			switch ignore.(type) {
-			case []interface{}:
-				for _, v := range ignore.([]interface{}) {
+			case []any:
+				for _, v := range ignore.([]any) {
 					switch v.(type) {
-					case []interface{}:
-					case map[string]interface{}:
+					case []any:
+					case map[string]any:
 					default:
 						dropResultsEntry(rr.Results, v)
 					}
 				}
-			case map[string]interface{}:
+			case map[string]any:
 			default:
 				dropResultsEntry(rr.Results, ignore)
 			}
@@ -919,24 +919,24 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		// again, we handle scalars and the scalars in an array
 		accept, ok := c["accept"]
 		if ok {
-			newResults := make([]interface{}, len(rr.Results))
+			newResults := make([]any, len(rr.Results))
 			switch accept.(type) {
-			case []interface{}:
+			case []any:
 				for j, _ := range rr.Results {
-					newResults[j] = make(map[string]interface{}, len(accept.([]interface{})))
+					newResults[j] = make(map[string]any, len(accept.([]any)))
 				}
-				for _, v := range accept.([]interface{}) {
+				for _, v := range accept.([]any) {
 					switch v.(type) {
-					case []interface{}:
-					case map[string]interface{}:
+					case []any:
+					case map[string]any:
 					default:
 						addResultsEntry(newResults, rr.Results, v)
 					}
 				}
-			case map[string]interface{}:
+			case map[string]any:
 			default:
 				for j, _ := range rr.Results {
-					newResults[j] = make(map[string]interface{}, 1)
+					newResults[j] = make(map[string]any, 1)
 				}
 				addResultsEntry(newResults, rr.Results, accept)
 			}
@@ -946,7 +946,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 		if ok {
 			if isAdvise, ok := c["advise"]; ok {
 				if isAdvise, ok := isAdvise.(bool); ok && isAdvise {
-					resultsExpected := v.([]interface{})
+					resultsExpected := v.([]any)
 					for _, sub := range Subpath_advise {
 						okres := doResultsMatch(getAdviseResults(sub, rr.Results), getAdviseResults(sub, resultsExpected), ordered,
 							statements, fname, i, b)
@@ -957,7 +957,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 					}
 				}
 			} else {
-				resultsExpected := v.([]interface{})
+				resultsExpected := v.([]any)
 				okres := doResultsMatch(rr.Results, resultsExpected, ordered, statements, fname, i, b)
 				if okres != nil {
 					errstring = okres
@@ -991,7 +991,7 @@ func FtestCaseFile(fname string, prepared, explain bool, qc *MockServer, namespa
 Matches expected results with the results obtained by
 running the queries.
 */
-func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, stmt, fname string, i int,
+func doResultsMatch(resultsActual, resultsExpected []any, ordered bool, stmt, fname string, i int,
 	content []byte) (errstring error) {
 
 	ffname, e := filepath.Abs(fname)
@@ -1033,11 +1033,11 @@ func doResultsMatch(resultsActual, resultsExpected []interface{}, ordered bool, 
 	return nil
 }
 
-func diff(a interface{}, b interface{}) string {
+func diff(a any, b any) string {
 	return diffpkg.Diff(prettyPrint(a), prettyPrint(b))
 }
 
-func prettyPrint(what interface{}) string {
+func prettyPrint(what any) string {
 	res, err := json.MarshalIndent(what, "", "  ")
 	if err != nil {
 		res = []byte(fmt.Sprintf("%v", what))
@@ -1087,15 +1087,15 @@ func findIndex(content []byte, index int) string {
 	return ""
 }
 
-func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace string, statement string, c map[string]interface{},
+func checkExplain(qc *MockServer, queryParams map[string]any, namespace string, statement string, c map[string]any,
 	ordered bool, namedArgs map[string]value.Value, positionalArgs value.Values, fname string, i int,
 	content []byte) (errstring error) {
 
-	var ev map[string]interface{}
+	var ev map[string]any
 
 	e, ok := c["explain"]
 	if ok {
-		ev, ok = e.(map[string]interface{})
+		ev, ok = e.(map[string]any)
 	}
 
 	if !ok {
@@ -1103,7 +1103,7 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	}
 
 	var eStmt string
-	var erExpected []interface{}
+	var erExpected []any
 
 	ed, dok := ev["disabled"]
 	es, sok := ev["statement"]
@@ -1125,7 +1125,7 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	}
 
 	if rok {
-		erExpected, rok = er.([]interface{})
+		erExpected, rok = er.([]any)
 	}
 
 	useArgs := false
@@ -1166,7 +1166,7 @@ func checkExplain(qc *MockServer, queryParams map[string]interface{}, namespace 
 	return
 }
 
-func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, statement string) (*plan.Prepared, errors.Error) {
+func PrepareStmt(qc *MockServer, queryParams map[string]any, namespace, statement string) (*plan.Prepared, errors.Error) {
 
 	feat_ctrl := util.GetN1qlFeatureControl()
 	if !util.IsFeatureEnabled(feat_ctrl, util.N1QL_ENCODED_PLAN) {
@@ -1186,7 +1186,7 @@ func PrepareStmt(qc *MockServer, queryParams map[string]interface{}, namespace, 
 	if len(rr.Results) != 1 {
 		return nil, errors.NewError(nil, fmt.Sprintf("Error %#v FOR (%v)", prepareStmt, rr.Results))
 	}
-	ra := rr.Results[0].(map[string]interface{})
+	ra := rr.Results[0].(map[string]any)
 
 	// if already tried decodeing just get on with it
 	qc.RLock()
@@ -1274,9 +1274,9 @@ func RunAdminStmt(mockServer *MockServer, q string) *RunResult {
 	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, _TEST_ADMIN_USER)
 }
 
-func getAdviseResults(subpath string, result []interface{}) []interface{} {
+func getAdviseResults(subpath string, result []any) []any {
 	for _, v := range result {
-		v, ok := value.NewValue(v).Actual().(map[string]interface{})
+		v, ok := value.NewValue(v).Actual().(map[string]any)
 		if !ok {
 			continue
 		}
@@ -1284,7 +1284,7 @@ func getAdviseResults(subpath string, result []interface{}) []interface{} {
 		if !ok {
 			continue
 		}
-		v1a, ok := value.NewValue(v1).Actual().(map[string]interface{})
+		v1a, ok := value.NewValue(v1).Actual().(map[string]any)
 		if !ok {
 			continue
 		}
@@ -1292,7 +1292,7 @@ func getAdviseResults(subpath string, result []interface{}) []interface{} {
 		if !ok {
 			continue
 		}
-		v2a, ok := value.NewValue(v2).Actual().(map[string]interface{})
+		v2a, ok := value.NewValue(v2).Actual().(map[string]any)
 		if !ok {
 			continue
 		}
@@ -1300,13 +1300,13 @@ func getAdviseResults(subpath string, result []interface{}) []interface{} {
 		if !ok {
 			continue
 		}
-		v3a, ok := value.NewValue(v3).Actual().(map[string]interface{})
+		v3a, ok := value.NewValue(v3).Actual().(map[string]any)
 		if !ok {
 			continue
 		}
 		v4, ok := v3a[subpath]
 		if ok {
-			return value.NewValue(v4).Actual().([]interface{})
+			return value.NewValue(v4).Actual().([]any)
 		}
 		//for k4, v4 := range v3a {
 		//	if k4 == subpath {

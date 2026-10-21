@@ -20,11 +20,11 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-func NewField(i interface{}) (Field, error) {
+func NewField(i any) (Field, error) {
 	logging.Tracef("%d", i)
 	var err error
 	var ok bool
-	defn, ok := i.(map[string]interface{})
+	defn, ok := i.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("Field definition is not an object.")
 	}
@@ -39,7 +39,7 @@ func NewField(i interface{}) (Field, error) {
 		return &AnyField{FieldBase{name: name, fixed: false, optional: o, nullable: n}}, nil
 	}
 	switch t := t.(type) {
-	case map[string]interface{}: // array
+	case map[string]any: // array
 		f := &ArrayField{FieldBase: FieldBase{typ: _FT_ARRAY, name: name, optional: o, nullable: n}}
 		v, ok := defn["length"]
 		if !ok {
@@ -52,7 +52,7 @@ func NewField(i interface{}) (Field, error) {
 			return nil, fmt.Errorf("Error in definition of \"%s\": %v.", name, err)
 		}
 		return f, nil
-	case []interface{}: // object
+	case []any: // object
 		f := &ObjectField{FieldBase: FieldBase{typ: _FT_OBJECT, name: name, optional: o, nullable: n}}
 		if len(t) > 0 {
 			f.fields = make([]Field, 0, len(t))
@@ -104,7 +104,7 @@ func NewField(i interface{}) (Field, error) {
 				return nil, fmt.Errorf("Error in definition of \"%s\": %v", name, err)
 			}
 			if v, ok := defn["values"]; ok {
-				if l, ok := v.([]interface{}); !ok {
+				if l, ok := v.([]any); !ok {
 					return nil, fmt.Errorf("Error in definition of \"%s\": \"values\" is not an array.", name)
 				} else {
 					for i := range l {
@@ -127,7 +127,7 @@ func NewField(i interface{}) (Field, error) {
 			}
 			v, ok := defn["values"]
 			if ok {
-				if l, ok := v.([]interface{}); !ok {
+				if l, ok := v.([]any); !ok {
 					return nil, fmt.Errorf("Error in definition of \"%s\": \"values\" is not an array.", name)
 				} else {
 					for i := range l {
@@ -186,7 +186,7 @@ func NewField(i interface{}) (Field, error) {
 			}
 			v, ok := defn["values"]
 			if ok {
-				if l, ok := v.([]interface{}); !ok {
+				if l, ok := v.([]any); !ok {
 					return nil, fmt.Errorf("Error in definition of \"%s\": \"values\" is not an array.", name)
 				} else {
 					for i := range l {
@@ -245,7 +245,7 @@ func NewField(i interface{}) (Field, error) {
 			}
 			v, ok := defn["values"]
 			if ok {
-				if l, ok := v.([]interface{}); !ok {
+				if l, ok := v.([]any); !ok {
 					return nil, fmt.Errorf("Error in definition of \"%s\": \"values\" is not an array.", name)
 				} else {
 					for i := range l {
@@ -275,7 +275,7 @@ func NewField(i interface{}) (Field, error) {
 			}
 			v, ok := defn["values"]
 			if ok {
-				if l, ok := v.([]interface{}); !ok {
+				if l, ok := v.([]any); !ok {
 					return nil, fmt.Errorf("Error in definition of \"%s\": \"values\" is not an array.", name)
 				} else {
 					for i := range l {
@@ -344,7 +344,7 @@ func NewField(i interface{}) (Field, error) {
 	return nil, fmt.Errorf("Internal error")
 }
 
-func getInt(m map[string]interface{}, f string) (bool, int, error) {
+func getInt(m map[string]any, f string) (bool, int, error) {
 	i, ok := m[f]
 	if !ok {
 		return false, 0, nil
@@ -356,7 +356,7 @@ func getInt(m map[string]interface{}, f string) (bool, int, error) {
 	}
 }
 
-func getFloat(m map[string]interface{}, f string) (bool, float64, error) {
+func getFloat(m map[string]any, f string) (bool, float64, error) {
 	i, ok := m[f]
 	if !ok {
 		return false, 0, nil
@@ -368,7 +368,7 @@ func getFloat(m map[string]interface{}, f string) (bool, float64, error) {
 	}
 }
 
-func getString(m map[string]interface{}, f string) (bool, string, error) {
+func getString(m map[string]any, f string) (bool, string, error) {
 	i, ok := m[f]
 	if !ok {
 		return false, "", nil
@@ -380,7 +380,7 @@ func getString(m map[string]interface{}, f string) (bool, string, error) {
 	}
 }
 
-func getBool(m map[string]interface{}, f string) (bool, bool, error) {
+func getBool(m map[string]any, f string) (bool, bool, error) {
 	i, ok := m[f]
 	if !ok {
 		return false, false, nil
@@ -392,7 +392,7 @@ func getBool(m map[string]interface{}, f string) (bool, bool, error) {
 	}
 }
 
-func getTime(m map[string]interface{}, f string) (bool, time.Time, error) {
+func getTime(m map[string]any, f string) (bool, time.Time, error) {
 	i, ok := m[f]
 	if !ok {
 		return false, time.Time{}, nil
@@ -627,7 +627,7 @@ type Field interface {
 	Copy() Field
 	Type() int
 	GenerateProjection(allowWildcards bool) string
-	GenerateValue() map[string]interface{}
+	GenerateValue() map[string]any
 	GenerateFilter(name string) string
 }
 
@@ -690,7 +690,7 @@ func (this *FieldBase) GenerateProjection(allowWildcards bool) string {
 	return this.name
 }
 
-func (this *FieldBase) GenerateValue() map[string]interface{} {
+func (this *FieldBase) GenerateValue() map[string]any {
 	return nil
 }
 
@@ -729,7 +729,7 @@ func (this *FieldBase) generateAsNullFilter() string {
 }
 
 func (this *FieldBase) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"name": this.name,
 	}
 	tn, ok := fieldType[this.typ]
@@ -764,7 +764,7 @@ type StringField struct {
 }
 
 func (this *StringField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base": &this.FieldBase,
 	}
 	if len(this.values) > 0 {
@@ -795,18 +795,18 @@ func (this *StringField) Copy() Field {
 	return c
 }
 
-func (this *StringField) GenerateValue() map[string]interface{} {
+func (this *StringField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
 	if this.generateAsNull() {
-		return map[string]interface{}{this.name: nil}
+		return map[string]any{this.name: nil}
 	}
 	if this.fixed {
 		if len(this.values) == 0 {
-			return map[string]interface{}{this.name: ""}
+			return map[string]any{this.name: ""}
 		} else {
-			return map[string]interface{}{this.name: this.values[0]}
+			return map[string]any{this.name: this.values[0]}
 		}
 	}
 	sb := &strings.Builder{}
@@ -846,7 +846,7 @@ func (this *StringField) GenerateValue() map[string]interface{} {
 		}
 	}
 	sb.WriteString(this.suffix)
-	return map[string]interface{}{this.name: sb.String()}
+	return map[string]any{this.name: sb.String()}
 }
 
 func (this *StringField) GenerateFilter(name string) string {
@@ -921,7 +921,7 @@ type IntField struct {
 }
 
 func (this *IntField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base": &this.FieldBase,
 	}
 	if len(this.values) > 0 {
@@ -955,30 +955,30 @@ func (this *IntField) Copy() Field {
 	return c
 }
 
-func (this *IntField) GenerateValue() map[string]interface{} {
+func (this *IntField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
 	if this.generateAsNull() {
-		return map[string]interface{}{this.name: nil}
+		return map[string]any{this.name: nil}
 	}
 	if this.fixed {
 		if len(this.values) == 0 {
-			return map[string]interface{}{this.name: this.min}
+			return map[string]any{this.name: this.min}
 		} else {
-			return map[string]interface{}{this.name: this.values[0]}
+			return map[string]any{this.name: this.values[0]}
 		}
 	}
 	if len(this.values) > 1 {
 		if this.random {
-			return map[string]interface{}{this.name: this.values[rand.Intn(len(this.values))]}
+			return map[string]any{this.name: this.values[rand.Intn(len(this.values))]}
 		}
 		n := this.count
 		this.count++
 		if this.count >= len(this.values) {
 			this.count = 0
 		}
-		return map[string]interface{}{this.name: this.values[n]}
+		return map[string]any{this.name: this.values[n]}
 	} else {
 		if this.random {
 			var n int
@@ -993,7 +993,7 @@ func (this *IntField) GenerateValue() map[string]interface{} {
 			if this.lwm > n {
 				this.lwm = n
 			}
-			return map[string]interface{}{this.name: n}
+			return map[string]any{this.name: n}
 		}
 		var v int
 		if len(this.values) >= 1 {
@@ -1014,7 +1014,7 @@ func (this *IntField) GenerateValue() map[string]interface{} {
 		if this.lwm > this.values[0] {
 			this.lwm = this.values[0]
 		}
-		return map[string]interface{}{this.name: v}
+		return map[string]any{this.name: v}
 	}
 }
 
@@ -1057,7 +1057,7 @@ type FloatField struct {
 }
 
 func (this *FloatField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base": &this.FieldBase,
 	}
 	if len(this.values) > 0 {
@@ -1091,30 +1091,30 @@ func (this *FloatField) Copy() Field {
 	return c
 }
 
-func (this *FloatField) GenerateValue() map[string]interface{} {
+func (this *FloatField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
 	if this.generateAsNull() {
-		return map[string]interface{}{this.name: nil}
+		return map[string]any{this.name: nil}
 	}
 	if this.fixed {
 		if len(this.values) == 0 {
-			return map[string]interface{}{this.name: this.min}
+			return map[string]any{this.name: this.min}
 		} else {
-			return map[string]interface{}{this.name: this.values[0]}
+			return map[string]any{this.name: this.values[0]}
 		}
 	}
 	if len(this.values) > 1 {
 		if this.random {
-			return map[string]interface{}{this.name: this.values[rand.Intn(len(this.values))]}
+			return map[string]any{this.name: this.values[rand.Intn(len(this.values))]}
 		}
 		n := this.count
 		this.count++
 		if this.count >= len(this.values) {
 			this.count = 0
 		}
-		return map[string]interface{}{this.name: this.values[n]}
+		return map[string]any{this.name: this.values[n]}
 	} else {
 		if this.random {
 			n := this.min + rand.Float64()*(this.max-this.min)
@@ -1124,7 +1124,7 @@ func (this *FloatField) GenerateValue() map[string]interface{} {
 			if this.lwm > n {
 				this.lwm = n
 			}
-			return map[string]interface{}{this.name: n}
+			return map[string]any{this.name: n}
 		}
 		var v float64
 		if len(this.values) >= 1 {
@@ -1145,7 +1145,7 @@ func (this *FloatField) GenerateValue() map[string]interface{} {
 		if this.lwm > this.values[0] {
 			this.lwm = this.values[0]
 		}
-		return map[string]interface{}{this.name: v}
+		return map[string]any{this.name: v}
 	}
 }
 
@@ -1183,7 +1183,7 @@ type BooleanField struct {
 }
 
 func (this *BooleanField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base": &this.FieldBase,
 	}
 	if len(this.values) > 0 {
@@ -1202,40 +1202,40 @@ func (this *BooleanField) Copy() Field {
 	return c
 }
 
-func (this *BooleanField) GenerateValue() map[string]interface{} {
+func (this *BooleanField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
 	if this.generateAsNull() {
-		return map[string]interface{}{this.name: nil}
+		return map[string]any{this.name: nil}
 	}
 	if this.fixed {
 		if len(this.values) == 0 {
-			return map[string]interface{}{this.name: false}
+			return map[string]any{this.name: false}
 		} else {
-			return map[string]interface{}{this.name: this.values[0]}
+			return map[string]any{this.name: this.values[0]}
 		}
 	}
 	if len(this.values) > 1 {
 		if this.random {
-			return map[string]interface{}{this.name: this.values[rand.Intn(len(this.values))]}
+			return map[string]any{this.name: this.values[rand.Intn(len(this.values))]}
 		}
 		n := this.count
 		this.count++
 		if this.count >= len(this.values) {
 			this.count = 0
 		}
-		return map[string]interface{}{this.name: this.values[n]}
+		return map[string]any{this.name: this.values[n]}
 	} else {
 		if this.random {
-			return map[string]interface{}{this.name: rand.Intn(10)%2 == 0}
+			return map[string]any{this.name: rand.Intn(10)%2 == 0}
 		}
 		if len(this.values) == 0 {
 			this.values = append(this.values, false)
 		}
 		v := this.values[0]
 		this.values[0] = !this.values[0]
-		return map[string]interface{}{this.name: v}
+		return map[string]any{this.name: v}
 	}
 }
 
@@ -1267,7 +1267,7 @@ type NullField struct {
 }
 
 func (this *NullField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base": &this.FieldBase,
 	}
 	return json.Marshal(m)
@@ -1280,11 +1280,11 @@ func (this *NullField) Copy() Field {
 	return c
 }
 
-func (this *NullField) GenerateValue() map[string]interface{} {
+func (this *NullField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
-	return map[string]interface{}{this.name: nil}
+	return map[string]any{this.name: nil}
 }
 
 func (this *NullField) GenerateFilter(name string) string {
@@ -1307,7 +1307,7 @@ type AnyField struct {
 }
 
 func (this *AnyField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base": &this.FieldBase,
 	}
 	return json.Marshal(m)
@@ -1325,7 +1325,7 @@ func (this *AnyField) randomField() Field {
 	return newRandomFieldWithBase(&this.FieldBase, false, true)
 }
 
-func (this *AnyField) GenerateValue() map[string]interface{} {
+func (this *AnyField) GenerateValue() map[string]any {
 	// no missing/any processing here so we don't amplify the chances of generating one of them
 	return this.randomField().GenerateValue()
 }
@@ -1343,7 +1343,7 @@ type ArrayField struct {
 }
 
 func (this *ArrayField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base":         &this.FieldBase,
 		"length":       this.length,
 		"element_type": this.elemType,
@@ -1370,21 +1370,21 @@ func (this *ArrayField) GenerateProjection(allowWildcards bool) string {
 	}
 }
 
-func (this *ArrayField) GenerateValue() map[string]interface{} {
+func (this *ArrayField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
 	if this.generateAsNull() {
-		return map[string]interface{}{this.name: nil}
+		return map[string]any{this.name: nil}
 	}
 	n := this.length
 	if this.random && n > 0 {
 		n = rand.Intn(n)
 	}
 	if n == 0 {
-		return map[string]interface{}{this.name: []interface{}{}}
+		return map[string]any{this.name: []any{}}
 	}
-	array := make([]interface{}, 0, n)
+	array := make([]any, 0, n)
 	for ; n > 0; n-- {
 		if val := this.elemType.GenerateValue(); val != nil {
 			for _, v := range val {
@@ -1393,7 +1393,7 @@ func (this *ArrayField) GenerateValue() map[string]interface{} {
 			}
 		}
 	}
-	return map[string]interface{}{this.name: array}
+	return map[string]any{this.name: array}
 }
 
 func (this *ArrayField) GenerateFilter(name string) string {
@@ -1418,7 +1418,7 @@ type ObjectField struct {
 }
 
 func (this *ObjectField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base":   &this.FieldBase,
 		"fields": this.fields,
 	}
@@ -1443,14 +1443,14 @@ func (this *ObjectField) GenerateProjection(allowWildcards bool) string {
 	return fmt.Sprintf("%s.%s", this.name, this.fields[n].GenerateProjection(allowWildcards))
 }
 
-func (this *ObjectField) GenerateValue() map[string]interface{} {
+func (this *ObjectField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
 	if this.generateAsNull() {
-		return map[string]interface{}{this.name: nil}
+		return map[string]any{this.name: nil}
 	}
-	obj := make(map[string]interface{}, len(this.fields))
+	obj := make(map[string]any, len(this.fields))
 	for i := range this.fields {
 		if fd := this.fields[i].GenerateValue(); fd != nil {
 			for k, v := range fd {
@@ -1458,7 +1458,7 @@ func (this *ObjectField) GenerateValue() map[string]interface{} {
 			}
 		}
 	}
-	return map[string]interface{}{this.name: obj}
+	return map[string]any{this.name: obj}
 }
 
 func (this *ObjectField) GenerateFilter(name string) string {
@@ -1490,7 +1490,7 @@ type DateField struct {
 }
 
 func (this *DateField) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"base": &this.FieldBase,
 		"unit": this.unit,
 	}
@@ -1524,23 +1524,23 @@ func (this *DateField) Copy() Field {
 	return c
 }
 
-func (this *DateField) GenerateValue() map[string]interface{} {
+func (this *DateField) GenerateValue() map[string]any {
 	if this.generateAsMissing() {
 		return nil
 	}
 	if this.generateAsNull() {
-		return map[string]interface{}{this.name: nil}
+		return map[string]any{this.name: nil}
 	}
 	if this.fixed {
 		if len(this.values) == 0 {
-			return map[string]interface{}{this.name: this.min.Format("2006-01-02T15:04:05.999999999Z07:00")}
+			return map[string]any{this.name: this.min.Format("2006-01-02T15:04:05.999999999Z07:00")}
 		} else {
-			return map[string]interface{}{this.name: this.values[0].Format("2006-01-02T15:04:05.999999999Z07:00")}
+			return map[string]any{this.name: this.values[0].Format("2006-01-02T15:04:05.999999999Z07:00")}
 		}
 	}
 	if len(this.values) > 1 {
 		if this.random {
-			return map[string]interface{}{
+			return map[string]any{
 				this.name: this.values[rand.Intn(len(this.values))].Format("2006-01-02T15:04:05.999999999Z07:00"),
 			}
 		}
@@ -1549,7 +1549,7 @@ func (this *DateField) GenerateValue() map[string]interface{} {
 		if this.count >= len(this.values) {
 			this.count = 0
 		}
-		return map[string]interface{}{this.name: this.values[n].Format("2006-01-02T15:04:05.999999999Z07:00")}
+		return map[string]any{this.name: this.values[n].Format("2006-01-02T15:04:05.999999999Z07:00")}
 	} else {
 		if this.random {
 			var res time.Time
@@ -1591,7 +1591,7 @@ func (this *DateField) GenerateValue() map[string]interface{} {
 			if this.lwm.After(res) {
 				this.lwm = res
 			}
-			return map[string]interface{}{this.name: res.Format("2006-01-02T15:04:05.999999999Z07:00")}
+			return map[string]any{this.name: res.Format("2006-01-02T15:04:05.999999999Z07:00")}
 		}
 		var v time.Time
 		if len(this.values) >= 1 {
@@ -1629,7 +1629,7 @@ func (this *DateField) GenerateValue() map[string]interface{} {
 		if this.lwm.After(this.values[0]) {
 			this.lwm = this.values[0]
 		}
-		return map[string]interface{}{this.name: v.Format("2006-01-02T15:04:05.999999999Z07:00")}
+		return map[string]any{this.name: v.Format("2006-01-02T15:04:05.999999999Z07:00")}
 	}
 }
 

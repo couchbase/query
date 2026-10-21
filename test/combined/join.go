@@ -28,9 +28,9 @@ type Join struct {
 	ridx string // only for joins loaded from config; the field name for the index in the right keyspace
 }
 
-func NewJoin(i interface{}) (*Join, error) {
+func NewJoin(i any) (*Join, error) {
 	logging.Tracef("%v", i)
-	join, ok := i.(map[string]interface{})
+	join, ok := i.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("Join definition is not an object.")
 	}
@@ -126,7 +126,7 @@ func NewJoinKeyspaces(left *Keyspace, right *Keyspace) *Join {
 // ---------------------------------------------------------------------------------------------------------------------------------
 
 func (this *Join) MarshalJSON() ([]byte, error) {
-	m := map[string]interface{}{
+	m := map[string]any{
 		"right": this.rightName,
 		"on":    this.on,
 	}

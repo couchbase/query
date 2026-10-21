@@ -116,7 +116,7 @@ func testAiComputeSuccess(qc *gsi.MockServer, t *testing.T) {
 		// We must return exactly that many results; returning more would cause
 		// an index-out-of-bounds panic inside the window execution code.
 		var req struct {
-			Documents []interface{} `json:"documents"`
+			Documents []any `json:"documents"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "mock: bad request: "+err.Error(), http.StatusBadRequest)
@@ -124,20 +124,20 @@ func testAiComputeSuccess(qc *gsi.MockServer, t *testing.T) {
 		}
 
 		// Build one result per document with a fixed relevance score.
-		results := make([]map[string]interface{}, len(req.Documents))
+		results := make([]map[string]any, len(req.Documents))
 		for i := range req.Documents {
 			score := 0.0
 			if i < len(fixedScores) {
 				score = fixedScores[i]
 			}
-			results[i] = map[string]interface{}{
+			results[i] = map[string]any{
 				"index":           i,
 				"relevance_score": score,
 			}
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 	}))
 	defer ts.Close()
 
@@ -160,7 +160,7 @@ func testAiComputeSuccess(qc *gsi.MockServer, t *testing.T) {
 			t.Errorf("%s: expected %d results, got %d", label, wantCount, len(rr.Results))
 		}
 		for i, row := range rr.Results {
-			m, ok := row.(map[string]interface{})
+			m, ok := row.(map[string]any)
 			if !ok {
 				t.Errorf("%s result %d: expected map[string]interface{}, got %T", label, i, row)
 				continue
@@ -217,7 +217,7 @@ func testAiComputeSuccess(qc *gsi.MockServer, t *testing.T) {
 		"default",
 		map[string]value.Value{
 			"query": value.NewValue("database technology"),
-			"cfg":   value.NewValue(map[string]interface{}{"uri": rerankURL}),
+			"cfg":   value.NewValue(map[string]any{"uri": rerankURL}),
 		},
 		nil, nil)
 	checkRows("AI_RERANK named-param $cfg", aiRerankNamedRR, 6)
@@ -228,7 +228,7 @@ func testAiComputeSuccess(qc *gsi.MockServer, t *testing.T) {
 			`FROM orders AS d WHERE d.test_id = 'ai_compute'`,
 		"default",
 		map[string]value.Value{
-			"cfg": value.NewValue(map[string]interface{}{
+			"cfg": value.NewValue(map[string]any{
 				"action": "rerank",
 				"uri":    rerankURL,
 			}),
@@ -302,18 +302,18 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	// aiValues slice.  aiRerankEvaluate must detect this and return an error.
 	oobServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Documents []interface{} `json:"documents"`
+			Documents []any `json:"documents"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		// Return an index that is equal to len(docs) — just past the end.
-		results := []map[string]interface{}{
+		results := []map[string]any{
 			{"index": len(req.Documents), "relevance_score": 0.9},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 	}))
 	defer oobServer.Close()
 
@@ -355,19 +355,19 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	// a silently nil/NULL score.
 	missingScoreServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Documents []interface{} `json:"documents"`
+			Documents []any `json:"documents"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		// Return entries with index but no relevance_score field.
-		results := make([]map[string]interface{}, len(req.Documents))
+		results := make([]map[string]any, len(req.Documents))
 		for i := range req.Documents {
-			results[i] = map[string]interface{}{"index": i}
+			results[i] = map[string]any{"index": i}
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 	}))
 	defer missingScoreServer.Close()
 
@@ -391,18 +391,18 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	// scores for the skipped documents instead of an error.
 	partialServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Documents []interface{} `json:"documents"`
+			Documents []any `json:"documents"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		// Only return a score for the first document, omit the rest.
-		results := []map[string]interface{}{
+		results := []map[string]any{
 			{"index": 0, "relevance_score": 0.9},
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 	}))
 	defer partialServer.Close()
 
@@ -418,7 +418,7 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	}
 	// Every row must have a "score" key; unmapped ones should be null (nil in Go).
 	for i, row := range rrPartial.Results {
-		m, ok := row.(map[string]interface{})
+		m, ok := row.(map[string]any)
 		if !ok {
 			t.Errorf("AI_RERANK partial response result %d: expected map, got %T", i, row)
 			continue
@@ -435,27 +435,27 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	// same successful outcome as one using "results".
 	dataKeyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
-			Documents []interface{} `json:"documents"`
+			Documents []any `json:"documents"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		scores := []float64{0.9, 0.5, 0.1}
-		results := make([]map[string]interface{}, len(req.Documents))
+		results := make([]map[string]any, len(req.Documents))
 		for i := range req.Documents {
 			score := 0.0
 			if i < len(scores) {
 				score = scores[i]
 			}
-			results[i] = map[string]interface{}{
+			results[i] = map[string]any{
 				"index":           i,
 				"relevance_score": score,
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
 		// Use "data" instead of "results" as the top-level key.
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"data": results})
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": results})
 	}))
 	defer dataKeyServer.Close()
 
@@ -470,7 +470,7 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 		t.Errorf("AI_RERANK 'data' key response: unexpected error: %v", rrDataKey.Err)
 	}
 	for i, row := range rrDataKey.Results {
-		m, ok := row.(map[string]interface{})
+		m, ok := row.(map[string]any)
 		if !ok {
 			t.Errorf("AI_RERANK 'data' key result %d: expected map, got %T", i, row)
 			continue
@@ -493,7 +493,7 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	noKeyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// Valid JSON, but the result array is under an unrecognised key.
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"scores": []float64{0.9, 0.5}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"scores": []float64{0.9, 0.5}})
 	}))
 	defer noKeyServer.Close()
 
@@ -515,9 +515,9 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	nonObjServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// Mix a valid entry with a bare string — the string must be warned and skipped.
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"results": []interface{}{
-				map[string]interface{}{"index": 0, "relevance_score": 0.9},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"results": []any{
+				map[string]any{"index": 0, "relevance_score": 0.9},
 				"not-an-object",
 			},
 		})
@@ -552,9 +552,9 @@ func testAiComputeMockErrors(qc *gsi.MockServer, t *testing.T) {
 	strIdxServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		// "index" is a string — the float64 type assertion will fail.
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"results": []interface{}{
-				map[string]interface{}{"index": "0", "relevance_score": 0.9},
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"results": []any{
+				map[string]any{"index": "0", "relevance_score": 0.9},
 			},
 		})
 	}))

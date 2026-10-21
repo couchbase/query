@@ -144,7 +144,7 @@ func externalJSTest(qc *gsi.MockServer, t *testing.T) {
 		return
 	} else {
 		d := json.NewDecoder(resp.Body)
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		if d.Decode(&m) == nil {
 			t.Logf("udf_test.go: External UDF library: %v", m)
 		}
