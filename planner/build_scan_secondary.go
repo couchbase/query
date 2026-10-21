@@ -1728,20 +1728,11 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 
 			if entry.cond != nil {
 				// Also skip filters that is in index condition
-				origExpr := fl.OrigExpr()
-				flExpr := fltrExpr
-				flExpr, err = this.context.ReplaceParameters(flExpr, false)
+				var implied bool
+				implied, err = this.impliedByIndexCond(fltrExpr, fl.OrigExpr(), entry.cond, entry.origCond)
 				if err != nil {
 					return
-				}
-				origExpr, err = this.context.ReplaceParameters(origExpr, false)
-				if err != nil {
-					return
-				}
-				if base.SubsetOf(entry.cond, flExpr) {
-					continue
-				}
-				if origExpr != nil && base.SubsetOf(entry.origCond, origExpr) {
+				} else if implied {
 					continue
 				}
 			}
@@ -1830,6 +1821,29 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	}
 
 	return
+}
+
+// check whether a filter is implied by the index condition (of a partial index)
+func (this *builder) impliedByIndexCond(fltrExpr, origExpr, cond, origCond expression.Expression) (
+	bool, error) {
+
+	fltrExpr, err := this.context.ReplaceParameters(fltrExpr, false)
+	if err != nil {
+		return false, err
+	}
+	if base.SubsetOf(cond, fltrExpr) {
+		return true, nil
+	}
+	if origExpr != nil {
+		origExpr, err = this.context.ReplaceParameters(origExpr, false)
+		if err != nil {
+			return false, err
+		}
+		if origCond != nil && base.SubsetOf(origCond, origExpr) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (this *builder) buildIndexFilters(entry *indexEntry, baseKeyspace *base.BaseKeyspace,
