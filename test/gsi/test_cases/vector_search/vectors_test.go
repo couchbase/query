@@ -89,6 +89,14 @@ func TestVectors(t *testing.T) {
 
 	runStmt(qc, "DROP INDEX idx_vec4 on product._default.vectors")
 
+	fmt.Println("Partial Bhive vector index with include columns")
+
+	runStmt(qc, "CREATE VECTOR INDEX idx_vec5 on product._default.vectors(vec VECTOR) INCLUDE (color) WHERE brand = \"adidas\" AND size = 7 WITH {'dimension': 128, 'description': 'IVF4,SQ8', 'similarity': 'L2'}")
+
+	runMatch("case_bhive_partial.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_vec5 on product._default.vectors")
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX ix_prod_id on product._default.vectors")
 
