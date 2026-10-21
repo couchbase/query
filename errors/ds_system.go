@@ -16,7 +16,7 @@ import (
 // System datastore error codes
 
 func NewSystemDatastoreError(e error, msg string) Error {
-	c := make(map[string]interface{}, 1)
+	c := make(map[string]any, 1)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -28,7 +28,7 @@ func NewSystemDatastoreError(e error, msg string) Error {
 // Error code 11011 is retired. Do not reuse.
 
 func NewSystemKeyspaceNotFoundError(e error, msg string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -39,7 +39,7 @@ func NewSystemKeyspaceNotFoundError(e error, msg string) Error {
 }
 
 func NewSystemNotImplementedError(e error, msg string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -50,7 +50,7 @@ func NewSystemNotImplementedError(e error, msg string) Error {
 }
 
 func NewSystemNotSupportedError(e error, msg string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -61,7 +61,7 @@ func NewSystemNotSupportedError(e error, msg string) Error {
 }
 
 func NewSystemIdxNotFoundError(e error, msg string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -72,7 +72,7 @@ func NewSystemIdxNotFoundError(e error, msg string) Error {
 }
 
 func NewSystemIdxNoDropError(e error, msg string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -82,7 +82,7 @@ func NewSystemIdxNoDropError(e error, msg string) Error {
 }
 
 func NewSystemStmtNotFoundError(e error, msg string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -92,7 +92,7 @@ func NewSystemStmtNotFoundError(e error, msg string) Error {
 }
 
 func NewSystemRemoteWarning(e error, op string, ks string) Error {
-	c := make(map[string]interface{}, 3)
+	c := make(map[string]any, 3)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -103,7 +103,7 @@ func NewSystemRemoteWarning(e error, op string, ks string) Error {
 }
 
 func NewSystemRemoteNodeSkippedWarning(node, op string, ks string) Error {
-	c := make(map[string]interface{}, 4)
+	c := make(map[string]any, 4)
 	c["error"] = fmt.Errorf("unhealthy %v", node)
 	c["node"] = node
 	c["operation"] = op
@@ -114,7 +114,7 @@ func NewSystemRemoteNodeSkippedWarning(node, op string, ks string) Error {
 }
 
 func NewSystemUnableToRetrieveError(e error, what string) Error {
-	c := make(map[string]interface{}, 1)
+	c := make(map[string]any, 1)
 	if ec := getErrorForCause(e); ec != nil {
 		c["error"] = ec
 	}
@@ -125,7 +125,7 @@ func NewSystemUnableToRetrieveError(e error, what string) Error {
 }
 
 func NewSystemUnableToUpdateError(e error, what string, credInfo ...string) Error {
-	c := make(map[string]interface{}, 4)
+	c := make(map[string]any, 4)
 	c["data"] = what
 	v := getErrorForCause(e)
 	if s, ok := v.(string); ok {
@@ -143,7 +143,7 @@ func NewSystemUnableToUpdateError(e error, what string, credInfo ...string) Erro
 }
 
 func NewSystemFilteredRowsWarning(keyspace string) Error {
-	c := make(map[string]interface{}, 1)
+	c := make(map[string]any, 1)
 	c["keyspace"] = keyspace
 	return &err{level: WARNING, ICode: W_SYSTEM_FILTERED_ROWS, IKey: "datastore.system.filtered_keyspaces", onceOnly: true,
 		InternalMsg: fmt.Sprintf("One or more documents were excluded from the %s bucket because of insufficient user "+
@@ -153,7 +153,7 @@ func NewSystemFilteredRowsWarning(keyspace string) Error {
 }
 
 func NewSystemMalformedKeyError(key string, keyspace string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	c["keyspace"] = keyspace
 	c["key"] = key
 	return &err{level: EXCEPTION, ICode: E_SYSTEM_MALFORMED_KEY, IKey: "datastore.system.malformed_key",
@@ -168,7 +168,7 @@ func NewSystemNoBuckets() Error {
 }
 
 func NewSystemRemoteNodeNotFoundWarning(node string) Error {
-	c := make(map[string]interface{}, 1)
+	c := make(map[string]any, 1)
 	c["node"] = node
 	return &err{level: WARNING, ICode: W_SYSTEM_REMOTE_NODE_NOT_FOUND, IKey: "datastore.system.remote_warning.not_found", cause: c,
 		InternalMsg: "Node \"" + node + "\" not found", InternalCaller: CallerN(1)}

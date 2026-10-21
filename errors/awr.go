@@ -18,7 +18,7 @@ var _awr = map[ErrorCode][2]string{
 	E_AWR_DISTRIB: {"distribution", "Error distributing workload settings"},
 }
 
-func getAWRSchemaHelp(setting string, min, max interface{}) string {
+func getAWRSchemaHelp(setting string, min, max any) string {
 	var help string
 	switch setting {
 	case "threshold":
@@ -53,10 +53,10 @@ func getAWRSchemaHelp(setting string, min, max interface{}) string {
 	return fmt.Sprintf("Setting '%s' must be: %s", setting, help)
 }
 
-func NewAWRError(code ErrorCode, args ...interface{}) Error {
+func NewAWRError(code ErrorCode, args ...any) Error {
 	e := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1),
 		IKey: "service.workload_report." + _awr[code][0], InternalMsg: _awr[code][1]}
-	var fmtArgs []interface{}
+	var fmtArgs []any
 	for _, a := range args {
 		switch a := a.(type) {
 		case string:
@@ -75,8 +75,8 @@ func NewAWRError(code ErrorCode, args ...interface{}) Error {
 	return e
 }
 
-func NewAWRInvalidSettingError(setting string, value interface{}, min, max interface{}, cause error) Error {
-	c := make(map[string]interface{}, 2)
+func NewAWRInvalidSettingError(setting string, value any, min, max any, cause error) Error {
+	c := make(map[string]any, 2)
 	if help := getAWRSchemaHelp(setting, min, max); help != "" {
 		c["help"] = help
 	}

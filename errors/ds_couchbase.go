@@ -55,9 +55,9 @@ func NewCbKeyspaceCountError(e error, msg string) Error {
 // Error code 12007 is retired. Do not reuse.
 
 func NewCbBulkGetError(e error, msg string, retry Tristate) Error {
-	var c interface{}
+	var c any
 	if e != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["error"] = e
 		c = m
 	}
@@ -83,7 +83,7 @@ func NewCbDMLError(e error, msg string, casMismatch bool, r Tristate, k string, 
 // Error code 12010 is retired. Do not reuse.
 
 func NewCbDeleteFailedError(e error, key string, msg string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["key"] = key
 	c["cause"] = e
 	return &err{level: EXCEPTION, ICode: E_CB_DELETE_FAILED, IKey: "datastore.couchbase.delete_failed", ICause: e, cause: c,
@@ -107,10 +107,10 @@ func NewCbIndexScanTimeoutError(e error) Error {
 		InternalMsg: "Index scan timed out", InternalCaller: CallerN(1)}
 }
 
-func NewCbIndexNotFoundError(args ...interface{}) Error {
+func NewCbIndexNotFoundError(args ...any) Error {
 	var e error
 	var name string
-	var c interface{}
+	var c any
 	for _, a := range args {
 		switch at := a.(type) {
 		case error:
@@ -126,17 +126,17 @@ func NewCbIndexNotFoundError(args ...interface{}) Error {
 	if name == "" && e != nil {
 		es := e.Error()
 		if strings.HasPrefix(es, "GSI ") {
-			c = make(map[string]interface{}, 1)
+			c = make(map[string]any, 1)
 			e := len(es) - 11
 			if e > 10 {
-				c.(map[string]interface{})["name"] = es[10:e]
+				c.(map[string]any)["name"] = es[10:e]
 			} else {
-				c.(map[string]interface{})["name"] = ""
+				c.(map[string]any)["name"] = ""
 			}
 		}
 	} else if name != "" {
-		c = make(map[string]interface{}, 1)
-		c.(map[string]interface{})["name"] = name
+		c = make(map[string]any, 1)
+		c.(map[string]any)["name"] = name
 	}
 	return &err{level: EXCEPTION, ICode: E_CB_INDEX_NOT_FOUND, IKey: "datastore.couchbase.index_not_found", ICause: e, cause: c,
 		InternalMsg: "Index Not Found", InternalCaller: CallerN(1)}
@@ -158,21 +158,21 @@ func NewAuditStreamHandlerFailed(e error) Error {
 }
 
 func NewCbBucketExistsError(b string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["bucket"] = b
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_EXISTS, IKey: "datastore.couchbase.bucket_already_exists",
 		cause: c, InternalMsg: "Bucket '" + b + "' already exists.", InternalCaller: CallerN(1)}
 }
 
 func NewCbBucketNotFoundError(e error, msg string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["bucket"] = msg
 	return &err{level: EXCEPTION, ICode: E_CB_BUCKET_NOT_FOUND, IKey: "datastore.couchbase.bucket_not_found", ICause: e, cause: c,
 		InternalMsg: "Bucket not found in CB datastore " + msg, InternalCaller: CallerN(1)}
 }
 
 func NewCbScopeNotFoundError(e error, msg string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["scope"] = msg
 	return &err{level: EXCEPTION, ICode: E_CB_SCOPE_NOT_FOUND, IKey: "datastore.couchbase.scope_not_found", ICause: e, cause: c,
 		InternalMsg: "Scope not found in CB datastore " + msg, InternalCaller: CallerN(1)}
@@ -190,7 +190,7 @@ func NewCbSecurityConfigNotProvided(bucket string) Error {
 }
 
 func NewCbCreateSystemBucketError(s string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -202,7 +202,7 @@ func NewCbCreateSystemBucketError(s string, e error) Error {
 }
 
 func NewCbDropSystemBucketError(s string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -214,7 +214,7 @@ func NewCbDropSystemBucketError(s string, e error) Error {
 }
 
 func NewCbBucketCreateScopeError(s string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -226,7 +226,7 @@ func NewCbBucketCreateScopeError(s string, e error) Error {
 }
 
 func NewCbBucketDropScopeError(s string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -238,7 +238,7 @@ func NewCbBucketDropScopeError(s string, e error) Error {
 }
 
 func NewCbBucketCreateCollectionError(coll string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -250,7 +250,7 @@ func NewCbBucketCreateCollectionError(coll string, e error) Error {
 }
 
 func NewCbBucketDropCollectionError(coll string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -262,7 +262,7 @@ func NewCbBucketDropCollectionError(coll string, e error) Error {
 }
 
 func NewCbBucketAlterCollectionError(coll string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -274,7 +274,7 @@ func NewCbBucketAlterCollectionError(coll string, e error) Error {
 }
 
 func NewCbBucketFlushCollectionError(coll string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -286,21 +286,21 @@ func NewCbBucketFlushCollectionError(coll string, e error) Error {
 }
 
 func NewCbCatalogExistsError(name string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["catalog"] = name
 	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_EXISTS, IKey: "datastore.couchbase.catalog_already_exists",
 		cause: c, InternalMsg: "Catalog '" + name + "' already exists.", InternalCaller: CallerN(1)}
 }
 
 func NewCbCatalogNotFoundError(e error, name string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["catalog"] = name
 	return &err{level: EXCEPTION, ICode: E_CB_CATALOG_NOT_FOUND, IKey: "datastore.couchbase.catalog_not_found", ICause: e, cause: c,
 		InternalMsg: "Catalog not found: " + name, InternalCaller: CallerN(1)}
 }
 
 func NewCbCatalogCreateError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -312,7 +312,7 @@ func NewCbCatalogCreateError(name string, e error) Error {
 }
 
 func NewCbCatalogAlterError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -324,7 +324,7 @@ func NewCbCatalogAlterError(name string, e error) Error {
 }
 
 func NewCbCatalogDropError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -336,7 +336,7 @@ func NewCbCatalogDropError(name string, e error) Error {
 }
 
 func NewCbCatalogGetError(e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -347,21 +347,21 @@ func NewCbCatalogGetError(e error) Error {
 }
 
 func NewCbCredentialStoreExistsError(name string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["credentialStore"] = name
 	return &err{level: EXCEPTION, ICode: E_CB_CREDENTIALSTORE_EXISTS, IKey: "datastore.couchbase.credentialstore_already_exists",
 		cause: c, InternalMsg: "Credential store '" + name + "' already exists.", InternalCaller: CallerN(1)}
 }
 
 func NewCbCredentialStoreNotFoundError(e error, name string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["credentialStore"] = name
 	return &err{level: EXCEPTION, ICode: E_CB_CREDENTIALSTORE_NOT_FOUND, IKey: "datastore.couchbase.credentialstore_not_found", ICause: e, cause: c,
 		InternalMsg: "Credential store not found: " + name, InternalCaller: CallerN(1)}
 }
 
 func NewCbCredentialStoreCreateError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -373,7 +373,7 @@ func NewCbCredentialStoreCreateError(name string, e error) Error {
 }
 
 func NewCbCredentialStoreAlterError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -385,7 +385,7 @@ func NewCbCredentialStoreAlterError(name string, e error) Error {
 }
 
 func NewCbCredentialStoreDropError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	if _, ok := e.(Error); ok {
 		c["error"] = e
 	} else if e != nil {
@@ -396,10 +396,10 @@ func NewCbCredentialStoreDropError(name string, e error) Error {
 		cause: c, InternalMsg: "Error while dropping credential store " + name, InternalCaller: CallerN(1)}
 }
 
-func NewDatastoreExternalCollectionError(e error, msg string, ec map[string]interface{}) Error {
-	var c interface{}
+func NewDatastoreExternalCollectionError(e error, msg string, ec map[string]any) Error {
+	var c any
 	if e != nil || len(ec) > 0 {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		if e != nil {
 			m["error"] = e.Error()
 		}
@@ -413,7 +413,7 @@ func NewDatastoreExternalCollectionError(e error, msg string, ec map[string]inte
 }
 
 func NewBinaryDocumentMutationError(op, key string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["operation"] = op
 	c["key"] = key
 	return &err{level: EXCEPTION, ICode: E_BINARY_DOCUMENT_MUTATION, IKey: "mutation.binarydocument.not_supported",
@@ -440,7 +440,7 @@ func newCASMismatchError() Error {
 }
 
 func NewCbDMLMCError(s string, k string, ks string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = ks
 	c["document_key"] = k
 	c["mc_status"] = s
@@ -449,7 +449,7 @@ func NewCbDMLMCError(s string, k string, ks string) Error {
 }
 
 func NewCbNotPrimaryIndexError(name string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["name"] = name
 	c["reason"] = "not primary index"
 	return &err{level: EXCEPTION, ICode: E_CB_NOT_PRIMARY_INDEX, IKey: "datastore.couchbase.not_primary_index",
@@ -458,19 +458,19 @@ func NewCbNotPrimaryIndexError(name string) Error {
 }
 
 func NewInsertError(e error, key string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["key"] = key
 	c["cause"] = e
 	return &err{level: ERROR, ICode: E_DML_INSERT, IKey: "datastore.couchbase.insert.error",
 		InternalMsg: "Error in INSERT of key: " + key, cause: c, InternalCaller: CallerN(1)}
 }
 
-func NewBucketActionError(e interface{}, attempts int) Error {
-	var c map[string]interface{}
-	if em, ok := e.(map[string]interface{}); ok {
+func NewBucketActionError(e any, attempts int) Error {
+	var c map[string]any
+	if em, ok := e.(map[string]any); ok {
 		c = em
 	} else {
-		c = make(map[string]interface{})
+		c = make(map[string]any)
 		c["cause"] = e
 	}
 
@@ -487,22 +487,22 @@ func NewCbAccessDeniedError(entity string) Error {
 }
 
 func NewWithInvalidOptionError(opt string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["option"] = opt
 	return &err{level: EXCEPTION, ICode: E_WITH_INVALID_OPTION, IKey: "datastore.with.invalid_option", cause: c,
 		InternalMsg: "Invalid option '" + opt + "'", InternalCaller: CallerN(1)}
 }
 
 func NewWithInvalidValueError(opt string, reason string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["option"] = opt
 	c["reason"] = reason
 	return &err{level: EXCEPTION, ICode: E_WITH_INVALID_TYPE, IKey: "datastore.with.invalid_value", cause: c,
 		InternalMsg: "Invalid value for '" + opt + "'", InternalCaller: CallerN(1)}
 }
 
-func NewInvalidCompressedValueError(e error, d interface{}) Error {
-	c := make(map[string]interface{})
+func NewInvalidCompressedValueError(e error, d any) Error {
+	c := make(map[string]any)
 	c["error"] = e.Error()
 	c["data"] = d
 	return &err{level: EXCEPTION, ICode: E_INVALID_COMPRESSED_VALUE, IKey: "datastore.invalid_value", cause: c,
@@ -510,25 +510,25 @@ func NewInvalidCompressedValueError(e error, d interface{}) Error {
 }
 
 func NewSubDocGetError(e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["error"] = e.Error()
 	return &err{level: EXCEPTION, ICode: E_CB_SUBDOC_GET, IKey: "datastore.subdoc.get", cause: c,
 		InternalMsg: "Sub-doc get operation failed", InternalCaller: CallerN(1)}
 }
 
-func NewSubDocSetError(e interface{}) Error {
-	var c interface{}
+func NewSubDocSetError(e any) Error {
+	var c any
 	switch e := e.(type) {
 	case Error:
 		c = e
 	case error:
-		c := make(map[string]interface{})
+		c := make(map[string]any)
 		c["error"] = e.Error()
-	case map[string]interface{}:
+	case map[string]any:
 		c = e
 	default:
 		if e != nil {
-			c := make(map[string]interface{})
+			c := make(map[string]any)
 			c["cause"] = fmt.Sprintf("%v", e)
 		}
 	}

@@ -40,14 +40,14 @@ var _seqLevel = map[ErrorCode]int{
 	W_SEQUENCE_NO_PREV_VALUE: WARNING,
 }
 
-func NewSequenceError(code ErrorCode, args ...interface{}) Error {
+func NewSequenceError(code ErrorCode, args ...any) Error {
 	l, ok := _seqLevel[code]
 	if !ok {
 		l = EXCEPTION
 	}
 	e := &err{level: l, ICode: code, InternalCaller: CallerN(1),
 		IKey: "datastore.sequence." + _seq[code][0], InternalMsg: _seq[code][1]}
-	var fmtArgs []interface{}
+	var fmtArgs []any
 	for _, a := range args {
 		switch a := a.(type) {
 		case string:

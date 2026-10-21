@@ -26,7 +26,7 @@ func NewPlanError(e error, msg string) Error {
 
 // for situations where we want to maintain previous error code of 4000 but a proper enclosed error
 func NewWrapPlanError(e error) Error {
-	var c interface{}
+	var c any
 	if er, ok := e.(Error); ok {
 		if er.Code() == E_PLAN {
 			return er
@@ -149,7 +149,7 @@ func NewNoIndexJoinError(alias, op string) Error {
 /* error number 4110 moved to semantics.go */
 
 func NewNoPrimaryIndexError(alias string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["user_action"] = "Verify the Index service is present and running."
 	return &err{level: EXCEPTION, ICode: E_NO_PRIMARY_INDEX, IKey: "plan.build_primary_index.no_index",
 		InternalMsg: fmt.Sprintf("No index available on keyspace %s that matches your query. Use CREATE PRIMARY INDEX ON "+
@@ -178,7 +178,7 @@ func NewNotGroupKeyOrAggError(expr string) Error {
 }
 
 func NewIndexAlreadyExistsError(idx string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["name"] = idx
 	return &err{level: EXCEPTION, ICode: E_INDEX_ALREADY_EXISTS,
 		IKey: "plan.new_index_already_exists", cause: c,

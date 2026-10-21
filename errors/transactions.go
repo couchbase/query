@@ -71,7 +71,7 @@ func NewTranStatementOutOfOrderError(prev, cur int64) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewStartTransactionError(e error, c interface{}) Error {
+func NewStartTransactionError(e error, c any) Error {
 	msg := "Start Transaction statement error"
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
@@ -80,7 +80,7 @@ func NewStartTransactionError(e error, c interface{}) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewCommitTransactionError(e error, c interface{}) Error {
+func NewCommitTransactionError(e error, c any) Error {
 	msg := "Commit Transaction statement error"
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
@@ -89,7 +89,7 @@ func NewCommitTransactionError(e error, c interface{}) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewRollbackTransactionError(e error, c interface{}) Error {
+func NewRollbackTransactionError(e error, c any) Error {
 	msg := "Rollback Transaction statement error"
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
@@ -104,7 +104,7 @@ func NewNoSavepointError(msg string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewTransactionExpired(c interface{}) Error {
+func NewTransactionExpired(c any) Error {
 	return &err{level: EXCEPTION, ICode: E_TRANSACTION_EXPIRED, IKey: "transaction.expired",
 		InternalMsg:    "Transaction timeout",
 		InternalCaller: CallerN(1), cause: c}
@@ -116,7 +116,7 @@ func NewTransactionReleased() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewDuplicateKeyError(key, ks string, c interface{}) Error {
+func NewDuplicateKeyError(key, ks string, c any) Error {
 	msg := ""
 	if ks != "" {
 		msg = fmt.Sprintf(" for '%s'", ks)
@@ -132,7 +132,7 @@ func NewTransactionInuse() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewKeyNotFoundError(key, ks string, c interface{}) Error {
+func NewKeyNotFoundError(key, ks string, c any) Error {
 	msg := ""
 	if ks != "" {
 		msg = fmt.Sprintf(" for '%s'", ks)
@@ -154,13 +154,13 @@ func NewTransactionMemoryQuotaExceededError(memQuota, memUsed int64) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewTransactionFetchError(e error, c interface{}) Error {
+func NewTransactionFetchError(e error, c any) Error {
 	return &err{level: EXCEPTION, ICode: E_TRANSACTION_FETCH, IKey: "transaction.fetch", ICause: e,
 		InternalMsg:    "Transaction fetch error",
 		InternalCaller: CallerN(1), cause: c}
 }
 
-func NewPostCommitTransactionError(e error, c interface{}) Error {
+func NewPostCommitTransactionError(e error, c any) Error {
 	msg := "Failed post commit"
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
@@ -169,7 +169,7 @@ func NewPostCommitTransactionError(e error, c interface{}) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewAmbiguousCommitTransactionError(e error, c interface{}) Error {
+func NewAmbiguousCommitTransactionError(e error, c any) Error {
 	msg := "Commit was ambiguous"
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
@@ -178,7 +178,7 @@ func NewAmbiguousCommitTransactionError(e error, c interface{}) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1), cause: c}
 }
 
-func NewTransactionStagingError(e error, c interface{}) Error {
+func NewTransactionStagingError(e error, c any) Error {
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
 		return e
@@ -198,7 +198,7 @@ func NewTransactionQueueFull() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewPostCommitTransactionWarning(e error, c interface{}) Error {
+func NewPostCommitTransactionWarning(e error, c any) Error {
 	msg := "Failed post commit"
 	if e != nil {
 		msg = fmt.Sprintf("%s: %v", msg, e)
@@ -208,7 +208,7 @@ func NewPostCommitTransactionWarning(e error, c interface{}) Error {
 }
 
 func NewGCAgentError(e error, op string) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	c["operation"] = op
 	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_GC_AGENT, IKey: "transaction.gcagent",

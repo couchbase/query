@@ -36,7 +36,7 @@ func NewExecutionKeyValidationSpaceError() Error {
 }
 
 func NewExecutionStatementStoppedError(statement string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["statement"] = statement
 	return &err{level: EXCEPTION, ICode: E_EXECUTION_STATEMENT_STOPPED, IKey: "execution.stopped_error",
 		InternalMsg: "Execution of statement has been stopped.", InternalCaller: CallerN(1), cause: c}
@@ -72,9 +72,9 @@ func NewEvaluationWithCauseError(e error, termType string) Error {
 		return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.evaluation_error", cause: ee,
 			InternalMsg: fmt.Sprintf("Error evaluating %s", termType), InternalCaller: CallerN(1)}
 	}
-	var c map[string]interface{}
+	var c map[string]any
 	if e != nil {
-		c = make(map[string]interface{})
+		c = make(map[string]any)
 		c["cause"] = e.Error()
 	}
 	return &err{level: EXCEPTION, ICode: E_EVALUATION, IKey: "execution.evaluation_error", cause: c,
@@ -93,12 +93,12 @@ var _de = map[ErrorCode]string{
 	W_DATE_INVALID_TIMEZONE:    ": Invalid time zone",
 }
 
-func NewDateWarning(e ErrorCode, info interface{}) Error {
-	var c interface{}
+func NewDateWarning(e ErrorCode, info any) Error {
+	var c any
 	if info != nil {
-		cm := make(map[string]interface{})
+		cm := make(map[string]any)
 		switch e := info.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			for k, v := range e {
 				cm[k] = v
 			}
@@ -144,8 +144,8 @@ func NewInvalidValueError(msg string) Error {
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
-func NewInvalidExpressionError(exp string, details interface{}) Error {
-	c := make(map[string]interface{})
+func NewInvalidExpressionError(exp string, details any) Error {
+	c := make(map[string]any)
 	c["expression"] = exp
 	if details != nil {
 		c["details"] = details
@@ -154,8 +154,8 @@ func NewInvalidExpressionError(exp string, details interface{}) Error {
 		InternalMsg: "Invalid expression", InternalCaller: CallerN(1)}
 }
 
-func NewUnsupportedExpressionError(exp string, details interface{}) Error {
-	c := make(map[string]interface{})
+func NewUnsupportedExpressionError(exp string, details any) Error {
+	c := make(map[string]any)
 	c["expression"] = exp
 	if details != nil {
 		c["details"] = details
@@ -170,7 +170,7 @@ func NewRangeError(termType string) Error {
 }
 
 func NewSizeError(termType string, elemSize uint64, nelem int, size uint64, limit uint64) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["limit"] = limit
 	c["size"] = size
 
@@ -198,46 +198,46 @@ func NewDuplicateFinalGroupError() Error {
 		InternalMsg: "Duplicate Final Group.", InternalCaller: CallerN(1)}
 }
 
-func NewInsertKeyError(v interface{}) Error {
+func NewInsertKeyError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_KEY, IKey: "execution.insert_key_error",
 		InternalMsg: fmt.Sprintf("No INSERT key for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewInsertValueError(v interface{}) Error {
+func NewInsertValueError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_VALUE, IKey: "execution.insert_value_error",
 		InternalMsg: fmt.Sprintf("No INSERT value for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewInsertKeyTypeError(v interface{}) Error {
+func NewInsertKeyTypeError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_KEY_TYPE, IKey: "execution.insert_key_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot INSERT non-string key %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
 }
 
-func NewInsertOptionsTypeError(v interface{}) Error {
+func NewInsertOptionsTypeError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_INSERT_OPTIONS_TYPE, IKey: "execution.insert_options_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot INSERT non-OBJECT options %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
 }
 
-func NewUpsertKeyError(v interface{}) Error {
+func NewUpsertKeyError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_KEY, IKey: "execution.upsert_key_error",
 		InternalMsg: fmt.Sprintf("No UPSERT key for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewUpsertValueError(v interface{}) Error {
+func NewUpsertValueError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_VALUE, IKey: "execution.upsert_value_error",
 		InternalMsg: fmt.Sprintf("No UPSERT value for %v", v), InternalCaller: CallerN(1)}
 }
 
-func NewUpsertKeyTypeError(v interface{}) Error {
+func NewUpsertKeyTypeError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_KEY_TYPE, IKey: "execution.upsert_key_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot UPSERT non-string key %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
 }
 
 func NewUpsertKeyAlreadyMutatedError(ks string, key string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = ks
 	c["key"] = key
 	return &err{level: EXCEPTION, ICode: E_UPSERT_KEY_ALREADY_MUTATED, IKey: "execution.upsert_key_already_mutated",
@@ -245,7 +245,7 @@ func NewUpsertKeyAlreadyMutatedError(ks string, key string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewUpsertOptionsTypeError(v interface{}) Error {
+func NewUpsertOptionsTypeError(v any) Error {
 	return &err{level: EXCEPTION, ICode: E_UPSERT_OPTIONS_TYPE, IKey: "execution.upsert_options_type_error",
 		InternalMsg:    fmt.Sprintf("Cannot UPSERT non-OBJECT options %v of type %T.", v, v),
 		InternalCaller: CallerN(1)}
@@ -282,7 +282,7 @@ func NewUpdateMissingClone() Error {
 
 // restricted field updates in system keyspace
 func NewUpdateInvalidField(key string, field string, unset bool) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["key"] = key
 	c["field"] = field
 	c["unset"] = unset
@@ -290,7 +290,7 @@ func NewUpdateInvalidField(key string, field string, unset bool) Error {
 		InternalMsg: "Invalid field update.", cause: c, InternalCaller: CallerN(1)}
 }
 
-func NewUnnestInvalidPosition(pos interface{}) Error {
+func NewUnnestInvalidPosition(pos any) Error {
 	return &err{level: EXCEPTION, ICode: E_UNNEST_INVALID_POSITION, IKey: "execution.unnest_invalid_position",
 		InternalMsg: fmt.Sprintf("Invalid UNNEST position of type %T.", pos), InternalCaller: CallerN(1)}
 }
@@ -305,21 +305,21 @@ func NewScanVectorTooManyScannedBuckets(buckets []string) Error {
 // Error code 5200 is retired. Do not reuse.
 
 func NewUserExistsError(u string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["user"] = u
 	return &err{level: EXCEPTION, ICode: E_USER_EXISTS, IKey: "execution.user_exists", cause: c,
 		InternalMsg: fmt.Sprintf("User %s already exists.", u), InternalCaller: CallerN(1)}
 }
 
 func NewUserNotFoundError(u string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["user"] = u
 	return &err{level: EXCEPTION, ICode: E_USER_NOT_FOUND, IKey: "execution.user_not_found", cause: c,
 		InternalMsg: fmt.Sprintf("Unable to find user %s.", u), InternalCaller: CallerN(1)}
 }
 
 func NewUserAttributeError(d string, a string, r string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["domain"] = d
 	c["attribute"] = a
 	c["reason"] = r
@@ -328,21 +328,21 @@ func NewUserAttributeError(d string, a string, r string) Error {
 }
 
 func NewGroupExistsError(g string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["group"] = g
 	return &err{level: EXCEPTION, ICode: E_GROUP_EXISTS, IKey: "execution.group_exists", cause: c,
 		InternalMsg: fmt.Sprintf("Group %s already exists.", g), InternalCaller: CallerN(1)}
 }
 
 func NewGroupNotFoundError(g string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["group"] = g
 	return &err{level: EXCEPTION, ICode: E_GROUP_NOT_FOUND, IKey: "execution.group_not_found", cause: c,
 		InternalMsg: fmt.Sprintf("Unable to find group %s.", g), InternalCaller: CallerN(1)}
 }
 
 func NewGroupAttributeError(a string, r string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["attribute"] = a
 	c["reason"] = r
 	return &err{level: EXCEPTION, ICode: E_GROUP_ATTRIBUTE, IKey: "execution.group_attribute",
@@ -350,28 +350,28 @@ func NewGroupAttributeError(a string, r string) Error {
 }
 
 func NewMissingAttributesError(what string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["entity"] = what
 	return &err{level: EXCEPTION, ICode: E_MISSING_ATTRIBUTES, IKey: "execution.missing_attributes",
 		cause: c, InternalMsg: fmt.Sprintf("Missing attributes for %s.", what), InternalCaller: CallerN(1)}
 }
 
 func NewRoleRequiresKeyspaceError(role string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["role"] = role
 	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_KEYSPACE, IKey: "execution.role_requires_keyspace", cause: c,
 		InternalMsg: fmt.Sprintf("Role %s requires a keyspace.", role), InternalCaller: CallerN(1)}
 }
 
 func NewRoleIncorrectLevelError(role string, level string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["role"] = role
 	return &err{level: EXCEPTION, ICode: E_ROLE_INCORRECT_LEVEL, IKey: "execution:role_incorrect_level", cause: c,
 		InternalMsg: fmt.Sprintf("Role %s cannot be specified at the %s level.", role, level), InternalCaller: CallerN(1)}
 }
 
 func NewRoleTakesNoKeyspaceError(role string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["role"] = role
 	return &err{level: EXCEPTION, ICode: E_ROLE_TAKES_NO_KEYSPACE, IKey: "execution.role_takes_no_keyspace", cause: c,
 		InternalMsg: fmt.Sprintf("Role %s does not take a keyspace.", role), InternalCaller: CallerN(1)}
@@ -398,14 +398,14 @@ func NewRoleNotFoundError(role string) Error {
 }
 
 func NewRoleRequiresCatalogError(role string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["role"] = role
 	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_CATALOG, IKey: "execution.role_requires_catalog", cause: c,
 		InternalMsg: fmt.Sprintf("Role %s requires a catalog name.", role), InternalCaller: CallerN(1)}
 }
 
 func NewRoleRequiresCredentialStoreError(role string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["role"] = role
 	return &err{level: EXCEPTION, ICode: E_ROLE_REQUIRES_CREDENTIALSTORE, IKey: "execution.role_requires_credentialstore", cause: c,
 		InternalMsg: fmt.Sprintf("Role %s requires a credential store name.", role), InternalCaller: CallerN(1)}
@@ -413,7 +413,7 @@ func NewRoleRequiresCredentialStoreError(role string) Error {
 
 func NewRoleAlreadyPresent(what string, id string, role string, target string, sourceType string) Error {
 	var msg string
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["role"] = role
 	c["id"] = id
 	c["what"] = strings.ToLower(what)
@@ -438,7 +438,7 @@ func NewRoleAlreadyPresent(what string, id string, role string, target string, s
 
 func NewRoleNotPresent(what string, id string, role string, target string, sourceType string) Error {
 	var msg string
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["role"] = role
 	c["id"] = id
 	c["what"] = strings.ToLower(what)
@@ -541,7 +541,7 @@ func NewMissingSystemCBOStatsError() Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewInvalidIndexNameError(name interface{}, ikey string) Error {
+func NewInvalidIndexNameError(name any, ikey string) Error {
 	return &err{level: EXCEPTION, ICode: E_INVALID_INDEX_NAME, IKey: ikey,
 		InternalMsg:    fmt.Sprintf("index name(%v) must be a string", name),
 		InternalCaller: CallerN(1)}
@@ -554,7 +554,7 @@ func NewIndexNotFoundError(name string, ikey string, e error) Error {
 }
 
 func NewIndexUpdStatsError(names, msg string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["index_names"] = names
 	if e != nil {
 		c["cause"] = e
@@ -566,7 +566,7 @@ func NewIndexUpdStatsError(names, msg string, e error) Error {
 }
 
 func NewTimeParseError(str string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["time_string"] = str
 	if e != nil {
 		c["cause"] = e
@@ -578,7 +578,7 @@ func NewTimeParseError(str string, e error) Error {
 }
 
 func NewNLInnerPrimaryDocsExceeded(alias string, limit int) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace_alias"] = alias
 	c["limit"] = limit
 	return &err{level: EXCEPTION, ICode: E_JOIN_ON_PRIMARY_DOCS_EXCEEDED, IKey: "execution.nljoin_inner_primary.docs_exceeded",
@@ -589,7 +589,7 @@ func NewNLInnerPrimaryDocsExceeded(alias string, limit int) Error {
 }
 
 func NewSubqueryNumDocsExceeded(keyspace string, limit int) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = keyspace
 	c["limit"] = limit
 	return &err{level: EXCEPTION,
@@ -639,7 +639,7 @@ func NewMaxHeapSizeExceeded(heapSize, maxHeapSize int, name string) Error {
 }
 
 func NewMemoryQuotaExceededError(inuse, limit uint64) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["caller"] = CallerN(2)
 	return &err{level: EXCEPTION, ICode: E_MEMORY_QUOTA_EXCEEDED, IKey: "execution.memory_quota.exceeded",
 		InternalMsg: fmt.Sprintf("Request has exceeded memory quota (inuse: %v limit: %v)", inuse, limit),
@@ -647,7 +647,7 @@ func NewMemoryQuotaExceededError(inuse, limit uint64) Error {
 }
 
 func NewNodeQuotaExceededError(curr, limit uint64) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["caller"] = CallerN(3)
 	return &err{level: EXCEPTION, ICode: E_NODE_QUOTA_EXCEEDED, IKey: "execution.node_quota.exceeded",
 		InternalMsg: fmt.Sprintf("Query node has run out of memory (curr: %v limit: %v)", curr, limit),
@@ -656,9 +656,9 @@ func NewNodeQuotaExceededError(curr, limit uint64) Error {
 
 func NewTenantQuotaExceededError(t string, u string, r, l uint64) Error {
 	var msg string
-	var c interface{}
+	var c any
 	if t != "" {
-		mc := make(map[string]interface{}, 1)
+		mc := make(map[string]any, 1)
 		mc["tenant"] = t
 		c = mc
 		msg = fmt.Sprintf("Tenant %v has run out of memory: requested %v, limit %v", t, r, l)
@@ -681,8 +681,8 @@ func NewNilEvaluateParamError(param string) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewMissingKeysWarning(count int, ks string, keys ...interface{}) Error {
-	c := make(map[string]interface{})
+func NewMissingKeysWarning(count int, ks string, keys ...any) Error {
+	c := make(map[string]any)
 	c["num_missing_keys"] = count
 	c["keyspace"] = ks
 	c["keys"] = keys
@@ -702,10 +702,10 @@ var _ve = map[ErrorCode][2]string{
 	E_VALUE_SPILL_MAX_FILES: {"spill.max_files", "Too many spill files"},
 }
 
-func NewValueError(code ErrorCode, args ...interface{}) Error {
+func NewValueError(code ErrorCode, args ...any) Error {
 	e := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1),
 		IKey: "value." + _ve[code][0], InternalMsg: _ve[code][1]}
-	var fmtArgs []interface{}
+	var fmtArgs []any
 	for _, a := range args {
 		switch a := a.(type) {
 		case string:
@@ -725,21 +725,21 @@ func NewValueError(code ErrorCode, args ...interface{}) Error {
 }
 
 func NewCurlExecutionError(e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_EXECUTION_CURL, IKey: "execution.curl",
 		InternalMsg: "Error executing CURL function", cause: c, InternalCaller: CallerN(1)}
 }
 
 func NewDynamicAuthError(e error) Error {
-	c := make(map[string]interface{}, 1)
+	c := make(map[string]any, 1)
 	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_DYNAMIC_AUTH, IKey: "execution.dynamic_auth",
 		InternalMsg: "Dynamic auth error", cause: c, InternalCaller: CallerN(1)}
 }
 
 func NewTransactionalAuthError(e error) Error {
-	c := make(map[string]interface{}, 1)
+	c := make(map[string]any, 1)
 	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_TRANSACTIONAL_AUTH, IKey: "execution.transactional_auth",
 		InternalMsg: "Transactional auth error", cause: c, InternalCaller: CallerN(1)}
@@ -750,8 +750,8 @@ func NewAdviseInvalidResultsError() Error {
 		InternalMsg: "Invalid advise results", InternalCaller: CallerN(1)}
 }
 
-func NewInvalidDocumentKeyTypeWarning(v interface{}, t string) Error {
-	c := make(map[string]interface{}, 2)
+func NewInvalidDocumentKeyTypeWarning(v any, t string) Error {
+	c := make(map[string]any, 2)
 	c["value"] = v
 	c["type"] = t
 	return &err{level: WARNING, ICode: W_DOCUMENT_KEY_TYPE, IKey: "execution.document_key.type", cause: c,

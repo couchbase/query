@@ -21,7 +21,7 @@ var _encryptionErrs = map[ErrorCode][2]string{
 	E_ENCRYPTION:       {"encryption.operation", "Error performing encryption-at-rest operation"},
 }
 
-func NewEncryptionError(code ErrorCode, e error, msgArgs ...interface{}) Error {
+func NewEncryptionError(code ErrorCode, e error, msgArgs ...any) Error {
 	ee, ok := _encryptionErrs[code]
 	if !ok {
 		panic(fmt.Sprintf("No encryption error message defined for error code: %d", code))

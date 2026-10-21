@@ -10,9 +10,9 @@ package errors
 
 // Couchbase authorization error
 func NewDatastoreAuthorizationError(e error) Error {
-	var c interface{}
+	var c any
 	if e != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["error"] = e
 		c = m
 	}
@@ -23,9 +23,9 @@ func NewDatastoreAuthorizationError(e error) Error {
 // Error codes 13010-13011 are retired. Do not reuse.
 
 func NewDatastoreClusterError(e error, msg string) Error {
-	var c interface{}
+	var c any
 	if e != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["error"] = e
 		c = m
 	}
@@ -34,9 +34,9 @@ func NewDatastoreClusterError(e error, msg string) Error {
 }
 
 func NewDatastoreUnableToRetrieveRoles(e error) Error {
-	var c interface{}
+	var c any
 	if e != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["error"] = e
 		c = m
 	}
@@ -45,9 +45,9 @@ func NewDatastoreUnableToRetrieveRoles(e error) Error {
 }
 
 func NewDatastoreInsufficientCredentials(msg string, e error, path string, role string, action string) Error {
-	var c interface{}
+	var c any
 	if e != nil || len(path) > 0 || role != "" || action != "" {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		if e != nil {
 			m["error"] = e
 		}
@@ -68,9 +68,9 @@ func NewDatastoreInsufficientCredentials(msg string, e error, path string, role 
 }
 
 func NewDatastoreUnableToRetrieveBuckets(e error) Error {
-	var c interface{}
+	var c any
 	if e != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["error"] = e
 		c = m
 	}
@@ -79,9 +79,9 @@ func NewDatastoreUnableToRetrieveBuckets(e error) Error {
 }
 
 func NewNoAdminPrivilegeError(e error) Error {
-	var c interface{}
+	var c any
 	if e != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["error"] = e
 		c = m
 	}

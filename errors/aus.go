@@ -64,8 +64,8 @@ func NewAusStorageAccessError(cause error) Error {
 		InternalMsg: "Error accessing Auto Update Statistics information from storage.", ICause: cause, InternalCaller: CallerN(1)}
 }
 
-func NewAusDocInvalidSettingsValue(setting string, value interface{}) Error {
-	c := make(map[string]interface{}, 1)
+func NewAusDocInvalidSettingsValue(setting string, value any) Error {
+	c := make(map[string]any, 1)
 	if help := getSchemaHelp(setting); help != "" {
 		c["cause"] = help
 	}
@@ -76,8 +76,8 @@ func NewAusDocInvalidSettingsValue(setting string, value interface{}) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewAusDocMissingSetting(setting string, defaultVal interface{}) Error {
-	c := make(map[string]interface{}, 2)
+func NewAusDocMissingSetting(setting string, defaultVal any) Error {
+	c := make(map[string]any, 2)
 	if help := getSchemaHelp(setting); help != "" {
 		c["cause"] = help
 	}
@@ -125,7 +125,7 @@ func NewAusStorageInvalidKey(key string, cause error) Error {
 }
 
 func NewAusSchedulingError(startTime time.Time, endTime time.Time, cause error) Error {
-	c := make(map[string]interface{}, 3)
+	c := make(map[string]any, 3)
 	if cause != nil {
 		c["cause"] = cause
 	}
@@ -142,7 +142,7 @@ func NewAusTaskError(msg string, cause error) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewAusTaskInvalidInfoError(val interface{}) Error {
+func NewAusTaskInvalidInfoError(val any) Error {
 	return &err{level: EXCEPTION, ICode: E_AUS_TASK_NOT_STARTED, IKey: "aus_task_not_started",
 		InternalMsg: fmt.Sprintf(
 			"The Auto Update Statistics task was not started due to invalid initialization information %v received.", val),

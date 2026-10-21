@@ -14,7 +14,7 @@ import (
 )
 
 // Parse errors - errors that are created in the parse package
-func NewParseSyntaxError(e interface{}, msg string) Error {
+func NewParseSyntaxError(e any, msg string) Error {
 	var basicError error
 	switch e := e.(type) {
 	case Error: // if given error is already an Error, just return it:
@@ -58,7 +58,7 @@ func NewParseUnescapedEmbeddedQuoteError() Error {
 }
 
 func NewParseInvalidInput(what string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["expected"] = what
 	return &err{level: EXCEPTION, ICode: E_PARSE_INVALID_INPUT, IKey: "parse.invalid_input", cause: c,
 		InternalMsg: "Invalid input.", InternalCaller: CallerN(1)}

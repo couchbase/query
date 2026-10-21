@@ -75,7 +75,7 @@ func NewInvalidFunctionNameError(name string, e error) Error {
 }
 
 func NewMetaKVError(where string, what error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["cause"] = where
 	return &err{level: EXCEPTION, ICode: E_FUNCTIONS_STORAGE, IKey: "function.storage.error", ICause: what, cause: c,
 		InternalMsg:    fmt.Sprintf("Could not access function definition for %v because %v", where, what),
@@ -107,7 +107,7 @@ func NewFunctionsDisabledError(what string) Error {
 		InternalMsg: fmt.Sprintf("%v functions are disabled", what), InternalCaller: CallerN(1)}
 }
 
-func NewFunctionExecutionError(what string, name string, reason interface{}) Error {
+func NewFunctionExecutionError(what string, name string, reason any) Error {
 	return &err{level: EXCEPTION, ICode: E_FUNCTION_EXECUTION, IKey: "function.execution.error", cause: reason,
 		InternalMsg:    fmt.Sprintf("Error executing function '%v' %v", name, what),
 		InternalCaller: CallerN(1)}
@@ -131,20 +131,20 @@ func NewFunctionLibraryPathError(path string) Error {
 			"function scope, or a local path ('./library')", path), InternalCaller: CallerN(1)}
 }
 
-func NewFunctionStatementsError(what string, name string, reason interface{}) Error {
+func NewFunctionStatementsError(what string, name string, reason any) Error {
 	return &err{level: EXCEPTION, ICode: E_FUNCTION_STATEMENTS, IKey: "function.statements.error", cause: reason,
 		InternalMsg: fmt.Sprintf("Error getting queries inside function '%v'. %v", name, what), InternalCaller: CallerN(1)}
 }
 
 func NewAdvisorSessionNotFoundError(s string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["unknown_session"] = s
 	return &err{level: EXCEPTION, ICode: E_ADVISOR_SESSION_NOT_FOUND, IKey: "function.advisor.session_not_found",
 		InternalMsg: "Advisor: Session not found.", cause: c, InternalCaller: CallerN(1)}
 }
 
 func NewAdvisorActionNotValid(a string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["invalid_action"] = a
 	return &err{level: EXCEPTION, ICode: E_ADVISOR_INVALID_ACTION, IKey: "function.advisor.invalid_action",
 		InternalMsg: "Advisor: Invalid value for 'action'", cause: c, InternalCaller: CallerN(1)}
@@ -156,14 +156,14 @@ func NewAdvisorActionMissing() Error {
 }
 
 func NewAdvisorInvalidArgs(args []string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["args"] = args
 	return &err{level: EXCEPTION, ICode: E_ADVISOR_INVALID_ARGS, IKey: "function.advisor.invalid_arguments",
 		InternalMsg: "Advisor: Invalid arguments.", cause: c, InternalCaller: CallerN(1)}
 }
 
-func NewFunctionLoadingError(function string, reason interface{}) Error {
-	c := make(map[string]interface{})
+func NewFunctionLoadingError(function string, reason any) Error {
+	c := make(map[string]any)
 	c["function"] = function
 	c["reason"] = reason
 	return &err{level: EXCEPTION, ICode: E_FUNCTION_LOADING, IKey: "function.loading.error", cause: c,
@@ -171,8 +171,8 @@ func NewFunctionLoadingError(function string, reason interface{}) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewEvaluatorLoadingError(tenant string, reason interface{}) Error {
-	c := make(map[string]interface{})
+func NewEvaluatorLoadingError(tenant string, reason any) Error {
+	c := make(map[string]any)
 	c["tenant"] = tenant
 	c["reason"] = reason
 	return &err{level: EXCEPTION, ICode: E_FUNCTION_LOADING, IKey: "function.tenant.loading.error", cause: c,
@@ -180,8 +180,8 @@ func NewEvaluatorLoadingError(tenant string, reason interface{}) Error {
 		InternalCaller: CallerN(1)}
 }
 
-func NewEvaluatorInflatingError(tenant string, reason interface{}) Error {
-	c := make(map[string]interface{})
+func NewEvaluatorInflatingError(tenant string, reason any) Error {
+	c := make(map[string]any)
 	c["tenant"] = tenant
 	c["reason"] = reason
 	return &err{level: EXCEPTION, ICode: E_FUNCTION_LOADING, IKey: "function.tenant.inflating.error", cause: c,

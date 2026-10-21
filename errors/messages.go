@@ -38,11 +38,11 @@ type ErrData struct {
 }
 
 func (this *ErrData) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{}, 6)
+	m := make(map[string]any, 6)
 	m["code"] = this.Code
 	m["description"] = this.Description
 	if len(this.Reason) > 0 {
-		a := make([]interface{}, 0, len(this.Reason))
+		a := make([]any, 0, len(this.Reason))
 		for i := range this.Reason {
 			sa := strings.Split(this.Reason[i], "\n")
 			if len(sa) == 1 {
@@ -54,7 +54,7 @@ func (this *ErrData) MarshalJSON() ([]byte, error) {
 		m["reason"] = a
 	}
 	if len(this.Action) > 0 {
-		a := make([]interface{}, 0, len(this.Action))
+		a := make([]any, 0, len(this.Action))
 		for i := range this.Action {
 			sa := strings.Split(this.Action[i], "\n")
 			if len(sa) == 1 {

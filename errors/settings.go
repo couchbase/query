@@ -22,7 +22,7 @@ func NewSettingsMetaKVError(e error, msg string) Error {
 		ICause: e, InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
-func NewSettingsInvalidType(setting, expected string, actual interface{}) Error {
+func NewSettingsInvalidType(setting, expected string, actual any) Error {
 	var msg string
 	if expected != "" {
 		msg = fmt.Sprintf("Invalid type (%T) specified for %s, %s expected", actual, setting, expected)
@@ -33,7 +33,7 @@ func NewSettingsInvalidType(setting, expected string, actual interface{}) Error 
 		InternalMsg: msg, InternalCaller: CallerN(1)}
 }
 
-func NewSettingsInvalidValue(setting, expected string, value interface{}) Error {
+func NewSettingsInvalidValue(setting, expected string, value any) Error {
 	var msg, tmsg string
 	if value != nil {
 		tmsg = fmt.Sprintf("(%v) of type %T", value, value)

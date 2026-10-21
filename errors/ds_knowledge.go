@@ -23,10 +23,10 @@ var _knowledge = map[ErrorCode][2]string{
 	E_KNOWLEDGE_LIMIT_EXCEEDED: {"limit_exceeded", "%v"},
 }
 
-func NewKnowledgeError(code ErrorCode, args ...interface{}) Error {
+func NewKnowledgeError(code ErrorCode, args ...any) Error {
 	e := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1),
 		IKey: "datastore.knowledge." + _knowledge[code][0], InternalMsg: _knowledge[code][1]}
-	var fmtArgs []interface{}
+	var fmtArgs []any
 	for _, a := range args {
 		switch a := a.(type) {
 		case string:

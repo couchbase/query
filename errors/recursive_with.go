@@ -36,7 +36,7 @@ func NewRecursiveAnchorError(termType string, alias string, iKey string) Error {
 }
 
 func NewInvalidConfigOptions(option string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["invalid_option"] = option
 	return &err{level: EXCEPTION, ICode: E_CONFIG_INVALID_OPTION, cause: c,
 		InternalMsg: fmt.Sprintf("Invalid config option %s", option), InternalCaller: CallerN(1)}
@@ -50,7 +50,7 @@ func NewRecursionUnsupportedError(clause string, cause string) Error {
 }
 
 func NewRecursiveImplicitDocLimitError(alias string, limit int64) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["alias"] = alias
 	c["limit"] = limit
 	return &err{level: WARNING, ICode: E_RECURSIVE_IMPLICIT_DOC_LIMIT, IKey: "recursive_with.implicit_docs_limit", cause: c,
@@ -60,7 +60,7 @@ func NewRecursiveImplicitDocLimitError(alias string, limit int64) Error {
 }
 
 func NewRecursiveImplicitDepthLimitError(alias string, depth int64) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["alias"] = alias
 	c["depth"] = depth
 

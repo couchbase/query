@@ -31,10 +31,10 @@ var _ss = map[ErrorCode][2]string{
 	E_SS_BAD_RESPONSE:       {"bad_response", "Invalid scan response received"},
 }
 
-func NewSSError(code ErrorCode, args ...interface{}) Error {
+func NewSSError(code ErrorCode, args ...any) Error {
 	e := &err{level: EXCEPTION, ICode: code, InternalCaller: CallerN(1),
 		IKey: "datastore.seq_scan." + _ss[code][0], InternalMsg: _ss[code][1]}
-	var fmtArgs []interface{}
+	var fmtArgs []any
 	for _, a := range args {
 		switch a := a.(type) {
 		case string:

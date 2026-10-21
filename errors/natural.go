@@ -85,11 +85,11 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_CHAT_ALREADY_ACTIVE:            {SERVE_NATURAL_CHAT, "chat with id: %s is already active and cannot be resumed again"},
 }
 
-func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {
+func NewNaturalLanguageRequestError(code ErrorCode, args ...any) Error {
 
 	e := &err{level: EXCEPTION, ICode: code, IKey: "natural." + naturalErrMap[code][0],
 		InternalMsg: naturalErrMap[code][1], InternalCaller: CallerN(1)}
-	var fmtArgs []interface{}
+	var fmtArgs []any
 	for _, a := range args {
 		switch a := a.(type) {
 		case string:
@@ -100,7 +100,7 @@ func NewNaturalLanguageRequestError(code ErrorCode, args ...interface{}) Error {
 			e.cause = a
 		case error:
 			e.cause = a
-		case map[string]interface{}:
+		case map[string]any:
 			e.cause = a
 		case nil:
 			// ignore

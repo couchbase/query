@@ -12,10 +12,10 @@ import "fmt"
 
 // Couchbase datastore path parsing errors
 
-func NewDatastoreInvalidPathError(w string, context interface{}) Error {
-	var c interface{}
+func NewDatastoreInvalidPathError(w string, context any) Error {
+	var c any
 	if context != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["context"] = context
 		c = m
 	}

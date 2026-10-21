@@ -30,9 +30,9 @@ func NewSemanticsWithCauseError(e error, msg string) Error {
 	case Error: // if given error is already an Error, just return it:
 		return e
 	default:
-		var c map[string]interface{}
+		var c map[string]any
 		if e != nil {
-			c = make(map[string]interface{})
+			c = make(map[string]any)
 			c["cause"] = e.Error()
 		}
 		return &err{level: EXCEPTION, ICode: E_SEMANTICS, IKey: "semantics_error", cause: c,

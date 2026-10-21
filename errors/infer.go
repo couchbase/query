@@ -13,14 +13,14 @@ import (
 )
 
 func NewInferInvalidOption(o string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["invalid_option"] = o
 	return &err{level: EXCEPTION, ICode: E_INFER_INVALID_OPTION, IKey: "infer.invalid_option", cause: c,
 		InternalMsg: fmt.Sprintf("Invalid option '%s'", o), InternalCaller: CallerN(1)}
 }
 
 func NewInferOptionMustBeNumeric(o string, t string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["option"] = o
 	c["type"] = t
 	return &err{level: EXCEPTION, ICode: E_INFER_OPTION_MUST_BE_NUMERIC, IKey: "infer.option.not_numeric", cause: c,
@@ -28,7 +28,7 @@ func NewInferOptionMustBeNumeric(o string, t string) Error {
 }
 
 func NewInferErrorReadingNumber(o string, v string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["option"] = o
 	c["value"] = v
 	return &err{level: EXCEPTION, ICode: E_INFER_READING_NUMBER, IKey: "infer.option.error_reading", cause: c,
@@ -36,7 +36,7 @@ func NewInferErrorReadingNumber(o string, v string) Error {
 }
 
 func NewInferNoKeyspaceDocuments(name string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = name
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_KEYSPACE_DOCUMENTS, IKey: "infer.keyspace.no_documents", cause: c,
 		InternalMsg:    "Keyspace has no documents, schema inference not possible.",
@@ -44,14 +44,14 @@ func NewInferNoKeyspaceDocuments(name string) Error {
 }
 
 func NewInferCreateRetrieverFailed(errors ...Error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["errors"] = errors
 	return &err{level: EXCEPTION, ICode: E_INFER_CREATE_RETRIEVER, IKey: "infer.create.retriever.failed", cause: c,
 		InternalMsg: "Error creating document retriever.", InternalCaller: CallerN(1)}
 }
 
 func NewInferNoRandomEntryProvider(k string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_RANDOM_ENTRY, IKey: "infer.keyspace.no_random_entry_provider", cause: c,
 		InternalMsg:    "Keyspace does not support random document retrieval.",
@@ -59,7 +59,7 @@ func NewInferNoRandomEntryProvider(k string) Error {
 }
 
 func NewInferNoRandomScanProvider(k string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_RANDOM_SCAN, IKey: "infer.keyspace.no_random_scan_provider", cause: c,
 		InternalMsg:    "Keyspace does not support random key scans.",
@@ -67,14 +67,14 @@ func NewInferNoRandomScanProvider(k string) Error {
 }
 
 func NewInferNoRandomDocuments(k string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_RANDOM_DOCS, IKey: "infer.keyspace.no_random_docs", cause: c,
 		InternalMsg: "Keyspace will not return random documents.", InternalCaller: CallerN(1)}
 }
 
 func NewInferMissingContext(t string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["context_type"] = t
 	return &err{level: EXCEPTION, ICode: E_INFER_MISSING_CONTEXT, IKey: "infer.missing_context", cause: c,
 		InternalMsg: "Missing expression context.", InternalCaller: CallerN(1)}
@@ -86,7 +86,7 @@ func NewInferExpressionEvalFailed(e error) Error {
 }
 
 func NewInferKeyspaceError(k string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	c["cause"] = e
 	return &err{level: EXCEPTION, ICode: E_INFER_KEYSPACE_ERROR, IKey: "infer.keyspace.error", cause: c,
@@ -94,42 +94,42 @@ func NewInferKeyspaceError(k string, e error) Error {
 }
 
 func NewInferNoSuitablePrimaryIndex(k string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_SUITABLE_PRIMARY_INDEX, IKey: "infer.keyspace.no_primary", cause: c,
 		InternalMsg: "No suitable primary index found.", InternalCaller: CallerN(1)}
 }
 
 func NewInferNoSuitableSecondaryIndex(k string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_SUITABLE_SECONDARY_INDEX, IKey: "infer.keyspace.no_secondary", cause: c,
 		InternalMsg: "No suitable secondary index found.", InternalCaller: CallerN(1)}
 }
 
 func NewInferNoSequentialScan(k string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_SEQUENTIAL_SCAN, IKey: "infer.keyspace.no_sequentialscan", cause: c,
 		InternalMsg: "Sequential scan not available.", InternalCaller: CallerN(1)}
 }
 
 func NewInferNoRetrievers(k string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["keyspace"] = k
 	return &err{level: EXCEPTION, ICode: E_INFER_NO_RETRIEVERS, IKey: "infer.keyspace.no_retrievers", cause: c,
 		InternalMsg: "No document retrievers available.", InternalCaller: CallerN(1)}
 }
 
 func NewInferTimeout(to int32) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["infer_timeout"] = to
 	return &err{level: WARNING, ICode: W_INFER_TIMEOUT, IKey: "infer.timeout", cause: c,
 		InternalMsg: "Stopped after exceeding infer_timeout. Schema may be incomplete.", InternalCaller: CallerN(1)}
 }
 
 func NewInferSizeLimit(l int32) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["max_schema_MB"] = l
 	return &err{level: WARNING, ICode: W_INFER_SIZE_LIMIT, IKey: "infer.size_limit", cause: c,
 		InternalMsg: "Stopped after exceeding max_schema_MB. Schema may be incomplete.", InternalCaller: CallerN(1)}
@@ -141,7 +141,7 @@ func NewInferNoDocuments() Error {
 }
 
 func NewInferConnectFailed(url string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["server"] = url
 	c["cause"] = e
 	return &err{level: EXCEPTION, ICode: E_INFER_CONNECT, IKey: "infer.connect.failed", cause: c,
@@ -154,7 +154,7 @@ func NewInferGetPoolFailed(e error) Error {
 }
 
 func NewInferGetBucketFailed(b string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["bucket"] = b
 	c["cause"] = e
 	return &err{level: EXCEPTION, ICode: E_INFER_GET_BUCKET, IKey: "infer.bucket_get.failed", cause: c,
@@ -179,21 +179,21 @@ func NewInferOptionsError() Error {
 }
 
 func NewNextDocumentError(e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_INFER_NEXT_DOCUMENT, IKey: "infer.next_document", cause: c,
 		InternalMsg: "NextDocument failed", InternalCaller: CallerN(1)}
 }
 
 func NewInvalidFlagsWarning(t string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["type"] = t
 	return &err{level: WARNING, ICode: W_INFER_INVALID_FLAGS, IKey: "infer.invalid_flags", cause: c,
 		InternalMsg: "'flags' must be a number, a string or an array not: " + t, InternalCaller: CallerN(1)}
 }
 
 func NewInvalidFlagWarning(e string) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["element"] = e
 	return &err{level: WARNING, ICode: W_INFER_INVALID_FLAG, IKey: "infer.invalid_flag", cause: c,
 		InternalMsg: "'flags' array element '" + e + "' is invalid", InternalCaller: CallerN(1)}

@@ -78,14 +78,14 @@ type Error interface {
 	IsFatal() bool
 	IsWarning() bool
 	OnceOnly() bool
-	Object() map[string]interface{}
+	Object() map[string]any
 	Retry() Tristate
-	Cause() interface{}
-	SetCause(cause interface{})
+	Cause() any
+	SetCause(cause any)
 	ContainsText(text string) bool
 	HasCause(ErrorCode) bool
 	HasICause(ErrorCode) bool
-	ExtractLineAndColumn(map[string]interface{})
+	ExtractLineAndColumn(map[string]any)
 	AddErrorContext(ctx string)
 	Repeat()
 	GetRepeats() int
@@ -131,7 +131,7 @@ func NewError(e error, internalMsg string) Error {
 		return e
 	}
 
-	var cause interface{}
+	var cause any
 
 	// Provide meaningful additional information for where possible for GSI errors
 	isGsi, caller := GSICaller()
@@ -153,7 +153,7 @@ func NewError(e error, internalMsg string) Error {
 			code := E_GSI
 			key := "indexing.error"
 			level := EXCEPTION
-			m := make(map[string]interface{}, 5)
+			m := make(map[string]any, 5)
 			if strings.HasPrefix(internalMsg, "GSI ") {
 				m["source"] = internalMsg[4:]
 			}
@@ -221,7 +221,7 @@ type err struct {
 	level          int
 	onceOnly       bool
 	retry          Tristate // Retrying this query might be useful.
-	cause          interface{}
+	cause          any
 	repeats        int
 }
 
@@ -240,8 +240,8 @@ func (e *err) Error() string {
 	}
 }
 
-func (e *err) Object() map[string]interface{} {
-	m := map[string]interface{}{
+func (e *err) Object() map[string]any {
+	m := map[string]any{
 		// only use standard data types in the object
 		"code":    int32(e.ICode),
 		"key":     e.IKey,
@@ -266,11 +266,11 @@ func (e *err) Object() map[string]interface{} {
 	return m
 }
 
-func processValue(v interface{}) interface{} {
+func processValue(v any) any {
 	switch vt := v.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		return processMap(vt)
-	case interface{ Object() map[string]interface{} }:
+	case interface{ Object() map[string]any }:
 		return vt.Object()
 	case interface{ Error() string }:
 		return vt.Error()
@@ -278,7 +278,7 @@ func processValue(v interface{}) interface{} {
 		return vt.String()
 	case *AbortError:
 		return vt.e
-	case []interface{}:
+	case []any:
 		return vt
 	case []string:
 		return vt
@@ -301,8 +301,8 @@ func processValue(v interface{}) interface{} {
 	}
 }
 
-func processMap(m map[string]interface{}) map[string]interface{} {
-	rv := make(map[string]interface{})
+func processMap(m map[string]any) map[string]any {
+	rv := make(map[string]any)
 	for k, v := range m {
 		rv[k] = processValue(v)
 	}
@@ -327,15 +327,15 @@ func (e *err) MarshalJSON() ([]byte, error) {
 
 func (e *err) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		Caller  string      `json:"caller"`
-		Code    int32       `json:"code"`
-		ICause  string      `json:"icause"`
-		Key     string      `json:"key"`
-		Message string      `json:"message"`
-		Retry   Tristate    `json:"retry"`
-		Cause   interface{} `json:"cause"`
-		Repeats int         `json:"repeats"`
-		Level   string      `json:"_level"`
+		Caller  string   `json:"caller"`
+		Code    int32    `json:"code"`
+		ICause  string   `json:"icause"`
+		Key     string   `json:"key"`
+		Message string   `json:"message"`
+		Retry   Tristate `json:"retry"`
+		Cause   any      `json:"cause"`
+		Repeats int      `json:"repeats"`
+		Level   string   `json:"_level"`
 	}
 
 	unmarshalErr := json.Unmarshal(body, &_unmarshalled)
@@ -405,7 +405,7 @@ func (e *err) Retry() Tristate {
 	return e.retry
 }
 
-func (e *err) Cause() interface{} {
+func (e *err) Cause() any {
 	if e.cause == nil {
 		return nil
 	}
@@ -419,13 +419,13 @@ func (e *err) Cause() interface{} {
 	return e.cause
 }
 
-func (e *err) SetCause(cause interface{}) {
+func (e *err) SetCause(cause any) {
 	e.cause = cause
 }
 
 var extractRe = regexp.MustCompile("line ([0-9]+), column ([0-9]+)")
 
-func (e *err) ExtractLineAndColumn(m map[string]interface{}) {
+func (e *err) ExtractLineAndColumn(m map[string]any) {
 	if m == nil {
 		return
 	}
@@ -570,7 +570,7 @@ func (e *err) ContainsText(text string) bool {
 			if strings.Contains(s, text) {
 				return true
 			}
-			if cwo, ok := cause.(interface{ Object() map[string]interface{} }); ok {
+			if cwo, ok := cause.(interface{ Object() map[string]any }); ok {
 				eo = cwo.Object()
 			} else {
 				return false
@@ -593,7 +593,7 @@ func (e *err) HasCause(code ErrorCode) bool {
 				return true
 			}
 			c = cse.Cause()
-		case map[string]interface{}:
+		case map[string]any:
 			if cde, ok := cse["code"]; ok {
 				switch cde := cde.(type) {
 				case int32:
@@ -610,7 +610,7 @@ func (e *err) HasCause(code ErrorCode) bool {
 					}
 				}
 			} else if cerr, ok := cse["error"]; ok {
-				if cerrMap, ok := cerr.(map[string]interface{}); ok {
+				if cerrMap, ok := cerr.(map[string]any); ok {
 					cde, ok := cerrMap["code"]
 					if ok {
 						switch cde := cde.(type) {
@@ -662,7 +662,7 @@ func NewTempFileQuotaExceededError() Error {
 		InternalMsg: "Temporary file quota exceeded"}
 }
 
-func getErrorForCause(e error) interface{} {
+func getErrorForCause(e error) any {
 	switch e := e.(type) {
 	case Error:
 		return e
@@ -670,7 +670,7 @@ func getErrorForCause(e error) interface{} {
 		return e
 	case error:
 		s := e.Error()
-		var i interface{}
+		var i any
 		if json.Unmarshal([]byte(s), &i) == nil {
 			return i
 		}
@@ -680,7 +680,7 @@ func getErrorForCause(e error) interface{} {
 	}
 }
 
-func FromObject(m map[string]interface{}) Error {
+func FromObject(m map[string]any) Error {
 	b, e := json.Marshal(m)
 	if e != nil {
 		return nil
@@ -697,7 +697,7 @@ func FromBytes(b []byte) Error {
 }
 
 func (this *err) GetErrorCause() Error {
-	if c, ok := this.cause.(map[string]interface{}); ok {
+	if c, ok := this.cause.(map[string]any); ok {
 		if _, ok := c["code"]; ok {
 			rv := FromObject(c)
 			if rv != nil {
@@ -706,7 +706,7 @@ func (this *err) GetErrorCause() Error {
 		}
 		if e, ok := c["cause"]; ok {
 			switch t := e.(type) {
-			case map[string]interface{}:
+			case map[string]any:
 				return FromObject(t)
 			case string:
 				return FromBytes([]byte(t))
@@ -716,7 +716,7 @@ func (this *err) GetErrorCause() Error {
 		}
 		if e, ok := c["error"]; ok {
 			switch t := e.(type) {
-			case map[string]interface{}:
+			case map[string]any:
 				return FromObject(t)
 			case string:
 				return FromBytes([]byte(t))

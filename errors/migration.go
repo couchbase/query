@@ -11,11 +11,11 @@ package errors
 // migration errors
 
 func NewMigrationError(what, msg string, elems []string, e error) Error {
-	var c map[string]interface{}
+	var c map[string]any
 	errString := "Error occurred during " + what + " migration"
 	if len(elems) == 4 {
 		// elems, if present, should only have 4 parts (fully qualified name)
-		c = make(map[string]interface{}, 4)
+		c = make(map[string]any, 4)
 		c["namespace"] = elems[0]
 		c["bucket"] = elems[1]
 		c["scope"] = elems[2]
@@ -32,11 +32,11 @@ func NewMigrationError(what, msg string, elems []string, e error) Error {
 }
 
 func NewMigrationInternalError(what, msg string, elems []string, e error) Error {
-	var c map[string]interface{}
+	var c map[string]any
 	errString := "Unexpected error occurred during " + what + " migration"
 	if len(elems) == 4 {
 		// elems, if present, should only have 4 parts (fully qualified name)
-		c = make(map[string]interface{}, 4)
+		c = make(map[string]any, 4)
 		c["namespace"] = elems[0]
 		c["bucket"] = elems[1]
 		c["scope"] = elems[2]

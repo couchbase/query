@@ -35,7 +35,7 @@ func NewServiceErrorUnrecognizedValue(feature string, value string) Error {
 }
 
 func NewServiceErrorBadValue(e error, feature string) Error {
-	var c interface{}
+	var c any
 	if ee, ok := e.(Error); ok {
 		c = ee
 	}
@@ -88,17 +88,17 @@ func NewServiceErrorHttpReq(id string) Error {
 		InternalMsg: fmt.Sprintf("Request %s is not a http request", id), InternalCaller: CallerN(1)}
 }
 
-func NewServiceErrorScanVectorBadLength(vec []interface{}) Error {
+func NewServiceErrorScanVectorBadLength(vec []any) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_SCAN_VECTOR_BAD_LENGTH, IKey: "service.io.request.scan_vector.length",
 		InternalMsg: fmt.Sprintf("Array %v should be of length 2", vec), InternalCaller: CallerN(1)}
 }
 
-func NewServiceErrorScanVectorBadSequenceNumber(seq interface{}) Error {
+func NewServiceErrorScanVectorBadSequenceNumber(seq any) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_SCAN_VECTOR_BAD_SEQUENCE_NUMBER, IKey: "service.io.request.scan_vector.sequence",
 		InternalMsg: fmt.Sprintf("Bad sequence number %v. Expected an unsigned 64-bit integer.", seq), InternalCaller: CallerN(1)}
 }
 
-func NewServiceErrorScanVectorBadUUID(uuid interface{}) Error {
+func NewServiceErrorScanVectorBadUUID(uuid any) Error {
 	return &err{level: EXCEPTION, ICode: E_SERVICE_SCAN_VECTOR_BADUUID, IKey: "service.io.request.scan_vector.uuid",
 		InternalMsg: fmt.Sprintf("Bad UUID %v. Expected a string.", uuid), InternalCaller: CallerN(1)}
 }
@@ -149,7 +149,7 @@ func NewServiceUserResultsSizeExceededError() Error {
 }
 
 func NewErrorLimit(limit int, num int, dups int, mut uint64) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["errorLimit"] = limit
 	c["distinctErrors"] = num
 	if dups > 0 {
@@ -186,7 +186,7 @@ func NewServiceTenantNotFoundError(bucket string) Error {
 func NewServiceTenantRejectedError(isZero bool, duration string) Error {
 	var (
 		message string
-		cause   map[string]interface{} = make(map[string]interface{})
+		cause   map[string]any = make(map[string]any)
 	)
 	if isZero {
 		message = "Request rejected due to limiting or throttling. Retry later"
@@ -224,7 +224,7 @@ func NewServiceInvalidValueError(value string, feature string, details string) E
 }
 
 func NewBackupNotPossible() Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["possible_reasons"] = []string{"Migration active."}
 	return &err{level: EXCEPTION, ICode: E_BACKUP_NOT_POSSIBLE, IKey: "service.backup_not_possible", cause: c,
 		InternalMsg: "Backup not possible currently.", InternalCaller: CallerN(1)}

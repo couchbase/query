@@ -13,7 +13,7 @@ import (
 )
 
 func NewUpdaterMaxErrors(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["last_error"] = e
 	return &err{level: EXCEPTION, ICode: E_UPDATER_MAX_ERRORS, IKey: "primitives.updater.max_errors", cause: c,
 		InternalMsg: fmt.Sprintf("%s: Max failures reached. Last error: %v", name, e), InternalCaller: CallerN(1)}
@@ -25,21 +25,21 @@ func NewUpdaterNoHealthyNodesFound(name string) Error {
 }
 
 func NewUpdaterStreamingError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["stream_error"] = e
 	return &err{level: EXCEPTION, ICode: E_UPDATER_STREAM_ERROR, IKey: "primitives.updater.stream_error", cause: c,
 		InternalMsg: fmt.Sprintf("%s: Streaming error: %v", name, e), InternalCaller: CallerN(1)}
 }
 
 func NewUpdaterAuthError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["auth_error"] = e
 	return &err{level: EXCEPTION, ICode: E_UPDATER_AUTH_ERROR, IKey: "primitives.updater.auth_error", cause: c,
 		InternalMsg: fmt.Sprintf("%s: Authentication error: %v", name, e), InternalCaller: CallerN(1)}
 }
 
-func NewUpdaterFailedToConnectToHost(name string, status int, body interface{}) Error {
-	c := make(map[string]interface{})
+func NewUpdaterFailedToConnectToHost(name string, status int, body any) Error {
+	c := make(map[string]any)
 	c["status"] = status
 	c["body"] = body
 	return &err{level: EXCEPTION, ICode: E_UPDATER_CONNECTION_FAILED, IKey: "primitives.updater.connection_failed", cause: c,
@@ -47,7 +47,7 @@ func NewUpdaterFailedToConnectToHost(name string, status int, body interface{}) 
 }
 
 func NewUpdaterMappingError(name string, e error) Error {
-	c := make(map[string]interface{})
+	c := make(map[string]any)
 	c["mapping_error"] = e
 	return &err{level: EXCEPTION, ICode: E_UPDATER_ERROR_MAPPING, IKey: "primitives.updater.mapping", cause: c,
 		InternalMsg: fmt.Sprintf("%s: Mapping error: %v", name, e), InternalCaller: CallerN(1)}

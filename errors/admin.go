@@ -44,7 +44,7 @@ func NewAdminUnknownSettingError(setting string) Error {
 		InternalMsg: fmt.Sprintf("Unknown setting: %s", setting), InternalCaller: CallerN(1)}
 }
 
-func NewAdminSettingTypeError(setting string, value interface{}) Error {
+func NewAdminSettingTypeError(setting string, value any) Error {
 	return &err{level: EXCEPTION, ICode: E_ADMIN_SETTING_TYPE, IKey: "admin.setting_type_error",
 		InternalMsg: fmt.Sprintf("Incorrect value '%v' (%T) for setting: %s", value, value, setting), InternalCaller: CallerN(1)}
 }
@@ -90,9 +90,9 @@ func NewAdminMakeMetricError(e error, msg string) Error {
 }
 
 func NewAdminAuthError(e error, msg string) Error {
-	var c interface{}
+	var c any
 	if e != nil {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["error"] = e
 		c = m
 	}
@@ -126,7 +126,7 @@ func NewCompletedQualifierUnknown(what string) Error {
 		InternalMsg: "Completed requests qualifier unknown: " + what, InternalCaller: CallerN(1)}
 }
 
-func NewCompletedQualifierNotFound(what string, cond interface{}) Error {
+func NewCompletedQualifierNotFound(what string, cond any) Error {
 	var condString string
 
 	if cond != nil {
@@ -141,7 +141,7 @@ func NewCompletedQualifierNotUnique(what string) Error {
 		InternalMsg: "Non-unique completed requests qualifier '" + what + "' cannot be updated.", InternalCaller: CallerN(1)}
 }
 
-func NewCompletedQualifierInvalidArgument(what string, cond interface{}) Error {
+func NewCompletedQualifierInvalidArgument(what string, cond any) Error {
 	var condString string
 
 	if cond != nil {
@@ -152,7 +152,7 @@ func NewCompletedQualifierInvalidArgument(what string, cond interface{}) Error {
 }
 
 func NewCompletedInvalidPlanSize(sz int) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	c["invalid_size"] = sz
 	return &err{level: EXCEPTION, ICode: E_COMPLETED_BAD_MAX_SIZE, IKey: "admin.accounting.completed.bad_max_size", cause: c,
 		InternalMsg: fmt.Sprintf("Completed requests maximum plan size (%v) is invalid.", sz), InternalCaller: CallerN(1)}
@@ -169,9 +169,9 @@ func NewAdminBodyError(e error) Error {
 }
 
 func NewAdminManualFFDCError(msg string, remaining int) Error {
-	var c map[string]interface{}
+	var c map[string]any
 	if msg != "" {
-		c = make(map[string]interface{}, 2)
+		c = make(map[string]any, 2)
 		c["seconds_before_next"] = remaining
 		c["message"] = msg
 	}
@@ -180,7 +180,7 @@ func NewAdminManualFFDCError(msg string, remaining int) Error {
 }
 
 func NewAdminLogError(e error) Error {
-	c := make(map[string]interface{}, 2)
+	c := make(map[string]any, 2)
 	c["error"] = e
 	return &err{level: EXCEPTION, ICode: E_ADMIN_LOG, IKey: "admin.log_streaming", ICause: e, cause: c,
 		InternalMsg: "Error accessing log", InternalCaller: CallerN(1)}
