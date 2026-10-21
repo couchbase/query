@@ -173,7 +173,7 @@ type UnifiedDocumentRetriever struct {
 	rnd            datastore.RandomEntryProvider
 	lastRnd        datastore.RandomEntryProvider
 	rs             datastore.RandomScanProvider
-	rs_scan        interface{}
+	rs_scan        any
 	ss             datastore.Index3
 	iconn          *datastore.IndexConnection
 	returned       int
@@ -1282,7 +1282,7 @@ func MakeKVRandomDocumentRetriever(serverURL, bucket, bucketPass string, sampleS
 ////////////////////////////////////////////////////////////////////////////////
 
 type subqueryResults interface {
-	Results() (interface{}, uint64, error)
+	Results() (any, uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
 }
@@ -1328,7 +1328,7 @@ func MakeExpressionDocumentRetriever(context datastore.QueryContext, expr expres
 			return nil, errors.NewInferExpressionEvalFailed(err)
 		}
 		if edr.doc.Type() == value.ARRAY {
-			a := edr.doc.Actual().([]interface{})
+			a := edr.doc.Actual().([]any)
 			if len(a) > sampleSize {
 				a = a[:sampleSize]
 				edr.doc = value.NewValue(a)

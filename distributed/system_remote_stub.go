@@ -42,8 +42,8 @@ func (this systemRemoteStub) GetRemoteKeys(nodes []string, endpoint string, keyF
 
 // get a specified remote document from a remote node
 func (this systemRemoteStub) GetRemoteDoc(node string, key string, endpoint string, command string,
-	docFn func(doc map[string]interface{}), warnFn func(warn errors.Error), creds Creds, authToken string,
-	formData map[string]interface{}) {
+	docFn func(doc map[string]any), warnFn func(warn errors.Error), creds Creds, authToken string,
+	formData map[string]any) {
 	// ditto
 }
 
@@ -101,7 +101,7 @@ func (this systemRemoteStub) Enabled(capability Capability) bool {
 }
 
 // change settings
-func (this systemRemoteStub) Settings(setting map[string]interface{}) errors.Error {
+func (this systemRemoteStub) Settings(setting map[string]any) errors.Error {
 	return nil
 }
 

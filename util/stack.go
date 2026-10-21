@@ -16,7 +16,7 @@ type Stack struct {
 }
 
 type Element struct {
-	value interface{}
+	value any
 	next  *Element
 }
 
@@ -25,14 +25,14 @@ func (s *Stack) Size() int {
 }
 
 // Push a new element onto the stack
-func (s *Stack) Push(value interface{}) {
+func (s *Stack) Push(value any) {
 	s.top = &Element{value, s.top}
 	s.size++
 }
 
 // Remove the top element from the stack and return it's value
 // If the stack is empty, return nil
-func (s *Stack) Pop() (value interface{}) {
+func (s *Stack) Pop() (value any) {
 	if s.size > 0 {
 		value, s.top = s.top.value, s.top.next
 		s.size--

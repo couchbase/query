@@ -13,7 +13,7 @@ import "fmt"
 type Value interface {
 	String() string
 	MarshalJSON() ([]byte, error)
-	Actual() interface{}
+	Actual() any
 	ToString() string
 	Truth() bool
 	Recycle()
@@ -22,19 +22,19 @@ type Value interface {
 
 type Error interface {
 	error
-	Object() map[string]interface{}
+	Object() map[string]any
 }
 
 type Context interface {
-	NewValue(val interface{}) interface{}
-	CopyValue(val interface{}) interface{}
-	StoreValue(key string, val interface{})
-	RetrieveValue(key string) interface{}
+	NewValue(val any) any
+	CopyValue(val any) any
+	StoreValue(key string, val any)
+	RetrieveValue(key string) any
 	ReleaseValue(key string)
-	CompareValues(val1, val2 interface{}) (int, bool)
-	ExecuteStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (interface{}, uint64, error)
-	OpenStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (interface{}, error)
-	Log(fmt string, args ...interface{})
+	CompareValues(val1, val2 any) (int, bool)
+	ExecuteStatement(statement string, namedArgs map[string]any, positionalArgs []any) (any, uint64, error)
+	OpenStatement(statement string, namedArgs map[string]any, positionalArgs []any) (any, error)
+	Log(fmt string, args ...any)
 	NestingLevel() int
 	StorageContext() string
 }
@@ -42,13 +42,13 @@ type Context interface {
 type Handle interface {
 	Type() string
 	Mutations() uint64
-	Results() (interface{}, uint64, error)
+	Results() (any, uint64, error)
 	Complete() (uint64, error)
-	NextDocument() (interface{}, error)
+	NextDocument() (any, error)
 	Cancel()
 }
 
-func Args(args interface{}, context interface{}) (Value, Context, error) {
+func Args(args any, context any) (Value, Context, error) {
 	a, ok := args.(Value)
 	if !ok {
 		return nil, nil, fmt.Errorf("invalid function arguments type %T", args)
@@ -63,5 +63,5 @@ func Args(args interface{}, context interface{}) (Value, Context, error) {
 // BasicContext interface exposes a limited set of methods to js-evaluator
 type BasicContext interface {
 	StorageContext() string
-	Log(fmt string, args ...interface{})
+	Log(fmt string, args ...any)
 }

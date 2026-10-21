@@ -297,7 +297,7 @@ func (z *zkCluster) Capability(name string) bool {
 	return false
 }
 
-func (z *zkCluster) Settings() (map[string]interface{}, errors.Error) {
+func (z *zkCluster) Settings() (map[string]any, errors.Error) {
 	return nil, nil
 }
 
@@ -491,7 +491,7 @@ func (z *zkQueryNodeConfig) Options() clustering.QueryNodeOptions {
 	return z.OptionsCL
 }
 
-func getJsonString(i interface{}) string {
+func getJsonString(i any) string {
 	serialized, _ := json.Marshal(i)
 	s := bytes.NewBuffer(append(serialized, '\n'))
 	return s.String()

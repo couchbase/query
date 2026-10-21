@@ -31,8 +31,8 @@ type SystemRemoteAccess interface {
 	// docFn processes the document
 	// warnFn issues warnings
 	GetRemoteDoc(node string, key string, endpoint string, command string,
-		docFn func(doc map[string]interface{}),
-		warnFn func(warn errors.Error), creds Creds, authToken string, formData map[string]interface{})
+		docFn func(doc map[string]any),
+		warnFn func(warn errors.Error), creds Creds, authToken string, formData map[string]any)
 
 	// Perform an operation on a key on all nodes in the argument
 	// data is sent to each remote node
@@ -60,7 +60,7 @@ type SystemRemoteAccess interface {
 	Enabled(capability Capability) bool
 
 	// dynamically change settings
-	Settings(settings map[string]interface{}) errors.Error
+	Settings(settings map[string]any) errors.Error
 
 	// Update TLS or node-to-node encryption settings.
 	SetConnectionSecurityConfig(caFile string, certFile string, encryptNodeToNodeComms bool, useInternalClientCert bool,

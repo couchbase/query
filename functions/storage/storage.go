@@ -412,7 +412,7 @@ func MakeName(bytes []byte) (functions.FunctionName, error) {
 	}
 }
 
-func IsInternal(val interface{}) (bool, error) {
+func IsInternal(val any) (bool, error) {
 	var t string
 
 	switch val := val.(type) {
@@ -705,7 +705,7 @@ func doMigrateBucket(name string, dropped bool) bool {
 	}
 
 	complete := true
-	err1 := metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]interface{}) errors.Error {
+	err1 := metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]any) errors.Error {
 		if len(parts) != 4 {
 			return nil
 		}
@@ -880,7 +880,7 @@ func checkMigrationComplete() bool {
 	}
 
 	complete := true
-	err1 := metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]interface{}) errors.Error {
+	err1 := metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]any) errors.Error {
 		if len(parts) == 4 {
 			if parts[1] == _N1QL_SYSTEM_BUCKET {
 				// ignore entries on N1QL_SYSTEM_BUCKET since that'll be dropped
@@ -919,7 +919,7 @@ func checkMigrationComplete() bool {
 
 // if retrying migration, since we go from the migrations map, make sure all buckets are in the map
 func checkMigrations() {
-	metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]interface{}) errors.Error {
+	metaStorage.ForeachBodyEntry(func(parts []string, entry map[string]any) errors.Error {
 		if len(parts) == 4 {
 			bname := parts[1]
 			if bname == _N1QL_SYSTEM_BUCKET {

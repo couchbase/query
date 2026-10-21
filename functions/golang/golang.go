@@ -52,7 +52,7 @@ func (this *golang) CheckAuthorize(name string, context functions.Context) bool 
 }
 
 func (this *golang) FunctionStatements(name functions.FunctionName, body functions.FunctionBody, context functions.Context) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	return nil, errors.NewFunctionUnsupportedActionError("golang", "EXPLAIN FUNCTION")
 }
@@ -61,7 +61,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 	values []value.Value, context functions.Context) (value.Value, errors.Error) {
 
 	var args value.Value
-	var val interface{}
+	var val any
 
 	funcName := name.Name()
 	funcBody, ok := body.(*golangBody)
@@ -84,7 +84,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 		return nil, funcBody.execError(err, funcName)
 	}
 
-	udf, ok := obj.(func(interface{}, interface{}) (interface{}, error))
+	udf, ok := obj.(func(any, any) (any, error))
 	if !ok {
 		return nil, funcBody.execError(fmt.Errorf("invalid object"), funcName)
 	}
@@ -93,7 +93,7 @@ func (this *golang) Execute(name functions.FunctionName, body functions.Function
 		if len(values) != len(funcBody.varNames) {
 			return nil, errors.NewArgumentsMismatchError(funcName)
 		}
-		argsObj := make(map[string]interface{}, len(values))
+		argsObj := make(map[string]any, len(values))
 		for i, _ := range values {
 			argsObj[funcBody.varNames[i]] = values[i]
 		}
@@ -135,7 +135,7 @@ func (this *golangBody) Lang() functions.Language {
 	return functions.GOLANG
 }
 
-func (this *golangBody) Body(object map[string]interface{}) {
+func (this *golangBody) Body(object map[string]any) {
 	object["#language"] = "golang"
 	object["library"] = this.library
 	object["object"] = this.object

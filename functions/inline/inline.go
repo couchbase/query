@@ -52,7 +52,7 @@ func (this *inline) CheckAuthorize(name string, fcontext functions.Context) bool
 // If the function body: Is a subquery - return it
 // If not: return all subqueries in the function body
 func (this *inline) FunctionStatements(name functions.FunctionName, body functions.FunctionBody,
-	context functions.Context) (interface{}, errors.Error) {
+	context functions.Context) (any, errors.Error) {
 	if funcBody, ok := body.(*inlineBody); ok {
 		// get plans will have all subquery plans and stored as refrence in context subquery plans
 		if _, _, err := funcBody.GetPlans(name.Key(), context); err != nil {
@@ -75,19 +75,19 @@ func (this *inline) Execute(name functions.FunctionName, body functions.Function
 	var val value.Value
 	expr, varNames, err := funcBody.GetPlans(name.Key(), context)
 	if err == nil {
-		var parent map[string]interface{}
+		var parent map[string]any
 
 		if varNames == nil {
 			args := make([]value.Value, len(values))
 			for i, _ := range values {
 				args[i] = value.NewValue(values[i])
 			}
-			parent = map[string]interface{}{"args": args}
+			parent = map[string]any{"args": args}
 		} else {
 			if len(values) != len(varNames) {
 				return nil, errors.NewArgumentsMismatchError(name.Name())
 			}
-			parent = make(map[string]interface{}, len(values))
+			parent = make(map[string]any, len(values))
 			for i, _ := range values {
 				parent[varNames[i]] = values[i]
 			}
@@ -154,7 +154,7 @@ func (this *inlineBody) Lang() functions.Language {
 	return functions.INLINE
 }
 
-func (this *inlineBody) Body(object map[string]interface{}) {
+func (this *inlineBody) Body(object map[string]any) {
 	object["#language"] = "inline"
 	object["expression"] = this.expr.String()
 	if this.varNames != nil {

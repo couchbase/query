@@ -20,12 +20,12 @@ import (
 
 // AccountingStore represents a store for maintaining all accounting data (metrics, statistics, events)
 type AccountingStore interface {
-	Id() string                                                             // Id of this AccountingStore
-	URL() string                                                            // URL to this AccountingStore
-	MetricRegistry() MetricRegistry                                         // The MetricRegistry that this AccountingStore is managing
-	Vitals(bool, util.DurationStyle) (map[string]interface{}, errors.Error) // The Vital Signs of the entity that this AccountingStore
-	ExternalVitals(map[string]interface{}) map[string]interface{}           // Vitals comeing from outside
-	NewCounter() Counter                                                    // Create individual metrics
+	Id() string                                                     // Id of this AccountingStore
+	URL() string                                                    // URL to this AccountingStore
+	MetricRegistry() MetricRegistry                                 // The MetricRegistry that this AccountingStore is managing
+	Vitals(bool, util.DurationStyle) (map[string]any, errors.Error) // The Vital Signs of the entity that this AccountingStore
+	ExternalVitals(map[string]any) map[string]any                   // Vitals comeing from outside
+	NewCounter() Counter                                            // Create individual metrics
 	NewGauge() Gauge
 	NewMeter() Meter
 	NewTimer() Timer
@@ -35,8 +35,7 @@ type AccountingStore interface {
 // Metric types
 
 // A Metric is a property that can be measured repeatedly and/or periodically
-type Metric interface {
-}
+type Metric any
 
 // Counter is an incrementing/decrementing count (#requests in a queue, #garbage collections)
 type Counter interface {

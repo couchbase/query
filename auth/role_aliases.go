@@ -120,17 +120,17 @@ func AliasToRole(alias, sourceType string) string {
 //	         {"bucket_name":"review","role":"bucket_full_access"}]}
 //
 // If the data is in an unexpected format, we leave it as we found it.
-func ConvertRolesToAliases(user map[string]interface{}) {
+func ConvertRolesToAliases(user map[string]any) {
 	roles, present := user["roles"]
 	if !present || roles == nil {
 		return
 	}
-	rolesArr, ok := roles.([]interface{})
+	rolesArr, ok := roles.([]any)
 	if !ok {
 		return
 	}
 	for _, role := range rolesArr {
-		roleMap, ok := role.(map[string]interface{})
+		roleMap, ok := role.(map[string]any)
 		if !ok {
 			continue
 		}

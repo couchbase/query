@@ -42,11 +42,11 @@ func (AccountingStoreStub) MetricRegistry() accounting.MetricRegistry {
 	return MetricRegistryStub{}
 }
 
-func (AccountingStoreStub) Vitals(bool, util.DurationStyle) (map[string]interface{}, errors.Error) {
+func (AccountingStoreStub) Vitals(bool, util.DurationStyle) (map[string]any, errors.Error) {
 	return nil, nil
 }
 
-func (AccountingStoreStub) ExternalVitals(vals map[string]interface{}) map[string]interface{} {
+func (AccountingStoreStub) ExternalVitals(vals map[string]any) map[string]any {
 	return nil
 }
 

@@ -48,7 +48,7 @@ type genElem struct {
 	lastMRU  uint32
 	refcount int32
 	deleted  bool
-	contents interface{}
+	contents any
 }
 
 const _MIN_CACHES = 8
@@ -111,7 +111,7 @@ func NewGenCache(l int) *GenCache {
 }
 
 // Fast Add, for caches where entries are never replaced and no actions are necessary
-func (this *GenCache) FastAdd(entry interface{}, id string) {
+func (this *GenCache) FastAdd(entry any, id string) {
 	cacheNum := HashString(id, this.numCaches)
 	elem := &genElem{
 		contents: entry,
@@ -125,7 +125,7 @@ func (this *GenCache) FastAdd(entry interface{}, id string) {
 }
 
 // Add (or update, if ID found) entry, eject old entry if we are controlling sie
-func (this *GenCache) Add(entry interface{}, id string, process func(interface{}) Operation) {
+func (this *GenCache) Add(entry any, id string, process func(any) Operation) {
 	cacheNum := HashString(id, this.numCaches)
 	this.lock(cacheNum)
 
@@ -219,7 +219,7 @@ func (this *GenCache) Add(entry interface{}, id string, process func(interface{}
 }
 
 // Remove entry
-func (this *GenCache) Delete(id string, cleanup func(interface{})) bool {
+func (this *GenCache) Delete(id string, cleanup func(any)) bool {
 	cacheNum := HashString(id, this.numCaches)
 	this.lock(cacheNum)
 	defer this.locks[cacheNum].Unlock()
@@ -236,7 +236,7 @@ func (this *GenCache) Delete(id string, cleanup func(interface{})) bool {
 	return false
 }
 
-func (this *GenCache) DeleteWithCheck(id string, cleanup func(interface{}) bool) bool {
+func (this *GenCache) DeleteWithCheck(id string, cleanup func(any) bool) bool {
 	cacheNum := HashString(id, this.numCaches)
 	this.lock(cacheNum)
 	defer this.locks[cacheNum].Unlock()
@@ -257,7 +257,7 @@ func (this *GenCache) DeleteWithCheck(id string, cleanup func(interface{}) bool)
 }
 
 // Returns an element's contents by id
-func (this *GenCache) Get(id string, process func(interface{})) interface{} {
+func (this *GenCache) Get(id string, process func(any)) any {
 	cacheNum := HashString(id, this.numCaches)
 	this.locks[cacheNum].RLock()
 	defer this.locks[cacheNum].RUnlock()
@@ -274,7 +274,7 @@ func (this *GenCache) Get(id string, process func(interface{})) interface{} {
 
 // Returns an element's contents by id and places it at the top of the bucket
 // Also useful to manipulate an element with an exclusive lock
-func (this *GenCache) Use(id string, process func(interface{})) interface{} {
+func (this *GenCache) Use(id string, process func(any)) any {
 
 	// if no processing is involved and the cache is in no danger of being
 	// cleaned, we can can just use a shared lock for performance
@@ -342,7 +342,7 @@ func (this *GenCache) Names() []string {
 	l := int(this.curSize)
 	sz := this.numCaches + l
 	n := make([]string, l, sz)
-	this.ForEach(func(id string, entry interface{}) bool {
+	this.ForEach(func(id string, entry any) bool {
 		if i < l {
 			n[i] = id
 		} else {
@@ -364,7 +364,7 @@ func (this *GenCache) Names() []string {
 // Since, for blocking operations, the entry is not guaranteed to exist, any data needed by them
 // must be set up in the non blocking part
 // both functions should return false if processing needs to stop
-func (this *GenCache) ForEach(nonBlocking func(string, interface{}) bool,
+func (this *GenCache) ForEach(nonBlocking func(string, any) bool,
 	blocking func() bool) {
 
 	safeUnlock := -1

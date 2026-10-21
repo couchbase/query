@@ -32,9 +32,9 @@ type Context interface {
 
 type CurlContext interface {
 	Context
-	GetAllowlist() map[string]interface{}
+	GetAllowlist() map[string]any
 	Credentials() *auth.Credentials
 	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
-	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (interface{}, error)
+	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (any, error)
 }

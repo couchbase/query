@@ -14,7 +14,7 @@ import (
 )
 
 func TestConvertRolesToAliases(t *testing.T) {
-	var user map[string]interface{}
+	var user map[string]any
 
 	input := `{ "domain":"local", "id":"reviewowner", "name":"OwnerOfreview",
 		    "roles":[{"bucket_name":"customer","role":"query_select"},

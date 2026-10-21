@@ -80,7 +80,7 @@ func (gl *goLogger) Fatala(f func() string) {
 
 // printf-style variants
 
-func (gl *goLogger) Logf(level logging.Level, format string, args ...interface{}) {
+func (gl *goLogger) Logf(level logging.Level, format string, args ...any) {
 	if gl.logger == nil {
 		return
 	}
@@ -89,31 +89,31 @@ func (gl *goLogger) Logf(level logging.Level, format string, args ...interface{}
 	}
 }
 
-func (gl *goLogger) Debugf(format string, args ...interface{}) {
+func (gl *goLogger) Debugf(format string, args ...any) {
 	gl.Logf(logging.DEBUG, format, args...)
 }
 
-func (gl *goLogger) Tracef(format string, args ...interface{}) {
+func (gl *goLogger) Tracef(format string, args ...any) {
 	gl.Logf(logging.TRACE, format, args...)
 }
 
-func (gl *goLogger) Infof(format string, args ...interface{}) {
+func (gl *goLogger) Infof(format string, args ...any) {
 	gl.Logf(logging.INFO, format, args...)
 }
 
-func (gl *goLogger) Warnf(format string, args ...interface{}) {
+func (gl *goLogger) Warnf(format string, args ...any) {
 	gl.Logf(logging.WARN, format, args...)
 }
 
-func (gl *goLogger) Errorf(format string, args ...interface{}) {
+func (gl *goLogger) Errorf(format string, args ...any) {
 	gl.Logf(logging.ERROR, format, args...)
 }
 
-func (gl *goLogger) Severef(format string, args ...interface{}) {
+func (gl *goLogger) Severef(format string, args ...any) {
 	gl.Logf(logging.SEVERE, format, args...)
 }
 
-func (gl *goLogger) Fatalf(format string, args ...interface{}) {
+func (gl *goLogger) Fatalf(format string, args ...any) {
 	gl.Logf(logging.FATAL, format, args...)
 }
 
@@ -134,7 +134,7 @@ func (gl *goLogger) str(level logging.Level, rlevel logging.Level, msg string) s
 	return gl.entryFormatter.format(tm, level, rlevel, msg)
 }
 
-func (gl *goLogger) Stringf(level logging.Level, format string, args ...interface{}) string {
+func (gl *goLogger) Stringf(level logging.Level, format string, args ...any) string {
 	return gl.str(level, logging.NONE, fmt.Sprintf(format, args...))
 }
 
@@ -176,7 +176,7 @@ func (*textFormatter) format(tm string, level logging.Level, rlevel logging.Leve
 	return b.String()
 }
 
-func appendKeyValue(b *strings.Builder, key, value interface{}) {
+func appendKeyValue(b *strings.Builder, key, value any) {
 	if _, ok := value.(string); ok {
 		fmt.Fprintf(b, "%v=%s ", key, value)
 	} else {

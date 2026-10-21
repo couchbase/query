@@ -103,7 +103,7 @@ func (this *constantToNamedParam) constructnamedparam() (string, string) {
 	return key, param
 }
 
-func (this *constantToNamedParam) VisitConstant(expr *expression.Constant) (interface{}, error) {
+func (this *constantToNamedParam) VisitConstant(expr *expression.Constant) (any, error) {
 	if expr.HasExprFlag(expression.EXPR_NULLS_POSITION) {
 		return expr, nil
 	}
@@ -114,7 +114,7 @@ func (this *constantToNamedParam) VisitConstant(expr *expression.Constant) (inte
 	return algebra.NewNamedParameter(param), nil
 }
 
-func (this *constantToNamedParam) VisitObjectConstruct(expr *expression.ObjectConstruct) (interface{}, error) {
+func (this *constantToNamedParam) VisitObjectConstruct(expr *expression.ObjectConstruct) (any, error) {
 	if expr.Value() != nil {
 		key, param := this.constructnamedparam()
 		if this.parametersMap != nil {
@@ -127,7 +127,7 @@ func (this *constantToNamedParam) VisitObjectConstruct(expr *expression.ObjectCo
 	return expr, err
 }
 
-func (this *constantToNamedParam) VisitArrayConstruct(expr *expression.ArrayConstruct) (interface{}, error) {
+func (this *constantToNamedParam) VisitArrayConstruct(expr *expression.ArrayConstruct) (any, error) {
 	if expr.Value() != nil {
 		key, param := this.constructnamedparam()
 		if this.parametersMap != nil {

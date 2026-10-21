@@ -48,10 +48,10 @@ type FunctionName interface {
 	ProtectedKey() string // Full name of the function with appropriate backticks
 	IsGlobal() bool
 	QueryContext() string
-	Signature(object map[string]interface{})
+	Signature(object map[string]any)
 	Load() (FunctionBody, errors.Error)
 	Save(body FunctionBody, replace bool) errors.Error
-	SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error
+	SaveBodyEntry(entry map[string]any, replace bool) errors.Error
 	Delete() errors.Error
 	CheckStorage() bool
 	ResetStorage()
@@ -65,7 +65,7 @@ type FunctionBody interface {
 	Lang() Language
 	SetVarNames(vars []string) errors.Error
 	SetStorage(Context, []string) errors.Error
-	Body(object map[string]interface{})
+	Body(object map[string]any)
 	Indexable() value.Tristate
 	SwitchContext() value.Tristate
 	IsExternal() bool
@@ -92,7 +92,7 @@ type LanguageRunner interface {
 	CheckAuthorize(name string, context Context) bool
 	Execute(name FunctionName, body FunctionBody, modifiers Modifier, values []value.Value, context Context) (
 		value.Value, errors.Error)
-	FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error)
+	FunctionStatements(name FunctionName, body FunctionBody, context Context) (any, errors.Error)
 }
 
 type functionCache struct {
@@ -138,17 +138,17 @@ func NameFunctions() []string {
 
 func FunctionsForeach(nonBlocking func(string, *FunctionEntry) bool,
 	blocking func() bool) {
-	dummyF := func(id string, r interface{}) bool {
+	dummyF := func(id string, r any) bool {
 		return nonBlocking(id, r.(*FunctionEntry))
 	}
 	functions.cache.ForEach(dummyF, blocking)
 }
 
 func FunctionDo(key string, f func(*FunctionEntry)) {
-	var process func(interface{}) = nil
+	var process func(any) = nil
 
 	if f != nil {
-		process = func(entry interface{}) {
+		process = func(entry any) {
 			ce := entry.(*FunctionEntry)
 			f(ce)
 		}
@@ -157,9 +157,9 @@ func FunctionDo(key string, f func(*FunctionEntry)) {
 }
 
 func FunctionClear(key string, f func(*FunctionEntry)) bool {
-	var process func(interface{}) = nil
+	var process func(any) = nil
 
-	process = func(entry interface{}) {
+	process = func(entry any) {
 		ce := entry.(*FunctionEntry)
 		if f != nil {
 			f(ce)
@@ -174,7 +174,7 @@ func ClearScopeEntries(namespace, bucket, scope string) {
 	var del bool
 	var id string
 
-	nonBlocking := func(k string, e interface{}) bool {
+	nonBlocking := func(k string, e any) bool {
 		ce := e.(*FunctionEntry)
 		path := ce.Path()
 		del = len(path) == 4 && namespace == path[0] && bucket == path[1] && scope == path[2]
@@ -242,7 +242,7 @@ func (name *MockName) SetUseSystem() {
 func (name *MockName) InheritStorage(changeCounter int32) {
 }
 
-func (name *MockName) Signature(object map[string]interface{}) {
+func (name *MockName) Signature(object map[string]any) {
 	object["name"] = name.name
 	object["namespace"] = name.namespace
 	object["global"] = true
@@ -256,7 +256,7 @@ func (name *MockName) Save(body FunctionBody, replace bool) errors.Error {
 	return nil
 }
 
-func (name *MockName) SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error {
+func (name *MockName) SaveBodyEntry(entry map[string]any, replace bool) errors.Error {
 	return nil
 }
 
@@ -301,7 +301,7 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 
 		// add it to the cache
 		added := true
-		functions.cache.Add(function, key, func(ce interface{}) util.Operation {
+		functions.cache.Add(function, key, func(ce any) util.Operation {
 			// remove any cached missing entry
 			_, ok := (ce.(*FunctionEntry)).FunctionBody.(*missing)
 			if ok {
@@ -324,7 +324,7 @@ func AddFunction(name FunctionName, body FunctionBody, replace bool) errors.Erro
 		})
 
 		if !added {
-			functions.cache.Delete(key, func(ce interface{}) {
+			functions.cache.Delete(key, func(ce any) {
 				ce.(*FunctionEntry).Unload(ce.(*FunctionEntry).FunctionName)
 			})
 			logging.Debugf("Conflict in saving function to cache, key <ud>%v</ud>", key)
@@ -357,7 +357,7 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 		key := name.Key()
 
 		// if successful clear the cache locally
-		functions.cache.Delete(key, func(ce interface{}) {
+		functions.cache.Delete(key, func(ce any) {
 			entry := ce.(*FunctionEntry)
 			entry.Unload(entry.FunctionName)
 			entry.DeleteUdfPrepared(entry.FunctionName)
@@ -378,7 +378,7 @@ func DeleteFunction(name FunctionName, context Context) errors.Error {
 func DropAllCacheEntries(name FunctionName) {
 	key := name.Name()
 	// drops entry from local functions cache
-	functions.cache.Delete(key, func(ce interface{}) {
+	functions.cache.Delete(key, func(ce any) {
 		ce.(*FunctionEntry).Unload(ce.(*FunctionEntry).FunctionName)
 	})
 
@@ -533,7 +533,7 @@ func ExecuteFunction(name FunctionName, modifiers Modifier, values []value.Value
 }
 
 // Returns all N1QL query statements inside a function
-func FunctionStatements(name FunctionName, creds *auth.Credentials, context Context) (Language, interface{}, errors.Error) {
+func FunctionStatements(name FunctionName, creds *auth.Credentials, context Context) (Language, any, errors.Error) {
 
 	// Get the function's entry and body
 	body, entry, err := getBodyAndEntry(name)
@@ -607,7 +607,7 @@ func getBodyAndEntry(name FunctionName) (FunctionBody, *FunctionEntry, errors.Er
 
 				// now that we have a body, we have to amend the cache,
 				// but only if noone has done it in the interim
-				ce = functions.cache.Get(key, func(ce interface{}) {
+				ce = functions.cache.Get(key, func(ce any) {
 					e := ce.(*FunctionEntry)
 
 					// our body is newer
@@ -675,7 +675,7 @@ func getBodyAndEntry(name FunctionName) (FunctionBody, *FunctionEntry, errors.Er
 
 // execution cache work horse
 func (entry *FunctionEntry) add() *FunctionEntry {
-	functions.cache.Add(entry, entry.Key(), func(ce interface{}) util.Operation {
+	functions.cache.Add(entry, entry.Key(), func(ce any) util.Operation {
 		oldEntry := ce.(*FunctionEntry)
 
 		// we win
@@ -733,7 +733,7 @@ func (this *empty) Execute(name FunctionName, body FunctionBody, modifiers Modif
 	return nil, errors.NewFunctionsNotSupported("")
 }
 
-func (this *empty) FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error) {
+func (this *empty) FunctionStatements(name FunctionName, body FunctionBody, context Context) (any, errors.Error) {
 	return nil, errors.NewFunctionUnsupportedActionError("", "EXPLAIN FUNCTION")
 }
 
@@ -749,7 +749,7 @@ func (this *missing) Lang() Language {
 	return _MISSING
 }
 
-func (this *missing) Body(object map[string]interface{}) {
+func (this *missing) Body(object map[string]any) {
 	object["undefined_function"] = true
 }
 
@@ -797,7 +797,7 @@ func (this *missing) Unload(name FunctionName) {
 func (this *missing) DeleteUdfPrepared(name FunctionName) {
 }
 
-func (this *missing) FunctionStatements(name FunctionName, body FunctionBody, context Context) (interface{}, errors.Error) {
+func (this *missing) FunctionStatements(name FunctionName, body FunctionBody, context Context) (any, errors.Error) {
 	return nil, errors.NewMissingFunctionError(name.Name())
 }
 

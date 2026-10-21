@@ -576,7 +576,7 @@ func terseOutput(w io.Writer, rows io.ReadCloser) error {
 			pretty = v.Truth()
 		}
 	}
-	status := make(map[string]interface{})
+	status := make(map[string]any)
 
 	buf := make([]byte, _INITIAL_BUFFER_SIZE)
 	i := 0
@@ -671,7 +671,7 @@ results:
 status:
 	// we should have only the meta-data to process at this point
 	dec := json.NewDecoder(io.MultiReader(bytes.NewReader(buf[i:]), rows))
-	var v map[string]interface{}
+	var v map[string]any
 	err = dec.Decode(&v)
 	if err != nil {
 		return err
@@ -687,7 +687,7 @@ status:
 		status["warnings"] = val
 	}
 	if im, ok := v["metrics"]; ok {
-		if m, ok := im.(map[string]interface{}); ok {
+		if m, ok := im.(map[string]any); ok {
 			if cnt, ok := m["mutationCount"]; ok {
 				status["mutationCount"] = cnt
 			} else if cnt, ok := m["resultCount"]; ok {

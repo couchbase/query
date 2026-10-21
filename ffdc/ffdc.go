@@ -846,7 +846,7 @@ func Reset(event string) {
 	}
 }
 
-func Stats(prefix string, res map[string]interface{}, details bool) {
+func Stats(prefix string, res map[string]any, details bool) {
 	tot := int64(0)
 	for k, v := range reasons {
 		tot += v.totalCount

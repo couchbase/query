@@ -20,7 +20,7 @@ func NewMapPool[K comparable, V any](size int) *MapPool[K, V] {
 	rv := &MapPool[K, V]{
 		size: size,
 	}
-	NewFastPool(&rv.pool, func() interface{} {
+	NewFastPool(&rv.pool, func() any {
 		return make(map[K]V, rv.size)
 	})
 

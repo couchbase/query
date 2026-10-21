@@ -22,8 +22,8 @@ func PlanStabilityAvailable() bool {
 }
 
 // when settings come from metakv, validate the settings (including proper type conversion)
-func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, errors.Error) {
-	planStability, ok := val.(map[string]interface{})
+func validatePlanStabilitySetting(val any) (map[string]any, errors.Error) {
+	planStability, ok := val.(map[string]any)
 	if !ok {
 		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
 	}
@@ -72,7 +72,7 @@ func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, erro
 	return planStability, nil
 }
 
-func UpdatePersistPlanStabilitySetting(requestId string, val interface{}) errors.Error {
+func UpdatePersistPlanStabilitySetting(requestId string, val any) errors.Error {
 	err := updatePlanStabilitySetting(requestId, val)
 	if err != nil {
 		return err
@@ -80,8 +80,8 @@ func UpdatePersistPlanStabilitySetting(requestId string, val interface{}) errors
 	return PersistSettings()
 }
 
-func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error {
-	psMap, ok := val.(map[string]interface{})
+func updatePlanStabilitySetting(requestId string, val any) errors.Error {
+	psMap, ok := val.(map[string]any)
 	if !ok {
 		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
 	}
@@ -189,8 +189,8 @@ func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error 
 
 // Given plan stability settings in integer form, remap to string form for easier understanding
 // (this function changes the input map and thus caller should use a copy when necessary)
-func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, errors.Error) {
-	planStability, ok := psSetting.(map[string]interface{})
+func remapPlanStabilitySetting(psSetting any) (map[string]any, errors.Error) {
+	planStability, ok := psSetting.(map[string]any)
 	if !ok {
 		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", psSetting)
 	}

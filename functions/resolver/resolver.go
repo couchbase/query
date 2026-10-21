@@ -150,7 +150,7 @@ func MakeBody(name string, bytes []byte) (functions.FunctionBody, errors.Error) 
 }
 
 // the "entry" returned here is the same format as what's returned from the "Body()" function
-func MakeBodyEntry(name string, bytes []byte) (map[string]interface{}, errors.Error) {
+func MakeBodyEntry(name string, bytes []byte) (map[string]any, errors.Error) {
 	var language_type struct {
 		Language string `json:"#language"`
 	}
@@ -172,7 +172,7 @@ func MakeBodyEntry(name string, bytes []byte) (map[string]interface{}, errors.Er
 		if err != nil {
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
-		entry := map[string]interface{}{
+		entry := map[string]any{
 			"#language":  "inline",
 			"expression": _unmarshalled.Expression,
 			"parameters": _unmarshalled.Parameters,
@@ -192,7 +192,7 @@ func MakeBodyEntry(name string, bytes []byte) (map[string]interface{}, errors.Er
 		if err != nil {
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
-		entry := map[string]interface{}{
+		entry := map[string]any{
 			"#language":  "golang",
 			"library":    _unmarshalled.Library,
 			"object":     _unmarshalled.Object,
@@ -215,7 +215,7 @@ func MakeBodyEntry(name string, bytes []byte) (map[string]interface{}, errors.Er
 		if err != nil {
 			return nil, errors.NewFunctionEncodingError("decode body", name, err)
 		}
-		entry := map[string]interface{}{
+		entry := map[string]any{
 			"#language":  "javascript",
 			"parameters": _unmarshalled.Parameters,
 		}

@@ -122,8 +122,8 @@ func get2(name functions.FunctionName, systemCollection datastore.Keyspace) (val
 	if definition == nil {
 		return nil, nil
 	}
-	val := make(map[string]interface{}, 2)
-	identity := make(map[string]interface{})
+	val := make(map[string]any, 2)
+	identity := make(map[string]any)
 	name.Signature(identity)
 	val["identity"] = identity
 	val["definition"] = definition
@@ -215,7 +215,7 @@ func (name *systemEntry) SetSystemEntry(systemEntry functions.FunctionName) {
 func (name *systemEntry) SetUseSystem() {
 }
 
-func (name *systemEntry) Signature(object map[string]interface{}) {
+func (name *systemEntry) Signature(object map[string]any) {
 	object["namespace"] = name.path.Namespace()
 	object["bucket"] = name.path.Bucket()
 	object["scope"] = name.path.Scope()
@@ -261,12 +261,12 @@ func (name *systemEntry) Load() (functions.FunctionBody, errors.Error) {
 }
 
 func (name *systemEntry) Save(body functions.FunctionBody, replace bool) errors.Error {
-	entry := make(map[string]interface{})
+	entry := make(map[string]any)
 	body.Body(entry)
 	return name.SaveBodyEntry(entry, replace)
 }
 
-func (name *systemEntry) SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error {
+func (name *systemEntry) SaveBodyEntry(entry map[string]any, replace bool) errors.Error {
 	parts := name.path.Parts()
 	if len(parts) != 4 {
 		return errors.NewInvalidFunctionNameError(name.Name(), fmt.Errorf("name has %v parts", len(parts)))

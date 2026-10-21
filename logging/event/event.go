@@ -55,7 +55,7 @@ func Init(c clustering.ConfigurationStore) {
 	configStore = c
 }
 
-func writeValue(buf *[]byte, title string, value interface{}) bool {
+func writeValue(buf *[]byte, title string, value any) bool {
 	mv, _ := json.Marshal(value)
 	if len(mv)+len(title)+4 > MaxRecLen-2-len(*buf) {
 		return false
@@ -70,7 +70,7 @@ func writeValue(buf *[]byte, title string, value interface{}) bool {
 	return true
 }
 
-func Report(e EventType, l EventLevel, args ...interface{}) {
+func Report(e EventType, l EventLevel, args ...any) {
 
 	body := make([]byte, 0, 3072)
 

@@ -65,7 +65,7 @@ func CountTransContext() int {
 
 func CountValidTransContextBefore(before time.Time) int {
 	cnt := 0
-	tranContextCache.cache.ForEach(func(s string, i interface{}) bool {
+	tranContextCache.cache.ForEach(func(s string, i any) bool {
 		tranContext := i.(*TranContext)
 		if (before.IsZero() || tranContext.TxStartTime().Before(before)) && tranContext.TxValid() == nil {
 			cnt++
@@ -79,11 +79,11 @@ func NameTransactions() []string {
 	return tranContextCache.cache.Names()
 }
 
-func TransactionEntryDo(txId string, f func(interface{})) {
+func TransactionEntryDo(txId string, f func(any)) {
 	tranContextCache.cache.Get(txId, f)
 }
 
-func TransactionEntriesForeach(nonBlocking func(string, interface{}) bool,
+func TransactionEntriesForeach(nonBlocking func(string, any) bool,
 	blocking func() bool) {
 	tranContextCache.cache.ForEach(nonBlocking, blocking)
 }
@@ -98,7 +98,7 @@ func (this *TranContextCache) add(txContext *TranContext, track bool) errors.Err
 }
 
 func (this *TranContextCache) get(txId string, track bool) *TranContext {
-	var cv interface{}
+	var cv any
 
 	if track {
 		cv = this.cache.Use(txId, nil)
@@ -127,7 +127,7 @@ func (this *TranContextCache) doTransactionCleanup() {
 		context := tranContextCache.context
 		ds := context.Datastore()
 
-		snapshot := func(name string, d interface{}) bool {
+		snapshot := func(name string, d any) bool {
 			tranContext := d.(*TranContext)
 			if tranContext.TxExpired() && !tranContext.TxProgress() {
 				if !tranContext.TxInUse() {

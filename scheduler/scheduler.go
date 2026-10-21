@@ -38,12 +38,12 @@ const (
 	COMPLETED_TASKS_CACHE
 )
 
-type TaskFunc func(Context, interface{}) (interface{}, []errors.Error)
+type TaskFunc func(Context, any) (any, []errors.Error)
 
 // A task function whose execution must be stopped when notified.
 // When the function receives a signal on the channel, its execution must be stopped.
 // When the task in the scheduler completes, the channel is closed.
-type StoppableTaskFunc func(Context, interface{}, <-chan bool) (interface{}, []errors.Error)
+type StoppableTaskFunc func(Context, any, <-chan bool) (any, []errors.Error)
 
 type TaskEntry struct {
 	sync.Mutex
@@ -58,13 +58,13 @@ type TaskEntry struct {
 	EndTime      time.Time
 	Delay        time.Duration
 	State        State
-	Results      interface{}
+	Results      any
 	Errors       []errors.Error
 	QueryContext string
 	Description  string
 
 	timer      *time.Timer
-	parameters interface{}
+	parameters any
 	context    Context
 
 	isStoppable   bool              // If the execution function of the task can be stopped while in RUNNING state.
@@ -107,7 +107,7 @@ func NameTasks() []string {
 }
 
 func TasksForeach(nonBlocking func(string, *TaskEntry) bool, blocking func() bool, cacheName CacheName) {
-	dummyF := func(id string, r interface{}) bool {
+	dummyF := func(id string, r any) bool {
 		return nonBlocking(id, r.(*TaskEntry))
 	}
 
@@ -123,10 +123,10 @@ func TasksForeach(nonBlocking func(string, *TaskEntry) bool, blocking func() boo
 }
 
 func TaskDo(key string, f func(*TaskEntry)) {
-	var process func(interface{}) = nil
+	var process func(any) = nil
 
 	if f != nil {
-		process = func(entry interface{}) {
+		process = func(entry any) {
 			ce := entry.(*TaskEntry)
 			f(ce)
 		}
@@ -141,19 +141,19 @@ func TaskDo(key string, f func(*TaskEntry)) {
 
 // Schedule a task. This task's execution cannot be stopped once it begins
 func ScheduleTask(name, class, subClass string, delay time.Duration, exec, stop TaskFunc,
-	parms interface{}, description string, context Context) errors.Error {
+	parms any, description string, context Context) errors.Error {
 	return scheduleTaskHelper(name, class, subClass, delay, false, exec, stop, nil, parms, description, context)
 }
 
 // Schedule a task. This task's execution can be stopped once it begins
 // Its execution function will receive a signal via the channel when its execution is to be aborted.
 func ScheduleStoppableTask(name, class, subClass string, delay time.Duration, stoppableExec StoppableTaskFunc, stop TaskFunc,
-	parms interface{}, description string, context Context) errors.Error {
+	parms any, description string, context Context) errors.Error {
 	return scheduleTaskHelper(name, class, subClass, delay, true, nil, stop, stoppableExec, parms, description, context)
 }
 
 func scheduleTaskHelper(name, class, subClass string, delay time.Duration, isStoppable bool, exec, stop TaskFunc,
-	stoppableExec StoppableTaskFunc, parms interface{}, description string, context Context) errors.Error {
+	stoppableExec StoppableTaskFunc, parms any, description string, context Context) errors.Error {
 
 	id, err := util.UUIDV5(class+subClass, name)
 	if err != nil {
@@ -194,7 +194,7 @@ func scheduleTaskHelper(name, class, subClass string, delay time.Duration, isSto
 
 	// add it to the cache
 	added := true
-	scheduler.scheduled.Add(task, id, func(ce interface{}) util.Operation {
+	scheduler.scheduled.Add(task, id, func(ce any) util.Operation {
 
 		// yawser - already there
 		added = false
@@ -210,7 +210,7 @@ func scheduleTaskHelper(name, class, subClass string, delay time.Duration, isSto
 
 		// first, lock, check and mark as running
 		bailOut := false
-		scheduler.scheduled.Get(task.Id, func(ce interface{}) {
+		scheduler.scheduled.Get(task.Id, func(ce any) {
 			// Check and modify state under lock to prevent races with the task's delete requests
 			task.Lock()
 			if task.State != SCHEDULED {
@@ -231,7 +231,7 @@ func scheduleTaskHelper(name, class, subClass string, delay time.Duration, isSto
 			return
 		}
 
-		var res interface{}
+		var res any
 		var errs errors.Errors
 
 		if task.isStoppable {
@@ -243,7 +243,7 @@ func scheduleTaskHelper(name, class, subClass string, delay time.Duration, isSto
 		}
 
 		// mark complete and remove from scheduled
-		scheduler.scheduled.Delete(task.Id, func(ce interface{}) {
+		scheduler.scheduled.Delete(task.Id, func(ce any) {
 
 			// Check state, modify state and cleanup under lock. This is to prevent races with the task's delete requests
 			task.Lock()
@@ -274,7 +274,7 @@ func scheduleTaskHelper(name, class, subClass string, delay time.Duration, isSto
 			task.stopChannel = nil
 			task.Unlock()
 		})
-		scheduler.completed.Add(task, task.Id, func(ce interface{}) util.Operation {
+		scheduler.completed.Add(task, task.Id, func(ce any) util.Operation {
 
 			// can't happen, but for completeness, ditch any previous run
 			return util.REPLACE
@@ -291,7 +291,7 @@ func DeleteTask(id string) errors.Error {
 	deleted := false
 	running := false
 
-	_ = scheduler.scheduled.Get(id, func(ce interface{}) {
+	_ = scheduler.scheduled.Get(id, func(ce any) {
 		task = ce.(*TaskEntry)
 
 		// Check and modify state under lock to prevent races with other delete requests or the execution routine
@@ -338,7 +338,7 @@ func DeleteTask(id string) errors.Error {
 	// * Since the task would have never entered RUNNING state, the execution routine cannot interfere
 	// cleanup and remove
 	if task != nil {
-		var res interface{}
+		var res any
 		var errs []errors.Error
 
 		if task.Stop != nil {
@@ -361,7 +361,7 @@ func DeleteTask(id string) errors.Error {
 			task.State = CANCELLED
 			task.Results = res
 			task.Errors = errs
-			scheduler.completed.Add(task, task.Id, func(ce interface{}) util.Operation {
+			scheduler.completed.Add(task, task.Id, func(ce any) util.Operation {
 
 				// can't happen, but for completeness, ditch any previous run
 				return util.REPLACE
@@ -371,7 +371,7 @@ func DeleteTask(id string) errors.Error {
 	}
 
 	// not in scheduled - maybe completed?
-	scheduler.completed.Delete(id, func(ce interface{}) {
+	scheduler.completed.Delete(id, func(ce any) {
 		deleted = true
 	})
 

@@ -23,7 +23,7 @@ type GoroutinePool struct {
 	buckets  uint32
 	useCount int32
 	maxCount int32
-	f        func(interface{})
+	f        func(any)
 }
 
 type opQueue struct {
@@ -33,7 +33,7 @@ type opQueue struct {
 }
 
 type operatorState struct {
-	args       interface{}
+	args       any
 	oLock      sync.Mutex
 	mustSignal bool
 	wg         sync.WaitGroup
@@ -46,7 +46,7 @@ type operatorState struct {
 type opCommand struct {
 }
 
-func NewGoroutinePool(p *GoroutinePool, f func(interface{})) {
+func NewGoroutinePool(p *GoroutinePool, f func(any)) {
 	*p = GoroutinePool{}
 	p.f = f
 	p.buckets = uint32(NumCPU())
@@ -59,7 +59,7 @@ func NewGoroutinePool(p *GoroutinePool, f func(interface{})) {
 	p.queues = make([]opQueue, p.buckets)
 }
 
-func (p *GoroutinePool) Exec(args interface{}) {
+func (p *GoroutinePool) Exec(args any) {
 	if atomic.LoadInt32(&p.useCount) == 0 {
 		go p.runner(&operatorState{args: args})
 		return

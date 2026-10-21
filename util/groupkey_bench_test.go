@@ -16,13 +16,13 @@ import (
 
 const _NKEYS = 3 // GROUP BY city, category, tier
 
-var benchVals = []interface{}{"San Francisco", "electronics", "premium"}
+var benchVals = []any{"San Francisco", "electronics", "premium"}
 
-var newPool = NewMapPool[string, interface{}](16)
-var oldPool = NewMapPool[string, interface{}](16)
+var newPool = NewMapPool[string, any](16)
+var oldPool = NewMapPool[string, any](16)
 
 // oldPut reproduces the pre-change Put(): zero each value, then delete it.
-func oldPut(p *MapPool[string, interface{}], s map[string]interface{}) {
+func oldPut(p *MapPool[string, any], s map[string]any) {
 	if s == nil || len(s) > p.Size() {
 		return
 	}

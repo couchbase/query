@@ -22,7 +22,7 @@ type UdfContext struct {
 type Handle interface {
 	Type() string
 	Mutations() uint64
-	Results() (interface{}, uint64, error)
+	Results() (any, uint64, error)
 	Complete() (uint64, error)
 	NextDocument() (value.Value, error)
 	Cancel()
@@ -36,11 +36,11 @@ func NewUdfContext(context Context, path string, funcKey string) *UdfContext {
 	return &UdfContext{context, path, funcKey}
 }
 
-func (this *UdfContext) NewValue(val interface{}) interface{} {
+func (this *UdfContext) NewValue(val any) any {
 	return value.NewValue(val)
 }
 
-func (this *UdfContext) CopyValue(val interface{}) interface{} {
+func (this *UdfContext) CopyValue(val any) any {
 	v, ok := val.(value.Value)
 	if ok {
 		return v.CopyForUpdate()
@@ -48,11 +48,11 @@ func (this *UdfContext) CopyValue(val interface{}) interface{} {
 	return nil
 }
 
-func (this *UdfContext) StoreValue(key string, val interface{}) {
+func (this *UdfContext) StoreValue(key string, val any) {
 	this.context.StoreValue(key, val)
 }
 
-func (this *UdfContext) RetrieveValue(key string) interface{} {
+func (this *UdfContext) RetrieveValue(key string) any {
 	return this.context.RetrieveValue(key)
 }
 
@@ -60,7 +60,7 @@ func (this *UdfContext) ReleaseValue(key string) {
 	this.context.ReleaseValue(key)
 }
 
-func (this *UdfContext) CompareValues(val1, val2 interface{}) (int, bool) {
+func (this *UdfContext) CompareValues(val1, val2 any) (int, bool) {
 	v1, ok1 := val1.(value.Value)
 	v2, ok2 := val2.(value.Value)
 	if !ok1 || !ok2 {
@@ -71,8 +71,8 @@ func (this *UdfContext) CompareValues(val1, val2 interface{}) (int, bool) {
 	return i, (!ok || res.Type() == value.NULL || res.Type() == value.MISSING)
 }
 
-func (this *UdfContext) ExecuteStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (
-	interface{}, uint64, error) {
+func (this *UdfContext) ExecuteStatement(statement string, namedArgs map[string]any, positionalArgs []any) (
+	any, uint64, error) {
 
 	var named map[string]value.Value
 	var positional []value.Value
@@ -92,8 +92,8 @@ func (this *UdfContext) ExecuteStatement(statement string, namedArgs map[string]
 	return this.context.ParkableEvaluateStatement(statement, named, positional, false, this.context.Readonly(), true, this.funcKey)
 }
 
-func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]interface{}, positionalArgs []interface{}) (
-	interface{}, error) {
+func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]any, positionalArgs []any) (
+	any, error) {
 
 	var named map[string]value.Value
 	var positional []value.Value
@@ -118,7 +118,7 @@ func (this *UdfContext) OpenStatement(statement string, namedArgs map[string]int
 	return &UdfHandle{handle}, nil
 }
 
-func (this *UdfContext) Log(fmt string, args ...interface{}) {
+func (this *UdfContext) Log(fmt string, args ...any) {
 	logging.Infof(fmt, args...)
 }
 
@@ -138,7 +138,7 @@ func (this *UdfHandle) Mutations() uint64 {
 	return this.handle.Mutations()
 }
 
-func (this *UdfHandle) Results() (interface{}, uint64, error) {
+func (this *UdfHandle) Results() (any, uint64, error) {
 	return this.handle.Results()
 }
 
@@ -146,7 +146,7 @@ func (this *UdfHandle) Complete() (uint64, error) {
 	return this.handle.Complete()
 }
 
-func (this *UdfHandle) NextDocument() (interface{}, error) {
+func (this *UdfHandle) NextDocument() (any, error) {
 	return this.handle.NextDocument()
 }
 
@@ -169,7 +169,7 @@ func (this *UdfBasicContext) StorageContext() string {
 	return this.path
 }
 
-func (this *UdfBasicContext) Log(fmt string, args ...interface{}) {
+func (this *UdfBasicContext) Log(fmt string, args ...any) {
 	args = append(args, this.context)
 	logging.Infof(fmt, args...)
 }

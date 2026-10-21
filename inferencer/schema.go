@@ -102,11 +102,11 @@ func NewArrayType(val value.Value, arraySampleSize int32, maxNestingDepth int32,
 	}
 
 	if maxNestingDepth > 0 && depth >= maxNestingDepth {
-		val = value.NewValue([]interface{}{})
+		val = value.NewValue([]any{})
 	}
 
 	// get the underlying slice
-	arr := val.Actual().([]interface{})
+	arr := val.Actual().([]any)
 	result := new(ArrayType)
 	result.minItems = len(arr)
 	result.maxItems = len(arr)
@@ -117,17 +117,17 @@ func NewArrayType(val value.Value, arraySampleSize int32, maxNestingDepth int32,
 	//fmt.Printf("Creating array type size: %d...\n",len(arr))
 	if arraySampleSize == 0 {
 		result.sampleSize = 0
-		return result, value.NewValue([]interface{}{})
+		return result, value.NewValue([]any{})
 	}
 
 	arrsamplesize := int(arraySampleSize)
 	arrlen := len(arr)
 	if arrsamplesize > 0 {
 		if arrlen > arrsamplesize {
-			shrinkArrayRandomly := func(arr []interface{}, sampleSize int32) []interface{} {
+			shrinkArrayRandomly := func(arr []any, sampleSize int32) []any {
 				usedIndices := make(map[int]bool, sampleSize)
 				indices := make([]int, 0, sampleSize)
-				shrunkenArr := make([]interface{}, 0, sampleSize)
+				shrunkenArr := make([]any, 0, sampleSize)
 				for len(indices) < int(sampleSize) {
 					randomIndex := rand.Intn(arrlen)
 					if !usedIndices[randomIndex] {
@@ -408,7 +408,7 @@ func (ft *FieldType) MarshalJSON() ([]byte, error) {
 	}
 
 	//	r := map[string]interface{}{"#schema": "FieldType"}
-	r := map[string]interface{}{}
+	r := map[string]any{}
 	r["type"] = ft.Type.String()
 
 	if ft.arrtype != nil {
@@ -628,9 +628,9 @@ func (f *Field) NameTypeOnly() string {
 	return (f.Name + " - " + f.Kind.Type.String())
 }
 
-func (f *Field) GetJSONMap() map[string]interface{} {
+func (f *Field) GetJSONMap() map[string]any {
 
-	r := map[string]interface{}{}
+	r := map[string]any{}
 
 	//
 	// simple case:no namesake types, our type is a string
@@ -981,7 +981,7 @@ func NewSchemaFromValue(val value.Value, arraySampleSize int32, maxNestingDepth 
 	if val.Type() == value.OBJECT {
 		schema.bareValue = nil
 		if maxNestingDepth > -1 && depth > maxNestingDepth {
-			val = value.NewValue(map[string]interface{}{})
+			val = value.NewValue(map[string]any{})
 		}
 
 		elements := val.Fields()
@@ -1299,9 +1299,9 @@ func (s *Schema) MarshalJSON() ([]byte, error) {
 // convenience function to get a string -> interface map for schemas,
 // used by both schema and flavor MarshalJSON
 
-func (s *Schema) getSchemaMap() map[string]interface{} {
+func (s *Schema) getSchemaMap() map[string]any {
 	// need a map for schema type, num docs, subfields, any bare values, etc.
-	r := map[string]interface{}{}
+	r := map[string]any{}
 
 	r["$schema"] = "http://json-schema.org/draft-06/schema"
 	r["#docs"] = s.matchingDocCount

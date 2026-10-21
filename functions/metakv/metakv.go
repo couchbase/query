@@ -164,7 +164,7 @@ func Foreach(b string, f func(path string, v value.Value) error) error {
 	})
 }
 
-func ForeachBodyEntry(f func(parts []string, entry map[string]interface{}) errors.Error) errors.Error {
+func ForeachBodyEntry(f func(parts []string, entry map[string]any) errors.Error) errors.Error {
 	err1 := metakv.IterateChildren(_FUNC_PATH, func(kve metakv.KVEntry) error {
 		path := kve.Path[len(_FUNC_PATH):]
 		if algebra.PartsFromPath(path) == 4 {
@@ -446,7 +446,7 @@ func (name *metaEntry) SetUseSystem() {
 	}
 }
 
-func (name *metaEntry) Signature(object map[string]interface{}) {
+func (name *metaEntry) Signature(object map[string]any) {
 	if name.path.IsCollection() {
 		object["namespace"] = name.path.Namespace()
 		object["bucket"] = name.path.Bucket()
@@ -496,9 +496,9 @@ func (name *metaEntry) Save(body functions.FunctionBody, replace bool) errors.Er
 		return name.systemEntry.Save(body, replace)
 	}
 
-	entry := make(map[string]interface{}, 2)
-	identity := make(map[string]interface{})
-	definition := make(map[string]interface{})
+	entry := make(map[string]any, 2)
+	identity := make(map[string]any)
+	definition := make(map[string]any)
 	name.Signature(identity)
 	body.Body(definition)
 	entry["identity"] = identity
@@ -506,7 +506,7 @@ func (name *metaEntry) Save(body functions.FunctionBody, replace bool) errors.Er
 	return name.SaveBodyEntry(entry, replace)
 }
 
-func (name *metaEntry) SaveBodyEntry(entry map[string]interface{}, replace bool) errors.Error {
+func (name *metaEntry) SaveBodyEntry(entry map[string]any, replace bool) errors.Error {
 	if name.useSystem {
 		return name.systemEntry.SaveBodyEntry(entry, replace)
 	}

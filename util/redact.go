@@ -15,9 +15,9 @@ func Redacted(in string, redact bool) string {
 	return in
 }
 
-func InterfaceRedacted(in interface{}, redact bool) interface{} {
+func InterfaceRedacted(in any, redact bool) any {
 	if redact {
-		out := make([]interface{}, 0, 3)
+		out := make([]any, 0, 3)
 		out = append(out, "<ud>")
 		out = append(out, in)
 		out = append(out, "</ud>")

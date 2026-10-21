@@ -83,7 +83,7 @@ type Cluster interface {
 	Version() Version                                      // Logical version of the QueryNodes in the cluster
 	ClusterManager() ClusterManager                        // Get a ClusterManager for this Cluster
 	Capability(string) bool                                // Check if cluster possesses a certain capability
-	Settings() (map[string]interface{}, errors.Error)      // Get cluster wide settings
+	Settings() (map[string]any, errors.Error)              // Get cluster wide settings
 
 	ReportEventAsync(event string)            // Cluster's event logging
 	NodeUUID(string) (string, errors.Error)   // Retrieve the UUID of the host

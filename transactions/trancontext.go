@@ -52,7 +52,7 @@ type TranContext struct {
 	startTime           time.Time
 	expiryTime          time.Time
 	uses                int32
-	txMutations         interface{}
+	txMutations         any
 	memoryQuota         uint64
 	sequences           map[string]int64
 }
@@ -288,14 +288,14 @@ func (this *TranContext) TxLastStmtNum() int64 {
 	return this.txLastStmtNum
 }
 
-func (this *TranContext) TxMutations() interface{} {
+func (this *TranContext) TxMutations() any {
 	this.mutex.RLock()
 	defer this.mutex.RUnlock()
 	return this.txMutations
 
 }
 
-func (this *TranContext) SetTxMutations(txMutations interface{}) {
+func (this *TranContext) SetTxMutations(txMutations any) {
 	this.mutex.Lock()
 	defer this.mutex.Unlock()
 	this.txMutations = txMutations
@@ -324,7 +324,7 @@ func (this *TranContext) SetSequence(name string, val int64) {
 	this.sequences[name] = val
 }
 
-func (this *TranContext) Content(r map[string]interface{}, includeMutations bool) {
+func (this *TranContext) Content(r map[string]any, includeMutations bool) {
 	r["id"] = this.txId
 	r["timeout"] = util.OutputDuration(this.txTimeout)
 	if this.kvTimeout > 0 {
@@ -368,7 +368,7 @@ func (this *TranContext) Content(r map[string]interface{}, includeMutations bool
 			// marshall & unmarshal to ensure only simple types are present in the output
 			b, err := json.Marshal(txMutations)
 			if err == nil {
-				m := make(map[string]interface{})
+				m := make(map[string]any)
 				err = json.Unmarshal(b, &m)
 				if err == nil {
 					r["mutations"] = m
@@ -382,7 +382,7 @@ func (this *TranContext) Content(r map[string]interface{}, includeMutations bool
 	}
 
 	if len(this.txData) > 0 {
-		var drv map[string]interface{}
+		var drv map[string]any
 		if err := json.Unmarshal(this.txData, &drv); err == nil {
 			r["data"] = drv
 		}

@@ -304,7 +304,7 @@ func RefundUnits(ctx Context, units Services) error {
 	return nil
 }
 
-func Units2Map(serv Services) map[string]interface{} {
+func Units2Map(serv Services) map[string]any {
 	var out []regulator.Units
 
 	for s, u := range serv {

@@ -87,7 +87,7 @@ type PrivilegePair struct {
 	// Privileges that have been precompiled, if possible
 	// this is store specific
 	// Since it is specific to the store, it's never marshalled or unmarshalled
-	Ready interface{} `json:"-"`
+	Ready any `json:"-"`
 }
 
 const (

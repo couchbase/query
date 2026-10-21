@@ -116,24 +116,24 @@ func (this PlanStabilityErrorPolicy) String() string {
 	return fmt.Sprintf("invalid plan stability error policy (%d)", this)
 }
 
-func defaultPlanStabilitySettings() map[string]interface{} {
-	return map[string]interface{}{
+func defaultPlanStabilitySettings() map[string]any {
+	return map[string]any{
 		"mode":         PS_MODE_DEFAULT,
 		"error_policy": PS_ERROR_DEFAULT,
 	}
 }
 
-func GetPlanStabilitySetting() (map[string]interface{}, errors.Error) {
+func GetPlanStabilitySetting() (map[string]any, errors.Error) {
 	// getSettings() returns a copy of the settings
 	psSetting := globalSettings.getSetting(PLAN_STABILITY)
-	planStability, ok := psSetting.(map[string]interface{})
+	planStability, ok := psSetting.(map[string]any)
 	if !ok {
 		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", psSetting)
 	}
 	return planStability, nil
 }
 
-func SetPlanStabilitySetting(psSetting map[string]interface{}) {
+func SetPlanStabilitySetting(psSetting map[string]any) {
 	globalSettings.setSetting(PLAN_STABILITY, psSetting)
 }
 
@@ -149,7 +149,7 @@ func GetPlanStabilityMode() PlanStabilityMode {
 	mode := PS_MODE_DEFAULT
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
-	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
+	if ps_setting, ok := setting_val.(map[string]any); ok {
 		if ps_mode_val, ok := ps_setting["mode"]; ok {
 			mode = getPlanStabilityModeValue(ps_mode_val)
 		}
@@ -158,7 +158,7 @@ func GetPlanStabilityMode() PlanStabilityMode {
 	return mode
 }
 
-func getPlanStabilityModeValue(val interface{}) PlanStabilityMode {
+func getPlanStabilityModeValue(val any) PlanStabilityMode {
 	mode := PS_MODE_DEFAULT
 	switch val := val.(type) {
 	case float64:
@@ -202,7 +202,7 @@ func GetPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
 	error_policy := PS_ERROR_DEFAULT
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
-	if ps_setting, ok := setting_val.(map[string]interface{}); ok {
+	if ps_setting, ok := setting_val.(map[string]any); ok {
 		if ps_error_policy_val, ok := ps_setting["error_policy"]; ok {
 			error_policy = getPlanStabilityErrorPolicyValue(ps_error_policy_val)
 		}
@@ -211,7 +211,7 @@ func GetPlanStabilityErrorPolicy() PlanStabilityErrorPolicy {
 	return error_policy
 }
 
-func getPlanStabilityErrorPolicyValue(val interface{}) PlanStabilityErrorPolicy {
+func getPlanStabilityErrorPolicyValue(val any) PlanStabilityErrorPolicy {
 	error_policy := PS_ERROR_DEFAULT
 	switch val := val.(type) {
 	case float64:

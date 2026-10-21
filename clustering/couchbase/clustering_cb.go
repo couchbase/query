@@ -715,13 +715,13 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 	var capabilities map[string]bool
 	if len(poolServices.Capabilities) > 0 {
-		var caps map[string]interface{}
+		var caps map[string]any
 
 		err := json.Unmarshal(poolServices.Capabilities, &caps)
 		if err == nil {
 			n1ql := caps[n1qlService]
 			if n1ql != nil {
-				capList, ok := n1ql.([]interface{})
+				capList, ok := n1ql.([]any)
 				if ok {
 					capabilities = make(map[string]bool, len(capList))
 					for i, _ := range capList {
@@ -852,13 +852,13 @@ func (this *cbCluster) Capability(name string) bool {
 	return rv
 }
 
-func (this *cbCluster) Settings() (map[string]interface{}, errors.Error) {
+func (this *cbCluster) Settings() (map[string]any, errors.Error) {
 	pool, err := this.configStore.(*cbConfigStore).cbConn.GetPool(this.ClusterName)
 	if err != nil {
 		return nil, errors.NewAdminGetClusterError(err, this.ClusterName)
 	}
 
-	out := map[string]interface{}{"memory": map[string]interface{}{
+	out := map[string]any{"memory": map[string]any{
 		"kv":       pool.MemoryQuota,
 		"cbas":     pool.CbasMemoryQuota,
 		"eventing": pool.EventingMemoryQuota,
@@ -1020,7 +1020,7 @@ func (this *cbQueryNodeConfig) Healthy() bool {
 	return this.NodeHealthy
 }
 
-func getJsonString(i interface{}) string {
+func getJsonString(i any) string {
 	serialized, _ := json.Marshal(i)
 	s := bytes.NewBuffer(append(serialized, '\n'))
 	return s.String()

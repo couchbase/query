@@ -105,7 +105,7 @@ func Init(router router.Router, jsevaluatorPath string) {
 		WorkerCount:    _DEF_RUNNERS,
 		FeatureBitmask: uint32(8),
 		IsIpV6:         util.IPv6,
-		SysLogCallback: func(level, ts string, msg string, ctx interface{}) {
+		SysLogCallback: func(level, ts string, msg string, ctx any) {
 			logging.Infof("jsevaluator: %s", msg)
 		},
 	}
@@ -158,7 +158,7 @@ func newEngine(desc string, t int) (defs.Engine, defs.LibStore, defs.Evaluator, 
 		WorkerCount:    _DEF_RUNNERS,
 		FeatureBitmask: uint32(8),
 		IsIpV6:         util.IPv6,
-		SysLogCallback: func(level, ts string, msg string, ctx interface{}) {
+		SysLogCallback: func(level, ts string, msg string, ctx any) {
 			logging.Infof("jsevaluator for %v: %s", desc, msg)
 		},
 	}
@@ -263,7 +263,7 @@ func (this *javascript) CheckAuthorize(name string, context functions.Context) b
 // Embedded: slice of strings. The Embedded query strings inside the JS UDF
 // Dynamic:  slice of uint. The line numbers of Dynamic N1QL queries inside the JS UDF
 func (this *javascript) FunctionStatements(name functions.FunctionName, body functions.FunctionBody,
-	context functions.Context) (interface{}, errors.Error) {
+	context functions.Context) (any, errors.Error) {
 	var evaluator *evaluatorDesc
 
 	funcName := name.Name()
@@ -329,7 +329,7 @@ func (this *javascript) FunctionStatements(name functions.FunctionName, body fun
 
 	}
 
-	rv := make(map[string]interface{}, 2)
+	rv := make(map[string]any, 2)
 
 	// slice of strings-  embedded query strings inside the UDF
 	rv["embedded"] = queries.Embedded
@@ -342,7 +342,7 @@ func (this *javascript) FunctionStatements(name functions.FunctionName, body fun
 func (this *javascript) Execute(name functions.FunctionName, body functions.FunctionBody, modifiers functions.Modifier,
 	values []value.Value, context functions.Context) (value.Value, errors.Error) {
 
-	var args []interface{}
+	var args []any
 	var evaluator *evaluatorDesc
 
 	funcName := name.Name()
@@ -395,7 +395,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 	// beyond the maximum number of runners the function will have to wait for a runner to be free
 	// we keep track of the remaining runners, rather than the active to be sure that only one request
 	// at a time inflates the runner pool
-	var errorText interface{}
+	var errorText any
 	if available == _MIN_THREADS_THRESHOLD && evaluator.threads < _MAX_THREAD_COUNT {
 		if atomic.AddInt32(&(*evaluator).amending, 1) == 1 {
 
@@ -426,7 +426,7 @@ func (this *javascript) Execute(name functions.FunctionName, body functions.Func
 		return nil, errors.NewEvaluatorInflatingError(evaluator.name, fmt.Errorf("%v", errorText))
 	}
 
-	var res interface{}
+	var res any
 	var err defs.Error
 	var library string
 
@@ -565,7 +565,7 @@ func (this *javascriptBody) Lang() functions.Language {
 	return functions.JAVASCRIPT
 }
 
-func (this *javascriptBody) Body(object map[string]interface{}) {
+func (this *javascriptBody) Body(object map[string]any) {
 	object["#language"] = "javascript"
 
 	if this.varNames != nil {

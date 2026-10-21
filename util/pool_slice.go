@@ -20,7 +20,7 @@ func NewSlicePool[T any](size int) *SlicePool[T] {
 	rv := &SlicePool[T]{
 		size: size,
 	}
-	NewFastPool(&rv.pool, func() interface{} {
+	NewFastPool(&rv.pool, func() any {
 		return make([]T, 0, size)
 	})
 

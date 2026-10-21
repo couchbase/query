@@ -35,7 +35,7 @@ type gometricsAccountingStore struct {
 	lastPauseTime uint64
 	lastNow       time.Time
 	startTime     time.Time
-	vitals        map[string]interface{}
+	vitals        map[string]any
 }
 
 func NewAccountingStore() (accounting.AccountingStore, errors.Error) {
@@ -78,7 +78,7 @@ func (g *gometricsAccountingStore) CompletedRequests() int64 {
 	return request_timer.Count()
 }
 
-func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyle) (map[string]interface{}, errors.Error) {
+func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyle) (map[string]any, errors.Error) {
 	var mem runtime.MemStats
 
 	runtime.ReadMemStats(&mem)
@@ -117,7 +117,7 @@ func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyl
 	} else {
 		prepPercent = 0.0
 	}
-	rv := map[string]interface{}{
+	rv := map[string]any{
 		"uptime":                   util.FormatDuration(uptime, style),
 		"local.time":               now.Format(util.DEFAULT_FORMAT),
 		"version":                  util.VERSION,
@@ -190,10 +190,10 @@ func (g *gometricsAccountingStore) Vitals(backward bool, style util.DurationStyl
 	return rv, nil
 }
 
-func requestTimes(timer accounting.Timer, style util.DurationStyle) (rv map[string]interface{}) {
+func requestTimes(timer accounting.Timer, style util.DurationStyle) (rv map[string]any) {
 	count := timer.Count()
 	if count >= 0 {
-		rv = make(map[string]interface{}, 10)
+		rv = make(map[string]any, 10)
 		rv["completed.count"] = count
 		rv["per.sec.1min"] = util.RoundPlaces(timer.Rate1(), 4)
 		rv["per.sec.5min"] = util.RoundPlaces(timer.Rate5(), 4)
@@ -207,7 +207,7 @@ func requestTimes(timer accounting.Timer, style util.DurationStyle) (rv map[stri
 	return
 }
 
-func (g *gometricsAccountingStore) ExternalVitals(vitals map[string]interface{}) map[string]interface{} {
+func (g *gometricsAccountingStore) ExternalVitals(vitals map[string]any) map[string]any {
 	g.Lock()
 	oldVitals := g.vitals
 	g.vitals = vitals
@@ -278,7 +278,7 @@ func (g *goMetricRegistry) Histogram(name string) accounting.Histogram {
 func (g *goMetricRegistry) Counters() map[string]accounting.Counter {
 	r := metrics.DefaultRegistry
 	counters := make(map[string]accounting.Counter)
-	r.Each(func(name string, i interface{}) {
+	r.Each(func(name string, i any) {
 		switch m := i.(type) {
 		case metrics.Counter:
 			counters[name] = m
@@ -290,7 +290,7 @@ func (g *goMetricRegistry) Counters() map[string]accounting.Counter {
 func (g *goMetricRegistry) Gauges() map[string]accounting.Gauge {
 	r := metrics.DefaultRegistry
 	gauges := make(map[string]accounting.Gauge)
-	r.Each(func(name string, i interface{}) {
+	r.Each(func(name string, i any) {
 		switch m := i.(type) {
 		case metrics.Gauge:
 			gauges[name] = m
@@ -302,7 +302,7 @@ func (g *goMetricRegistry) Gauges() map[string]accounting.Gauge {
 func (g *goMetricRegistry) Meters() map[string]accounting.Meter {
 	r := metrics.DefaultRegistry
 	meters := make(map[string]accounting.Meter)
-	r.Each(func(name string, i interface{}) {
+	r.Each(func(name string, i any) {
 		switch m := i.(type) {
 		case metrics.Meter:
 			meters[name] = m
@@ -314,7 +314,7 @@ func (g *goMetricRegistry) Meters() map[string]accounting.Meter {
 func (g *goMetricRegistry) Timers() map[string]accounting.Timer {
 	r := metrics.DefaultRegistry
 	timers := make(map[string]accounting.Timer)
-	r.Each(func(name string, i interface{}) {
+	r.Each(func(name string, i any) {
 		switch m := i.(type) {
 		case metrics.Timer:
 			timers[name] = m
@@ -326,7 +326,7 @@ func (g *goMetricRegistry) Timers() map[string]accounting.Timer {
 func (g *goMetricRegistry) Histograms() map[string]accounting.Histogram {
 	r := metrics.DefaultRegistry
 	histograms := make(map[string]accounting.Histogram)
-	r.Each(func(name string, i interface{}) {
+	r.Each(func(name string, i any) {
 		switch m := i.(type) {
 		case metrics.Histogram:
 			histograms[name] = m

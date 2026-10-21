@@ -211,7 +211,7 @@ func callback(kve metakv.KVEntry) error {
 	ausCfg.Lock()
 	logging.Infof("AUS: New global settings received.")
 
-	var v map[string]interface{}
+	var v map[string]any
 	err := json.Unmarshal(kve.Value, &v)
 	if err != nil {
 		ausCfg.Unlock()
@@ -312,7 +312,7 @@ func CountAus() (int64, errors.Error) {
 	return 1, nil
 }
 
-func FetchAus() (map[string]interface{}, errors.Error) {
+func FetchAus() (map[string]any, errors.Error) {
 	if !ausCfg.initialized {
 		return nil, errors.NewAusNotInitialized()
 	}
@@ -327,7 +327,7 @@ func FetchAus() (map[string]interface{}, errors.Error) {
 		return nil, nil
 	}
 
-	var val map[string]interface{}
+	var val map[string]any
 	err = json.Unmarshal(bytes, &val)
 	if err != nil {
 		return nil, errors.NewAusStorageAccessError(errors.NewAusDocEncodingError(false, err))
@@ -343,7 +343,7 @@ func FetchAus() (map[string]interface{}, errors.Error) {
 // Checks if the path/ key is present in metakv
 // If not present, attempts to add the path to metakv with the default global settings value
 // get: if the value of the key are to be returned
-func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
+func fetchAusHelper(get bool) (rv []byte, rev any, err error) {
 	rv, rev, err = metakv.Get(_AUS_GLOBAL_SETTINGS_PATH)
 	if err != nil {
 		logging.Errorf("AUS: Error retrieving global settings from metakv: %v", err)
@@ -354,7 +354,7 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 	if rv == nil && rev == nil && err == nil {
 
 		// The default global settings document
-		bytes, err := json.Marshal(map[string]interface{}{
+		bytes, err := json.Marshal(map[string]any{
 			"enable":                    false,
 			"all_buckets":               false,
 			"change_percentage":         10,
@@ -391,7 +391,7 @@ func fetchAusHelper(get bool) (rv []byte, rev interface{}, err error) {
 	}
 }
 
-func SetAus(settings interface{}, distribute bool, restore bool) (err errors.Error, warnings errors.Errors) {
+func SetAus(settings any, distribute bool, restore bool) (err errors.Error, warnings errors.Errors) {
 	if !ausCfg.initialized {
 		return errors.NewAusNotInitialized(), nil
 	}
@@ -401,14 +401,14 @@ func SetAus(settings interface{}, distribute bool, restore bool) (err errors.Err
 }
 
 // Function to validate schema of the input settings document. And optionally distribute said settings document in metakv
-func setAusHelper(settings interface{}, distribute bool, restore bool) (obj ausGlobalSettings, err errors.Error,
+func setAusHelper(settings any, distribute bool, restore bool) (obj ausGlobalSettings, err errors.Error,
 	warnings errors.Errors) {
 
 	if actual, ok := settings.(value.Value); ok {
 		settings = actual.Actual()
 	}
 
-	if settings, ok := settings.(map[string]interface{}); !ok {
+	if settings, ok := settings.(map[string]any); !ok {
 		return obj, errors.NewAusDocInvalidSettingsValue("settings", settings), nil
 	} else {
 		var isEnabled bool
@@ -544,7 +544,7 @@ func setAusHelper(settings interface{}, distribute bool, restore bool) (obj ausG
 
 }
 
-func validateTime(val interface{}) (time.Time, bool) {
+func validateTime(val any) (time.Time, bool) {
 	if va, ok := val.(value.Value); ok {
 		val = va.Actual()
 	}
@@ -560,12 +560,12 @@ func validateTime(val interface{}) (time.Time, bool) {
 	return time.Time{}, false
 }
 
-func validateSchedule(schedule interface{}) (ausSchedule ausSchedule, err errors.Error, warnings errors.Errors) {
+func validateSchedule(schedule any) (ausSchedule ausSchedule, err errors.Error, warnings errors.Errors) {
 	if va, ok := schedule.(value.Value); ok {
 		schedule = va.Actual()
 	}
 
-	if sched, ok1 := schedule.(map[string]interface{}); ok1 {
+	if sched, ok1 := schedule.(map[string]any); ok1 {
 		// Check if there are any unknown fields
 		for k, _ := range sched {
 			switch k {
@@ -640,7 +640,7 @@ func validateSchedule(schedule interface{}) (ausSchedule ausSchedule, err errors
 			if dva, ok := dv.(value.Value); ok {
 				dv = dva.Actual()
 			}
-			if days, ok := dv.([]interface{}); ok {
+			if days, ok := dv.([]any); ok {
 				if len(days) == 0 {
 					return ausSchedule, errors.NewAusDocInvalidSettingsValue("schedule.days", days), warnings
 				}
@@ -1093,8 +1093,8 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 
 // Backup related functions
 
-func BackupAusSettings(namespace string, bucket string, filter func([]string) bool) ([]interface{}, errors.Error) {
-	rv := make([]interface{}, 0)
+func BackupAusSettings(namespace string, bucket string, filter func([]string) bool) ([]any, errors.Error) {
+	rv := make([]any, 0)
 	keys := make([]string, 1)
 
 	err := datastore.ScanSystemCollection(bucket, _AUS_SETTING_DOC_PREFIX, nil,
@@ -1121,7 +1121,7 @@ func BackupAusSettings(namespace string, bucket string, filter func([]string) bo
 				av, ok := fetchMap[key]
 
 				if ok && av != nil {
-					setting := make(map[string]interface{})
+					setting := make(map[string]any)
 					setting["identity"] = path
 					v, ok1 := av.Field("enable")
 					if ok1 {
@@ -1257,7 +1257,7 @@ func scheduleTask(task taskInfo) errors.Error {
 		}
 
 		task.sessionName = session
-		parms := make(map[string]interface{}, 1)
+		parms := make(map[string]any, 1)
 		parms["task"] = task
 
 		after := task.startTime.Sub(time.Now())
@@ -1343,8 +1343,8 @@ func (this *taskContext) GetExecutionSetup() (query_ee.AusContext, *datastore.Va
 	return ausCtx, datastore.NewValueConnection(ausCtx), nil
 }
 
-func extractTaskInfo(parms interface{}) (taskInfo, bool) {
-	params, ok := parms.(map[string]interface{})
+func extractTaskInfo(parms any) (taskInfo, bool) {
+	params, ok := parms.(map[string]any)
 	if !ok {
 		return taskInfo{}, false
 	}
@@ -1388,7 +1388,7 @@ func (this *taskContext) processCollections(skipDisabled bool, getKsSettings boo
 	dpairs := value.Pairs{value.Pair{
 		Name:    "",
 		Value:   value.EMPTY_ANNOTATED_OBJECT,
-		Options: value.NewValue(map[string]interface{}{"expiration": this.task.endTime.Unix()}),
+		Options: value.NewValue(map[string]any{"expiration": this.task.endTime.Unix()}),
 	}}
 
 	for i := 0; i < len(buckets); i++ {
@@ -1619,7 +1619,7 @@ func fuzzyStart() bool {
 
 // AUS task related functions
 
-func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-chan bool) (interface{}, []errors.Error) {
+func execAusTask(context scheduler.Context, parms any, stopChannel <-chan bool) (any, []errors.Error) {
 	task, ok := extractTaskInfo(parms)
 	if !ok {
 		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
@@ -1692,7 +1692,7 @@ func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-cha
 		return nil, errors.Errors{errors.NewAusTaskNotStartedError()}
 	}
 
-	var keyspacesUpdated []interface{}
+	var keyspacesUpdated []any
 
 	ausHandler := func(keyspace datastore.Keyspace, settings *keyspaceSettings, taskContext *taskContext) {
 
@@ -1738,7 +1738,7 @@ func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-cha
 		errs = append(errs, errors.NewAusTaskTimeoutExceeded())
 	}
 
-	taskRv := make(map[string]interface{}, 2)
+	taskRv := make(map[string]any, 2)
 	if errCount > 0 {
 		taskRv["error_count"] = errCount
 	}
@@ -1766,7 +1766,7 @@ func execAusTask(context scheduler.Context, parms interface{}, stopChannel <-cha
 	return taskRv, errs
 }
 
-func stopAusTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+func stopAusTask(context scheduler.Context, parms any) (any, []errors.Error) {
 
 	task, ok := extractTaskInfo(parms)
 	if !ok {
@@ -1832,7 +1832,7 @@ func (this *ausConfig) scheduleCleanupTask(version string) (bool, errors.Error) 
 	return true, nil
 }
 
-func execCleanupTask(context scheduler.Context, parms interface{}, stopChannel <-chan bool) (interface{}, []errors.Error) {
+func execCleanupTask(context scheduler.Context, parms any, stopChannel <-chan bool) (any, []errors.Error) {
 	task, ok := extractTaskInfo(parms)
 	if !ok {
 		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
@@ -1889,7 +1889,7 @@ func execCleanupTask(context scheduler.Context, parms interface{}, stopChannel <
 	ausCfg.setRunningCleanupEnd(false, task.endTime)
 	ausCfg.Unlock()
 
-	var keyspacesCleaned []interface{}
+	var keyspacesCleaned []any
 
 	cleanupHandler := func(keyspace datastore.Keyspace, settings *keyspaceSettings, taskContext *taskContext) {
 		if taskContext.abort {
@@ -1922,7 +1922,7 @@ func execCleanupTask(context scheduler.Context, parms interface{}, stopChannel <
 		errs = append(errs, errors.NewAusTaskTimeoutExceeded())
 	}
 
-	taskRv := make(map[string]interface{}, 2)
+	taskRv := make(map[string]any, 2)
 	if errCount > 0 {
 		taskRv["error_count"] = errCount
 	}
@@ -1945,7 +1945,7 @@ func execCleanupTask(context scheduler.Context, parms interface{}, stopChannel <
 	return taskRv, errs
 }
 
-func stopCleanupTask(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+func stopCleanupTask(context scheduler.Context, parms any) (any, []errors.Error) {
 	task, ok := extractTaskInfo(parms)
 	if !ok {
 		return nil, []errors.Error{errors.NewAusTaskInvalidInfoError(parms)}
@@ -2160,12 +2160,12 @@ func (this *ausOutput) PhaseOperator(p execution.Phases) uint64 {
 	return uint64(0)
 }
 
-func (this *ausOutput) FmtPhaseCounts() map[string]interface{} {
+func (this *ausOutput) FmtPhaseCounts() map[string]any {
 	// do nothing
 	return nil
 }
 
-func (this *ausOutput) FmtPhaseOperators() map[string]interface{} {
+func (this *ausOutput) FmtPhaseOperators() map[string]any {
 	// do nothing
 	return nil
 }
@@ -2174,16 +2174,16 @@ func (this *ausOutput) AddPhaseTime(phase execution.Phases, duration time.Durati
 	// do nothing
 }
 
-func (this *ausOutput) FmtPhaseTimes(s util.DurationStyle) map[string]interface{} {
+func (this *ausOutput) FmtPhaseTimes(s util.DurationStyle) map[string]any {
 	// do nothing
 	return nil
 }
 
-func (this *ausOutput) RawPhaseTimes() map[string]interface{} {
+func (this *ausOutput) RawPhaseTimes() map[string]any {
 	return nil
 }
 
-func (this *ausOutput) FmtOptimizerEstimates(op execution.Operator) map[string]interface{} {
+func (this *ausOutput) FmtOptimizerEstimates(op execution.Operator) map[string]any {
 	// do nothing
 	return nil
 }

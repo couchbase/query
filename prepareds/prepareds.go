@@ -161,7 +161,7 @@ func PreparedsRemotePrime() {
 
 				// and for each key get the prepared and add it
 				distributed.RemoteAccess().GetRemoteDoc(host, name, "prepareds", "GET",
-					func(doc map[string]interface{}) {
+					func(doc map[string]any) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
 							// deferIndexerRace=true: an indexer-not-ready failure is deferred (below)
@@ -248,14 +248,14 @@ func PreparedsRemotePrime() {
 }
 
 type PrimeReport struct {
-	Host             string      `json:"host,omitempty"`
-	StartTime        time.Time   `json:"startTime"`
-	EndTime          time.Time   `json:"endTime"`
-	Reason           interface{} `json:"reason,omitempty"`
-	Success          int         `json:"success"`
-	Failed           int         `json:"failed"`
-	Reprepared       int         `json:"reprepared"`
-	RepreparedReason interface{} `json:"repreparedReason,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	StartTime        time.Time `json:"startTime"`
+	EndTime          time.Time `json:"endTime"`
+	Reason           any       `json:"reason,omitempty"`
+	Success          int       `json:"success"`
+	Failed           int       `json:"failed"`
+	Reprepared       int       `json:"reprepared"`
+	RepreparedReason any       `json:"repreparedReason,omitempty"`
 
 	// Retried: decodes that hit an index-not-found error and got a delayed retry. RetrySuccess: how
 	// many of those the retry fixed (not included in Success).
@@ -393,7 +393,7 @@ func PreparedsSetLimit(limit int) {
 }
 
 func (this *preparedCache) get(fullName string, track bool) *CacheEntry {
-	var cv interface{}
+	var cv any
 
 	if track {
 		cv = prepareds.cache.Use(fullName, nil)
@@ -429,7 +429,7 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 		ce.Uses = 1
 		ce.LastUse = when
 	}
-	prepareds.cache.Add(ce, encodeName(prepared.Name(), prepared.QueryContext()), func(entry interface{}) util.Operation {
+	prepareds.cache.Add(ce, encodeName(prepared.Name(), prepared.QueryContext()), func(entry any) util.Operation {
 		var op util.Operation = util.AMEND
 		var cont bool = true
 
@@ -646,17 +646,17 @@ func NamePrepareds() []string {
 
 func PreparedsForeach(nonBlocking func(string, *CacheEntry) bool,
 	blocking func() bool) {
-	dummyF := func(id string, r interface{}) bool {
+	dummyF := func(id string, r any) bool {
 		return nonBlocking(id, r.(*CacheEntry))
 	}
 	prepareds.cache.ForEach(dummyF, blocking)
 }
 
 func PreparedDo(name string, f func(*CacheEntry)) {
-	var process func(interface{}) = nil
+	var process func(any) = nil
 
 	if f != nil {
-		process = func(entry interface{}) {
+		process = func(entry any) {
 			ce := entry.(*CacheEntry)
 			f(ce)
 		}
@@ -700,7 +700,7 @@ func deletePreparedFromCache(name string) errors.Error {
 
 func DeletePreparedFunc(name string, f func(*CacheEntry) bool) errors.Error {
 	persist := false
-	process := func(entry interface{}) bool {
+	process := func(entry any) bool {
 		ce := entry.(*CacheEntry)
 		persist = ce.Prepared.Persist()
 		if f != nil {
@@ -795,7 +795,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 
 	if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
 		distributed.RemoteAccess().GetRemoteDoc(host, encodedName, "prepareds", "GET",
-			func(doc map[string]interface{}) {
+			func(doc map[string]any) {
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
 					prepared, err, _ = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime,
@@ -910,7 +910,7 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 
 	// cache get had already moved this entry to the top of the LRU
 	// no need to do it again
-	_ = prepareds.cache.Get(name, func(entry interface{}) {
+	_ = prepareds.cache.Get(name, func(entry any) {
 		ce := entry.(*CacheEntry)
 		atomic.AddUint64(&ce.ServiceTime, uint64(serviceTime))
 		util.TestAndSetUint64(&ce.MinServiceTime, uint64(serviceTime),

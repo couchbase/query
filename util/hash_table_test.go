@@ -14,24 +14,24 @@ import (
 	"testing"
 )
 
-func getBytesInt(val interface{}) ([]byte, error) {
+func getBytesInt(val any) ([]byte, error) {
 	i := val.(int)
 	s := strconv.FormatInt(int64(i), 10)
 	return []byte(s), nil
 }
 
-func getBytesStr(val interface{}) ([]byte, error) {
+func getBytesStr(val any) ([]byte, error) {
 	s := val.(string)
 	return []byte(s), nil
 }
 
-func equalInt(val1, val2 interface{}) bool {
+func equalInt(val1, val2 any) bool {
 	v1 := val1.(int)
 	v2 := val2.(int)
 	return v1 == v2
 }
 
-func equalStr(val1, val2 interface{}) bool {
+func equalStr(val1, val2 any) bool {
 	v1 := val1.(string)
 	v2 := val2.(string)
 	return v1 == v2
@@ -43,7 +43,7 @@ func TestHashTable(t *testing.T) {
 	var e error
 	var intVal int
 	var strVal, inputVal1, inputVal2 string
-	var outputVal interface{}
+	var outputVal any
 
 	// create a hash table
 	htab := NewHashTable(HASH_TABLE_FOR_HASH_JOIN, -1.0, 1)

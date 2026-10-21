@@ -18,7 +18,7 @@ package util
 
 // Queue is a basic FIFO queue based on a circular list that resizes as needed.
 type Queue struct {
-	nodes []interface{}
+	nodes []any
 	head  int
 	tail  int
 	count int
@@ -30,16 +30,16 @@ func NewQueue(size int) *Queue {
 	}
 
 	rv := &Queue{
-		nodes: make([]interface{}, size),
+		nodes: make([]any, size),
 	}
 
 	return rv
 }
 
 // Add a node to the queue.
-func (q *Queue) Add(n interface{}) {
+func (q *Queue) Add(n any) {
 	if q.head == q.tail && q.count > 0 {
-		nodes := make([]interface{}, 2*len(q.nodes))
+		nodes := make([]any, 2*len(q.nodes))
 		copy(nodes, q.nodes[q.head:])
 		copy(nodes[len(q.nodes)-q.head:], q.nodes[:q.head])
 		q.head = 0
@@ -53,7 +53,7 @@ func (q *Queue) Add(n interface{}) {
 }
 
 // Remove and return a node from the queue in FIFO order.
-func (q *Queue) Remove() interface{} {
+func (q *Queue) Remove() any {
 	if q.count == 0 {
 		return nil
 	}
@@ -66,7 +66,7 @@ func (q *Queue) Remove() interface{} {
 }
 
 // Remove and return a node from the queue in FIFO order.
-func (q *Queue) Peek() interface{} {
+func (q *Queue) Peek() any {
 	if q.count == 0 {
 		return nil
 	}

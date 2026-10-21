@@ -52,7 +52,7 @@ func (this *TempFileLogger) SetLevel(l Level) {
 	this.logLevel = l
 }
 
-func (this *TempFileLogger) Stringf(l Level, format string, args ...interface{}) string {
+func (this *TempFileLogger) Stringf(l Level, format string, args ...any) string {
 	var fl string
 	if l == DEBUG || l == TRACE {
 		fl = getFileLine(1)
@@ -184,34 +184,34 @@ func (this *TempFileLogger) Fatala(f func() string) {
 	this.log(FATAL, f)
 }
 
-func (this *TempFileLogger) Logf(level Level, f string, args ...interface{}) {
+func (this *TempFileLogger) Logf(level Level, f string, args ...any) {
 	this.log(level, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *TempFileLogger) Debugf(f string, args ...interface{}) {
+func (this *TempFileLogger) Debugf(f string, args ...any) {
 	this.log(DEBUG, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *TempFileLogger) Tracef(f string, args ...interface{}) {
+func (this *TempFileLogger) Tracef(f string, args ...any) {
 	this.log(TRACE, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *TempFileLogger) Infof(f string, args ...interface{}) {
+func (this *TempFileLogger) Infof(f string, args ...any) {
 	this.log(INFO, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *TempFileLogger) Warnf(f string, args ...interface{}) {
+func (this *TempFileLogger) Warnf(f string, args ...any) {
 	this.log(WARN, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *TempFileLogger) Errorf(f string, args ...interface{}) {
+func (this *TempFileLogger) Errorf(f string, args ...any) {
 	this.log(ERROR, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *TempFileLogger) Severef(f string, args ...interface{}) {
+func (this *TempFileLogger) Severef(f string, args ...any) {
 	this.log(SEVERE, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *TempFileLogger) Fatalf(f string, args ...interface{}) {
+func (this *TempFileLogger) Fatalf(f string, args ...any) {
 	this.log(FATAL, func() string { return fmtpkg.Sprintf(f, args...) })
 }

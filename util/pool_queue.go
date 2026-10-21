@@ -17,7 +17,7 @@ func NewQueuePool(size int) *QueuePool {
 	rv := &QueuePool{
 		size: size,
 	}
-	NewFastPool(&rv.pool, func() interface{} {
+	NewFastPool(&rv.pool, func() any {
 		return NewQueue(size)
 	})
 

@@ -15,7 +15,7 @@ type Pairs []Pair
 // Key-value pair
 type Pair struct {
 	Name  string
-	Value interface{}
+	Value any
 }
 
 // for sorting
@@ -35,6 +35,6 @@ type IPairs []IPair
 
 // Key-value pair
 type IPair struct {
-	Name  interface{}
-	Value interface{}
+	Name  any
+	Value any
 }

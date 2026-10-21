@@ -139,20 +139,20 @@ type Log interface {
 	Fatala(f func() string)
 
 	// Printf style
-	Logf(level Level, fmt string, args ...interface{})
-	Debugf(fmt string, args ...interface{})
-	Tracef(fmt string, args ...interface{})
-	Infof(fmt string, args ...interface{})
-	Warnf(fmt string, args ...interface{})
-	Errorf(fmt string, args ...interface{})
-	Severef(fmt string, args ...interface{})
-	Fatalf(fmt string, args ...interface{})
+	Logf(level Level, fmt string, args ...any)
+	Debugf(fmt string, args ...any)
+	Tracef(fmt string, args ...any)
+	Infof(fmt string, args ...any)
+	Warnf(fmt string, args ...any)
+	Errorf(fmt string, args ...any)
+	Severef(fmt string, args ...any)
+	Fatalf(fmt string, args ...any)
 }
 
 type Logger interface {
 	Log
 
-	Stringf(level Level, format string, args ...interface{}) string
+	Stringf(level Level, format string, args ...any) string
 
 	/*
 		These APIs control the logging level
@@ -261,7 +261,7 @@ func SetLogger(newLogger Logger) {
 	loggerMutex.Unlock()
 }
 
-func Loga(level Level, f func() string, args ...interface{}) {
+func Loga(level Level, f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Loga(level, f)
@@ -277,7 +277,7 @@ func Loga(level Level, f func() string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Debuga(f func() string, args ...interface{}) {
+func Debuga(f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Debuga(f)
@@ -296,7 +296,7 @@ func Debuga(f func() string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Tracea(f func() string, args ...interface{}) {
+func Tracea(f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Tracea(f)
@@ -315,7 +315,7 @@ func Tracea(f func() string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Infoa(f func() string, args ...interface{}) {
+func Infoa(f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Infoa(f)
@@ -329,7 +329,7 @@ func Infoa(f func() string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Warna(f func() string, args ...interface{}) {
+func Warna(f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Warna(f)
@@ -343,7 +343,7 @@ func Warna(f func() string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Errora(f func() string, args ...interface{}) {
+func Errora(f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Errora(f)
@@ -357,7 +357,7 @@ func Errora(f func() string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Severea(f func() string, args ...interface{}) {
+func Severea(f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Severea(f)
@@ -371,7 +371,7 @@ func Severea(f func() string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Fatala(f func() string, args ...interface{}) {
+func Fatala(f func() string, args ...any) {
 	if len(args) > 0 {
 		if l, ok := args[0].(Log); ok {
 			l.Fatala(f)
@@ -387,7 +387,7 @@ func Fatala(f func() string, args ...interface{}) {
 
 // printf-style variants
 
-func Logf(level Level, fmt string, args ...interface{}) {
+func Logf(level Level, fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -405,7 +405,7 @@ func Logf(level Level, fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Debugf(fmt string, args ...interface{}) {
+func Debugf(fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -422,7 +422,7 @@ func Debugf(fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Tracef(fmt string, args ...interface{}) {
+func Tracef(fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -439,7 +439,7 @@ func Tracef(fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Infof(fmt string, args ...interface{}) {
+func Infof(fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -455,7 +455,7 @@ func Infof(fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Warnf(fmt string, args ...interface{}) {
+func Warnf(fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -471,7 +471,7 @@ func Warnf(fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Errorf(fmt string, args ...interface{}) {
+func Errorf(fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -487,7 +487,7 @@ func Errorf(fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Severef(fmt string, args ...interface{}) {
+func Severef(fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -503,7 +503,7 @@ func Severef(fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Fatalf(fmt string, args ...interface{}) {
+func Fatalf(fmt string, args ...any) {
 	n := len(args)
 	if n > 0 {
 		if l, ok := args[n-1].(Log); ok {
@@ -541,7 +541,7 @@ func Logging(l Level) bool {
 	return !skipLogging(l)
 }
 
-func Stackf(level Level, fmt string, args ...interface{}) {
+func Stackf(level Level, fmt string, args ...any) {
 	if skipLogging(level) {
 		return
 	} else if level == DEBUG && !filterDebug() {
@@ -556,7 +556,7 @@ func Stackf(level Level, fmt string, args ...interface{}) {
 	loggerMutex.Unlock()
 }
 
-func Stringf(level Level, fmt string, args ...interface{}) string {
+func Stringf(level Level, fmt string, args ...any) string {
 	loggerMutex.RLock()
 	rv := logger.Stringf(level, fmt, args...)
 	loggerMutex.RUnlock()
@@ -567,7 +567,7 @@ func SetDebugFilter(s string) {
 	setDebugFilter(&loggerMutex, &debugFilter, s, Infof)
 }
 
-func setDebugFilter(pMutex sync.Locker, pFilters *[]_filter, s string, log func(string, ...interface{})) {
+func setDebugFilter(pMutex sync.Locker, pFilters *[]_filter, s string, log func(string, ...any)) {
 	if s == "" {
 		if *pFilters != nil {
 			pMutex.Lock()
@@ -756,25 +756,25 @@ var NULL_LOG Logger = &nullLogImpl{}
 
 type nullLogImpl struct{}
 
-func (this *nullLogImpl) Loga(level Level, f func() string)                              {}
-func (this *nullLogImpl) Debuga(f func() string)                                         {}
-func (this *nullLogImpl) Tracea(f func() string)                                         {}
-func (this *nullLogImpl) Infoa(f func() string)                                          {}
-func (this *nullLogImpl) Warna(f func() string)                                          {}
-func (this *nullLogImpl) Errora(f func() string)                                         {}
-func (this *nullLogImpl) Severea(f func() string)                                        {}
-func (this *nullLogImpl) Fatala(f func() string)                                         {}
-func (this *nullLogImpl) Logf(level Level, f string, args ...interface{})                {}
-func (this *nullLogImpl) Debugf(f string, args ...interface{})                           {}
-func (this *nullLogImpl) Tracef(f string, args ...interface{})                           {}
-func (this *nullLogImpl) Infof(f string, args ...interface{})                            {}
-func (this *nullLogImpl) Warnf(f string, args ...interface{})                            {}
-func (this *nullLogImpl) Errorf(f string, args ...interface{})                           {}
-func (this *nullLogImpl) Severef(f string, args ...interface{})                          {}
-func (this *nullLogImpl) Fatalf(f string, args ...interface{})                           {}
-func (this *nullLogImpl) Stringf(level Level, format string, args ...interface{}) string { return "" }
-func (this *nullLogImpl) SetLevel(Level)                                                 {}
-func (this *nullLogImpl) Level() Level                                                   { return NONE }
+func (this *nullLogImpl) Loga(level Level, f func() string)                      {}
+func (this *nullLogImpl) Debuga(f func() string)                                 {}
+func (this *nullLogImpl) Tracea(f func() string)                                 {}
+func (this *nullLogImpl) Infoa(f func() string)                                  {}
+func (this *nullLogImpl) Warna(f func() string)                                  {}
+func (this *nullLogImpl) Errora(f func() string)                                 {}
+func (this *nullLogImpl) Severea(f func() string)                                {}
+func (this *nullLogImpl) Fatala(f func() string)                                 {}
+func (this *nullLogImpl) Logf(level Level, f string, args ...any)                {}
+func (this *nullLogImpl) Debugf(f string, args ...any)                           {}
+func (this *nullLogImpl) Tracef(f string, args ...any)                           {}
+func (this *nullLogImpl) Infof(f string, args ...any)                            {}
+func (this *nullLogImpl) Warnf(f string, args ...any)                            {}
+func (this *nullLogImpl) Errorf(f string, args ...any)                           {}
+func (this *nullLogImpl) Severef(f string, args ...any)                          {}
+func (this *nullLogImpl) Fatalf(f string, args ...any)                           {}
+func (this *nullLogImpl) Stringf(level Level, format string, args ...any) string { return "" }
+func (this *nullLogImpl) SetLevel(Level)                                         {}
+func (this *nullLogImpl) Level() Level                                           { return NONE }
 
 const (
 	KiB = (1 << 10)

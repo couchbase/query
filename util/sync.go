@@ -36,8 +36,8 @@ type workerDesc struct {
 
 type worker struct {
 	wg sync.WaitGroup
-	f  func(p interface{})
-	p  interface{}
+	f  func(p any)
+	p  any
 }
 
 var workers [_OP_POOL_SIZE]workerDesc
@@ -80,7 +80,7 @@ func (this *worker) work() {
 
 }
 
-func Fork(f func(interface{}), p interface{}) {
+func Fork(f func(any), p any) {
 	var w *worker
 	gId := atomic.AddUint32(&getId, 1) % _OP_POOL_SIZE
 	workers[gId].Lock()
@@ -151,7 +151,7 @@ type FastPool struct {
 	useCount  int32
 	freeCount int32
 	buckets   uint32
-	f         func() interface{}
+	f         func() any
 	pool      []poolList
 	free      []poolList
 	interval  time.Duration
@@ -167,11 +167,11 @@ type poolList struct {
 }
 
 type poolEntry struct {
-	entry interface{}
+	entry any
 	next  *poolEntry
 }
 
-func NewFastPool(p *FastPool, f func() interface{}) {
+func NewFastPool(p *FastPool, f func() any) {
 	*p = FastPool{}
 	p.buckets = uint32(NumCPU())
 	if p.buckets > _MAX_BUCKETS {
@@ -184,7 +184,7 @@ func NewFastPool(p *FastPool, f func() interface{}) {
 	p.f = f
 }
 
-func (p *FastPool) Get() interface{} {
+func (p *FastPool) Get() any {
 	if atomic.LoadInt32(&p.useCount) == 0 {
 		return p.f()
 	}
@@ -203,11 +203,11 @@ func (p *FastPool) Get() interface{} {
 	return rv
 }
 
-func (p *FastPool) Put(s interface{}) {
+func (p *FastPool) Put(s any) {
 	p.PutFn(s, nil)
 }
 
-func (p *FastPool) PutFn(s interface{}, f func(interface{})) {
+func (p *FastPool) PutFn(s any, f func(any)) {
 	if atomic.LoadInt32(&p.useCount) >= _POOL_SIZE {
 		if f != nil {
 			f(s)

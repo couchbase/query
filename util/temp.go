@@ -102,7 +102,7 @@ func CreateTemp(pattern string) (*TempFile, error) {
 	f, err := os.CreateTemp(TempLocation(), pattern)
 	tf.File = *f
 	if logging.LogLevel() == logging.DEBUG {
-		runtime.SetFinalizer(tf, func(i interface{}) {
+		runtime.SetFinalizer(tf, func(i any) {
 			if tf, ok := i.(*TempFile); ok {
 				logging.Debugf("Temp file finaliser for %s called.  Missing close.", tf.Name())
 				tf.Close()

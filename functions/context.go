@@ -32,18 +32,18 @@ type Context interface {
 	ExternalCredential(credId string) (*cbauth.Credential, error)
 	IsAdmin() bool
 	DatastoreVersion() string
-	NewQueryContext(queryContext string, readonly bool) interface{}
-	AdminContext() (interface{}, error)
+	NewQueryContext(queryContext string, readonly bool) any
+	AdminContext() (any, error)
 	QueryContext() string
 	QueryContextParts() []string
-	GetTxContext() interface{}
-	SetTxContext(c interface{})
+	GetTxContext() any
+	SetTxContext(c any)
 	Readonly() bool
 	SetAdvisor()
 	IncRecursionCount(inc int) int
 	RecursionCount() int
-	StoreValue(key string, val interface{})
-	RetrieveValue(key string) interface{}
+	StoreValue(key string, val any)
+	RetrieveValue(key string) any
 	ReleaseValue(key string)
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool,
 		profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
@@ -53,9 +53,9 @@ type Context interface {
 		readonly bool, profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
 	ParkableOpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery bool,
 		readonly bool, profileUdfExecTrees bool, funcKey string) (Handle, error)
-	Parse(s string) (interface{}, error)
+	Parse(s string) (any, error)
 	Infer(value.Value, value.Value) (value.Value, error)
-	InferKeyspace(ks interface{}, with value.Value) (value.Value, error)
+	InferKeyspace(ks any, with value.Value) (value.Value, error)
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
@@ -69,8 +69,8 @@ type Context interface {
 
 type CurlContext interface {
 	Context
-	GetAllowlist() map[string]interface{}
+	GetAllowlist() map[string]any
 	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
-	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (interface{}, error)
+	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (any, error)
 }

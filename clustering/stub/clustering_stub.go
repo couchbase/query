@@ -150,7 +150,7 @@ func (ClusterStub) Capability(name string) bool {
 	return false
 }
 
-func (ClusterStub) Settings() (map[string]interface{}, errors.Error) {
+func (ClusterStub) Settings() (map[string]any, errors.Error) {
 	return nil, nil
 }
 

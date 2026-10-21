@@ -35,7 +35,7 @@ func (this *FileLogger) SetLevel(l Level) {
 	this.logLevel = l
 }
 
-func (this *FileLogger) Stringf(l Level, format string, args ...interface{}) string {
+func (this *FileLogger) Stringf(l Level, format string, args ...any) string {
 	var fl string
 	if l == DEBUG || l == TRACE {
 		fl = getFileLine(1)
@@ -152,34 +152,34 @@ func (this *FileLogger) Fatala(f func() string) {
 	this.log(FATAL, f)
 }
 
-func (this *FileLogger) Logf(level Level, f string, args ...interface{}) {
+func (this *FileLogger) Logf(level Level, f string, args ...any) {
 	this.log(level, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *FileLogger) Debugf(f string, args ...interface{}) {
+func (this *FileLogger) Debugf(f string, args ...any) {
 	this.log(DEBUG, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *FileLogger) Tracef(f string, args ...interface{}) {
+func (this *FileLogger) Tracef(f string, args ...any) {
 	this.log(TRACE, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *FileLogger) Infof(f string, args ...interface{}) {
+func (this *FileLogger) Infof(f string, args ...any) {
 	this.log(INFO, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *FileLogger) Warnf(f string, args ...interface{}) {
+func (this *FileLogger) Warnf(f string, args ...any) {
 	this.log(WARN, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *FileLogger) Errorf(f string, args ...interface{}) {
+func (this *FileLogger) Errorf(f string, args ...any) {
 	this.log(ERROR, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *FileLogger) Severef(f string, args ...interface{}) {
+func (this *FileLogger) Severef(f string, args ...any) {
 	this.log(SEVERE, func() string { return fmtpkg.Sprintf(f, args...) })
 }
 
-func (this *FileLogger) Fatalf(f string, args ...interface{}) {
+func (this *FileLogger) Fatalf(f string, args ...any) {
 	this.log(FATAL, func() string { return fmtpkg.Sprintf(f, args...) })
 }

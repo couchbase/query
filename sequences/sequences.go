@@ -325,7 +325,7 @@ func DropSequence(path *algebra.Path, force bool) errors.Error {
 	if seq == nil {
 		sequences.Delete(name, nil)
 	} else {
-		sequences.Delete(name, func(s interface{}) {
+		sequences.Delete(name, func(s any) {
 			seq := s.(*sequence)
 			seq.Unlock()
 		})
@@ -650,7 +650,7 @@ func DropAllSequences(namespace string, bucket string, scope string, uid string,
 	// clear the cache entries
 	listWalkMutex.Lock()
 	sequences.ForEach(
-		func(k string, s interface{}) bool {
+		func(k string, s any) bool {
 			if strings.HasPrefix(k, keyPrefix) {
 				del = k
 			} else {
@@ -1140,7 +1140,7 @@ func ListSequenceKeys(namespace string, bucket string, scope string, cachedOnly 
 
 	if cachedOnly {
 		listWalkMutex.Lock()
-		sequences.ForEach(func(k string, s interface{}) bool {
+		sequences.ForEach(func(k string, s any) bool {
 			elements := algebra.ParsePath(k)
 			if strings.HasPrefix(k, filter) && len(elements) == 4 {
 				res = append(res, k)
@@ -1193,7 +1193,7 @@ func FetchSequence(name string, cacheOnly bool) (value.AnnotatedValue, errors.Er
 	}
 	path := algebra.NewPathFromElements(elements)
 
-	val := make(map[string]interface{})
+	val := make(map[string]any)
 	cache := int64(0)
 	base := int64(0)
 	min := int64(math.MinInt64)
@@ -1219,7 +1219,7 @@ func FetchSequence(name string, cacheOnly bool) (value.AnnotatedValue, errors.Er
 		return nil, nil
 	}
 
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["namespace"] = elements[0]
 	m["namespace_id"] = elements[0]
 	m["bucket"] = elements[1]
@@ -1277,7 +1277,7 @@ func FetchSequence(name string, cacheOnly bool) (value.AnnotatedValue, errors.Er
 func ListCachedSequences() []string {
 	res := make([]string, 0, 32)
 	listWalkMutex.Lock()
-	sequences.ForEach(func(k string, s interface{}) bool {
+	sequences.ForEach(func(k string, s any) bool {
 		res = append(res, k)
 		return true
 	}, nil)
@@ -1285,9 +1285,9 @@ func ListCachedSequences() []string {
 	return res
 }
 
-func BackupSequences(namespace string, bucket string, filter func(string) bool) ([]interface{}, errors.Error) {
+func BackupSequences(namespace string, bucket string, filter func(string) bool) ([]any, errors.Error) {
 
-	target := make([]interface{}, 0, 16)
+	target := make([]any, 0, 16)
 	res := make(map[string]value.AnnotatedValue, 1)
 	keys := make([]string, 1)
 
@@ -1304,7 +1304,7 @@ func BackupSequences(namespace string, bucket string, filter func(string) bool) 
 				}
 				av, ok := res[keys[0]]
 				if ok {
-					m := make(map[string]interface{})
+					m := make(map[string]any)
 					m["identity"] = name
 					v, _ := av.Field("cache")
 					m["cache"] = v.ToString()
@@ -1335,7 +1335,7 @@ func CleanupCacheEntry(namespace string, bucket string, key string) {
 	sequences.Delete(getCacheKey(namespace, bucket, key), nil)
 }
 
-func ValidateCreateSequenceOption(m map[string]interface{}, optionName string, optionVal interface{}) string {
+func ValidateCreateSequenceOption(m map[string]any, optionName string, optionVal any) string {
 
 	if optionVal == nil {
 		return "invalid option value"
@@ -1377,7 +1377,7 @@ func ValidateCreateSequenceOption(m map[string]interface{}, optionName string, o
 	return "invalid option value"
 }
 
-func ValidateAlterSequenceOption(m map[string]interface{}, optionName string, optionVal interface{}) string {
+func ValidateAlterSequenceOption(m map[string]any, optionName string, optionVal any) string {
 
 	if optionVal == nil {
 		return "invalid option value"

@@ -50,18 +50,18 @@ const (
 var HTLoadThreshold = 0.75
 
 type hashEntry struct {
-	hashKey   uint64        // generated hash code
-	hashVal   interface{}   // values used for hashing
-	inputVals []interface{} // payload
+	hashKey   uint64 // generated hash code
+	hashVal   any    // values used for hashing
+	inputVals []any  // payload
 }
 
-func newHashEntry(hashKey uint64, hashVal, inputVal interface{}) *hashEntry {
+func newHashEntry(hashKey uint64, hashVal, inputVal any) *hashEntry {
 	inputVals := _ARR_POOL_1.Get()
 	inputVals = append(inputVals, inputVal)
 	return &hashEntry{hashKey, hashVal, inputVals}
 }
 
-func newArrayHashEntry(hashKey uint64, hashVal []interface{}, inputVal interface{}) *hashEntry {
+func newArrayHashEntry(hashKey uint64, hashVal []any, inputVal any) *hashEntry {
 	inputVals := _ARR_POOL_1.Get()
 	inputVals = append(inputVals, inputVal)
 	hashVals := _ARR_POOL_4.GetCapped(len(hashVal))
@@ -128,8 +128,8 @@ func NewHashTable(purpose int, cardinality float64, arrLen int) *HashTable {
 }
 
 // given a hash value (hashVal), put the inputVal into hash table
-func (this *HashTable) Put(hashVal, inputVal interface{}, marshal func(interface{}) ([]byte, error),
-	equal func(val1, val2 interface{}) bool, size uint64) error {
+func (this *HashTable) Put(hashVal, inputVal any, marshal func(any) ([]byte, error),
+	equal func(val1, val2 any) bool, size uint64) error {
 
 	this.mode = HASH_TABLE_PUT
 
@@ -147,7 +147,7 @@ func (this *HashTable) Put(hashVal, inputVal interface{}, marshal func(interface
 
 	var entry *hashEntry
 	if this.array {
-		if arr, ok := hashVal.([]interface{}); ok {
+		if arr, ok := hashVal.([]any); ok {
 			entry = newArrayHashEntry(hashKey, arr, inputVal)
 		} else {
 			return fmt.Errorf("HashTable.Put: expecting an array, not %T", hashVal)
@@ -163,7 +163,7 @@ func (this *HashTable) Put(hashVal, inputVal interface{}, marshal func(interface
 	return err
 }
 
-func (this *HashTable) putEntry(entry *hashEntry, equal func(val1, val2 interface{}) bool) error {
+func (this *HashTable) putEntry(entry *hashEntry, equal func(val1, val2 any) bool) error {
 	// use quadratic probing to find available slot in hash table
 	// since the hash table size is power of 2, the mod operation can be
 	// achieved by bitwise and
@@ -202,8 +202,8 @@ func (this *HashTable) putEntry(entry *hashEntry, equal func(val1, val2 interfac
 }
 
 // give a hash value (hashVal), get the first output value associated with that hash value
-func (this *HashTable) Get(hashVal interface{}, marshal func(interface{}) ([]byte, error),
-	equal func(val1, val2 interface{}) bool) (interface{}, error) {
+func (this *HashTable) Get(hashVal any, marshal func(any) ([]byte, error),
+	equal func(val1, val2 any) bool) (any, error) {
 
 	this.mode = HASH_TABLE_GET
 
@@ -236,7 +236,7 @@ func (this *HashTable) Get(hashVal interface{}, marshal func(interface{}) ([]byt
 }
 
 // after initial Get() call, return any additional values associated with the same hash value
-func (this *HashTable) GetNext() (interface{}, error) {
+func (this *HashTable) GetNext() (any, error) {
 	if this.mode == HASH_TABLE_GET {
 		if this.bucket >= 0 && this.vector >= 0 {
 			// if previous get call left a position in the hash table, use that position
@@ -257,7 +257,7 @@ func (this *HashTable) GetNext() (interface{}, error) {
 	return nil, fmt.Errorf("HashTable.GetNext: not following a Get call")
 }
 
-func (this *HashTable) getHashKey(hashVal interface{}, marshal func(interface{}) ([]byte, error)) (uint64, error) {
+func (this *HashTable) getHashKey(hashVal any, marshal func(any) ([]byte, error)) (uint64, error) {
 	bytes, err := marshal(hashVal)
 	if err != nil {
 		return 0, err
@@ -268,7 +268,7 @@ func (this *HashTable) getHashKey(hashVal interface{}, marshal func(interface{})
 	return hashKey, nil
 }
 
-func (this *HashTable) Iterate() interface{} {
+func (this *HashTable) Iterate() any {
 	if this.mode != HASH_TABLE_ITERATE {
 		this.mode = HASH_TABLE_ITERATE
 		this.bucket = 0
@@ -298,7 +298,7 @@ func (this *HashTable) loadFactor() float64 {
 	return float64(this.distinct) / float64(len(this.entries))
 }
 
-func (this *HashTable) Grow(equal func(val1, val2 interface{}) bool) error {
+func (this *HashTable) Grow(equal func(val1, val2 any) bool) error {
 	prevMode := this.mode
 	defer func() { this.mode = prevMode }()
 	this.mode = HASH_TABLE_GROW
@@ -346,7 +346,7 @@ func (this *HashTable) Drop() {
 		if this.entries[i] != nil {
 			hashVal := this.entries[i].hashVal
 			if this.array {
-				_ARR_POOL_4.Put(hashVal.([]interface{}))
+				_ARR_POOL_4.Put(hashVal.([]any))
 			}
 			this.entries[i].hashVal = nil
 			_ARR_POOL_1.Put(this.entries[i].inputVals)
@@ -395,5 +395,5 @@ func GetNumMemCopy(purpose int, size float64) float64 {
 	return total * HTLoadThreshold
 }
 
-var _ARR_POOL_1 = NewSlicePool[interface{}](1)
-var _ARR_POOL_4 = NewSlicePool[interface{}](4)
+var _ARR_POOL_1 = NewSlicePool[any](1)
+var _ARR_POOL_4 = NewSlicePool[any](4)

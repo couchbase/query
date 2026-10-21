@@ -81,8 +81,8 @@ type Auditable interface {
 	EventNodeName() string
 
 	// Query parameters.
-	EventNamedArgs() map[string]interface{}
-	EventPositionalArgs() []interface{}
+	EventNamedArgs() map[string]any
+	EventPositionalArgs() []any
 
 	// From client_context_id input parameter.
 	// Useful for separating system-generated queries from user-issued queries.
@@ -120,8 +120,8 @@ type ApiAuditFields struct {
 	Request string
 	Cluster string
 	Node    string
-	Values  interface{}
-	Body    interface{}
+	Values  any
+	Body    any
 }
 
 // An auditor is a component that can accept an audit record for processing.
@@ -180,7 +180,7 @@ func (sa *standardAuditor) submit(entry auditQueueEntry) {
 
 var _AUDITOR Auditor
 
-func loggerFunc(level string, format string, args ...interface{}) string {
+func loggerFunc(level string, format string, args ...any) string {
 	l := logging.NONE
 	if strings.HasPrefix(format, "audit:") || strings.HasPrefix(format, "Auditing:") {
 		l = logging.INFO
@@ -781,11 +781,11 @@ var AUTH_ERRORS = map[errors.ErrorCode]bool{
 	errors.W_USER_WITH_NO_ROLES:                 true,
 	errors.E_NODE_INFO_ACCESS_ERR:               true}
 
-func auditError(err []errors.Error) (finalErr []map[string]interface{}) {
+func auditError(err []errors.Error) (finalErr []map[string]any) {
 
 	for _, err := range err {
 		if ok := AUTH_ERRORS[err.Code()]; ok {
-			finalErr = append(finalErr, map[string]interface{}{"code": err.Code(), "msg": err.Error()})
+			finalErr = append(finalErr, map[string]any{"code": err.Code(), "msg": err.Error()})
 		}
 	}
 	return finalErr
@@ -884,14 +884,14 @@ type n1qlAuditEvent struct {
 	Remote *addressFields `json:"remote,omitempty"`
 	Local  *addressFields `json:"local,omitempty"`
 
-	RequestId       string                   `json:"requestId"`
-	Statement       string                   `json:"statement"`
-	Errors          []map[string]interface{} `json:"errors"`
-	QueryContext    string                   `json:"queryContext,omitempty"`
-	NamedArgs       map[string]interface{}   `json:"namedArgs,omitempty"`
-	PositionalArgs  []interface{}            `json:"positionalArgs,omitempty"`
-	ClientContextId string                   `json:"clientContextId,omitempty"`
-	TxId            string                   `json:"txId,omitempty"`
+	RequestId       string           `json:"requestId"`
+	Statement       string           `json:"statement"`
+	Errors          []map[string]any `json:"errors"`
+	QueryContext    string           `json:"queryContext,omitempty"`
+	NamedArgs       map[string]any   `json:"namedArgs,omitempty"`
+	PositionalArgs  []any            `json:"positionalArgs,omitempty"`
+	ClientContextId string           `json:"clientContextId,omitempty"`
+	TxId            string           `json:"txId,omitempty"`
 
 	IsAdHoc    bool   `json:"isAdHoc"`
 	PreparedId string `json:"preparedId,omitempty"`
@@ -931,13 +931,13 @@ type n1qlAuditApiRequestEvent struct {
 	ErrorCode      int    `json:"errorCode,omitempty"`
 	ErrorMessage   string `json:"errorMessage,omitempty"`
 
-	Stat    string      `json:"stat,omitempty"`
-	Name    string      `json:"name,omitempty"`
-	Request string      `json:"request,omitempty"`
-	Cluster string      `json:"cluster,omitempty"`
-	Node    string      `json:"node,omitempty"`
-	Values  interface{} `json:"values,omitempty"`
-	Body    interface{} `json:"body,omitempty"`
+	Stat    string `json:"stat,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Request string `json:"request,omitempty"`
+	Cluster string `json:"cluster,omitempty"`
+	Node    string `json:"node,omitempty"`
+	Values  any    `json:"values,omitempty"`
+	Body    any    `json:"body,omitempty"`
 }
 
 type n1qlConfigurationChangeEvent struct {

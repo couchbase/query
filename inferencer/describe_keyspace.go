@@ -90,7 +90,7 @@ func DescribeKeyspace(context datastore.QueryContext, conn *datastore.ValueConne
 
 		if options != nil && (options.Flags&INCLUDE_KEY) != 0 {
 			if _, ok := doc.Field("~meta"); !ok {
-				m := make(map[string]interface{})
+				m := make(map[string]any)
 				m["id"] = key
 				doc.SetField("~meta", value.NewValue(m))
 			}
@@ -214,7 +214,7 @@ func processWith(context datastore.QueryContext, with value.Value) (*DescribeOpt
 					}
 					options.Flags = Flag(flags_num)
 				} else if fv.Type() == value.ARRAY {
-					fa := fv.Actual().([]interface{})
+					fa := fv.Actual().([]any)
 					options.Flags = NO_FLAGS
 					for _, f := range fa {
 						fs := strings.ToLower(f.(value.Value).ToString())
