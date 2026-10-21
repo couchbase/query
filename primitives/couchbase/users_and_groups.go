@@ -63,8 +63,8 @@ type RoleDescription struct {
 //
 //	[{"id":"ivanivanov","name":"Ivan Ivanov","roles":[{"role":"cluster_admin"},{"bucket_name":"default","role":"bucket_admin"}]},
 //	 {"id":"petrpetrov","name":"Petr Petrov","roles":[{"role":"replication_admin"}]}]
-func (c *Client) GetUserRoles(cred cbauth.Creds, ctx context.Context) ([]interface{}, error) {
-	ret := make([]interface{}, 0, 1)
+func (c *Client) GetUserRoles(cred cbauth.Creds, ctx context.Context) ([]any, error) {
+	ret := make([]any, 0, 1)
 	err := c.parseURLResponse("/settings/rbac/users", cred, &ret, ctx)
 	if err != nil {
 		return nil, err
@@ -72,19 +72,19 @@ func (c *Client) GetUserRoles(cred cbauth.Creds, ctx context.Context) ([]interfa
 
 	// Get the configured administrator.
 	// Expected result: {"port":8091,"username":"Administrator"}
-	adminInfo := make(map[string]interface{}, 2)
+	adminInfo := make(map[string]any, 2)
 	err = c.parseURLResponse("/settings/web", cred, &adminInfo, ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a special entry for the configured administrator.
-	adminResult := map[string]interface{}{
+	adminResult := map[string]any{
 		"name":   adminInfo["username"],
 		"id":     adminInfo["username"],
 		"domain": "builtin",
-		"roles": []interface{}{
-			map[string]interface{}{
+		"roles": []any{
+			map[string]any{
 				"role": "admin",
 			},
 		},
@@ -152,7 +152,7 @@ func rolesToParamFormat(roles []Role) string {
 }
 
 func (c *Client) PutUserInfo(cred cbauth.Creds, u *User, ctx context.Context) error {
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	if u.Name != string([]byte{0}) {
 		params["name"] = u.Name
 	}
@@ -240,7 +240,7 @@ func (c *Client) GetGroupInfo(cred cbauth.Creds, g *Group, ctx context.Context) 
 }
 
 func (c *Client) PutGroupInfo(cred cbauth.Creds, g *Group, ctx context.Context) error {
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	if g.Desc != string([]byte{0}) {
 		params["description"] = g.Desc
 	}
@@ -290,8 +290,8 @@ func (c *Client) DeleteGroup(cred cbauth.Creds, g *Group, ctx context.Context) e
 
 // The subtle different between GroupInfo() and GetGroupInfoAll() is the returned maps from GroupInfo() may be missing fields
 // which are always present in the Group type.
-func (c *Client) GroupInfo(cred cbauth.Creds, ctx context.Context) ([]interface{}, error) {
-	ret := make([]interface{}, 0, 1)
+func (c *Client) GroupInfo(cred cbauth.Creds, ctx context.Context) ([]any, error) {
+	ret := make([]any, 0, 1)
 	err := c.parseURLResponse("/settings/rbac/groups", cred, &ret, ctx)
 	if err != nil {
 		return nil, err

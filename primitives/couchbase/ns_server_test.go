@@ -288,13 +288,13 @@ var samplePool = `{
     "tasksStatus": "none"
 }`
 
-func assert(t *testing.T, name string, got interface{}, expected interface{}) {
+func assert(t *testing.T, name string, got any, expected any) {
 	if got != expected {
 		t.Fatalf("Expected %v for %s, got %v", expected, name, got)
 	}
 }
 
-func testParse(t *testing.T, s string, rv interface{}) {
+func testParse(t *testing.T, s string, rv any) {
 	if err := json.Unmarshal([]byte(s), rv); err != nil {
 		t.Fatalf("Error decoding:  %v", err)
 	}

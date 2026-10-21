@@ -77,7 +77,7 @@ func init() {
 func (b *Bucket) StartKeyScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	ranges []*SeqScanRange, offset int64, limit int64, ordered bool, timeout time.Duration, pipelineSize int,
 	serverless bool, useReplica bool, skipKey func(string) bool, encryptionKey *encryption.EaRKey,
-	snapshotReqs map[uint16]*memcached.SnapshotRequirements) (interface{}, qerrors.Error) {
+	snapshotReqs map[uint16]*memcached.SnapshotRequirements) (any, qerrors.Error) {
 	if log == nil {
 		log = logging.NULL_LOG
 	}
@@ -197,7 +197,7 @@ func parseFailoverUUIDs(stats map[string]string) map[uint16]string {
 func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint32, scope string, collection string,
 	sampleSize int, timeout time.Duration, pipelineSize int, serverless bool, useReplica bool, xattrs bool, withDocs bool,
 	encryptionKey *encryption.EaRKey) (
-	interface{}, qerrors.Error) {
+	any, qerrors.Error) {
 
 	if log == nil {
 		log = logging.NULL_LOG
@@ -219,7 +219,7 @@ func (b *Bucket) StartRandomScan(requestId string, log logging.Log, collId uint3
 	return scan, nil
 }
 
-func (b *Bucket) StopScan(scan interface{}) (uint64, qerrors.Error) {
+func (b *Bucket) StopScan(scan any) (uint64, qerrors.Error) {
 	ss, ok := scan.(*seqScan)
 	if !ok {
 		return 0, qerrors.NewSSError(qerrors.E_SS_INVALID, "stop")
@@ -228,7 +228,7 @@ func (b *Bucket) StopScan(scan interface{}) (uint64, qerrors.Error) {
 	return ss.runits, nil
 }
 
-func (b *Bucket) FetchKeys(scan interface{}, timeout time.Duration) ([]string, qerrors.Error, bool) {
+func (b *Bucket) FetchKeys(scan any, timeout time.Duration) ([]string, qerrors.Error, bool) {
 	var keys []string
 	var err qerrors.Error
 	var timedout bool
@@ -272,7 +272,7 @@ func (b *Bucket) FetchKeys(scan interface{}, timeout time.Duration) ([]string, q
 	return keys, err, timedout
 }
 
-func (b *Bucket) FetchDocs(scan interface{}, timeout time.Duration) ([]value.AnnotatedValue, qerrors.Error, bool) {
+func (b *Bucket) FetchDocs(scan any, timeout time.Duration) ([]value.AnnotatedValue, qerrors.Error, bool) {
 	var docs []value.AnnotatedValue
 	var err qerrors.Error
 	var timedout bool
@@ -437,7 +437,7 @@ func (this *rQueue) pop() *vbRangeScan {
 
 type seqScan struct {
 	log           logging.Log
-	ch            chan interface{}
+	ch            chan any
 	abortch       chan bool
 	requestId     string
 	scanNum       uint64
@@ -484,7 +484,7 @@ func NewSeqScan(requestId string, log logging.Log, collId uint32, ranges []*SeqS
 		encryptionKey: encryptionKey,
 		snapshotReqs:  snapshotReqs,
 	}
-	scan.ch = make(chan interface{}, 1)
+	scan.ch = make(chan any, 1)
 	scan.abortch = make(chan bool, 1)
 	scan.fetchLimit = _SS_MAX_KEYS_PER_REQUEST
 	if scan.limit > 0 {
@@ -516,7 +516,7 @@ func NewRandomScan(requestId string, log logging.Log, collId uint32, sampleSize 
 		withDocs:      withDocs,
 		encryptionKey: encryptionKey,
 	}
-	scan.ch = make(chan interface{}, 1)
+	scan.ch = make(chan any, 1)
 	scan.abortch = make(chan bool, 1)
 	scan.readyQueue.init()
 	return scan
@@ -593,7 +593,7 @@ func (this *seqScan) reportError(err qerrors.Error) bool {
 	return rv
 }
 
-func (this *seqScan) reportResults(data interface{}) bool {
+func (this *seqScan) reportResults(data any) bool {
 	rv := false
 	if !this.inactive && !this.timedout {
 		select {
@@ -1837,9 +1837,9 @@ func (this *vbRangeScanHeap) Len() int { return len(*this) }
 func (this *vbRangeScanHeap) Less(i, j int) bool {
 	return bytes.Compare((*this)[i].current(), (*this)[j].current()) < 0
 }
-func (this *vbRangeScanHeap) Swap(i, j int)      { (*this)[i], (*this)[j] = (*this)[j], (*this)[i] }
-func (this *vbRangeScanHeap) Push(x interface{}) { *this = append(*this, x.(*vbRangeScan)) }
-func (this *vbRangeScanHeap) Pop() interface{} {
+func (this *vbRangeScanHeap) Swap(i, j int) { (*this)[i], (*this)[j] = (*this)[j], (*this)[i] }
+func (this *vbRangeScanHeap) Push(x any)    { *this = append(*this, x.(*vbRangeScan)) }
+func (this *vbRangeScanHeap) Pop() any {
 	i := len(*this) - 1
 	last := (*this)[i]
 	*this = (*this)[:i]
@@ -2760,10 +2760,10 @@ func getXattrValLen(raw []byte) int {
 
 func ExtractXattrs(raw []byte) ([]byte, value.Value, bool) {
 	lx := int(binary.BigEndian.Uint32(raw)) + 4
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	for i := 8; i < lx; { // start after lx and the first length field
 		var name string
-		var val interface{}
+		var val any
 		name = string(raw[i : i+getXattrValLen(raw[i:])])
 		if name == "" {
 			return raw[lx:], nil, false

@@ -615,7 +615,7 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 	}
 
 	if resp, ok := lastError.(*gomemcached.MCResponse); ok {
-		var err interface{}
+		var err any
 
 		if gomemcached.IsTenantLimit(resp) {
 			err = gomemcached.StatusDesc[resp.Status]
@@ -629,10 +629,10 @@ func (b *Bucket) do3(vb uint16, f func(mc *memcached.Client, vb uint16) error, d
 
 			// Add the memcached error response
 			if len(resp.Body) > 0 {
-				var r map[string]interface{}
+				var r map[string]any
 				if json.Unmarshal(resp.Body, &r) == nil {
 					if e, ok := r["error"]; ok {
-						if em, ok := e.(map[string]interface{}); ok {
+						if em, ok := e.(map[string]any); ok {
 							// Add the status of the memcached response
 							// This status is necessary for further processing in some cases.
 							// For example: DML/ mutation operations check if the memcached error is a KEY_ENOENT error
@@ -1342,7 +1342,7 @@ var ErrKeyExists = errors.New("key exists")
 // a delete.) If `Raw` is not given, `v` will be marshaled as JSON
 // before being written. It must be JSON-marshalable and it must not
 // be nil.
-func (b *Bucket) Write(k string, flags, exp int, v interface{}, xattrs map[string]interface{},
+func (b *Bucket) Write(k string, flags, exp int, v any, xattrs map[string]any,
 	opt WriteOptions, context ...*memcached.ClientContext) (wu uint64, err error) {
 
 	_, wu, err = b.WriteWithCAS(k, flags, exp, v, xattrs, opt, context...)
@@ -1350,7 +1350,7 @@ func (b *Bucket) Write(k string, flags, exp int, v interface{}, xattrs map[strin
 	return wu, err
 }
 
-func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{}, xattrs map[string]interface{},
+func (b *Bucket) WriteWithCAS(k string, flags, exp int, v any, xattrs map[string]any,
 	opt WriteOptions, context ...*memcached.ClientContext) (cas uint64, wu uint64, err error) {
 
 	var data []byte
@@ -1464,13 +1464,13 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v interface{}, xattrs ma
 }
 
 // Extended CAS operation. These functions will return the mutation token, i.e vbuuid & guard
-func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v interface{}, xattrs map[string]interface{},
+func (b *Bucket) CasWithMeta(k string, flags int, exp int, cas uint64, v any, xattrs map[string]any,
 	context ...*memcached.ClientContext) (uint64, uint64, *MutationToken, error) {
 
 	return b.WriteCasWithMT(k, flags, exp, cas, v, xattrs, 0, context...)
 }
 
-func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interface{}, xattrs map[string]interface{},
+func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v any, xattrs map[string]any,
 	opt WriteOptions, context ...*memcached.ClientContext) (newCas uint64, wu uint64, mt *MutationToken, err error) {
 
 	var data []byte
@@ -1553,7 +1553,7 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v interfac
 }
 
 // Set a value in this bucket.
-func (b *Bucket) SetWithCAS(k string, exp int, v interface{}, xattrs map[string]interface{},
+func (b *Bucket) SetWithCAS(k string, exp int, v any, xattrs map[string]any,
 	context ...*memcached.ClientContext) (uint64, uint64, error) {
 
 	return b.WriteWithCAS(k, 0, exp, v, xattrs, 0, context...)
@@ -1561,7 +1561,7 @@ func (b *Bucket) SetWithCAS(k string, exp int, v interface{}, xattrs map[string]
 
 // Add adds a value to this bucket; like Set except that nothing
 // happens if the key exists. Return the CAS value.
-func (b *Bucket) AddWithCAS(k string, exp int, v interface{}, xattrs map[string]interface{},
+func (b *Bucket) AddWithCAS(k string, exp int, v any, xattrs map[string]any,
 	context ...*memcached.ClientContext) (bool, uint64, uint64, error) {
 
 	cas, wu, err := b.WriteWithCAS(k, 0, exp, v, xattrs, AddOnly, context...)
@@ -1886,7 +1886,7 @@ func newVBStringPool(size int, sp *util.StringPool) *vbStringPool {
 	rv := &vbStringPool{
 		strPool: sp,
 	}
-	util.NewFastPool(&rv.pool, func() interface{} {
+	util.NewFastPool(&rv.pool, func() any {
 		return make(map[uint16][]string, size)
 	})
 	return rv
@@ -1910,7 +1910,7 @@ func (this *vbStringPool) Put(s map[uint16][]string) {
 
 var _VB_STRING_POOL = newVBStringPool(16, _STRING_POOL)
 
-func processSubdocMultiError(ops []memcached.SubDocOp, err interface{}) error {
+func processSubdocMultiError(ops []memcached.SubDocOp, err any) error {
 	if err == nil {
 		return nil
 	}
@@ -1919,7 +1919,7 @@ func processSubdocMultiError(ops []memcached.SubDocOp, err interface{}) error {
 		return error(res)
 	}
 	// we need to examine the body for the error details
-	m := make(map[string]interface{}, 7)
+	m := make(map[string]any, 7)
 	for i := 0; i < len(res.Body); i += 3 {
 		status := gomemcached.Status(binary.BigEndian.Uint16(res.Body[i+1:]))
 		em := gomemcached.StatusNames[status]

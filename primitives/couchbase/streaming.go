@@ -92,13 +92,13 @@ func doHTTPRequestForStreaming(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-func (c *Client) ProcessStream(path string, callb func(interface{}) error, data interface{}) error {
+func (c *Client) ProcessStream(path string, callb func(any) error, data any) error {
 	return c.processStream(c.BaseURL, path, c.ah, callb, data)
 }
 
 // Based on code in http://src.couchbase.org/source/xref/trunk/goproj/src/github.com/couchbase/indexing/secondary/dcp/pools.go#309
-func (c *Client) processStream(baseURL *url.URL, path string, authHandler AuthHandler, callb func(interface{}) error,
-	data interface{}) error {
+func (c *Client) processStream(baseURL *url.URL, path string, authHandler AuthHandler, callb func(any) error,
+	data any) error {
 
 	var requestUrl string
 

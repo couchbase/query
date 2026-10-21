@@ -253,7 +253,7 @@ type Node struct {
 	Uptime               int                           `json:"uptime,string"`
 	Version              string                        `json:"version"`
 	ThisNode             bool                          `json:"thisNode,omitempty"`
-	CpuCount             interface{}                   `json:"cpuCount"`
+	CpuCount             any                           `json:"cpuCount"`
 }
 
 // A Pool of nodes and buckets.
@@ -325,7 +325,7 @@ type VBucketServerMap struct {
 }
 
 func (this VBucketServerMap) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["HashAlgorithm"] = this.HashAlgorithm
 	m["NumReplicas"] = this.NumReplicas
 	m["ServerList"] = this.ServerList
@@ -399,8 +399,8 @@ type Bucket struct {
 	DDocs                          struct {
 		URI string `json:"uri"`
 	} `json:"ddocs,omitempty"`
-	BasicStats  map[string]interface{} `json:"basicStats,omitempty"`
-	Controllers map[string]interface{} `json:"controllers,omitempty"`
+	BasicStats  map[string]any `json:"basicStats,omitempty"`
+	Controllers map[string]any `json:"controllers,omitempty"`
 
 	// These are used for JSON IO, but isn't used for processing
 	// since it needs to be swapped out safely.
@@ -700,7 +700,7 @@ func (b *Bucket) CreateScope(cred cbauth.Creds, scope string, ctx context.Contex
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
-	args := map[string]interface{}{"name": scope}
+	args := map[string]any{"name": scope}
 	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes", cred, args, nil, ctx)
 }
 
@@ -712,7 +712,7 @@ func (b *Bucket) DropScope(cred cbauth.Creds, scope string, ctx context.Context)
 	return client.parseDeleteURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/scopes/"+uriAdj(scope), cred, nil, nil, ctx)
 }
 
-func (b *Bucket) CreateCollection(cred cbauth.Creds, scope, collection, catalog, credential string, params map[string]interface{},
+func (b *Bucket) CreateCollection(cred cbauth.Creds, scope, collection, catalog, credential string, params map[string]any,
 	ctx context.Context) error {
 	b.RLock()
 	client := b.pool.client
@@ -724,7 +724,7 @@ func (b *Bucket) CreateCollection(cred cbauth.Creds, scope, collection, catalog,
 	}
 
 	// Regular collection - create via ns_server
-	args := map[string]interface{}{"name": collection}
+	args := map[string]any{"name": collection}
 	for k, v := range params {
 		args[k] = v
 	}
@@ -758,7 +758,7 @@ func (b *Bucket) FlushCollection(cred cbauth.Creds, scope string, collection str
 	pool := b.pool
 	client := pool.client
 	b.RUnlock()
-	args := map[string]interface{}{"name": collection, "scope": scope}
+	args := map[string]any{"name": collection, "scope": scope}
 	return client.parsePostURLResponseTerse("/pools/default/buckets/"+uriAdj(b.Name)+"/collections-flush", cred, args, nil, ctx)
 }
 
@@ -929,24 +929,24 @@ func doHTTPRequest(req *http.Request) (*http.Response, error) {
 	return res, err
 }
 
-func doPostAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds, out interface{},
+func doPostAPI(baseURL *url.URL, path string, params map[string]any, authHandler AuthHandler, cred cbauth.Creds, out any,
 	terse bool, userAgent string, ctx context.Context) error {
 
 	return doOutputAPI("POST", baseURL, path, params, authHandler, cred, out, terse, userAgent, ctx)
 }
 
-func doPatchAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds,
-	out interface{}, terse bool, userAgent string, ctx context.Context) error {
+func doPatchAPI(baseURL *url.URL, path string, params map[string]any, authHandler AuthHandler, cred cbauth.Creds,
+	out any, terse bool, userAgent string, ctx context.Context) error {
 	return doOutputAPI("PATCH", baseURL, path, params, authHandler, cred, out, terse, userAgent, ctx)
 }
 
-func doDeleteAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds, out interface{},
+func doDeleteAPI(baseURL *url.URL, path string, params map[string]any, authHandler AuthHandler, cred cbauth.Creds, out any,
 	terse bool, userAgent string, ctx context.Context) error {
 
 	return doOutputAPI("DELETE", baseURL, path, params, authHandler, cred, out, terse, userAgent, ctx)
 }
 
-func doPutAPI(baseURL *url.URL, path string, params map[string]interface{}, authHandler AuthHandler, cred cbauth.Creds, out interface{},
+func doPutAPI(baseURL *url.URL, path string, params map[string]any, authHandler AuthHandler, cred cbauth.Creds, out any,
 	terse bool, userAgent string, ctx context.Context) error {
 
 	return doOutputAPI("PUT", baseURL, path, params, authHandler, cred, out, terse, userAgent, ctx)
@@ -956,10 +956,10 @@ func doOutputAPI(
 	httpVerb string,
 	baseURL *url.URL,
 	path string,
-	params map[string]interface{},
+	params map[string]any,
 	authHandler AuthHandler,
 	cred cbauth.Creds,
-	out interface{},
+	out any,
 	terse bool,
 	userAgent string,
 	ctx context.Context) error {
@@ -1010,17 +1010,17 @@ func doOutputAPI(
 	if res.StatusCode != 200 && res.StatusCode != 202 {
 		bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
 		if terse {
-			var outBuf interface{}
+			var outBuf any
 
 			err := json.Unmarshal(bod, &outBuf)
 			if err == nil && outBuf != nil {
 				switch errText := outBuf.(type) {
 				case string:
 					return fmt.Errorf("%s", errText)
-				case map[string]interface{}:
+				case map[string]any:
 					errField := errText["errors"]
 					if errField != nil {
-						if m, ok := errField.(map[string]interface{}); ok {
+						if m, ok := errField.(map[string]any); ok {
 							s := ""
 							for k, v := range m {
 								if s != "" {
@@ -1056,7 +1056,7 @@ func queryRestAPI(
 	path string,
 	authHandler AuthHandler,
 	cred cbauth.Creds,
-	out interface{},
+	out any,
 	terse bool,
 	userAgent string,
 	ctx context.Context) error {
@@ -1097,7 +1097,7 @@ func queryRestAPI(
 	if res.StatusCode != 200 {
 		bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
 		if terse {
-			var outBuf interface{}
+			var outBuf any
 
 			err := json.Unmarshal(bod, &outBuf)
 			if err == nil && outBuf != nil {
@@ -1121,47 +1121,47 @@ func queryRestAPI(
 	return nil
 }
 
-func (c *Client) parseURLResponse(path string, cred cbauth.Creds, out interface{}, ctx context.Context) error {
+func (c *Client) parseURLResponse(path string, cred cbauth.Creds, out any, ctx context.Context) error {
 	return queryRestAPI(c.BaseURL, path, c.ah, cred, out, false, c.userAgent, ctx)
 }
 
-func (c *Client) parsePostURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}, ctx context.Context) error {
+func (c *Client) parsePostURLResponseTerse(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return doPostAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent, ctx)
 }
 
-func (c *Client) parsePatchURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}, ctx context.Context) error {
+func (c *Client) parsePatchURLResponseTerse(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return doPatchAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent, ctx)
 }
 
-func (c *Client) parseDeleteURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}, ctx context.Context) error {
+func (c *Client) parseDeleteURLResponseTerse(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return doDeleteAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent, ctx)
 }
 
-func (c *Client) parsePutURLResponse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}, ctx context.Context) error {
+func (c *Client) parsePutURLResponse(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return doPutAPI(c.BaseURL, path, params, c.ah, cred, out, false, c.userAgent, ctx)
 }
 
-func (c *Client) parsePatchURLResponse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}, ctx context.Context) error {
+func (c *Client) parsePatchURLResponse(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return doPatchAPI(c.BaseURL, path, params, c.ah, cred, out, false, c.userAgent, ctx)
 }
 
-func (c *Client) parsePutURLResponseTerse(path string, cred cbauth.Creds, params map[string]interface{}, out interface{}, ctx context.Context) error {
+func (c *Client) parsePutURLResponseTerse(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return doPutAPI(c.BaseURL, path, params, c.ah, cred, out, true, c.userAgent, ctx)
 }
 
 // parsePostURLResponseJSON sends a POST request with JSON body
-func (c *Client) parsePostURLResponseJSON(path string, cred cbauth.Creds, params map[string]any, out interface{}, ctx context.Context) error {
+func (c *Client) parsePostURLResponseJSON(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return c.doURLRequestJSON("POST", path, cred, params, out, ctx)
 }
 
 // parsePutURLResponseJSON sends a PUT request with JSON body
-func (c *Client) parsePutURLResponseJSON(path string, cred cbauth.Creds, params map[string]any, out interface{}, ctx context.Context) error {
+func (c *Client) parsePutURLResponseJSON(path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	return c.doURLRequestJSON("PUT", path, cred, params, out, ctx)
 }
 
 // doURLRequestJSON sends a request with a JSON body and the given HTTP verb, returning an
 // error for any non-2xx response instead of silently treating it as success.
-func (c *Client) doURLRequestJSON(verb, path string, cred cbauth.Creds, params map[string]any, out interface{}, ctx context.Context) error {
+func (c *Client) doURLRequestJSON(verb, path string, cred cbauth.Creds, params map[string]any, out any, ctx context.Context) error {
 	var requestUrl string
 	if q := bytes.IndexByte([]byte(path), '?'); q > 0 {
 		requestUrl = c.BaseURL.Scheme + "://" + c.BaseURL.Host + path[:q] + "?" + path[q+1:]
@@ -1204,7 +1204,7 @@ func (c *Client) doURLRequestJSON(verb, path string, cred cbauth.Creds, params m
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
-		var outBuf interface{}
+		var outBuf any
 		if json.Unmarshal(bod, &outBuf) == nil && outBuf != nil {
 			if errText, ok := outBuf.(string); ok {
 				return fmt.Errorf("%s", errText)
@@ -1763,7 +1763,7 @@ func (b *Bucket) StopUpdater() {
 }
 
 func (b *Bucket) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
+	m := make(map[string]any)
 	m["readCount"] = b.readCount
 	m["writeCount"] = b.writeCount
 	m["retryCount"] = b.retryCount
@@ -1798,7 +1798,7 @@ func (b *Bucket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bool, times bool) map[string]interface{} {
+func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bool, times bool) map[string]any {
 	var readCount uint64
 	var writeCount uint64
 	var retryCount uint64
@@ -1808,7 +1808,7 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bo
 	var doTime uint64
 	var opTime uint64
 	var bulkTime uint64
-	var rv map[string]interface{}
+	var rv map[string]any
 
 	if reset {
 		readCount = atomic.SwapUint64(&b.readCount, uint64(0))
@@ -1835,26 +1835,26 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bo
 	}
 	if readCount != 0 || all {
 		if rv == nil {
-			rv = make(map[string]interface{})
+			rv = make(map[string]any)
 		}
 		rv["reads"] = readCount
 	}
 	if writeCount != 0 || all {
 		if rv == nil {
-			rv = make(map[string]interface{})
+			rv = make(map[string]any)
 		}
 		rv["writes"] = writeCount
 	}
 	if retryCount != 0 || all {
 		if rv == nil {
-			rv = make(map[string]interface{})
+			rv = make(map[string]any)
 		}
 		rv["retries"] = retryCount
 	}
 	if serverless {
 		if kvThrottleCount != 0 || all {
 			if rv == nil {
-				rv = make(map[string]interface{})
+				rv = make(map[string]any)
 			}
 			if prometheus {
 				rv["kv_throttle_count"] = kvThrottleCount
@@ -1864,7 +1864,7 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bo
 		}
 		if kvThrottleDuration != 0 || all {
 			if rv == nil {
-				rv = make(map[string]interface{})
+				rv = make(map[string]any)
 			}
 			if prometheus {
 				rv["kv_throttle_seconds_total"] = float64(kvThrottleDuration / uint64(time.Second))
@@ -1875,9 +1875,9 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bo
 	}
 	if times {
 		if rv == nil {
-			rv = make(map[string]interface{})
+			rv = make(map[string]any)
 		}
-		t := make(map[string]interface{})
+		t := make(map[string]any)
 		t["cn"] = vbcTime
 		t["do"] = doTime
 		t["op"] = opTime
@@ -1998,14 +1998,14 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 		}
 
 		// create the bucket if not found
-		args := map[string]interface{}{
+		args := map[string]any{
 			"bucketType":     "couchbase",
 			"name":           name,
 			"ramQuotaMB":     100,
 			"storageBackend": "magma",
 			"numVBuckets":    128,
 		}
-		var ret interface{}
+		var ret any
 		// allow "bucket already exists" error in case duplicate create
 		// (e.g. two query nodes starting at same time)
 		err = c.parsePostURLResponseTerse("/pools/default/buckets", nil, args, &ret, nil)
