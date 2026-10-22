@@ -470,7 +470,8 @@ type systemUpdateFields struct {
 
 // system keyspaces not listed here are not restricted (the keyspace implementation decides)
 var _SYSTEM_UPDATE_FIELDS = map[string]systemUpdateFields{
-	"prepareds": {unset: map[string]bool{"planPreparedTime": true}},
+	"prepareds":     {unset: map[string]bool{"planPreparedTime": true}},
+	"natural_chats": {set: map[string]bool{"inactivityTimeout": true}},
 }
 
 /*
