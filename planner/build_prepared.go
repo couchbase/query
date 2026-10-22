@@ -24,9 +24,15 @@ func BuildPrepared(stmt algebra.Statement, store, systemstore datastore.Datastor
 		return nil, err, subTimes
 	}
 	var subqueryPlans *algebra.SubqueryPlans
-	if len(qp.Subqueries()) > 0 {
-		subqueryPlans = algebra.NewSubqueryPlans()
+	if forceSQBuild && len(qp.Subqueries()) > 0 {
 		for sq, op := range qp.Subqueries() {
+			// plans for SubqueryTerm under nested-loop join are for explain only
+			if qp.IsSubqueryTerm(sq) {
+				continue
+			}
+			if subqueryPlans == nil {
+				subqueryPlans = algebra.NewSubqueryPlans()
+			}
 			subqueryPlans.Set(sq, nil, plan.NewQueryPlan(op), nil, false)
 		}
 	}

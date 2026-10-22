@@ -1623,6 +1623,7 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 		psubplans := this.prepared.GetSubqueryPlans(true)
 		_, subplan, subplanIsks, planFound = psubplans.Get(query, true)
 		if !planFound {
+			persist := false
 			mutex := psubplans.GetMutex()
 			mutex.Lock()
 			// check again, just in case somebody has done it while we were waiting
@@ -1638,8 +1639,21 @@ func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Valu
 				if subqp, ok := subplan.(*plan.QueryPlan); ok {
 					subqp.Verify(this.prepared)
 				}
+				// if a subquery plan is newly generated for a prepared statement
+				// (e.g. subquery plans not available when the prepared statement
+				// was first generated, i.e. no plan stability at the time),
+				// save the subquery plan
+				persist = this.prepared.Persist() || this.IsPlanStabilityEnabled()
 			}
 			mutex.Unlock()
+			// persist outside of the lock, marshalling of subquery plans acquires the same mutex
+			if persist {
+				err1 := prepareds.PersistSubqueryPlan(this.prepared, this.planStabilityMode)
+				if err1 != nil {
+					logging.Errorf("Plan Stability: error saving subquery plan for prepared statement %s: %v",
+						this.prepared.Name(), err1)
+				}
+			}
 		}
 		if subplanIsks != nil {
 			for ks, _ := range subplanIsks.(map[string]bool) {

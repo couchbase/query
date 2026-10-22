@@ -690,6 +690,54 @@ func AddPrepared(prepared *plan.Prepared, planStability bool) errors.Error {
 	return nil
 }
 
+// serializes rebuild and save of encoded_plan for newly generated subquery plans, such that
+// an older encoded_plan does not overwrite a newer one
+var subqPersistLock sync.Mutex
+
+// if one or more subquery plans are newly generated, persist the new subquery plan
+// should not be called while holding the mutex of the prepared statement's subquery plans
+func PersistSubqueryPlan(prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) errors.Error {
+	if !shouldPersist(prepared, planStabilityMode) {
+		return nil
+	}
+
+	fullName := encodeName(prepared.Name(), prepared.QueryContext())
+
+	subqPersistLock.Lock()
+	defer subqPersistLock.Unlock()
+
+	// do not save a prepared statement that has been removed from (or replaced in) the cache
+	current := false
+	prepareds.cache.Get(fullName, func(entry interface{}) {
+		current = entry.(*CacheEntry).Prepared == prepared
+	})
+	if !current {
+		return nil
+	}
+
+	// rebuild the encoded_plan (to include subquery)
+	_, err := prepared.BuildEncodedPlan()
+	if err != nil {
+		return errors.NewPreparedEncodedPlanError(fullName, err)
+	}
+	return persistPrepared(prepared)
+}
+
+// same criteria as when a prepared statement is first added to the cache (AddPrepared(),
+// AddAutoPreparePlan()): auto prepared statements are only saved under AD_HOC mode
+func shouldPersist(prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) bool {
+	if prepared.Persist() {
+		return true
+	} else if prepared.IsInlineUdf() {
+		return false
+	} else if prepared.AutoPrepared() {
+		return prepared.AdHoc() && planStabilityMode == settings.PS_MODE_AD_HOC
+	}
+	return planStabilityMode == settings.PS_MODE_PREPARED_ONLY ||
+		planStabilityMode == settings.PS_MODE_AD_HOC ||
+		planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY
+}
+
 // this function does not check whether the prepared has any saved query plans on disk
 func deletePreparedFromCache(name string) errors.Error {
 	if prepareds.cache.Delete(name, nil) {

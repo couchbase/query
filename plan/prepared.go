@@ -152,7 +152,7 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 		r["text"] = this.text
 	}
 	r["name"] = this.name
-	r["encoded_plan"] = this.encoded_plan
+	r["encoded_plan"] = this.EncodedPlan()
 	r["indexApiVersion"] = this.indexApiVersion
 	r["featureControls"] = this.featureControls
 	r["namespace"] = this.namespace
@@ -211,8 +211,8 @@ func (this *Prepared) marshalInternal(r map[string]interface{}) {
 	if len(this.keyspaceRefs) > 0 {
 		r["keyspaceReferences"] = this.keyspaceRefs
 	}
-	if this.subqueryPlans != nil {
-		r["subqueryPlans"] = this.subqueryPlans.MarshalPlans(true, this.name, marshalSubqueryPlan)
+	if subqueryPlans := this.GetSubqueryPlans(false); subqueryPlans != nil {
+		r["subqueryPlans"] = subqueryPlans.MarshalPlans(true, this.name, marshalSubqueryPlan)
 	}
 }
 
@@ -528,12 +528,19 @@ func (this *Prepared) IsRestored() bool {
 	return this.restored
 }
 
+// encoded_plan can be rebuilt (e.g. when a new subquery plan is added) while the prepared
+// statement is in use, access it under lock
 func (this *Prepared) EncodedPlan() string {
-	return this.encoded_plan
+	this.RLock()
+	rv := this.encoded_plan
+	this.RUnlock()
+	return rv
 }
 
 func (this *Prepared) SetEncodedPlan(encoded_plan string) {
+	this.Lock()
 	this.encoded_plan = encoded_plan
+	this.Unlock()
 }
 
 func (this *Prepared) BuildEncodedPlan() (string, error) {
@@ -552,7 +559,7 @@ func (this *Prepared) BuildEncodedPlan() (string, error) {
 	w.Write(json_bytes)
 	w.Close()
 	str := base64.StdEncoding.EncodeToString(b.Bytes())
-	this.encoded_plan = str
+	this.SetEncodedPlan(str)
 	return str, nil
 }
 
@@ -566,7 +573,7 @@ func (this *Prepared) RebuildRestoredPlan() error {
 }
 
 func (this *Prepared) MismatchingEncodedPlan(encoded_plan string) bool {
-	return this.encoded_plan != encoded_plan
+	return this.EncodedPlan() != encoded_plan
 }
 
 func (this *Prepared) OptimHints() *algebra.OptimHints {
