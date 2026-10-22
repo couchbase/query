@@ -69,7 +69,7 @@ func NewDelete(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexR
 It calls the VisitDelete method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Delete) Accept(visitor Visitor) (interface{}, error) {
+func (this *Delete) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDelete(this)
 }
 

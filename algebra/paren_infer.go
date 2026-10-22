@@ -30,7 +30,7 @@ func NewParenInfer(infer Statement) *ParenInfer {
 	return rv
 }
 
-func (this *ParenInfer) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *ParenInfer) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitParenInfer(this)
 }
 

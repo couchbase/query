@@ -42,7 +42,7 @@ func NewAvg(operands expression.Expressions, flags uint32, filter expression.Exp
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Avg) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *Avg) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -117,7 +117,7 @@ func (this *Avg) CumulateInitial(item, cumulative value.Value, context Context) 
 	if this.Distinct() {
 		return setAdd(item, cumulative, true), nil
 	} else {
-		part := value.NewValue(map[string]interface{}{"sum": item, "count": value.ONE_VALUE})
+		part := value.NewValue(map[string]any{"sum": item, "count": value.ONE_VALUE})
 		return this.cumulatePart(part, cumulative, context)
 	}
 }

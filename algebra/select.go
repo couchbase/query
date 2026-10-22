@@ -67,7 +67,7 @@ func NewSelect(subresult Subresult, with *WithClause, order *Order, offset, limi
 /*
 Visitor pattern.
 */
-func (this *Select) Accept(visitor Visitor) (interface{}, error) {
+func (this *Select) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSelect(this)
 }
 
@@ -297,7 +297,7 @@ func (this *Select) FormalizeSubquery(parent *expression.Formalizer, isSubq bool
 
 	prevIdentifiers := parent.Identifiers()
 	defer parent.SetIdentifiers(prevIdentifiers)
-	parent.SetIdentifiers(value.NewScopeValue(make(map[string]interface{}, 16), nil))
+	parent.SetIdentifiers(value.NewScopeValue(make(map[string]any, 16), nil))
 
 	if this.limit != nil {
 		_, err = this.limit.Accept(parent)

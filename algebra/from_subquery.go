@@ -37,7 +37,7 @@ func NewSubqueryTerm(subquery *Select, as string, joinHint JoinHint) *SubqueryTe
 /*
 Visitor pattern.
 */
-func (this *SubqueryTerm) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *SubqueryTerm) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitSubqueryTerm(this)
 }
 

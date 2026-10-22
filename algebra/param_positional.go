@@ -45,7 +45,7 @@ func NewPositionalParameter(position int) expression.Expression {
 It calls the VisitPositionalParameter method by passing in
 the receiver and returns the interface. It is a visitor pattern.
 */
-func (this *PositionalParameter) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *PositionalParameter) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitPositionalParameter(this)
 }
 

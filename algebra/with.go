@@ -28,7 +28,7 @@ func NewCycleCheck(cycle expression.Expressions) *CycleCheck {
 }
 
 func (this *CycleCheck) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 1)
+	r := make(map[string]any, 1)
 
 	r["cycle"] = this.cycle
 	return json.Marshal(r)
@@ -136,7 +136,7 @@ func (this *With) WriteSyntaxString(s *strings.Builder) {
 }
 
 func (this *With) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
+	r := make(map[string]any, 2)
 	r["alias"] = this.alias
 	r["expr"] = this.expr.String()
 	if this.rexpr != nil {

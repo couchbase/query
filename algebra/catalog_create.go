@@ -95,7 +95,7 @@ func (this *CreateCatalog) FailIfExists() bool {
 }
 
 func (this *CreateCatalog) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createCatalog"}
+	r := map[string]any{"type": "createCatalog"}
 	r["name"] = this.name
 	r["catalogType"] = this.catalogType
 	r["source"] = this.source

@@ -41,7 +41,7 @@ func NewPercentRank(operands expression.Expressions, flags uint32, filter expres
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *PercentRank) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *PercentRank) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -172,7 +172,7 @@ func (this *PercentRank) cumulatePart(part, cumulative value.Value, context Cont
 	if part == value.NULL_VALUE {
 		return cumulative, nil
 	} else if cumulative == value.NULL_VALUE {
-		cumulative = value.NewValue(map[string]interface{}{"part": value.ZERO_VALUE, "nrows": value.ONE_VALUE})
+		cumulative = value.NewValue(map[string]any{"part": value.ZERO_VALUE, "nrows": value.ONE_VALUE})
 	}
 
 	pnrows, _ := part.Field("nrows")

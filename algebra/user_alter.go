@@ -44,7 +44,7 @@ func NewAlterUser(user string, password expression.Expression, name value.Value,
 	}
 	if groups != nil {
 		rv.groups_set = true
-		act := groups.Actual().([]interface{})
+		act := groups.Actual().([]any)
 		rv.groups = make([]string, len(act))
 		for i := range act {
 			rv.groups[i] = value.NewValue(act[i]).ToString()
@@ -55,7 +55,7 @@ func NewAlterUser(user string, password expression.Expression, name value.Value,
 	return rv
 }
 
-func (this *AlterUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterUser(this)
 }
 
@@ -104,7 +104,7 @@ func (this *AlterUser) Groups() ([]string, bool) {
 }
 
 func (this *AlterUser) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterUser"}
+	r := map[string]any{"type": "alterUser"}
 	r["user"] = this.user
 	r["password_set"] = this.password_set
 	if this.password_set {

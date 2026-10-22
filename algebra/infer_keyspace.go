@@ -39,7 +39,7 @@ func NewInferKeyspace(keyspace *KeyspaceRef, using datastore.InferenceType,
 	return rv
 }
 
-func (this *InferKeyspace) Accept(visitor Visitor) (interface{}, error) {
+func (this *InferKeyspace) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInferKeyspace(this)
 }
 
@@ -87,7 +87,7 @@ func (this *InferKeyspace) With() value.Value {
 }
 
 func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "InferKeyspace"}
+	r := map[string]any{"type": "InferKeyspace"}
 	r["keyspaceRef"] = this.keyspace
 	r["using"] = this.using
 	r["with"] = this.with

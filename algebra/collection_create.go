@@ -62,7 +62,7 @@ It calls the VisitCreateCollection method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *CreateCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateCollection(this)
 }
 
@@ -139,7 +139,7 @@ func (this *CreateCollection) Credential() string {
 Marshals input receiver into byte array.
 */
 func (this *CreateCollection) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createCollection"}
+	r := map[string]any{"type": "createCollection"}
 	r["keyspaceRef"] = this.keyspace
 	r["failIfExists"] = this.failIfExists
 	if this.isExternal {

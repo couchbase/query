@@ -42,7 +42,7 @@ func NewStddev(operands expression.Expressions, flags uint32, filter expression.
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Stddev) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *Stddev) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

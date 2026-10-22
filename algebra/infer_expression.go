@@ -38,7 +38,7 @@ func NewInferExpression(expr expression.Expression, using datastore.InferenceTyp
 	return rv
 }
 
-func (this *InferExpression) Accept(visitor Visitor) (interface{}, error) {
+func (this *InferExpression) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInferExpression(this)
 }
 
@@ -83,7 +83,7 @@ func (this *InferExpression) With() value.Value {
 }
 
 func (this *InferExpression) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "InferExpression"}
+	r := map[string]any{"type": "InferExpression"}
 	r["expr"] = this.expr
 	r["using"] = this.using
 	r["with"] = this.with

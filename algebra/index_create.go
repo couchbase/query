@@ -76,7 +76,7 @@ It calls the VisitCreateIndex method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateIndex(this)
 }
 
@@ -241,7 +241,7 @@ func (this *CreateIndex) RangeKeys() expression.Expressions {
 Marshals input receiver into byte array.
 */
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createIndex"}
+	r := map[string]any{"type": "createIndex"}
 	r["keyspaceRef"] = this.keyspace
 	r["name"] = this.name
 	r["keys"] = this.keys

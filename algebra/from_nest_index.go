@@ -35,7 +35,7 @@ func NewIndexNest(left FromTerm, outer bool, right *KeyspaceTerm, keyFor string)
 	return &IndexNest{left, right, outer, keyFor}
 }
 
-func (this *IndexNest) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *IndexNest) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitIndexNest(this)
 }
 
@@ -186,7 +186,7 @@ func (this *IndexNest) GetCorrelation() map[string]uint32 {
 Marshals input NEST terms into byte array.
 */
 func (this *IndexNest) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "indexNest"}
+	r := map[string]any{"type": "indexNest"}
 	r["left"] = this.left
 	r["right"] = this.right
 	r["outer"] = this.outer

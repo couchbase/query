@@ -37,7 +37,7 @@ func NewCreateBucket(name string, failIfExists bool, with value.Value) *CreateBu
 	return rv
 }
 
-func (this *CreateBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateBucket(this)
 }
 
@@ -77,7 +77,7 @@ func (this *CreateBucket) FailIfExists() bool {
 }
 
 func (this *CreateBucket) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createBucket"}
+	r := map[string]any{"type": "createBucket"}
 	r["name"] = this.name
 	if this.with != nil {
 		r["with"] = this.with

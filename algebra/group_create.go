@@ -40,7 +40,7 @@ func NewCreateGroup(group string, failIfExists bool, desc value.Value, roles val
 	}
 	if roles != nil {
 		rv.roles_set = true
-		act := roles.Actual().([]interface{})
+		act := roles.Actual().([]any)
 		rv.roles = make([]string, len(act))
 		for i := range act {
 			rv.roles[i] = value.NewValue(act[i]).ToString()
@@ -50,7 +50,7 @@ func NewCreateGroup(group string, failIfExists bool, desc value.Value, roles val
 	return rv
 }
 
-func (this *CreateGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateGroup(this)
 }
 
@@ -94,7 +94,7 @@ func (this *CreateGroup) Roles() ([]string, bool) {
 }
 
 func (this *CreateGroup) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createGroup"}
+	r := map[string]any{"type": "createGroup"}
 	r["group"] = this.group
 	r["failIfExists"] = this.failIfExists
 	r["desc_set"] = this.desc_set

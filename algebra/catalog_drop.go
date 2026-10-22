@@ -71,7 +71,7 @@ func (this *DropCatalog) FailIfNotExists() bool {
 }
 
 func (this *DropCatalog) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropCatalog"}
+	r := map[string]any{"type": "dropCatalog"}
 	r["name"] = this.name
 	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)

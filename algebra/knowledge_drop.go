@@ -55,7 +55,7 @@ func NewDropKnowledge(keyspace *Path, names []string, failIfNotExists bool) *Dro
 	return rv
 }
 
-func (this *DropKnowledge) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropKnowledge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropKnowledge(this)
 }
 
@@ -95,7 +95,7 @@ func (this *DropKnowledge) FailIfNotExists() bool {
 	return this.failIfNotExists
 }
 
-func (this *DropKnowledge) MarshalName(m map[string]interface{}) {
+func (this *DropKnowledge) MarshalName(m map[string]any) {
 	m["namespace"] = this.keyspace.Namespace()
 	m["bucket"] = this.keyspace.Bucket()
 	m["scope"] = this.keyspace.Scope()
@@ -104,7 +104,7 @@ func (this *DropKnowledge) MarshalName(m map[string]interface{}) {
 }
 
 func (this *DropKnowledge) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropKnowledge"}
+	r := map[string]any{"type": "dropKnowledge"}
 	this.MarshalName(r)
 	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)

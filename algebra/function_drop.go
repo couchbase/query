@@ -57,7 +57,7 @@ It calls the VisitDropFunction method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *DropFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropFunction(this)
 }
 

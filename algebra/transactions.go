@@ -44,7 +44,7 @@ func NewStartTransaction(isolation datastore.IsolationLevel) *StartTransaction {
 It calls the VisitStartTransaction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *StartTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *StartTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitStartTransaction(this)
 }
 
@@ -139,7 +139,7 @@ func NewCommitTransaction() *CommitTransaction {
 It calls the VisitCommitTransaction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *CommitTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *CommitTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCommitTransaction(this)
 }
 
@@ -217,7 +217,7 @@ func NewRollbackTransaction(savepoint string) *RollbackTransaction {
 It calls the VisitRollbackTransaction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *RollbackTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *RollbackTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitRollbackTransaction(this)
 }
 
@@ -311,7 +311,7 @@ func NewTransactionIsolation(isolation datastore.IsolationLevel) *TransactionIso
 It calls the VisitTransactionIsolation method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *TransactionIsolation) Accept(visitor Visitor) (interface{}, error) {
+func (this *TransactionIsolation) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitTransactionIsolation(this)
 }
 

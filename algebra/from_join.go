@@ -30,7 +30,7 @@ func NewJoin(left FromTerm, outer bool, right *KeyspaceTerm) *Join {
 	return &Join{left, right, outer}
 }
 
-func (this *Join) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *Join) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitJoin(this)
 }
 
@@ -171,7 +171,7 @@ func (this *Join) GetCorrelation() map[string]uint32 {
 Marshals input JOIN terms.
 */
 func (this *Join) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "join"}
+	r := map[string]any{"type": "join"}
 	r["left"] = this.left
 	r["right"] = this.right
 	r["outer"] = this.outer

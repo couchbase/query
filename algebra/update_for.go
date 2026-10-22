@@ -82,7 +82,7 @@ func (this *UpdateFor) When() expression.Expression {
 Marshals input into byte array.
 */
 func (this *UpdateFor) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
+	r := make(map[string]any, 2)
 	r["bindings"] = this.bindings
 	if this.when != nil {
 		r["when"] = this.when.String()

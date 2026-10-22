@@ -71,7 +71,7 @@ func NewExecute(prepared expression.Expression, using expression.Expression) *Ex
 It calls the VisitExecute method by passing in the receiver
 and returns the interface. It is a visitor pattern.
 */
-func (this *Execute) Accept(visitor Visitor) (interface{}, error) {
+func (this *Execute) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExecute(this)
 }
 

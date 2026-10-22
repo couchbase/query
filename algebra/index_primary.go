@@ -63,7 +63,7 @@ It calls the VisitCreatePrimaryIndex method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreatePrimaryIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreatePrimaryIndex(this)
 }
 
@@ -164,7 +164,7 @@ func (this *CreatePrimaryIndex) FailIfExists() bool {
 Marshals input receiver into byte array.
 */
 func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createPrimaryIndex"}
+	r := map[string]any{"type": "createPrimaryIndex"}
 	r["name"] = this.name
 	r["keyspaceRef"] = this.keyspace
 	r["using"] = this.using

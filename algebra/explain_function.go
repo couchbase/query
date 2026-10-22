@@ -42,7 +42,7 @@ func NewExplainFunction(funcName functions.FunctionName) *ExplainFunction {
 It calls the VisitExplainFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *ExplainFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExplainFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExplainFunction(this)
 }
 

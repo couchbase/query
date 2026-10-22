@@ -35,7 +35,7 @@ func NewAlterBucket(name string, with value.Value) *AlterBucket {
 	return rv
 }
 
-func (this *AlterBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterBucket(this)
 }
 
@@ -71,7 +71,7 @@ func (this *AlterBucket) With() value.Value {
 }
 
 func (this *AlterBucket) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterBucket"}
+	r := map[string]any{"type": "alterBucket"}
 	r["name"] = this.name
 	if this.with != nil {
 		r["with"] = this.with

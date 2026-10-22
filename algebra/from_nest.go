@@ -34,7 +34,7 @@ func NewNest(left FromTerm, outer bool, right *KeyspaceTerm) *Nest {
 	return &Nest{left, right, outer}
 }
 
-func (this *Nest) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *Nest) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitNest(this)
 }
 
@@ -175,7 +175,7 @@ func (this *Nest) GetCorrelation() map[string]uint32 {
 Marshals input NEST terms into byte array.
 */
 func (this *Nest) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "nest"}
+	r := map[string]any{"type": "nest"}
 	r["left"] = this.left
 	r["right"] = this.right
 	r["outer"] = this.outer

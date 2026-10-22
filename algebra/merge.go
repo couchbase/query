@@ -73,7 +73,7 @@ func NewMerge(keyspace *KeyspaceRef, indexes IndexRefs, source *MergeSource,
 It calls the VisitMerge method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
+func (this *Merge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitMerge(this)
 }
 

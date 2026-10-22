@@ -47,7 +47,7 @@ func NewNamedParameter(name string) expression.Expression {
 It calls the VisitNamedParameter method by passing in
 the receiver and returns the interface. It is a visitor pattern.
 */
-func (this *NamedParameter) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *NamedParameter) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitNamedParameter(this)
 }
 

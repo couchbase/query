@@ -35,7 +35,7 @@ func NewDropBucket(name string, failIfNotExists bool) *DropBucket {
 	return rv
 }
 
-func (this *DropBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropBucket(this)
 }
 
@@ -70,7 +70,7 @@ func (this *DropBucket) FailIfNotExists() bool {
 }
 
 func (this *DropBucket) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropBucket"}
+	r := map[string]any{"type": "dropBucket"}
 	r["name"] = this.name
 	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)

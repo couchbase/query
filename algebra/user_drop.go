@@ -35,7 +35,7 @@ func NewDropUser(user string, failIfNotExists bool) *DropUser {
 	return rv
 }
 
-func (this *DropUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropUser(this)
 }
 
@@ -76,7 +76,7 @@ func (this *DropUser) FailIfNotExists() bool {
 }
 
 func (this *DropUser) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropUser"}
+	r := map[string]any{"type": "dropUser"}
 	r["user"] = this.user
 	r["failIfNotExists"] = this.failIfNotExists
 

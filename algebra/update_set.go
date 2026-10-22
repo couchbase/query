@@ -292,7 +292,7 @@ func (this *SetTerm) UpdateFor() *UpdateFor {
 Marshals input into byte array.
 */
 func (this *SetTerm) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 3)
+	r := make(map[string]any, 3)
 	stringer := expression.NewStringer()
 	if this.meta != nil {
 		r["meta"] = stringer.Visit(this.meta)

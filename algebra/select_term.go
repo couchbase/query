@@ -33,7 +33,7 @@ func NewSelectTerm(term *Select) *SelectTerm {
 /*
 Visitor pattern.
 */
-func (this *SelectTerm) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *SelectTerm) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitSelectTerm(this)
 }
 

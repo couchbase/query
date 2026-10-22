@@ -189,7 +189,7 @@ func medianOfMedian(data []value.Value, k int, even bool) value.Value {
 		sort.Sort(value.NewSorter(dataCopy))
 		array := dataCopy.Actual()
 		switch array := array.(type) {
-		case []interface{}:
+		case []any:
 			if even {
 				f := (array[k].(value.NumberValue).Float64() + array[k-1].(value.NumberValue).Float64()) / 2.0
 				return value.NewValue(f)

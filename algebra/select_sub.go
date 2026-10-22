@@ -57,7 +57,7 @@ func NewSubselect(from FromTerm, let expression.Bindings,
 /*
 Visitor pattern.
 */
-func (this *Subselect) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *Subselect) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitSubselect(this)
 }
 

@@ -71,7 +71,7 @@ func (this *AlterCatalog) With() value.Value {
 }
 
 func (this *AlterCatalog) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterCatalog"}
+	r := map[string]any{"type": "alterCatalog"}
 	r["name"] = this.name
 	if this.with != nil {
 		r["with"] = this.with

@@ -189,7 +189,7 @@ func (this *OptimHints) RemoveSubqTermHints(alias string) {
 
 func (this *OptimHints) String() string {
 	var sb strings.Builder
-	var r map[string]interface{}
+	var r map[string]any
 	found := false
 	for _, hint := range this.hints {
 		if hint.Derived() {
@@ -201,7 +201,7 @@ func (this *OptimHints) String() string {
 			}
 		} else {
 			if this.jsonStyle {
-				r = make(map[string]interface{}, len(this.hints))
+				r = make(map[string]any, len(this.hints))
 			}
 			found = true
 		}
@@ -234,9 +234,9 @@ func (this *OptimHints) String() string {
 	return sb.String()
 }
 
-func addJSONHint(r map[string]interface{}, hint OptimHint) {
+func addJSONHint(r map[string]any, hint OptimHint) {
 	var name string
-	var obj map[string]interface{}
+	var obj map[string]any
 	switch hint := hint.(type) {
 	case *HintIndex:
 		name = "index"
@@ -298,12 +298,12 @@ func addJSONHint(r map[string]interface{}, hint OptimHint) {
 		curr, ok := r[name]
 		if ok {
 			// already has a hint of same type
-			var newHints []interface{}
+			var newHints []any
 			switch curr := curr.(type) {
-			case []interface{}:
+			case []any:
 				newHints = append(curr, obj)
 			default:
-				newHints = []interface{}{curr, obj}
+				newHints = []any{curr, obj}
 			}
 			r[name] = newHints
 		} else {
@@ -573,7 +573,7 @@ func (this *HintIndex) sortString() string {
 
 func (this *HintIndex) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			"index": this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -585,11 +585,11 @@ func (this *HintIndex) FormatHint(jsonStyle bool) string {
 	return formatHint("INDEX", args)
 }
 
-func (this *HintIndex) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *HintIndex) formatJSON() map[string]any {
+	r := make(map[string]any, 2)
 	r["keyspace"] = this.keyspace
 	if len(this.indexes) > 0 {
-		indexes := make([]interface{}, 0, len(this.indexes))
+		indexes := make([]any, 0, len(this.indexes))
 		for _, idx := range this.indexes {
 			indexes = append(indexes, idx)
 		}
@@ -696,7 +696,7 @@ func (this *HintFTSIndex) sortString() string {
 
 func (this *HintFTSIndex) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			"index_fts": this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -708,11 +708,11 @@ func (this *HintFTSIndex) FormatHint(jsonStyle bool) string {
 	return formatHint("INDEX_FTS", args)
 }
 
-func (this *HintFTSIndex) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *HintFTSIndex) formatJSON() map[string]any {
+	r := make(map[string]any, 2)
 	r["keyspace"] = this.keyspace
 	if len(this.indexes) > 0 {
-		indexes := make([]interface{}, 0, len(this.indexes))
+		indexes := make([]any, 0, len(this.indexes))
 		for _, idx := range this.indexes {
 			indexes = append(indexes, idx)
 		}
@@ -832,7 +832,7 @@ func (this *HintNoIndex) FormatHint(jsonStyle bool) string {
 		if this.avoid {
 			key = "avoid_index"
 		}
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -852,15 +852,15 @@ func (this *HintNoIndex) FormatHint(jsonStyle bool) string {
 	return formatHint(name, args)
 }
 
-func (this *HintNoIndex) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *HintNoIndex) formatJSON() map[string]any {
+	r := make(map[string]any, 2)
 	r["keyspace"] = this.keyspace
 	idxs := this.indexes
 	if this.oriIndexes != nil {
 		idxs = this.oriIndexes
 	}
 	if len(idxs) > 0 {
-		indexes := make([]interface{}, 0, len(idxs))
+		indexes := make([]any, 0, len(idxs))
 		for _, idx := range idxs {
 			indexes = append(indexes, idx)
 		}
@@ -967,7 +967,7 @@ func (this *HintNoFTSIndex) FormatHint(jsonStyle bool) string {
 		if this.avoid {
 			key = "avoid_index_fts"
 		}
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -987,15 +987,15 @@ func (this *HintNoFTSIndex) FormatHint(jsonStyle bool) string {
 	return formatHint(name, args)
 }
 
-func (this *HintNoFTSIndex) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *HintNoFTSIndex) formatJSON() map[string]any {
+	r := make(map[string]any, 2)
 	r["keyspace"] = this.keyspace
 	idxs := this.indexes
 	if this.oriIndexes != nil {
 		idxs = this.oriIndexes
 	}
 	if len(idxs) > 0 {
-		indexes := make([]interface{}, 0, len(idxs))
+		indexes := make([]any, 0, len(idxs))
 		for _, idx := range idxs {
 			indexes = append(indexes, idx)
 		}
@@ -1079,7 +1079,7 @@ func (this *HintIndexAll) sortString() string {
 
 func (this *HintIndexAll) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			"index_all": this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -1091,11 +1091,11 @@ func (this *HintIndexAll) FormatHint(jsonStyle bool) string {
 	return formatHint("INDEX_ALL", args)
 }
 
-func (this *HintIndexAll) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *HintIndexAll) formatJSON() map[string]any {
+	r := make(map[string]any, 2)
 	r["keyspace"] = this.keyspace
 	if len(this.indexes) > 0 {
-		indexes := make([]interface{}, 0, len(this.indexes))
+		indexes := make([]any, 0, len(this.indexes))
 		for _, idx := range this.indexes {
 			indexes = append(indexes, idx)
 		}
@@ -1177,7 +1177,7 @@ func (this *HintNL) sortString() string {
 
 func (this *HintNL) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			"use_nl": this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -1186,8 +1186,8 @@ func (this *HintNL) FormatHint(jsonStyle bool) string {
 	return formatHint("USE_NL", []string{this.keyspace})
 }
 
-func (this *HintNL) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 1)
+func (this *HintNL) formatJSON() map[string]any {
+	r := make(map[string]any, 1)
 	r["keyspace"] = this.keyspace
 	return r
 }
@@ -1285,7 +1285,7 @@ func (this *HintHash) sortString() string {
 
 func (this *HintHash) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			"use_hash": this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -1301,8 +1301,8 @@ func (this *HintHash) FormatHint(jsonStyle bool) string {
 	return formatHintNoQuote("USE_HASH", []string{s})
 }
 
-func (this *HintHash) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *HintHash) formatJSON() map[string]any {
+	r := make(map[string]any, 2)
 	r["keyspace"] = this.keyspace
 	switch this.option {
 	case HASH_OPTION_BUILD:
@@ -1392,7 +1392,7 @@ func (this *HintNoNL) FormatHint(jsonStyle bool) string {
 		if this.avoid {
 			key = "avoid_nl"
 		}
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -1405,8 +1405,8 @@ func (this *HintNoNL) FormatHint(jsonStyle bool) string {
 	return formatHint(name, []string{this.keyspace})
 }
 
-func (this *HintNoNL) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 1)
+func (this *HintNoNL) formatJSON() map[string]any {
+	r := make(map[string]any, 1)
 	r["keyspace"] = this.keyspace
 	return r
 }
@@ -1486,7 +1486,7 @@ func (this *HintNoHash) FormatHint(jsonStyle bool) string {
 		if this.avoid {
 			key = "avoid_hash"
 		}
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -1499,8 +1499,8 @@ func (this *HintNoHash) FormatHint(jsonStyle bool) string {
 	return formatHint(name, []string{this.keyspace})
 }
 
-func (this *HintNoHash) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 1)
+func (this *HintNoHash) formatJSON() map[string]any {
+	r := make(map[string]any, 1)
 	r["keyspace"] = this.keyspace
 	return r
 }
@@ -1569,7 +1569,7 @@ func (this *HintJoinFilter) sortString() string {
 
 func (this *HintJoinFilter) FormatHint(jsonStyle bool) string {
 	if jsonStyle {
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			"join_filter": this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -1578,8 +1578,8 @@ func (this *HintJoinFilter) FormatHint(jsonStyle bool) string {
 	return formatHint("JOIN_FILTER", []string{this.keyspace})
 }
 
-func (this *HintJoinFilter) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 1)
+func (this *HintJoinFilter) formatJSON() map[string]any {
+	r := make(map[string]any, 1)
 	r["keyspace"] = this.keyspace
 	return r
 }
@@ -1659,7 +1659,7 @@ func (this *HintNoJoinFilter) FormatHint(jsonStyle bool) string {
 		if this.avoid {
 			key = "avoid_join_filter"
 		}
-		hint := map[string]interface{}{
+		hint := map[string]any{
 			key: this.formatJSON(),
 		}
 		bytes, _ := json.Marshal(hint)
@@ -1672,8 +1672,8 @@ func (this *HintNoJoinFilter) FormatHint(jsonStyle bool) string {
 	return formatHint(name, []string{this.keyspace})
 }
 
-func (this *HintNoJoinFilter) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 1)
+func (this *HintNoJoinFilter) formatJSON() map[string]any {
+	r := make(map[string]any, 1)
 	r["keyspace"] = this.keyspace
 	return r
 }
@@ -1740,15 +1740,15 @@ func (this *HintOrdered) FormatHint(jsonStyle bool) string {
 	return formatHint("ORDERED", nil)
 }
 
-func (this *HintOrdered) formatJSON() map[string]interface{} {
-	r := make(map[string]interface{}, 1)
+func (this *HintOrdered) formatJSON() map[string]any {
+	r := make(map[string]any, 1)
 	r["ordered"] = true
 	return r
 }
 
 type HintInvalid struct {
 	input    string
-	inputObj map[string]interface{}
+	inputObj map[string]any
 	err      string
 }
 
@@ -1758,7 +1758,7 @@ func NewInvalidHint(input string) *HintInvalid {
 	}
 }
 
-func NewInvalidJSONHint(r map[string]interface{}) *HintInvalid {
+func NewInvalidJSONHint(r map[string]any) *HintInvalid {
 	return &HintInvalid{
 		inputObj: r,
 	}
@@ -1774,7 +1774,7 @@ func (this *HintInvalid) Copy() OptimHint {
 		err:   this.err,
 	}
 	if len(this.inputObj) > 0 {
-		inputObj := make(map[string]interface{}, len(this.inputObj))
+		inputObj := make(map[string]any, len(this.inputObj))
 		for k, v := range this.inputObj {
 			inputObj[k] = v
 		}
@@ -1787,7 +1787,7 @@ func (this *HintInvalid) Input() string {
 	return this.input
 }
 
-func (this *HintInvalid) InputObj() map[string]interface{} {
+func (this *HintInvalid) InputObj() map[string]any {
 	return this.inputObj
 }
 
@@ -1828,7 +1828,7 @@ func (this *HintInvalid) FormatHint(jsonStyle bool) string {
 	return this.input
 }
 
-func (this *HintInvalid) formatJSON() map[string]interface{} {
+func (this *HintInvalid) formatJSON() map[string]any {
 	return this.inputObj
 }
 
@@ -1865,7 +1865,7 @@ func genInvalidHint(input, err string) []OptimHint {
 	return []OptimHint{hint}
 }
 
-func genInvalidJSONHint(r map[string]interface{}, err string) []OptimHint {
+func genInvalidJSONHint(r map[string]any, err string) []OptimHint {
 	hint := NewInvalidJSONHint(r)
 	hint.SetError(err)
 	return []OptimHint{hint}
@@ -1939,7 +1939,7 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 		}
 
 		if invalid {
-			r := map[string]interface{}{
+			r := map[string]any{
 				k: v,
 			}
 			if err == "" {
@@ -1963,7 +1963,7 @@ func ParseObjectHints(object expression.Expression) []OptimHint {
 	return optimHints
 }
 
-func getIndexHintInfo(hint_name string, fields map[string]interface{}) (keyspace string, indexes []string, err string) {
+func getIndexHintInfo(hint_name string, fields map[string]any) (keyspace string, indexes []string, err string) {
 	for k, v := range fields {
 		key := strings.ToLower(k)
 		if key == "keyspace" || key == "alias" {
@@ -1979,7 +1979,7 @@ func getIndexHintInfo(hint_name string, fields map[string]interface{}) (keyspace
 		} else if key == "indexes" {
 			idxs := value.NewValue(v).Actual()
 			switch idxs := idxs.(type) {
-			case []interface{}:
+			case []any:
 				for _, idx := range idxs {
 					name := value.NewValue(idx).ToString()
 					if name == "" {
@@ -2021,7 +2021,7 @@ func newNoIndexHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procIndexHints, true, avoid)
 }
 
-func procIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+func procIndexHints(fields map[string]any, negative, avoid bool) (OptimHint, bool, string) {
 	hint_name := "index"
 	if negative {
 		if avoid {
@@ -2057,7 +2057,7 @@ func newNoFTSIndexHints(val value.Value, avoid bool) ([]OptimHint, bool, string)
 	return newHints(val, procFTSIndexHints, true, avoid)
 }
 
-func procFTSIndexHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+func procFTSIndexHints(fields map[string]any, negative, avoid bool) (OptimHint, bool, string) {
 	hint_name := "index_fts"
 	if negative {
 		if avoid {
@@ -2089,7 +2089,7 @@ func newIndexAllHints(val value.Value) ([]OptimHint, bool, string) {
 	return newHints(val, procIndexAllHints, false, false)
 }
 
-func procIndexAllHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+func procIndexAllHints(fields map[string]any, negative, avoid bool) (OptimHint, bool, string) {
 	hint_name := "index_all"
 
 	var invalid bool
@@ -2118,7 +2118,7 @@ func newNoNLHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procNLHints, true, avoid)
 }
 
-func procNLHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+func procNLHints(fields map[string]any, negative, avoid bool) (OptimHint, bool, string) {
 	hint_name := "use_nl"
 	if negative {
 		if avoid {
@@ -2175,7 +2175,7 @@ func newNoHashHints(val value.Value, avoid bool) ([]OptimHint, bool, string) {
 	return newHints(val, procHashHints, true, avoid)
 }
 
-func procHashHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+func procHashHints(fields map[string]any, negative, avoid bool) (OptimHint, bool, string) {
 	hint_name := "use_hash"
 	if negative {
 		if avoid {
@@ -2253,7 +2253,7 @@ func newNoJoinFilterHints(val value.Value, avoid bool) ([]OptimHint, bool, strin
 	return newHints(val, procJoinFilterHints, true, avoid)
 }
 
-func procJoinFilterHints(fields map[string]interface{}, negative, avoid bool) (OptimHint, bool, string) {
+func procJoinFilterHints(fields map[string]any, negative, avoid bool) (OptimHint, bool, string) {
 	hint_name := "join_filter"
 	if negative {
 		if avoid {
@@ -2299,13 +2299,13 @@ func procJoinFilterHints(fields map[string]interface{}, negative, avoid bool) (O
 	return NewJoinFilterHint(keyspace), false, ""
 }
 
-func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool) (OptimHint, bool, string), negative,
+func newHints(val value.Value, procFunc func(map[string]any, bool, bool) (OptimHint, bool, string), negative,
 	avoid bool) ([]OptimHint, bool, string) {
 
 	hints := make([]OptimHint, 0, 1)
 	actual := val.Actual()
 	switch actual := actual.(type) {
-	case []interface{}:
+	case []any:
 		for _, a := range actual {
 			ahints, invalid, aerr := newHints(value.NewValue(a), procFunc, negative, avoid)
 			if invalid {
@@ -2315,7 +2315,7 @@ func newHints(val value.Value, procFunc func(map[string]interface{}, bool, bool)
 				hints = append(hints, ahints...)
 			}
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		hint, invalid, err := procFunc(actual, negative, avoid)
 		if invalid {
 			return nil, true, err
@@ -2338,7 +2338,7 @@ func newOrderedHint(val value.Value) ([]OptimHint, bool, string) {
 // when marshalling we put the optimizer hints in groups:
 // hints_followed, hints_not_followed, invalid_hints
 func (this *OptimHints) MarshalJSON() ([]byte, error) {
-	var followed, not_followed, invalid, errored, unknown []interface{}
+	var followed, not_followed, invalid, errored, unknown []any
 	for _, hint := range this.hints {
 		obj := formatOptimHint(hint, this.jsonStyle)
 		switch hint.State() {
@@ -2355,7 +2355,7 @@ func (this *OptimHints) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	r := make(map[string]interface{}, 6)
+	r := make(map[string]any, 6)
 	if len(followed) > 0 {
 		r["hints_followed"] = followed
 	}
@@ -2373,7 +2373,7 @@ func (this *OptimHints) MarshalJSON() ([]byte, error) {
 	}
 
 	if len(this.subqTermHints) > 0 {
-		subqs := make([]interface{}, 0, len(this.subqTermHints))
+		subqs := make([]any, 0, len(this.subqTermHints))
 		for _, subq := range this.subqTermHints {
 			if subq != nil {
 				subqs = append(subqs, subq)
@@ -2386,10 +2386,10 @@ func (this *OptimHints) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func formatOptimHint(hint OptimHint, jsonStyle bool) interface{} {
+func formatOptimHint(hint OptimHint, jsonStyle bool) any {
 	err := hint.Error()
 	if jsonStyle {
-		r := make(map[string]interface{}, 2)
+		r := make(map[string]any, 2)
 		r["hint"] = hint.FormatHint(jsonStyle)
 		if err != "" {
 			r["error"] = err
@@ -2440,7 +2440,7 @@ func (this *SubqOptimHints) OptimHints() *OptimHints {
 }
 
 func (this *SubqOptimHints) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
+	r := make(map[string]any, 2)
 	r["alias"] = this.alias
 	r["optimizer_hints"] = this.hints
 	return json.Marshal(r)

@@ -92,7 +92,7 @@ func (this *ScopeRef) Alias() string {
 Marshals input into byte array.
 */
 func (this *ScopeRef) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 3)
+	r := make(map[string]any, 3)
 	r["path"] = this.path
 	if this.as != "" {
 		r["as"] = this.as
@@ -101,7 +101,7 @@ func (this *ScopeRef) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *ScopeRef) MarshalKeyspace(m map[string]interface{}) {
+func (this *ScopeRef) MarshalKeyspace(m map[string]any) {
 	this.path.marshalKeyspace(m)
 }
 

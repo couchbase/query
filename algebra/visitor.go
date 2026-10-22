@@ -12,18 +12,18 @@ type Visitor interface {
 	/*
 	   Visitor for SELECT statement.
 	*/
-	VisitSelect(stmt *Select) (interface{}, error)
+	VisitSelect(stmt *Select) (any, error)
 
 	/*
 	   Visitor for DML statements. N1QL provides several data
 	   modification statements such as INSERT, UPSERT, DELETE,
 	   UPDATE and MERGE.
 	*/
-	VisitInsert(stmt *Insert) (interface{}, error)
-	VisitUpsert(stmt *Upsert) (interface{}, error)
-	VisitDelete(stmt *Delete) (interface{}, error)
-	VisitUpdate(stmt *Update) (interface{}, error)
-	VisitMerge(stmt *Merge) (interface{}, error)
+	VisitInsert(stmt *Insert) (any, error)
+	VisitUpsert(stmt *Upsert) (any, error)
+	VisitDelete(stmt *Delete) (any, error)
+	VisitUpdate(stmt *Update) (any, error)
+	VisitMerge(stmt *Merge) (any, error)
 
 	/*
 	   Visitor for DDL statements. N1QL provides index
@@ -32,19 +32,19 @@ type Visitor interface {
 	   CREATE COLLECTION, DROP COLLECTION and FLUSH COLLECTION
 	   as Data definition statements.
 	*/
-	VisitCreatePrimaryIndex(stmt *CreatePrimaryIndex) (interface{}, error)
-	VisitCreateIndex(stmt *CreateIndex) (interface{}, error)
-	VisitDropIndex(stmt *DropIndex) (interface{}, error)
-	VisitAlterIndex(stmt *AlterIndex) (interface{}, error)
-	VisitBuildIndexes(stmt *BuildIndexes) (interface{}, error)
-	VisitCreateScope(stmt *CreateScope) (interface{}, error)
-	VisitDropScope(stmt *DropScope) (interface{}, error)
-	VisitCreateCollection(stmt *CreateCollection) (interface{}, error)
-	VisitDropCollection(stmt *DropCollection) (interface{}, error)
-	VisitFlushCollection(stmt *FlushCollection) (interface{}, error)
-	VisitCreateBucket(stmt *CreateBucket) (interface{}, error)
-	VisitAlterBucket(stmt *AlterBucket) (interface{}, error)
-	VisitDropBucket(stmt *DropBucket) (interface{}, error)
+	VisitCreatePrimaryIndex(stmt *CreatePrimaryIndex) (any, error)
+	VisitCreateIndex(stmt *CreateIndex) (any, error)
+	VisitDropIndex(stmt *DropIndex) (any, error)
+	VisitAlterIndex(stmt *AlterIndex) (any, error)
+	VisitBuildIndexes(stmt *BuildIndexes) (any, error)
+	VisitCreateScope(stmt *CreateScope) (any, error)
+	VisitDropScope(stmt *DropScope) (any, error)
+	VisitCreateCollection(stmt *CreateCollection) (any, error)
+	VisitDropCollection(stmt *DropCollection) (any, error)
+	VisitFlushCollection(stmt *FlushCollection) (any, error)
+	VisitCreateBucket(stmt *CreateBucket) (any, error)
+	VisitAlterBucket(stmt *AlterBucket) (any, error)
+	VisitDropBucket(stmt *DropBucket) (any, error)
 	VisitCreateCatalog(stmt *CreateCatalog) (any, error)
 	VisitAlterCatalog(stmt *AlterCatalog) (any, error)
 	VisitDropCatalog(stmt *DropCatalog) (any, error)
@@ -53,81 +53,81 @@ type Visitor interface {
 	/*
 		USER statements.
 	*/
-	VisitCreateUser(stmt *CreateUser) (interface{}, error)
-	VisitAlterUser(stmt *AlterUser) (interface{}, error)
-	VisitDropUser(stmt *DropUser) (interface{}, error)
+	VisitCreateUser(stmt *CreateUser) (any, error)
+	VisitAlterUser(stmt *AlterUser) (any, error)
+	VisitDropUser(stmt *DropUser) (any, error)
 
 	/*
 		GROUP statements.
 	*/
-	VisitCreateGroup(stmt *CreateGroup) (interface{}, error)
-	VisitAlterGroup(stmt *AlterGroup) (interface{}, error)
-	VisitDropGroup(stmt *DropGroup) (interface{}, error)
+	VisitCreateGroup(stmt *CreateGroup) (any, error)
+	VisitAlterGroup(stmt *AlterGroup) (any, error)
+	VisitDropGroup(stmt *DropGroup) (any, error)
 
 	/*
 	   Visitor for ROLES statements.
 	*/
-	VisitGrantRole(stmt *GrantRole) (interface{}, error)
-	VisitRevokeRole(stmt *RevokeRole) (interface{}, error)
+	VisitGrantRole(stmt *GrantRole) (any, error)
+	VisitRevokeRole(stmt *RevokeRole) (any, error)
 
 	/*
 	   Visitor for EXPLAIN statements.
 	*/
-	VisitExplain(stmt *Explain) (interface{}, error)
+	VisitExplain(stmt *Explain) (any, error)
 
 	/*
 	   Visitor for EXPLAIN FUNCTION statements.
 	*/
-	VisitExplainFunction(stmt *ExplainFunction) (interface{}, error)
+	VisitExplainFunction(stmt *ExplainFunction) (any, error)
 
 	/*
 	   Visitor for ADVISE statements.
 	*/
-	VisitAdvise(stmt *Advise) (interface{}, error)
+	VisitAdvise(stmt *Advise) (any, error)
 
 	/*
 	   Visitor for PREPARED statements.
 	*/
-	VisitPrepare(stmt *Prepare) (interface{}, error)
+	VisitPrepare(stmt *Prepare) (any, error)
 
 	/*
 	   Visitor for EXECUTE statements.
 	*/
-	VisitExecute(stmt *Execute) (interface{}, error)
+	VisitExecute(stmt *Execute) (any, error)
 
 	/*
 	   Visitor for INFER statements.
 	*/
-	VisitInferKeyspace(stmt *InferKeyspace) (interface{}, error)
-	VisitInferExpression(stmt *InferExpression) (interface{}, error)
+	VisitInferKeyspace(stmt *InferKeyspace) (any, error)
+	VisitInferExpression(stmt *InferExpression) (any, error)
 
 	/*
 	   Visitor FUNCTION statements
 	*/
-	VisitCreateFunction(stmt *CreateFunction) (interface{}, error)
-	VisitDropFunction(stmt *DropFunction) (interface{}, error)
-	VisitExecuteFunction(stmt *ExecuteFunction) (interface{}, error)
+	VisitCreateFunction(stmt *CreateFunction) (any, error)
+	VisitDropFunction(stmt *DropFunction) (any, error)
+	VisitExecuteFunction(stmt *ExecuteFunction) (any, error)
 
 	/*
 	   Visitor for UPDATE STATISTICS statements.
 	*/
-	VisitUpdateStatistics(stmt *UpdateStatistics) (interface{}, error)
+	VisitUpdateStatistics(stmt *UpdateStatistics) (any, error)
 
 	/*
 	   Visitor for Transaction statements.
 	*/
-	VisitStartTransaction(stmt *StartTransaction) (interface{}, error)
-	VisitCommitTransaction(stmt *CommitTransaction) (interface{}, error)
-	VisitRollbackTransaction(stmt *RollbackTransaction) (interface{}, error)
-	VisitTransactionIsolation(stmt *TransactionIsolation) (interface{}, error)
-	VisitSavepoint(stmt *Savepoint) (interface{}, error)
+	VisitStartTransaction(stmt *StartTransaction) (any, error)
+	VisitCommitTransaction(stmt *CommitTransaction) (any, error)
+	VisitRollbackTransaction(stmt *RollbackTransaction) (any, error)
+	VisitTransactionIsolation(stmt *TransactionIsolation) (any, error)
+	VisitSavepoint(stmt *Savepoint) (any, error)
 
-	VisitCreateSequence(stmt *CreateSequence) (interface{}, error)
-	VisitDropSequence(stmt *DropSequence) (interface{}, error)
-	VisitAlterSequence(stmt *AlterSequence) (interface{}, error)
+	VisitCreateSequence(stmt *CreateSequence) (any, error)
+	VisitDropSequence(stmt *DropSequence) (any, error)
+	VisitAlterSequence(stmt *AlterSequence) (any, error)
 
-	VisitCreateKnowledge(stmt *CreateKnowledge) (interface{}, error)
-	VisitDropKnowledge(stmt *DropKnowledge) (interface{}, error)
+	VisitCreateKnowledge(stmt *CreateKnowledge) (any, error)
+	VisitDropKnowledge(stmt *DropKnowledge) (any, error)
 
 	VisitCreateCredentialStore(stmt *CreateCredentialStore) (any, error)
 	VisitAlterCredentialStore(stmt *AlterCredentialStore) (any, error)
@@ -135,22 +135,22 @@ type Visitor interface {
 }
 
 type NodeVisitor interface {
-	VisitSelectTerm(node *SelectTerm) (interface{}, error)
-	VisitSubselect(node *Subselect) (interface{}, error)
-	VisitKeyspaceTerm(node *KeyspaceTerm) (interface{}, error)
-	VisitExpressionTerm(node *ExpressionTerm) (interface{}, error)
-	VisitSubqueryTerm(node *SubqueryTerm) (interface{}, error)
-	VisitJoin(node *Join) (interface{}, error)
-	VisitIndexJoin(node *IndexJoin) (interface{}, error)
-	VisitAnsiJoin(node *AnsiJoin) (interface{}, error)
-	VisitNest(node *Nest) (interface{}, error)
-	VisitIndexNest(node *IndexNest) (interface{}, error)
-	VisitAnsiNest(node *AnsiNest) (interface{}, error)
-	VisitUnnest(node *Unnest) (interface{}, error)
-	VisitUnion(node *Union) (interface{}, error)
-	VisitUnionAll(node *UnionAll) (interface{}, error)
-	VisitIntersect(node *Intersect) (interface{}, error)
-	VisitIntersectAll(node *IntersectAll) (interface{}, error)
-	VisitExcept(node *Except) (interface{}, error)
-	VisitExceptAll(node *ExceptAll) (interface{}, error)
+	VisitSelectTerm(node *SelectTerm) (any, error)
+	VisitSubselect(node *Subselect) (any, error)
+	VisitKeyspaceTerm(node *KeyspaceTerm) (any, error)
+	VisitExpressionTerm(node *ExpressionTerm) (any, error)
+	VisitSubqueryTerm(node *SubqueryTerm) (any, error)
+	VisitJoin(node *Join) (any, error)
+	VisitIndexJoin(node *IndexJoin) (any, error)
+	VisitAnsiJoin(node *AnsiJoin) (any, error)
+	VisitNest(node *Nest) (any, error)
+	VisitIndexNest(node *IndexNest) (any, error)
+	VisitAnsiNest(node *AnsiNest) (any, error)
+	VisitUnnest(node *Unnest) (any, error)
+	VisitUnion(node *Union) (any, error)
+	VisitUnionAll(node *UnionAll) (any, error)
+	VisitIntersect(node *Intersect) (any, error)
+	VisitIntersectAll(node *IntersectAll) (any, error)
+	VisitExcept(node *Except) (any, error)
+	VisitExceptAll(node *ExceptAll) (any, error)
 }

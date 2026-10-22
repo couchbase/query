@@ -37,7 +37,7 @@ func NewCreateSequence(name *Path, failIfExists bool, with value.Value) *CreateS
 	return rv
 }
 
-func (this *CreateSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateSequence(this)
 }
 
@@ -76,7 +76,7 @@ func (this *CreateSequence) FailIfExists() bool {
 	return this.failIfExists
 }
 
-func (this *CreateSequence) MarshalName(m map[string]interface{}) {
+func (this *CreateSequence) MarshalName(m map[string]any) {
 	m["namespace"] = this.name.Namespace()
 	m["bucket"] = this.name.Bucket()
 	m["scope"] = this.name.Scope()
@@ -84,7 +84,7 @@ func (this *CreateSequence) MarshalName(m map[string]interface{}) {
 }
 
 func (this *CreateSequence) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createSequence"}
+	r := map[string]any{"type": "createSequence"}
 	this.MarshalName(r)
 	r["failIfExists"] = this.failIfExists
 	if this.with != nil {

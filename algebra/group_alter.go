@@ -38,7 +38,7 @@ func NewAlterGroup(group string, desc value.Value, roles value.Value) *AlterGrou
 	}
 	if roles != nil {
 		rv.roles_set = true
-		act := roles.Actual().([]interface{})
+		act := roles.Actual().([]any)
 		rv.roles = make([]string, len(act))
 		for i := range act {
 			rv.roles[i] = value.NewValue(act[i]).ToString()
@@ -48,7 +48,7 @@ func NewAlterGroup(group string, desc value.Value, roles value.Value) *AlterGrou
 	return rv
 }
 
-func (this *AlterGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterGroup(this)
 }
 
@@ -88,7 +88,7 @@ func (this *AlterGroup) Roles() ([]string, bool) {
 }
 
 func (this *AlterGroup) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterGroup"}
+	r := map[string]any{"type": "alterGroup"}
 	r["group"] = this.group
 	r["desc_set"] = this.desc_set
 	if this.desc_set {

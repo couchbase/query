@@ -47,7 +47,7 @@ It calls the VisitFlushCollection method by passing in the
 receiver and returns the interface. It is a visitor
 pattern.
 */
-func (this *FlushCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *FlushCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFlushCollection(this)
 }
 
@@ -102,7 +102,7 @@ func (this *FlushCollection) Keyspace() *KeyspaceRef {
 Marshals input receiver into byte array.
 */
 func (this *FlushCollection) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "flushCollection"}
+	r := map[string]any{"type": "flushCollection"}
 	r["keyspaceRef"] = this.keyspace
 	return json.Marshal(r)
 }

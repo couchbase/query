@@ -49,7 +49,7 @@ It calls the VisitCreateScope method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *CreateScope) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateScope) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateScope(this)
 }
 
@@ -110,7 +110,7 @@ func (this *CreateScope) Name() string {
 Marshals input receiver into byte array.
 */
 func (this *CreateScope) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createScope"}
+	r := map[string]any{"type": "createScope"}
 	r["scopeRef"] = this.scope
 	r["failIfExists"] = this.failIfExists
 	return json.Marshal(r)

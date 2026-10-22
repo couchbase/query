@@ -35,7 +35,7 @@ func NewDropSequence(name *Path, failIfNotExists bool) *DropSequence {
 	return rv
 }
 
-func (this *DropSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropSequence(this)
 }
 
@@ -70,14 +70,14 @@ func (this *DropSequence) FailIfNotExists() bool {
 	return this.failIfNotExists
 }
 
-func (this *DropSequence) MarshalName(m map[string]interface{}) {
+func (this *DropSequence) MarshalName(m map[string]any) {
 	m["namespace"] = this.name.Namespace()
 	m["bucket"] = this.name.Bucket()
 	m["scope"] = this.name.Scope()
 	m["keyspace"] = this.name.Keyspace()
 }
 func (this *DropSequence) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropSequence"}
+	r := map[string]any{"type": "dropSequence"}
 	this.MarshalName(r)
 	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)

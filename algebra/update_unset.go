@@ -207,7 +207,7 @@ func (this *UnsetTerm) Meta() expression.Expression {
 Marshals input into byte array.
 */
 func (this *UnsetTerm) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
+	r := make(map[string]any, 2)
 	r["path"] = this.path.String()
 	if this.updateFor != nil {
 		r["path_for"] = this.updateFor

@@ -88,7 +88,7 @@ func NewUpsertSelect(keyspace *KeyspaceRef, key, value, options expression.Expre
 It calls the VisitUpsert method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Upsert) Accept(visitor Visitor) (interface{}, error) {
+func (this *Upsert) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUpsert(this)
 }
 

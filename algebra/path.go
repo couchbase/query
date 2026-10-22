@@ -453,7 +453,7 @@ func pathFromParts(forceBackticks bool, isContext bool, elements ...string) stri
 
 // this is used for operator marshalling
 // by the time it's called, the namespace is expected to be set
-func (this *Path) marshalKeyspace(m map[string]interface{}) {
+func (this *Path) marshalKeyspace(m map[string]any) {
 	l := len(this.elements)
 	m["namespace"] = this.elements[0]
 	if l > 2 {

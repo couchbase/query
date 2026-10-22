@@ -38,7 +38,7 @@ func NewExpressionTerm(fromExpr expression.Expression, as string,
 /*
 Visitor pattern.
 */
-func (this *ExpressionTerm) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *ExpressionTerm) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitExpressionTerm(this)
 }
 
@@ -432,7 +432,7 @@ func (this *ExpressionTerm) UnsetLateralJoin() {
 Marshals input ExpressionTerm.
 */
 func (this *ExpressionTerm) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "ExpressionTerm"}
+	r := map[string]any{"type": "ExpressionTerm"}
 	r["as"] = this.as
 	r["fromexpr"] = this.fromExpr
 	if this.correlated {

@@ -28,7 +28,7 @@ type Statement interface {
 	/*
 		Visitor pattern.
 	*/
-	Accept(visitor Visitor) (interface{}, error)
+	Accept(visitor Visitor) (any, error)
 
 	/*
 		The shape of this statement's return values.
@@ -95,5 +95,5 @@ type Node interface {
 	/*
 	   Visitor pattern.
 	*/
-	Accept(visitor NodeVisitor) (interface{}, error)
+	Accept(visitor NodeVisitor) (any, error)
 }

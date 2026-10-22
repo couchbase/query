@@ -60,7 +60,7 @@ It calls the VisitRevokeRole method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *RevokeRole) Accept(visitor Visitor) (interface{}, error) {
+func (this *RevokeRole) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitRevokeRole(this)
 }
 
@@ -144,7 +144,7 @@ func (this *RevokeRole) SourceType() string {
 Marshals input receiver into byte array.
 */
 func (this *RevokeRole) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "revokeRole"}
+	r := map[string]any{"type": "revokeRole"}
 	r["users"] = this.users
 	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles

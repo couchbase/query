@@ -40,7 +40,7 @@ func NewAlterIndex(keyspace *KeyspaceRef, name string, using datastore.IndexType
 	return rv
 }
 
-func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterIndex(this)
 }
 
@@ -87,7 +87,7 @@ func (this *AlterIndex) With() value.Value {
 }
 
 func (this *AlterIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterIndex"}
+	r := map[string]any{"type": "alterIndex"}
 	r["keyspaceRef"] = this.keyspace
 	r["name"] = this.name
 	r["using"] = this.using

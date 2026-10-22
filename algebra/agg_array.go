@@ -43,7 +43,7 @@ func NewArrayAgg(operands expression.Expressions, flags uint32, filter expressio
 It calls the VisitFunction method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *ArrayAgg) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *ArrayAgg) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -118,7 +118,7 @@ func (this *ArrayAgg) CumulateInitial(item, cumulative value.Value, context Cont
 	if this.Distinct() {
 		return setAdd(item, cumulative, false), nil
 	} else {
-		return this.cumulatePart(value.NewTrackedValue([]interface{}{item}), cumulative, context)
+		return this.cumulatePart(value.NewTrackedValue([]any{item}), cumulative, context)
 	}
 }
 
@@ -174,7 +174,7 @@ func (this *ArrayAgg) cumulatePart(part, cumulative value.Value, context Context
 
 	actual := part.Actual()
 	switch actual := actual.(type) {
-	case []interface{}:
+	case []any:
 		if cumulative.Type() == value.ARRAY {
 			var ok bool
 			cumulative, ok = cumulative.Append(actual)

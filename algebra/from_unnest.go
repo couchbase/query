@@ -33,7 +33,7 @@ func NewUnnest(left FromTerm, outer bool, expr expression.Expression, as string)
 	return &Unnest{left, expr, as, outer}
 }
 
-func (this *Unnest) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *Unnest) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitUnnest(this)
 }
 
@@ -200,7 +200,7 @@ func (this *Unnest) GetCorrelation() map[string]uint32 {
 Marshals input unnest terms into byte array.
 */
 func (this *Unnest) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "unnest"}
+	r := map[string]any{"type": "unnest"}
 	r["left"] = this.left
 	r["expr"] = this.expr.String()
 	r["as"] = this.as

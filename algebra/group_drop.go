@@ -35,7 +35,7 @@ func NewDropGroup(group string, failIfNotExists bool) *DropGroup {
 	return rv
 }
 
-func (this *DropGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropGroup(this)
 }
 
@@ -71,7 +71,7 @@ func (this *DropGroup) FailIfNotExists() bool {
 }
 
 func (this *DropGroup) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropGroup"}
+	r := map[string]any{"type": "dropGroup"}
 	r["group"] = this.group
 	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)

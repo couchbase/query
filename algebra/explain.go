@@ -44,7 +44,7 @@ func NewExplain(stmt Statement, text string) *Explain {
 It calls the VisitExplain method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
+func (this *Explain) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExplain(this)
 }
 

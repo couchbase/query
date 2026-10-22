@@ -32,7 +32,7 @@ func NewAiCompute(operands expression.Expressions, flags uint32, filter expressi
 	return rv
 }
 
-func (this *AiCompute) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *AiCompute) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -83,7 +83,7 @@ func (this *AiCompute) CumulateInitial(item, cumulative value.Value, context Con
 		item = value.NULL_VALUE
 	}
 
-	return this.cumulatePart(value.NewTrackedValue([]interface{}{item}), cumulative, context)
+	return this.cumulatePart(value.NewTrackedValue([]any{item}), cumulative, context)
 }
 
 /*
@@ -113,7 +113,7 @@ func (this *AiCompute) cumulatePart(part, cumulative value.Value, context Contex
 	}
 	actual := part.Actual()
 	switch actual := actual.(type) {
-	case []interface{}:
+	case []any:
 		if cumulative.Type() == value.ARRAY {
 			var ok bool
 			cumulative, ok = cumulative.Append(actual)

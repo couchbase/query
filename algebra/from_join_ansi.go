@@ -41,7 +41,7 @@ func NewAnsiRightJoin(left SimpleFromTerm, right SimpleFromTerm, onclause expres
 	return &AnsiJoin{right, left, true, false, onclause}
 }
 
-func (this *AnsiJoin) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *AnsiJoin) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitAnsiJoin(this)
 }
 
@@ -241,7 +241,7 @@ func (this *AnsiJoin) IsCommaJoin() bool {
 Marshals input JOIN terms.
 */
 func (this *AnsiJoin) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "AnsiJoin"}
+	r := map[string]any{"type": "AnsiJoin"}
 	r["left"] = this.left
 	r["right"] = this.right
 	r["outer"] = this.outer

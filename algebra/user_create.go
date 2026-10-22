@@ -46,7 +46,7 @@ func NewCreateUser(user string, failIfExists bool, password expression.Expressio
 	}
 	if groups != nil {
 		rv.groups_set = true
-		act := groups.Actual().([]interface{})
+		act := groups.Actual().([]any)
 		rv.groups = make([]string, len(act))
 		for i := range act {
 			rv.groups[i] = value.NewValue(act[i]).ToString()
@@ -57,7 +57,7 @@ func NewCreateUser(user string, failIfExists bool, password expression.Expressio
 	return rv
 }
 
-func (this *CreateUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateUser(this)
 }
 
@@ -110,7 +110,7 @@ func (this *CreateUser) FailIfExists() bool {
 }
 
 func (this *CreateUser) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createUser"}
+	r := map[string]any{"type": "createUser"}
 	r["user"] = this.user
 	r["password_set"] = this.password_set
 	if this.password_set {

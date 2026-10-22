@@ -72,7 +72,7 @@ It calls the VisitCreateFunction method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *CreateFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateFunction(this)
 }
 
@@ -131,7 +131,7 @@ func (this *CreateFunction) String() string {
 		s.WriteString("IF NOT EXISTS ")
 	}
 	s.WriteString(this.name.ProtectedKey())
-	funcbody := map[string]interface{}{}
+	funcbody := map[string]any{}
 	this.body.Body(funcbody)
 	parameters := funcbody["parameters"]
 	s.WriteString("(")
@@ -201,7 +201,7 @@ const (
 	UNEXPECTED_LANGUAGE = "unexpected language in function body, language: %s"
 )
 
-func writeErrBody(msg string, s *strings.Builder, args ...interface{}) {
+func writeErrBody(msg string, s *strings.Builder, args ...any) {
 	s.WriteString("{ ")
 	errmap := map[string]string{
 		"error": fmt.Sprintf(msg, args...),

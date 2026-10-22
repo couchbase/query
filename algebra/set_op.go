@@ -224,7 +224,7 @@ func (this *unionSubresult) Signature() value.Value {
 	}
 
 	rv := first.Copy()
-	sa := second.Actual().(map[string]interface{})
+	sa := second.Actual().(map[string]any)
 	for k, v := range sa {
 		cv, ok := rv.Field(k)
 		if ok {
@@ -275,7 +275,7 @@ It calls the VisitUnion method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *Union) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *Union) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitUnion(this)
 }
 
@@ -322,7 +322,7 @@ It calls the VisitUnionAll method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *UnionAll) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *UnionAll) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitUnionAll(this)
 }
 
@@ -366,7 +366,7 @@ It calls the VisitIntersect method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *Intersect) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *Intersect) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitIntersect(this)
 }
 
@@ -411,7 +411,7 @@ It calls the VisitIntersectAll method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *IntersectAll) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *IntersectAll) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitIntersectAll(this)
 }
 
@@ -455,7 +455,7 @@ It calls the VisitExcept method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *Except) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *Except) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitExcept(this)
 }
 
@@ -500,7 +500,7 @@ It calls the VisitExceptAll method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *ExceptAll) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *ExceptAll) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitExceptAll(this)
 }
 

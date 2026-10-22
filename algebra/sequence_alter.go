@@ -35,7 +35,7 @@ func NewAlterSequence(name *Path, with value.Value) *AlterSequence {
 	return rv
 }
 
-func (this *AlterSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterSequence(this)
 }
 
@@ -70,7 +70,7 @@ func (this *AlterSequence) With() value.Value {
 	return this.with
 }
 
-func (this *AlterSequence) MarshalName(m map[string]interface{}) {
+func (this *AlterSequence) MarshalName(m map[string]any) {
 	m["namespace"] = this.name.Namespace()
 	m["bucket"] = this.name.Bucket()
 	m["scope"] = this.name.Scope()
@@ -78,7 +78,7 @@ func (this *AlterSequence) MarshalName(m map[string]interface{}) {
 }
 
 func (this *AlterSequence) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterSequence"}
+	r := map[string]any{"type": "alterSequence"}
 	this.MarshalName(r)
 	if this.with != nil {
 		r["with"] = this.with

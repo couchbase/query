@@ -54,7 +54,7 @@ It calls the VisitExecuteFunction method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *ExecuteFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExecuteFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExecuteFunction(this)
 }
 

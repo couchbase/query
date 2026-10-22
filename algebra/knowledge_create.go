@@ -85,7 +85,7 @@ func newCreateKnowledge(keyspace *Path, value expression.Expression) *CreateKnow
 	return rv
 }
 
-func (this *CreateKnowledge) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateKnowledge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateKnowledge(this)
 }
 
@@ -142,7 +142,7 @@ func (this *CreateKnowledge) Replace() bool {
 	return this.replace
 }
 
-func (this *CreateKnowledge) MarshalName(m map[string]interface{}) {
+func (this *CreateKnowledge) MarshalName(m map[string]any) {
 	m["namespace"] = this.keyspace.Namespace()
 	m["bucket"] = this.keyspace.Bucket()
 	m["scope"] = this.keyspace.Scope()
@@ -153,7 +153,7 @@ func (this *CreateKnowledge) MarshalName(m map[string]interface{}) {
 }
 
 func (this *CreateKnowledge) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "createKnowledge"}
+	r := map[string]any{"type": "createKnowledge"}
 	this.MarshalName(r)
 	r["value"] = this.value
 	return json.Marshal(r)

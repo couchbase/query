@@ -58,7 +58,7 @@ It calls the VisitDropIndex method by passing in the
 receiver and returns the interface. It is a visitor
 pattern.
 */
-func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropIndex(this)
 }
 
@@ -141,7 +141,7 @@ func (this *DropIndex) Vector() bool {
 Marshals input receiver into byte array.
 */
 func (this *DropIndex) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropIndex"}
+	r := map[string]any{"type": "dropIndex"}
 	r["keyspaceRef"] = this.keyspace
 	r["name"] = this.name
 	r["using"] = this.using

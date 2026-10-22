@@ -88,7 +88,7 @@ func NewInsertSelect(keyspace *KeyspaceRef, key, value, options expression.Expre
 It calls the VisitInsert method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Insert) Accept(visitor Visitor) (interface{}, error) {
+func (this *Insert) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInsert(this)
 }
 

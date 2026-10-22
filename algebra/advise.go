@@ -20,7 +20,7 @@ type Advise struct {
 
 	stmt    Statement `json:"stmt"`
 	query   string    `json:"query"`
-	context interface{}
+	context any
 }
 
 func NewAdvise(stmt Statement, text string) *Advise {
@@ -32,7 +32,7 @@ func NewAdvise(stmt Statement, text string) *Advise {
 	return rv
 }
 
-func (this *Advise) Accept(visitor Visitor) (interface{}, error) {
+func (this *Advise) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAdvise(this)
 }
 
@@ -68,11 +68,11 @@ func (this *Advise) Type() string {
 	return "ADVISE"
 }
 
-func (this *Advise) SetContext(context interface{}) {
+func (this *Advise) SetContext(context any) {
 	this.context = context
 }
 
-func (this *Advise) Context() interface{} {
+func (this *Advise) Context() any {
 	return this.context
 }
 

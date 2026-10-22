@@ -62,7 +62,7 @@ func NewUpdate(keyspace *KeyspaceRef, keys expression.Expression, indexes IndexR
 /*
 Visitor pattern.
 */
-func (this *Update) Accept(visitor Visitor) (interface{}, error) {
+func (this *Update) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUpdate(this)
 }
 

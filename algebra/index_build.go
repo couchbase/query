@@ -38,7 +38,7 @@ func NewBuildIndexes(keyspace *KeyspaceRef, using datastore.IndexType, names ...
 	return rv
 }
 
-func (this *BuildIndexes) Accept(visitor Visitor) (interface{}, error) {
+func (this *BuildIndexes) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitBuildIndexes(this)
 }
 
@@ -96,7 +96,7 @@ func (this *BuildIndexes) Names() expression.Expressions {
 }
 
 func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "BuildIndexes"}
+	r := map[string]any{"type": "BuildIndexes"}
 	r["keyspaceRef"] = this.keyspace
 	r["using"] = this.using
 	r["names"] = this.names

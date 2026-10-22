@@ -36,7 +36,7 @@ func NewAnsiNest(left FromTerm, outer bool, right SimpleFromTerm, onclause expre
 	return &AnsiNest{left, right, outer, false, onclause}
 }
 
-func (this *AnsiNest) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *AnsiNest) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitAnsiNest(this)
 }
 
@@ -214,7 +214,7 @@ func (this *AnsiNest) GetCorrelation() map[string]uint32 {
 Marshals input NEST terms into byte array.
 */
 func (this *AnsiNest) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "AnsiNest"}
+	r := map[string]any{"type": "AnsiNest"}
 	r["left"] = this.left
 	r["right"] = this.right
 	r["outer"] = this.outer

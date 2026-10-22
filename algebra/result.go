@@ -81,7 +81,7 @@ func (this *Projection) Signature() value.Value {
 		return value.NewValue(this.terms[0].expr.Type().String())
 	}
 
-	rv := value.NewAnnotatedValue(make(map[string]interface{}, len(this.terms)))
+	rv := value.NewAnnotatedValue(make(map[string]any, len(this.terms)))
 	var order []string
 	if len(this.terms) > 1 {
 		order = make([]string, 0, len(this.terms))
@@ -300,7 +300,7 @@ func (this *Projection) CheckEarlyProjection(alias string) bool {
 Marshal input into byte array.
 */
 func (this *Projection) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "projection"}
+	r := map[string]any{"type": "projection"}
 	r["distinct"] = this.distinct
 	r["raw"] = this.raw
 	r["terms"] = this.terms
@@ -461,7 +461,7 @@ func (this *ResultTerm) setAlias(a int) int {
 Marshal input ResultTerm into byte array.
 */
 func (this *ResultTerm) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "resultTerm"}
+	r := map[string]any{"type": "resultTerm"}
 	r["alias"] = this.alias
 	r["as"] = this.as
 	if this.expr != nil {

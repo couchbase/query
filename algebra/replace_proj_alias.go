@@ -47,7 +47,7 @@ func newProjAliasReplacer(projection *Projection) *projAliasReplacer {
 	return rv
 }
 
-func (this *projAliasReplacer) VisitIdentifier(expr *expression.Identifier) (interface{}, error) {
+func (this *projAliasReplacer) VisitIdentifier(expr *expression.Identifier) (any, error) {
 	if expr.IsProjectionAlias() {
 		this.found = true
 		if this.projection != nil {

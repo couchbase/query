@@ -49,7 +49,7 @@ It calls the VisitDropCollection method by passing in the
 receiver and returns the interface. It is a visitor
 pattern.
 */
-func (this *DropCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropCollection(this)
 }
 
@@ -109,7 +109,7 @@ func (this *DropCollection) Name() string {
 Marshals input receiver into byte array.
 */
 func (this *DropCollection) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "dropCollection"}
+	r := map[string]any{"type": "dropCollection"}
 	r["keyspaceRef"] = this.keyspace
 	r["failIfNotExists"] = this.failIfNotExists
 	return json.Marshal(r)

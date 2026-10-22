@@ -82,7 +82,7 @@ func (this *AlterCollection) With() value.Value {
 }
 
 func (this *AlterCollection) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "alterCollection"}
+	r := map[string]any{"type": "alterCollection"}
 	r["keyspaceRef"] = this.keyspace
 	if this.with != nil {
 		r["with"] = this.with

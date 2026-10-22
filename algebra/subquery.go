@@ -57,7 +57,7 @@ func (this *Subquery) String() string {
 /*
 Visitor pattern.
 */
-func (this *Subquery) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *Subquery) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitSubquery(this)
 }
 
@@ -228,17 +228,17 @@ func (this *Subquery) CoveredBy(keyspace string, exprs expression.Expressions,
 // Hold Subquery Plans IN (UDF, prepare statements, context)
 
 type SubqueryPlans struct {
-	mutex    sync.RWMutex            // mutex
-	expr     expression.Expression   // Valid inside udf only
-	prepared interface{}             // only inline udf, this is dummy entry
-	plans    map[*Select]interface{} // map subquery plan
-	isks     map[*Select]interface{} // map of keyspaces inside the transction
+	mutex    sync.RWMutex          // mutex
+	expr     expression.Expression // Valid inside udf only
+	prepared any                   // only inline udf, this is dummy entry
+	plans    map[*Select]any       // map subquery plan
+	isks     map[*Select]any       // map of keyspaces inside the transction
 }
 
 func NewSubqueryPlans() *SubqueryPlans {
 	return &SubqueryPlans{
-		plans: make(map[*Select]interface{}),
-		isks:  make(map[*Select]interface{}),
+		plans: make(map[*Select]any),
+		isks:  make(map[*Select]any),
 	}
 }
 
@@ -257,7 +257,7 @@ func (this *SubqueryPlans) GetExpression(lock bool) expression.Expression {
 	return expr
 }
 
-func (this *SubqueryPlans) Get(key *Select, lock bool) (expression.Expression, interface{}, interface{}, bool) {
+func (this *SubqueryPlans) Get(key *Select, lock bool) (expression.Expression, any, any, bool) {
 	if lock {
 		this.mutex.RLock()
 	}
@@ -273,7 +273,7 @@ func (this *SubqueryPlans) Get(key *Select, lock bool) (expression.Expression, i
 	return expr, plan, isk, ok
 }
 
-func (this *SubqueryPlans) Set(key *Select, expr expression.Expression, plan, isk interface{}, lock bool) {
+func (this *SubqueryPlans) Set(key *Select, expr expression.Expression, plan, isk any, lock bool) {
 	if lock {
 		this.mutex.Lock()
 	}
@@ -296,7 +296,7 @@ func (this *SubqueryPlans) Set(key *Select, expr expression.Expression, plan, is
 // Used in the context of UDF, Dummy entry to detect MetadataVersion change of collections/indexes,
 // Allows auto plan generation if the metadata change vs leave the unoptimized plan for ever until UDF changed
 
-func (this *SubqueryPlans) GetPrepared(lock bool) (prepared interface{}) {
+func (this *SubqueryPlans) GetPrepared(lock bool) (prepared any) {
 	if lock {
 		this.mutex.RLock()
 		prepared = this.prepared
@@ -307,7 +307,7 @@ func (this *SubqueryPlans) GetPrepared(lock bool) (prepared interface{}) {
 	return prepared
 }
 
-func (this *SubqueryPlans) SetPrepared(prepared interface{}, lock bool) {
+func (this *SubqueryPlans) SetPrepared(prepared any, lock bool) {
 	if lock {
 		this.mutex.Lock()
 		this.prepared = prepared
@@ -403,7 +403,7 @@ func (this *SubqueryPlans) IsEquivalent(other *SubqueryPlans, lock bool) bool {
 // Validation of each subquery plans.
 
 func (this *SubqueryPlans) ForEach(expr expression.Expression, options uint32, lock bool,
-	verify func(key *Select, options uint32, plan, isk interface{}) (errors.Error, bool)) (errors.Error, bool) {
+	verify func(key *Select, options uint32, plan, isk any) (errors.Error, bool)) (errors.Error, bool) {
 
 	var trans bool
 	if lock {
@@ -423,13 +423,13 @@ func (this *SubqueryPlans) ForEach(expr expression.Expression, options uint32, l
 }
 
 func (this *SubqueryPlans) MarshalPlans(lock bool, prepName string,
-	marshal func(map[string]interface{}, *Select, interface{}, interface{}, string) string) map[string]interface{} {
+	marshal func(map[string]any, *Select, any, any, string) string) map[string]any {
 	if lock {
 		this.mutex.RLock()
 	}
-	subqueries := make(map[string]interface{}, len(this.plans))
+	subqueries := make(map[string]any, len(this.plans))
 	for key := range this.plans {
-		r := make(map[string]interface{}, 4)
+		r := make(map[string]any, 4)
 		str := marshal(r, key, this.plans[key], this.isks[key], prepName)
 		// duplicates are removed, i.e. if the exact same subquery appears multiple times in
 		// the query, the subquery plan is only saved once

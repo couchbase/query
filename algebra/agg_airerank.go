@@ -40,7 +40,7 @@ func NewAiRerank(operands expression.Expressions, flags uint32, filter expressio
 	return rv
 }
 
-func (this *AiRerank) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *AiRerank) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -92,7 +92,7 @@ func (this *AiRerank) CumulateInitial(item, cumulative value.Value, context Cont
 		item = value.NULL_VALUE
 	}
 
-	return this.cumulatePart(value.NewTrackedValue([]interface{}{item}), cumulative, context)
+	return this.cumulatePart(value.NewTrackedValue([]any{item}), cumulative, context)
 }
 
 /*
@@ -115,7 +115,7 @@ func (this *AiRerank) cumulatePart(part, cumulative value.Value, context Context
 	}
 	actual := part.Actual()
 	switch actual := actual.(type) {
-	case []interface{}:
+	case []any:
 		if cumulative.Type() == value.ARRAY {
 			var ok bool
 			cumulative, ok = cumulative.Append(actual)

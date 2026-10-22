@@ -32,7 +32,7 @@ func NewIndexJoin(left FromTerm, outer bool, right *KeyspaceTerm, keyFor string)
 	return &IndexJoin{left, right, outer, keyFor}
 }
 
-func (this *IndexJoin) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *IndexJoin) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitIndexJoin(this)
 }
 
@@ -184,7 +184,7 @@ func (this *IndexJoin) GetCorrelation() map[string]uint32 {
 Marshals input JOIN terms.
 */
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "indexJoin"}
+	r := map[string]any{"type": "indexJoin"}
 	r["left"] = this.left
 	r["right"] = this.right
 	r["outer"] = this.outer

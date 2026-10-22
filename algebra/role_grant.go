@@ -67,7 +67,7 @@ It calls the VisitGrantRole method by passing
 in the receiver and returns the interface. It is a
 visitor pattern.
 */
-func (this *GrantRole) Accept(visitor Visitor) (interface{}, error) {
+func (this *GrantRole) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitGrantRole(this)
 }
 
@@ -151,7 +151,7 @@ func (this *GrantRole) SourceType() string {
 Marshals input receiver into byte array.
 */
 func (this *GrantRole) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "grantRole"}
+	r := map[string]any{"type": "grantRole"}
 	r["users"] = this.users
 	r["keyspaces"] = this.keyspaces
 	r["roles"] = this.roles

@@ -51,25 +51,25 @@ func (this *checkRecursion) visitSetop(first Subresult, second Subresult) error 
 	return err
 }
 
-func (this *checkRecursion) VisitSelectTerm(node *SelectTerm) (interface{}, error) {
+func (this *checkRecursion) VisitSelectTerm(node *SelectTerm) (any, error) {
 	return node.query.subresult.Accept(this)
 }
 
-func (this *checkRecursion) VisitSubselect(node *Subselect) (interface{}, error) {
+func (this *checkRecursion) VisitSubselect(node *Subselect) (any, error) {
 	if node.From() != nil {
 		return node.From().Accept(this)
 	}
 	return nil, nil
 }
 
-func (this *checkRecursion) VisitKeyspaceTerm(node *KeyspaceTerm) (interface{}, error) {
+func (this *checkRecursion) VisitKeyspaceTerm(node *KeyspaceTerm) (any, error) {
 	return nil, nil
 }
 
 /*
 check for recursive cte identifier
 */
-func (this *checkRecursion) VisitExpressionTerm(node *ExpressionTerm) (interface{}, error) {
+func (this *checkRecursion) VisitExpressionTerm(node *ExpressionTerm) (any, error) {
 	if expr := node.ExpressionTerm(); expr != nil {
 		identExpr, isIdent := expr.(*expression.Identifier)
 		if isIdent {
@@ -91,58 +91,58 @@ func (this *checkRecursion) VisitExpressionTerm(node *ExpressionTerm) (interface
 	return nil, nil
 }
 
-func (this *checkRecursion) VisitSubqueryTerm(node *SubqueryTerm) (interface{}, error) {
+func (this *checkRecursion) VisitSubqueryTerm(node *SubqueryTerm) (any, error) {
 	return nil, nil
 }
 
-func (this *checkRecursion) VisitJoin(node *Join) (interface{}, error) {
+func (this *checkRecursion) VisitJoin(node *Join) (any, error) {
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *checkRecursion) VisitIndexJoin(node *IndexJoin) (interface{}, error) {
+func (this *checkRecursion) VisitIndexJoin(node *IndexJoin) (any, error) {
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *checkRecursion) VisitAnsiJoin(node *AnsiJoin) (interface{}, error) {
+func (this *checkRecursion) VisitAnsiJoin(node *AnsiJoin) (any, error) {
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *checkRecursion) VisitNest(node *Nest) (interface{}, error) {
+func (this *checkRecursion) VisitNest(node *Nest) (any, error) {
 	return nil, errors.NewRecursionUnsupportedError("NEST", node.String())
 }
 
-func (this *checkRecursion) VisitIndexNest(node *IndexNest) (interface{}, error) {
+func (this *checkRecursion) VisitIndexNest(node *IndexNest) (any, error) {
 	return nil, errors.NewRecursionUnsupportedError("NEST", node.String())
 }
 
-func (this *checkRecursion) VisitAnsiNest(node *AnsiNest) (interface{}, error) {
+func (this *checkRecursion) VisitAnsiNest(node *AnsiNest) (any, error) {
 	return nil, errors.NewRecursionUnsupportedError("NEST", node.String())
 }
 
-func (this *checkRecursion) VisitUnnest(node *Unnest) (interface{}, error) {
+func (this *checkRecursion) VisitUnnest(node *Unnest) (any, error) {
 	return nil, errors.NewRecursionUnsupportedError("UNNEST", node.String())
 }
 
-func (this *checkRecursion) VisitUnion(node *Union) (interface{}, error) {
+func (this *checkRecursion) VisitUnion(node *Union) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *checkRecursion) VisitUnionAll(node *UnionAll) (interface{}, error) {
+func (this *checkRecursion) VisitUnionAll(node *UnionAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *checkRecursion) VisitIntersect(node *Intersect) (interface{}, error) {
+func (this *checkRecursion) VisitIntersect(node *Intersect) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *checkRecursion) VisitIntersectAll(node *IntersectAll) (interface{}, error) {
+func (this *checkRecursion) VisitIntersectAll(node *IntersectAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *checkRecursion) VisitExcept(node *Except) (interface{}, error) {
+func (this *checkRecursion) VisitExcept(node *Except) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }
 
-func (this *checkRecursion) VisitExceptAll(node *ExceptAll) (interface{}, error) {
+func (this *checkRecursion) VisitExceptAll(node *ExceptAll) (any, error) {
 	return nil, this.visitSetop(node.First(), node.Second())
 }

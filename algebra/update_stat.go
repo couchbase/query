@@ -83,7 +83,7 @@ func NewUpdateStatisticsDelete(keyspace *KeyspaceRef, terms expression.Expressio
 	return rv
 }
 
-func (this *UpdateStatistics) Accept(visitor Visitor) (interface{}, error) {
+func (this *UpdateStatistics) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUpdateStatistics(this)
 }
 
@@ -236,7 +236,7 @@ func (this *UpdateStatistics) String() string {
 }
 
 func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "updateStatistics"}
+	r := map[string]any{"type": "updateStatistics"}
 	r["keyspaceRef"] = this.keyspace
 	r["terms"] = this.terms
 	r["with"] = this.with

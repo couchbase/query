@@ -92,7 +92,7 @@ func NewKeyspaceTermFromExpression(expr expression.Expression, as string,
 	}
 }
 
-func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (interface{}, error) {
+func (this *KeyspaceTerm) Accept(visitor NodeVisitor) (any, error) {
 	return visitor.VisitKeyspaceTerm(this)
 }
 
@@ -648,7 +648,7 @@ func (this *KeyspaceTerm) SetTransferJoinHint() {
 Marshals the input keyspace into a byte array.
 */
 func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
-	r := map[string]interface{}{"type": "keyspaceTerm"}
+	r := map[string]any{"type": "keyspaceTerm"}
 	r["as"] = this.as
 	if this.joinKeys != nil {
 		r["keys"] = this.joinKeys.String()
@@ -663,7 +663,7 @@ func (this *KeyspaceTerm) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (this *KeyspaceTerm) MarshalKeyspace(m map[string]interface{}) {
+func (this *KeyspaceTerm) MarshalKeyspace(m map[string]any) {
 	if this.path != nil {
 		this.path.marshalKeyspace(m)
 	} else {

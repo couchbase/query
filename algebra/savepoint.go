@@ -41,7 +41,7 @@ func NewSavepoint(name string) *Savepoint {
 It calls the VisitSavepoint method by passing in the receiver to
 and returns the interface. It is a visitor pattern.
 */
-func (this *Savepoint) Accept(visitor Visitor) (interface{}, error) {
+func (this *Savepoint) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSavepoint(this)
 }
 
