@@ -68,7 +68,7 @@ const (
 	DURATIONSTYLE         = "duration-style"
 )
 
-type Checker func(interface{}) (bool, errors.Error)
+type Checker func(any) (bool, errors.Error)
 
 var CHECKERS = map[string]Checker{
 	CPUPROFILE:            checkString,
@@ -123,12 +123,12 @@ var CHECKERS_MIN = map[string]int{
 	NUM_CPUS:        0,
 }
 
-func checkBool(val interface{}) (bool, errors.Error) {
+func checkBool(val any) (bool, errors.Error) {
 	_, ok := val.(bool)
 	return ok, nil
 }
 
-func checkTristateString(val interface{}) (bool, errors.Error) {
+func checkTristateString(val any) (bool, errors.Error) {
 	t, ok := val.(string)
 
 	if ok {
@@ -140,7 +140,7 @@ func checkTristateString(val interface{}) (bool, errors.Error) {
 	return false, nil
 }
 
-func checkNumber(val interface{}) (bool, errors.Error) {
+func checkNumber(val any) (bool, errors.Error) {
 	switch val.(type) {
 	case int64:
 		return true, nil
@@ -150,7 +150,7 @@ func checkNumber(val interface{}) (bool, errors.Error) {
 	return false, nil
 }
 
-func checkHexNumber(val interface{}) (bool, errors.Error) {
+func checkHexNumber(val any) (bool, errors.Error) {
 	switch v := val.(type) {
 	case int64:
 		return true, nil
@@ -162,7 +162,7 @@ func checkHexNumber(val interface{}) (bool, errors.Error) {
 	return false, nil
 }
 
-func checkNumberMin(val interface{}, min int) (bool, errors.Error) {
+func checkNumberMin(val any, min int) (bool, errors.Error) {
 	switch val := val.(type) {
 	case int64:
 		return val >= int64(min), nil
@@ -172,15 +172,15 @@ func checkNumberMin(val interface{}, min int) (bool, errors.Error) {
 	return false, nil
 }
 
-func checkObject(val interface{}) (bool, errors.Error) {
-	_, ok := val.(map[string]interface{})
+func checkObject(val any) (bool, errors.Error) {
+	_, ok := val.(map[string]any)
 	return ok, nil
 }
 
-func checkCompleted(val interface{}) (bool, errors.Error) {
+func checkCompleted(val any) (bool, errors.Error) {
 	var tag string
 
-	object, ok := val.(map[string]interface{})
+	object, ok := val.(map[string]any)
 	if !ok {
 		return ok, errors.NewAdminSettingTypeError("completed", object)
 	}
@@ -219,12 +219,12 @@ func checkCompleted(val interface{}) (bool, errors.Error) {
 	return ok, nil
 }
 
-func checkString(val interface{}) (bool, errors.Error) {
+func checkString(val any) (bool, errors.Error) {
 	_, ok := val.(string)
 	return ok, nil
 }
 
-func checkDuration(val interface{}) (bool, errors.Error) {
+func checkDuration(val any) (bool, errors.Error) {
 	switch val := val.(type) {
 	case string:
 		if val != "" {
@@ -235,7 +235,7 @@ func checkDuration(val interface{}) (bool, errors.Error) {
 	return false, nil
 }
 
-func checkLogLevel(val interface{}) (bool, errors.Error) {
+func checkLogLevel(val any) (bool, errors.Error) {
 	level, is_string := val.(string)
 	if !is_string {
 		return false, nil
@@ -244,7 +244,7 @@ func checkLogLevel(val interface{}) (bool, errors.Error) {
 	return ok, nil
 }
 
-func checkPath(val interface{}) (bool, errors.Error) {
+func checkPath(val any) (bool, errors.Error) {
 	s, ok := val.(string)
 	if ok && s != "" {
 		if _, err := algebra.NewVariablePathWithContext(s, "default", ""); err != nil {
@@ -255,7 +255,7 @@ func checkPath(val interface{}) (bool, errors.Error) {
 	return ok, nil
 }
 
-func checkPercent(val interface{}) (bool, errors.Error) {
+func checkPercent(val any) (bool, errors.Error) {
 	switch val := val.(type) {
 	case int64:
 		if val >= 0 && val <= 100 {
@@ -269,7 +269,7 @@ func checkPercent(val interface{}) (bool, errors.Error) {
 	return false, nil
 }
 
-func checkDurationStyle(val interface{}) (bool, errors.Error) {
+func checkDurationStyle(val any) (bool, errors.Error) {
 	style, is_string := val.(string)
 	if !is_string {
 		return false, nil

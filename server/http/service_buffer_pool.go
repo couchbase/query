@@ -32,7 +32,7 @@ type syncPoolBufPool struct {
 
 func NewSyncPool(buf_size int) BufferPool {
 	newPool := &syncPoolBufPool{}
-	util.NewFastPool(&newPool.pool, func() interface{} {
+	util.NewFastPool(&newPool.pool, func() any {
 		var b bytes.Buffer
 
 		// the buffer pool will eventually home just

@@ -85,8 +85,8 @@ type Request interface {
 	NaturalConfig() value.Value
 	SetNaturalRequestTokens(prompt, completion, total int)
 	SetNaturalChatTokens(prompt, completion, total int)
-	FmtNaturalRequestTokens() map[string]interface{}
-	FmtNaturalChatTokens() map[string]interface{}
+	FmtNaturalRequestTokens() map[string]any
+	FmtNaturalChatTokens() map[string]any
 	SetNaturalCred(cred string)
 	NaturalCred() string
 	SetNaturalOrganizationId(orgId string)
@@ -240,8 +240,8 @@ type Request interface {
 	GetTimings() execution.Operator
 	SetFmtTimings(e []byte)
 	GetFmtTimings() []byte
-	SetFmtOptimizerEstimates(e map[string]interface{})
-	GetFmtOptimizerEstimates() map[string]interface{}
+	SetFmtOptimizerEstimates(e map[string]any)
+	GetFmtOptimizerEstimates() map[string]any
 	IsAdHoc() bool
 	SetErrorLimit(limit int)
 	GetErrorLimit() int
@@ -278,7 +278,7 @@ type Request interface {
 
 	Halt(err errors.Error)
 
-	Format(util.DurationStyle, bool, bool, bool) map[string]interface{}
+	Format(util.DurationStyle, bool, bool, bool) map[string]any
 	NaturalTime() time.Duration
 }
 
@@ -306,7 +306,7 @@ type ScanConfiguration interface {
 	ScanConsistency() datastore.ScanConsistency
 	ScanWait() time.Duration
 	ScanVectorSource() timestamp.ScanVectorSource
-	SetScanConsistency(consistency datastore.ScanConsistency) interface{}
+	SetScanConsistency(consistency datastore.ScanConsistency) any
 }
 
 // API for tracking active requests
@@ -437,7 +437,7 @@ type BaseRequest struct {
 	stopOperator         execution.Operator // notified when request execution stops
 	timings              execution.Operator
 	fmtTimings           []byte
-	fmtEstimates         map[string]interface{}
+	fmtEstimates         map[string]any
 	controls             value.Tristate
 	profile              Profile
 	indexApiVersion      int    // Index API version
@@ -500,7 +500,7 @@ type BaseRequest struct {
 	nlsummarize          value.Tristate
 
 	// effectively temporary storage for the TRACE level request logging ahead of being included in completed_requests
-	logContent []interface{}
+	logContent []any
 }
 
 type requestIDImpl struct {
@@ -682,7 +682,7 @@ func (this *BaseRequest) IsPrepare() bool {
 	return this.isPrepare
 }
 
-var REDACTED_VALUE = value.NewValue(map[string]interface{}{"redacted": true})
+var REDACTED_VALUE = value.NewValue(map[string]any{"redacted": true})
 
 func IsSpecialNamedParam(param string) bool {
 	return len(param) > 2 && param[0] == '_' && param[len(param)-1] == '_'
@@ -692,7 +692,7 @@ func (this *BaseRequest) NamedArgs() map[string]value.Value {
 	return this.namedArgs
 }
 
-var _REDACTED_VALUE = value.NewValue(map[string]interface{}{"redacted": true})
+var _REDACTED_VALUE = value.NewValue(map[string]any{"redacted": true})
 
 func (this *BaseRequest) FormattedRedactedNamedArgs() map[string]value.Value {
 
@@ -1076,8 +1076,8 @@ func (this *BaseRequest) PhaseCount(p execution.Phases) uint64 {
 	return uint64(this.phaseStats[p].count)
 }
 
-func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
-	var p map[string]interface{} = nil
+func (this *BaseRequest) FmtPhaseCounts() map[string]any {
+	var p map[string]any = nil
 
 	// Use simple iteration rather than a range clause to avoid a spurious data race report. MB-20692
 	nr := len(this.phaseStats)
@@ -1085,7 +1085,7 @@ func (this *BaseRequest) FmtPhaseCounts() map[string]interface{} {
 		count := atomic.LoadUint64(&this.phaseStats[i].count)
 		if count > 0 {
 			if p == nil {
-				p = make(map[string]interface{}, execution.PHASES)
+				p = make(map[string]any, execution.PHASES)
 			}
 			p[execution.Phases(i).String()] = count
 		}
@@ -1101,8 +1101,8 @@ func (this *BaseRequest) PhaseOperator(p execution.Phases) uint64 {
 	return uint64(this.phaseStats[p].operators)
 }
 
-func (this *BaseRequest) FmtPhaseOperators() map[string]interface{} {
-	var p map[string]interface{} = nil
+func (this *BaseRequest) FmtPhaseOperators() map[string]any {
+	var p map[string]any = nil
 
 	// Use simple iteration rather than a range clause to avoid a spurious data race report. MB-20692
 	nr := len(this.phaseStats)
@@ -1110,7 +1110,7 @@ func (this *BaseRequest) FmtPhaseOperators() map[string]interface{} {
 		operators := atomic.LoadUint64(&this.phaseStats[i].operators)
 		if operators > 0 {
 			if p == nil {
-				p = make(map[string]interface{}, execution.PHASES)
+				p = make(map[string]any, execution.PHASES)
 			}
 			p[execution.Phases(i).String()] = operators
 		}
@@ -1122,8 +1122,8 @@ func (this *BaseRequest) AddPhaseTime(p execution.Phases, duration time.Duration
 	atomic.AddUint64(&this.phaseStats[p].duration, uint64(duration))
 }
 
-func (this *BaseRequest) FmtPhaseTimes(style util.DurationStyle) map[string]interface{} {
-	var p map[string]interface{} = nil
+func (this *BaseRequest) FmtPhaseTimes(style util.DurationStyle) map[string]any {
+	var p map[string]any = nil
 
 	// Use simple iteration rather than a range clause to avoid a spurious data race report. MB-20692
 	nr := len(this.phaseStats)
@@ -1131,7 +1131,7 @@ func (this *BaseRequest) FmtPhaseTimes(style util.DurationStyle) map[string]inte
 		duration := atomic.LoadUint64(&this.phaseStats[i].duration)
 		if duration > 0 {
 			if p == nil {
-				p = make(map[string]interface{}, execution.PHASES)
+				p = make(map[string]any, execution.PHASES)
 			}
 			p[execution.Phases(i).String()] = util.FormatDuration(time.Duration(duration), style)
 		}
@@ -1139,15 +1139,15 @@ func (this *BaseRequest) FmtPhaseTimes(style util.DurationStyle) map[string]inte
 	return p
 }
 
-func (this *BaseRequest) RawPhaseTimes() map[string]interface{} {
-	var p map[string]interface{} = nil
+func (this *BaseRequest) RawPhaseTimes() map[string]any {
+	var p map[string]any = nil
 
 	nr := len(this.phaseStats)
 	for i := 0; i < nr; i++ {
 		duration := atomic.LoadUint64(&this.phaseStats[i].duration)
 		if duration > 0 {
 			if p == nil {
-				p = make(map[string]interface{},
+				p = make(map[string]any,
 					execution.PHASES)
 			}
 			p[execution.Phases(i).String()] = time.Duration(duration)
@@ -1156,13 +1156,13 @@ func (this *BaseRequest) RawPhaseTimes() map[string]interface{} {
 	return p
 }
 
-func (this *BaseRequest) FmtOptimizerEstimates(op execution.Operator) map[string]interface{} {
-	var p map[string]interface{} = nil
+func (this *BaseRequest) FmtOptimizerEstimates(op execution.Operator) map[string]any {
+	var p map[string]any = nil
 
 	if op != nil {
 		planOp := op.PlanOp()
 		if planOp != nil && planOp.Cost() > 0.0 && planOp.Cardinality() > 0.0 {
-			p = make(map[string]interface{}, 2)
+			p = make(map[string]any, 2)
 			p["cost"] = planOp.Cost()
 			p["cardinality"] = planOp.Cardinality()
 		}
@@ -1253,7 +1253,7 @@ func (this *requestPlan) MarshalJSON() (b []byte, err error) {
 	return json.Marshal(this.timings)
 }
 
-func logPlanCleanedUp(id string, e interface{}) {
+func logPlanCleanedUp(id string, e any) {
 	logging.Debugf("Execution tree of request %v cleaned up whilst gathering its plan: %v", id, e)
 }
 
@@ -1262,16 +1262,16 @@ func logPlanCleanedUp(id string, e interface{}) {
 // the execution tree being cleaned up in the meantime; the estimates are gathered now, so they
 // need the same protection here.
 // Both are nil if the request has no execution tree, or if it was cleaned up whilst gathering.
-func RequestPlan(request Request) (value.Value, map[string]interface{}) {
+func RequestPlan(request Request) (value.Value, map[string]any) {
 	return gatherRequestPlan(request.Id().String(), request.GetTimings(),
-		func(op execution.Operator) map[string]interface{} { return request.Output().FmtOptimizerEstimates(op) })
+		func(op execution.Operator) map[string]any { return request.Output().FmtOptimizerEstimates(op) })
 }
 
 // The estimates are gathered through a function so that whichever way the caller reaches them -
 // Output() for a foreign request, the request itself when formatting - is resolved inside the
 // guarded region, along with the walk of the tree they are gathered from.
 func gatherRequestPlan(id string, timings execution.Operator,
-	fmtEstimates func(execution.Operator) map[string]interface{}) (plan value.Value, estimates map[string]interface{}) {
+	fmtEstimates func(execution.Operator) map[string]any) (plan value.Value, estimates map[string]any) {
 
 	if timings == nil {
 		return nil, nil
@@ -1297,11 +1297,11 @@ func (this *BaseRequest) GetFmtTimings() []byte {
 	return this.fmtTimings
 }
 
-func (this *BaseRequest) SetFmtOptimizerEstimates(e map[string]interface{}) {
+func (this *BaseRequest) SetFmtOptimizerEstimates(e map[string]any) {
 	this.fmtEstimates = e
 }
 
-func (this *BaseRequest) GetFmtOptimizerEstimates() map[string]interface{} {
+func (this *BaseRequest) GetFmtOptimizerEstimates() map[string]any {
 	return this.fmtEstimates
 }
 
@@ -1728,9 +1728,9 @@ func (this *BaseRequest) EventUsers() []string {
 }
 
 // For audit.Auditable interface.
-func (this *BaseRequest) EventNamedArgs() map[string]interface{} {
+func (this *BaseRequest) EventNamedArgs() map[string]any {
 	argsMap := this.FormattedRedactedNamedArgs()
-	ret := make(map[string]interface{}, len(argsMap))
+	ret := make(map[string]any, len(argsMap))
 	for name, argValue := range argsMap {
 		ret[name] = argValue.Actual()
 	}
@@ -1738,9 +1738,9 @@ func (this *BaseRequest) EventNamedArgs() map[string]interface{} {
 }
 
 // For audit.Auditable interface.
-func (this *BaseRequest) EventPositionalArgs() []interface{} {
+func (this *BaseRequest) EventPositionalArgs() []any {
 	args := this.RedactedPositionalArgs()
-	ret := make([]interface{}, len(args))
+	ret := make([]any, len(args))
 	for i, v := range args {
 		ret[i] = v.Actual()
 	}
@@ -1870,11 +1870,11 @@ func (this *BaseRequest) SetNaturalChatTokens(prompt, completion, total int) {
 
 // fmtTokenTriple renders a prompt/completion/total triple, or nil when all three
 // are zero, so an unused field is omitted from the response.
-func fmtTokenTriple(t [3]int) map[string]interface{} {
+func fmtTokenTriple(t [3]int) map[string]any {
 	if t[0] == 0 && t[1] == 0 && t[2] == 0 {
 		return nil
 	}
-	return map[string]interface{}{
+	return map[string]any{
 		"promptTokens":     t[0],
 		"completionTokens": t[1],
 		"totalTokens":      t[2],
@@ -1884,14 +1884,14 @@ func fmtTokenTriple(t [3]int) map[string]interface{} {
 // FmtNaturalRequestTokens returns this request's own LLM token usage, or nil when
 // none was spent (e.g. a non-natural request, a Capella-path request, or a
 // lifecycle command that made no LLM call), so the field is omitted.
-func (this *BaseRequest) FmtNaturalRequestTokens() map[string]interface{} {
+func (this *BaseRequest) FmtNaturalRequestTokens() map[string]any {
 	return fmtTokenTriple(this.naturalTokens)
 }
 
 // FmtNaturalChatTokens returns the running conversation total, or nil when there
 // is no chat total to report (a non-chat request, or a Capella-path chat that
 // never accumulates usage), so the field is omitted.
-func (this *BaseRequest) FmtNaturalChatTokens() map[string]interface{} {
+func (this *BaseRequest) FmtNaturalChatTokens() map[string]any {
 	return fmtTokenTriple(this.naturalChatTokens)
 }
 
@@ -2039,8 +2039,8 @@ func (this *BaseRequest) NaturalChatId() string {
 	return this.nlchatid
 }
 
-func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof bool, redact bool) map[string]interface{} {
-	item := make(map[string]interface{}, 32)
+func (this *BaseRequest) Format(durStyle util.DurationStyle, controls bool, prof bool, redact bool) map[string]any {
+	item := make(map[string]any, 32)
 	item["requestId"] = this.Id().String()
 	item["requestTime"] = this.RequestTime().Format(util.DEFAULT_FORMAT)
 	item["elapsedTime"] = util.FormatDuration(time.Since(this.RequestTime()), durStyle)
@@ -2297,9 +2297,9 @@ func (this *BaseRequest) ProcessNatural() errors.Error {
 	}
 }
 
-func decodeJSONOpts(s string) (map[string]interface{}, errors.Error) {
+func decodeJSONOpts(s string) (map[string]any, errors.Error) {
 	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
+	var opts map[string]any
 	if e := d.Decode(&opts); e != nil {
 		return nil, errors.NewAdminEncodingError(e)
 	}
@@ -2334,7 +2334,7 @@ var (
 // E_NL_OPTION_NOT_ALLOWED; stmt is the statement label used in that error.
 // Statement-specific post-validation (e.g. model-without-vendor, mandatory
 // timeout) remains with each caller.
-func (this *BaseRequest) applyNaturalWithOpts(opts map[string]interface{},
+func (this *BaseRequest) applyNaturalWithOpts(opts map[string]any,
 	allowed map[string]bool, stmt string) errors.Error {
 
 	for k, v := range opts {
@@ -2343,7 +2343,7 @@ func (this *BaseRequest) applyNaturalWithOpts(opts map[string]interface{},
 		}
 		switch k {
 		case "keyspaces":
-			if a, ok := v.([]interface{}); ok {
+			if a, ok := v.([]any); ok {
 				sb := strings.Builder{}
 				for i := range a {
 					if s, ok := a[i].(string); ok {
@@ -2416,7 +2416,7 @@ func (this *BaseRequest) applyNaturalWithOpts(opts map[string]interface{},
 				return errors.NewAdminSettingTypeError(k, v)
 			}
 		case "config":
-			if _, ok := v.(map[string]interface{}); !ok {
+			if _, ok := v.(map[string]any); !ok {
 				return errors.NewAdminSettingTypeError(k, v)
 			}
 			this.SetNaturalConfig(value.NewValue(v))
@@ -2478,7 +2478,7 @@ func (this *BaseRequest) processNaturalUsingAi(m []int, s string) errors.Error {
 	s = s[m[1]-1:]
 
 	d := sys_json.NewDecoder(strings.NewReader(s))
-	var opts map[string]interface{}
+	var opts map[string]any
 	if e := d.Decode(&opts); e != nil {
 		return errors.NewAdminEncodingError(e)
 	}
@@ -2521,8 +2521,8 @@ func parseChatWithClause(s, stmt string) (string, errors.Error) {
 	return s[m1[1]-1:], nil
 }
 
-func (this *BaseRequest) parseNaturalCredsOpt(k string, v interface{}) errors.Error {
-	if m, ok := v.(map[string]interface{}); ok {
+func (this *BaseRequest) parseNaturalCredsOpt(k string, v any) errors.Error {
+	if m, ok := v.(map[string]any); ok {
 		var u, p string
 		for mk, mv := range m {
 			switch mk {
@@ -2654,7 +2654,7 @@ func (this *BaseRequest) processNaturalAlterChat(s string) errors.Error {
 	return nil
 }
 
-func (this *BaseRequest) GetLogContent() []interface{} {
+func (this *BaseRequest) GetLogContent() []any {
 	return this.logContent
 }
 
@@ -2672,7 +2672,7 @@ func (this *BaseRequest) AddLogContent(text string) {
 
 func (this *BaseRequest) RemoveIndexDetails(b []byte) []byte {
 	if this.ScanReportWait() > time.Duration(0) {
-		var target interface{}
+		var target any
 		if err := json.Unmarshal(b, &target); err == nil {
 			removeFields(target, "#indexStats", "detailed")
 			if b1, err := json.Marshal(target); err == nil {
@@ -2683,19 +2683,19 @@ func (this *BaseRequest) RemoveIndexDetails(b []byte) []byte {
 	return b
 }
 
-func removeFields(s interface{}, p, f string) {
+func removeFields(s any, p, f string) {
 	switch av := s.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for k, v := range av {
 			if k == p {
-				if v1, ok := v.(map[string]interface{}); ok {
+				if v1, ok := v.(map[string]any); ok {
 					delete(v1, f)
 				}
 			} else {
 				removeFields(v, p, f)
 			}
 		}
-	case []interface{}:
+	case []any:
 		for _, v := range av {
 			removeFields(v, p, f)
 		}

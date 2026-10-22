@@ -33,125 +33,125 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type Setter func(*Server, interface{}) errors.Error
+type Setter func(*Server, any) errors.Error
 
 var _SETTERS = map[string]Setter{
-	CPUPROFILE: func(s *Server, o interface{}) errors.Error {
+	CPUPROFILE: func(s *Server, o any) errors.Error {
 		value, _ := o.(string)
 		s.SetCpuProfile(value)
 		return nil
 	},
-	DEBUG: func(s *Server, o interface{}) errors.Error {
+	DEBUG: func(s *Server, o any) errors.Error {
 		value, _ := o.(bool)
 		s.SetDebug(value)
 		return nil
 	},
-	KEEPALIVELENGTH: func(s *Server, o interface{}) errors.Error {
+	KEEPALIVELENGTH: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetKeepAlive(int(value))
 		s.SettingsCallback()(KEEPALIVELENGTH, int(value))
 		return nil
 	},
-	LOGLEVEL: func(s *Server, o interface{}) errors.Error {
+	LOGLEVEL: func(s *Server, o any) errors.Error {
 		value, _ := o.(string)
 		s.SetLogLevel(value)
 		return nil
 	},
-	MAXPARALLELISM: func(s *Server, o interface{}) errors.Error {
+	MAXPARALLELISM: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetMaxParallelism(int(value))
 		return nil
 	},
-	MEMPROFILE: func(s *Server, o interface{}) errors.Error {
+	MEMPROFILE: func(s *Server, o any) errors.Error {
 		value, _ := o.(string)
 		s.SetMemProfile(value)
 		return nil
 	},
-	PIPELINECAP: func(s *Server, o interface{}) errors.Error {
+	PIPELINECAP: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetPipelineCap(int64(value))
 		return nil
 	},
-	PIPELINEBATCH: func(s *Server, o interface{}) errors.Error {
+	PIPELINEBATCH: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetPipelineBatch(int(value))
 		return nil
 	},
-	REQUESTSIZECAP: func(s *Server, o interface{}) errors.Error {
+	REQUESTSIZECAP: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetRequestSizeCap(int(value))
 		return nil
 	},
-	SCANCAP: func(s *Server, o interface{}) errors.Error {
+	SCANCAP: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetScanCap(int64(value))
 		return nil
 	},
-	SERVICERS: func(s *Server, o interface{}) errors.Error {
+	SERVICERS: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetServicers(int(value))
 		memory.Config(memory.NodeQuota(), memory.ValPercent(), []int{s.Servicers(), s.PlusServicers()})
 		return nil
 	},
-	PLUSSERVICERS: func(s *Server, o interface{}) errors.Error {
+	PLUSSERVICERS: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetPlusServicers(int(value))
 		memory.Config(memory.NodeQuota(), memory.ValPercent(), []int{s.Servicers(), s.PlusServicers()})
 		return nil
 	},
-	TIMEOUTSETTING: func(s *Server, o interface{}) errors.Error {
+	TIMEOUTSETTING: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetTimeout(time.Duration(value))
 		return nil
 	},
-	CMPTHRESHOLD: func(s *Server, o interface{}) errors.Error {
+	CMPTHRESHOLD: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		return RequestsUpdateQualifier("threshold", int(value), "")
 	},
-	CMPLIMIT: func(s *Server, o interface{}) errors.Error {
+	CMPLIMIT: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		RequestsSetLimit(int(value), CMP_OP_UPD)
 		return nil
 	},
-	CMPPUSH: func(s *Server, o interface{}) errors.Error {
+	CMPPUSH: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		RequestsSetLimit(int(value), CMP_OP_ADD)
 		return nil
 	},
-	CMPPOP: func(s *Server, o interface{}) errors.Error {
+	CMPPOP: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		RequestsSetLimit(int(value), CMP_OP_DEL)
 		return nil
 	},
 	CMPOBJECT: setCompleted,
-	CMPMAXPLANSIZE: func(s *Server, o interface{}) errors.Error {
+	CMPMAXPLANSIZE: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		RequestsSetMaxPlanSize(int(value))
 		return nil
 	},
-	CMPSTREAM: func(s *Server, o interface{}) errors.Error {
+	CMPSTREAM: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		RequestsSetFileStreamSize(int64(value))
 		return nil
 	},
-	PRPLIMIT: func(s *Server, o interface{}) errors.Error {
+	PRPLIMIT: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		prepareds.PreparedsSetLimit(int(value))
 		return nil
 	},
-	PRETTY: func(s *Server, o interface{}) errors.Error {
+	PRETTY: func(s *Server, o any) errors.Error {
 		value, _ := o.(bool)
 		s.SetPretty(value)
 		return nil
 	},
-	MAXINDEXAPI: func(s *Server, o interface{}) errors.Error {
+	MAXINDEXAPI: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetMaxIndexAPI(int(value))
 		return nil
 	},
 	PROFILE:  setProfileAdmin,
 	CONTROLS: setControlsAdmin,
-	N1QLFEATCTRL: func(s *Server, o interface{}) errors.Error {
+	N1QLFEATCTRL: func(s *Server, o any) errors.Error {
 		value := getHexNumber(o)
 		if s.enterprise {
 			s.SetN1qlFeatureControl(uint64(value))
@@ -160,91 +160,91 @@ var _SETTERS = map[string]Setter{
 		}
 		return nil
 	},
-	AUTOPREPARE: func(s *Server, o interface{}) errors.Error {
+	AUTOPREPARE: func(s *Server, o any) errors.Error {
 		value, _ := o.(bool)
 		s.SetAutoPrepare(value)
 		return nil
 	},
-	MUTEXPROFILE: func(s *Server, o interface{}) errors.Error {
+	MUTEXPROFILE: func(s *Server, o any) errors.Error {
 		value, _ := o.(bool)
 		s.SetMutexProfile(value)
 		return nil
 	},
-	FUNCLIMIT: func(s *Server, o interface{}) errors.Error {
+	FUNCLIMIT: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		functions.FunctionsSetLimit(int(value))
 		return nil
 	},
-	TASKLIMIT: func(s *Server, o interface{}) errors.Error {
+	TASKLIMIT: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		scheduler.SchedulerSetLimit(int(value))
 		return nil
 	},
-	MEMORYQUOTA: func(s *Server, o interface{}) errors.Error {
+	MEMORYQUOTA: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		s.SetMemoryQuota(uint64(value))
 		return nil
 	},
-	NODEQUOTA: func(s *Server, o interface{}) errors.Error {
+	NODEQUOTA: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		memory.Config(uint64(value), memory.ValPercent(), []int{s.Servicers(), s.PlusServicers()})
 		tenant.Config(memory.Quota())
 		return nil
 	},
-	NODEQUOTAVALPERCENT: func(s *Server, o interface{}) errors.Error {
+	NODEQUOTAVALPERCENT: func(s *Server, o any) errors.Error {
 		value := getNumber(o)
 		memory.Config(memory.NodeQuota(), uint(value), []int{s.Servicers(), s.PlusServicers()})
 		tenant.Config(memory.Quota())
 		return nil
 	},
-	USECBO: func(s *Server, o interface{}) errors.Error {
+	USECBO: func(s *Server, o any) errors.Error {
 		value, _ := o.(bool)
 		s.SetUseCBO(value)
 		return nil
 	},
-	TXTIMEOUT: func(s *Server, o interface{}) errors.Error {
+	TXTIMEOUT: func(s *Server, o any) errors.Error {
 		s.SetTxTimeout(getDuration(o))
 		return nil
 	},
-	ATRCOLLECTION: func(s *Server, o interface{}) errors.Error {
+	ATRCOLLECTION: func(s *Server, o any) errors.Error {
 		if value, ok := o.(string); ok {
 			s.SetAtrCollection(value)
 		}
 		return nil
 	},
-	NUMATRS: func(s *Server, o interface{}) errors.Error {
+	NUMATRS: func(s *Server, o any) errors.Error {
 		s.SetNumAtrs(int(getNumber(o)))
 		return nil
 	},
-	CLEANUPWINDOW: func(s *Server, o interface{}) errors.Error {
+	CLEANUPWINDOW: func(s *Server, o any) errors.Error {
 		datastore.GetTransactionSettings().SetCleanupWindow(getDuration(o))
 		return nil
 	},
-	CLEANUPCLIENTATTEMPTS: func(s *Server, o interface{}) errors.Error {
+	CLEANUPCLIENTATTEMPTS: func(s *Server, o any) errors.Error {
 		if value, ok := o.(bool); ok {
 			datastore.GetTransactionSettings().SetCleanupClientAttempts(value)
 		}
 		return nil
 	},
-	CLEANUPLOSTATTEMPTS: func(s *Server, o interface{}) errors.Error {
+	CLEANUPLOSTATTEMPTS: func(s *Server, o any) errors.Error {
 		if value, ok := o.(bool); ok {
 			datastore.GetTransactionSettings().SetCleanupLostAttempts(value)
 		}
 		return nil
 	},
-	GCPERCENT: func(s *Server, o interface{}) errors.Error {
+	GCPERCENT: func(s *Server, o any) errors.Error {
 		if err := s.SetGCPercent(int(getNumber(o))); err != nil {
 			return errors.NewServiceErrorBadValue(err, "settings")
 		}
 		return nil
 	},
-	REQUESTERRORLIMIT: func(s *Server, o interface{}) errors.Error {
+	REQUESTERRORLIMIT: func(s *Server, o any) errors.Error {
 		if err := s.SetRequestErrorLimit(int(getNumber(o))); err != nil {
 			return errors.NewServiceErrorBadValue(err, "settings")
 		}
 		return nil
 	},
-	DURATIONSTYLE: func(s *Server, o interface{}) errors.Error {
+	DURATIONSTYLE: func(s *Server, o any) errors.Error {
 		var ok bool
 		var str string
 		var style util.DurationStyle
@@ -268,19 +268,19 @@ var _SETTERS = map[string]Setter{
 	                   s.SettingsCallback()("enforce_limits", o)
 	                   return nil
 	*/
-	QUERY_TMP_DIR: func(s *Server, o interface{}) errors.Error {
+	QUERY_TMP_DIR: func(s *Server, o any) errors.Error {
 		if err := util.SetTempDir(o.(string)); err != nil {
 			return errors.NewServiceErrorBadValue(err, "settings")
 		}
 		return nil
 	},
-	QUERY_TMP_LIMIT: func(s *Server, o interface{}) errors.Error {
+	QUERY_TMP_LIMIT: func(s *Server, o any) errors.Error {
 		if err := util.SetTempQuota(int64(getNumber(o)) * util.MiB); err != nil {
 			return errors.NewServiceErrorBadValue(err, "settings")
 		}
 		return nil
 	},
-	USEREPLICA: func(s *Server, o interface{}) errors.Error {
+	USEREPLICA: func(s *Server, o any) errors.Error {
 		ur, ok := o.(string)
 
 		if ok {
@@ -293,7 +293,7 @@ var _SETTERS = map[string]Setter{
 
 		return nil
 	},
-	NUM_CPUS: func(s *Server, o interface{}) errors.Error {
+	NUM_CPUS: func(s *Server, o any) errors.Error {
 		logging.Infoa(func() string {
 			return fmt.Sprintf("%s updated to %d.  Change will take place on restart.", NUM_CPUS, int(getNumber(o)))
 		})
@@ -301,7 +301,7 @@ var _SETTERS = map[string]Setter{
 	},
 }
 
-func getNumber(o interface{}) float64 {
+func getNumber(o any) float64 {
 	switch o := o.(type) {
 	case int64:
 		return float64(o)
@@ -311,7 +311,7 @@ func getNumber(o interface{}) float64 {
 	return -1
 }
 
-func getHexNumber(o interface{}) int64 {
+func getHexNumber(o any) int64 {
 	switch o := o.(type) {
 	case int64:
 		return o
@@ -325,7 +325,7 @@ func getHexNumber(o interface{}) int64 {
 	return -1
 }
 
-func getDuration(o interface{}) time.Duration {
+func getDuration(o any) time.Duration {
 	switch o := o.(type) {
 	case string:
 		if d, e := util.ParseDurationStyle(o, util.DEFAULT); e == nil {
@@ -335,11 +335,11 @@ func getDuration(o interface{}) time.Duration {
 	return 0
 }
 
-func setCompleted(s *Server, o interface{}) errors.Error {
+func setCompleted(s *Server, o any) errors.Error {
 	var res errors.Error
 	var tag string
 
-	object := o.(map[string]interface{})
+	object := o.(map[string]any)
 	if tagVal, ok := object["tag"]; ok {
 		tag, ok = tagVal.(string)
 		if !ok {
@@ -379,8 +379,8 @@ func setCompleted(s *Server, o interface{}) errors.Error {
 
 var reportAllInitially = true
 
-func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.Error) {
-	prev := make(map[string]interface{})
+func ProcessSettings(settings map[string]any, srvr *Server) (err errors.Error) {
+	prev := make(map[string]any)
 	prev = FillSettings(prev, srvr)
 
 	for setting, value := range settings {
@@ -427,7 +427,7 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 		}
 	}
 
-	current := make(map[string]interface{})
+	current := make(map[string]any)
 	current = FillSettings(current, srvr)
 	reportChangedValues(prev, current, reportAllInitially)
 	reportAllInitially = false
@@ -435,10 +435,10 @@ func ProcessSettings(settings map[string]interface{}, srvr *Server) (err errors.
 	return err
 }
 
-func compare(a, b interface{}) bool {
+func compare(a, b any) bool {
 	switch av := a.(type) {
-	case map[string]interface{}:
-		if bv, ok := b.(map[string]interface{}); ok {
+	case map[string]any:
+		if bv, ok := b.(map[string]any); ok {
 			if len(av) != len(bv) {
 				return false
 			}
@@ -451,8 +451,8 @@ func compare(a, b interface{}) bool {
 			return true
 		}
 		return false
-	case []interface{}:
-		if bv, ok := b.([]interface{}); ok {
+	case []any:
+		if bv, ok := b.([]any); ok {
 			if len(av) != len(bv) {
 				return false
 			}
@@ -464,15 +464,15 @@ func compare(a, b interface{}) bool {
 			return true
 		}
 		return false
-	case interface{ Equals(interface{}) bool }:
+	case interface{ Equals(any) bool }:
 		return av.Equals(b)
 	default:
 		return a == b
 	}
 }
 
-func reportChangedValues(prev map[string]interface{}, current map[string]interface{}, all bool) {
-	changed := make([]interface{}, 0, len(current))
+func reportChangedValues(prev map[string]any, current map[string]any, all bool) {
+	changed := make([]any, 0, len(current))
 
 	names := make([]string, 0, len(current))
 	for setting, _ := range current {
@@ -486,18 +486,18 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 		same := false
 		if ok && reflect.TypeOf(v) == reflect.TypeOf(p) {
 			switch vt := v.(type) {
-			case map[string]interface{}:
-				pt := p.(map[string]interface{})
+			case map[string]any:
+				pt := p.(map[string]any)
 				same = compare(vt, pt)
-			case []interface{}:
-				pt := p.([]interface{})
+			case []any:
+				pt := p.([]any)
 				if len(vt) == len(pt) {
 					same = true
 					for i := 0; i < len(vt) && same == true; i++ {
 						if reflect.TypeOf(vt[i]) == reflect.TypeOf(pt[i]) {
 							switch vtt := vt[i].(type) {
-							case map[string]interface{}:
-								ptt := pt[i].(map[string]interface{})
+							case map[string]any:
+								ptt := pt[i].(map[string]any)
 								same = compare(vtt, ptt)
 							default:
 								same = vt[i] == pt[i]
@@ -513,11 +513,11 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 		}
 		if !same || all {
 			changed = append(changed, k)
-			changeRecord := make(map[string]interface{})
+			changeRecord := make(map[string]any)
 			changeRecord["from"] = p
 			changeRecord["to"] = v
 			changed = append(changed, changeRecord)
-			if _, ok := v.(map[string]interface{}); !ok {
+			if _, ok := v.(map[string]any); !ok {
 				var extra string
 				// log what features have changed in the new n1ql-feat-ctrl bitset
 				if k == N1QLFEATCTRL {
@@ -556,7 +556,7 @@ func reportChangedValues(prev map[string]interface{}, current map[string]interfa
 	}
 }
 
-func FillSettings(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+func FillSettings(settings map[string]any, srvr *Server) map[string]any {
 	settings[CPUPROFILE] = srvr.CpuProfile()
 	settings[MEMPROFILE] = srvr.MemProfile()
 	settings[SERVICERS] = srvr.Servicers()
@@ -609,10 +609,10 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 	// Convert value.Value - type OBJECT to map[string]interface{}
 	// Range through the config changes and put together 2 lists.
 	// List 1 : Indexer settings
-	var idxrSettings = map[string]interface{}{}
+	var idxrSettings = map[string]any{}
 
 	// List 2 : Query settings
-	var querySettings = map[string]interface{}{}
+	var querySettings = map[string]any{}
 
 	configValues := cfg.Fields()
 	for key, val := range configValues {
@@ -630,7 +630,7 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 				// Create a new map just for comparison between new and existing values for this parameter
 				// This new map excludes the allowed and disallowed URL object fields
 				// this is because the value package cannot handle url.Url object type
-				serverAllowList := make(map[string]interface{}, len(srvr.GetAllowlist()))
+				serverAllowList := make(map[string]any, len(srvr.GetAllowlist()))
 				for k, v := range srvr.GetAllowlist() {
 					if k == "allowed_transformed_urls" || k == "disallowed_transformed_urls" {
 						continue
@@ -642,7 +642,7 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 				nal := value.NewValue(val)
 
 				if !al.Equals(nal).Truth() {
-					srvr.SetAllowlist(val.(map[string]interface{}))
+					srvr.SetAllowlist(val.(map[string]any))
 					logging.Infof("New Value for curl allowed list <ud>%v</ud>", val)
 				}
 			} else {
@@ -683,7 +683,7 @@ func SetParamValuesForAll(cfg queryMetakv.Config, srvr *Server) {
 // FTS MetakvNotifier notifies the FTS client about any metakv changes it subscribed for.
 
 func N1ftyMetakvNotifier(kve metakv.KVEntry) error {
-	configs := map[string]interface{}{kve.Path: kve.Value}
+	configs := map[string]any{kve.Path: kve.Value}
 	idxConfig, err := ftsclient.GetConfig()
 	if err != nil {
 		logging.Errorf(" Cannot get n1fty index config :: %v", err.Error())

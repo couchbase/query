@@ -23,8 +23,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-type Manager interface {
-}
+type Manager any
 
 type ServiceMgr struct {
 	sync.Mutex
@@ -238,7 +237,7 @@ func (m *ServiceMgr) monitorShutdown(changeID string, host string, eject service
 		var err errors.Error
 		var code errors.ErrorCode
 		logging.Debugf("ServiceMgr::monitorShutdown: %v(%v[%v]) - polling", changeID, eject, host)
-		distributed.RemoteAccess().GetRemoteDoc(host, "", "shutdown", "GET", func(doc map[string]interface{}) {
+		distributed.RemoteAccess().GetRemoteDoc(host, "", "shutdown", "GET", func(doc map[string]any) {
 			if i, ok := doc["code"]; ok {
 				if c, ok := i.(float64); ok {
 					code = errors.ErrorCode(c)

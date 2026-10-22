@@ -534,7 +534,7 @@ func (this *httpRequest) writeNaturalTokens(prefix, indent string) bool {
 		this.writeNaturalTokensField("chatTokens", this.FmtNaturalChatTokens(), prefix)
 }
 
-func (this *httpRequest) writeNaturalTokensField(name string, tokens map[string]interface{}, prefix string) bool {
+func (this *httpRequest) writeNaturalTokensField(name string, tokens map[string]any, prefix string) bool {
 	if tokens == nil {
 		return true
 	}
@@ -552,7 +552,7 @@ func (this *httpRequest) writeNaturalTokensXML(prefix, indent string) bool {
 		this.writeNaturalTokensFieldXML("chatTokens", this.FmtNaturalChatTokens(), prefix)
 }
 
-func (this *httpRequest) writeNaturalTokensFieldXML(name string, tokens map[string]interface{}, prefix string) bool {
+func (this *httpRequest) writeNaturalTokensFieldXML(name string, tokens map[string]any, prefix string) bool {
 	if tokens == nil {
 		return true
 	}
@@ -888,7 +888,7 @@ func (this *httpRequest) writeError(err errors.Error, first bool, prefix, indent
 		return false
 	}
 
-	m := map[string]interface{}{
+	m := map[string]any{
 		"code": err.Code(),
 		"msg":  err.Error(),
 	}
@@ -1522,7 +1522,7 @@ func (this *httpRequest) writeServerlessXML(metrics bool, prefix string, indent 
 		this.writer.truncate(beforeUnits)
 		return false
 	}
-	mi := make(map[string]interface{})
+	mi := make(map[string]any)
 	err = json.Unmarshal(b, &mi)
 	if err != nil {
 		this.writer.truncate(beforeUnits)
@@ -1553,7 +1553,7 @@ func (this *httpRequest) writeProfile(profile server.Profile, prefix, indent str
 	var newPrefix string
 	var e []byte
 	var err error
-	var analysis []interface{}
+	var analysis []any
 	var timings execution.Operator
 
 	needComma := false
@@ -1813,7 +1813,7 @@ func (this *httpRequest) Loga(l logging.Level, f func() string) {
 	this.logger.Loga(l, f)
 }
 
-func (this *httpRequest) Logf(l logging.Level, f string, args ...interface{}) {
+func (this *httpRequest) Logf(l logging.Level, f string, args ...any) {
 	if this.logger == nil || this.logger.Level() < l {
 		return
 	}
@@ -2025,7 +2025,7 @@ func (this *bufferedWriter) writeBytes(s []byte) bool {
 	return err == nil
 }
 
-func (this *bufferedWriter) printf(f string, args ...interface{}) bool {
+func (this *bufferedWriter) printf(f string, args ...any) bool {
 	if this.closed || this.buffer == nil {
 		return false
 	}

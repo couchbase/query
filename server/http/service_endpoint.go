@@ -73,7 +73,7 @@ var _ENDPOINT *HttpEndpoint
 var requestPool util.FastPool
 
 func init() {
-	util.NewFastPool(&requestPool, func() interface{} {
+	util.NewFastPool(&requestPool, func() any {
 		r := &httpRequest{}
 		return r
 	})
@@ -117,7 +117,7 @@ func (this *HttpEndpoint) Router() router.Router {
 	return this.router
 }
 
-func (this *HttpEndpoint) SettingsCallback(f string, v interface{}) {
+func (this *HttpEndpoint) SettingsCallback(f string, v any) {
 	switch f {
 	case server.KEEPALIVELENGTH:
 		val, ok := v.(int)
@@ -714,10 +714,10 @@ func (this *activeHttpRequests) Put(req server.Request) errors.Error {
 }
 
 func (this *activeHttpRequests) Get(id string, f func(server.Request)) errors.Error {
-	var dummyF func(interface{}) = nil
+	var dummyF func(any) = nil
 
 	if f != nil {
-		dummyF = func(e interface{}) {
+		dummyF = func(e any) {
 			r := e.(*httpRequest)
 			f(r)
 		}
@@ -727,7 +727,7 @@ func (this *activeHttpRequests) Get(id string, f func(server.Request)) errors.Er
 }
 
 func (this *activeHttpRequests) Delete(id string, stop bool, f func(r server.Request) bool) bool {
-	this.cache.DeleteWithCheck(id, func(e interface{}) bool {
+	this.cache.DeleteWithCheck(id, func(e any) bool {
 		r := e.(server.Request)
 		if f != nil && !f(r) {
 			return false
@@ -747,7 +747,7 @@ func (this *activeHttpRequests) Count() (int, errors.Error) {
 }
 
 func (this *activeHttpRequests) ForEach(nonBlocking func(string, server.Request) bool, blocking func() bool) {
-	dummyF := func(id string, r interface{}) bool {
+	dummyF := func(id string, r any) bool {
 		return nonBlocking(id, r.(*httpRequest))
 	}
 	this.cache.ForEach(dummyF, blocking)

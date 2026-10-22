@@ -129,8 +129,8 @@ func (c *statsCollector) runCollectStats() {
 	unhealthyCount := 0
 	averageMemoryUsage := newRunningAverage(_SAMPLES_2_HOURS)
 
-	oldStats := make(map[string]interface{}, 6)
-	newStats := make(map[string]interface{}, 6)
+	oldStats := make(map[string]any, 6)
+	newStats := make(map[string]any, 6)
 	c.server.AccountingStore().ExternalVitals(oldStats)
 	tickerFunc := func() {
 		if c.server.IsHealthy() {
@@ -161,7 +161,7 @@ func (c *statsCollector) runCollectStats() {
 			delete(newStats, "node.memory.usage")
 		}
 		if tenant.IsServerless() {
-			tenants := make(map[string]interface{})
+			tenants := make(map[string]any)
 			tenant.Foreach(func(n string, m memory.MemoryManager) {
 				tenants[n] = m.AllocatedMemory()
 			})
@@ -169,14 +169,14 @@ func (c *statsCollector) runCollectStats() {
 		}
 
 		// get per bucket stats
-		var bstats map[string]interface{}
+		var bstats map[string]any
 		store, ok := datastore.GetDatastore().(datastore.Datastore2)
 		if ok {
 			store.ForeachBucket(func(b datastore.ExtendedBucket) {
 				stats := b.GetIOStats(false, false, false, tenant.IsServerless(), true)
 				if len(stats) != 0 {
 					if bstats == nil {
-						bstats = make(map[string]interface{})
+						bstats = make(map[string]any)
 					}
 					bstats[b.Name()] = stats
 				}

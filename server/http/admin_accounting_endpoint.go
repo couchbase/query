@@ -280,7 +280,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 }
 
 func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	switch req.Method {
 	case "GET":
@@ -291,7 +291,7 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 		acctStore := endpoint.server.AccountingStore()
 		reg := acctStore.MetricRegistry()
 		af.EventTypeId = audit.API_DO_NOT_AUDIT
-		stats := make(map[string]interface{})
+		stats := make(map[string]any)
 		for name, metric := range reg.Counters() {
 			addMetricData(name, stats, getMetricData(metric, true))
 		}
@@ -317,7 +317,7 @@ func doStats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 	}
 }
 
-func addMetricData(name string, stats map[string]interface{}, metrics map[string]interface{}) {
+func addMetricData(name string, stats map[string]any, metrics map[string]any) {
 	for metric_type, metric_value := range metrics {
 
 		// MB-20521 avoid buffers that are reused
@@ -326,7 +326,7 @@ func addMetricData(name string, stats map[string]interface{}, metrics map[string
 }
 
 func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "stat")
 	acctStore := endpoint.server.AccountingStore()
@@ -366,7 +366,7 @@ func doStat(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 }
 
 func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_QUERY_STATS), req, nil)
@@ -419,8 +419,8 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		})
 
 		if nBuckets > 0 {
-			bucketStats := make(map[string]map[string]interface{}, nBuckets)
-			var referenceBucketStats map[string]interface{}
+			bucketStats := make(map[string]map[string]any, nBuckets)
+			var referenceBucketStats map[string]any
 
 			store.ForeachBucket(func(b datastore.ExtendedBucket) {
 				stats := b.GetIOStats(false, true, true, tenant.IsServerless(), false)
@@ -456,7 +456,7 @@ func doPrometheusLow(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 }
 
 func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_QUERY_STATS), req, nil)
@@ -469,19 +469,19 @@ func doEmpty(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 }
 
 func doNotFound(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	accounting.UpdateCounter(accounting.INVALID_REQUESTS)
 	return nil, nil
 }
 
 func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	rv interface{}, err errors.Error) {
+	rv any, err errors.Error) {
 
 	defer func() {
 		e := recover()
 		if e != nil {
-			rv = map[string]interface{}{"failed": "Changing structure forced command termination"}
+			rv = map[string]any{"failed": "Changing structure forced command termination"}
 			err = errors.NewServiceErrorBadValue(go_errors.New(fmt.Sprintf("%v", e)), "vitals")
 		}
 	}()
@@ -502,7 +502,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 			store := datastore.GetDatastore()
 			if store != nil {
 				if ds2, ok := store.(datastore.Datastore2); ok {
-					debug := make(map[string]interface{})
+					debug := make(map[string]any)
 					ds2.ForeachBucket(func(b datastore.ExtendedBucket) {
 						debug[b.Name()] = b
 					})
@@ -523,7 +523,7 @@ func doVitals(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 func CaptureVitals(endpoint *HttpEndpoint, w io.Writer) error {
 	acctStore := endpoint.server.AccountingStore()
 	var err error
-	var v map[string]interface{}
+	var v map[string]any
 	v, err = acctStore.Vitals(false, util.SECONDS)
 	if err != nil {
 		return err
@@ -621,7 +621,7 @@ func doRedact(req *http.Request) bool {
 }
 
 func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "name")
 
@@ -685,7 +685,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		profiling := req.Method == "POST"
-		var res interface{}
+		var res any
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
 			// for serverless user access, we treat entries not owned by the user as not existent
 			userName, tenantName, err1 := endpoint.getImpersonateBucket(req)
@@ -712,8 +712,8 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 	}
 }
 
-func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool, durStyle util.DurationStyle) interface{} {
-	itemMap := map[string]interface{}{
+func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool, durStyle util.DurationStyle) any {
+	itemMap := map[string]any{
 		"name":            entry.Prepared.Name(),
 		"uses":            entry.Uses,
 		"indexApiVersion": entry.Prepared.IndexApiVersion(),
@@ -755,7 +755,7 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		itemMap["verificationErrorCount"] = entry.Prepared.ErrorCount()
 	}
 	if ksRefs := entry.Prepared.GetKeyspaceReferences(); len(ksRefs) > 0 {
-		keyspaceRefs := make([]interface{}, len(ksRefs))
+		keyspaceRefs := make([]any, len(ksRefs))
 		for i := range ksRefs {
 			keyspaceRefs[i] = ksRefs[i]
 		}
@@ -775,7 +775,7 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 		}
 		if profiling {
 			// meta().plan now contains a "plan" object and a "~subqueries" object
-			metaPlan := make(map[string]interface{}, 2)
+			metaPlan := make(map[string]any, 2)
 			metaPlan["plan"] = entry.Prepared.Operator
 			sqPlans := entry.Prepared.GetSubqueryPlansEntry()
 			if len(sqPlans) > 0 {
@@ -828,7 +828,7 @@ func preparedWorkHorse(entry *prepareds.CacheEntry, profiling bool, redact bool,
 }
 
 func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	switch req.Method {
@@ -839,7 +839,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		}
 
 		numPrepareds := prepareds.CountPrepareds()
-		data := make([]interface{}, 0, numPrepareds)
+		data := make([]any, 0, numPrepareds)
 		profiling := req.Method == "POST"
 
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
@@ -859,7 +859,7 @@ func doPrepareds(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 }
 
 func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "name")
 
@@ -885,11 +885,11 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var res interface{}
+		var res any
 
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		functions.FunctionDo(name, func(entry *functions.FunctionEntry) {
-			itemMap := map[string]interface{}{
+			itemMap := map[string]any{
 				"uses": entry.Uses,
 			}
 			entry.Signature(itemMap)
@@ -912,7 +912,7 @@ func doFunction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_FUNCTIONS
 	switch req.Method {
@@ -923,7 +923,7 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 		}
 
 		numFunctions := functions.CountFunctions()
-		data := make([]map[string]interface{}, numFunctions)
+		data := make([]map[string]any, numFunctions)
 		i := 0
 
 		snapshot := func(name string, d *functions.FunctionEntry) bool {
@@ -932,7 +932,7 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 			if i >= numFunctions {
 				return false
 			}
-			data[i] = map[string]interface{}{}
+			data[i] = map[string]any{}
 			data[i]["uses"] = d.Uses
 			d.Signature(data[i])
 			d.Body(data[i])
@@ -952,7 +952,7 @@ func doFunctions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reques
 }
 
 func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "name")
 
@@ -979,12 +979,12 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var res interface{}
+		var res any
 
-		dictionary.DictCacheEntryDo(name, func(d interface{}) {
+		dictionary.DictCacheEntryDo(name, func(d any) {
 			entry := d.(dictionary.DictCacheEntry)
 
-			itemMap := map[string]interface{}{}
+			itemMap := map[string]any{}
 			entry.Target(itemMap)
 			entry.Dictionary(itemMap)
 			res = itemMap
@@ -996,7 +996,7 @@ func doDictionaryEntry(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 }
 
 func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_DICTIONARY
 	switch req.Method {
@@ -1007,16 +1007,16 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 		}
 
 		numKeyspaces := dictionary.CountDictCacheEntries()
-		data := make([]map[string]interface{}, numKeyspaces)
+		data := make([]map[string]any, numKeyspaces)
 		i := 0
 
-		snapshot := func(name string, d interface{}) bool {
+		snapshot := func(name string, d any) bool {
 
 			// FIXME quick hack to avoid overruns
 			if i >= numKeyspaces {
 				return false
 			}
-			data[i] = map[string]interface{}{}
+			data[i] = map[string]any{}
 			entry := d.(dictionary.DictCacheEntry)
 			entry.Target(data[i])
 			entry.Dictionary(data[i])
@@ -1033,7 +1033,7 @@ func doDictionary(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 }
 
 func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "name")
 
@@ -1063,11 +1063,11 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var res interface{}
+		var res any
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 
 		scheduler.TaskDo(name, func(entry *scheduler.TaskEntry) {
-			itemMap := map[string]interface{}{
+			itemMap := map[string]any{
 				"class":        entry.Class,
 				"subClass":     entry.SubClass,
 				"name":         entry.Name,
@@ -1081,7 +1081,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 				itemMap["results"] = entry.Results
 			}
 			if entry.Errors != nil {
-				errors := make([]interface{}, 0, len(entry.Errors))
+				errors := make([]any, 0, len(entry.Errors))
 				for _, err := range entry.Errors {
 					if err != nil {
 						errors = append(errors, err.Object())
@@ -1107,7 +1107,7 @@ func doTask(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 }
 
 func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_TASKS
 	switch req.Method {
@@ -1118,7 +1118,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 		}
 
 		numTasks := scheduler.CountTasks()
-		data := make([]map[string]interface{}, numTasks)
+		data := make([]map[string]any, numTasks)
 		i := 0
 
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
@@ -1128,7 +1128,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 			if i >= numTasks {
 				return false
 			}
-			data[i] = map[string]interface{}{}
+			data[i] = map[string]any{}
 			data[i]["class"] = d.Class
 			data[i]["subClass"] = d.SubClass
 			data[i]["name"] = d.Name
@@ -1139,7 +1139,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 				data[i]["results"] = d.Results
 			}
 			if d.Errors != nil {
-				errors := make([]interface{}, 0, len(d.Errors))
+				errors := make([]any, 0, len(d.Errors))
 				for _, err := range d.Errors {
 					if err != nil {
 						errors = append(errors, err.Object())
@@ -1171,7 +1171,7 @@ func doTasks(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 }
 
 func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_BACKUP
 	switch req.Method {
@@ -1185,7 +1185,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if err1 != nil {
 			return nil, errors.NewStorageAccessError("backup", err1)
 		}
-		data := make([]interface{}, 0, numFunctions)
+		data := make([]any, 0, numFunctions)
 
 		// this check doesn't force waiting if the migration is active
 		version := dictionary.SupportedBackupVersion()
@@ -1213,7 +1213,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		awr := server.AwrCB.Config()
 
 		// Backup global AUS settings
-		var ausSettings map[string]interface{}
+		var ausSettings map[string]any
 		if aus.Initialized() {
 			var err errors.Error
 			ausSettings, err = aus.FetchAus()
@@ -1227,7 +1227,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		// Backup plan stability settings
-		var planStabilitySetting map[string]interface{}
+		var planStabilitySetting map[string]any
 		if settings.PlanStabilityAvailable() {
 			planStabilitySetting, err = settings.GetPlanStabilitySetting()
 			if err != nil {
@@ -1286,7 +1286,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		iState.Release()
 
 		if awr != nil { // non-nil if a suitable backup image version
-			var m map[string]interface{}
+			var m map[string]any
 			err1 := json.Unmarshal(awr, &m)
 			if err1 != nil {
 				return nil, errors.NewServiceErrorBadValue(err1, "restore AWR")
@@ -1305,7 +1305,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				logging.Errorf("AUS: Cannot restore global settings as the feature is not supported or not initialized." +
 					" The feature is only available on Enterprise Edition clusters migrated to a supported version.")
 			} else {
-				var mAus map[string]interface{}
+				var mAus map[string]any
 				err2 := json.Unmarshal(ausGlobal, &mAus)
 				if err2 != nil {
 					return nil, errors.NewServiceErrorBadValue(err2, "restore AUS")
@@ -1324,7 +1324,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				logging.Errorf("Plan Stability: Cannot restore global settings as the feature is not supported." +
 					" The feature is only available on Enterprise Edition clusters on a supported version.")
 			} else {
-				var psSetting map[string]interface{}
+				var psSetting map[string]any
 				err2 := json.Unmarshal(planStabilitySetting, &psSetting)
 				if err2 != nil {
 					return nil, errors.NewServiceErrorBadValue(err2, "restore Plan Stability Settings")
@@ -1344,7 +1344,7 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 }
 
 func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, bucket := router.RequestValue(req, "bucket")
 	af.EventTypeId = audit.API_ADMIN_BACKUP
@@ -1369,7 +1369,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		if version == datastore.BACKUP_NOT_POSSIBLE {
 			return nil, errors.NewBackupNotPossible()
 		}
-		fns := make([]interface{}, 0)
+		fns := make([]any, 0)
 		// do not archive functions if the metadata is already stored in KV
 		snapshot := func(name string, v value.Value) error {
 			path := algebra.ParsePath(name)
@@ -1400,7 +1400,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 
 		keys := make([]string, 1)
 		res := make(map[string]value.AnnotatedValue, 1)
-		cbo := make([]interface{}, 0)
+		cbo := make([]any, 0)
 		err = datastore.ScanSystemCollection(bucket, "cbo::", nil,
 			func(key string, systemCollection datastore.Keyspace) errors.Error {
 				// Exclude index records as they're bound to the index ID which will differ when restored. Furthermore, indices
@@ -1456,7 +1456,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 					}
 					b, err := av.MarshalJSON()
 					if err == nil {
-						d := make(map[string]interface{})
+						d := make(map[string]any)
 						d["key"] = key
 						sn := snappy.Encode(nil, b)
 						b64 := base64.StdEncoding.EncodeToString(sn)
@@ -1475,7 +1475,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		// Backup keyspace level AUS settings
-		var ausSettings []interface{}
+		var ausSettings []any
 		if aus.Initialized() {
 			var err errors.Error
 			ausSettings, err = aus.BackupAusSettings("default", bucket, func(pathParts []string) bool {
@@ -1492,9 +1492,9 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		// Backup Plan Stability entries
-		var planStability []interface{}
+		var planStability []any
 		if settings.PlanStabilityAvailable() && bucket != "" && bucket == dictionary.QUERY_METADATA_BUCKET {
-			planStability = make([]interface{}, 0)
+			planStability = make([]any, 0)
 			err = datastore.ScanSystemCollection(bucket, "ppn::", nil,
 				func(key string, systemCollection datastore.Keyspace) errors.Error {
 					keys[0] = key
@@ -1509,7 +1509,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 							logging.Errorf("Plan Stability Backup: missing keyspaceReferences for key %s", key)
 							return nil
 						}
-						ksrefs, ok := val.Actual().([]interface{})
+						ksrefs, ok := val.Actual().([]any)
 						if !ok {
 							logging.Errorf("Plan Stability Backup: keyspaceReferences for key %s is not an array", key)
 							return nil
@@ -1551,7 +1551,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 						}
 						b, err := av.MarshalJSON()
 						if err == nil {
-							d := make(map[string]interface{})
+							d := make(map[string]any)
 							d["key"] = key
 							sn := snappy.Encode(nil, b)
 							b64 := base64.StdEncoding.EncodeToString(sn)
@@ -1842,10 +1842,10 @@ const _PLAN_STABILITY_KEY = "plan_stability"
 const _PLAN_STABILITY_SETTINGS_KEY = "plan_stability_settings"
 const _KNOWLEDGE_KEY = "knowledge" // Keyspace level knowledge entries (see natural/knowledge)
 
-func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}, aus interface{},
-	ausSettings interface{}, planStabilitySetting interface{}, planStability interface{},
-	knowledgeEntries interface{}) interface{} {
-	data := make(map[string]interface{}, 4)
+func makeBackupHeader(v any, s any, c any, a any, aus any,
+	ausSettings any, planStabilitySetting any, planStability any,
+	knowledgeEntries any) any {
+	data := make(map[string]any, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION
 	data[_UDF_KEY] = v
@@ -1860,9 +1860,9 @@ func makeBackupHeader(v interface{}, s interface{}, c interface{}, a interface{}
 	return data
 }
 
-func makeBackupHeaderV3(v interface{}, s interface{}, c interface{}, a interface{}, aus interface{},
-	ausSettings interface{}) interface{} {
-	data := make(map[string]interface{}, 4)
+func makeBackupHeaderV3(v any, s any, c any, a any, aus any,
+	ausSettings any) any {
+	data := make(map[string]any, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION_3
 	data[_UDF_KEY] = v
@@ -1874,8 +1874,8 @@ func makeBackupHeaderV3(v interface{}, s interface{}, c interface{}, a interface
 	return data
 }
 
-func makeBackupHeaderV2(v interface{}, s interface{}, c interface{}) interface{} {
-	data := make(map[string]interface{}, 4)
+func makeBackupHeaderV2(v any, s any, c any) any {
+	data := make(map[string]any, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION_2
 	data[_UDF_KEY] = v
@@ -1884,8 +1884,8 @@ func makeBackupHeaderV2(v interface{}, s interface{}, c interface{}) interface{}
 	return data
 }
 
-func makeBackupHeaderV1(v interface{}) interface{} {
-	data := make(map[string]interface{}, 4)
+func makeBackupHeaderV1(v any) any {
+	data := make(map[string]any, 4)
 	data[_MAGIC_KEY] = _MAGIC
 	data[_VERSION_KEY] = _VERSION_1
 	data[_UDF_KEY] = v
@@ -2247,7 +2247,7 @@ func doFunctionRestore(v []byte, l int, b string, include, exclude matcher, rema
 }
 
 func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, txId := router.RequestValue(req, "txid")
 
@@ -2273,10 +2273,10 @@ func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Requ
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
 
-		var res interface{}
-		transactions.TransactionEntryDo(txId, func(d interface{}) {
+		var res any
+		transactions.TransactionEntryDo(txId, func(d any) {
 			entry := d.(*transactions.TranContext)
-			itemMap := map[string]interface{}{}
+			itemMap := map[string]any{}
 			entry.Content(itemMap, true)
 			res = itemMap
 		})
@@ -2287,7 +2287,7 @@ func doTransaction(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Requ
 }
 
 func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
-	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af *audit.ApiAuditFields) (any, errors.Error) {
 	af.EventTypeId = audit.API_ADMIN_TRANSACTIONS
 	switch req.Method {
 	case "GET":
@@ -2297,11 +2297,11 @@ func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		}
 
 		numTransactions := transactions.CountTransContext()
-		data := make([]map[string]interface{}, 0, numTransactions)
+		data := make([]map[string]any, 0, numTransactions)
 
-		snapshot := func(name string, d interface{}) bool {
+		snapshot := func(name string, d any) bool {
 			tranContext := d.(*transactions.TranContext)
-			entry := map[string]interface{}{}
+			entry := map[string]any{}
 			tranContext.Content(entry, false)
 			data = append(data, entry)
 			return true
@@ -2315,7 +2315,7 @@ func doTransactions(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 }
 
 func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, requestId := router.RequestValue(req, "request")
 
@@ -2367,9 +2367,9 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 }
 
 func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool, redact bool,
-	durStyle util.DurationStyle) interface{} {
+	durStyle util.DurationStyle) any {
 
-	var res interface{}
+	var res any
 
 	_ = endpoint.actives.Get(requestId, func(request server.Request) {
 		if userName != "" {
@@ -2384,7 +2384,7 @@ func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName str
 }
 
 func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, profiling bool, redact bool,
-	durStyle util.DurationStyle) interface{} {
+	durStyle util.DurationStyle) any {
 
 	prof := false
 	ctrl := false
@@ -2406,7 +2406,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 }
 
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_PREPAREDS
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
@@ -2419,7 +2419,7 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 		return nil, err
 	}
 
-	requests := make([]interface{}, 0, numRequests)
+	requests := make([]any, 0, numRequests)
 	profiling := req.Method == "POST"
 	durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 
@@ -2449,7 +2449,7 @@ func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
 			r := activeRequestWorkHorse(endpoint, request, true, true, util.GetDurationStyle())
 			// Remove statement fields for sensitive statements
 			if sensitive {
-				if m, ok := r.(map[string]interface{}); ok {
+				if m, ok := r.(map[string]any); ok {
 					delete(m, "statement")
 					delete(m, "sanitized_statement")
 					delete(m, "preparedText")
@@ -2471,7 +2471,7 @@ func CaptureActiveRequests(endpoint *HttpEndpoint, w io.Writer) error {
 }
 
 func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, requestId := router.RequestValue(req, "request")
 
@@ -2520,9 +2520,9 @@ func doCompletedRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 }
 
 func processCompletedRequest(requestId string, userName string, profiling bool, redact bool,
-	durStyle util.DurationStyle) interface{} {
+	durStyle util.DurationStyle) any {
 
-	var res interface{}
+	var res any
 
 	server.RequestDo(requestId, func(request *server.RequestLogEntry) {
 		if userName != "" && userName != request.Users {
@@ -2534,7 +2534,7 @@ func processCompletedRequest(requestId string, userName string, profiling bool, 
 }
 
 func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_COMPLETED_REQUESTS
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests", auth.PRIV_SYSTEM_READ), req, af)
@@ -2543,7 +2543,7 @@ func doCompletedRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *htt
 	}
 
 	numRequests := server.RequestsCount()
-	requests := make([]interface{}, 0, numRequests)
+	requests := make([]any, 0, numRequests)
 	profiling := req.Method == "POST"
 
 	durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
@@ -2586,7 +2586,7 @@ func CaptureCompletedRequests(w io.Writer) error {
 }
 
 func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
@@ -2619,7 +2619,7 @@ func doPreparedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 }
 
 func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
@@ -2660,7 +2660,7 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 }
 
 func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests", auth.PRIV_SYSTEM_READ), req, af)
@@ -2695,7 +2695,7 @@ func doCompletedIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 }
 
 func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:functions_cache", auth.PRIV_SYSTEM_READ), req, af)
@@ -2706,7 +2706,7 @@ func doFunctionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 }
 
 func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:dictionary_cache", auth.PRIV_SYSTEM_READ), req, af)
@@ -2717,7 +2717,7 @@ func doDictionaryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.
 }
 
 func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:tasks", auth.PRIV_SYSTEM_READ), req, af)
@@ -2728,7 +2728,7 @@ func doTasksIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 }
 
 func doTransactionsIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
-	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af *audit.ApiAuditFields) (any, errors.Error) {
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:transactions", auth.PRIV_SYSTEM_READ), req, af)
 	if err != nil {
@@ -2753,8 +2753,8 @@ func isLocal(metric string) bool {
 	return localData[metric] != ""
 }
 
-func getLocalData(serv *server.Server, metric string) map[string]interface{} {
-	values := make(map[string]interface{})
+func getLocalData(serv *server.Server, metric string) map[string]any {
+	values := make(map[string]any)
 	switch metric {
 	case "load":
 		values["value"] = serv.Load()
@@ -2785,7 +2785,7 @@ func getLocalData(serv *server.Server, metric string) map[string]interface{} {
 	return values
 }
 
-func localValue(serv *server.Server, metric string) interface{} {
+func localValue(serv *server.Server, metric string) any {
 	switch metric {
 	case "load":
 		return serv.Load()
@@ -2818,8 +2818,8 @@ func localValue(serv *server.Server, metric string) interface{} {
 	return nil
 }
 
-func getMetricData(metric accounting.Metric, stats bool) map[string]interface{} {
-	values := make(map[string]interface{})
+func getMetricData(metric accounting.Metric, stats bool) map[string]any {
+	values := make(map[string]any)
 	switch metric := metric.(type) {
 	case accounting.Counter:
 		values["count"] = metric.Count()
@@ -2889,7 +2889,7 @@ func getMetricData(metric accounting.Metric, stats bool) map[string]interface{} 
 	return values
 }
 
-func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_GC
 	err, _ := ep.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_CLUSTER_ADMIN), req, af)
@@ -2899,7 +2899,7 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 
 	var before runtime.MemStats
 	var after runtime.MemStats
-	resp := make(map[string]interface{}, 3)
+	resp := make(map[string]any, 3)
 	switch req.Method {
 	case "GET":
 		runtime.ReadMemStats(&before)
@@ -2942,7 +2942,7 @@ func doForceGC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *a
 var earliest time.Time
 
 func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_FFDC
 	err, _ := ep.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_CLUSTER_ADMIN), req, af)
@@ -2953,7 +2953,7 @@ func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	logging.Warnf("Manual FFDC collection invoked.")
 	if ffdc.Capture(ffdc.Manual) {
 		ffdc.Reset(ffdc.Manual)
-		resp := make(map[string]interface{}, 2)
+		resp := make(map[string]any, 2)
 		resp["status"] = "FFDC invoked."
 		earliest = time.Now().Add(ffdc.FFDC_MIN_INTERVAL)
 		resp["next_earliest"] = earliest.Format(util.DEFAULT_FORMAT)
@@ -2968,7 +2968,7 @@ func doManualFFDC(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 	}
 }
 
-func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (interface{}, errors.Error) {
+func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_STREAM_LOG
 	err, _ := ep.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_SYSTEM_READ), req, af)
@@ -2999,7 +2999,7 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 		return nil, errors.NewAdminLogError(fmt.Errorf("Attempt to access a file outside of Couchbase log directory"))
 	}
 
-	adt := make(map[string]interface{}, 2)
+	adt := make(map[string]any, 2)
 	adt["file"] = fileName
 	adt["stream"] = stream
 	af.Values = adt
@@ -3085,7 +3085,7 @@ func doLog(ep *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit
 }
 
 func doSequenceIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_SEQUENCES
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:sequences", auth.PRIV_SYSTEM_READ), req, af)
@@ -3096,7 +3096,7 @@ func doSequenceIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 }
 
 func doSequence(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "name")
 	af.EventTypeId = audit.API_ADMIN_SEQUENCES
@@ -3107,7 +3107,7 @@ func doSequence(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if err != nil {
 			return nil, err
 		}
-		var res interface{}
+		var res any
 		av, err := sequences.FetchSequence(name, true)
 		if av != nil {
 			res = av.Actual()
@@ -3119,7 +3119,7 @@ func doSequence(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func doMigration(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_MIGRATION
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_ADMIN), req, af)
@@ -3216,7 +3216,7 @@ func doSequenceRestore(v []byte, b string, include, exclude matcher, remap remap
 	}
 	if filterEval(path, include, exclude, false) {
 		remap.remap(b, path, false)
-		m := make(map[string]interface{}, 2)
+		m := make(map[string]any, 2)
 		m[sequences.OPT_CACHE] = cache
 		m[sequences.OPT_CYCLE] = cycle
 		m[sequences.OPT_START] = start
@@ -3447,7 +3447,7 @@ func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, rem
 		return nil
 	}
 
-	doc := make(map[string]interface{}, 3)
+	doc := make(map[string]any, 3)
 
 	if aEnable != nil {
 		enable, parseErr := strconv.ParseBool(strings.Trim(string(aEnable), "\""))
@@ -3520,7 +3520,7 @@ func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap 
 		logging.Errorf("Plan Stability Restore: missing keyspaceReferences for key %s", key)
 		return errors.NewServiceErrorBadValue(nil, "plan stability restore: missing keyspaceReferences")
 	}
-	ksrefs, ok := ksVal.Actual().([]interface{})
+	ksrefs, ok := ksVal.Actual().([]any)
 	if !ok {
 		logging.Errorf("Plan Stability Restore: keyspacesReferences for key %s is not an array (%T)", key, ksVal)
 		return errors.NewServiceErrorBadValue(nil, "plan stability restore: invalid keyspaceReferences")
@@ -3637,7 +3637,7 @@ func doKnowledgeRestore(v []byte, index int, bucket string, include, exclude mat
 	}
 	remap.remap(bucket, parts, true)
 
-	var fields map[string]interface{}
+	var fields map[string]any
 	if uerr := json.Unmarshal(aKnowledge, &fields); uerr != nil {
 		return errors.NewServiceErrorBadValue(uerr,
 			fmt.Sprintf("knowledge restore: invalid knowledge value (identity: %s)", path))
@@ -3663,7 +3663,7 @@ func doKnowledgeRestore(v []byte, index int, bucket string, include, exclude mat
 }
 
 func doCompletedRequestHistory(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, requestId := router.RequestValue(req, "request")
 
@@ -3699,8 +3699,8 @@ func doCompletedRequestHistory(endpoint *HttpEndpoint, w http.ResponseWriter, re
 		if e != nil {
 			return nil, errors.NewServiceErrorBadValue(e, "history request id")
 		}
-		var rv interface{}
-		e = server.RequestsFileStreamRead(fileNum, recNum, 1, userName, func(m map[string]interface{}) bool {
+		var rv any
+		e = server.RequestsFileStreamRead(fileNum, recNum, 1, userName, func(m map[string]any) bool {
 			m["~file"] = fileNum
 			rv = m
 			return true
@@ -3715,7 +3715,7 @@ func doCompletedRequestHistory(endpoint *HttpEndpoint, w http.ResponseWriter, re
 }
 
 func doCompletedHistoryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:completed_requests_history", auth.PRIV_SYSTEM_READ),
@@ -3740,7 +3740,7 @@ func doCompletedHistoryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 	} else {
 		for i := 0; i < len(info); i += 2 {
 			n := 0
-			server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]interface{}) bool { n++; return true })
+			server.RequestsFileStreamRead(info[i], 0, 0, userName, func(m map[string]any) bool { n++; return true })
 			if n > 0 {
 				completed = append(completed, fmt.Sprintf("%d-%d", info[i], n))
 			}
@@ -3750,7 +3750,7 @@ func doCompletedHistoryIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req 
 }
 
 func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, chatId := router.RequestValue(req, "chatId")
 	af.EventTypeId = audit.API_ADMIN_NATURAL_CHATS
@@ -3821,7 +3821,7 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			return false, errors.NewServiceErrorBadValue(err, "unable to read request body")
 		}
 
-		var body map[string]interface{}
+		var body map[string]any
 		err = json.Unmarshal(b, &body)
 		if err != nil {
 			return false, errors.NewServiceErrorBadValue(err, "unable to parse request body as JSON")
@@ -3854,7 +3854,7 @@ func doNaturalChats(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 }
 
 func doNaturalChatIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
-	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af *audit.ApiAuditFields) (any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:natural_chats", auth.PRIV_SYSTEM_READ), req, af)
@@ -3874,7 +3874,7 @@ func doNaturalChatIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http
 }
 
 func doEncryption(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("", auth.PRIV_SECURITY_READ), req, af)
 	if err != nil {
 		return nil, err
@@ -3895,19 +3895,19 @@ func doEncryption(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Reque
 			return nil, errors.NewServiceErrorBadValue(err, "get in-use encryption keys")
 		}
 
-		rv := make(map[string]interface{}, len(allKeys))
+		rv := make(map[string]any, len(allKeys))
 		for datatype, keyIDs := range allKeys {
 			rv[datatype.String()] = keyIDs
 		}
 
-		return map[string]interface{}{"keys.in_use": rv}, nil
+		return map[string]any{"keys.in_use": rv}, nil
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
 func doCatalogs(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
-	af *audit.ApiAuditFields) (interface{}, errors.Error) {
+	af *audit.ApiAuditFields) (any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CATALOGS
 

@@ -343,12 +343,12 @@ func (this *systemRemoteHttp) GetRemoteKeys(nodes []string, endpoint string,
 // get a specified remote document from a remote node
 // Note - the remote "node" must be the node name
 func (this *systemRemoteHttp) GetRemoteDoc(node string, key string, endpoint string, command string,
-	docFn func(map[string]interface{}), warnFn func(warn errors.Error), creds distributed.Creds, authToken string,
-	formData map[string]interface{}) {
+	docFn func(map[string]any), warnFn func(warn errors.Error), creds distributed.Creds, authToken string,
+	formData map[string]any) {
 
 	var loc string
 	var body []byte
-	var doc map[string]interface{}
+	var doc map[string]any
 
 	queryNode, err := this.getQueryNode(node, "fetch", endpoint)
 	if err != nil {
@@ -788,6 +788,6 @@ func (this *systemRemoteHttp) Enabled(capability distributed.Capability) bool {
 }
 
 // dynamically change settings
-func (this *systemRemoteHttp) Settings(settings map[string]interface{}) errors.Error {
+func (this *systemRemoteHttp) Settings(settings map[string]any) errors.Error {
 	return settingsWorkHorse(settings, _ENDPOINT.server)
 }

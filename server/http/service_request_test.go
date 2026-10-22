@@ -99,7 +99,7 @@ func TestGetScanVectors(t *testing.T) {
 	jsonText = strings.Replace(jsonText, "FULL_SCAN_VECTOR", replacement, 1)
 
 	decoder := json.NewDecoder(strings.NewReader(jsonText))
-	var target interface{}
+	var target any
 	e := decoder.Decode(&target)
 	if e != nil {
 		t.Errorf("Unexpected JSON parsing error %v", e)
@@ -169,7 +169,7 @@ func TestFullScanVector(t *testing.T) {
 	jsonText = strings.Replace(jsonText, "FULL_SCAN_VECTOR", replacement, 1)
 
 	decoder := json.NewDecoder(strings.NewReader(jsonText))
-	var target interface{}
+	var target any
 	e := decoder.Decode(&target)
 	if e != nil {
 		t.Errorf("Unexpected JSON parsing error %v", e)
@@ -195,7 +195,7 @@ func TestSparseScanVector(t *testing.T) {
 		"5": [ 100001, "BAUID" ],
 		"7": [ 999999, "CAUID" ]
 	}`
-	var target interface{}
+	var target any
 	decoder := json.NewDecoder(strings.NewReader(jsonText))
 	e := decoder.Decode(&target)
 	if e != nil {
@@ -245,7 +245,7 @@ func TestRequestWithTimeout(t *testing.T) {
 	request_timeout := "100ms"
 	expected_timeout := time.Millisecond * 100
 
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"statement": "select 1",
 		"timeout":   request_timeout,
 	}
@@ -266,7 +266,7 @@ func TestPrepareStatements(t *testing.T) {
 }
 
 // insert requires parameters
-var insertArgs []interface{} = []interface{}{"aaa", "bbb"}
+var insertArgs []any = []any{"aaa", "bbb"}
 
 func preparedSequence(t *testing.T, name string, stmt string) {
 	// Verify a sequence of requests:
@@ -278,7 +278,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 	doPrepare(t, name, stmt)
 
 	// { "prepared": "name" }  succeeds
-	doJsonRequest(t, map[string]interface{}{
+	doJsonRequest(t, map[string]any{
 		"prepared": name,
 		"args":     insertArgs,
 	})
@@ -290,7 +290,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 	}
 
 	// { "prepared": "name", "encoded_plan": "<<encoded plan>>" }  succeeds
-	doJsonRequest(t, map[string]interface{}{
+	doJsonRequest(t, map[string]any{
 		"prepared":     name,
 		"encoded_plan": prepared.EncodedPlan(),
 		"args":         insertArgs,
@@ -302,7 +302,7 @@ func preparedSequence(t *testing.T, name string, stmt string) {
 }
 
 func doNoSuchPrepared(t *testing.T, name string) {
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"prepared": name,
 	}
 
@@ -322,7 +322,7 @@ func doNoSuchPrepared(t *testing.T, name string) {
 }
 
 func doPrepare(t *testing.T, name string, stmt string) {
-	doJsonRequest(t, map[string]interface{}{
+	doJsonRequest(t, map[string]any{
 		"statement": "prepare " + name + " as " + stmt,
 	})
 
@@ -338,20 +338,20 @@ func doPrepare(t *testing.T, name string, stmt string) {
 }
 
 func doPreparedWithPlan(t *testing.T, name string, encoded_plan string) {
-	doJsonRequest(t, map[string]interface{}{
+	doJsonRequest(t, map[string]any{
 		"prepared":     name,
 		"encoded_plan": encoded_plan,
 	})
 }
 
 func doPreparedNameOnly(t *testing.T, name string) {
-	doJsonRequest(t, map[string]interface{}{
+	doJsonRequest(t, map[string]any{
 		"prepared": name,
 	})
 }
 
 func doPreparedAndStatement(t *testing.T, name string, stmt string) {
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"prepared":  name,
 		"statement": stmt,
 	}
@@ -371,7 +371,7 @@ func doPreparedAndStatement(t *testing.T, name string, stmt string) {
 	}
 }
 
-func doJsonRequest(t *testing.T, payload map[string]interface{}) {
+func doJsonRequest(t *testing.T, payload map[string]any) {
 	_, err := doJsonEncodedPost(payload)
 	if err != nil {
 		t.Errorf("Unexpected error in HTTP request: %v", err)
@@ -463,7 +463,7 @@ func doUrlEncodedPost(payload url.Values) (*http.Response, error) {
 	return res, nil
 }
 
-func doJsonEncodedPost(payload map[string]interface{}) (*http.Response, error) {
+func doJsonEncodedPost(payload map[string]any) (*http.Response, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err

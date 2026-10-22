@@ -149,7 +149,7 @@ var pingStatus = struct {
 }
 
 func doPing(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_PING
 	if endpoint.server.IsHealthy() {
@@ -166,7 +166,7 @@ var localConfig struct {
 }
 
 func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CONFIG
 
@@ -217,7 +217,7 @@ func doConfig(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, 
 }
 
 func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 
@@ -251,7 +251,7 @@ func doClusters(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 }
 
 func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 
@@ -286,7 +286,7 @@ func doCluster(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 }
 
 func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_CLUSTERS
 
@@ -325,7 +325,7 @@ func doNodes(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, a
 }
 
 func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "cluster")
 	_, node := router.RequestValue(req, "node")
@@ -367,7 +367,7 @@ func doNode(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af
 // the request contains basic authorization credentials that can be successfully
 // authorized against the configuration store.
 func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_SSL_CERT
 	if endpoint.httpsAddr == "" {
@@ -398,7 +398,7 @@ func doSslCert(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request,
 }
 
 func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_SETTINGS
 
@@ -412,7 +412,7 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		return nil, err
 	}
 
-	settings := map[string]interface{}{}
+	settings := map[string]any{}
 	srvr := endpoint.server
 	switch req.Method {
 	case "GET":
@@ -432,14 +432,14 @@ func doSettings(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if errP != nil {
 			return nil, errP
 		}
-		settings = map[string]interface{}{}
+		settings = map[string]any{}
 		return server.FillSettings(settings, srvr), nil
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
 
-func settingsWorkHorse(settings map[string]interface{}, srvr *server.Server) errors.Error {
+func settingsWorkHorse(settings map[string]any, srvr *server.Server) errors.Error {
 	distribute := settings["distribute"]
 	if distribute != nil {
 		delete(settings, "distribute")
@@ -488,7 +488,7 @@ func getNodeFromRequest(req *http.Request) (clustering.QueryNode, errors.Error) 
 }
 
 func doShutdown(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	af.EventTypeId = audit.API_ADMIN_SHUTDOWN
 

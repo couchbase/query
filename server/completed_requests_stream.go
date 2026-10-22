@@ -144,7 +144,7 @@ func (this *requestStreamFile) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (this *requestStreamFile) encode(v interface{}) error {
+func (this *requestStreamFile) encode(v any) error {
 	var err error
 	if this.f == nil {
 		if err = this.create(); err != nil {
@@ -826,7 +826,7 @@ func (this *requestLogStream) loadFiles() {
 	this.filesLock.Unlock()
 }
 
-func (this *requestLogStream) encode(i interface{}) {
+func (this *requestLogStream) encode(i any) {
 	if this.streamFiles == nil || atomic.LoadUint64(&this.active) == 0 {
 		return
 	}
@@ -1101,7 +1101,7 @@ func (this *readCacheEntry) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("\"file=%d size=%d count=%d\"", this.num, len(this.raw), len(this.offsets))), nil
 }
 
-func (this *readCacheEntry) read(rec uint64) interface{} {
+func (this *readCacheEntry) read(rec uint64) any {
 	if rec >= uint64(len(this.offsets)) {
 		return nil
 	}
@@ -1114,7 +1114,7 @@ func (this *readCacheEntry) read(rec uint64) interface{} {
 	if !d.More() {
 		return nil
 	}
-	var ent interface{}
+	var ent any
 	err := d.Decode(&ent)
 	if err != nil {
 		return nil
@@ -1128,9 +1128,9 @@ type readCache struct {
 }
 
 func (this *readCache) MarshalJSON() ([]byte, error) {
-	var a []interface{}
+	var a []any
 	if this.cache != nil {
-		a = make([]interface{}, 0, this.cache.Len())
+		a = make([]any, 0, this.cache.Len())
 		for it := this.cache.Front(); it != nil; it = it.Next() {
 			a = append(a, it.Value.(*readCacheEntry))
 		}
@@ -1927,7 +1927,7 @@ func RequestsFileStreamFileInfo() []uint64 {
 	return requestLog.stream.entryCounts()
 }
 
-func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user string, fn func(map[string]interface{}) bool) error {
+func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user string, fn func(map[string]any) bool) error {
 	ce, err := requestLog.stream.load(fileNum, false)
 	if err != nil {
 		return err
@@ -1947,7 +1947,7 @@ func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user stri
 	if user == "" {
 		for i := skip; i < max && count > 0; i++ {
 			if v := ce.read(i); v != nil {
-				if m, ok := v.(map[string]interface{}); ok {
+				if m, ok := v.(map[string]any); ok {
 					if !fn(m) {
 						return nil
 					}
@@ -1958,7 +1958,7 @@ func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user stri
 	} else {
 		for i := uint64(0); i < max && count > 0; i++ {
 			if v := ce.read(i); v != nil {
-				if m, ok := v.(map[string]interface{}); ok {
+				if m, ok := v.(map[string]any); ok {
 					if m["users"] == user {
 						if skip == 0 {
 							if !fn(m) {
@@ -1976,12 +1976,12 @@ func RequestsFileStreamRead(fileNum uint64, skip uint64, count uint64, user stri
 	return nil
 }
 
-func RequestsFileStreamStats(stats map[string]interface{}) {
+func RequestsFileStreamStats(stats map[string]any) {
 	if stats != nil {
 		requestLog.stream.Lock()
 		if requestLog.stream.active != 0 {
-			m := make(map[string]interface{}, 8)
-			a := make([]interface{}, 0, len(requestLog.stream.streamFiles))
+			m := make(map[string]any, 8)
+			a := make([]any, 0, len(requestLog.stream.streamFiles))
 			for i := range requestLog.stream.streamFiles {
 				if !requestLog.stream.streamFiles[i].isClosed() {
 					a = append(a, requestLog.stream.streamFiles[i])
@@ -1999,7 +1999,7 @@ func RequestsFileStreamStats(stats map[string]interface{}) {
 
 			bytes, err := json.Marshal(m)
 			if err == nil {
-				var v interface{}
+				var v any
 				if json.Unmarshal(bytes, &v) == nil {
 					stats["request_log_stream"] = v
 				}

@@ -28,7 +28,7 @@ const (
 	adminPrefix = "/admin"
 )
 
-type apiFunc func(*HttpEndpoint, http.ResponseWriter, *http.Request, *audit.ApiAuditFields) (interface{}, errors.Error)
+type apiFunc func(*HttpEndpoint, http.ResponseWriter, *http.Request, *audit.ApiAuditFields) (any, errors.Error)
 
 type handlerFunc func(http.ResponseWriter, *http.Request)
 
@@ -42,7 +42,7 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		LocalAddress:  req.Host,
 	}
 
-	var obj interface{}
+	var obj any
 	var err errors.Error
 
 	if !log {
@@ -94,7 +94,7 @@ func (this *HttpEndpoint) wrapAPI(w http.ResponseWriter, req *http.Request, f ap
 		}
 		// avoid producing a single over-long line which may be difficult to process
 		// this deliberately targets only []interface{} so only select endpoint responses are adjusted
-		if a, ok := obj.([]interface{}); ok && !pretty && len(a) > 1 {
+		if a, ok := obj.([]any); ok && !pretty && len(a) > 1 {
 			buf.WriteString("[\n")
 			for i := range a {
 				if i > 0 {

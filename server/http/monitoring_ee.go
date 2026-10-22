@@ -15,7 +15,7 @@ import (
 	"github.com/couchbase/query/server"
 )
 
-func getProfileRequest(a httpRequestArgs, parm string, val interface{}) (server.Profile, errors.Error) {
+func getProfileRequest(a httpRequestArgs, parm string, val any) (server.Profile, errors.Error) {
 	profile, err := a.getStringVal(parm, val)
 	if err == nil && profile != "" {
 		prof, ok := server.ParseProfile(profile, true)

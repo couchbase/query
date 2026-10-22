@@ -14,7 +14,7 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func setProfileAdmin(s *Server, o interface{}) errors.Error {
+func setProfileAdmin(s *Server, o any) errors.Error {
 	value, _ := o.(string)
 	prof, ok := ParseProfile(value, false)
 	if ok {
@@ -23,28 +23,28 @@ func setProfileAdmin(s *Server, o interface{}) errors.Error {
 	return nil
 }
 
-func setControlsAdmin(s *Server, o interface{}) errors.Error {
+func setControlsAdmin(s *Server, o any) errors.Error {
 	value, _ := o.(bool)
 	s.SetControls(value)
 	return nil
 }
 
-func GetProfileAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+func GetProfileAdmin(settings map[string]any, srvr *Server) map[string]any {
 	settings[PROFILE] = srvr.Profile().String()
 	return settings
 }
 
-func GetControlsAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+func GetControlsAdmin(settings map[string]any, srvr *Server) map[string]any {
 	settings[CONTROLS] = srvr.Controls()
 	return settings
 }
 
-func checkProfileAdmin(val interface{}) (bool, errors.Error) {
+func checkProfileAdmin(val any) (bool, errors.Error) {
 	_, ok := val.(string)
 	return ok, nil
 }
 
-func checkControlsAdmin(val interface{}) (bool, errors.Error) {
+func checkControlsAdmin(val any) (bool, errors.Error) {
 	_, ok := val.(bool)
 	return ok, nil
 }

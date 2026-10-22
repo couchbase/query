@@ -53,7 +53,7 @@ const (
 
 func InitAWR() {
 	process := func(val []byte, thisNode string) {
-		var m map[string]interface{}
+		var m map[string]any
 		if err := json.Unmarshal(val, &m); err == nil {
 			if n, ok := m["node"]; ok && n != thisNode {
 				if err, _ = AwrCB.SetConfig(m, false); err != nil {
@@ -228,8 +228,8 @@ type awrCB struct {
 	start                  time.Time
 }
 
-func (this *awrCB) Config() map[string]interface{} {
-	m := make(map[string]interface{})
+func (this *awrCB) Config() map[string]any {
+	m := make(map[string]any)
 	m["enabled"] = this.enabled
 	m["location"] = this.config.Location()
 	m["queue_len"] = this.config.QueueLen()
@@ -239,9 +239,9 @@ func (this *awrCB) Config() map[string]interface{} {
 	return m
 }
 
-func (this *awrCB) Vitals(m map[string]interface{}) {
+func (this *awrCB) Vitals(m map[string]any) {
 	if this.enabled {
-		v := make(map[string]interface{}, 7)
+		v := make(map[string]any, 7)
 		if this.state == _AWR_QUIESCENT {
 			v["state"] = "quiescent"
 		} else {
@@ -278,9 +278,9 @@ func (this *awrCB) isQuiescent() bool {
 }
 
 // Returns an error and a list of warnings
-func (this *awrCB) SetConfig(i interface{}, distribute bool) (errors.Error, errors.Errors) {
+func (this *awrCB) SetConfig(i any, distribute bool) (errors.Error, errors.Errors) {
 
-	cfg, ok := i.(map[string]interface{})
+	cfg, ok := i.(map[string]any)
 	if !ok {
 		if s, ok := i.(string); ok {
 			s = strings.TrimSpace(s)
@@ -632,7 +632,7 @@ func (this *awrStat) record(val uint64) (bool, bool) {
 	return min, max
 }
 
-func (this *awrStat) appendTo(a *[]interface{}) {
+func (this *awrStat) appendTo(a *[]any) {
 	*a = append(*a, this.total)
 	*a = append(*a, this.min)
 	*a = append(*a, this.max)
@@ -677,8 +677,8 @@ func (this *awrUniqueStmt) record(elem awrStatID, val uint64) (bool, bool) {
 	return this.elems[elem].record(val)
 }
 
-func (this *awrUniqueStmt) stats() []interface{} {
-	a := make([]interface{}, 0, len(this.elems)*3)
+func (this *awrUniqueStmt) stats() []any {
+	a := make([]any, 0, len(this.elems)*3)
 	for i := range this.elems {
 		this.elems[i].appendTo(&a)
 	}
@@ -862,7 +862,7 @@ func (this *awrCB) reporter() {
 			var ins int
 			tot := uint64(0)
 			for k, v := range loc {
-				o := make(map[string]interface{})
+				o := make(map[string]any)
 				o["ver"] = _CURR_STATS_VERSION
 				o["from"] = tsStart
 				o["to"] = tsEnd
@@ -870,7 +870,7 @@ func (this *awrCB) reporter() {
 				o["txt"] = v.text
 				o["qc"] = v.qc
 				o["cnt"] = v.count
-				o["pln"] = append(append([]interface{}(nil), v.minPlan), v.maxPlan) // automatically base64 encoded
+				o["pln"] = append(append([]any(nil), v.minPlan), v.maxPlan) // automatically base64 encoded
 				o["sts"] = v.stats()
 				tot += v.count
 

@@ -257,7 +257,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 	// start - temporary logging of requests
 	dfn := func() string {
 		u, _, _ := cbauth.ExtractCredsGeneric(req.Header)
-		data := make(map[string]interface{}, 7)
+		data := make(map[string]any, 7)
 		data["user"] = u
 		if prepared := rv.Prepared(); prepared != nil {
 			data["prepared"] = prepared.Name()
@@ -269,7 +269,7 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 		data["named_args"] = httpArgs.getFormattedNamedArgs()
 		data["client_context_id"] = rv.ClientContextId()
 		// only include fields not already processed in args
-		a := make(map[string]interface{})
+		a := make(map[string]any)
 		if rv.jsonArgs.req != nil {
 			for i := 0; i < rv.jsonArgs.args.count; i++ {
 				if _, ok := data[rv.jsonArgs.args.parms[i].name]; !ok && rv.jsonArgs.args.parms[i].name != "creds" {
@@ -307,7 +307,7 @@ func (this *httpRequest) EventNodeName() string {
 	return ret
 }
 
-func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	statement, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		if rv.Natural() != "" {
@@ -320,11 +320,11 @@ func handleStatement(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 	return err
 }
 
-func handleEncodedPlan(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleEncodedPlan(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	return httpArgs.storeDirect(_ENCODED_PLAN, parm, val)
 }
 
-func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	var phaseTime time.Duration
 
 	log := rv.logger
@@ -385,7 +385,7 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	return err
 }
 
-func handlePositionalArgs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handlePositionalArgs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	positionalArgs, err := httpArgs.getPositionalArgs(parm, val)
 	if err == nil {
 		rv.SetPositionalArgs(positionalArgs)
@@ -393,7 +393,7 @@ func handlePositionalArgs(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
-func handleNamespace(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNamespace(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	namespace, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNamespace(namespace)
@@ -401,7 +401,7 @@ func handleNamespace(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 	return err
 }
 
-func handleTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	var timeout time.Duration
 
 	t, err := httpArgs.getStringVal(parm, val)
@@ -414,7 +414,7 @@ func handleTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	return err
 }
 
-func handleMaxParallelism(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleMaxParallelism(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	max_parallelism, err := httpArgs.getIntVal(parm, val)
 	if err == nil {
 		rv.SetMaxParallelism(max_parallelism)
@@ -422,7 +422,7 @@ func handleMaxParallelism(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
-func handleScanCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleScanCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	scan_cap, err := httpArgs.getInt64Val(parm, val)
 	if err == nil {
 		rv.SetScanCap(scan_cap)
@@ -430,7 +430,7 @@ func handleScanCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	return err
 }
 
-func handlePipelineCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handlePipelineCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	pipeline_cap, err := httpArgs.getInt64Val(parm, val)
 	if err == nil {
 		rv.SetPipelineCap(pipeline_cap)
@@ -438,7 +438,7 @@ func handlePipelineCap(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handlePipelineBatch(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handlePipelineBatch(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	pipeline_batch, err := httpArgs.getIntVal(parm, val)
 	if err == nil {
 		rv.SetPipelineBatch(pipeline_batch)
@@ -446,7 +446,7 @@ func handlePipelineBatch(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	return err
 }
 
-func handleReadonly(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleReadonly(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	readonly, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		if rv.req.Method == "GET" && readonly == value.FALSE {
@@ -458,7 +458,7 @@ func handleReadonly(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	return err
 }
 
-func handleMetrics(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleMetrics(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	metrics, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetMetrics(metrics)
@@ -466,7 +466,7 @@ func handleMetrics(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	return err
 }
 
-func handleFormat(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleFormat(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	format_field, err := httpArgs.getStringVal(parm, val)
 	if err == nil && format_field != "" {
 		format := newFormat(format_field)
@@ -484,7 +484,7 @@ func handleFormat(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 	return err
 }
 
-func handleSignature(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleSignature(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	signature, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetSignature(signature)
@@ -492,7 +492,7 @@ func handleSignature(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 	return err
 }
 
-func handleCompression(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleCompression(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	compression_field, err := httpArgs.getStringVal(parm, val)
 	if err == nil && compression_field != "" {
 		compression := newCompression(compression_field)
@@ -505,7 +505,7 @@ func handleCompression(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleEncoding(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleEncoding(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	encoding_field, err := httpArgs.getStringVal(parm, val)
 	if err == nil && encoding_field != "" {
 		encoding := newEncoding(encoding_field)
@@ -518,7 +518,7 @@ func handleEncoding(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	return err
 }
 
-func handlePretty(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handlePretty(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	pretty, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetPretty(pretty)
@@ -526,7 +526,7 @@ func handlePretty(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 	return err
 }
 
-func handleAutoPrepare(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleAutoPrepare(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	autoPrepare, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		if rv.AutoExecute() == value.TRUE {
@@ -538,7 +538,7 @@ func handleAutoPrepare(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleAutoExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleAutoExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	autoExecute, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		if rv.AutoPrepare() == value.TRUE {
@@ -550,11 +550,11 @@ func handleAutoExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleCreds(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleCreds(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	return httpArgs.storeDirect(_CREDS, parm, val)
 }
 
-func handleConsistency(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleConsistency(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	rv.consCnt++
 	err := httpArgs.storeDirect(_SCAN_CONSISTENCY, parm, val)
 	if err == nil {
@@ -568,22 +568,22 @@ func handleConsistency(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleScanWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleScanWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	rv.consCnt++
 	return httpArgs.storeDirect(_SCAN_WAIT, parm, val)
 }
 
-func handleScanVector(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleScanVector(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	rv.consCnt++
 	return httpArgs.storeDirect(_SCAN_VECTOR, parm, val)
 }
 
-func handleScanVectors(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleScanVectors(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	rv.consCnt++
 	return httpArgs.storeDirect(_SCAN_VECTORS, parm, val)
 }
 
-func handleClientContextID(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleClientContextID(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	client_id, err := httpArgs.getStringVal(parm, val)
 	if err != nil {
 		return err
@@ -595,7 +595,7 @@ func handleClientContextID(rv *httpRequest, httpArgs httpRequestArgs, parm strin
 	return err
 }
 
-func handleControls(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleControls(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	controls, err := getControlsRequest(httpArgs, parm, val)
 	if err == nil {
 		rv.SetControls(controls)
@@ -603,7 +603,7 @@ func handleControls(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	return err
 }
 
-func handleProfile(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleProfile(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	prof, err := getProfileRequest(httpArgs, parm, val)
 	if err == nil {
 		rv.SetProfile(prof)
@@ -611,7 +611,7 @@ func handleProfile(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	return err
 }
 
-func handleN1QLFeatCtrl(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleN1QLFeatCtrl(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	n1qlFeatureControl, err := httpArgs.getUint64Val(parm, val)
 	if err == nil {
 		rv.SetFeatureControls(n1qlFeatureControl)
@@ -619,7 +619,7 @@ func handleN1QLFeatCtrl(rv *httpRequest, httpArgs httpRequestArgs, parm string, 
 	return err
 }
 
-func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	indexApiVer, err := httpArgs.getIntVal(parm, val)
 	if err == nil {
 		rv.SetIndexApiVersion(indexApiVer)
@@ -627,7 +627,7 @@ func handleMaxIndexAPI(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleQueryContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleQueryContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	queryContext, err := httpArgs.getStringVal(QUERY_CONTEXT, val)
 	if err == nil {
 		err = algebra.ValidateQueryContext(queryContext)
@@ -638,7 +638,7 @@ func handleQueryContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, 
 	return err
 }
 
-func handleUseFts(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleUseFts(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	useFts, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetUseFts(useFts == value.TRUE)
@@ -646,7 +646,7 @@ func handleUseFts(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 	return err
 }
 
-func handleMemoryQuota(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleMemoryQuota(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	memoryQuota, err := httpArgs.getUint64Val(parm, val)
 	if err == nil {
 		rv.SetMemoryQuota(memoryQuota)
@@ -654,7 +654,7 @@ func handleMemoryQuota(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleUseCBO(rv *httpRequest, httpsArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleUseCBO(rv *httpRequest, httpsArgs httpRequestArgs, parm string, val any) errors.Error {
 	useCBO, err := httpsArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetUseCBO(useCBO == value.TRUE)
@@ -662,7 +662,7 @@ func handleUseCBO(rv *httpRequest, httpsArgs httpRequestArgs, parm string, val i
 	return err
 }
 
-func handleTxId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleTxId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	txid, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetTxId(txid)
@@ -670,7 +670,7 @@ func handleTxId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val inte
 	return err
 }
 
-func handleTxImplicit(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleTxImplicit(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	tximplicit, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetTxImplicit(tximplicit == value.TRUE)
@@ -679,7 +679,7 @@ func handleTxImplicit(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 	return err
 }
 
-func handleTxStmtNum(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleTxStmtNum(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	txstmtnum, err := httpArgs.getInt64Val(parm, val)
 	if err == nil {
 		rv.SetTxStmtNum(txstmtnum)
@@ -687,7 +687,7 @@ func handleTxStmtNum(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 	return err
 }
 
-func handleTxTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleTxTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	var timeout time.Duration
 
 	t, err := httpArgs.getStringVal(parm, val)
@@ -701,7 +701,7 @@ func handleTxTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 	return err
 }
 
-func handleDurabilityLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleDurabilityLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	dLevel, err := httpArgs.getStringVal(parm, val)
 
 	if err == nil {
@@ -715,7 +715,7 @@ func handleDurabilityLevel(rv *httpRequest, httpArgs httpRequestArgs, parm strin
 	return err
 }
 
-func handleDurabilityTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleDurabilityTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	var timeout time.Duration
 
 	t, err := httpArgs.getStringVal(parm, val)
@@ -728,7 +728,7 @@ func handleDurabilityTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm str
 	return err
 }
 
-func handleTxData(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleTxData(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	txData, err := httpArgs.getTxData(parm, val)
 	if err == nil && len(txData) > 0 {
 		rv.SetTxData(txData)
@@ -736,7 +736,7 @@ func handleTxData(rv *httpRequest, httpArgs httpRequestArgs, parm string, val in
 	return err
 }
 
-func handleKvTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleKvTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	var timeout time.Duration
 
 	t, err := httpArgs.getStringVal(parm, val)
@@ -752,7 +752,7 @@ func handleKvTimeout(rv *httpRequest, httpArgs httpRequestArgs, parm string, val
 
 const _MAX_SCAN_REPORT_WAIT = time.Second * 15
 
-func handleScanReportWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleScanReportWait(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	var timeout time.Duration
 
 	t, err := httpArgs.getStringVal(parm, val)
@@ -769,7 +769,7 @@ func handleScanReportWait(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
-func handleAtrCollection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleAtrCollection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	s, err := httpArgs.getStringVal(parm, val)
 	if err == nil && s != "" {
 		rv.SetAtrCollection(s)
@@ -778,7 +778,7 @@ func handleAtrCollection(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	return err
 }
 
-func handleNumAtrs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNumAtrs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	n, err := httpArgs.getUint64Val(parm, val)
 	if err == nil {
 		if n <= 0 || n >= (1<<16) {
@@ -790,7 +790,7 @@ func handleNumAtrs(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	return err
 }
 
-func handlePreserveExpiry(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handlePreserveExpiry(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	preserveExpiry, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetPreserveExpiry(preserveExpiry == value.TRUE)
@@ -798,7 +798,7 @@ func handlePreserveExpiry(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
-func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	limit, err := httpArgs.getIntVal(parm, val)
 	if err == nil {
 		rv.SetErrorLimit(limit)
@@ -806,7 +806,7 @@ func handleErrorLimit(rv *httpRequest, httpArgs httpRequestArgs, parm string, va
 	return err
 }
 
-func handleSortProjection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleSortProjection(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	sp, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		if sp == value.FALSE {
@@ -818,7 +818,7 @@ func handleSortProjection(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
-func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	v, err := httpArgs.getStringVal(parm, val)
 	if err != nil {
 		return err
@@ -861,7 +861,7 @@ func handleLogLevel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 	return nil
 }
 
-func handleUseReplica(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleUseReplica(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	ur, err := httpArgs.getStringVal(parm, val)
 
 	if err != nil {
@@ -1056,7 +1056,7 @@ const ( // Request argument names
 )
 
 type argHandler struct {
-	fn      func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error
+	fn      func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error
 	initial bool
 }
 
@@ -1139,19 +1139,19 @@ const (
 	_DIRECT_MAX
 )
 
-type directAccess [_DIRECT_MAX]interface{}
+type directAccess [_DIRECT_MAX]any
 
 type parmValue struct {
 	name string
-	val  interface{}
-	fn   func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error
+	val  any
+	fn   func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error
 }
 
 // this is a bit of a hack because golang doesn't allow map constants (can't size an array at compile time based on a map)
 // and is a bit clumsy with statically allocated slice buffers
 // remember to resize initialArray and argsArray approriately if _PARAMETERS changes
 type parmList interface {
-	add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error)
+	add(name string, val any, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error)
 	slice() []parmValue
 }
 
@@ -1164,8 +1164,8 @@ func (ia *initialArray) slice() []parmValue {
 	return ia.parms[0:ia.count]
 }
 
-func (ia *initialArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string,
-	val interface{}) errors.Error) {
+func (ia *initialArray) add(name string, val any, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string,
+	val any) errors.Error) {
 
 	ia.parms[ia.count].name = name
 	ia.parms[ia.count].val = val
@@ -1182,8 +1182,8 @@ func (aa *argsArray) slice() []parmValue {
 	return aa.parms[0:aa.count]
 }
 
-func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string,
-	val interface{}) errors.Error) {
+func (aa *argsArray) add(name string, val any, fn func(rv *httpRequest, httpArgs httpRequestArgs, parm string,
+	val any) errors.Error) {
 
 	aa.parms[aa.count].name = name
 	aa.parms[aa.count].val = val
@@ -1191,7 +1191,7 @@ func (aa *argsArray) add(name string, val interface{}, fn func(rv *httpRequest, 
 	aa.count++
 }
 
-func getPrepared(a httpRequestArgs, queryContext string, parm string, val interface{},
+func getPrepared(a httpRequestArgs, queryContext string, parm string, val any,
 	phaseTime *time.Duration, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, scanConsistency datastore.ScanConsistency,
 	log logging.Log) (string, *plan.Prepared, errors.Error) {
@@ -1388,22 +1388,22 @@ func validateContentVersion(version string) bool {
 // httpRequestArgs is an interface for getting the arguments in a http request
 type httpRequestArgs interface {
 	processParameters(rv *httpRequest) errors.Error
-	storeDirect(int, string, interface{}) errors.Error
+	storeDirect(int, string, any) errors.Error
 	getString(int, string) (string, errors.Error)
-	getIntVal(field string, v interface{}) (int, errors.Error)
-	getInt64Val(field string, v interface{}) (int64, errors.Error)
-	getUint64Val(field string, v interface{}) (uint64, errors.Error)
-	getStringVal(field string, v interface{}) (string, errors.Error)
-	getValue(parm string, val interface{}) (value.Value, errors.Error)
-	getTristateVal(field string, v interface{}) (value.Tristate, errors.Error)
-	getPreparedName(field string, v interface{}) (string, errors.Error)
+	getIntVal(field string, v any) (int, errors.Error)
+	getInt64Val(field string, v any) (int64, errors.Error)
+	getUint64Val(field string, v any) (uint64, errors.Error)
+	getStringVal(field string, v any) (string, errors.Error)
+	getValue(parm string, val any) (value.Value, errors.Error)
+	getTristateVal(field string, v any) (value.Tristate, errors.Error)
+	getPreparedName(field string, v any) (string, errors.Error)
 	getNamedArgs() map[string]value.Value
 	getFormattedNamedArgs() map[string]value.Value
-	getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error)
+	getPositionalArgs(parm string, val any) (value.Values, errors.Error)
 	getCredentials() (*auth.Credentials, errors.Error)
 	getScanVector() (timestamp.Vector, errors.Error)
 	getScanVectors() (map[string]timestamp.Vector, errors.Error)
-	getTxData(parm string, val interface{}) ([]byte, errors.Error)
+	getTxData(parm string, val any) ([]byte, errors.Error)
 }
 
 // urlArgs is an implementation of httpRequestArgs that reads
@@ -1499,7 +1499,7 @@ func (this *urlArgs) processParameters(rv *httpRequest) errors.Error {
 	return err
 }
 
-func (this *urlArgs) storeDirect(f int, parm string, val interface{}) errors.Error {
+func (this *urlArgs) storeDirect(f int, parm string, val any) errors.Error {
 	s, err := this.checkFormValue(parm, val)
 	if err == nil {
 		this.direct[f] = s
@@ -1532,7 +1532,7 @@ func getJsonDecoder(r io.Reader) (*json.Decoder, errors.Error) {
 }
 
 // Positional args are of the form: args=json_list
-func (this *urlArgs) getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error) {
+func (this *urlArgs) getPositionalArgs(parm string, val any) (value.Values, errors.Error) {
 	var positionalArgs value.Values
 
 	args_field, err := this.checkFormValue(parm, val)
@@ -1540,7 +1540,7 @@ func (this *urlArgs) getPositionalArgs(parm string, val interface{}) (value.Valu
 		return positionalArgs, err
 	}
 
-	var args []interface{}
+	var args []any
 
 	e := json.Unmarshal([]byte(args_field), &args)
 	if e != nil {
@@ -1557,19 +1557,19 @@ func (this *urlArgs) getPositionalArgs(parm string, val interface{}) (value.Valu
 	return positionalArgs, nil
 }
 
-func (this *urlArgs) getTxData(parm string, val interface{}) ([]byte, errors.Error) {
+func (this *urlArgs) getTxData(parm string, val any) ([]byte, errors.Error) {
 	txData, err := this.checkFormValue(parm, val)
 	if err != nil {
 		return nil, err
 	}
 
-	var target interface{}
+	var target any
 	err1 := json.Unmarshal([]byte(txData), &target)
 	if err1 != nil {
 		return nil, errors.NewServiceErrorBadValue(err1, TXDATA)
 	}
 
-	if rval, ok := target.(map[string]interface{}); ok {
+	if rval, ok := target.(map[string]any); ok {
 		if err1 := txDataValidation(rval); err1 != nil {
 			return nil, errors.NewServiceErrorBadValue(err1, TXDATA)
 		}
@@ -1582,8 +1582,8 @@ func (this *urlArgs) getTxData(parm string, val interface{}) ([]byte, errors.Err
 
 // Note: This function has no receiver, which makes it easier to test.
 // The "json" input parameter should be a parsed JSON object structure, the output of a decoder.
-func getScanVectorsFromJSON(json interface{}) (map[string]timestamp.Vector, errors.Error) {
-	bucketMap, ok := json.(map[string]interface{})
+func getScanVectorsFromJSON(json any) (map[string]timestamp.Vector, errors.Error) {
+	bucketMap, ok := json.(map[string]any)
 	if !ok {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTORS, "map of strings to vectors")
 	}
@@ -1594,7 +1594,7 @@ func getScanVectorsFromJSON(json interface{}) (map[string]timestamp.Vector, erro
 	out := make(map[string]timestamp.Vector)
 	for k, v := range bucketMap {
 		// Is it a sparse vector?
-		mapVector, ok := v.(map[string]interface{})
+		mapVector, ok := v.(map[string]any)
 		if ok {
 			entries, err := makeSparseVector(mapVector)
 			if err != nil {
@@ -1604,7 +1604,7 @@ func getScanVectorsFromJSON(json interface{}) (map[string]timestamp.Vector, erro
 			continue
 		}
 		// Is it a full vector?
-		arrayVector, ok := v.([]interface{})
+		arrayVector, ok := v.([]any)
 		if ok {
 			entries, err := makeFullVector(arrayVector)
 			if err != nil {
@@ -1621,15 +1621,15 @@ func getScanVectorsFromJSON(json interface{}) (map[string]timestamp.Vector, erro
 
 // Note: This function has no receiver, which makes it easier to test.
 // The "json" input parameter should be a parsed JSON object structure, the output of a decoder.
-func getScanVectorFromJSON(json interface{}) (timestamp.Vector, errors.Error) {
+func getScanVectorFromJSON(json any) (timestamp.Vector, errors.Error) {
 	// Is it a sparse vector?
-	mapVector, ok := json.(map[string]interface{})
+	mapVector, ok := json.(map[string]any)
 	if ok {
 		return makeSparseVector(mapVector)
 	}
 
 	// Is it a full vector?
-	arrayVector, ok := json.([]interface{})
+	arrayVector, ok := json.([]any)
 	if ok {
 		return makeFullVector(arrayVector)
 	}
@@ -1644,7 +1644,7 @@ func (this *urlArgs) getScanVector() (timestamp.Vector, errors.Error) {
 		return nil, err
 	}
 
-	var target interface{}
+	var target any
 	e := json.Unmarshal([]byte(scan_vector_data_field), &target)
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse scan vector"), SCAN_VECTOR)
@@ -1660,7 +1660,7 @@ func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error
 		return nil, err
 	}
 
-	var target interface{}
+	var target any
 	e := json.Unmarshal([]byte(scan_vectors_data_field), &target)
 	if e != nil {
 		return nil, errors.NewServiceErrorBadValue(go_errors.New("unable to parse scan vectors"), SCAN_VECTORS)
@@ -1669,7 +1669,7 @@ func (this *urlArgs) getScanVectors() (map[string]timestamp.Vector, errors.Error
 	return getScanVectorsFromJSON(target)
 }
 
-func (this *urlArgs) getIntVal(field string, v interface{}) (int, errors.Error) {
+func (this *urlArgs) getIntVal(field string, v any) (int, errors.Error) {
 	val, err := this.getStringVal(field, v)
 	if err == nil {
 		res, e := strconv.Atoi(val)
@@ -1681,7 +1681,7 @@ func (this *urlArgs) getIntVal(field string, v interface{}) (int, errors.Error) 
 	return -1, err
 }
 
-func (this *urlArgs) getInt64Val(field string, v interface{}) (int64, errors.Error) {
+func (this *urlArgs) getInt64Val(field string, v any) (int64, errors.Error) {
 	val, err := this.getStringVal(field, v)
 	if err == nil {
 		res, e := strconv.ParseInt(val, 10, 64)
@@ -1693,7 +1693,7 @@ func (this *urlArgs) getInt64Val(field string, v interface{}) (int64, errors.Err
 	return -1, err
 }
 
-func (this *urlArgs) getUint64Val(field string, v interface{}) (uint64, errors.Error) {
+func (this *urlArgs) getUint64Val(field string, v any) (uint64, errors.Error) {
 	val, err := this.getStringVal(field, v)
 	if err == nil {
 		res, e := strconv.ParseUint(val, 0, 64)
@@ -1705,7 +1705,7 @@ func (this *urlArgs) getUint64Val(field string, v interface{}) (uint64, errors.E
 	return 0, err
 }
 
-func (this *urlArgs) getStringVal(field string, v interface{}) (string, errors.Error) {
+func (this *urlArgs) getStringVal(field string, v any) (string, errors.Error) {
 	values, ok := v.([]string)
 
 	// this never happens
@@ -1724,7 +1724,7 @@ func (this *urlArgs) getStringVal(field string, v interface{}) (string, errors.E
 
 // getValue returns a JSON-object request parameter as a value.Value. The form
 // value is a JSON text which is parsed; an empty value yields (nil, nil).
-func (this *urlArgs) getValue(parm string, val interface{}) (value.Value, errors.Error) {
+func (this *urlArgs) getValue(parm string, val any) (value.Value, errors.Error) {
 	s, err := this.getStringVal(parm, val)
 	if err != nil {
 		return nil, err
@@ -1745,7 +1745,7 @@ func (this *urlArgs) getString(f int, dflt string) (string, errors.Error) {
 	return value, err
 }
 
-func (this *urlArgs) getTristateVal(field string, v interface{}) (value.Tristate, errors.Error) {
+func (this *urlArgs) getTristateVal(field string, v any) (value.Tristate, errors.Error) {
 	tristate_value := value.NONE
 
 	value_field, err := this.getStringVal(field, v)
@@ -1787,7 +1787,7 @@ func (this *urlArgs) getCredentials() (*auth.Credentials, errors.Error) {
 	return creds, err
 }
 
-func (this *urlArgs) getPreparedName(field string, v interface{}) (string, errors.Error) {
+func (this *urlArgs) getPreparedName(field string, v any) (string, errors.Error) {
 	value_field, err := this.getStringVal(field, v)
 	if value_field == "" || err != nil {
 		return "", err
@@ -1809,7 +1809,7 @@ func (this *urlArgs) formValue(field int) (string, errors.Error) {
 	return v.(string), nil
 }
 
-func (this *urlArgs) checkFormValue(field string, val interface{}) (string, errors.Error) {
+func (this *urlArgs) checkFormValue(field string, val any) (string, errors.Error) {
 	values, ok := val.([]string)
 
 	// this should never happen
@@ -1917,7 +1917,7 @@ func (this *jsonArgs) processParameters(rv *httpRequest) errors.Error {
 	return err
 }
 
-func (this *jsonArgs) storeDirect(f int, parm string, val interface{}) errors.Error {
+func (this *jsonArgs) storeDirect(f int, parm string, val any) errors.Error {
 	if val == nil {
 		return errors.NewServiceErrorBadValue(go_errors.New("value is not specified"), parm)
 	}
@@ -1941,10 +1941,10 @@ func (this *jsonArgs) getFormattedNamedArgs() map[string]value.Value {
 	return fnamedArgs
 }
 
-func (this *jsonArgs) getPositionalArgs(parm string, val interface{}) (value.Values, errors.Error) {
+func (this *jsonArgs) getPositionalArgs(parm string, val any) (value.Values, errors.Error) {
 	var positionalArgs value.Values
 
-	args, type_ok := val.([]interface{})
+	args, type_ok := val.([]any)
 	if !type_ok {
 		return positionalArgs, errors.NewServiceErrorTypeMismatch(ARGS, "array")
 	}
@@ -1958,9 +1958,9 @@ func (this *jsonArgs) getPositionalArgs(parm string, val interface{}) (value.Val
 	return positionalArgs, nil
 }
 
-func (this *jsonArgs) getTxData(parm string, val interface{}) (txData []byte, err errors.Error) {
+func (this *jsonArgs) getTxData(parm string, val any) (txData []byte, err errors.Error) {
 	var err1 error
-	if rval, ok := val.(map[string]interface{}); ok {
+	if rval, ok := val.(map[string]any); ok {
 		err1 = txDataValidation(rval)
 		if err1 == nil {
 			txData, err1 = json.Marshal(rval)
@@ -1983,7 +1983,7 @@ func (this *jsonArgs) getCredentials() (*auth.Credentials, errors.Error) {
 		return creds, nil
 	}
 
-	creds_items, arr_ok := creds_field.([]interface{})
+	creds_items, arr_ok := creds_field.([]any)
 	if !arr_ok {
 		return nil, errors.NewServiceErrorTypeMismatch(CREDS, "array of { user, pass }")
 	}
@@ -1991,7 +1991,7 @@ func (this *jsonArgs) getCredentials() (*auth.Credentials, errors.Error) {
 	var u string
 	var p string
 	for i := range creds_items {
-		map_item, map_ok := creds_items[i].(map[string]interface{})
+		map_item, map_ok := creds_items[i].(map[string]any)
 		if map_ok {
 			v, uok := map_item["user"]
 			if uok {
@@ -2029,8 +2029,8 @@ func (this *jsonArgs) getScanVector() (timestamp.Vector, errors.Error) {
 	return getScanVectorFromJSON(scan_vector_data)
 }
 
-func makeVectorEntry(index int, args interface{}) (*scanVectorEntry, errors.Error) {
-	data, is_map := args.(map[string]interface{})
+func makeVectorEntry(index int, args any) (*scanVectorEntry, errors.Error) {
+	data, is_map := args.(map[string]any)
 	if !is_map {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR, "array or map of { number, string }")
 	}
@@ -2057,7 +2057,7 @@ func makeVectorEntry(index int, args interface{}) (*scanVectorEntry, errors.Erro
 	}, nil
 }
 
-func (this *jsonArgs) getTristateVal(field string, v interface{}) (value.Tristate, errors.Error) {
+func (this *jsonArgs) getTristateVal(field string, v any) (value.Tristate, errors.Error) {
 	value_tristate := value.NONE
 
 	b, type_ok := v.(bool)
@@ -2070,7 +2070,7 @@ func (this *jsonArgs) getTristateVal(field string, v interface{}) (value.Tristat
 }
 
 // helper function to get a int type argument
-func (this *jsonArgs) getIntVal(field string, v interface{}) (int, errors.Error) {
+func (this *jsonArgs) getIntVal(field string, v any) (int, errors.Error) {
 	switch v := v.(type) {
 	case int:
 		return v, nil
@@ -2088,7 +2088,7 @@ func (this *jsonArgs) getIntVal(field string, v interface{}) (int, errors.Error)
 }
 
 // helper function to get a int64 type argument
-func (this *jsonArgs) getInt64Val(field string, v interface{}) (int64, errors.Error) {
+func (this *jsonArgs) getInt64Val(field string, v any) (int64, errors.Error) {
 	switch v := v.(type) {
 	case int:
 		return int64(v), nil
@@ -2106,7 +2106,7 @@ func (this *jsonArgs) getInt64Val(field string, v interface{}) (int64, errors.Er
 }
 
 // helper function to get a uint64 type argument
-func (this *jsonArgs) getUint64Val(field string, v interface{}) (uint64, errors.Error) {
+func (this *jsonArgs) getUint64Val(field string, v any) (uint64, errors.Error) {
 	switch v := v.(type) {
 	case int:
 		if v >= 0 {
@@ -2132,7 +2132,7 @@ func (this *jsonArgs) getUint64Val(field string, v interface{}) (uint64, errors.
 }
 
 // helper function to get a string type argument
-func (this *jsonArgs) getStringVal(field string, v interface{}) (string, errors.Error) {
+func (this *jsonArgs) getStringVal(field string, v any) (string, errors.Error) {
 	value, type_ok := v.(string)
 	if !type_ok {
 		return value, errors.NewServiceErrorTypeMismatch(field, "string")
@@ -2142,7 +2142,7 @@ func (this *jsonArgs) getStringVal(field string, v interface{}) (string, errors.
 
 // getValue returns a JSON-object request parameter as a value.Value. The body
 // value is already decoded, so it is wrapped directly; nil yields (nil, nil).
-func (this *jsonArgs) getValue(parm string, val interface{}) (value.Value, errors.Error) {
+func (this *jsonArgs) getValue(parm string, val any) (value.Value, errors.Error) {
 	if val == nil {
 		return nil, nil
 	}
@@ -2159,7 +2159,7 @@ func (this *jsonArgs) getString(f int, dflt string) (string, errors.Error) {
 	return value_field.(string), nil
 }
 
-func (this *jsonArgs) getPreparedName(field string, v interface{}) (string, errors.Error) {
+func (this *jsonArgs) getPreparedName(field string, v any) (string, errors.Error) {
 	switch v := v.(type) {
 	case string:
 		return v, nil
@@ -2322,7 +2322,7 @@ func (this *scanVectorEntries) Entries() []timestamp.Entry {
 }
 
 // A scan vector entry is an array of length two: [number, string] holding a sequence number and a guard string.
-func extractValues(arr []interface{}) (uint64, string, errors.Error) {
+func extractValues(arr []any) (uint64, string, errors.Error) {
 	if len(arr) != 2 {
 		return 0, "", errors.NewServiceErrorScanVectorBadLength(arr)
 	}
@@ -2339,7 +2339,7 @@ func extractValues(arr []interface{}) (uint64, string, errors.Error) {
 	return uint64(sequenceNum), uuid, nil
 }
 
-func makeSparseVector(args map[string]interface{}) (*scanVectorEntries, errors.Error) {
+func makeSparseVector(args map[string]any) (*scanVectorEntries, errors.Error) {
 	entries := make([]timestamp.Entry, len(args))
 	i := 0
 	for key, arg := range args {
@@ -2347,7 +2347,7 @@ func makeSparseVector(args map[string]interface{}) (*scanVectorEntries, errors.E
 		if err != nil {
 			return nil, errors.NewServiceErrorBadValue(go_errors.New("Key value is not integer: "+key), SCAN_VECTOR)
 		}
-		array, ok := arg.([]interface{})
+		array, ok := arg.([]any)
 		if !ok {
 			return nil, errors.NewServiceErrorTypeMismatch("scan vector entry", "two-element array")
 		}
@@ -2367,7 +2367,7 @@ func makeSparseVector(args map[string]interface{}) (*scanVectorEntries, errors.E
 	}, nil
 }
 
-func makeFullVector(args []interface{}) (*scanVectorEntries, errors.Error) {
+func makeFullVector(args []any) (*scanVectorEntries, errors.Error) {
 	l := len(args)
 	if l != SCAN_VECTOR_SIZE && l != SCAN_VECTOR_SIZE0 && l != SCAN_VECTOR_SIZE1 {
 		return nil, errors.NewServiceErrorTypeMismatch(SCAN_VECTOR,
@@ -2375,7 +2375,7 @@ func makeFullVector(args []interface{}) (*scanVectorEntries, errors.Error) {
 	}
 	entries := make([]timestamp.Entry, len(args))
 	for i, arg := range args {
-		array, ok := arg.([]interface{})
+		array, ok := arg.([]any)
 		if !ok {
 			return nil, errors.NewServiceErrorTypeMismatch("entry of a full scan vector",
 				"array of length 2")
@@ -2423,7 +2423,7 @@ func (this *scanConfigImpl) ScanConsistency() datastore.ScanConsistency {
 	}
 }
 
-func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) interface{} {
+func (this *scanConfigImpl) SetScanConsistency(consistency datastore.ScanConsistency) any {
 	if this == nil {
 		this = &scanConfigImpl{}
 	}
@@ -2514,11 +2514,11 @@ var validTxDataFields = map[string]bool{"id": true, "txn": true, "atmpt": true, 
 	"kv": true, "scas": true, "txnMeta": false, "opaque": false,
 	"state": true, "timeLeftMillis": true, "config": true, "numAtrs": true, "durabilityLevel": true, "kvTimeoutMs": true}
 
-func txDataValidation(tgt interface{}) (err error) {
+func txDataValidation(tgt any) (err error) {
 
 	return nil
 
-	if obj, ok := tgt.(map[string]interface{}); ok {
+	if obj, ok := tgt.(map[string]any); ok {
 		for s, v := range obj {
 			mv, ok := validTxDataFields[s]
 			if !ok {
@@ -2529,7 +2529,7 @@ func txDataValidation(tgt interface{}) (err error) {
 				}
 			}
 		}
-	} else if av, ok := tgt.([]interface{}); ok {
+	} else if av, ok := tgt.([]any); ok {
 		for _, v := range av {
 			if err = txDataValidation(v); err != nil {
 				return err
@@ -2540,11 +2540,11 @@ func txDataValidation(tgt interface{}) (err error) {
 	return nil
 }
 
-func getControlsRequest(a httpRequestArgs, parm string, val interface{}) (value.Tristate, errors.Error) {
+func getControlsRequest(a httpRequestArgs, parm string, val any) (value.Tristate, errors.Error) {
 	return a.getTristateVal(parm, val)
 }
 
-func handleDurationStyle(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleDurationStyle(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	styleStr, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		if style, ok := util.IsDurationStyle(styleStr); ok {
@@ -2554,7 +2554,7 @@ func handleDurationStyle(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	return err
 }
 
-func handleNatural(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNatural(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	natural, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		if rv.Prepared() != nil {
@@ -2569,7 +2569,7 @@ func handleNatural(rv *httpRequest, httpArgs httpRequestArgs, parm string, val i
 	return err
 }
 
-func handleNaturalCred(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalCred(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalCred, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalCred(naturalCred)
@@ -2577,7 +2577,7 @@ func handleNaturalCred(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleNaturalOrgId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalOrgId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalOrgId, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalOrganizationId(naturalOrgId)
@@ -2585,7 +2585,7 @@ func handleNaturalOrgId(rv *httpRequest, httpArgs httpRequestArgs, parm string, 
 	return err
 }
 
-func handleNaturalContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalContext(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalContext, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalContext(naturalContext)
@@ -2593,7 +2593,7 @@ func handleNaturalContext(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
-func handleNaturalHint(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalHint(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalHint, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalHint(naturalHint)
@@ -2601,7 +2601,7 @@ func handleNaturalHint(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return err
 }
 
-func handleNaturalOutput(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalOutput(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalOutput, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalOutput(naturalOutput)
@@ -2609,7 +2609,7 @@ func handleNaturalOutput(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	return err
 }
 
-func handleNaturalExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalExecute, err := httpArgs.getTristateVal(parm, val)
 	if err == nil {
 		rv.SetNaturalShowOnly(naturalExecute != value.TRUE)
@@ -2617,7 +2617,7 @@ func handleNaturalExecute(rv *httpRequest, httpArgs httpRequestArgs, parm string
 	return err
 }
 
-func handleNaturalChatId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalChatId(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalChatId, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalChatId(naturalChatId)
@@ -2625,7 +2625,7 @@ func handleNaturalChatId(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	return err
 }
 
-func handleNaturalConfig(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalConfig(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalConfig, err := httpArgs.getValue(parm, val)
 	if err == nil {
 		rv.SetNaturalConfig(naturalConfig)
@@ -2633,7 +2633,7 @@ func handleNaturalConfig(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	return err
 }
 
-func handleNaturalVendor(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalVendor(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalVendor, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalVendor(naturalVendor)
@@ -2641,7 +2641,7 @@ func handleNaturalVendor(rv *httpRequest, httpArgs httpRequestArgs, parm string,
 	return err
 }
 
-func handleNaturalModel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handleNaturalModel(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	naturalModel, err := httpArgs.getStringVal(parm, val)
 	if err == nil {
 		rv.SetNaturalModel(naturalModel)

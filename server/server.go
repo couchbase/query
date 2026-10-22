@@ -254,12 +254,12 @@ type Server struct {
 	pretty                 bool
 	srvprofile             Profile
 	srvcontrols            bool
-	allowlist              map[string]interface{}
+	allowlist              map[string]any
 	autoPrepare            bool
 	memoryQuota            uint64
 	atrCollection          string
 	numAtrs                int
-	settingsCallback       func(string, interface{})
+	settingsCallback       func(string, any)
 	gcpercent              int
 	shutdown               int
 	shutdownStart          time.Time
@@ -312,7 +312,7 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 		pretty:           pretty,
 		srvcontrols:      srvcontrols,
 		srvprofile:       srvprofile,
-		settingsCallback: func(s string, v interface{}) {},
+		settingsCallback: func(s string, v any) {},
 	}
 
 	rv.unboundQueue.name = "unbound"
@@ -358,7 +358,7 @@ func NewServer(store datastore.Datastore, sys datastore.Systemstore, config clus
 	// set namespaces in parser
 	ns, _ := store.NamespaceNames()
 	ss, _ := sys.NamespaceNames()
-	nsm := make(map[string]interface{}, len(ns)+len(ss))
+	nsm := make(map[string]any, len(ns)+len(ss))
 	for i, _ := range ns {
 		nsm[ns[i]] = true
 	}
@@ -375,11 +375,11 @@ func MetakvSubscribe() {
 	queryMetakv.Subscribe(N1ftyMetakvNotifier, queryMetakv.FTSMetaDir, make(chan struct{}))
 }
 
-func (this *Server) SetSettingsCallback(f func(string, interface{})) {
+func (this *Server) SetSettingsCallback(f func(string, any)) {
 	this.settingsCallback = f
 }
 
-func (this *Server) SettingsCallback() func(string, interface{}) {
+func (this *Server) SettingsCallback() func(string, any) {
 	return this.settingsCallback
 }
 
@@ -397,15 +397,15 @@ func (this *Server) Namespace() string {
 
 // Sets the Server Allowlist field for CURL()
 // Transforms the allowed/disallowed URL strings into valid URL objects
-func (this *Server) SetAllowlist(val map[string]interface{}) {
+func (this *Server) SetAllowlist(val map[string]any) {
 	if v, ok := val["allowed_urls"]; ok {
-		aUrls, ok := v.([]interface{})
+		aUrls, ok := v.([]any)
 		if !ok {
 			logging.Warnf("CURL allowed URLs list must be a list of strings.")
 		}
 
 		allowedUrlObjects := make([]*url.URL, 0, len(aUrls))
-		allowedUrlStrings := make([]interface{}, 0, len(aUrls))
+		allowedUrlStrings := make([]any, 0, len(aUrls))
 		for _, a := range aUrls {
 			if aUrl, ok := a.(string); !ok {
 				logging.Warnf("CURL allowed URLs list must be a list of strings.")
@@ -428,13 +428,13 @@ func (this *Server) SetAllowlist(val map[string]interface{}) {
 	}
 
 	if v, ok := val["disallowed_urls"]; ok {
-		dUrls, ok := v.([]interface{})
+		dUrls, ok := v.([]any)
 		if !ok {
 			logging.Warnf("CURL disallowed URLs list must be a list of strings.")
 		}
 
 		disallowedUrlObjects := make([]*url.URL, 0, len(dUrls))
-		disallowedUrlStrings := make([]interface{}, 0, len(dUrls))
+		disallowedUrlStrings := make([]any, 0, len(dUrls))
 
 		for _, d := range dUrls {
 			if dUrl, ok := d.(string); !ok {
@@ -459,7 +459,7 @@ func (this *Server) SetAllowlist(val map[string]interface{}) {
 	this.allowlist = val
 }
 
-func (this *Server) GetAllowlist() map[string]interface{} {
+func (this *Server) GetAllowlist() map[string]any {
 	return this.allowlist
 }
 
@@ -2328,14 +2328,14 @@ func (this *Server) setUsingArgs(exec *algebra.Execute, positionalArgs value.Val
 
 	actualValue := argsValue.Actual()
 	switch actualValue := actualValue.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		newArgs := make(map[string]value.Value, len(actualValue))
 		for n, v := range actualValue {
 			newArgs[n] = value.NewValue(v)
 		}
 		request.SetNamedArgs(newArgs)
 		context.SetNamedArgs(newArgs)
-	case []interface{}:
+	case []any:
 		newArgs := make([]value.Value, len(actualValue))
 		for n, v := range actualValue {
 			newArgs[n] = value.NewValue(v)
@@ -2356,9 +2356,9 @@ func (this *Server) getAutoExecutePrepared(request Request, prepared *plan.Prepa
 	res, _, er := context.ExecutePrepared(prepared, false, request.NamedArgs(), request.PositionalArgs(), "", false, "")
 	if er == nil {
 		var name string
-		actual, ok := res.Actual().([]interface{})
+		actual, ok := res.Actual().([]any)
 		if ok && len(actual) > 0 {
-			if fields, ok := actual[0].(map[string]interface{}); ok {
+			if fields, ok := actual[0].(map[string]any); ok {
 				name, _ = fields["name"].(string)
 			}
 		}
