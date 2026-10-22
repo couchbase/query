@@ -34,7 +34,7 @@ func NewClone(alias string, cost, cardinality float64, size int64, frCost float6
 	return rv
 }
 
-func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
+func (this *Clone) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitClone(this)
 }
 
@@ -50,8 +50,8 @@ func (this *Clone) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Clone) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Clone"}
+func (this *Clone) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Clone"}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -63,7 +63,7 @@ func (this *Clone) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Clone) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -91,7 +91,7 @@ func NewSet(node *algebra.Set, cost, cardinality float64, size int64, frCost flo
 	return rv
 }
 
-func (this *Set) Accept(visitor Visitor) (interface{}, error) {
+func (this *Set) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSet(this)
 }
 
@@ -107,8 +107,8 @@ func (this *Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Set) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Set"}
+func (this *Set) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Set"}
 	r["set_terms"] = this.node.Terms()
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -121,9 +121,9 @@ func (this *Set) MarshalBase(f func(map[string]interface{})) map[string]interfac
 
 func (this *Set) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		SetTerms    json.RawMessage        `json:"set_terms"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string          `json:"#operator"`
+		SetTerms    json.RawMessage `json:"set_terms"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -166,7 +166,7 @@ func NewUnset(node *algebra.Unset, cost, cardinality float64, size int64, frCost
 	return rv
 }
 
-func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
+func (this *Unset) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnset(this)
 }
 
@@ -182,8 +182,8 @@ func (this *Unset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Unset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Unset"}
+func (this *Unset) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Unset"}
 	r["unset_terms"] = this.node.Terms()
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -196,9 +196,9 @@ func (this *Unset) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Unset) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		UnsetTerms  json.RawMessage        `json:"unset_terms"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string          `json:"#operator"`
+		UnsetTerms  json.RawMessage `json:"unset_terms"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -250,7 +250,7 @@ func NewSendUpdate(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	return rv
 }
 
-func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
+func (this *SendUpdate) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSendUpdate(this)
 }
 
@@ -282,8 +282,8 @@ func (this *SendUpdate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "SendUpdate"}
+func (this *SendUpdate) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "SendUpdate"}
 	this.term.MarshalKeyspace(r)
 	r["alias"] = this.alias
 
@@ -305,17 +305,17 @@ func (this *SendUpdate) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendUpdate) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		Expr        string                 `json:"expr"`
-		As          string                 `json:"as"`
-		Alias       string                 `json:"alias"`
-		Limit       string                 `json:"limit"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		FastDiscard bool                   `json:"fast_discard"`
+		_           string         `json:"#operator"`
+		Namespace   string         `json:"namespace"`
+		Bucket      string         `json:"bucket"`
+		Scope       string         `json:"scope"`
+		Keyspace    string         `json:"keyspace"`
+		Expr        string         `json:"expr"`
+		As          string         `json:"as"`
+		Alias       string         `json:"alias"`
+		Limit       string         `json:"limit"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
+		FastDiscard bool           `json:"fast_discard"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

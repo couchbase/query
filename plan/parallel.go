@@ -25,7 +25,7 @@ func NewParallel(child Operator, maxParallelism int) *Parallel {
 	return &Parallel{nil, child, maxParallelism}
 }
 
-func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
+func (this *Parallel) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitParallel(this)
 }
 
@@ -53,8 +53,8 @@ func (this *Parallel) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Parallel) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Parallel"}
+func (this *Parallel) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Parallel"}
 
 	if this.maxParallelism > 0 {
 		r["maxParallelism"] = this.maxParallelism

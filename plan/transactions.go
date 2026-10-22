@@ -23,7 +23,7 @@ func NewStartTransaction(stmt *algebra.StartTransaction) *StartTransaction {
 	return &StartTransaction{isolation: stmt.IsolationLevel()}
 }
 
-func (this *StartTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *StartTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitStartTransaction(this)
 }
 
@@ -39,8 +39,8 @@ func (this *StartTransaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *StartTransaction) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "StartTransaction"}
+func (this *StartTransaction) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "StartTransaction"}
 	r["isolation"] = this.IsolationLevel()
 
 	if f != nil {
@@ -72,7 +72,7 @@ func NewCommitTransaction(stmt *algebra.CommitTransaction) *CommitTransaction {
 	return &CommitTransaction{}
 }
 
-func (this *CommitTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *CommitTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCommitTransaction(this)
 }
 
@@ -84,8 +84,8 @@ func (this *CommitTransaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CommitTransaction) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CommitTransaction"}
+func (this *CommitTransaction) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CommitTransaction"}
 
 	if f != nil {
 		f(r)
@@ -115,7 +115,7 @@ func NewRollbackTransaction(stmt *algebra.RollbackTransaction) *RollbackTransact
 	return &RollbackTransaction{savepoint: stmt.Savepoint()}
 }
 
-func (this *RollbackTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *RollbackTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitRollbackTransaction(this)
 }
 
@@ -135,8 +135,8 @@ func (this *RollbackTransaction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *RollbackTransaction) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "RollbackTransaction"}
+func (this *RollbackTransaction) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "RollbackTransaction"}
 	if this.IsSavepointRollback() {
 		r["savepoint"] = this.Savepoint()
 	}
@@ -171,7 +171,7 @@ func NewTransactionIsolation(stmt *algebra.TransactionIsolation) *TransactionIso
 	return &TransactionIsolation{isolation: stmt.IsolationLevel()}
 }
 
-func (this *TransactionIsolation) Accept(visitor Visitor) (interface{}, error) {
+func (this *TransactionIsolation) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitTransactionIsolation(this)
 }
 
@@ -187,8 +187,8 @@ func (this *TransactionIsolation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *TransactionIsolation) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "TransactionIsolation"}
+func (this *TransactionIsolation) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "TransactionIsolation"}
 	r["isolation"] = this.IsolationLevel()
 
 	if f != nil {
@@ -221,7 +221,7 @@ func NewSavepoint(stmt *algebra.Savepoint) *Savepoint {
 	return &Savepoint{savepoint: stmt.Savepoint()}
 }
 
-func (this *Savepoint) Accept(visitor Visitor) (interface{}, error) {
+func (this *Savepoint) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSavepoint(this)
 }
 
@@ -237,8 +237,8 @@ func (this *Savepoint) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Savepoint) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Savepoint"}
+func (this *Savepoint) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Savepoint"}
 	r["savepoint"] = this.Savepoint()
 
 	if f != nil {

@@ -42,7 +42,7 @@ func NewIndexCountScan2(index datastore.CountIndex2, term *algebra.KeyspaceTerm,
 	}
 }
 
-func (this *IndexCountScan2) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexCountScan2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexCountScan2(this)
 }
 
@@ -122,8 +122,8 @@ func (this *IndexCountScan2) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexCountScan2) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexCountScan2"}
+func (this *IndexCountScan2) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexCountScan2"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
@@ -161,19 +161,19 @@ func (this *IndexCountScan2) MarshalBase(f func(map[string]interface{})) map[str
 
 func (this *IndexCountScan2) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                string                 `json:"#operator"`
-		Index            string                 `json:"index"`
-		IndexId          string                 `json:"index_id"`
-		Namespace        string                 `json:"namespace"`
-		Bucket           string                 `json:"bucket"`
-		Scope            string                 `json:"scope"`
-		Keyspace         string                 `json:"keyspace"`
-		As               string                 `json:"as"`
-		Using            datastore.IndexType    `json:"using"`
-		Spans            Spans2                 `json:"spans"`
-		Covers           []string               `json:"covers"`
-		FilterCovers     map[string]interface{} `json:"filter_covers"`
-		IndexDefChecksum string                 `json:"index_definition_checksum"`
+		_                string              `json:"#operator"`
+		Index            string              `json:"index"`
+		IndexId          string              `json:"index_id"`
+		Namespace        string              `json:"namespace"`
+		Bucket           string              `json:"bucket"`
+		Scope            string              `json:"scope"`
+		Keyspace         string              `json:"keyspace"`
+		As               string              `json:"as"`
+		Using            datastore.IndexType `json:"using"`
+		Spans            Spans2              `json:"spans"`
+		Covers           []string            `json:"covers"`
+		FilterCovers     map[string]any      `json:"filter_covers"`
+		IndexDefChecksum string              `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -262,7 +262,7 @@ func (this *IndexCountScan2) verify(prepared *Prepared) errors.Error {
 	return verifyIndex(this.index, this.indexer, nil, prepared)
 }
 
-func (this *IndexCountScan2) Equals(i interface{}) bool {
+func (this *IndexCountScan2) Equals(i any) bool {
 	if cs, ok := i.(*IndexCountScan2); ok {
 		return this.String() == cs.String()
 	}

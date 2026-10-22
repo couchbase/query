@@ -48,7 +48,7 @@ func NewExternalScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, su
 	return rv
 }
 
-func (this *ExternalScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExternalScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExternalScan(this)
 }
 
@@ -111,8 +111,8 @@ func (this *ExternalScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *ExternalScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "ExternalScan"}
+func (this *ExternalScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "ExternalScan"}
 	this.term.MarshalKeyspace(r)
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
@@ -149,20 +149,20 @@ func (this *ExternalScan) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *ExternalScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                 string                 `json:"#operator"`
-		Namespace         string                 `json:"namespace"`
-		Bucket            string                 `json:"bucket"`
-		Scope             string                 `json:"scope"`
-		Keyspace          string                 `json:"keyspace"`
-		As                string                 `json:"as"`
-		SubPaths          []string               `json:"subpaths"`
-		Projection        []string               `json:"early_projection"`
-		Filter            string                 `json:"filter"`
-		SnapshotId        string                 `json:"snapshot_id"`
-		SnapshotTimestamp string                 `json:"snapshot_timestamp"`
-		NestedLoop        bool                   `json:"nested_loop"`
-		CountOnly         bool                   `json:"count_only"`
-		OptEstimate       map[string]interface{} `json:"optimizer_estimates"`
+		_                 string         `json:"#operator"`
+		Namespace         string         `json:"namespace"`
+		Bucket            string         `json:"bucket"`
+		Scope             string         `json:"scope"`
+		Keyspace          string         `json:"keyspace"`
+		As                string         `json:"as"`
+		SubPaths          []string       `json:"subpaths"`
+		Projection        []string       `json:"early_projection"`
+		Filter            string         `json:"filter"`
+		SnapshotId        string         `json:"snapshot_id"`
+		SnapshotTimestamp string         `json:"snapshot_timestamp"`
+		NestedLoop        bool           `json:"nested_loop"`
+		CountOnly         bool           `json:"count_only"`
+		OptEstimate       map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

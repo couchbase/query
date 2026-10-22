@@ -20,7 +20,7 @@ func NewCollect() *Collect {
 	return &Collect{}
 }
 
-func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
+func (this *Collect) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCollect(this)
 }
 
@@ -32,8 +32,8 @@ func (this *Collect) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Collect) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Collect"}
+func (this *Collect) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Collect"}
 	if f != nil {
 		f(r)
 	}

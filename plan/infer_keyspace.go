@@ -31,7 +31,7 @@ func NewInferKeyspace(keyspace datastore.Keyspace, node *algebra.InferKeyspace) 
 	}
 }
 
-func (this *InferKeyspace) Accept(visitor Visitor) (interface{}, error) {
+func (this *InferKeyspace) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInferKeyspace(this)
 }
 
@@ -51,8 +51,8 @@ func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *InferKeyspace) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "InferKeyspace"}
+func (this *InferKeyspace) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "InferKeyspace"}
 	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 

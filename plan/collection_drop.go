@@ -30,7 +30,7 @@ func NewDropCollection(scope datastore.Scope, node *algebra.DropCollection) *Dro
 	}
 }
 
-func (this *DropCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropCollection(this)
 }
 
@@ -50,8 +50,8 @@ func (this *DropCollection) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropCollection) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropCollection"}
+func (this *DropCollection) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropCollection"}
 	this.node.Keyspace().MarshalKeyspace(r)
 	// invert so the default if not present is to fail if not exists
 	r["ifExists"] = !this.node.FailIfNotExists()

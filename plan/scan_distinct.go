@@ -37,7 +37,7 @@ func NewDistinctScan(limit, offset expression.Expression, scan SecondaryScan, co
 	return rv
 }
 
-func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *DistinctScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDistinctScan(this)
 }
 
@@ -121,8 +121,8 @@ func (this *DistinctScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DistinctScan"}
+func (this *DistinctScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DistinctScan"}
 
 	if this.limit != nil {
 		r["limit"] = this.limit.String()
@@ -146,11 +146,11 @@ func (this *DistinctScan) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *DistinctScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Scan        json.RawMessage        `json:"scan"`
-		Limit       string                 `json:"limit"`
-		Offset      string                 `json:"offset"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string          `json:"#operator"`
+		Scan        json.RawMessage `json:"scan"`
+		Limit       string          `json:"limit"`
+		Offset      string          `json:"offset"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -218,7 +218,7 @@ func (this *DistinctScan) keyspaceReferences(prepared *Prepared) {
 	this.scan.keyspaceReferences(prepared)
 }
 
-func (this *DistinctScan) Equals(i interface{}) bool {
+func (this *DistinctScan) Equals(i any) bool {
 	if ds, ok := i.(*DistinctScan); ok {
 		return this.String() == ds.String()
 	}

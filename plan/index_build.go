@@ -32,7 +32,7 @@ func NewBuildIndexes(keyspace datastore.Keyspace, node *algebra.BuildIndexes) *B
 	}
 }
 
-func (this *BuildIndexes) Accept(visitor Visitor) (interface{}, error) {
+func (this *BuildIndexes) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitBuildIndexes(this)
 }
 
@@ -52,8 +52,8 @@ func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *BuildIndexes) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "BuildIndexes"}
+func (this *BuildIndexes) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "BuildIndexes"}
 	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 

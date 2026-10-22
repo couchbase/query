@@ -37,8 +37,8 @@ func (this *IndexKeyOrder) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexKeyOrder) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *IndexKeyOrder) MarshalBase(f func(map[string]any)) map[string]any {
+	r := make(map[string]any, 2)
 
 	r["keypos"] = this.KeyPos
 	if this.Desc {

@@ -26,7 +26,7 @@ func NewGrantRole(node *algebra.GrantRole) *GrantRole {
 	}
 }
 
-func (this *GrantRole) Accept(visitor Visitor) (interface{}, error) {
+func (this *GrantRole) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitGrantRole(this)
 }
 
@@ -42,8 +42,8 @@ func (this *GrantRole) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *GrantRole) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "GrantRole"}
+func (this *GrantRole) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "GrantRole"}
 	r["roles"] = this.node.Roles()
 	r["keyspaces"] = this.node.Keyspaces()
 	r["users"] = this.node.Users()

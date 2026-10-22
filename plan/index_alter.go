@@ -38,7 +38,7 @@ func NewAlterIndex(index datastore.Index, err errors.Error, indexer datastore.In
 	}
 }
 
-func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterIndex(this)
 }
 
@@ -66,8 +66,8 @@ func (this *AlterIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *AlterIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "AlterIndex"}
+func (this *AlterIndex) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "AlterIndex"}
 	if this.index != nil {
 		r["index"] = this.index.Name()
 		r["index_id"] = this.index.Id()

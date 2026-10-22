@@ -57,7 +57,7 @@ func NewPrimaryScan3(index datastore.PrimaryIndex3, keyspace datastore.Keyspace,
 	return rv
 }
 
-func (this *PrimaryScan3) Accept(visitor Visitor) (interface{}, error) {
+func (this *PrimaryScan3) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitPrimaryScan3(this)
 }
 
@@ -125,8 +125,8 @@ func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "PrimaryScan3"}
+func (this *PrimaryScan3) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "PrimaryScan3"}
 	r["index"] = this.index.Name()
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()
@@ -179,23 +179,23 @@ func (this *PrimaryScan3) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *PrimaryScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                string                 `json:"#operator"`
-		Index            string                 `json:"index"`
-		Namespace        string                 `json:"namespace"`
-		Bucket           string                 `json:"bucket"`
-		Scope            string                 `json:"scope"`
-		Keyspace         string                 `json:"keyspace"`
-		As               string                 `json:"as"`
-		Using            datastore.IndexType    `json:"using"`
-		GroupAggs        *IndexGroupAggregates  `json:"index_group_aggs"`
-		Projection       *IndexProjection       `json:"index_projection"`
-		OrderTerms       IndexKeyOrders         `json:"index_order"`
-		Offset           string                 `json:"offset"`
-		Limit            string                 `json:"limit"`
-		OptEstimate      map[string]interface{} `json:"optimizer_estimates"`
-		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
-		SkipNewKeys      bool                   `json:"skip_new_keys"`
-		IndexDefChecksum string                 `json:"index_definition_checksum"`
+		_                string                `json:"#operator"`
+		Index            string                `json:"index"`
+		Namespace        string                `json:"namespace"`
+		Bucket           string                `json:"bucket"`
+		Scope            string                `json:"scope"`
+		Keyspace         string                `json:"keyspace"`
+		As               string                `json:"as"`
+		Using            datastore.IndexType   `json:"using"`
+		GroupAggs        *IndexGroupAggregates `json:"index_group_aggs"`
+		Projection       *IndexProjection      `json:"index_projection"`
+		OrderTerms       IndexKeyOrders        `json:"index_order"`
+		Offset           string                `json:"offset"`
+		Limit            string                `json:"limit"`
+		OptEstimate      map[string]any        `json:"optimizer_estimates"`
+		HasDeltaKeyspace bool                  `json:"has_delta_keyspace"`
+		SkipNewKeys      bool                  `json:"skip_new_keys"`
+		IndexDefChecksum string                `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

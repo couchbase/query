@@ -40,7 +40,7 @@ func NewFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, subPaths 
 	return rv
 }
 
-func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
+func (this *Fetch) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFetch(this)
 }
 
@@ -84,8 +84,8 @@ func (this *Fetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Fetch"}
+func (this *Fetch) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Fetch"}
 	this.term.MarshalKeyspace(r)
 	if len(this.subPaths) > 0 {
 		r["subpaths"] = this.subPaths
@@ -119,19 +119,19 @@ func (this *Fetch) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Fetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Namespace    string                 `json:"namespace"`
-		Bucket       string                 `json:"bucket"`
-		Scope        string                 `json:"scope"`
-		Keyspace     string                 `json:"keyspace"`
-		FromExpr     string                 `json:"fromExpr"`
-		As           string                 `json:"as"`
-		UnderNL      bool                   `json:"nested_loop"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
-		SubPaths     []string               `json:"subpaths"`
-		Projection   []string               `json:"early_projection"`
-		ValidateKeys bool                   `json:"validate_keys"`
-		CacheResult  bool                   `json:"cache_result"`
+		_            string         `json:"#operator"`
+		Namespace    string         `json:"namespace"`
+		Bucket       string         `json:"bucket"`
+		Scope        string         `json:"scope"`
+		Keyspace     string         `json:"keyspace"`
+		FromExpr     string         `json:"fromExpr"`
+		As           string         `json:"as"`
+		UnderNL      bool           `json:"nested_loop"`
+		OptEstimate  map[string]any `json:"optimizer_estimates"`
+		SubPaths     []string       `json:"subpaths"`
+		Projection   []string       `json:"early_projection"`
+		ValidateKeys bool           `json:"validate_keys"`
+		CacheResult  bool           `json:"cache_result"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -200,7 +200,7 @@ func NewDummyFetch(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm,
 	return rv
 }
 
-func (this *DummyFetch) Accept(visitor Visitor) (interface{}, error) {
+func (this *DummyFetch) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDummyFetch(this)
 }
 
@@ -224,8 +224,8 @@ func (this *DummyFetch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DummyFetch"}
+func (this *DummyFetch) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DummyFetch"}
 	this.term.MarshalKeyspace(r)
 	if this.term.As() != "" {
 		r["as"] = this.term.As()
@@ -246,15 +246,15 @@ func (this *DummyFetch) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *DummyFetch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		FromExpr    string                 `json:"fromExpr"`
-		As          string                 `json:"as"`
-		UnderNL     bool                   `json:"nested_loop"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string         `json:"#operator"`
+		Namespace   string         `json:"namespace"`
+		Bucket      string         `json:"bucket"`
+		Scope       string         `json:"scope"`
+		Keyspace    string         `json:"keyspace"`
+		FromExpr    string         `json:"fromExpr"`
+		As          string         `json:"as"`
+		UnderNL     bool           `json:"nested_loop"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

@@ -34,7 +34,7 @@ func NewDropIndex(index datastore.Index, err errors.Error, indexer datastore.Ind
 	}
 }
 
-func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropIndex(this)
 }
 
@@ -58,8 +58,8 @@ func (this *DropIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropIndex"}
+func (this *DropIndex) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropIndex"}
 	this.node.Keyspace().MarshalKeyspace(r)
 	r["using"] = this.node.Using()
 	r["name"] = this.node.Name()

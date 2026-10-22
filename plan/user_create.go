@@ -28,7 +28,7 @@ func NewCreateUser(node *algebra.CreateUser) *CreateUser {
 	}
 }
 
-func (this *CreateUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateUser(this)
 }
 
@@ -44,8 +44,8 @@ func (this *CreateUser) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateUser) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateUser"}
+func (this *CreateUser) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateUser"}
 	r["user"] = this.node.User()
 	password, ok := this.node.Password()
 	r["password_set"] = ok

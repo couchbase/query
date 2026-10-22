@@ -43,7 +43,7 @@ func NewAuthorize(privs *auth.Privileges, child Operator) *Authorize {
 	return rv
 }
 
-func (this *Authorize) Accept(visitor Visitor) (interface{}, error) {
+func (this *Authorize) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAuthorize(this)
 }
 
@@ -87,8 +87,8 @@ func (this *Authorize) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Authorize) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Authorize"}
+func (this *Authorize) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Authorize"}
 	r["privileges"] = this.privs
 	if this.dynamic {
 		r["dynamic"] = this.dynamic

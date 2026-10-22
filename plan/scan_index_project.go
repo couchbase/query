@@ -37,8 +37,8 @@ func (this *IndexProjection) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexProjection) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *IndexProjection) MarshalBase(f func(map[string]any)) map[string]any {
+	r := make(map[string]any, 2)
 
 	if len(this.EntryKeys) != 0 {
 		r["entry_keys"] = this.EntryKeys

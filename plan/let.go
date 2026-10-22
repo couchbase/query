@@ -29,7 +29,7 @@ func NewLet(bindings expression.Bindings, cost, cardinality float64, size int64,
 	return rv
 }
 
-func (this *Let) Accept(visitor Visitor) (interface{}, error) {
+func (this *Let) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitLet(this)
 }
 
@@ -45,8 +45,8 @@ func (this *Let) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Let"}
+func (this *Let) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Let"}
 	r["bindings"] = this.bindings
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -59,9 +59,9 @@ func (this *Let) MarshalBase(f func(map[string]interface{})) map[string]interfac
 
 func (this *Let) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Bindings    json.RawMessage        `json:"bindings"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string          `json:"#operator"`
+		Bindings    json.RawMessage `json:"bindings"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

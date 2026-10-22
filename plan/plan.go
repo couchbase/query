@@ -84,11 +84,11 @@ type Operator interface {
 	json.Marshaler   // JSON encoding; used by EXPLAIN and PREPARE
 	json.Unmarshaler // JSON decoding: used by EXECUTE
 
-	MarshalBase(f func(map[string]interface{})) map[string]interface{} // JSON encoding helper for execution
+	MarshalBase(f func(map[string]any)) map[string]any // JSON encoding helper for execution
 
-	Accept(visitor Visitor) (interface{}, error) // Visitor pattern
-	Readonly() bool                              // Used to determine read-only compliance
-	New() Operator                               // Dynamic constructor; used for unmarshaling
+	Accept(visitor Visitor) (any, error) // Visitor pattern
+	Readonly() bool                      // Used to determine read-only compliance
+	New() Operator                       // Dynamic constructor; used for unmarshaling
 
 	verify(prepared *Prepared) errors.Error // Check that the operator can reference keyspaces and indexes
 	keyspaceReferences(prepared *Prepared)  // Gather keyspace references
@@ -135,7 +135,7 @@ type SecondaryScan interface {
 	// get index pointer if single index used, nil if multiple indexes used
 	GetIndex() datastore.Index
 
-	Equals(interface{}) bool
+	Equals(any) bool
 }
 
 func CopyOperators(ops []Operator) []Operator {

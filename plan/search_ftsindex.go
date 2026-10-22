@@ -53,7 +53,7 @@ func NewIndexFtsSearch(index datastore.Index, term *algebra.KeyspaceTerm,
 	return rv
 }
 
-func (this *IndexFtsSearch) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexFtsSearch) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexFtsSearch(this)
 }
 
@@ -169,8 +169,8 @@ func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexFtsSearch) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexFtsSearch"}
+func (this *IndexFtsSearch) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexFtsSearch"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
@@ -217,21 +217,21 @@ func (this *IndexFtsSearch) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                string                 `json:"#operator"`
-		Index            string                 `json:"index"`
-		IndexId          string                 `json:"index_id"`
-		Namespace        string                 `json:"namespace"`
-		Bucket           string                 `json:"bucket"`
-		Scope            string                 `json:"scope"`
-		Keyspace         string                 `json:"keyspace"`
-		As               string                 `json:"as"`
-		Using            datastore.IndexType    `json:"using"`
-		UnderNL          bool                   `json:"nested_loop"`
-		SearchInfo       *FTSSearchInfo         `json:"search_info"`
-		Covers           []string               `json:"covers"`
-		FilterCovers     map[string]interface{} `json:"filter_covers"`
-		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
-		IndexDefChecksum string                 `json:"index_definition_checksum"`
+		_                string              `json:"#operator"`
+		Index            string              `json:"index"`
+		IndexId          string              `json:"index_id"`
+		Namespace        string              `json:"namespace"`
+		Bucket           string              `json:"bucket"`
+		Scope            string              `json:"scope"`
+		Keyspace         string              `json:"keyspace"`
+		As               string              `json:"as"`
+		Using            datastore.IndexType `json:"using"`
+		UnderNL          bool                `json:"nested_loop"`
+		SearchInfo       *FTSSearchInfo      `json:"search_info"`
+		Covers           []string            `json:"covers"`
+		FilterCovers     map[string]any      `json:"filter_covers"`
+		HasDeltaKeyspace bool                `json:"has_delta_keyspace"`
+		IndexDefChecksum string              `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -324,7 +324,7 @@ func (this *IndexFtsSearch) keyspaceReferences(prepared *Prepared) {
 	prepared.addKeyspaceReference(this.keyspace)
 }
 
-func (this *IndexFtsSearch) Equals(i interface{}) bool {
+func (this *IndexFtsSearch) Equals(i any) bool {
 	if fs, ok := i.(*IndexFtsSearch); ok {
 		return this.String() == fs.String()
 	}
@@ -406,8 +406,8 @@ func (this *FTSSearchInfo) OutName() string {
 	return this.outName
 }
 
-func (this *FTSSearchInfo) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 7)
+func (this *FTSSearchInfo) MarshalBase(f func(map[string]any)) map[string]any {
+	r := make(map[string]any, 7)
 
 	if this.field != nil {
 		r["field"] = this.field.String()

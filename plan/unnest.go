@@ -36,7 +36,7 @@ func NewUnnest(term *algebra.Unnest, filter expression.Expression, cost, cardina
 	return rv
 }
 
-func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
+func (this *Unnest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnnest(this)
 }
 
@@ -64,8 +64,8 @@ func (this *Unnest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Unnest"}
+func (this *Unnest) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Unnest"}
 
 	if this.term.Outer() {
 		r["outer"] = this.term.Outer()
@@ -96,13 +96,13 @@ func (this *Unnest) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Unnest) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_               string                 `json:"#operator"`
-		Outer           bool                   `json:"outer"`
-		Expr            string                 `json:"expr"`
-		As              string                 `json:"as"`
-		Filter          string                 `json:"filter"`
-		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
-		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
+		_               string            `json:"#operator"`
+		Outer           bool              `json:"outer"`
+		Expr            string            `json:"expr"`
+		As              string            `json:"as"`
+		Filter          string            `json:"filter"`
+		OptEstimate     map[string]any    `json:"optimizer_estimates"`
+		BuildBitFilters []json.RawMessage `json:"build_bit_filters"`
 	}
 	var expr expression.Expression
 

@@ -27,7 +27,7 @@ func NewIndexAdvice(curIndexes, recIndexes, coverIdxes iaplan.IndexInfos) *Index
 	}
 }
 
-func (this *IndexAdvice) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexAdvice) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexAdvice(this)
 }
 
@@ -43,8 +43,8 @@ func (this *IndexAdvice) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexAdvice) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexAdvice"}
+func (this *IndexAdvice) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexAdvice"}
 	r["adviseinfo"] = this.adviceInfo
 
 	if f != nil {

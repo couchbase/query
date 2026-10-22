@@ -36,9 +36,9 @@ type planContext struct {
 
 func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.SubqueryPlans, remap bool, planVersion int) *planContext {
 	rv := &planContext{
-		withs:       value.NewScopeValue(make(map[string]interface{}), nil),
-		vars:        value.NewScopeValue(make(map[string]interface{}), nil),
-		keyspaces:   value.NewScopeValue(make(map[string]interface{}), nil),
+		withs:       value.NewScopeValue(make(map[string]any), nil),
+		vars:        value.NewScopeValue(make(map[string]any), nil),
+		keyspaces:   value.NewScopeValue(make(map[string]any), nil),
 		subqMap:     subqMap,
 		subqPlans:   subqPlans,
 		remap:       remap,
@@ -59,9 +59,9 @@ func subqPlanContext(parent *planContext) *planContext {
 	// the pointers since this is currently only used for unmarshal of subquery plans from a
 	// prepared statement (no parallelism)
 	rv := &planContext{
-		withs:       value.NewScopeValue(make(map[string]interface{}), parent.withs),
-		vars:        value.NewScopeValue(make(map[string]interface{}), parent.vars),
-		keyspaces:   value.NewScopeValue(make(map[string]interface{}), parent.keyspaces),
+		withs:       value.NewScopeValue(make(map[string]any), parent.withs),
+		vars:        value.NewScopeValue(make(map[string]any), parent.vars),
+		keyspaces:   value.NewScopeValue(make(map[string]any), parent.keyspaces),
 		subqMap:     parent.subqMap,
 		subqPlans:   parent.subqPlans,
 		remap:       parent.remap,
@@ -72,7 +72,7 @@ func subqPlanContext(parent *planContext) *planContext {
 	return rv
 }
 
-func (this *planContext) VisitAny(expr *expression.Any) (interface{}, error) {
+func (this *planContext) VisitAny(expr *expression.Any) (any, error) {
 	err := this.pushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (this *planContext) VisitAny(expr *expression.Any) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *planContext) VisitEvery(expr *expression.Every) (interface{}, error) {
+func (this *planContext) VisitEvery(expr *expression.Every) (any, error) {
 	err := this.pushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (this *planContext) VisitEvery(expr *expression.Every) (interface{}, error)
 	return expr, nil
 }
 
-func (this *planContext) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+func (this *planContext) VisitAnyEvery(expr *expression.AnyEvery) (any, error) {
 	err := this.pushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -117,7 +117,7 @@ func (this *planContext) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, 
 	return expr, nil
 }
 
-func (this *planContext) VisitArray(expr *expression.Array) (interface{}, error) {
+func (this *planContext) VisitArray(expr *expression.Array) (any, error) {
 	err := this.pushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (this *planContext) VisitArray(expr *expression.Array) (interface{}, error)
 	return expr, nil
 }
 
-func (this *planContext) VisitFirst(expr *expression.First) (interface{}, error) {
+func (this *planContext) VisitFirst(expr *expression.First) (any, error) {
 	err := this.pushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (this *planContext) VisitFirst(expr *expression.First) (interface{}, error)
 	return expr, nil
 }
 
-func (this *planContext) VisitObject(expr *expression.Object) (interface{}, error) {
+func (this *planContext) VisitObject(expr *expression.Object) (any, error) {
 	err := this.pushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -167,8 +167,8 @@ func (this *planContext) pushBindings(bindings expression.Bindings, push bool) (
 	keyspaces := this.keyspaces
 
 	if push {
-		vars = value.NewScopeValue(make(map[string]interface{}, len(bindings)), vars)
-		keyspaces = value.NewScopeValue(make(map[string]interface{}, len(bindings)), keyspaces)
+		vars = value.NewScopeValue(make(map[string]any, len(bindings)), vars)
+		keyspaces = value.NewScopeValue(make(map[string]any, len(bindings)), keyspaces)
 	}
 
 	for _, b := range bindings {
@@ -229,7 +229,7 @@ func (this *planContext) addWiths(withs expression.Withs) (err error) {
 	return
 }
 
-func (this *planContext) VisitIdentifier(expr *expression.Identifier) (interface{}, error) {
+func (this *planContext) VisitIdentifier(expr *expression.Identifier) (any, error) {
 	ident := expr.Identifier()
 	if _, ok := this.withs.Field(ident); ok {
 		expr.SetWithAlias(true)
@@ -253,7 +253,7 @@ func (this *planContext) VisitIdentifier(expr *expression.Identifier) (interface
 	return expr, nil
 }
 
-func (this *planContext) VisitSubquery(expr expression.Subquery) (interface{}, error) {
+func (this *planContext) VisitSubquery(expr expression.Subquery) (any, error) {
 	// use a new planContext for an extra scope
 	planContext := subqPlanContext(this)
 

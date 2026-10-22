@@ -38,8 +38,8 @@ func (this *IndexGroupKey) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexGroupKey) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 4)
+func (this *IndexGroupKey) MarshalBase(f func(map[string]any)) map[string]any {
+	r := make(map[string]any, 4)
 
 	r["id"] = this.EntryKeyId
 	r["keypos"] = this.KeyPos
@@ -111,8 +111,8 @@ func (this *IndexAggregate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexAggregate) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 4)
+func (this *IndexAggregate) MarshalBase(f func(map[string]any)) map[string]any {
+	r := make(map[string]any, 4)
 
 	r["aggregate"] = this.Operation
 	r["id"] = this.EntryKeyId
@@ -190,9 +190,9 @@ func (this *IndexGroupAggregates) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexGroupAggregates) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
+func (this *IndexGroupAggregates) MarshalBase(f func(map[string]any)) map[string]any {
 
-	r := make(map[string]interface{}, 4)
+	r := make(map[string]any, 4)
 
 	if this.Name != "" {
 		r["name"] = this.Name

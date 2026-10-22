@@ -50,7 +50,7 @@ func NewIndexNest(keyspace datastore.Keyspace, nest *algebra.IndexNest, index da
 	return rv
 }
 
-func (this *IndexNest) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexNest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexNest(this)
 }
 
@@ -90,8 +90,8 @@ func (this *IndexNest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexNest) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexNest"}
+func (this *IndexNest) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexNest"}
 	this.term.MarshalKeyspace(r)
 	r["on_key"] = this.term.JoinKeys().String()
 	r["for"] = this.keyFor
@@ -107,7 +107,7 @@ func (this *IndexNest) MarshalBase(f func(map[string]interface{})) map[string]in
 		r["as"] = this.term.As()
 	}
 
-	scan := map[string]interface{}{
+	scan := map[string]any{
 		"index":    this.index.Name(),
 		"index_id": this.index.Id(),
 		"using":    this.index.Type(),
@@ -150,9 +150,9 @@ func (this *IndexNest) UnmarshalJSON(body []byte) error {
 			Using            datastore.IndexType `json:"using"`
 			IndexDefChecksum string              `json:"index_definition_checksum"`
 		} `json:"scan"`
-		SubPaths     []string               `json:"subpaths"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
-		ValidateKeys bool                   `json:"validate_keys"`
+		SubPaths     []string       `json:"subpaths"`
+		OptEstimate  map[string]any `json:"optimizer_estimates"`
+		ValidateKeys bool           `json:"validate_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

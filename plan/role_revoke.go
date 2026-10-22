@@ -26,7 +26,7 @@ func NewRevokeRole(node *algebra.RevokeRole) *RevokeRole {
 	}
 }
 
-func (this *RevokeRole) Accept(visitor Visitor) (interface{}, error) {
+func (this *RevokeRole) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitRevokeRole(this)
 }
 
@@ -42,8 +42,8 @@ func (this *RevokeRole) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *RevokeRole) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "RevokeRole"}
+func (this *RevokeRole) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "RevokeRole"}
 	r["roles"] = this.node.Roles()
 	r["keyspaces"] = this.node.Keyspaces()
 	r["users"] = this.node.Users()

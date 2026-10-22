@@ -29,7 +29,7 @@ func NewPrepare(prepared value.Value, plan *Prepared, force bool) *Prepare {
 	}
 }
 
-func (this *Prepare) Accept(visitor Visitor) (interface{}, error) {
+func (this *Prepare) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitPrepare(this)
 }
 
@@ -53,8 +53,8 @@ func (this *Prepare) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Prepare) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Prepare"}
+func (this *Prepare) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Prepare"}
 	r["prepared"] = this.prepared
 	if f != nil {
 		f(r)

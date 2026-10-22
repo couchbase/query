@@ -60,7 +60,7 @@ func NewMerge(keyspace datastore.Keyspace, ref *algebra.KeyspaceRef, key express
 	return rv
 }
 
-func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
+func (this *Merge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitMerge(this)
 }
 
@@ -124,8 +124,8 @@ func (this *Merge) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Merge"}
+func (this *Merge) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Merge"}
 	this.ref.MarshalKeyspace(r)
 
 	if this.key != nil {
@@ -179,23 +179,23 @@ func (this *Merge) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Merge) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Namespace    string                 `json:"namespace"`
-		Bucket       string                 `json:"bucket"`
-		Scope        string                 `json:"scope"`
-		Keyspace     string                 `json:"keyspace"`
-		As           string                 `json:"as"`
-		Key          string                 `json:"key"`
-		CanSpill     bool                   `json:"can_spill"`
-		FastDiscard  bool                   `json:"fast_discard"`
-		Limit        string                 `json:"limit"`
-		Update       json.RawMessage        `json:"update"`
-		Delete       json.RawMessage        `json:"delete"`
-		Insert       json.RawMessage        `json:"insert"`
-		UpdateFilter string                 `json:"update_filter"`
-		DeleteFilter string                 `json:"delete_filter"`
-		InsertFilter string                 `json:"insert_filter"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
+		_            string          `json:"#operator"`
+		Namespace    string          `json:"namespace"`
+		Bucket       string          `json:"bucket"`
+		Scope        string          `json:"scope"`
+		Keyspace     string          `json:"keyspace"`
+		As           string          `json:"as"`
+		Key          string          `json:"key"`
+		CanSpill     bool            `json:"can_spill"`
+		FastDiscard  bool            `json:"fast_discard"`
+		Limit        string          `json:"limit"`
+		Update       json.RawMessage `json:"update"`
+		Delete       json.RawMessage `json:"delete"`
+		Insert       json.RawMessage `json:"insert"`
+		UpdateFilter string          `json:"update_filter"`
+		DeleteFilter string          `json:"delete_filter"`
+		InsertFilter string          `json:"insert_filter"`
+		OptEstimate  map[string]any  `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

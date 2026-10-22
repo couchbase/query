@@ -31,7 +31,7 @@ func NewFilter(cond expression.Expression, alias string, cost, cardinality float
 	return rv
 }
 
-func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
+func (this *Filter) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFilter(this)
 }
 
@@ -55,8 +55,8 @@ func (this *Filter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Filter"}
+func (this *Filter) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Filter"}
 	r["condition"] = expression.NewStringer().Visit(this.cond)
 	if this.alias != "" {
 		r["alias"] = this.alias
@@ -78,11 +78,11 @@ func (this *Filter) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Filter) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_               string                 `json:"#operator"`
-		Condition       string                 `json:"condition"`
-		Alias           string                 `json:"alias"`
-		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
-		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
+		_               string            `json:"#operator"`
+		Condition       string            `json:"condition"`
+		Alias           string            `json:"alias"`
+		OptEstimate     map[string]any    `json:"optimizer_estimates"`
+		BuildBitFilters []json.RawMessage `json:"build_bit_filters"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

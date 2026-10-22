@@ -28,7 +28,7 @@ func NewDropSequence(node *algebra.DropSequence) *DropSequence {
 	}
 }
 
-func (this *DropSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropSequence(this)
 }
 
@@ -44,8 +44,8 @@ func (this *DropSequence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropSequence) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropSequence"}
+func (this *DropSequence) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropSequence"}
 	this.node.MarshalName(r)
 
 	// invert so the default if not present is to fail if not exists

@@ -25,7 +25,7 @@ func NewDropGroup(node *algebra.DropGroup) *DropGroup {
 	}
 }
 
-func (this *DropGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropGroup(this)
 }
 
@@ -41,8 +41,8 @@ func (this *DropGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropGroup"}
+func (this *DropGroup) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropGroup"}
 	r["group"] = this.node.Group()
 	r["ifExists"] = !this.node.FailIfNotExists()
 	if f != nil {

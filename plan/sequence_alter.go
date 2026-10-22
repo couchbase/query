@@ -29,7 +29,7 @@ func NewAlterSequence(node *algebra.AlterSequence) *AlterSequence {
 	}
 }
 
-func (this *AlterSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterSequence(this)
 }
 
@@ -45,8 +45,8 @@ func (this *AlterSequence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *AlterSequence) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "AlterSequence"}
+func (this *AlterSequence) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "AlterSequence"}
 	this.node.MarshalName(r)
 
 	r["with"] = this.node.With()

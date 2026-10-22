@@ -40,7 +40,7 @@ func NewNLJoin(join *algebra.AnsiJoin, child Operator, filter expression.Express
 	return rv
 }
 
-func (this *NLJoin) Accept(visitor Visitor) (interface{}, error) {
+func (this *NLJoin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitNLJoin(this)
 }
 
@@ -84,8 +84,8 @@ func (this *NLJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "NestedLoopJoin"}
+func (this *NLJoin) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "NestedLoopJoin"}
 	r["alias"] = this.alias
 	if this.onclause != nil {
 		r["on_clause"] = this.onclause.String()
@@ -113,13 +113,13 @@ func (this *NLJoin) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *NLJoin) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Onclause    string                 `json:"on_clause"`
-		Outer       bool                   `json:"outer"`
-		Alias       string                 `json:"alias"`
-		Filter      string                 `json:"filter"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		Child       json.RawMessage        `json:"~child"`
+		_           string          `json:"#operator"`
+		Onclause    string          `json:"on_clause"`
+		Outer       bool            `json:"outer"`
+		Alias       string          `json:"alias"`
+		Filter      string          `json:"filter"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
+		Child       json.RawMessage `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

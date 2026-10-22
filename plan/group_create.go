@@ -26,7 +26,7 @@ func NewCreateGroup(node *algebra.CreateGroup) *CreateGroup {
 	}
 }
 
-func (this *CreateGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateGroup(this)
 }
 
@@ -42,8 +42,8 @@ func (this *CreateGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateGroup"}
+func (this *CreateGroup) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateGroup"}
 	r["group"] = this.node.Group()
 	desc, ok := this.node.Desc()
 	r["desc_set"] = ok

@@ -30,7 +30,7 @@ func NewDropScope(bucket datastore.Bucket, node *algebra.DropScope) *DropScope {
 	}
 }
 
-func (this *DropScope) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropScope) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropScope(this)
 }
 
@@ -50,8 +50,8 @@ func (this *DropScope) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropScope) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropScope"}
+func (this *DropScope) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropScope"}
 	this.node.Scope().MarshalKeyspace(r)
 	// invert so the default if not present is to fail if not exists
 	r["ifExists"] = !this.node.FailIfNotExists()

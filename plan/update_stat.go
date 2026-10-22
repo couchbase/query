@@ -34,7 +34,7 @@ func NewUpdateStatistics(keyspace datastore.Keyspace,
 	}
 }
 
-func (this *UpdateStatistics) Accept(visitor Visitor) (interface{}, error) {
+func (this *UpdateStatistics) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUpdateStatistics(this)
 }
 
@@ -54,19 +54,19 @@ func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *UpdateStatistics) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "UpdateStatistics"}
+func (this *UpdateStatistics) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "UpdateStatistics"}
 	this.node.Keyspace().MarshalKeyspace(r)
 
 	if len(this.node.Terms()) > 0 {
-		terms := make([]interface{}, 0, len(this.node.Terms()))
+		terms := make([]any, 0, len(this.node.Terms()))
 		for _, term := range this.node.Terms() {
 			terms = append(terms, term.String())
 		}
 		r["terms"] = terms
 	}
 	if len(this.node.Indexes()) > 0 {
-		indexes := make([]interface{}, 0, len(this.node.Indexes()))
+		indexes := make([]any, 0, len(this.node.Indexes()))
 		for _, index := range this.node.Indexes() {
 			indexes = append(indexes, index.String())
 		}

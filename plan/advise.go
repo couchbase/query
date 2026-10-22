@@ -32,7 +32,7 @@ func NewAdvise(op Operator, subqueries []StmtAdvice, text string) *Advise {
 	}
 }
 
-func (this *Advise) Accept(visitor Visitor) (interface{}, error) {
+func (this *Advise) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAdvise(this)
 }
 
@@ -48,8 +48,8 @@ func (this *Advise) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Advise) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Advise"}
+func (this *Advise) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Advise"}
 
 	r["query"] = this.query
 
@@ -58,7 +58,7 @@ func (this *Advise) MarshalBase(f func(map[string]interface{})) map[string]inter
 	} else {
 		r["advice"] = this.op
 		if len(this.subqueries) > 0 {
-			marshalledSubqueries := make([]map[string]interface{}, 0, len(this.subqueries))
+			marshalledSubqueries := make([]map[string]any, 0, len(this.subqueries))
 			for _, s := range this.subqueries {
 				op := s.Op.MarshalBase(nil)
 				op["subquery"] = s.Subquery

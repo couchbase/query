@@ -28,7 +28,7 @@ func NewOffset(expr expression.Expression, cost, cardinality float64, size int64
 	return rv
 }
 
-func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
+func (this *Offset) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitOffset(this)
 }
 
@@ -44,8 +44,8 @@ func (this *Offset) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Offset"}
+func (this *Offset) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Offset"}
 	r["expr"] = this.expr.String()
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -58,9 +58,9 @@ func (this *Offset) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Offset) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Expr        string                 `json:"expr"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string         `json:"#operator"`
+		Expr        string         `json:"expr"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

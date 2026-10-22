@@ -41,7 +41,7 @@ func NewPrimaryScan(index datastore.PrimaryIndex, keyspace datastore.Keyspace,
 	}
 }
 
-func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *PrimaryScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitPrimaryScan(this)
 }
 
@@ -77,8 +77,8 @@ func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *PrimaryScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "PrimaryScan"}
+func (this *PrimaryScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "PrimaryScan"}
 	r["index"] = this.index.Name()
 	this.term.MarshalKeyspace(r)
 	r["using"] = this.index.Type()

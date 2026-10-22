@@ -42,7 +42,7 @@ func NewSendDelete(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef, limi
 	return rv
 }
 
-func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
+func (this *SendDelete) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSendDelete(this)
 }
 
@@ -82,8 +82,8 @@ func (this *SendDelete) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "SendDelete"}
+func (this *SendDelete) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "SendDelete"}
 	this.term.MarshalKeyspace(r)
 	r["alias"] = this.alias
 
@@ -109,18 +109,18 @@ func (this *SendDelete) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendDelete) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Namespace    string                 `json:"namespace"`
-		Bucket       string                 `json:"bucket"`
-		Scope        string                 `json:"scope"`
-		Keyspace     string                 `json:"keyspace"`
-		Expr         string                 `json:"expr"`
-		As           string                 `json:"as"`
-		Alias        string                 `json:"alias"`
-		Limit        string                 `json:"limit"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
-		ValidateKeys bool                   `json:"validate_keys"`
-		FastDiscard  bool                   `json:"fast_discard"`
+		_            string         `json:"#operator"`
+		Namespace    string         `json:"namespace"`
+		Bucket       string         `json:"bucket"`
+		Scope        string         `json:"scope"`
+		Keyspace     string         `json:"keyspace"`
+		Expr         string         `json:"expr"`
+		As           string         `json:"as"`
+		Alias        string         `json:"alias"`
+		Limit        string         `json:"limit"`
+		OptEstimate  map[string]any `json:"optimizer_estimates"`
+		ValidateKeys bool           `json:"validate_keys"`
+		FastDiscard  bool           `json:"fast_discard"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

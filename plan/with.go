@@ -35,7 +35,7 @@ func NewWith(bindings *algebra.WithClause, child Operator, cost, cardinality flo
 	return rv
 }
 
-func (this *With) Accept(visitor Visitor) (interface{}, error) {
+func (this *With) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitWith(this)
 }
 
@@ -59,8 +59,8 @@ func (this *With) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *With) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "With"}
+func (this *With) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "With"}
 	r["recursive"] = this.bindings.IsRecursive()
 	r["bindings"] = this.bindings.Bindings()
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
@@ -76,11 +76,11 @@ func (this *With) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *With) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Recursive   bool                   `json:"recursive"`
-		Bindings    json.RawMessage        `json:"bindings"`
-		Child       json.RawMessage        `json:"~child"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string          `json:"#operator"`
+		Recursive   bool            `json:"recursive"`
+		Bindings    json.RawMessage `json:"bindings"`
+		Child       json.RawMessage `json:"~child"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
 	}
 
 	var child_type struct {

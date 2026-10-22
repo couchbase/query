@@ -33,7 +33,7 @@ func NewIntersectAll(first, second Operator, distinct bool, cost, cardinality fl
 	return rv
 }
 
-func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
+func (this *IntersectAll) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIntersectAll(this)
 }
 
@@ -57,8 +57,8 @@ func (this *IntersectAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IntersectAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IntersectAll"}
+func (this *IntersectAll) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IntersectAll"}
 	if this.distinct {
 		r["distinct"] = this.distinct
 	}
@@ -76,11 +76,11 @@ func (this *IntersectAll) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *IntersectAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		First       json.RawMessage        `json:"first"`
-		Second      json.RawMessage        `json:"second"`
-		Distinct    bool                   `json:"distinct"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string          `json:"#operator"`
+		First       json.RawMessage `json:"first"`
+		Second      json.RawMessage `json:"second"`
+		Distinct    bool            `json:"distinct"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

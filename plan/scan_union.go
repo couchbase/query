@@ -46,7 +46,7 @@ func NewUnionScan(limit, offset expression.Expression, cost, cardinality float64
 	return rv
 }
 
-func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *UnionScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnionScan(this)
 }
 
@@ -190,8 +190,8 @@ func (this *UnionScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "UnionScan"}
+func (this *UnionScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "UnionScan"}
 
 	if this.limit != nil {
 		r["limit"] = this.limit.String()
@@ -215,11 +215,11 @@ func (this *UnionScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *UnionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Scans       []json.RawMessage      `json:"scans"`
-		Limit       string                 `json:"limit"`
-		Offset      string                 `json:"offset"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string            `json:"#operator"`
+		Scans       []json.RawMessage `json:"scans"`
+		Limit       string            `json:"limit"`
+		Offset      string            `json:"offset"`
+		OptEstimate map[string]any    `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -299,7 +299,7 @@ func (this *UnionScan) keyspaceReferences(prepared *Prepared) {
 	}
 }
 
-func (this *UnionScan) Equals(i interface{}) bool {
+func (this *UnionScan) Equals(i any) bool {
 	if us, ok := i.(*UnionScan); ok {
 		if len(this.scans) != len(us.scans) {
 			return false

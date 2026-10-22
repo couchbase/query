@@ -87,7 +87,7 @@ func (this *BitFilterIndex) sameAs(other *BitFilterIndex) bool {
 
 func (this *BitFilterIndex) MarshalJSON() ([]byte, error) {
 	stringer := expression.NewStringer()
-	r := make(map[string]interface{}, 4)
+	r := make(map[string]any, 4)
 	r["index_name"] = this.indexName
 	r["index_id"] = this.indexId
 	if this.size > 0 {
@@ -186,9 +186,9 @@ func (this *BitFilterTerm) addBitFilterIndex(bfIndexExprs []*BitFilterIndex) ([]
 }
 
 func (this *BitFilterTerm) MarshalJSON() ([]byte, error) {
-	r := make(map[string]interface{}, 2)
+	r := make(map[string]any, 2)
 	r["alias"] = this.alias
-	bfixs := make([]interface{}, 0, len(this.indexBFs))
+	bfixs := make([]any, 0, len(this.indexBFs))
 	for _, ix := range this.indexBFs {
 		bfixs = append(bfixs, ix)
 	}
@@ -287,8 +287,8 @@ func (this *BuildBitFilterBase) CompactBuildBitFilters() {
 	}
 }
 
-func (this *BuildBitFilterBase) marshalBuildBitFilters(r map[string]interface{}) {
-	buildBFs := make([]interface{}, 0, len(this.buildBitFilters))
+func (this *BuildBitFilterBase) marshalBuildBitFilters(r map[string]any) {
+	buildBFs := make([]any, 0, len(this.buildBitFilters))
 	for _, bbf := range this.buildBitFilters {
 		buildBFs = append(buildBFs, bbf)
 	}
@@ -351,8 +351,8 @@ func (this *ProbeBitFilterBase) CompactProbeBitFilters() {
 	}
 }
 
-func (this *ProbeBitFilterBase) marshalProbeBitFilters(r map[string]interface{}) {
-	probeBFs := make([]interface{}, 0, len(this.probeBitFilters))
+func (this *ProbeBitFilterBase) marshalProbeBitFilters(r map[string]any) {
+	probeBFs := make([]any, 0, len(this.probeBitFilters))
 	for _, pbf := range this.probeBitFilters {
 		probeBFs = append(probeBFs, pbf)
 	}

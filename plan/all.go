@@ -20,7 +20,7 @@ func NewAll() *All {
 	return &All{}
 }
 
-func (this *All) Accept(visitor Visitor) (interface{}, error) {
+func (this *All) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAll(this)
 }
 
@@ -32,8 +32,8 @@ func (this *All) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *All) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "All"}
+func (this *All) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "All"}
 	if f != nil {
 		f(r)
 	}

@@ -61,7 +61,7 @@ func NewInitialProject(projection *algebra.Projection, cost, cardinality float64
 	return rv
 }
 
-func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
+func (this *InitialProject) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInitialProject(this)
 }
 
@@ -97,8 +97,8 @@ func (this *InitialProject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "InitialProject"}
+func (this *InitialProject) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "InitialProject"}
 
 	if this.projection.Distinct() {
 		r["distinct"] = this.projection.Distinct()
@@ -112,9 +112,9 @@ func (this *InitialProject) MarshalBase(f func(map[string]interface{})) map[stri
 		r["optimizer_estimates"] = optEstimate
 	}
 
-	s := make([]interface{}, 0, len(this.terms))
+	s := make([]any, 0, len(this.terms))
 	for _, term := range this.terms {
-		t := make(map[string]interface{})
+		t := make(map[string]any)
 
 		if term.Result().Star() {
 			t["star"] = term.Result().Star()
@@ -165,7 +165,7 @@ func (this *InitialProject) UnmarshalJSON(body []byte) error {
 		} `json:"result_terms"`
 		Distinct      bool                   `json:"distinct"`
 		Raw           bool                   `json:"raw"`
-		OptEstimate   map[string]interface{} `json:"optimizer_estimates"`
+		OptEstimate   map[string]any         `json:"optimizer_estimates"`
 		PreserveOrder bool                   `json:"preserve_order"`
 		Exclude       expression.Expressions `json:"exclude"`
 		Bindings      []string               `json:"bindings"`
@@ -252,7 +252,7 @@ func NewIndexCountProject(projection *algebra.Projection) *IndexCountProject {
 	}
 }
 
-func (this *IndexCountProject) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexCountProject) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexCountProject(this)
 }
 
@@ -272,16 +272,16 @@ func (this *IndexCountProject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexCountProject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexCountProject"}
+func (this *IndexCountProject) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexCountProject"}
 
 	if this.projection.Raw() {
 		r["raw"] = this.projection.Raw()
 	}
 
-	s := make([]interface{}, 0, len(this.terms))
+	s := make([]any, 0, len(this.terms))
 	for _, term := range this.terms {
-		t := make(map[string]interface{})
+		t := make(map[string]any)
 
 		if term.Result().As() != "" {
 			t["as"] = term.Result().As()

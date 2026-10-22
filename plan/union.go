@@ -28,7 +28,7 @@ func NewUnionAll(cost, cardinality float64, size int64, frCost float64, children
 	return rv
 }
 
-func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
+func (this *UnionAll) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnionAll(this)
 }
 
@@ -44,8 +44,8 @@ func (this *UnionAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *UnionAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "UnionAll"}
+func (this *UnionAll) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "UnionAll"}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -59,9 +59,9 @@ func (this *UnionAll) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *UnionAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Children    []json.RawMessage      `json:"~children"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string            `json:"#operator"`
+		Children    []json.RawMessage `json:"~children"`
+		OptEstimate map[string]any    `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

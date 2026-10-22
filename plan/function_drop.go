@@ -38,7 +38,7 @@ func (this *DropFunction) FailIfNotExists() bool {
 	return this.failIfNotExists
 }
 
-func (this *DropFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropFunction(this)
 }
 
@@ -50,9 +50,9 @@ func (this *DropFunction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropFunction) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropFunction"}
-	identity := make(map[string]interface{})
+func (this *DropFunction) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropFunction"}
+	identity := make(map[string]any)
 	this.name.Signature(identity)
 	r["identity"] = identity
 	r["fail_if_not_exists"] = this.failIfNotExists

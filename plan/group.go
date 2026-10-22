@@ -39,7 +39,7 @@ func NewInitialGroup(keys expression.Expressions, aggregates algebra.Aggregates,
 	return rv
 }
 
-func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *InitialGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInitialGroup(this)
 }
 
@@ -75,14 +75,14 @@ func (this *InitialGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "InitialGroup"}
+func (this *InitialGroup) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "InitialGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
 		keylist = append(keylist, key.String())
 	}
 	r["group_keys"] = keylist
-	s := make([]interface{}, 0, len(this.aggregates))
+	s := make([]any, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
 		s = append(s, agg.String())
 	}
@@ -107,13 +107,13 @@ func (this *InitialGroup) MarshalBase(f func(map[string]interface{})) map[string
 
 func (this *InitialGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_             string                 `json:"#operator"`
-		Keys          []string               `json:"group_keys"`
-		Aggs          []string               `json:"aggregates"`
-		OptEstimate   map[string]interface{} `json:"optimizer_estimates"`
-		Flags         uint32                 `json:"flags"`
-		GroupAs       string                 `json:"group_as"`
-		GroupAsFields []string               `json:"group_as_fields"`
+		_             string         `json:"#operator"`
+		Keys          []string       `json:"group_keys"`
+		Aggs          []string       `json:"aggregates"`
+		OptEstimate   map[string]any `json:"optimizer_estimates"`
+		Flags         uint32         `json:"flags"`
+		GroupAs       string         `json:"group_as"`
+		GroupAsFields []string       `json:"group_as_fields"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -182,7 +182,7 @@ func NewIntermediateGroup(keys expression.Expressions, aggregates algebra.Aggreg
 	return rv
 }
 
-func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *IntermediateGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIntermediateGroup(this)
 }
 
@@ -214,14 +214,14 @@ func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IntermediateGroup"}
+func (this *IntermediateGroup) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IntermediateGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
 		keylist = append(keylist, key.String())
 	}
 	r["group_keys"] = keylist
-	s := make([]interface{}, 0, len(this.aggregates))
+	s := make([]any, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
 		s = append(s, agg.String())
 	}
@@ -243,12 +243,12 @@ func (this *IntermediateGroup) MarshalBase(f func(map[string]interface{})) map[s
 
 func (this *IntermediateGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Keys        []string               `json:"group_keys"`
-		Aggs        []string               `json:"aggregates"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		Flags       uint32                 `json:"flags"`
-		GroupAs     string                 `json:"group_as"`
+		_           string         `json:"#operator"`
+		Keys        []string       `json:"group_keys"`
+		Aggs        []string       `json:"aggregates"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
+		Flags       uint32         `json:"flags"`
+		GroupAs     string         `json:"group_as"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -314,7 +314,7 @@ func NewFinalGroup(keys expression.Expressions, aggregates algebra.Aggregates,
 	return rv
 }
 
-func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *FinalGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFinalGroup(this)
 }
 
@@ -342,14 +342,14 @@ func (this *FinalGroup) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "FinalGroup"}
+func (this *FinalGroup) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "FinalGroup"}
 	keylist := make([]string, 0, len(this.keys))
 	for _, key := range this.keys {
 		keylist = append(keylist, key.String())
 	}
 	r["group_keys"] = keylist
-	s := make([]interface{}, 0, len(this.aggregates))
+	s := make([]any, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
 		s = append(s, agg.String())
 	}
@@ -368,11 +368,11 @@ func (this *FinalGroup) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *FinalGroup) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Keys        []string               `json:"group_keys"`
-		Aggs        []string               `json:"aggregates"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		Flags       uint32                 `json:"flags"`
+		_           string         `json:"#operator"`
+		Keys        []string       `json:"group_keys"`
+		Aggs        []string       `json:"aggregates"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
+		Flags       uint32         `json:"flags"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

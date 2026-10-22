@@ -28,7 +28,7 @@ func NewAlterUser(node *algebra.AlterUser) *AlterUser {
 	}
 }
 
-func (this *AlterUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterUser(this)
 }
 
@@ -44,8 +44,8 @@ func (this *AlterUser) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *AlterUser) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "AlterUser"}
+func (this *AlterUser) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "AlterUser"}
 	r["user"] = this.node.User()
 	password, ok := this.node.Password()
 	r["password_set"] = ok

@@ -52,7 +52,7 @@ func (this *CreateFunction) FailIfExists() bool {
 	return this.failIfExists
 }
 
-func (this *CreateFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateFunction(this)
 }
 
@@ -64,10 +64,10 @@ func (this *CreateFunction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateFunction) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateFunction"}
-	identity := make(map[string]interface{})
-	definition := make(map[string]interface{})
+func (this *CreateFunction) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateFunction"}
+	identity := make(map[string]any)
+	definition := make(map[string]any)
 	this.name.Signature(identity)
 	this.body.Body(definition)
 	r["identity"] = identity

@@ -49,7 +49,7 @@ func NewHashJoin(join *algebra.AnsiJoin, child Operator, buildExprs, probeExprs 
 	return rv
 }
 
-func (this *HashJoin) Accept(visitor Visitor) (interface{}, error) {
+func (this *HashJoin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitHashJoin(this)
 }
 
@@ -117,8 +117,8 @@ func (this *HashJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "HashJoin"}
+func (this *HashJoin) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "HashJoin"}
 	if this.onclause != nil {
 		r["on_clause"] = this.onclause.String()
 	}
@@ -164,17 +164,17 @@ func (this *HashJoin) MarshalBase(f func(map[string]interface{})) map[string]int
 
 func (this *HashJoin) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Onclause     string                 `json:"on_clause"`
-		Outer        bool                   `json:"outer"`
-		External     bool                   `json:"hash_external_filter"`
-		BuildExprs   []string               `json:"build_exprs"`
-		ProbeExprs   []string               `json:"probe_exprs"`
-		BuildAliases []string               `json:"build_aliases"`
-		ProbeAliases []string               `json:"probe_aliases"`
-		Filter       string                 `json:"filter"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
-		Child        json.RawMessage        `json:"~child"`
+		_            string          `json:"#operator"`
+		Onclause     string          `json:"on_clause"`
+		Outer        bool            `json:"outer"`
+		External     bool            `json:"hash_external_filter"`
+		BuildExprs   []string        `json:"build_exprs"`
+		ProbeExprs   []string        `json:"probe_exprs"`
+		BuildAliases []string        `json:"build_aliases"`
+		ProbeAliases []string        `json:"probe_aliases"`
+		Filter       string          `json:"filter"`
+		OptEstimate  map[string]any  `json:"optimizer_estimates"`
+		Child        json.RawMessage `json:"~child"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

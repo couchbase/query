@@ -48,7 +48,7 @@ func NewSendUpsert(keyspace datastore.Keyspace, ksref *algebra.KeyspaceRef,
 	return rv
 }
 
-func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {
+func (this *SendUpsert) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSendUpsert(this)
 }
 
@@ -92,8 +92,8 @@ func (this *SendUpsert) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "SendUpsert"}
+func (this *SendUpsert) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "SendUpsert"}
 	this.term.MarshalKeyspace(r)
 	r["alias"] = this.alias
 
@@ -127,20 +127,20 @@ func (this *SendUpsert) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *SendUpsert) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		KeyExpr     string                 `json:"key"`
-		ValueExpr   string                 `json:"value"`
-		OptionsExpr string                 `json:"options"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		Expr        string                 `json:"expr"`
-		As          string                 `json:"as"`
-		Alias       string                 `json:"alias"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
-		SkipNewKeys bool                   `json:"skip_new_keys"`
-		FastDiscard bool                   `json:"fast_discard"`
+		_           string         `json:"#operator"`
+		KeyExpr     string         `json:"key"`
+		ValueExpr   string         `json:"value"`
+		OptionsExpr string         `json:"options"`
+		Namespace   string         `json:"namespace"`
+		Bucket      string         `json:"bucket"`
+		Scope       string         `json:"scope"`
+		Keyspace    string         `json:"keyspace"`
+		Expr        string         `json:"expr"`
+		As          string         `json:"as"`
+		Alias       string         `json:"alias"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
+		SkipNewKeys bool           `json:"skip_new_keys"`
+		FastDiscard bool           `json:"fast_discard"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

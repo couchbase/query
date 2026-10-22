@@ -30,7 +30,7 @@ func NewCreateScope(bucket datastore.Bucket, node *algebra.CreateScope) *CreateS
 	}
 }
 
-func (this *CreateScope) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateScope) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateScope(this)
 }
 
@@ -50,8 +50,8 @@ func (this *CreateScope) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateScope) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateScope"}
+func (this *CreateScope) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateScope"}
 	this.node.Scope().MarshalKeyspace(r)
 
 	// invert so the default if not present is to fail if exists

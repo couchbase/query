@@ -34,7 +34,7 @@ func NewCountScan(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm,
 	return rv
 }
 
-func (this *CountScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *CountScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCountScan(this)
 }
 
@@ -54,8 +54,8 @@ func (this *CountScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CountScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CountScan"}
+func (this *CountScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CountScan"}
 	this.term.MarshalKeyspace(r)
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -68,12 +68,12 @@ func (this *CountScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *CountScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Namespace   string                 `json:"namespace"`
-		Bucket      string                 `json:"bucket"`
-		Scope       string                 `json:"scope"`
-		Keyspace    string                 `json:"keyspace"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string         `json:"#operator"`
+		Namespace   string         `json:"namespace"`
+		Bucket      string         `json:"bucket"`
+		Scope       string         `json:"scope"`
+		Keyspace    string         `json:"keyspace"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

@@ -30,7 +30,7 @@ func NewFlushCollection(keyspace datastore.Keyspace, node *algebra.FlushCollecti
 	}
 }
 
-func (this *FlushCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *FlushCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFlushCollection(this)
 }
 
@@ -50,8 +50,8 @@ func (this *FlushCollection) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *FlushCollection) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "FlushCollection"}
+func (this *FlushCollection) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "FlushCollection"}
 	this.node.Keyspace().MarshalKeyspace(r)
 
 	if f != nil {

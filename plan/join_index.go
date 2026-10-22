@@ -58,7 +58,7 @@ func NewIndexJoin(keyspace datastore.Keyspace, join *algebra.IndexJoin,
 	return rv
 }
 
-func (this *IndexJoin) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexJoin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexJoin(this)
 }
 
@@ -122,8 +122,8 @@ func (this *IndexJoin) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexJoin"}
+func (this *IndexJoin) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexJoin"}
 	this.term.MarshalKeyspace(r)
 	r["on_key"] = this.term.JoinKeys().String()
 	r["for"] = this.keyFor
@@ -139,7 +139,7 @@ func (this *IndexJoin) MarshalBase(f func(map[string]interface{})) map[string]in
 		r["as"] = this.term.As()
 	}
 
-	scan := map[string]interface{}{
+	scan := map[string]any{
 		"index":    this.index.Name(),
 		"index_id": this.index.Id(),
 		"using":    this.index.Type(),
@@ -190,16 +190,16 @@ func (this *IndexJoin) UnmarshalJSON(body []byte) error {
 		As        string `json:"as"`
 		For       string `json:"for"`
 		Scan      struct {
-			Index            string                 `json:"index"`
-			IndexId          string                 `json:"index_id"`
-			Using            datastore.IndexType    `json:"using"`
-			Covers           []string               `json:"covers"`
-			FilterCovers     map[string]interface{} `json:"filter_covers"`
-			IndexDefChecksum string                 `json:"index_definition_checksum"`
+			Index            string              `json:"index"`
+			IndexId          string              `json:"index_id"`
+			Using            datastore.IndexType `json:"using"`
+			Covers           []string            `json:"covers"`
+			FilterCovers     map[string]any      `json:"filter_covers"`
+			IndexDefChecksum string              `json:"index_definition_checksum"`
 		} `json:"scan"`
-		SubPaths     []string               `json:"subpaths"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
-		ValidateKeys bool                   `json:"validate_keys"`
+		SubPaths     []string       `json:"subpaths"`
+		OptEstimate  map[string]any `json:"optimizer_estimates"`
+		ValidateKeys bool           `json:"validate_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

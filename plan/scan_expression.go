@@ -40,7 +40,7 @@ func NewExpressionScan(fromExpr expression.Expression, alias string, correlated,
 	return rv
 }
 
-func (this *ExpressionScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExpressionScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExpressionScan(this)
 }
 
@@ -92,8 +92,8 @@ func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "ExpressionScan"}
+func (this *ExpressionScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "ExpressionScan"}
 	r["expr"] = this.fromExpr.String()
 	r["alias"] = this.alias
 	if !this.correlated {
@@ -119,14 +119,14 @@ func (this *ExpressionScan) MarshalBase(f func(map[string]interface{})) map[stri
 
 func (this *ExpressionScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_               string                 `json:"#operator"`
-		FromExpr        string                 `json:"expr"`
-		Alias           string                 `json:"alias"`
-		UnCorrelated    bool                   `json:"uncorrelated"`
-		NestedLoop      bool                   `json:"nested_loop"`
-		Filter          string                 `json:"filter"`
-		OptEstimate     map[string]interface{} `json:"optimizer_estimates"`
-		BuildBitFilters []json.RawMessage      `json:"build_bit_filters"`
+		_               string            `json:"#operator"`
+		FromExpr        string            `json:"expr"`
+		Alias           string            `json:"alias"`
+		UnCorrelated    bool              `json:"uncorrelated"`
+		NestedLoop      bool              `json:"nested_loop"`
+		Filter          string            `json:"filter"`
+		OptEstimate     map[string]any    `json:"optimizer_estimates"`
+		BuildBitFilters []json.RawMessage `json:"build_bit_filters"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

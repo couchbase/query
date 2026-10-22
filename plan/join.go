@@ -53,7 +53,7 @@ func NewJoinFromAnsi(keyspace datastore.Keyspace, term *algebra.KeyspaceTerm, su
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
+func (this *Join) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitJoin(this)
 }
 
@@ -93,8 +93,8 @@ func (this *Join) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Join"}
+func (this *Join) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Join"}
 	this.term.MarshalKeyspace(r)
 	r["on_keys"] = this.term.JoinKeys().String()
 	if len(this.subPaths) > 0 {
@@ -129,18 +129,18 @@ func (this *Join) MarshalBase(f func(map[string]interface{})) map[string]interfa
 
 func (this *Join) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		Namespace    string                 `json:"namespace"`
-		Bucket       string                 `json:"bucket"`
-		Scope        string                 `json:"scope"`
-		Keyspace     string                 `json:"keyspace"`
-		On           string                 `json:"on_keys"`
-		Outer        bool                   `json:"outer"`
-		As           string                 `json:"as"`
-		OnFilter     string                 `json:"on_filter"`
-		SubPaths     []string               `json:"subpaths"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
-		ValidateKeys bool                   `json:"validate_keys"`
+		_            string         `json:"#operator"`
+		Namespace    string         `json:"namespace"`
+		Bucket       string         `json:"bucket"`
+		Scope        string         `json:"scope"`
+		Keyspace     string         `json:"keyspace"`
+		On           string         `json:"on_keys"`
+		Outer        bool           `json:"outer"`
+		As           string         `json:"as"`
+		OnFilter     string         `json:"on_filter"`
+		SubPaths     []string       `json:"subpaths"`
+		OptEstimate  map[string]any `json:"optimizer_estimates"`
+		ValidateKeys bool           `json:"validate_keys"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

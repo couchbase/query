@@ -55,7 +55,7 @@ func NewIndexScan(index datastore.Index, term *algebra.KeyspaceTerm, spans Spans
 	return rv
 }
 
-func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexScan(this)
 }
 
@@ -180,8 +180,8 @@ func (this *IndexScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexScan"}
+func (this *IndexScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexScan"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
@@ -234,23 +234,23 @@ func (this *IndexScan) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *IndexScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                string                 `json:"#operator"`
-		Index            string                 `json:"index"`
-		IndexId          string                 `json:"index_id"`
-		Namespace        string                 `json:"namespace"`
-		Bucket           string                 `json:"bucket"`
-		Scope            string                 `json:"scope"`
-		Keyspace         string                 `json:"keyspace"`
-		As               string                 `json:"as"`
-		Using            datastore.IndexType    `json:"using"`
-		Spans            Spans                  `json:"spans"`
-		Distinct         bool                   `json:"distinct"`
-		UnderNL          bool                   `json:"nested_loop"`
-		Limit            string                 `json:"limit"`
-		Covers           []string               `json:"covers"`
-		FilterCovers     map[string]interface{} `json:"filter_covers"`
-		HasDeltaKeyspace bool                   `json:"has_delta_keyspace"`
-		IndexDefChecksum string                 `json:"index_definition_checksum"`
+		_                string              `json:"#operator"`
+		Index            string              `json:"index"`
+		IndexId          string              `json:"index_id"`
+		Namespace        string              `json:"namespace"`
+		Bucket           string              `json:"bucket"`
+		Scope            string              `json:"scope"`
+		Keyspace         string              `json:"keyspace"`
+		As               string              `json:"as"`
+		Using            datastore.IndexType `json:"using"`
+		Spans            Spans               `json:"spans"`
+		Distinct         bool                `json:"distinct"`
+		UnderNL          bool                `json:"nested_loop"`
+		Limit            string              `json:"limit"`
+		Covers           []string            `json:"covers"`
+		FilterCovers     map[string]any      `json:"filter_covers"`
+		HasDeltaKeyspace bool                `json:"has_delta_keyspace"`
+		IndexDefChecksum string              `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -352,7 +352,7 @@ func (this *IndexScan) keyspaceReferences(prepared *Prepared) {
 	prepared.addKeyspaceReference(this.keyspace)
 }
 
-func (this *IndexScan) Equals(i interface{}) bool {
+func (this *IndexScan) Equals(i any) bool {
 	if is, ok := i.(*IndexScan); ok {
 		return this.String() == is.String()
 	}

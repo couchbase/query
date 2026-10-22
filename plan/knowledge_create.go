@@ -29,7 +29,7 @@ func NewCreateKnowledge(node *algebra.CreateKnowledge) *CreateKnowledge {
 	}
 }
 
-func (this *CreateKnowledge) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateKnowledge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateKnowledge(this)
 }
 
@@ -45,8 +45,8 @@ func (this *CreateKnowledge) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateKnowledge) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateKnowledge"}
+func (this *CreateKnowledge) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateKnowledge"}
 	this.node.MarshalName(r)
 	r["value"] = this.node.Value()
 	if f != nil {

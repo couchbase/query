@@ -125,8 +125,8 @@ func (this *Range2) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Range2) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{
+func (this *Range2) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{
 		"inclusion": this.Inclusion,
 	}
 
@@ -341,8 +341,8 @@ func (this *Span2) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Span2) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{
+func (this *Span2) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{
 		"range": this.Ranges,
 	}
 

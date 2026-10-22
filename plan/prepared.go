@@ -135,8 +135,8 @@ func (this *Prepared) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 20)
+func (this *Prepared) MarshalBase(f func(map[string]any)) map[string]any {
+	r := make(map[string]any, 20)
 	this.marshalInternal(r)
 	if f != nil {
 		f(r)
@@ -144,7 +144,7 @@ func (this *Prepared) MarshalBase(f func(map[string]interface{})) map[string]int
 	return r
 }
 
-func (this *Prepared) marshalInternal(r map[string]interface{}) {
+func (this *Prepared) marshalInternal(r map[string]any) {
 	if !this.inlineUdf {
 		r["operator"] = this.Operator
 		r["signature"] = this.signature
@@ -222,34 +222,34 @@ func (this *Prepared) UnmarshalJSON(body []byte) error {
 
 func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 	var _unmarshalled struct {
-		Operator           json.RawMessage        `json:"operator"`
-		Signature          json.RawMessage        `json:"signature"`
-		Name               string                 `json:"name"`
-		EncodedPlan        string                 `json:"encoded_plan"`
-		Text               string                 `json:"text"`
-		ReqType            string                 `json:"reqType"`
-		ApiVersion         int                    `json:"indexApiVersion"`
-		FeatureControls    uint64                 `json:"featureControls"`
-		Namespace          string                 `json:"namespace"`
-		QueryContext       string                 `json:"queryContext"`
-		UseFts             bool                   `json:"useFts"`
-		UseCBO             bool                   `json:"useCBO"`
-		Persist            bool                   `json:"persist"`
-		AdHoc              bool                   `json:"adHocStatement"`
-		InlineUdf          bool                   `json:"inlineUdf"`
-		Restored           bool                   `json:"restored"`
-		AutoPrepared       bool                   `json:"autoPrepared"`
-		IndexScanKeyspaces map[string]interface{} `json:"indexScanKeyspaces"`
-		Version            int                    `json:"planVersion"`
-		OptimHints         json.RawMessage        `json:"optimizer_hints"`
-		PreparedTime       string                 `json:"planPreparedTime"`
-		UserAgent          string                 `json:"userAgent"`
-		CreatingUserAgent  string                 `json:"creatingUserAgent"`
-		Users              string                 `json:"users"`
-		RemoteAddr         string                 `json:"remoteAddr"`
-		FatalError         bool                   `json:"verificationFatalError"`
-		ErrCount           int                    `json:"verificationErrorCount"`
-		KeyspaceRefs       []string               `json:"keyspaceReferences"`
+		Operator           json.RawMessage `json:"operator"`
+		Signature          json.RawMessage `json:"signature"`
+		Name               string          `json:"name"`
+		EncodedPlan        string          `json:"encoded_plan"`
+		Text               string          `json:"text"`
+		ReqType            string          `json:"reqType"`
+		ApiVersion         int             `json:"indexApiVersion"`
+		FeatureControls    uint64          `json:"featureControls"`
+		Namespace          string          `json:"namespace"`
+		QueryContext       string          `json:"queryContext"`
+		UseFts             bool            `json:"useFts"`
+		UseCBO             bool            `json:"useCBO"`
+		Persist            bool            `json:"persist"`
+		AdHoc              bool            `json:"adHocStatement"`
+		InlineUdf          bool            `json:"inlineUdf"`
+		Restored           bool            `json:"restored"`
+		AutoPrepared       bool            `json:"autoPrepared"`
+		IndexScanKeyspaces map[string]any  `json:"indexScanKeyspaces"`
+		Version            int             `json:"planVersion"`
+		OptimHints         json.RawMessage `json:"optimizer_hints"`
+		PreparedTime       string          `json:"planPreparedTime"`
+		UserAgent          string          `json:"userAgent"`
+		CreatingUserAgent  string          `json:"creatingUserAgent"`
+		Users              string          `json:"users"`
+		RemoteAddr         string          `json:"remoteAddr"`
+		FatalError         bool            `json:"verificationFatalError"`
+		ErrCount           int             `json:"verificationErrorCount"`
+		KeyspaceRefs       []string        `json:"keyspaceReferences"`
 		SubqPlans          map[string]struct {
 			PlanOp             json.RawMessage `json:"plan"`
 			IndexScanKeyspaces map[string]bool `json:"indexScanKeyspaces"`
@@ -539,7 +539,7 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 func (this *Prepared) BuildEncodedPlan() (string, error) {
 	var b bytes.Buffer
 
-	r := make(map[string]interface{}, 5)
+	r := make(map[string]any, 5)
 	r["planVersion"] = this.planVersion
 	this.marshalInternal(r)
 	// unset any previously generated encoded_plan
@@ -577,9 +577,9 @@ func (this *Prepared) SetIndexScanKeyspaces(ik map[string]bool) {
 	this.indexScanKeyspaces = ik
 }
 
-func (this *Prepared) IndexScanKeyspaces() (rv map[string]interface{}) {
+func (this *Prepared) IndexScanKeyspaces() (rv map[string]any) {
 	if len(this.indexScanKeyspaces) > 0 {
-		rv = make(map[string]interface{}, len(this.indexScanKeyspaces))
+		rv = make(map[string]any, len(this.indexScanKeyspaces))
 		for ks, v := range this.indexScanKeyspaces {
 			rv[ks] = v
 		}
@@ -651,7 +651,7 @@ func (this *Prepared) Verify() errors.Error {
 		subqueryPlans := this.GetSubqueryPlans(false)
 		if subqueryPlans != nil {
 			// Verify subquery plans
-			verifyF := func(key *algebra.Select, options uint32, plan, isk interface{}) (errors.Error, bool) {
+			verifyF := func(key *algebra.Select, options uint32, plan, isk any) (errors.Error, bool) {
 				var subqerr errors.Error
 				if qp, ok := plan.(*QueryPlan); ok {
 					subqerr = qp.PlanOp().verify(this)
@@ -682,7 +682,7 @@ func (this *Prepared) hasCountScan() bool {
 	subqueryPlans := this.GetSubqueryPlans(false)
 	if subqueryPlans != nil {
 		found := false
-		subqueryPlans.ForEach(nil, uint32(0), true, func(key *algebra.Select, options uint32, plan, isk interface{}) (errors.Error, bool) {
+		subqueryPlans.ForEach(nil, uint32(0), true, func(key *algebra.Select, options uint32, plan, isk any) (errors.Error, bool) {
 			if qp, ok := plan.(*QueryPlan); ok && operatorHasCountScan(qp.PlanOp()) {
 				found = true
 			}
@@ -766,7 +766,7 @@ func (this *Prepared) KeyspaceReferences() {
 	this.Operator.keyspaceReferences(this)
 	subqueryPlans := this.GetSubqueryPlans(false)
 	if subqueryPlans != nil {
-		keyspaceRefsF := func(key *algebra.Select, options uint32, plan, isk interface{}) (errors.Error, bool) {
+		keyspaceRefsF := func(key *algebra.Select, options uint32, plan, isk any) (errors.Error, bool) {
 			if qp, ok := plan.(*QueryPlan); ok {
 				qp.PlanOp().keyspaceReferences(this)
 			}
@@ -879,14 +879,14 @@ func (this *Prepared) GetTxPrepared(deltaKeyspaces map[string]bool) (*Prepared, 
 	return prepared, hashCode
 }
 
-func (this *Prepared) TxPrepared() (rv map[string]interface{}, rvp map[string]interface{}) {
+func (this *Prepared) TxPrepared() (rv map[string]any, rvp map[string]any) {
 	if len(this.txPrepareds) == 0 {
 		return
 	}
 	this.RLock()
 	defer this.RUnlock()
-	rv = make(map[string]interface{}, len(this.txPrepareds))
-	rvp = make(map[string]interface{}, len(this.txPrepareds))
+	rv = make(map[string]any, len(this.txPrepareds))
+	rvp = make(map[string]any, len(this.txPrepareds))
 	i := 1
 	for _, p := range this.txPrepareds {
 		plan := p.EncodedPlan()
@@ -894,12 +894,12 @@ func (this *Prepared) TxPrepared() (rv map[string]interface{}, rvp map[string]in
 		if plan != "" && len(isks) > 0 {
 			key := "p" + strconv.Itoa(i)
 			i++
-			rv[key] = map[string]interface{}{
+			rv[key] = map[string]any{
 				"plan":               plan,
 				"indexScanKeyspaces": isks,
 			}
 			b, _ := json.Marshal(p.Operator)
-			rvp[key] = map[string]interface{}{
+			rvp[key] = map[string]any{
 				"plan":               b,
 				"indexScanKeyspaces": isks,
 			}
@@ -948,15 +948,15 @@ func (this *Prepared) PreparedTime() time.Time {
 
 // Generates subquery plan information for all subquery plans stored in the Prepared object
 // for its system:prepareds entry
-func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
+func (this *Prepared) GetSubqueryPlansEntry() map[string]any {
 	subqueryPlans := this.GetSubqueryPlans(false)
 
 	if subqueryPlans != nil {
 		index := 1
-		rv := make(map[string]interface{}, 0)
+		rv := make(map[string]any, 0)
 
 		// Iterate through the subquery plans and create the entry
-		verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (errors.Error, bool) {
+		verifyF := func(key *algebra.Select, options uint32, splan, isk any) (errors.Error, bool) {
 			var sqOperator Operator
 
 			if qp, ok := splan.(*QueryPlan); ok {
@@ -964,7 +964,7 @@ func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
 			}
 
 			entryKey := "sq" + strconv.Itoa(index)
-			entry := map[string]interface{}{
+			entry := map[string]any{
 				"plan":     value.NewMarshalledValue(sqOperator),
 				"subquery": key.String(),
 			}
@@ -972,7 +972,7 @@ func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
 			// process index scan keyspaces since value.Value creation not supported for map[string]bool type
 			if i, ok := isk.(map[string]bool); ok {
 				if len(i) > 0 {
-					isksEntry := make(map[string]interface{}, len(i))
+					isksEntry := make(map[string]any, len(i))
 
 					for ks, v := range i {
 						isksEntry[ks] = v
@@ -1002,7 +1002,7 @@ func (this *Prepared) GetSubqueryPlansEntry() map[string]interface{} {
 func (this *Prepared) SetupUdfSubqPlans(expr expression.Expression, subqPlans *algebra.SubqueryPlans, lock bool) error {
 	// for UDF, we put marshalled plans for the subqueries in the prepared cache
 	marshalSubqPlans := subqPlans.MarshalPlans(lock, this.name, marshalSubqueryPlan)
-	r := map[string]interface{}{
+	r := map[string]any{
 		"udfExpr":          expr,
 		"planVersion":      util.PLAN_VERSION,
 		"udfSubqueryPlans": marshalSubqPlans,
@@ -1069,7 +1069,7 @@ func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlan
 	return nil
 }
 
-func marshalSubqueryPlan(r map[string]interface{}, subselect *algebra.Select, planP, isksP interface{},
+func marshalSubqueryPlan(r map[string]any, subselect *algebra.Select, planP, isksP any,
 	prepName string) string {
 
 	qp, _ := planP.(*QueryPlan)

@@ -27,7 +27,7 @@ func NewCreateBucket(node *algebra.CreateBucket) *CreateBucket {
 	}
 }
 
-func (this *CreateBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateBucket(this)
 }
 
@@ -43,8 +43,8 @@ func (this *CreateBucket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateBucket) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateBucket"}
+func (this *CreateBucket) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateBucket"}
 	r["name"] = this.node.Name()
 	if this.node.With() != nil {
 		r["with"] = this.node.With()

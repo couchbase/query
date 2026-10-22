@@ -25,7 +25,7 @@ func NewStream(cost, cardinality float64, size int64, frCost float64, serializab
 	return rv
 }
 
-func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
+func (this *Stream) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitStream(this)
 }
 
@@ -41,8 +41,8 @@ func (this *Stream) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Stream) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Stream"}
+func (this *Stream) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Stream"}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -57,9 +57,9 @@ func (this *Stream) MarshalBase(f func(map[string]interface{})) map[string]inter
 
 func (this *Stream) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_            string                 `json:"#operator"`
-		OptEstimate  map[string]interface{} `json:"optimizer_estimates"`
-		Serializable bool                   `json:"serializable"`
+		_            string         `json:"#operator"`
+		OptEstimate  map[string]any `json:"optimizer_estimates"`
+		Serializable bool           `json:"serializable"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

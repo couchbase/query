@@ -118,7 +118,7 @@ func NewIndexScan3(index datastore.Index3, term *algebra.KeyspaceTerm, spans, in
 	return rv
 }
 
-func (this *IndexScan3) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexScan3) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexScan3(this)
 }
 
@@ -431,8 +431,8 @@ func (this *IndexScan3) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IndexScan3"}
+func (this *IndexScan3) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IndexScan3"}
 	r["index"] = this.index.Name()
 	r["index_id"] = this.index.Id()
 	this.term.MarshalKeyspace(r)
@@ -556,9 +556,9 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 	}
 
 	if len(this.indexPartitionSets) > 0 {
-		indexPartitionSets := make([][]interface{}, len(this.indexPartitionSets))
+		indexPartitionSets := make([][]any, len(this.indexPartitionSets))
 		for i, indexPartSet := range this.indexPartitionSets {
-			partitionSet := make([]interface{}, len(indexPartSet.PartitionSet))
+			partitionSet := make([]any, len(indexPartSet.PartitionSet))
 			for j, partSet := range indexPartSet.PartitionSet {
 				partitionSet[j] = partSet.String()
 			}
@@ -575,42 +575,42 @@ func (this *IndexScan3) MarshalBase(f func(map[string]interface{})) map[string]i
 
 func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_                  string                 `json:"#operator"`
-		Index              string                 `json:"index"`
-		IndexId            string                 `json:"index_id"`
-		Namespace          string                 `json:"namespace"`
-		Bucket             string                 `json:"bucket"`
-		Scope              string                 `json:"scope"`
-		Keyspace           string                 `json:"keyspace"`
-		As                 string                 `json:"as"`
-		Using              datastore.IndexType    `json:"using"`
-		Spans              Spans2                 `json:"spans"`
-		IncludeSpans       Spans2                 `json:"spans_include"`
-		Reverse            bool                   `json:"reverse"`
-		Distinct           bool                   `json:"distinct"`
-		DynamicIn          bool                   `json:"has_dynamic_in"`
-		CacheResult        bool                   `json:"cache_result"`
-		UnderNL            bool                   `json:"nested_loop"`
-		GroupAggs          *IndexGroupAggregates  `json:"index_group_aggs"`
-		Projection         *IndexProjection       `json:"index_projection"`
-		OrderTerms         IndexKeyOrders         `json:"index_order"`
-		Offset             string                 `json:"offset"`
-		Limit              string                 `json:"limit"`
-		Covers             []string               `json:"covers"`
-		IndexKeys          []string               `json:"index_keys"`
-		FilterCovers       map[string]interface{} `json:"filter_covers"`
-		IndexConditions    map[string]interface{} `json:"index_conditions"`
-		Filter             string                 `json:"filter"`
-		OptEstimate        map[string]interface{} `json:"optimizer_estimates"`
-		HasDeltaKeyspace   bool                   `json:"has_delta_keyspace"`
-		BuildBitFilters    []json.RawMessage      `json:"build_bit_filters"`
-		ProbeBitFilters    []json.RawMessage      `json:"probe_bit_filters"`
-		_                  string                 `json:"index_partition_by"`
-		SkipNewKeys        bool                   `json:"skip_new_keys"`
-		IndexVector        json.RawMessage        `json:"index_vector"`
-		IndexKeyNames      []string               `json:"index_key_names"`
-		IndexPartitionSets [][]string             `json:"index_partition_sets"`
-		IndexDefChecksum   string                 `json:"index_definition_checksum"`
+		_                  string                `json:"#operator"`
+		Index              string                `json:"index"`
+		IndexId            string                `json:"index_id"`
+		Namespace          string                `json:"namespace"`
+		Bucket             string                `json:"bucket"`
+		Scope              string                `json:"scope"`
+		Keyspace           string                `json:"keyspace"`
+		As                 string                `json:"as"`
+		Using              datastore.IndexType   `json:"using"`
+		Spans              Spans2                `json:"spans"`
+		IncludeSpans       Spans2                `json:"spans_include"`
+		Reverse            bool                  `json:"reverse"`
+		Distinct           bool                  `json:"distinct"`
+		DynamicIn          bool                  `json:"has_dynamic_in"`
+		CacheResult        bool                  `json:"cache_result"`
+		UnderNL            bool                  `json:"nested_loop"`
+		GroupAggs          *IndexGroupAggregates `json:"index_group_aggs"`
+		Projection         *IndexProjection      `json:"index_projection"`
+		OrderTerms         IndexKeyOrders        `json:"index_order"`
+		Offset             string                `json:"offset"`
+		Limit              string                `json:"limit"`
+		Covers             []string              `json:"covers"`
+		IndexKeys          []string              `json:"index_keys"`
+		FilterCovers       map[string]any        `json:"filter_covers"`
+		IndexConditions    map[string]any        `json:"index_conditions"`
+		Filter             string                `json:"filter"`
+		OptEstimate        map[string]any        `json:"optimizer_estimates"`
+		HasDeltaKeyspace   bool                  `json:"has_delta_keyspace"`
+		BuildBitFilters    []json.RawMessage     `json:"build_bit_filters"`
+		ProbeBitFilters    []json.RawMessage     `json:"probe_bit_filters"`
+		_                  string                `json:"index_partition_by"`
+		SkipNewKeys        bool                  `json:"skip_new_keys"`
+		IndexVector        json.RawMessage       `json:"index_vector"`
+		IndexKeyNames      []string              `json:"index_key_names"`
+		IndexPartitionSets [][]string            `json:"index_partition_sets"`
+		IndexDefChecksum   string                `json:"index_definition_checksum"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -879,7 +879,7 @@ func (this *IndexScan3) keyspaceReferences(prepared *Prepared) {
 	prepared.addKeyspaceReference(this.keyspace)
 }
 
-func (this *IndexScan3) Equals(i interface{}) bool {
+func (this *IndexScan3) Equals(i any) bool {
 	if is, ok := i.(*IndexScan3); ok {
 		return this.String() == is.String()
 	}

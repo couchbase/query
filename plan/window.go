@@ -29,7 +29,7 @@ func NewWindowAggregate(aggregates algebra.Aggregates, cost, cardinality float64
 	return rv
 }
 
-func (this *WindowAggregate) Accept(visitor Visitor) (interface{}, error) {
+func (this *WindowAggregate) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitWindowAggregate(this)
 }
 
@@ -45,9 +45,9 @@ func (this *WindowAggregate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *WindowAggregate) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "WindowAggregate"}
-	s := make([]interface{}, 0, len(this.aggregates))
+func (this *WindowAggregate) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "WindowAggregate"}
+	s := make([]any, 0, len(this.aggregates))
 	for _, agg := range this.aggregates {
 		s = append(s, agg.String())
 	}
@@ -63,9 +63,9 @@ func (this *WindowAggregate) MarshalBase(f func(map[string]interface{})) map[str
 
 func (this *WindowAggregate) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Aggs        []string               `json:"aggregates"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string         `json:"#operator"`
+		Aggs        []string       `json:"aggregates"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

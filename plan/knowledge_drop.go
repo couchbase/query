@@ -28,7 +28,7 @@ func NewDropKnowledge(node *algebra.DropKnowledge) *DropKnowledge {
 	}
 }
 
-func (this *DropKnowledge) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropKnowledge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropKnowledge(this)
 }
 
@@ -44,8 +44,8 @@ func (this *DropKnowledge) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropKnowledge) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropKnowledge"}
+func (this *DropKnowledge) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropKnowledge"}
 	this.node.MarshalName(r)
 
 	// invert so the default if not present is to fail if not exists

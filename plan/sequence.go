@@ -23,7 +23,7 @@ func NewSequence(children ...Operator) *Sequence {
 	return &Sequence{nil, children}
 }
 
-func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *Sequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSequence(this)
 }
 
@@ -49,8 +49,8 @@ func (this *Sequence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Sequence) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Sequence"}
+func (this *Sequence) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Sequence"}
 	if f != nil {
 		f(r)
 	} else {

@@ -29,7 +29,7 @@ func NewCreateSequence(node *algebra.CreateSequence) *CreateSequence {
 	}
 }
 
-func (this *CreateSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateSequence(this)
 }
 
@@ -45,8 +45,8 @@ func (this *CreateSequence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateSequence) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateSequence"}
+func (this *CreateSequence) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateSequence"}
 	this.node.MarshalName(r)
 
 	// invert so the default if not present is to fail if exists

@@ -55,7 +55,7 @@ func NewOrder(order *algebra.Order, partialSortTermCount int, offset *Offset, li
 	return rv
 }
 
-func (this *Order) Accept(visitor Visitor) (interface{}, error) {
+func (this *Order) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitOrder(this)
 }
 
@@ -83,13 +83,13 @@ func (this *Order) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Order) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Order"}
+func (this *Order) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Order"}
 
 	/* generate sort terms */
-	s := make([]interface{}, 0, len(this.terms))
+	s := make([]any, 0, len(this.terms))
 	for _, term := range this.terms {
-		q := make(map[string]interface{})
+		q := make(map[string]any)
 		q["expr"] = term.Expression().String()
 		if term.DescendingExpr() != nil {
 			q["desc"] = term.DescendingExpr().String()
@@ -126,15 +126,15 @@ func (this *Order) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
 		_     string `json:"#operator"`
 		Terms []struct {
-			Expr     string      `json:"expr"`
-			Desc     interface{} `json:"desc"`
-			NullsPos interface{} `json:"nulls_pos"`
+			Expr     string `json:"expr"`
+			Desc     any    `json:"desc"`
+			NullsPos any    `json:"nulls_pos"`
 		} `json:"sort_terms"`
-		PartialSortTermCount int                    `json:"partial_sort_term_count"`
-		Flags                uint32                 `json:"flags"`
-		OffsetExpr           string                 `json:"offset"`
-		LimitExpr            string                 `json:"limit"`
-		OptEstimate          map[string]interface{} `json:"optimizer_estimates"`
+		PartialSortTermCount int            `json:"partial_sort_term_count"`
+		Flags                uint32         `json:"flags"`
+		OffsetExpr           string         `json:"offset"`
+		LimitExpr            string         `json:"limit"`
+		OptEstimate          map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

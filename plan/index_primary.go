@@ -33,7 +33,7 @@ func NewCreatePrimaryIndex(keyspace datastore.Keyspace, node *algebra.CreatePrim
 	}
 }
 
-func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreatePrimaryIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreatePrimaryIndex(this)
 }
 
@@ -53,8 +53,8 @@ func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreatePrimaryIndex"}
+func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreatePrimaryIndex"}
 	this.node.Keyspace().MarshalKeyspace(r)
 	r["index"] = this.node.Name()
 	r["using"] = this.node.Using()
@@ -62,7 +62,7 @@ func (this *CreatePrimaryIndex) MarshalBase(f func(map[string]interface{})) map[
 		r["with"] = this.node.With()
 	}
 	if this.node.Partition() != nil && this.node.Partition().Strategy() != datastore.NO_PARTITION {
-		q := make(map[string]interface{}, 2)
+		q := make(map[string]any, 2)
 		q["exprs"] = this.node.Partition().Expressions()
 		q["strategy"] = this.node.Partition().Strategy()
 		r["partition"] = q

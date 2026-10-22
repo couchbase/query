@@ -28,7 +28,7 @@ func NewInferExpression(node *algebra.InferExpression) *InferExpression {
 	}
 }
 
-func (this *InferExpression) Accept(visitor Visitor) (interface{}, error) {
+func (this *InferExpression) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInferExpression(this)
 }
 
@@ -44,8 +44,8 @@ func (this *InferExpression) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *InferExpression) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "InferExpression"}
+func (this *InferExpression) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "InferExpression"}
 	r["expr"] = this.node.Expression()
 	r["using"] = this.node.Using()
 	if this.node.With() != nil {

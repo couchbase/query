@@ -33,7 +33,7 @@ func NewCreateIndex(keyspace datastore.Keyspace, node *algebra.CreateIndex) *Cre
 	}
 }
 
-func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateIndex(this)
 }
 
@@ -53,13 +53,13 @@ func (this *CreateIndex) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateIndex"}
+func (this *CreateIndex) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateIndex"}
 	this.node.Keyspace().MarshalKeyspace(r)
 	r["index"] = this.node.Name()
-	k := make([]interface{}, len(this.node.Keys()))
+	k := make([]any, len(this.node.Keys()))
 	for i, term := range this.node.Keys() {
-		q := make(map[string]interface{}, 2)
+		q := make(map[string]any, 2)
 		q["expr"] = term.Expression().String()
 
 		if term.HasAttribute(algebra.IK_MISSING) {
@@ -83,7 +83,7 @@ func (this *CreateIndex) MarshalBase(f func(map[string]interface{})) map[string]
 	}
 
 	if this.node.Partition() != nil && this.node.Partition().Strategy() != datastore.NO_PARTITION {
-		q := make(map[string]interface{}, 2)
+		q := make(map[string]any, 2)
 		q["exprs"] = this.node.Partition().Expressions()
 		q["strategy"] = this.node.Partition().Strategy()
 		r["partition"] = q

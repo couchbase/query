@@ -26,7 +26,7 @@ func NewDropBucket(node *algebra.DropBucket) *DropBucket {
 	}
 }
 
-func (this *DropBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropBucket(this)
 }
 
@@ -42,8 +42,8 @@ func (this *DropBucket) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropBucket) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropBucket"}
+func (this *DropBucket) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropBucket"}
 	r["name"] = this.node.Name()
 	// invert so the default if not present is to fail if not exists
 	r["ifExists"] = !this.node.FailIfNotExists()

@@ -25,7 +25,7 @@ func NewDropUser(node *algebra.DropUser) *DropUser {
 	}
 }
 
-func (this *DropUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropUser(this)
 }
 
@@ -41,8 +41,8 @@ func (this *DropUser) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *DropUser) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "DropUser"}
+func (this *DropUser) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "DropUser"}
 	r["user"] = this.node.User()
 	r["ifExists"] = !this.node.FailIfNotExists()
 	if f != nil {

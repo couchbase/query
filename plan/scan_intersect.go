@@ -74,7 +74,7 @@ func NewIntersectScan(limit expression.Expression, allScan bool, cost, cardinali
 	return rv
 }
 
-func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *IntersectScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIntersectScan(this)
 }
 
@@ -173,8 +173,8 @@ func (this *IntersectScan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "IntersectScan"}
+func (this *IntersectScan) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "IntersectScan"}
 
 	if this.limit != nil {
 		r["limit"] = this.limit.String()
@@ -198,11 +198,11 @@ func (this *IntersectScan) MarshalBase(f func(map[string]interface{})) map[strin
 
 func (this *IntersectScan) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Scans       []json.RawMessage      `json:"scans"`
-		Limit       string                 `json:"limit"`
-		AllScan     bool                   `json:"all_scan"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string            `json:"#operator"`
+		Scans       []json.RawMessage `json:"scans"`
+		Limit       string            `json:"limit"`
+		AllScan     bool              `json:"all_scan"`
+		OptEstimate map[string]any    `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
@@ -282,7 +282,7 @@ func (this *IntersectScan) keyspaceReferences(prepared *Prepared) {
 	}
 }
 
-func (this *IntersectScan) Equals(i interface{}) bool {
+func (this *IntersectScan) Equals(i any) bool {
 	if is, ok := i.(*IntersectScan); ok {
 		if len(this.scans) != len(is.scans) {
 			return false

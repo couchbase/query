@@ -27,7 +27,7 @@ func NewExplainFunction(funcName functions.FunctionName) *ExplainFunction {
 	}
 }
 
-func (this *ExplainFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExplainFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExplainFunction(this)
 }
 
@@ -40,10 +40,10 @@ func (this *ExplainFunction) MarshalJSON() ([]byte, error) {
 	return rv, err
 }
 
-func (this *ExplainFunction) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	rv := map[string]interface{}{"#operator": "ExplainFunction"}
+func (this *ExplainFunction) MarshalBase(f func(map[string]any)) map[string]any {
+	rv := map[string]any{"#operator": "ExplainFunction"}
 
-	identity := make(map[string]interface{})
+	identity := make(map[string]any)
 	this.funcName.Signature(identity)
 
 	rv["identity"] = identity

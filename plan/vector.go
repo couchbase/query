@@ -93,8 +93,8 @@ func (this *IndexVector) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *IndexVector) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	rv := map[string]interface{}{
+func (this *IndexVector) MarshalBase(f func(map[string]any)) map[string]any {
+	rv := map[string]any{
 		"query_vector":  this.QueryVector,
 		"index_key_pos": this.IndexKeyPos,
 	}

@@ -29,7 +29,7 @@ func NewExplain(qp *QueryPlan, text string, optimHints *algebra.OptimHints) *Exp
 	}
 }
 
-func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
+func (this *Explain) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExplain(this)
 }
 
@@ -45,8 +45,8 @@ func (this *Explain) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := make(map[string]interface{}, 2)
+func (this *Explain) MarshalBase(f func(map[string]any)) map[string]any {
+	r := make(map[string]any, 2)
 	r["text"] = this.text
 	op := this.qp.op
 	if op != nil {
@@ -63,9 +63,9 @@ func (this *Explain) MarshalBase(f func(map[string]interface{})) map[string]inte
 	}
 	subqueries := this.qp.subqueries
 	if len(subqueries) > 0 {
-		marshalledSubqueries := make([]map[string]interface{}, 0, len(subqueries))
+		marshalledSubqueries := make([]map[string]any, 0, len(subqueries))
 		for t, s := range subqueries {
-			subquery := map[string]interface{}{
+			subquery := map[string]any{
 				"subquery":   t.String(),
 				"plan":       s,
 				"correlated": t.IsCorrelated(),

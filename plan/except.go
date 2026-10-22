@@ -33,7 +33,7 @@ func NewExceptAll(first, second Operator, distinct bool, cost, cardinality float
 	return rv
 }
 
-func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExceptAll) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExceptAll(this)
 }
 
@@ -57,8 +57,8 @@ func (this *ExceptAll) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *ExceptAll) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "ExceptAll"}
+func (this *ExceptAll) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "ExceptAll"}
 	if this.distinct {
 		r["distinct"] = this.distinct
 	}
@@ -76,11 +76,11 @@ func (this *ExceptAll) MarshalBase(f func(map[string]interface{})) map[string]in
 
 func (this *ExceptAll) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		First       json.RawMessage        `json:"first"`
-		Second      json.RawMessage        `json:"second"`
-		Distinct    bool                   `json:"distinct"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string          `json:"#operator"`
+		First       json.RawMessage `json:"first"`
+		Second      json.RawMessage `json:"second"`
+		Distinct    bool            `json:"distinct"`
+		OptEstimate map[string]any  `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

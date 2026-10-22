@@ -23,7 +23,7 @@ func NewDiscard(cost, cardinality float64, size int64, frCost float64) *Discard 
 	return rv
 }
 
-func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
+func (this *Discard) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDiscard(this)
 }
 
@@ -35,8 +35,8 @@ func (this *Discard) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Discard) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Discard"}
+func (this *Discard) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Discard"}
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
 	}
@@ -48,8 +48,8 @@ func (this *Discard) MarshalBase(f func(map[string]interface{})) map[string]inte
 
 func (this *Discard) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string         `json:"#operator"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)

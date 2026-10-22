@@ -39,7 +39,7 @@ func (this *ExecuteFunction) Expressions() expression.Expressions {
 	return this.exprs
 }
 
-func (this *ExecuteFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExecuteFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExecuteFunction(this)
 }
 
@@ -51,9 +51,9 @@ func (this *ExecuteFunction) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *ExecuteFunction) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "ExecuteFunction"}
-	identity := make(map[string]interface{})
+func (this *ExecuteFunction) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "ExecuteFunction"}
+	identity := make(map[string]any)
 	this.name.Signature(identity)
 	r["identity"] = identity
 

@@ -20,7 +20,7 @@ func NewReceive() *Receive {
 	return &Receive{}
 }
 
-func (this *Receive) Accept(visitor Visitor) (interface{}, error) {
+func (this *Receive) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitReceive(this)
 }
 
@@ -32,8 +32,8 @@ func (this *Receive) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Receive) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Receive"}
+func (this *Receive) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Receive"}
 	if f != nil {
 		f(r)
 	}

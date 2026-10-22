@@ -31,7 +31,7 @@ func NewCreateCollection(scope datastore.Scope, node *algebra.CreateCollection) 
 	}
 }
 
-func (this *CreateCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateCollection(this)
 }
 
@@ -51,8 +51,8 @@ func (this *CreateCollection) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *CreateCollection) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "CreateCollection"}
+func (this *CreateCollection) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "CreateCollection"}
 	this.node.Keyspace().MarshalKeyspace(r)
 
 	// invert so the default if not present is to fail if exists

@@ -14,10 +14,10 @@ const (
 	PLAN_SIZE_NOT_AVAIL = -1   // document size is not available
 )
 
-func marshalOptEstimate(oe *optEstimate) map[string]interface{} {
-	var r map[string]interface{}
+func marshalOptEstimate(oe *optEstimate) map[string]any {
+	var r map[string]any
 	if oe.cost > 0.0 || oe.cardinality > 0.0 || oe.size > 0 || oe.frCost > 0.0 {
-		r = make(map[string]interface{}, 4)
+		r = make(map[string]any, 4)
 	}
 	if oe.cost > 0.0 {
 		r["cost"] = oe.cost
@@ -35,7 +35,7 @@ func marshalOptEstimate(oe *optEstimate) map[string]interface{} {
 	return r
 }
 
-func unmarshalOptEstimate(oe *optEstimate, unmarshalled map[string]interface{}) {
+func unmarshalOptEstimate(oe *optEstimate, unmarshalled map[string]any) {
 	var hasCost, hasCard, hasSize, hasFrCost bool
 
 	if costv, ok := unmarshalled["cost"]; ok {

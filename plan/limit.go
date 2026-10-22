@@ -28,7 +28,7 @@ func NewLimit(expr expression.Expression, cost, cardinality float64, size int64,
 	return rv
 }
 
-func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
+func (this *Limit) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitLimit(this)
 }
 
@@ -44,8 +44,8 @@ func (this *Limit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *Limit) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{"#operator": "Limit"}
+func (this *Limit) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{"#operator": "Limit"}
 	r["expr"] = this.expr.String()
 	if optEstimate := marshalOptEstimate(&this.optEstimate); optEstimate != nil {
 		r["optimizer_estimates"] = optEstimate
@@ -58,9 +58,9 @@ func (this *Limit) MarshalBase(f func(map[string]interface{})) map[string]interf
 
 func (this *Limit) UnmarshalJSON(body []byte) error {
 	var _unmarshalled struct {
-		_           string                 `json:"#operator"`
-		Expr        string                 `json:"expr"`
-		OptEstimate map[string]interface{} `json:"optimizer_estimates"`
+		_           string         `json:"#operator"`
+		Expr        string         `json:"expr"`
+		OptEstimate map[string]any `json:"optimizer_estimates"`
 	}
 
 	err := json.Unmarshal(body, &_unmarshalled)
