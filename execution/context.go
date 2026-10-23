@@ -360,6 +360,7 @@ type Context struct {
 	numAtrs                   int
 	kvTimeout                 time.Duration
 	scanReportWait            time.Duration
+	pendingScanReports        *int32 // shared across context copies
 	preserveExpiry            bool
 	flags                     uint32
 	recursionCount            int32
@@ -548,6 +549,8 @@ func (this *Context) Copy() *Context {
 		queryMutex:     this.queryMutex,
 		scanReportWait: this.scanReportWait,
 
+		pendingScanReports: this.pendingScanReports,
+
 		// Encryption material should be the shared across contexts
 		activeKeyInfo: this.activeKeyInfo,
 		keysMutex:     this.keysMutex,
@@ -621,6 +624,38 @@ func (this *Context) ScanReportWait() time.Duration {
 
 func (this *Context) SetScanReportWait(w time.Duration) {
 	this.scanReportWait = w
+	if w > time.Duration(0) {
+		this.pendingScanReports = new(int32)
+	} else {
+		this.pendingScanReports = nil
+	}
+}
+
+// MB-74759 a scan stopped early (LIMIT, timeout, cancel) has its scan report merged in only after
+// the request has had all its results and has moved on to writing the profile, so the scans still
+// waiting on their report are tracked and the request waits for them (up to scanreport_wait)
+func (this *Context) AddPendingScanReport() bool {
+	if this.pendingScanReports == nil {
+		return false
+	}
+	atomic.AddInt32(this.pendingScanReports, 1)
+	return true
+}
+
+func (this *Context) DonePendingScanReport() {
+	atomic.AddInt32(this.pendingScanReports, -1)
+}
+
+const _SCAN_REPORT_WAIT_LOOPS = 25
+
+func (this *Context) WaitScanReports() {
+	if this.pendingScanReports == nil {
+		return
+	}
+	st := this.scanReportWait / _SCAN_REPORT_WAIT_LOOPS
+	for i := 0; atomic.LoadInt32(this.pendingScanReports) > 0 && i < _SCAN_REPORT_WAIT_LOOPS; i++ {
+		time.Sleep(st)
+	}
 }
 
 func (this *Context) Type() string {

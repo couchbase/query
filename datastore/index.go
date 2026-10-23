@@ -782,7 +782,14 @@ type IndexConnection struct {
 	skipNewKeys     bool
 	skipMetering    bool
 	indexScanReport *IndexScanReport
+	pendingReport   bool
 	encryptionKey   *encryption.EaRKey
+}
+
+// MB-74759 implemented by contexts that track the scans still waiting on their scan report
+type ScanReportTracker interface {
+	AddPendingScanReport() bool
+	DonePendingScanReport()
 }
 
 type Sender interface {
@@ -892,6 +899,11 @@ func (this *IndexConnection) IsDetailedIndexScanReport() bool {
 
 func (this *IndexConnection) SetIndexScanReport(sr *IndexScanReport) {
 	this.indexScanReport = sr
+	if sr != nil && !this.pendingReport {
+		if t, ok := this.context.(ScanReportTracker); ok {
+			this.pendingReport = t.AddPendingScanReport()
+		}
+	}
 }
 
 func (this *IndexConnection) WaitScanReport(w time.Duration) {
@@ -900,6 +912,10 @@ func (this *IndexConnection) WaitScanReport(w time.Duration) {
 		for i := 0; !this.sender.IsClosed() && i < _INDEX_SCAN_WAIT_LOOPS; i++ {
 			time.Sleep(st)
 		}
+	}
+	if this.pendingReport {
+		this.pendingReport = false
+		this.context.(ScanReportTracker).DonePendingScanReport()
 	}
 }
 

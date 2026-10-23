@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/value"
@@ -181,7 +182,7 @@ func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
 	privs := auth.NewPrivileges()
 	fullKeyspace := this.keyspace.FullName()
 	if this.returning != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_SELECT, auth.PRIV_PROPS_NONE)
+		this.addPrivilege(privs, auth.PRIV_QUERY_SELECT)
 	}
 
 	sp, err := this.source.Privileges()
@@ -191,7 +192,15 @@ func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
 	privs.AddAll(sp)
 
 	if this.actions != nil {
-		this.actions.AddPrivilegesFor(privs, fullKeyspace)
+		if this.actions.update != nil {
+			this.addPrivilege(privs, auth.PRIV_QUERY_UPDATE)
+		}
+		if this.actions.delete != nil {
+			this.addPrivilege(privs, auth.PRIV_QUERY_DELETE)
+		}
+		if this.actions.insert != nil {
+			privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT, auth.PRIV_PROPS_NONE)
+		}
 	}
 
 	exprs := this.Expressions()
@@ -206,6 +215,15 @@ func (this *Merge) Privileges() (*auth.Privileges, errors.Error) {
 	}
 
 	return privs, nil
+}
+
+// system keyspaces map privileges through the system store, as UPDATE and DELETE do
+func (this *Merge) addPrivilege(privs *auth.Privileges, priv auth.Privilege) {
+	if this.keyspace.IsSystem() {
+		datastore.GetSystemstore().PrivilegesFromPath(this.keyspace.FullName(), this.keyspace.Keyspace(), priv, privs)
+	} else {
+		privs.Add(this.keyspace.FullName(), priv, auth.PRIV_PROPS_NONE)
+	}
 }
 
 /*
@@ -770,25 +788,6 @@ func (this *MergeActions) NonMutatedExpressions() expression.Expressions {
 	}
 
 	return exprs
-}
-
-/*
-Determine the privileges requires for the merge actions,
-and add them to 'privs' (which will not be nil).
-The keyspace being acted on is passed down as 'keyspace'.
-*/
-func (this *MergeActions) AddPrivilegesFor(privs *auth.Privileges, fullKeyspace string) {
-	if this.update != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_UPDATE, auth.PRIV_PROPS_NONE)
-	}
-
-	if this.delete != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_DELETE, auth.PRIV_PROPS_NONE)
-	}
-
-	if this.insert != nil {
-		privs.Add(fullKeyspace, auth.PRIV_QUERY_INSERT, auth.PRIV_PROPS_NONE)
-	}
 }
 
 /*
