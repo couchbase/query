@@ -12,7 +12,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitLT(expr *expression.LT) (interface{}, error) {
+func (this *subset) VisitLT(expr *expression.LT) (any, error) {
 	switch expr2 := this.expr2.(type) {
 
 	case *expression.LE:

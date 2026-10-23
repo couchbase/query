@@ -39,148 +39,148 @@ type subset struct {
 
 // Arithmetic
 
-func (this *subset) VisitAdd(expr *expression.Add) (interface{}, error) {
+func (this *subset) VisitAdd(expr *expression.Add) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitDiv(expr *expression.Div) (interface{}, error) {
+func (this *subset) VisitDiv(expr *expression.Div) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitMod(expr *expression.Mod) (interface{}, error) {
+func (this *subset) VisitMod(expr *expression.Mod) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitMult(expr *expression.Mult) (interface{}, error) {
+func (this *subset) VisitMult(expr *expression.Mult) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitNeg(expr *expression.Neg) (interface{}, error) {
+func (this *subset) VisitNeg(expr *expression.Neg) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitSub(expr *expression.Sub) (interface{}, error) {
+func (this *subset) VisitSub(expr *expression.Sub) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Case
 
-func (this *subset) VisitSearchedCase(expr *expression.SearchedCase) (interface{}, error) {
+func (this *subset) VisitSearchedCase(expr *expression.SearchedCase) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, error) {
+func (this *subset) VisitSimpleCase(expr *expression.SimpleCase) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Collection
 
-func (this *subset) VisitArray(expr *expression.Array) (interface{}, error) {
+func (this *subset) VisitArray(expr *expression.Array) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitExists(expr *expression.Exists) (interface{}, error) {
+func (this *subset) VisitExists(expr *expression.Exists) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitFirst(expr *expression.First) (interface{}, error) {
+func (this *subset) VisitFirst(expr *expression.First) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitObject(expr *expression.Object) (interface{}, error) {
+func (this *subset) VisitObject(expr *expression.Object) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Comparison
 
-func (this *subset) VisitBetween(expr *expression.Between) (interface{}, error) {
+func (this *subset) VisitBetween(expr *expression.Between) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitLike(expr *expression.Like) (interface{}, error) {
+func (this *subset) VisitLike(expr *expression.Like) (any, error) {
 	return this.visitLike(expr)
 }
 
-func (this *subset) VisitIsMissing(expr *expression.IsMissing) (interface{}, error) {
+func (this *subset) VisitIsMissing(expr *expression.IsMissing) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitIsNotMissing(expr *expression.IsNotMissing) (interface{}, error) {
+func (this *subset) VisitIsNotMissing(expr *expression.IsNotMissing) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitIsNotNull(expr *expression.IsNotNull) (interface{}, error) {
+func (this *subset) VisitIsNotNull(expr *expression.IsNotNull) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitIsNotValued(expr *expression.IsNotValued) (interface{}, error) {
+func (this *subset) VisitIsNotValued(expr *expression.IsNotValued) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitIsNull(expr *expression.IsNull) (interface{}, error) {
+func (this *subset) VisitIsNull(expr *expression.IsNull) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitIsValued(expr *expression.IsValued) (interface{}, error) {
+func (this *subset) VisitIsValued(expr *expression.IsValued) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Concat
-func (this *subset) VisitConcat(expr *expression.Concat) (interface{}, error) {
+func (this *subset) VisitConcat(expr *expression.Concat) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Constant
-func (this *subset) VisitConstant(expr *expression.Constant) (interface{}, error) {
+func (this *subset) VisitConstant(expr *expression.Constant) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Identifier
-func (this *subset) VisitIdentifier(expr *expression.Identifier) (interface{}, error) {
+func (this *subset) VisitIdentifier(expr *expression.Identifier) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Construction
 
-func (this *subset) VisitArrayConstruct(expr *expression.ArrayConstruct) (interface{}, error) {
+func (this *subset) VisitArrayConstruct(expr *expression.ArrayConstruct) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitObjectConstruct(expr *expression.ObjectConstruct) (interface{}, error) {
+func (this *subset) VisitObjectConstruct(expr *expression.ObjectConstruct) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Logic
 
-func (this *subset) VisitNot(expr *expression.Not) (interface{}, error) {
+func (this *subset) VisitNot(expr *expression.Not) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Navigation
 
-func (this *subset) VisitElement(expr *expression.Element) (interface{}, error) {
+func (this *subset) VisitElement(expr *expression.Element) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitField(expr *expression.Field) (interface{}, error) {
+func (this *subset) VisitField(expr *expression.Field) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitFieldName(expr *expression.FieldName) (interface{}, error) {
+func (this *subset) VisitFieldName(expr *expression.FieldName) (any, error) {
 	return this.visitDefault(expr)
 }
 
-func (this *subset) VisitSlice(expr *expression.Slice) (interface{}, error) {
+func (this *subset) VisitSlice(expr *expression.Slice) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Self
-func (this *subset) VisitSelf(expr *expression.Self) (interface{}, error) {
+func (this *subset) VisitSelf(expr *expression.Self) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Function
-func (this *subset) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *subset) VisitFunction(expr expression.Function) (any, error) {
 	switch expr := expr.(type) {
 	case *expression.RegexpLike:
 		return this.visitLike(expr)
@@ -190,32 +190,32 @@ func (this *subset) VisitFunction(expr expression.Function) (interface{}, error)
 }
 
 // Subquery
-func (this *subset) VisitSubquery(expr expression.Subquery) (interface{}, error) {
+func (this *subset) VisitSubquery(expr expression.Subquery) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // InferUnderParenthesis
-func (this *subset) VisitParenInfer(expr expression.ParenInfer) (interface{}, error) {
+func (this *subset) VisitParenInfer(expr expression.ParenInfer) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // NamedParameter
-func (this *subset) VisitNamedParameter(expr expression.NamedParameter) (interface{}, error) {
+func (this *subset) VisitNamedParameter(expr expression.NamedParameter) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // PositionalParameter
-func (this *subset) VisitPositionalParameter(expr expression.PositionalParameter) (interface{}, error) {
+func (this *subset) VisitPositionalParameter(expr expression.PositionalParameter) (any, error) {
 	return this.visitDefault(expr)
 }
 
 // Cover
-func (this *subset) VisitCover(expr *expression.Cover) (interface{}, error) {
+func (this *subset) VisitCover(expr *expression.Cover) (any, error) {
 	return expr.Covered().Accept(this)
 }
 
 // All
-func (this *subset) VisitAll(expr *expression.All) (interface{}, error) {
+func (this *subset) VisitAll(expr *expression.All) (any, error) {
 	return expr.Array().Accept(this)
 }
 

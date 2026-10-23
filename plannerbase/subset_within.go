@@ -12,6 +12,6 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitWithin(expr *expression.Within) (interface{}, error) {
+func (this *subset) VisitWithin(expr *expression.Within) (any, error) {
 	return this.visitDefault(expr)
 }

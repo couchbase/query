@@ -12,7 +12,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitAny(expr *expression.Any) (interface{}, error) {
+func (this *subset) VisitAny(expr *expression.Any) (any, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.Any:
 		return this.visitCollPredicate(expr, expr2)
@@ -24,7 +24,7 @@ func (this *subset) VisitAny(expr *expression.Any) (interface{}, error) {
 }
 
 func (this *subset) visitCollPredicate(expr, expr2 expression.CollPredicate) (
-	interface{}, error) {
+	any, error) {
 
 	if !expr.Bindings().SubsetOf(expr2.Bindings()) {
 		return false, nil

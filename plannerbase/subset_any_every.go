@@ -12,7 +12,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitAnyEvery(expr *expression.AnyEvery) (interface{}, error) {
+func (this *subset) VisitAnyEvery(expr *expression.AnyEvery) (any, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.AnyEvery:
 		return this.visitCollPredicate(expr, expr2)

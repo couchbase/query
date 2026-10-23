@@ -34,7 +34,7 @@ func NewDNF(expr expression.Expression, like bool, doDNF bool) *DNF {
 	return rv
 }
 
-func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
+func (this *DNF) VisitBetween(expr *expression.Between) (any, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (this *DNF) VisitBetween(expr *expression.Between) (interface{}, error) {
 	return exp, nil
 }
 
-func (this *DNF) VisitLike(expr *expression.Like) (interface{}, error) {
+func (this *DNF) VisitLike(expr *expression.Like) (any, error) {
 	return this.visitLike(expr)
 }
 
@@ -63,7 +63,7 @@ Convert ANDs of ORs to ORs of ANDs. For example:
 
 Also flatten and apply constant folding.
 */
-func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
+func (this *DNF) VisitAnd(expr *expression.And) (any, error) {
 	// Flatten nested ANDs
 	var truth bool
 	expr, truth = expression.FlattenAnd(expr)
@@ -97,7 +97,7 @@ func (this *DNF) VisitAnd(expr *expression.And) (interface{}, error) {
 /*
 Flatten and apply constant folding.
 */
-func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *DNF) VisitOr(expr *expression.Or) (any, error) {
 	// Flatten nested ORs
 	var truth bool
 	expr, truth = expression.FlattenOr(expr)
@@ -126,7 +126,7 @@ func (this *DNF) VisitOr(expr *expression.Or) (interface{}, error) {
 /*
 Apply DeMorgan's laws and other transformations.
 */
-func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
+func (this *DNF) VisitNot(expr *expression.Not) (any, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -192,11 +192,11 @@ func (this *DNF) VisitNot(expr *expression.Not) (interface{}, error) {
 Don't transform subqueries
 */
 
-func (this *DNF) VisitSubquery(expr expression.Subquery) (interface{}, error) {
+func (this *DNF) VisitSubquery(expr expression.Subquery) (any, error) {
 	return expr, nil
 }
 
-func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *DNF) VisitFunction(expr expression.Function) (any, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return nil, err
@@ -246,7 +246,7 @@ func (this *DNF) VisitFunction(expr expression.Function) (interface{}, error) {
 }
 
 func (this *DNF) visitNotIn(first expression.Expression, second *expression.ArrayConstruct) (
-	interface{}, error) {
+	any, error) {
 
 	neqs := make([]expression.Expression, 0, len(second.Operands()))
 	for _, s := range second.Operands() {
@@ -349,7 +349,7 @@ func dnfComplexity(expr *expression.And, max int) int {
 	return comp
 }
 
-func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
+func (this *DNF) visitLike(expr expression.LikeFunction) (any, error) {
 	err := expr.MapChildren(this)
 	if err != nil || !this.like {
 		return expr, err
@@ -398,11 +398,11 @@ func (this *DNF) visitLike(expr expression.LikeFunction) (interface{}, error) {
 }
 
 // no need to do DNF transformation for CASE expressions
-func (this *DNF) VisitSearchedCase(expr *expression.SearchedCase) (interface{}, error) {
+func (this *DNF) VisitSearchedCase(expr *expression.SearchedCase) (any, error) {
 	return expr, nil
 }
 
-func (this *DNF) VisitSimpleCase(expr *expression.SimpleCase) (interface{}, error) {
+func (this *DNF) VisitSimpleCase(expr *expression.SimpleCase) (any, error) {
 	return expr, nil
 }
 

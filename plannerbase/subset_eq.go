@@ -14,7 +14,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *subset) VisitEq(expr *expression.Eq) (interface{}, error) {
+func (this *subset) VisitEq(expr *expression.Eq) (any, error) {
 	switch expr2 := this.expr2.(type) {
 
 	case *expression.LE:

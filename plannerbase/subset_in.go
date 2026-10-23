@@ -14,7 +14,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
+func (this *subset) VisitIn(expr *expression.In) (any, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.Within:
 		return expr.First().EquivalentTo(expr2.First()) &&
@@ -38,8 +38,8 @@ func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
 			return false, nil
 		}
 
-		qvals, qok := qval.Actual().([]interface{})
-		ivals, iok := ival.Actual().([]interface{})
+		qvals, qok := qval.Actual().([]any)
+		ivals, iok := ival.Actual().([]any)
 
 		// right side of IN in the index and query must be arrays of length > 0
 		if !qok || !iok || len(qvals) == 0 || len(ivals) == 0 {
@@ -68,7 +68,7 @@ func (this *subset) VisitIn(expr *expression.In) (interface{}, error) {
 		if expr.First().EquivalentTo(expr2) {
 			val := expr.Second().Value()
 			if val != nil {
-				if vals, ok := val.Actual().([]interface{}); ok && len(vals) > 0 {
+				if vals, ok := val.Actual().([]any); ok && len(vals) > 0 {
 					for _, v := range vals {
 						iv := value.NewValue(v)
 						if iv.Type() != value.BOOLEAN || !iv.Truth() {

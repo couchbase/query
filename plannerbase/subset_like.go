@@ -16,7 +16,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) visitLike(expr expression.LikeFunction) (interface{}, error) {
+func (this *subset) visitLike(expr expression.LikeFunction) (any, error) {
 	expr2 := this.expr2
 	value2 := expr2.Value()
 	if value2 != nil {
@@ -74,7 +74,7 @@ func (this *subset) visitLike(expr expression.LikeFunction) (interface{}, error)
 	return and.Accept(this)
 }
 
-func likeSubset(expr1, expr2 expression.LikeFunction, re1 *regexp.Regexp, prefix1 string) (interface{}, error) {
+func likeSubset(expr1, expr2 expression.LikeFunction, re1 *regexp.Regexp, prefix1 string) (any, error) {
 	// make sure left-hand side matches
 	if expr1 == nil || expr2 == nil || re1 == nil || prefix1 == "" || !expr1.First().EquivalentTo(expr2.First()) {
 		return false, nil

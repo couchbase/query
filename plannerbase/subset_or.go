@@ -12,7 +12,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitOr(expr *expression.Or) (interface{}, error) {
+func (this *subset) VisitOr(expr *expression.Or) (any, error) {
 	expr2 := this.expr2
 	value2 := expr2.Value()
 	if value2 != nil {

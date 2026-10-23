@@ -12,7 +12,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *subset) VisitEvery(expr *expression.Every) (interface{}, error) {
+func (this *subset) VisitEvery(expr *expression.Every) (any, error) {
 	switch expr2 := this.expr2.(type) {
 	case *expression.Every:
 		return expr.Bindings().SubsetOf(expr2.Bindings()) &&
