@@ -85,6 +85,14 @@ func (this *builder) VisitMerge(stmt *algebra.Merge) (interface{}, error) {
 	ksref.SetDefaultNamespace(this.namespace)
 	ksAlias := ksref.Alias()
 
+	// MERGE target is never a keyspace expression, so validate here
+	if act := stmt.Actions().Update(); act != nil {
+		err = algebra.ValidateSystemUpdate(ksref.Path(), ksAlias, act.Set(), act.Unset())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	right := algebra.NewKeyspaceTermFromPath(ksref.Path(), ksref.As(), nil, stmt.Indexes())
 	targetKeyspace.SetNode(right)
 
