@@ -34,7 +34,7 @@ func NewBuildIndexes(plan *plan.BuildIndexes, context *Context) *BuildIndexes {
 	return rv
 }
 
-func (this *BuildIndexes) Accept(visitor Visitor) (interface{}, error) {
+func (this *BuildIndexes) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitBuildIndexes(this)
 }
 
@@ -141,7 +141,7 @@ func getIndexNames(context *opContext, av value.Value, exprs expression.Expressi
 
 		actual := val.Actual()
 
-		if actuals, ok := actual.([]interface{}); ok {
+		if actuals, ok := actual.([]any); ok {
 			for _, actual := range actuals {
 				ac := value.NewValue(actual).Actual()
 				if s, ok := ac.(string); ok {
@@ -161,7 +161,7 @@ func getIndexNames(context *opContext, av value.Value, exprs expression.Expressi
 }
 
 func (this *BuildIndexes) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

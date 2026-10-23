@@ -32,7 +32,7 @@ func NewCreateScope(plan *plan.CreateScope, context *Context) *CreateScope {
 	return rv
 }
 
-func (this *CreateScope) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateScope) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateScope(this)
 }
 
@@ -71,7 +71,7 @@ func (this *CreateScope) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreateScope) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

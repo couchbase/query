@@ -33,7 +33,7 @@ func NewCreatePrimaryIndex(plan *plan.CreatePrimaryIndex, context *Context) *Cre
 	return rv
 }
 
-func (this *CreatePrimaryIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreatePrimaryIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreatePrimaryIndex(this)
 }
 
@@ -144,7 +144,7 @@ func (this *CreatePrimaryIndex) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreatePrimaryIndex) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

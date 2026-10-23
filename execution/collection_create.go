@@ -32,7 +32,7 @@ func NewCreateCollection(plan *plan.CreateCollection, context *Context) *CreateC
 	return rv
 }
 
-func (this *CreateCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateCollection(this)
 }
 
@@ -78,7 +78,7 @@ func (this *CreateCollection) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreateCollection) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

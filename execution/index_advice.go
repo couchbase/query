@@ -29,7 +29,7 @@ func NewIndexAdvisor(plan plan.Operator, context *Context) *IndexAdvice {
 	return rv
 }
 
-func (this *IndexAdvice) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexAdvice) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexAdvice(this)
 }
 
@@ -70,7 +70,7 @@ func (this *IndexAdvice) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexAdvice) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

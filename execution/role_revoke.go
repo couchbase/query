@@ -33,7 +33,7 @@ func NewRevokeRole(plan *plan.RevokeRole, context *Context) *RevokeRole {
 	return rv
 }
 
-func (this *RevokeRole) Accept(visitor Visitor) (interface{}, error) {
+func (this *RevokeRole) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitRevokeRole(this)
 }
 
@@ -198,7 +198,7 @@ func (this *RevokeRole) revokeGroupRoles(context *Context, cbDatastore datastore
 }
 
 func (this *RevokeRole) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -39,7 +39,7 @@ func NewNLNest(plan *plan.NLNest, context *Context, child Operator, aliasMap map
 	return rv
 }
 
-func (this *NLNest) Accept(visitor Visitor) (interface{}, error) {
+func (this *NLNest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitNLNest(this)
 }
 
@@ -217,7 +217,7 @@ func processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValue
 		}
 	}
 
-	vals := make([]interface{}, 0, len(right_items))
+	vals := make([]any, 0, len(right_items))
 
 	for _, right_item := range right_items {
 		// only interested in the value corresponding to "alias"
@@ -236,7 +236,7 @@ func processAnsiNest(item value.AnnotatedValue, right_items value.AnnotatedValue
 }
 
 func (this *NLNest) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["~child"] = this.child
 	})

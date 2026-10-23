@@ -571,7 +571,7 @@ type opForkDesc struct {
 	parent  value.Value
 }
 
-func opFork(p interface{}) {
+func opFork(p any) {
 	d := p.(opForkDesc)
 	d.op.RunOnce(d.context, d.parent)
 }
@@ -1325,14 +1325,14 @@ func (this *base) enbatch(item value.AnnotatedValue, b batcher, context *Context
 	return this.enbatchSize(item, b, cap(this.batch), context, false)
 }
 
-func (this *base) newEmptyDocumentWithKey(key interface{}, parent value.Value, context *Context) value.AnnotatedValue {
+func (this *base) newEmptyDocumentWithKey(key any, parent value.Value, context *Context) value.AnnotatedValue {
 	cv := value.NewNestedScopeValue(parent)
 	av := value.NewAnnotatedValue(cv)
 	av.SetId(key)
 	return av
 }
 
-func (this *base) newEmptyDocumentWithKeyMeta(key interface{}, metaSource value.AnnotatedValue, parent value.Value,
+func (this *base) newEmptyDocumentWithKeyMeta(key any, metaSource value.AnnotatedValue, parent value.Value,
 	context *Context) value.AnnotatedValue {
 
 	cv := value.NewNestedScopeValue(parent)
@@ -1348,7 +1348,7 @@ func (this *base) newEmptyDocumentWithKeyMeta(key interface{}, metaSource value.
 	return av
 }
 
-func (this *base) setDocumentKey(key interface{}, item value.AnnotatedValue,
+func (this *base) setDocumentKey(key any, item value.AnnotatedValue,
 	expiration uint32, context *Context) value.AnnotatedValue {
 	item.SetMetaField(value.META_EXPIRATION, expiration)
 	item.SetId(key)
@@ -1412,15 +1412,15 @@ func (this *base) evaluateKey(keyExpr expression.Expression, item value.Annotate
 
 	actuals := kv.Actual()
 	switch actuals.(type) {
-	case []interface{}:
+	case []any:
 		// Do nothing
 	case nil:
-		actuals = []interface{}(nil)
+		actuals = []any(nil)
 	default:
-		actuals = []interface{}{actuals}
+		actuals = []any{actuals}
 	}
 
-	acts := actuals.([]interface{})
+	acts := actuals.([]any)
 	keys := make([]string, 0, len(acts))
 	for _, key := range acts {
 		k := value.NewValue(key).Actual()
@@ -1647,9 +1647,9 @@ func (this *base) Phase() Phases {
 }
 
 // profile marshaller
-func (this *base) marshalTimes(r map[string]interface{}) {
+func (this *base) marshalTimes(r map[string]any) {
 	var d time.Duration
-	stats := make(map[string]interface{}, 6)
+	stats := make(map[string]any, 6)
 
 	if this.inDocs != 0 {
 		stats["#itemsIn"] = this.inDocs
@@ -1710,7 +1710,7 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 
 	// chosen to go at the end of the plan
 	if this.isRoot {
-		var versions []interface{}
+		var versions []any
 
 		if rc := this.rootContext; rc != nil {
 			if !rc.PlanPreparedTime().IsZero() {
@@ -1734,7 +1734,7 @@ func (this *base) marshalTimes(r map[string]interface{}) {
 	}
 }
 
-func (this *base) marshalIndexScanReport(r map[string]interface{}, scanReport *datastore.IndexScanReport) ([]byte, error) {
+func (this *base) marshalIndexScanReport(r map[string]any, scanReport *datastore.IndexScanReport) ([]byte, error) {
 	if scanReport != nil {
 		if rv := scanReport.GetScanReport(); len(rv) > 0 {
 			r["#indexStats"] = rv
@@ -1794,7 +1794,7 @@ func childrenAccrueTimes(o1, o2 []Operator) bool {
 type missingKeys struct {
 	validate bool
 	count    int
-	keys     []interface{}
+	keys     []any
 }
 
 const _MAX_MISSING_KEYS = 10

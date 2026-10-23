@@ -72,13 +72,13 @@ var largeChildPool util.FastPool
 var threshold int
 
 func init() {
-	util.NewFastPool(&valueSlicePool, func() interface{} {
+	util.NewFastPool(&valueSlicePool, func() any {
 		return make([]value.AnnotatedValue, GetPipelineCap())
 	})
-	util.NewFastPool(&smallChildPool, func() interface{} {
+	util.NewFastPool(&smallChildPool, func() any {
 		return make([]int, _SMALL_CHILD_POOL)
 	})
-	util.NewFastPool(&largeChildPool, func() interface{} {
+	util.NewFastPool(&largeChildPool, func() any {
 		return make([]int, _LARGE_CHILD_POOL)
 	})
 	threshold = util.NumCPU()

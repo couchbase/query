@@ -42,7 +42,7 @@ func NewIndexScan(plan *plan.IndexScan, context *Context) *IndexScan {
 	return rv
 }
 
-func (this *IndexScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexScan(this)
 }
 
@@ -102,7 +102,7 @@ func (this *IndexScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	r["~children"] = this.children
@@ -170,7 +170,7 @@ func newSpanScan(parent *IndexScan, span *plan.Span, context *Context) *spanScan
 	return rv
 }
 
-func (this *spanScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *spanScan) Accept(visitor Visitor) (any, error) {
 	// we can expect to be visited by post-execution analysis
 	if _, ok := visitor.(*execAnalyser); !ok {
 		panic(fmt.Sprintf("Internal operator spanScan visited by %T.", visitor))
@@ -338,7 +338,7 @@ func evalSpan(ps *plan.Span, parent value.Value, context *opContext) (*datastore
 }
 
 func (this *spanScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return this.marshalIndexScanReport(r, this.indexScan.scanReport)

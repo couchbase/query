@@ -136,7 +136,7 @@ func NewMerge(plan *plan.Merge, context *Context, update, delete, insert Operato
 	return rv, nil
 }
 
-func (this *Merge) Accept(visitor Visitor) (interface{}, error) {
+func (this *Merge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitMerge(this)
 }
 
@@ -638,7 +638,7 @@ func (this *Merge) wrapChild(op Operator, context *Context) (Operator, *Channel)
 }
 
 func (this *Merge) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		if this.update != nil {
 			r["update"] = this.update

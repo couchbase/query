@@ -45,7 +45,7 @@ func NewNLJoin(plan *plan.NLJoin, context *Context, child Operator, aliasMap map
 	return rv
 }
 
-func (this *NLJoin) Accept(visitor Visitor) (interface{}, error) {
+func (this *NLJoin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitNLJoin(this)
 }
 
@@ -287,7 +287,7 @@ func (this *NLJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() uint
 }
 
 func (this *NLJoin) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["~child"] = this.child
 	})

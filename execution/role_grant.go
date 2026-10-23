@@ -35,7 +35,7 @@ func NewGrantRole(plan *plan.GrantRole, context *Context) *GrantRole {
 	return rv
 }
 
-func (this *GrantRole) Accept(visitor Visitor) (interface{}, error) {
+func (this *GrantRole) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitGrantRole(this)
 }
 
@@ -340,7 +340,7 @@ func (this *GrantRole) grantGroupRoles(context *Context, cbDatastore datastore.C
 }
 
 func (this *GrantRole) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -31,7 +31,7 @@ func NewIndexCountScan2(plan *plan.IndexCountScan2, context *Context) *IndexCoun
 	return rv
 }
 
-func (this *IndexCountScan2) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexCountScan2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexCountScan2(this)
 }
 
@@ -84,7 +84,7 @@ func (this *IndexCountScan2) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *IndexCountScan2) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

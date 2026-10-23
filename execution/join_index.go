@@ -43,7 +43,7 @@ func NewIndexJoin(plan *plan.IndexJoin, context *Context) *IndexJoin {
 	return rv
 }
 
-func (this *IndexJoin) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexJoin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexJoin(this)
 }
 
@@ -252,7 +252,7 @@ func (this *IndexJoin) flushBatch(context *Context) bool {
 }
 
 func (this *IndexJoin) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return this.marshalIndexScanReport(r, this.scanReport)

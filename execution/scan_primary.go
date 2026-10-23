@@ -40,7 +40,7 @@ func NewPrimaryScan(plan *plan.PrimaryScan, context *Context) *PrimaryScan {
 	return rv
 }
 
-func (this *PrimaryScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *PrimaryScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitPrimaryScan(this)
 }
 
@@ -233,7 +233,7 @@ func (this *PrimaryScan) scanChunk(context *Context, conn *datastore.IndexConnec
 }
 
 func (this *PrimaryScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return this.marshalIndexScanReport(r, this.scanReport)

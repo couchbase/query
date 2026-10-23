@@ -103,7 +103,7 @@ func getKeyspace(keyspace datastore.Keyspace, expr expression.Expression, contex
 
 func getQueryVectorIndices(qiVal value.Value) ([]int, errors.Error) {
 	qiAct := qiVal.Actual()
-	qiArr, ok := qiAct.([]interface{})
+	qiArr, ok := qiAct.([]any)
 	if !ok {
 		return nil, errors.NewInvalidQueryVector("sparse indices not an array")
 	}
@@ -161,7 +161,7 @@ func getQueryVectorIndices(qiVal value.Value) ([]int, errors.Error) {
 
 func getQueryVectorValue(qvVal value.Value, size int, dense bool) ([]float32, errors.Error) {
 	qvAct := qvVal.Actual()
-	qvArr, ok := qvAct.([]interface{})
+	qvArr, ok := qvAct.([]any)
 	if !ok {
 		return nil, errors.NewInvalidQueryVector("not an array")
 	}

@@ -40,7 +40,7 @@ func NewWith(plan *plan.With, context *Context, child Operator) *With {
 	return rv
 }
 
-func (this *With) Accept(visitor Visitor) (interface{}, error) {
+func (this *With) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitWith(this)
 }
 
@@ -88,7 +88,7 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 		if parent != nil {
 			wv = value.NewAnnotatedValue(parent.Copy())
 		} else {
-			wv = value.NewAnnotatedValue(make(map[string]interface{}, 1))
+			wv = value.NewAnnotatedValue(make(map[string]any, 1))
 		}
 
 		withs := this.plan.Bindings()
@@ -141,8 +141,8 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 				// CYCLE CLAUSE
 				trackCycle := newwMap()
 
-				finalRes := []interface{}{}
-				workRes, ok := v.Actual().([]interface{})
+				finalRes := []any{}
+				workRes, ok := v.Actual().([]any)
 				if !ok {
 					context.Error(errors.NewExecutionInternalError("Anchor value is not an array"))
 					this.notify()
@@ -209,7 +209,7 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 					}
 
 					// create workRes
-					workRes, ok = v.Actual().([]interface{})
+					workRes, ok = v.Actual().([]any)
 					orgLen := len(workRes)
 					if !ok {
 						e = errors.NewExecutionInternalError("couldn't convert recursive result to array")
@@ -255,7 +255,7 @@ func (this *With) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *With) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	r["~child"] = this.child
@@ -317,11 +317,11 @@ func (this *With) recycleBindings() {
 }
 
 type wMap struct {
-	m map[string]interface{}
+	m map[string]any
 }
 
 func newwMap() *wMap {
-	return &wMap{m: make(map[string]interface{})}
+	return &wMap{m: make(map[string]any)}
 }
 
 func (this *wMap) clear() {
@@ -376,8 +376,8 @@ func processConfig(config value.Value) (*ConfigOptions, errors.Error) {
 	return &configOptions, nil
 }
 
-func hopVal(item value.Value, cycleFields expression.Expressions, context *Context) (map[string]interface{}, error) {
-	val := map[string]interface{}{}
+func hopVal(item value.Value, cycleFields expression.Expressions, context *Context) (map[string]any, error) {
+	val := map[string]any{}
 	for _, exp := range cycleFields {
 		fval, err := exp.Evaluate(item, context)
 
@@ -393,8 +393,8 @@ func hopVal(item value.Value, cycleFields expression.Expressions, context *Conte
 	return val, nil
 }
 
-func dedupAndCycleRestrict(items []interface{}, cycleFields expression.Expressions, isUnion bool,
-	trackCycle *wMap, trackSet *wMap, context *Context) ([]interface{}, errors.Error) {
+func dedupAndCycleRestrict(items []any, cycleFields expression.Expressions, isUnion bool,
+	trackCycle *wMap, trackSet *wMap, context *Context) ([]any, errors.Error) {
 	if !isUnion && cycleFields == nil {
 		return items, nil
 	}

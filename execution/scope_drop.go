@@ -32,7 +32,7 @@ func NewDropScope(plan *plan.DropScope, context *Context) *DropScope {
 	return rv
 }
 
-func (this *DropScope) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropScope) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropScope(this)
 }
 
@@ -71,7 +71,7 @@ func (this *DropScope) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropScope) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

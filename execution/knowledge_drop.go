@@ -32,7 +32,7 @@ func NewDropKnowledge(plan *plan.DropKnowledge, context *Context) *DropKnowledge
 	return rv
 }
 
-func (this *DropKnowledge) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropKnowledge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropKnowledge(this)
 }
 
@@ -70,7 +70,7 @@ func (this *DropKnowledge) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropKnowledge) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

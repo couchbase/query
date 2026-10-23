@@ -21,7 +21,7 @@ import (
 var _SENDDELETE_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_SENDDELETE_OP_POOL, func() interface{} {
+	util.NewFastPool(&_SENDDELETE_OP_POOL, func() any {
 		return &SendDelete{}
 	})
 }
@@ -48,7 +48,7 @@ func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
 	return rv
 }
 
-func (this *SendDelete) Accept(visitor Visitor) (interface{}, error) {
+func (this *SendDelete) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSendDelete(this)
 }
 
@@ -222,7 +222,7 @@ func (this *SendDelete) readonly() bool {
 }
 
 func (this *SendDelete) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

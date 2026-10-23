@@ -34,7 +34,7 @@ func NewCreateGroup(plan *plan.CreateGroup, context *Context) *CreateGroup {
 	return rv
 }
 
-func (this *CreateGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateGroup(this)
 }
 
@@ -104,7 +104,7 @@ func (this *CreateGroup) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreateGroup) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

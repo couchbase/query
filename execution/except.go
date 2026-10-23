@@ -36,7 +36,7 @@ func NewExcept(plan *plan.ExceptAll, context *Context, first, second Operator) *
 	return rv
 }
 
-func (this *Except) Accept(visitor Visitor) (interface{}, error) {
+func (this *Except) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExcept(this)
 }
 
@@ -104,7 +104,7 @@ func (this *Except) afterItems(context *Context) {
 }
 
 func (this *Except) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["first"] = this.first
 		r["second"] = this.second
@@ -179,7 +179,7 @@ func NewExceptAll(plan *plan.ExceptAll, context *Context, first, second Operator
 	return rv
 }
 
-func (this *ExceptAll) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExceptAll) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExceptAll(this)
 }
 
@@ -247,7 +247,7 @@ func (this *ExceptAll) afterItems(context *Context) {
 }
 
 func (this *ExceptAll) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["first"] = this.first
 		r["second"] = this.second

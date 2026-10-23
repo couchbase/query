@@ -35,7 +35,7 @@ type Operator interface {
 
 	OpSendAction
 
-	Accept(visitor Visitor) (interface{}, error)
+	Accept(visitor Visitor) (any, error)
 	ValueExchange() *valueExchange                 // Closed by this operator
 	Input() Operator                               // Read by this operator
 	SetInput(op Operator)                          // Can be set

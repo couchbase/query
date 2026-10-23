@@ -45,7 +45,7 @@ func NewIndexFtsSearch(plan *plan.IndexFtsSearch, context *Context) *IndexFtsSea
 	return rv
 }
 
-func (this *IndexFtsSearch) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexFtsSearch) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexFtsSearch(this)
 }
 
@@ -86,7 +86,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 		defer this.conn.WaitScanReport(context.ScanReportWait())
 		defer this.conn.SendStop() // Notify index that I have stopped
 
-		util.Fork(func(interface{}) {
+		util.Fork(func(any) {
 			this.search(context, this.conn, parent)
 		}, nil)
 
@@ -149,7 +149,7 @@ func (this *IndexFtsSearch) RunOnce(context *Context, parent value.Value) {
 								}
 							}
 						}
-						av.SetAttachment(value.ATT_SMETA, map[string]interface{}{outName: entry.MetaData})
+						av.SetAttachment(value.ATT_SMETA, map[string]any{outName: entry.MetaData})
 						av.SetBit(this.bit)
 						ok = this.sendItem(av)
 						docs++
@@ -233,7 +233,7 @@ func (this *IndexFtsSearch) planToSearchMapping(context *Context,
 }
 
 func (this *IndexFtsSearch) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

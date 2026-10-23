@@ -26,7 +26,7 @@ type Sequence struct {
 var _SEQUENCE_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_SEQUENCE_OP_POOL, func() interface{} {
+	util.NewFastPool(&_SEQUENCE_OP_POOL, func() any {
 		return &Sequence{}
 	})
 }
@@ -66,7 +66,7 @@ func (this *Sequence) SetParallel() {
 	this.isParallel = true
 }
 
-func (this *Sequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *Sequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSequence(this)
 }
 
@@ -164,7 +164,7 @@ func (this *Sequence) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Sequence) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["~children"] = this.children
 	})

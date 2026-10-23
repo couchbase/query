@@ -25,8 +25,8 @@ type HashNest struct {
 	aliasMap  map[string]string
 	ansiFlags uint32
 	hashTab   *util.HashTable
-	buildVals []interface{}
-	probeVals []interface{}
+	buildVals []any
+	probeVals []any
 }
 
 func NewHashNest(plan *plan.HashNest, context *Context, child Operator, aliasMap map[string]string) *HashNest {
@@ -43,7 +43,7 @@ func NewHashNest(plan *plan.HashNest, context *Context, child Operator, aliasMap
 	return rv
 }
 
-func (this *HashNest) Accept(visitor Visitor) (interface{}, error) {
+func (this *HashNest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitHashNest(this)
 }
 
@@ -114,8 +114,8 @@ func (this *HashNest) beforeItems(context *Context, parent value.Value) bool {
 	// build hash table
 	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN, this.child.PlanOp().Cardinality(), len(this.plan.BuildExprs()))
 
-	this.buildVals = make([]interface{}, len(this.plan.BuildExprs()))
-	this.probeVals = make([]interface{}, len(this.plan.ProbeExprs()))
+	this.buildVals = make([]any, len(this.plan.BuildExprs()))
+	this.probeVals = make([]any, len(this.plan.ProbeExprs()))
 
 	this.child.SetOutput(this.child)
 	this.child.SetInput(nil)
@@ -146,7 +146,7 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 	defer this.switchPhase(_EXECTIME)
 
 	var err error
-	var outVal interface{}
+	var outVal any
 	var right_items value.AnnotatedValues
 	ok := true
 
@@ -156,9 +156,9 @@ func (this *HashNest) processItem(item value.AnnotatedValue, context *Context) b
 		return false
 	}
 
-	var probeVal interface{}
-	var marshal func(interface{}) ([]byte, error)
-	var equal func(interface{}, interface{}) bool
+	var probeVal any
+	var marshal func(any) ([]byte, error)
+	var equal func(any, any) bool
 	if len(this.probeVals) == 1 {
 		probeVal = this.probeVals[0]
 		marshal = value.MarshalValue
@@ -253,7 +253,7 @@ func (this *HashNest) dropHashTable(context *Context) {
 }
 
 func (this *HashNest) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["~child"] = this.child
 	})

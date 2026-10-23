@@ -25,7 +25,7 @@ type Stream struct {
 var _STREAM_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_STREAM_OP_POOL, func() interface{} {
+	util.NewFastPool(&_STREAM_OP_POOL, func() any {
 		return &Stream{}
 	})
 }
@@ -47,7 +47,7 @@ func NewStream(plan *plan.Stream, context *Context) *Stream {
 	return rv
 }
 
-func (this *Stream) Accept(visitor Visitor) (interface{}, error) {
+func (this *Stream) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitStream(this)
 }
 
@@ -89,7 +89,7 @@ func (this *Stream) afterItems(context *Context) {
 }
 
 func (this *Stream) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

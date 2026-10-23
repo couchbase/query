@@ -28,8 +28,8 @@ type HashJoin struct {
 	aliasMap  map[string]string
 	ansiFlags uint32
 	hashTab   *util.HashTable
-	buildVals []interface{}
-	probeVals []interface{}
+	buildVals []any
+	probeVals []any
 }
 
 func NewHashJoin(plan *plan.HashJoin, context *Context, child Operator, aliasMap map[string]string) *HashJoin {
@@ -46,7 +46,7 @@ func NewHashJoin(plan *plan.HashJoin, context *Context, child Operator, aliasMap
 	return rv
 }
 
-func (this *HashJoin) Accept(visitor Visitor) (interface{}, error) {
+func (this *HashJoin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitHashJoin(this)
 }
 
@@ -120,8 +120,8 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 	// build hash table
 	this.hashTab = util.NewHashTable(util.HASH_TABLE_FOR_HASH_JOIN, this.child.PlanOp().Cardinality(), len(this.plan.BuildExprs()))
 
-	this.buildVals = make([]interface{}, len(this.plan.BuildExprs()))
-	this.probeVals = make([]interface{}, len(this.plan.ProbeExprs()))
+	this.buildVals = make([]any, len(this.plan.BuildExprs()))
+	this.probeVals = make([]any, len(this.plan.ProbeExprs()))
 
 	this.child.SetOutput(this.child)
 	this.child.SetInput(nil)
@@ -155,14 +155,14 @@ func (this *HashJoin) beforeItems(context *Context, parent value.Value) bool {
 }
 
 func buildHashTab(base *base, buildOp Operator, hashTab *util.HashTable, buildExprs expression.Expressions,
-	buildVals []interface{}, external bool, externalValSet []*value.Set, context *opContext) bool {
+	buildVals []any, external bool, externalValSet []*value.Set, context *opContext) bool {
 
 	var err error
 	stopped := false
 	n := 1
 
-	var marshal func(interface{}) ([]byte, error)
-	var equal func(interface{}, interface{}) bool
+	var marshal func(any) ([]byte, error)
+	var equal func(any, any) bool
 
 	array := len(buildVals) > 1
 	if array {
@@ -196,7 +196,7 @@ loop:
 					buildVals[i] = buildValue
 				}
 
-				var buildVal interface{}
+				var buildVal any
 				var size uint64
 				if array {
 					buildVal = buildVals
@@ -236,7 +236,7 @@ loop:
 }
 
 func getProbeVal(item value.AnnotatedValue, probeExprs expression.Expressions,
-	probeVals []interface{}, context *opContext) errors.Error {
+	probeVals []any, context *opContext) errors.Error {
 
 	var err error
 	for i, pe := range probeExprs {
@@ -253,7 +253,7 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 	defer this.switchPhase(_EXECTIME)
 
 	var err error
-	var outVal interface{}
+	var outVal any
 	ok := true
 	matched := false
 
@@ -263,9 +263,9 @@ func (this *HashJoin) processItem(item value.AnnotatedValue, context *Context) b
 		return false
 	}
 
-	var probeVal interface{}
-	var marshal func(interface{}) ([]byte, error)
-	var equal func(interface{}, interface{}) bool
+	var probeVal any
+	var marshal func(any) ([]byte, error)
+	var equal func(any, any) bool
 	if len(this.probeVals) == 1 {
 		probeVal = this.probeVals[0]
 		marshal = value.MarshalValue
@@ -376,7 +376,7 @@ func (this *HashJoin) checkSendItem(av value.AnnotatedValue, quotaFunc func() ui
 }
 
 func (this *HashJoin) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["~child"] = this.child
 	})

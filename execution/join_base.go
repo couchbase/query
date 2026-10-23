@@ -212,7 +212,7 @@ func (this *joinBase) nestEntries(keyCount map[string]int, pairMap map[string]va
 		var alreadyAccountedForSize uint64
 
 		av := item.Value
-		nvs := make([]interface{}, 0, len(item.Keys))
+		nvs := make([]any, 0, len(item.Keys))
 		if len(pairMap) > 0 {
 			for _, key := range item.Keys {
 				pv, ok := pairMap[key]

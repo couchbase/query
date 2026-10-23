@@ -71,7 +71,7 @@ func (this *Context) IndexInfo(bucket, scope, collection, indexName string) (val
 	if err != nil {
 		return nil, nil
 	}
-	docs := make([]interface{}, 0, 2)
+	docs := make([]any, 0, 2)
 	for _, indexer := range indexers {
 		err = indexer.Refresh()
 		if err != nil {

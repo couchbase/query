@@ -38,7 +38,7 @@ func NewIntermediateGroup(plan *plan.IntermediateGroup, context *Context) *Inter
 	return rv
 }
 
-func (this *IntermediateGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *IntermediateGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIntermediateGroup(this)
 }
 
@@ -149,8 +149,8 @@ func (this *IntermediateGroup) processItem(item value.AnnotatedValue, context *C
 			return false
 		}
 
-		act1, _ := groupAsv1.Actual().([]interface{})
-		act2, _ := groupAsv2.Actual().([]interface{})
+		act1, _ := groupAsv1.Actual().([]any)
+		act2, _ := groupAsv2.Actual().([]any)
 		act := append(act2, act1...)
 		gv.SetField(this.plan.GroupAs(), value.NewValue(act))
 	}
@@ -170,7 +170,7 @@ func (this *IntermediateGroup) afterItems(context *Context) {
 }
 
 func (this *IntermediateGroup) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

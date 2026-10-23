@@ -32,7 +32,7 @@ func NewJoin(plan *plan.Join, context *Context) *Join {
 	return rv
 }
 
-func (this *Join) Accept(visitor Visitor) (interface{}, error) {
+func (this *Join) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitJoin(this)
 }
 
@@ -100,7 +100,7 @@ func (this *Join) flushBatch(context *Context) bool {
 }
 
 func (this *Join) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -33,7 +33,7 @@ func NewValueScan(plan *plan.ValueScan, context *Context) *ValueScan {
 	return rv
 }
 
-func (this *ValueScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *ValueScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitValueScan(this)
 }
 
@@ -108,7 +108,7 @@ func (this *ValueScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *ValueScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -32,7 +32,7 @@ func NewDropFunction(plan *plan.DropFunction, context *Context) *DropFunction {
 	return rv
 }
 
-func (this *DropFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropFunction(this)
 }
 
@@ -72,7 +72,7 @@ func (this *DropFunction) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropFunction) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

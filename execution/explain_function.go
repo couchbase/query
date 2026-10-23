@@ -41,7 +41,7 @@ func NewExplainFunction(plan *plan.ExplainFunction, context *Context) *ExplainFu
 	return rv
 }
 
-func (this *ExplainFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExplainFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExplainFunction(this)
 }
 
@@ -78,7 +78,7 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 			// Inline function subquery plans already part the Context use them
 			subqPlans := context.GetSubqueryPlans(false)
 			if subqPlans != nil {
-				verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (errors.Error, bool) {
+				verifyF := func(key *algebra.Select, options uint32, splan, isk any) (errors.Error, bool) {
 					if qp, ok := splan.(*plan.QueryPlan); ok {
 						this.plans = append(this.plans, planEntry{statement: key.String(), qPlan: qp, optimHints: key.OptimHints()})
 					}
@@ -88,7 +88,7 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 			}
 		} else if stmts != nil {
 			if lang == functions.JAVASCRIPT {
-				qs, _ := stmts.(map[string]interface{})
+				qs, _ := stmts.(map[string]any)
 				stmtStrings, ok := qs["embedded"].([]string)
 
 				if ok {
@@ -130,7 +130,7 @@ func (this *ExplainFunction) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *ExplainFunction) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -150,7 +150,7 @@ type planEntry struct {
 }
 
 func (this *ExplainFunction) marshalPlans() ([]byte, error) {
-	r := make(map[string]interface{}, 3)
+	r := make(map[string]any, 3)
 	r["function"] = this.plan.FuncName().Key()
 
 	if len(this.dynamicLineNos) > 0 {
@@ -158,11 +158,11 @@ func (this *ExplainFunction) marshalPlans() ([]byte, error) {
 	}
 
 	if len(this.plans) > 0 {
-		marshalledPlans := make([]map[string]interface{}, 0, len(this.plans))
+		marshalledPlans := make([]map[string]any, 0, len(this.plans))
 
 		for _, pe := range this.plans {
 
-			query := map[string]interface{}{
+			query := map[string]any{
 				"statement": pe.statement,
 			}
 
@@ -187,10 +187,10 @@ func (this *ExplainFunction) marshalPlans() ([]byte, error) {
 
 				if len(subqueries) > 0 {
 
-					marshalledSubqueries := make([]map[string]interface{}, 0, len(subqueries))
+					marshalledSubqueries := make([]map[string]any, 0, len(subqueries))
 					for k, v := range subqueries {
 
-						subquery := map[string]interface{}{
+						subquery := map[string]any{
 							"subquery":   k.String(),
 							"plan":       v,
 							"correlated": k.IsCorrelated(),

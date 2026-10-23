@@ -34,7 +34,7 @@ func NewAll(plan *plan.All, context *Context, collect bool) *All {
 	return rv
 }
 
-func (this *All) Accept(visitor Visitor) (interface{}, error) {
+func (this *All) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAll(this)
 }
 
@@ -80,7 +80,7 @@ func (this *All) MultiSet() *value.MultiSet {
 }
 
 func (this *All) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

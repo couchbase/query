@@ -26,7 +26,7 @@ func NewNoop() *Noop {
 	return _noop
 }
 
-func (this *Noop) Accept(visitor Visitor) (interface{}, error) {
+func (this *Noop) Accept(visitor Visitor) (any, error) {
 	return nil, nil
 }
 

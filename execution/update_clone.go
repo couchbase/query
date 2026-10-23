@@ -19,7 +19,7 @@ import (
 var _CLONE_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_CLONE_OP_POOL, func() interface{} {
+	util.NewFastPool(&_CLONE_OP_POOL, func() any {
 		return &Clone{}
 	})
 }
@@ -39,7 +39,7 @@ func NewClone(plan *plan.Clone, context *Context) *Clone {
 	return rv
 }
 
-func (this *Clone) Accept(visitor Visitor) (interface{}, error) {
+func (this *Clone) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitClone(this)
 }
 
@@ -61,8 +61,8 @@ func (this *Clone) RunOnce(context *Context, parent value.Value) {
 func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool {
 	clone := item.CopyForUpdate()
 	if av, ok := clone.(value.AnnotatedValue); ok && av != nil {
-		options := make(map[string]interface{})
-		var xattrs interface{}
+		options := make(map[string]any)
+		var xattrs any
 		if fv, ok := av.Field(this.plan.Alias()); ok {
 			if fav, ok := fv.(value.AnnotatedValue); ok {
 				xattrs = fav.GetMetaField(value.META_XATTRS)
@@ -81,7 +81,7 @@ func (this *Clone) processItem(item value.AnnotatedValue, context *Context) bool
 }
 
 func (this *Clone) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

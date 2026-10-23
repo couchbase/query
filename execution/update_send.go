@@ -23,7 +23,7 @@ import (
 var _SENDUPDATE_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_SENDUPDATE_OP_POOL, func() interface{} {
+	util.NewFastPool(&_SENDUPDATE_OP_POOL, func() any {
 		return &SendUpdate{}
 	})
 }
@@ -49,7 +49,7 @@ func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
 	return rv
 }
 
-func (this *SendUpdate) Accept(visitor Visitor) (interface{}, error) {
+func (this *SendUpdate) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSendUpdate(this)
 }
 
@@ -253,7 +253,7 @@ func (this *SendUpdate) readonly() bool {
 }
 
 func (this *SendUpdate) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

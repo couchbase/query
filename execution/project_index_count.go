@@ -33,7 +33,7 @@ func NewIndexCountProject(plan *plan.IndexCountProject, context *Context) *Index
 	return rv
 }
 
-func (this *IndexCountProject) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexCountProject) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexCountProject(this)
 }
 
@@ -66,7 +66,7 @@ func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *C
 		var v value.Value
 		var err error
 
-		sv := value.NewScopeValue(make(map[string]interface{}, len(this.plan.Terms())), item)
+		sv := value.NewScopeValue(make(map[string]any, len(this.plan.Terms())), item)
 		for _, term := range this.plan.Terms() {
 			switch term.Result().Expression().(type) {
 			case *algebra.Count:
@@ -98,7 +98,7 @@ func (this *IndexCountProject) processItem(item value.AnnotatedValue, context *C
 }
 
 func (this *IndexCountProject) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

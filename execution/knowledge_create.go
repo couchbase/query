@@ -34,7 +34,7 @@ func NewCreateKnowledge(plan *plan.CreateKnowledge, context *Context) *CreateKno
 	return rv
 }
 
-func (this *CreateKnowledge) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateKnowledge) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateKnowledge(this)
 }
 
@@ -144,7 +144,7 @@ func (this *CreateKnowledge) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreateKnowledge) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

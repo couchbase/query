@@ -32,7 +32,7 @@ func NewDropSequence(plan *plan.DropSequence, context *Context) *DropSequence {
 	return rv
 }
 
-func (this *DropSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropSequence(this)
 }
 
@@ -74,7 +74,7 @@ func (this *DropSequence) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropSequence) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

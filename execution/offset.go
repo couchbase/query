@@ -40,7 +40,7 @@ func NewOffset(plan *plan.Offset, context *Context) *Offset {
 	return rv
 }
 
-func (this *Offset) Accept(visitor Visitor) (interface{}, error) {
+func (this *Offset) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitOffset(this)
 }
 
@@ -93,7 +93,7 @@ func (this *Offset) processItem(item value.AnnotatedValue, context *Context) boo
 }
 
 func (this *Offset) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

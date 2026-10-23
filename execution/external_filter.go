@@ -16,7 +16,7 @@ import (
 
 type ExternalFilterTerm struct {
 	term   expression.Expression
-	values []interface{}
+	values []any
 }
 
 type ExternalFilterTerms struct {
@@ -30,7 +30,7 @@ func newExternalFilterTerms(nterms int) *ExternalFilterTerms {
 	}
 }
 
-func (this *ExternalFilterTerms) addTermValues(term expression.Expression, vals []interface{}) {
+func (this *ExternalFilterTerms) addTermValues(term expression.Expression, vals []any) {
 	termStr := term.String()
 	this.Lock()
 	if curTerm, ok := this.terms[termStr]; ok {

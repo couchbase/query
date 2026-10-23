@@ -23,7 +23,7 @@ import (
 var _UNSET_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_UNSET_OP_POOL, func() interface{} {
+	util.NewFastPool(&_UNSET_OP_POOL, func() any {
 		return &Unset{}
 	})
 }
@@ -43,7 +43,7 @@ func NewUnset(plan *plan.Unset, context *Context) *Unset {
 	return rv
 }
 
-func (this *Unset) Accept(visitor Visitor) (interface{}, error) {
+func (this *Unset) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnset(this)
 }
 
@@ -171,7 +171,7 @@ func unsetFor(t *algebra.UnsetTerm, clone, item value.AnnotatedValue, context *o
 }
 
 func (this *Unset) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

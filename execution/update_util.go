@@ -39,7 +39,7 @@ func buildFors(dimensions []expression.Bindings, vals value.Values, context *opC
 		}
 
 		for i := 0; i < n; i++ {
-			sv := value.NewScopeValue(make(map[string]interface{}, len(bindings)), val)
+			sv := value.NewScopeValue(make(map[string]any, len(bindings)), val)
 
 			for j, b := range bindings {
 				if b.NameVariable() == "" {
@@ -65,7 +65,7 @@ func buildFors(dimensions []expression.Bindings, vals value.Values, context *opC
 }
 
 func arraysFor(bindings expression.Bindings, val value.Value, context *opContext) (
-	arrays, buffers [][]interface{}, pairs [][]util.IPair, n int, mismatch bool, err error) {
+	arrays, buffers [][]any, pairs [][]util.IPair, n int, mismatch bool, err error) {
 	var bv value.Value
 
 	for i, b := range bindings {
@@ -98,7 +98,7 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *opContext
 
 			switch bv.Type() {
 			case value.ARRAY:
-				arrays[i] = bv.Actual().([]interface{})
+				arrays[i] = bv.Actual().([]any)
 			default:
 				arrays[i] = _EMPTY_ARRAY
 			}
@@ -130,7 +130,7 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *opContext
 						bp = append(bp, util.IPair{n, v})
 					}
 				case value.ARRAY:
-					for n, v := range bv.Actual().([]interface{}) {
+					for n, v := range bv.Actual().([]any) {
 						bp = append(bp, util.IPair{n, v})
 					}
 				default:
@@ -159,13 +159,13 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *opContext
 	return
 }
 
-var _EMPTY_ARRAY = []interface{}{}
+var _EMPTY_ARRAY = []any{}
 
 func releaseValsFor(vals []value.Value) {
 	_VALUE_POOL.Put(vals)
 }
 
-func releaseBuffersFor(arrays, buffers [][]interface{}, pairs [][]util.IPair) {
+func releaseBuffersFor(arrays, buffers [][]any, pairs [][]util.IPair) {
 	for _, b := range buffers {
 		if b != nil {
 			_INTERFACE_POOL.Put(b)
@@ -192,10 +192,10 @@ func releaseBuffersFor(arrays, buffers [][]interface{}, pairs [][]util.IPair) {
 }
 
 var _IPAIR_POOL = util.NewSlicePool[util.IPair](1024)
-var _INTERFACE_POOL = util.NewSlicePool[interface{}](1024)
+var _INTERFACE_POOL = util.NewSlicePool[any](1024)
 var _VALUE_POOL = util.NewSlicePool[value.Value](1024)
 
-var _INTERFACES_POOL = util.NewSlicePool[[]interface{}](64)
+var _INTERFACES_POOL = util.NewSlicePool[[]any](64)
 var _IPAIRS_POOL = util.NewSlicePool[[]util.IPair](64)
 
 const _NAME_CAP = 16

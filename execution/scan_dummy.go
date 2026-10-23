@@ -25,7 +25,7 @@ type DummyScan struct {
 var _DUMMYSCAN_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_DUMMYSCAN_OP_POOL, func() interface{} {
+	util.NewFastPool(&_DUMMYSCAN_OP_POOL, func() any {
 		return &DummyScan{}
 	})
 }
@@ -38,7 +38,7 @@ func NewDummyScan(plan *plan.DummyScan, context *Context) *DummyScan {
 	return rv
 }
 
-func (this *DummyScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *DummyScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDummyScan(this)
 }
 
@@ -66,7 +66,7 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 		var av value.AnnotatedValue
 		// must use a new empty map as the returned value may be modified downstream
 		if parent != nil {
-			cv := value.NewScopeValue(map[string]interface{}{}, parent)
+			cv := value.NewScopeValue(map[string]any{}, parent)
 			av = value.NewAnnotatedValue(cv)
 		} else {
 			av = value.EMPTY_ANNOTATED_OBJECT.CopyForUpdate().(value.AnnotatedValue)
@@ -88,7 +88,7 @@ func (this *DummyScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DummyScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

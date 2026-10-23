@@ -40,7 +40,7 @@ func NewStartTransaction(plan *plan.StartTransaction, context *Context) *StartTr
 	return rv
 }
 
-func (this *StartTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *StartTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitStartTransaction(this)
 }
 
@@ -118,7 +118,7 @@ func (this *StartTransaction) RunOnce(context *Context, parent value.Value) {
 		}
 
 		// return transaction id
-		sv := value.NewScopeValue(make(map[string]interface{}, 2), parent)
+		sv := value.NewScopeValue(make(map[string]any, 2), parent)
 		sv.SetField("txid", context.txContext.TxId())
 
 		// return nodeUUID
@@ -136,7 +136,7 @@ func (this *StartTransaction) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *StartTransaction) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -163,7 +163,7 @@ func NewCommitTransaction(plan *plan.CommitTransaction, context *Context) *Commi
 	return rv
 }
 
-func (this *CommitTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *CommitTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCommitTransaction(this)
 }
 
@@ -205,7 +205,7 @@ func (this *CommitTransaction) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CommitTransaction) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -232,7 +232,7 @@ func NewRollbackTransaction(plan *plan.RollbackTransaction, context *Context) *R
 	return rv
 }
 
-func (this *RollbackTransaction) Accept(visitor Visitor) (interface{}, error) {
+func (this *RollbackTransaction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitRollbackTransaction(this)
 }
 
@@ -275,7 +275,7 @@ func (this *RollbackTransaction) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *RollbackTransaction) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -302,7 +302,7 @@ func NewTransactionIsolation(plan *plan.TransactionIsolation, context *Context) 
 	return rv
 }
 
-func (this *TransactionIsolation) Accept(visitor Visitor) (interface{}, error) {
+func (this *TransactionIsolation) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitTransactionIsolation(this)
 }
 
@@ -341,7 +341,7 @@ func (this *TransactionIsolation) RunOnce(context *Context, parent value.Value) 
 }
 
 func (this *TransactionIsolation) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -368,7 +368,7 @@ func NewSavepoint(plan *plan.Savepoint, context *Context) *Savepoint {
 	return rv
 }
 
-func (this *Savepoint) Accept(visitor Visitor) (interface{}, error) {
+func (this *Savepoint) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSavepoint(this)
 }
 
@@ -410,7 +410,7 @@ func (this *Savepoint) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Savepoint) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -32,7 +32,7 @@ func NewDropCollection(plan *plan.DropCollection, context *Context) *DropCollect
 	return rv
 }
 
-func (this *DropCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropCollection(this)
 }
 
@@ -73,7 +73,7 @@ func (this *DropCollection) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropCollection) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

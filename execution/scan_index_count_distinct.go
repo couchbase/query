@@ -31,7 +31,7 @@ func NewIndexCountDistinctScan2(plan *plan.IndexCountDistinctScan2, context *Con
 	return rv
 }
 
-func (this *IndexCountDistinctScan2) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexCountDistinctScan2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexCountDistinctScan2(this)
 }
 
@@ -76,7 +76,7 @@ func (this *IndexCountDistinctScan2) RunOnce(context *Context, parent value.Valu
 }
 
 func (this *IndexCountDistinctScan2) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

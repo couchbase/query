@@ -35,7 +35,7 @@ func NewDistinctScan(plan *plan.DistinctScan, context *Context, scan Operator) *
 	return rv
 }
 
-func (this *DistinctScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *DistinctScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDistinctScan(this)
 }
 
@@ -163,7 +163,7 @@ func (this *DistinctScan) processKey(item value.AnnotatedValue,
 }
 
 func (this *DistinctScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	r["scan"] = this.scan

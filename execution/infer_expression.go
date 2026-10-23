@@ -34,7 +34,7 @@ func NewInferExpression(plan *plan.InferExpression, context *Context) *InferExpr
 	return rv
 }
 
-func (this *InferExpression) Accept(visitor Visitor) (interface{}, error) {
+func (this *InferExpression) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInferExpression(this)
 }
 
@@ -96,7 +96,7 @@ func (this *InferExpression) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *InferExpression) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

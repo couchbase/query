@@ -41,7 +41,7 @@ func NewCreateBucket(plan *plan.CreateBucket, context *Context) *CreateBucket {
 	return rv
 }
 
-func (this *CreateBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateBucket(this)
 }
 
@@ -111,7 +111,7 @@ func (this *CreateBucket) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreateBucket) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

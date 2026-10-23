@@ -37,7 +37,7 @@ func NewIntersectScan(plan *plan.IntersectScan, context *Context, scans []Operat
 	return rv
 }
 
-func (this *IntersectScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *IntersectScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIntersectScan(this)
 }
 
@@ -217,7 +217,7 @@ func (this *IntersectScan) sendItems(childBits int64) {
 }
 
 func (this *IntersectScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["scans"] = this.scans
 	})
@@ -278,8 +278,8 @@ func mergeSearchMeta(dest, src value.AnnotatedValue) {
 	if destMeta == nil {
 		dest.SetAttachment(value.ATT_SMETA, srcMeta)
 	} else {
-		s := srcMeta.(map[string]interface{})
-		d := destMeta.(map[string]interface{})
+		s := srcMeta.(map[string]any)
+		d := destMeta.(map[string]any)
 		for n, v := range s {
 			d[n] = v
 		}

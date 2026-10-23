@@ -35,7 +35,7 @@ func NewDistinct(plan *plan.Distinct, context *Context, collect bool) *Distinct 
 	return rv
 }
 
-func (this *Distinct) Accept(visitor Visitor) (interface{}, error) {
+func (this *Distinct) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDistinct(this)
 }
 
@@ -89,7 +89,7 @@ func (this *Distinct) Set() *value.Set {
 }
 
 func (this *Distinct) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

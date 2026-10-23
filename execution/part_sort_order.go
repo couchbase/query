@@ -221,7 +221,7 @@ func (this *PartSortOrder) sortAndStream(context *Context) bool {
 }
 
 func (this *PartSortOrder) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -41,7 +41,7 @@ func NewPrimaryScan3(plan *plan.PrimaryScan3, context *Context) *PrimaryScan3 {
 	return rv
 }
 
-func (this *PrimaryScan3) Accept(visitor Visitor) (interface{}, error) {
+func (this *PrimaryScan3) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitPrimaryScan3(this)
 }
 
@@ -99,7 +99,7 @@ func (this *PrimaryScan3) scanPrimary(context *Context, parent value.Value) {
 	offset := evalLimitOffset(this.plan.Offset(), parent, int64(0), false, &this.operatorCtx)
 	limit := evalLimitOffset(this.plan.Limit(), parent, math.MaxInt64, false, &this.operatorCtx)
 
-	util.Fork(func(interface{}) {
+	util.Fork(func(any) {
 		this.scanEntries(context, this.conn, offset, limit)
 	}, nil)
 
@@ -172,7 +172,7 @@ func (this *PrimaryScan3) scanPrimaryChunk(context *Context, parent value.Value,
 	defer conn.WaitScanReport(context.ScanReportWait())
 	defer conn.SendStop() // Notify index that I have stopped
 
-	util.Fork(func(interface{}) {
+	util.Fork(func(any) {
 		this.scanChunk(context, conn, limit, indexEntry)
 	}, nil)
 
@@ -240,7 +240,7 @@ func (this *PrimaryScan3) scanChunk(context *Context, conn *datastore.IndexConne
 }
 
 func (this *PrimaryScan3) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return this.marshalIndexScanReport(r, this.scanReport)

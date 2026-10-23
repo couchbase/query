@@ -32,7 +32,7 @@ func NewAlterIndex(plan *plan.AlterIndex, context *Context) *AlterIndex {
 	return rv
 }
 
-func (this *AlterIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterIndex(this)
 }
 
@@ -94,7 +94,7 @@ func (this *AlterIndex) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *AlterIndex) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

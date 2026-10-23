@@ -35,7 +35,7 @@ func NewUnnest(plan *plan.Unnest, context *Context) *Unnest {
 	return rv
 }
 
-func (this *Unnest) Accept(visitor Visitor) (interface{}, error) {
+func (this *Unnest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnnest(this)
 }
 
@@ -370,10 +370,10 @@ func (this *Unnest) afterItems(context *Context) {
 }
 
 func (this *Unnest) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
 }
 
-var _EMPTY_ACTUALS []interface{}
+var _EMPTY_ACTUALS []any

@@ -53,7 +53,7 @@ func NewIndexScan3(plan *plan.IndexScan3, context *Context) *IndexScan3 {
 	return rv
 }
 
-func (this *IndexScan3) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexScan3) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexScan3(this)
 }
 
@@ -78,7 +78,7 @@ type scanDesc struct {
 	indexPartitionSets datastore.IndexPartitionSets
 }
 
-func scanFork(p interface{}) {
+func scanFork(p any) {
 	d := p.(scanDesc)
 	d.scan.scan(d.context, d.scan.conn, d.parent, d.indexVector, d.inlineFilter, d.indexPartitionSets)
 }
@@ -463,7 +463,7 @@ func evalSpan3(pspans plan.Spans2, parent value.Value, hasDynamicInSpan bool, co
 					return nil, false, err
 				}
 				if !empty && av.Type() == value.ARRAY {
-					arr := av.ActualForIndex().([]interface{})
+					arr := av.ActualForIndex().([]any)
 					set := value.NewSet(len(arr), true, false)
 					set.AddAll(arr)
 					arr = set.Actuals()
@@ -547,7 +547,7 @@ func planToScanMapping(index datastore.Index, proj *plan.IndexProjection, indexO
 }
 
 func (this *IndexScan3) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return this.marshalIndexScanReport(r, this.scanReport)

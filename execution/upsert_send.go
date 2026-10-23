@@ -40,7 +40,7 @@ func NewSendUpsert(plan *plan.SendUpsert, context *Context) *SendUpsert {
 	return rv
 }
 
-func (this *SendUpsert) Accept(visitor Visitor) (interface{}, error) {
+func (this *SendUpsert) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSendUpsert(this)
 }
 
@@ -246,7 +246,7 @@ func (this *SendUpsert) flushBatch(context *Context) bool {
 
 			// Capture the upserted keys in case there is a RETURNING clause
 			dv := value.NewAnnotatedValue(dp.Value)
-			av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
+			av := value.NewAnnotatedValue(make(map[string]any, 1))
 			av.CopyAnnotations(dv)
 			av.SetField(this.plan.Alias(), dv)
 			if context.UseRequestQuota() {
@@ -276,12 +276,12 @@ func (this *SendUpsert) readonly() bool {
 }
 
 func (this *SendUpsert) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	if this.sysXattrChecked != 0 {
 		if s, ok := r["#stats"]; ok {
-			if sm, ok := s.(map[string]interface{}); ok {
+			if sm, ok := s.(map[string]any); ok {
 				sm["sysXattrAuthTime"] = util.OutputDuration(this.sysXattrChecked)
 			}
 		}

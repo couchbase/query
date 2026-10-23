@@ -32,7 +32,7 @@ func NewNest(plan *plan.Nest, context *Context) *Nest {
 	return rv
 }
 
-func (this *Nest) Accept(visitor Visitor) (interface{}, error) {
+func (this *Nest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitNest(this)
 }
 
@@ -98,7 +98,7 @@ func (this *Nest) flushBatch(context *Context) bool {
 }
 
 func (this *Nest) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -118,12 +118,12 @@ func (this *internalOutput) PhaseOperator(p Phases) uint64 {
 	return uint64(0)
 }
 
-func (this *internalOutput) FmtPhaseCounts() map[string]interface{} {
+func (this *internalOutput) FmtPhaseCounts() map[string]any {
 	// never used
 	return nil
 }
 
-func (this *internalOutput) FmtPhaseOperators() map[string]interface{} {
+func (this *internalOutput) FmtPhaseOperators() map[string]any {
 	// never used
 	return nil
 }
@@ -132,16 +132,16 @@ func (this *internalOutput) AddPhaseTime(phase Phases, duration time.Duration) {
 	this.output.AddPhaseTime(phase, duration)
 }
 
-func (this *internalOutput) FmtPhaseTimes(s util.DurationStyle) map[string]interface{} {
+func (this *internalOutput) FmtPhaseTimes(s util.DurationStyle) map[string]any {
 	// never used
 	return nil
 }
 
-func (this *internalOutput) RawPhaseTimes() map[string]interface{} {
+func (this *internalOutput) RawPhaseTimes() map[string]any {
 	return nil
 }
 
-func (this *internalOutput) FmtOptimizerEstimates(op Operator) map[string]interface{} {
+func (this *internalOutput) FmtOptimizerEstimates(op Operator) map[string]any {
 	// never used
 	return nil
 }
@@ -480,13 +480,13 @@ func (this *Context) handleUsing(stmt algebra.Statement, namedArgs map[string]va
 
 		actualValue := argsValue.Actual()
 		switch actualValue := actualValue.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			newArgs := make(map[string]value.Value, len(actualValue))
 			for n, v := range actualValue {
 				newArgs[n] = value.NewValue(v)
 			}
 			namedArgs = newArgs
-		case []interface{}:
+		case []any:
 			newArgs := make([]value.Value, len(actualValue))
 			for n, v := range actualValue {
 				newArgs[n] = value.NewValue(v)
@@ -747,7 +747,7 @@ func (this *executionHandle) context() *Context {
 	return this.opContext.Context
 }
 
-func (this *executionHandle) Results() (interface{}, uint64, error) {
+func (this *executionHandle) Results() (any, uint64, error) {
 
 	// if the calling operator has stopped - reject any interaction with any handle
 	// note: this action is possible only when the opContext is not a dummy opContext
@@ -759,13 +759,13 @@ func (this *executionHandle) Results() (interface{}, uint64, error) {
 	if atomic.LoadInt32(&this.stopped) > 0 {
 		return nil, 0, nil
 	}
-	values := make([]interface{}, 0, _INITIAL_SIZE)
+	values := make([]any, 0, _INITIAL_SIZE)
 
 	for {
 		item, ok := this.input.getItem()
 		if item != nil {
 			if len(values) == cap(values) {
-				newValues := make([]interface{}, len(values), len(values)<<1)
+				newValues := make([]any, len(values), len(values)<<1)
 				copy(newValues, values)
 				values = newValues
 			}
@@ -948,8 +948,8 @@ func (this *Context) ExecuteTranStatement(stmtType string, stmtAtomicity bool) (
 	}
 
 	if stmtType == "START" {
-		if actual, ok := res.Actual().([]interface{}); ok {
-			if fields, ok := actual[0].(map[string]interface{}); ok {
+		if actual, ok := res.Actual().([]any); ok {
+			if fields, ok := actual[0].(map[string]any); ok {
 				txId, _ = fields["txid"].(string)
 			}
 		}
@@ -1008,7 +1008,7 @@ func (this *Context) DoStatementComplete(stmtType string, success bool) (err err
 	return
 }
 
-func (this *Context) Parse(s string) (interface{}, error) {
+func (this *Context) Parse(s string) (any, error) {
 	rv, err := n1ql.ParseExpression(s)
 	if err == nil {
 		return rv, nil
@@ -1041,7 +1041,7 @@ func (this *Context) Infer(v value.Value, with value.Value) (value.Value, error)
 	return value.NULL_VALUE, nil
 }
 
-func (this *Context) InferKeyspace(ks interface{}, with value.Value) (value.Value, error) {
+func (this *Context) InferKeyspace(ks any, with value.Value) (value.Value, error) {
 
 	var path *algebra.Path
 	if ksref, ok := ks.(*algebra.KeyspaceRef); ok {
@@ -1077,12 +1077,12 @@ func (this *internalOutput) GetErrorCount() int {
 	return this.output.GetErrorCount()
 }
 
-func (this *opContext) PrepareStatementExt(statement string) (interface{}, error) {
+func (this *opContext) PrepareStatementExt(statement string) (any, error) {
 	_, prepared, _, err := this.PrepareStatement(statement, nil, nil, false, true, false)
 	return prepared, err
 }
 
-func (this *opContext) ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (
+func (this *opContext) ExecutePreparedExt(prepared any, namedArgs map[string]value.Value, positionalArgs value.Values) (
 	value.Value, uint64, error) {
 
 	orgPrepared, ok := prepared.(*plan.Prepared)

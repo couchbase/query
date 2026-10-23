@@ -35,7 +35,7 @@ func NewCreateIndex(plan *plan.CreateIndex, context *Context) *CreateIndex {
 	return rv
 }
 
-func (this *CreateIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateIndex(this)
 }
 
@@ -203,7 +203,7 @@ func (this *CreateIndex) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		m := make(map[string]interface{}, 2)
+		m := make(map[string]any, 2)
 		m["name"] = node.Name()
 		if idx != nil {
 			m["id"] = idx.Id()
@@ -257,7 +257,7 @@ func (this *CreateIndex) getRangeKeys(terms algebra.IndexKeyTerms) datastore.Ind
 }
 
 func (this *CreateIndex) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

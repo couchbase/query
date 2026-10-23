@@ -41,7 +41,7 @@ func NewLimit(plan *plan.Limit, context *Context) *Limit {
 	return rv
 }
 
-func (this *Limit) Accept(visitor Visitor) (interface{}, error) {
+func (this *Limit) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitLimit(this)
 }
 
@@ -100,7 +100,7 @@ func (this *Limit) processItem(item value.AnnotatedValue, context *Context) bool
 }
 
 func (this *Limit) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

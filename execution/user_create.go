@@ -33,7 +33,7 @@ func NewCreateUser(plan *plan.CreateUser, context *Context) *CreateUser {
 	return rv
 }
 
-func (this *CreateUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateUser(this)
 }
 
@@ -111,7 +111,7 @@ func (this *CreateUser) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreateUser) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -24,10 +24,10 @@ var _DUMMYFETCH_OP_POOL util.FastPool
 const _MAX_RESULT_CACHE_SIZE = 1000
 
 func init() {
-	util.NewFastPool(&_FETCH_OP_POOL, func() interface{} {
+	util.NewFastPool(&_FETCH_OP_POOL, func() any {
 		return &Fetch{}
 	})
-	util.NewFastPool(&_DUMMYFETCH_OP_POOL, func() interface{} {
+	util.NewFastPool(&_DUMMYFETCH_OP_POOL, func() any {
 		return &DummyFetch{}
 	})
 }
@@ -62,7 +62,7 @@ func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	return rv
 }
 
-func (this *Fetch) Accept(visitor Visitor) (interface{}, error) {
+func (this *Fetch) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFetch(this)
 }
 
@@ -376,7 +376,7 @@ func (this *Fetch) flushBatch(context *Context) bool {
 }
 
 func (this *Fetch) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -416,7 +416,7 @@ func NewDummyFetch(plan *plan.DummyFetch, context *Context) *DummyFetch {
 	return rv
 }
 
-func (this *DummyFetch) Accept(visitor Visitor) (interface{}, error) {
+func (this *DummyFetch) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDummyFetch(this)
 }
 
@@ -445,7 +445,7 @@ func (this *DummyFetch) afterItems(context *Context) {
 }
 
 func (this *DummyFetch) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

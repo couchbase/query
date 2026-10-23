@@ -83,7 +83,7 @@ func (this *DropCatalog) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropCatalog) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

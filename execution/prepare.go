@@ -36,7 +36,7 @@ func NewPrepare(plan *plan.Prepare, context *Context, prepared value.Value) *Pre
 	return rv
 }
 
-func (this *Prepare) Accept(visitor Visitor) (interface{}, error) {
+func (this *Prepare) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitPrepare(this)
 }
 
@@ -78,10 +78,10 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		// to affect the cache
 		val := value.NewValue(this.prepared).Copy()
 		host := tenant.EncodeNodeName(distributed.RemoteAccess().WhoAmI())
-		name, ok := val.Actual().(map[string]interface{})["name"].(string)
+		name, ok := val.Actual().(map[string]any)["name"].(string)
 		if host != "" && ok {
 			name = distributed.RemoteAccess().MakeKey(host, name)
-			val.Actual().(map[string]interface{})["name"] = name
+			val.Actual().(map[string]any)["name"] = name
 		}
 
 		// encoded_plans are not enabled by default, so we are asked by the SDK team
@@ -95,14 +95,14 @@ func (this *Prepare) RunOnce(context *Context, parent value.Value) {
 		// This will eventually go away when SDKs older than 3.0 will stop being supported
 		if !util.IsFeatureEnabled(context.featureControls, util.N1QL_ENCODED_PLAN) &&
 			distributed.RemoteAccess().Enabled(distributed.NEW_PREPAREDS) {
-			val.Actual().(map[string]interface{})["encoded_plan"] = prepareds.EmptyPlan
+			val.Actual().(map[string]any)["encoded_plan"] = prepareds.EmptyPlan
 		}
 		this.sendItem(value.NewAnnotatedValue(val))
 	})
 }
 
 func (this *Prepare) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

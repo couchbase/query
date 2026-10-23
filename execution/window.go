@@ -64,7 +64,7 @@ type AiOptions struct {
 	action    int
 	batchSize int64
 	model     string
-	header    map[string]interface{}
+	header    map[string]any
 }
 
 /*
@@ -168,7 +168,7 @@ func NewWindowAggregate(plan *plan.WindowAggregate, context *Context) *WindowAgg
 	return rv
 }
 
-func (this *WindowAggregate) Accept(visitor Visitor) (interface{}, error) {
+func (this *WindowAggregate) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitWindowAggregate(this)
 }
 
@@ -319,7 +319,7 @@ func (this *AggregateInfo) setAiCompute(context *opContext, parent value.Value) 
 	}
 
 	if v, ok := optionsVal.Field("header"); ok && v.Type() == value.OBJECT {
-		this.options.header = v.Actual().(map[string]interface{})
+		this.options.header = v.Actual().(map[string]any)
 	}
 	if v, ok := optionsVal.Field("batchSize"); ok && v.Type() == value.NUMBER {
 		this.options.batchSize = value.AsNumberValue(v).Int64()
@@ -407,7 +407,7 @@ func (this *AggregateInfo) setAiRerank(context *opContext, parent value.Value) e
 	this.options.uriObj = uriObj
 
 	if v, ok := optionsVal.Field("header"); ok && v.Type() == value.OBJECT {
-		this.options.header = v.Actual().(map[string]interface{})
+		this.options.header = v.Actual().(map[string]any)
 	}
 	if v, ok := optionsVal.Field("model"); ok && v.Type() == value.STRING {
 		this.options.model = v.ToString()
@@ -689,12 +689,12 @@ func (this *AggregateInfo) aiRerankEvaluate(val value.Value, op *WindowAggregate
 
 	uriObj := this.options.uriObj
 
-	docs := val.Actual().([]interface{})
+	docs := val.Actual().([]any)
 	if len(docs) == 0 {
 		return nil
 	}
 
-	payloadMap := map[string]interface{}{
+	payloadMap := map[string]any{
 		"query":     this.options.query,
 		"documents": docs,
 	}
@@ -773,16 +773,16 @@ func (this *AggregateInfo) aiRerankEvaluate(val value.Value, op *WindowAggregate
 		this.aiValues[i] = value.NULL_VALUE
 	}
 
-	var rawResponse map[string]interface{}
+	var rawResponse map[string]any
 	if err = json.Unmarshal(body, &rawResponse); err != nil {
 		return err
 	}
 
 	// Accept either "results" or "data" as the top-level array key.
-	var resultList []interface{}
+	var resultList []any
 	for _, key := range []string{"results", "data"} {
 		if v, ok := rawResponse[key]; ok {
-			if arr, ok := v.([]interface{}); ok {
+			if arr, ok := v.([]any); ok {
 				resultList = arr
 				break
 			}
@@ -793,7 +793,7 @@ func (this *AggregateInfo) aiRerankEvaluate(val value.Value, op *WindowAggregate
 	}
 
 	for _, entry := range resultList {
-		respDoc, ok := entry.(map[string]interface{})
+		respDoc, ok := entry.(map[string]any)
 		if !ok {
 			op.operatorCtx.Warning(errors.NewAiRerankResponseWarning("entry is not a JSON object"))
 			continue
@@ -916,7 +916,7 @@ func (this *AggregateInfo) getWindowRow(cIndex int64, item value.AnnotatedValue,
 	}
 
 	if v1 == nil || val == nil {
-		val = value.NewValue(map[string]interface{}{"part": value.ONE_VALUE, "nrows": value.NewValue(op.nItems)})
+		val = value.NewValue(map[string]any{"part": value.ONE_VALUE, "nrows": value.NewValue(op.nItems)})
 		item.SetAttachment(value.ATT_WINDOW_ATTACHMENT, val)
 	}
 
@@ -1560,7 +1560,7 @@ func (this *WindowAggregate) processWindowAggregates(c int64, item value.Annotat
 }
 
 func (this *WindowAggregate) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

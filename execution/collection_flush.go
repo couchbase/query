@@ -31,7 +31,7 @@ func NewFlushCollection(plan *plan.FlushCollection, context *Context) *FlushColl
 	return rv
 }
 
-func (this *FlushCollection) Accept(visitor Visitor) (interface{}, error) {
+func (this *FlushCollection) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFlushCollection(this)
 }
 
@@ -68,7 +68,7 @@ func (this *FlushCollection) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *FlushCollection) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

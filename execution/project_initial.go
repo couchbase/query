@@ -30,7 +30,7 @@ type InitialProject struct {
 var _INITPROJ_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_INITPROJ_OP_POOL, func() interface{} {
+	util.NewFastPool(&_INITPROJ_OP_POOL, func() any {
 		return &InitialProject{}
 	})
 }
@@ -44,7 +44,7 @@ func NewInitialProject(plan *plan.InitialProject, context *Context) *InitialProj
 	return rv
 }
 
-func (this *InitialProject) Accept(visitor Visitor) (interface{}, error) {
+func (this *InitialProject) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInitialProject(this)
 }
 
@@ -142,7 +142,7 @@ func (this *InitialProject) processItem(item value.AnnotatedValue, context *Cont
 		if result.Self() {
 			v = value.NewValue(v.Actual())
 		}
-		sv := value.NewScopeValue(make(map[string]interface{}, 1), item)
+		sv := value.NewScopeValue(make(map[string]any, 1), item)
 		if result.As() != "" {
 			sv.SetField(result.As(), v)
 		}
@@ -180,11 +180,11 @@ func (this *InitialProject) afterItems(context *Context) {
 
 func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Context) bool {
 	n := len(this.plan.Terms())
-	sv := value.NewScopeValue(make(map[string]interface{}, n), item)
+	sv := value.NewScopeValue(make(map[string]any, n), item)
 	pv := value.NewAnnotatedValue(sv)
 	pv.ShareAnnotations(item)
 
-	p := value.NewTrackedValue(make(map[string]interface{}, n+(this.plan.StarTermCount()*7)))
+	p := value.NewTrackedValue(make(map[string]any, n+(this.plan.StarTermCount()*7)))
 
 	var order map[string]int
 	nextOrder := 0
@@ -277,7 +277,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			// check if we must copy to support the EXCLUDE clause; check if term is referenced in an exclusion (first element)
 			// as each item may have a different schema, always check
 			if len(exclusions) > 0 {
-				if sa, ok := starval.Actual().(map[string]interface{}); ok {
+				if sa, ok := starval.Actual().(map[string]any); ok {
 					found := false
 				excl:
 					for i := range exclusions {
@@ -301,7 +301,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 			}
 
 			// Latest star overwrites previous star
-			if sa, ok := starval.Actual().(map[string]interface{}); ok {
+			if sa, ok := starval.Actual().(map[string]any); ok {
 				if doOrder {
 					for k, v := range sa {
 						order[k] = nextOrder
@@ -369,7 +369,7 @@ func (this *InitialProject) processTerms(item value.AnnotatedValue, context *Con
 }
 
 func (this *InitialProject) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -431,7 +431,7 @@ func (this *InitialProject) getExclusions(singlequalification bool, item value.A
 
 func (this *InitialProject) excludeAndSend(exclusions [][]string, item value.AnnotatedValue, context *Context) bool {
 	if len(exclusions) != 0 {
-		if ia, ok := item.Actual().(map[string]interface{}); ok {
+		if ia, ok := item.Actual().(map[string]any); ok {
 			before := item.Size()
 			for _, e := range exclusions {
 				expression.DeleteFromObject(ia, e)

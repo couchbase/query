@@ -32,7 +32,7 @@ func NewCreateSequence(plan *plan.CreateSequence, context *Context) *CreateSeque
 	return rv
 }
 
-func (this *CreateSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *CreateSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCreateSequence(this)
 }
 
@@ -74,7 +74,7 @@ func (this *CreateSequence) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *CreateSequence) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

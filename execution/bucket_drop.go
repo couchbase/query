@@ -32,7 +32,7 @@ func NewDropBucket(plan *plan.DropBucket, context *Context) *DropBucket {
 	return rv
 }
 
-func (this *DropBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropBucket(this)
 }
 
@@ -80,7 +80,7 @@ func (this *DropBucket) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropBucket) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

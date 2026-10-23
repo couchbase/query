@@ -19,7 +19,7 @@ import (
 type Collect struct {
 	base
 	plan   *plan.Collect
-	values []interface{}
+	values []any
 }
 
 const _COLLECT_CAP = 64
@@ -27,7 +27,7 @@ const _COLLECT_CAP = 64
 func NewCollect(plan *plan.Collect, context *Context) *Collect {
 	rv := &Collect{
 		plan:   plan,
-		values: make([]interface{}, 0, _COLLECT_CAP),
+		values: make([]any, 0, _COLLECT_CAP),
 	}
 
 	newBase(&rv.base, context)
@@ -35,14 +35,14 @@ func NewCollect(plan *plan.Collect, context *Context) *Collect {
 	return rv
 }
 
-func (this *Collect) Accept(visitor Visitor) (interface{}, error) {
+func (this *Collect) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCollect(this)
 }
 
 func (this *Collect) Copy() Operator {
 	rv := &Collect{
 		plan:   this.plan,
-		values: make([]interface{}, 0, _COLLECT_CAP),
+		values: make([]any, 0, _COLLECT_CAP),
 	}
 	this.base.copy(&rv.base)
 	return rv
@@ -58,7 +58,7 @@ func (this *Collect) RunOnce(context *Context, parent value.Value) {
 
 func (this *Collect) processItem(item value.AnnotatedValue, context *Context) bool {
 	if len(this.values) == cap(this.values) {
-		values := make([]interface{}, len(this.values), len(this.values)<<1)
+		values := make([]any, len(this.values), len(this.values)<<1)
 		copy(values, this.values)
 		this.values = values
 	}
@@ -77,7 +77,7 @@ func (this *Collect) releaseValues() {
 }
 
 func (this *Collect) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
@@ -85,6 +85,6 @@ func (this *Collect) MarshalJSON() ([]byte, error) {
 
 func (this *Collect) reopen(context *Context) bool {
 	rv := this.baseReopen(context)
-	this.values = make([]interface{}, 0, _COLLECT_CAP)
+	this.values = make([]any, 0, _COLLECT_CAP)
 	return rv
 }

@@ -32,7 +32,7 @@ func NewAlterBucket(plan *plan.AlterBucket, context *Context) *AlterBucket {
 	return rv
 }
 
-func (this *AlterBucket) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterBucket) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterBucket(this)
 }
 
@@ -77,7 +77,7 @@ func (this *AlterBucket) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *AlterBucket) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

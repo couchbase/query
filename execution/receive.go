@@ -37,7 +37,7 @@ func NewReceive(plan *plan.Receive, context *Context) *Receive {
 	return rv
 }
 
-func (this *Receive) Accept(visitor Visitor) (interface{}, error) {
+func (this *Receive) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitReceive(this)
 }
 
@@ -61,7 +61,7 @@ func (this *Receive) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Receive) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

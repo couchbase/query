@@ -41,7 +41,7 @@ func NewIndexScan2(plan *plan.IndexScan2, context *Context) *IndexScan2 {
 	return rv
 }
 
-func (this *IndexScan2) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexScan2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexScan2(this)
 }
 
@@ -267,7 +267,7 @@ func evalSpan2(pspans plan.Spans2, parent value.Value, context *opContext) (data
 }
 
 func (this *IndexScan2) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return this.marshalIndexScanReport(r, this.scanReport)

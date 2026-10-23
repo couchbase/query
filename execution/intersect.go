@@ -36,7 +36,7 @@ func NewIntersect(plan *plan.IntersectAll, context *Context, first, second Opera
 	return rv
 }
 
-func (this *Intersect) Accept(visitor Visitor) (interface{}, error) {
+func (this *Intersect) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIntersect(this)
 }
 
@@ -110,7 +110,7 @@ func (this *Intersect) afterItems(context *Context) {
 }
 
 func (this *Intersect) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["first"] = this.first
 		r["second"] = this.second
@@ -185,7 +185,7 @@ func NewIntersectAll(plan *plan.IntersectAll, context *Context, first, second Op
 	return rv
 }
 
-func (this *IntersectAll) Accept(visitor Visitor) (interface{}, error) {
+func (this *IntersectAll) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIntersectAll(this)
 }
 
@@ -259,7 +259,7 @@ func (this *IntersectAll) afterItems(context *Context) {
 }
 
 func (this *IntersectAll) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["first"] = this.first
 		r["second"] = this.second

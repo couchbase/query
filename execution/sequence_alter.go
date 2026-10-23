@@ -31,7 +31,7 @@ func NewAlterSequence(plan *plan.AlterSequence, context *Context) *AlterSequence
 	return rv
 }
 
-func (this *AlterSequence) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterSequence) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterSequence(this)
 }
 
@@ -71,7 +71,7 @@ func (this *AlterSequence) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *AlterSequence) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

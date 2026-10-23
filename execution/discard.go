@@ -30,7 +30,7 @@ func NewDiscard(plan *plan.Discard, context *Context) *Discard {
 	return rv
 }
 
-func (this *Discard) Accept(visitor Visitor) (interface{}, error) {
+func (this *Discard) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDiscard(this)
 }
 
@@ -61,7 +61,7 @@ func (this *Discard) processItem(item value.AnnotatedValue, context *Context) bo
 }
 
 func (this *Discard) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -31,7 +31,7 @@ func NewDropIndex(plan *plan.DropIndex, context *Context) *DropIndex {
 	return rv
 }
 
-func (this *DropIndex) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropIndex) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropIndex(this)
 }
 
@@ -83,7 +83,7 @@ func (this *DropIndex) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropIndex) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -34,7 +34,7 @@ func NewUnionAll(plan *plan.UnionAll, context *Context, children ...Operator) *U
 	return rv
 }
 
-func (this *UnionAll) Accept(visitor Visitor) (interface{}, error) {
+func (this *UnionAll) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnionAll(this)
 }
 
@@ -99,7 +99,7 @@ func (this *UnionAll) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *UnionAll) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["~children"] = this.children
 	})

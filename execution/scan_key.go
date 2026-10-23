@@ -27,7 +27,7 @@ type KeyScan struct {
 var _KEYSCAN_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_KEYSCAN_OP_POOL, func() interface{} {
+	util.NewFastPool(&_KEYSCAN_OP_POOL, func() any {
 		return &KeyScan{}
 	})
 }
@@ -40,7 +40,7 @@ func NewKeyScan(plan *plan.KeyScan, context *Context) *KeyScan {
 	return rv
 }
 
-func (this *KeyScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *KeyScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitKeyScan(this)
 }
 
@@ -90,7 +90,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 
 		actuals := keys.Actual()
 		switch actuals := actuals.(type) {
-		case []interface{}:
+		case []any:
 			for _, key := range actuals {
 				k := value.NewValue(key).Actual()
 				if ks, ok := k.(string); ok {
@@ -122,7 +122,7 @@ func (this *KeyScan) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *KeyScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

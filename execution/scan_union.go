@@ -35,7 +35,7 @@ func NewUnionScan(plan *plan.UnionScan, context *Context, scans []Operator) *Uni
 	return rv
 }
 
-func (this *UnionScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *UnionScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUnionScan(this)
 }
 
@@ -162,7 +162,7 @@ func (this *UnionScan) processKey(item value.AnnotatedValue,
 }
 
 func (this *UnionScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["scans"] = this.scans
 	})

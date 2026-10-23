@@ -32,7 +32,7 @@ func NewDropGroup(plan *plan.DropGroup, context *Context) *DropGroup {
 	return rv
 }
 
-func (this *DropGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *DropGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDropGroup(this)
 }
 
@@ -83,7 +83,7 @@ func (this *DropGroup) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *DropGroup) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

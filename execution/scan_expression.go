@@ -21,7 +21,7 @@ type ExpressionScan struct {
 	base
 	buildBitFilterBase
 	plan    *plan.ExpressionScan
-	results []interface{}
+	results []any
 	context *Context
 }
 
@@ -36,7 +36,7 @@ func NewExpressionScan(plan *plan.ExpressionScan, context *Context) *ExpressionS
 	return rv
 }
 
-func (this *ExpressionScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExpressionScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExpressionScan(this)
 }
 
@@ -89,7 +89,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		// use cached results if available
 		if useCache && this.results != nil {
 			for _, act := range this.results {
-				actv := value.NewScopeValue(make(map[string]interface{}), parent)
+				actv := value.NewScopeValue(make(map[string]any), parent)
 				actv.SetField(alias, act)
 				av := value.NewAnnotatedValue(actv)
 				av.SetId("")
@@ -135,7 +135,7 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 		}
 		actuals := ev.Actual()
 		switch actuals.(type) {
-		case []interface{}:
+		case []any:
 		case nil:
 			if ev.Type() == value.NULL {
 				actuals = _ARRAY_NULL_VALUE
@@ -143,10 +143,10 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 				actuals = _ARRAY_MISSING_VALUE
 			}
 		default:
-			actuals = []interface{}{actuals}
+			actuals = []any{actuals}
 		}
 
-		acts := actuals.([]interface{})
+		acts := actuals.([]any)
 
 		var freeSize uint64
 		if context.UseRequestQuota() {
@@ -171,13 +171,13 @@ func (this *ExpressionScan) RunOnce(context *Context, parent value.Value) {
 			}
 		}
 
-		var results []interface{}
+		var results []any
 		if useCache {
 			this.results = nil
-			results = make([]interface{}, 0, len(acts))
+			results = make([]any, 0, len(acts))
 		}
 		for _, act := range acts {
-			actv := value.NewScopeValue(make(map[string]interface{}), parent)
+			actv := value.NewScopeValue(make(map[string]any), parent)
 			actv.SetField(alias, act)
 			av := value.NewAnnotatedValue(actv)
 			av.SetId("")
@@ -240,11 +240,11 @@ func (this *ExpressionScan) Done() {
 }
 
 func (this *ExpressionScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)
 }
 
-var _ARRAY_NULL_VALUE []interface{} = []interface{}{value.NULL_VALUE}
-var _ARRAY_MISSING_VALUE []interface{} = []interface{}(nil)
+var _ARRAY_NULL_VALUE []any = []any{value.NULL_VALUE}
+var _ARRAY_MISSING_VALUE []any = []any(nil)

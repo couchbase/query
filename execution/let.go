@@ -31,7 +31,7 @@ func NewLet(plan *plan.Let, context *Context) *Let {
 	return rv
 }
 
-func (this *Let) Accept(visitor Visitor) (interface{}, error) {
+func (this *Let) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitLet(this)
 }
 
@@ -87,7 +87,7 @@ func (this *Let) processItem(item value.AnnotatedValue, context *Context) bool {
 }
 
 func (this *Let) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

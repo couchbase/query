@@ -37,7 +37,7 @@ func NewFinalGroup(plan *plan.FinalGroup, context *Context) *FinalGroup {
 	return rv
 }
 
-func (this *FinalGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *FinalGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFinalGroup(this)
 }
 
@@ -162,7 +162,7 @@ func (this *FinalGroup) afterItems(context *Context) {
 }
 
 func (this *FinalGroup) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -40,7 +40,7 @@ func NewOrderedIntersectScan(plan *plan.OrderedIntersectScan, context *Context, 
 	return rv
 }
 
-func (this *OrderedIntersectScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *OrderedIntersectScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitOrderedIntersectScan(this)
 }
 
@@ -277,7 +277,7 @@ func (this *OrderedIntersectScan) processQueue(fullBits, sendBits, limit int64,
 }
 
 func (this *OrderedIntersectScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 		r["scans"] = this.scans
 	})

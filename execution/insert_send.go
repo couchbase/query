@@ -23,7 +23,7 @@ import (
 var _SENDINSERT_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_SENDINSERT_OP_POOL, func() interface{} {
+	util.NewFastPool(&_SENDINSERT_OP_POOL, func() any {
 		return &SendInsert{}
 	})
 }
@@ -49,7 +49,7 @@ func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
 	return rv
 }
 
-func (this *SendInsert) Accept(visitor Visitor) (interface{}, error) {
+func (this *SendInsert) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSendInsert(this)
 }
 
@@ -277,7 +277,7 @@ func (this *SendInsert) flushBatch(context *Context) bool {
 		for _, dp := range dpairs {
 			// Capture the inserted keys in case there is a RETURNING clause
 			dv := value.NewAnnotatedValue(dp.Value)
-			av := value.NewAnnotatedValue(make(map[string]interface{}, 1))
+			av := value.NewAnnotatedValue(make(map[string]any, 1))
 			av.ShareAnnotations(dv)
 			av.SetField(this.plan.Alias(), dv)
 
@@ -309,12 +309,12 @@ func (this *SendInsert) readonly() bool {
 }
 
 func (this *SendInsert) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	if this.sysXattrChecked != 0 {
 		if s, ok := r["#stats"]; ok {
-			if sm, ok := s.(map[string]interface{}); ok {
+			if sm, ok := s.(map[string]any); ok {
 				sm["sysXattrAuthTime"] = util.OutputDuration(this.sysXattrChecked)
 			}
 		}

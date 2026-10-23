@@ -32,7 +32,7 @@ type Authorize struct {
 var _AUTH_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_AUTH_OP_POOL, func() interface{} {
+	util.NewFastPool(&_AUTH_OP_POOL, func() any {
 		return &Authorize{}
 	})
 }
@@ -49,7 +49,7 @@ func NewAuthorize(plan *plan.Authorize, context *Context, child Operator, dynami
 	return rv
 }
 
-func (this *Authorize) Accept(visitor Visitor) (interface{}, error) {
+func (this *Authorize) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAuthorize(this)
 }
 
@@ -126,7 +126,7 @@ func (this *Authorize) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Authorize) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	r["~child"] = this.child

@@ -41,7 +41,7 @@ func NewIndexNest(plan *plan.IndexNest, context *Context) *IndexNest {
 	return rv
 }
 
-func (this *IndexNest) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexNest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexNest(this)
 }
 
@@ -179,7 +179,7 @@ func (this *IndexNest) flushBatch(context *Context) bool {
 }
 
 func (this *IndexNest) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return this.marshalIndexScanReport(r, this.scanReport)

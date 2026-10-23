@@ -128,7 +128,7 @@ func NewOrder(plan *plan.Order, context *Context, less func(value.AnnotatedValue
 	return rv, nil
 }
 
-func (this *Order) Accept(visitor Visitor) (interface{}, error) {
+func (this *Order) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitOrder(this)
 }
 
@@ -290,7 +290,7 @@ func (this *Order) lessThan(v1 value.AnnotatedValue, v2 value.AnnotatedValue) bo
 }
 
 func (this *Order) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

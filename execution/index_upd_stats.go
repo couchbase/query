@@ -68,7 +68,7 @@ func updateStats(names []string, subClass string, keyspace datastore.Keyspace, c
 
 const _MAX_ITERATION = 8
 
-func updateIndexStats(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+func updateIndexStats(context scheduler.Context, parms any) (any, []errors.Error) {
 	idxUpdStatParams := parms.(*IndexUpdStatParams)
 	if idxUpdStatParams == nil {
 		return nil, nil

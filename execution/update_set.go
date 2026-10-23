@@ -23,7 +23,7 @@ import (
 var _SET_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_SET_OP_POOL, func() interface{} {
+	util.NewFastPool(&_SET_OP_POOL, func() any {
 		return &Set{}
 	})
 }
@@ -43,7 +43,7 @@ func NewSet(plan *plan.Set, context *Context) *Set {
 	return rv
 }
 
-func (this *Set) Accept(visitor Visitor) (interface{}, error) {
+func (this *Set) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSet(this)
 }
 
@@ -119,7 +119,7 @@ func setPath(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opCo
 				// if we're trying to set an xattr and none were retrieved previously, we'll need to create the empty value first
 				if f, ok := t.Path().(*expression.Field); ok && f.First().Alias() == "xattrs" {
 					if xattrs, ok := opVal.Field("xattrs"); ok && xattrs == nil || xattrs.Type() == value.NULL {
-						opVal.SetField("xattrs", value.NewValue(map[string]interface{}{}))
+						opVal.SetField("xattrs", value.NewValue(map[string]any{}))
 						// try again
 						t.Path().Set(opVal, v, context)
 					}
@@ -185,7 +185,7 @@ func setFor(t *algebra.SetTerm, clone, item value.AnnotatedValue, context *opCon
 }
 
 func (this *Set) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

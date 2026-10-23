@@ -38,7 +38,7 @@ func NewInitialGroup(plan *plan.InitialGroup, context *Context) *InitialGroup {
 	return rv
 }
 
-func (this *InitialGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *InitialGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInitialGroup(this)
 }
 
@@ -168,8 +168,8 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 	if this.plan.GroupAs() != "" {
 		groupAsAlias := this.plan.GroupAs()
 		// Create the entry for the Group As array field
-		groupAs := make(map[string]interface{}, len(this.plan.GroupAsFields()))
-		itemAct := item.Actual().(map[string]interface{})
+		groupAs := make(map[string]any, len(this.plan.GroupAsFields()))
+		itemAct := item.Actual().(map[string]any)
 
 		// Only add the allowed group as fields from the item to the Group As entry
 		for _, k := range this.plan.GroupAsFields() {
@@ -182,11 +182,11 @@ func (this *InitialGroup) processItem(item value.AnnotatedValue, context *Contex
 		// Add the Group As field to the groupKey's entry in the map
 		groupAsField, ok := gv.Field(groupAsAlias)
 		if !ok {
-			groupAsField = value.NewTrackedValue(make([]interface{}, 0, len(groupAs)))
+			groupAsField = value.NewTrackedValue(make([]any, 0, len(groupAs)))
 		}
 
 		groupAsVal := value.NewTrackedValue(groupAs)
-		groupAsField, ok = groupAsField.Append([]interface{}{groupAsVal})
+		groupAsField, ok = groupAsField.Append([]any{groupAsVal})
 		if !ok {
 			context.Fatal(errors.NewGroupUpdateError(nil, fmt.Sprintf("Group As append failed for alias %s", groupAsAlias)))
 			item.Recycle()
@@ -225,7 +225,7 @@ func (this *InitialGroup) afterItems(context *Context) {
 }
 
 func (this *InitialGroup) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

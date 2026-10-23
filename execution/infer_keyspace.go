@@ -34,7 +34,7 @@ func NewInferKeyspace(plan *plan.InferKeyspace, context *Context) *InferKeyspace
 	return rv
 }
 
-func (this *InferKeyspace) Accept(visitor Visitor) (interface{}, error) {
+func (this *InferKeyspace) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitInferKeyspace(this)
 }
 
@@ -100,7 +100,7 @@ func (this *InferKeyspace) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *InferKeyspace) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -31,7 +31,7 @@ func NewExplain(plan plan.Operator, context *Context) *Explain {
 	return rv
 }
 
-func (this *Explain) Accept(visitor Visitor) (interface{}, error) {
+func (this *Explain) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExplain(this)
 }
 
@@ -78,7 +78,7 @@ func (this *Explain) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *Explain) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

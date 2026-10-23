@@ -19,7 +19,7 @@ import (
 var _PARALLEL_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_PARALLEL_OP_POOL, func() interface{} {
+	util.NewFastPool(&_PARALLEL_OP_POOL, func() any {
 		return &Parallel{}
 	})
 }
@@ -52,7 +52,7 @@ func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Paralle
 	return rv
 }
 
-func (this *Parallel) Accept(visitor Visitor) (interface{}, error) {
+func (this *Parallel) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitParallel(this)
 }
 
@@ -142,7 +142,7 @@ func (this *Parallel) runChild(child Operator, context *Context, parent value.Va
 func (this *Parallel) MarshalJSON() ([]byte, error) {
 	var outChild Operator
 
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 
 		childCount := len(this.children)

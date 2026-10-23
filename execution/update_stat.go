@@ -36,7 +36,7 @@ func NewUpdateStatistics(plan *plan.UpdateStatistics, context *Context) *UpdateS
 	return rv
 }
 
-func (this *UpdateStatistics) Accept(visitor Visitor) (interface{}, error) {
+func (this *UpdateStatistics) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitUpdateStatistics(this)
 }
 
@@ -146,7 +146,7 @@ func getIndexes(context *opContext, parent value.Value, keyspace datastore.Keysp
 }
 
 func (this *UpdateStatistics) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

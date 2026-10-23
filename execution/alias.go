@@ -32,7 +32,7 @@ func NewAlias(plan *plan.Alias, context *Context) *Alias {
 	return rv
 }
 
-func (this *Alias) Accept(visitor Visitor) (interface{}, error) {
+func (this *Alias) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlias(this)
 }
 
@@ -87,7 +87,7 @@ func (this *Alias) afterItems(context *Context) {
 }
 
 func (this *Alias) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

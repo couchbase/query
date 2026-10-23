@@ -32,7 +32,7 @@ func NewExecuteFunction(plan *plan.ExecuteFunction, context *Context) *ExecuteFu
 	return rv
 }
 
-func (this *ExecuteFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExecuteFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExecuteFunction(this)
 }
 
@@ -95,7 +95,7 @@ func (this *ExecuteFunction) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *ExecuteFunction) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

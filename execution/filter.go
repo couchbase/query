@@ -28,7 +28,7 @@ type Filter struct {
 var _FILTER_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_FILTER_OP_POOL, func() interface{} {
+	util.NewFastPool(&_FILTER_OP_POOL, func() any {
 		return &Filter{}
 	})
 }
@@ -43,7 +43,7 @@ func NewFilter(plan *plan.Filter, context *Context, aliasMap map[string]string) 
 	return rv
 }
 
-func (this *Filter) Accept(visitor Visitor) (interface{}, error) {
+func (this *Filter) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFilter(this)
 }
 
@@ -111,7 +111,7 @@ func (this *Filter) afterItems(context *Context) {
 }
 
 func (this *Filter) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

@@ -205,12 +205,12 @@ type Output interface {
 	SetSortCount(i uint64)
 	AddPhaseOperator(p Phases)
 	AddPhaseCount(p Phases, c uint64)
-	FmtPhaseCounts() map[string]interface{}
-	FmtPhaseOperators() map[string]interface{}
+	FmtPhaseCounts() map[string]any
+	FmtPhaseOperators() map[string]any
 	AddPhaseTime(phase Phases, duration time.Duration)
-	FmtPhaseTimes(util.DurationStyle) map[string]interface{}
-	RawPhaseTimes() map[string]interface{}
-	FmtOptimizerEstimates(op Operator) map[string]interface{}
+	FmtPhaseTimes(util.DurationStyle) map[string]any
+	RawPhaseTimes() map[string]any
+	FmtOptimizerEstimates(op Operator) map[string]any
 	AddCpuTime(duration time.Duration)
 	AddIoTime(duration time.Duration)
 	AddWaitTime(duration time.Duration)
@@ -280,7 +280,7 @@ func (this *opContext) Copy() *opContext {
 	return &opContext{this.base, this.Context.Copy()}
 }
 
-func (this *opContext) NewQueryContext(queryContext string, readonly bool) interface{} {
+func (this *opContext) NewQueryContext(queryContext string, readonly bool) any {
 	return &opContext{this.base, this.Context.NewQueryContext(queryContext, readonly).(*Context)}
 }
 
@@ -290,7 +290,7 @@ func NewOpContext(context *Context) *opContext {
 	return &opContext{b, context}
 }
 
-func (this *opContext) AdminContext() (interface{}, error) {
+func (this *opContext) AdminContext() (any, error) {
 	rv, err := this.Context.AdminContext()
 	if err != nil {
 		return nil, err
@@ -298,7 +298,7 @@ func (this *opContext) AdminContext() (interface{}, error) {
 	return &opContext{this.base, rv.(*Context)}, nil
 }
 
-func (this *opContext) CopyOpContext() interface{} {
+func (this *opContext) CopyOpContext() any {
 	b := &base{}
 	ctx := this.Context.Copy()
 	newBase(b, ctx)
@@ -343,7 +343,7 @@ type Context struct {
 	subresults                *subqueryMap
 	httpRequest               *http.Request
 	mutex                     sync.RWMutex
-	allowlist                 map[string]interface{}
+	allowlist                 map[string]any
 	inlistHashMap             map[*expression.In]*expression.InlistHash
 	inlistHashLock            sync.RWMutex
 	memoryQuota               uint64
@@ -576,14 +576,14 @@ func (this *Context) CopyForScheduledTask() expression.Context {
 	return rv
 }
 
-func (this *Context) NewQueryContext(queryContext string, readonly bool) interface{} {
+func (this *Context) NewQueryContext(queryContext string, readonly bool) any {
 	rv := this.Copy()
 	rv.queryContext = queryContext
 	rv.readonly = readonly
 	return rv
 }
 
-func (this *Context) AdminContext() (interface{}, error) {
+func (this *Context) AdminContext() (any, error) {
 	node := distributed.RemoteAccess().WhoAmI()
 	if node == "" {
 
@@ -646,11 +646,11 @@ func (this *Context) SetPrepared(prepared *plan.Prepared) {
 	this.prepared = prepared
 }
 
-func (this *Context) SetAllowlist(val map[string]interface{}) {
+func (this *Context) SetAllowlist(val map[string]any) {
 	this.allowlist = val
 }
 
-func (this *Context) GetAllowlist() map[string]interface{} {
+func (this *Context) GetAllowlist() map[string]any {
 	return this.allowlist
 }
 
@@ -702,7 +702,7 @@ func (this *Context) GetTimeout() time.Duration {
 	return this.reqTimeout
 }
 
-func (this *Context) GetTxContext() interface{} {
+func (this *Context) GetTxContext() any {
 	return this.txContext
 }
 
@@ -714,7 +714,7 @@ func (this *Context) TxDataVal() value.Value {
 	return this.txDataVal
 }
 
-func (this *Context) SetTxContext(tc interface{}) {
+func (this *Context) SetTxContext(tc any) {
 	this.txContext, _ = tc.(*transactions.TranContext)
 }
 
@@ -1124,11 +1124,11 @@ func (this *Context) SessionMemory() uint64 {
 
 // UDF memory storage
 
-func (this *Context) StoreValue(key string, val interface{}) {
+func (this *Context) StoreValue(key string, val any) {
 	this.udfValueMap.Store(key, val)
 }
 
-func (this *Context) RetrieveValue(key string) interface{} {
+func (this *Context) RetrieveValue(key string) any {
 	res, _ := this.udfValueMap.Load(key)
 	return res
 }
@@ -1335,7 +1335,7 @@ func (this *Context) RecordKvWU(wu tenant.Unit) {
 
 func (this *opContext) SubqueryPlan(node *algebra.Select, mutex *sync.RWMutex, deltaKeyspaces map[string]bool,
 	namedArgs map[string]value.Value, positionalArgs value.Values,
-	lock bool) (interface{}, interface{}, error) {
+	lock bool) (any, any, error) {
 	var prepContext planner.PrepareContext
 	var optimizer planner.Optimizer
 	var err1 errors.Error
@@ -1547,7 +1547,7 @@ func (this *opContext) VerifySubqueryPlans(expr expression.Expression, subqPlans
 		}
 	}
 
-	verifyF := func(key *algebra.Select, options uint32, splan, isk interface{}) (errors.Error, bool) {
+	verifyF := func(key *algebra.Select, options uint32, splan, isk any) (errors.Error, bool) {
 		var local bool
 		var err errors.Error
 		if qp, ok := splan.(*plan.QueryPlan); ok {
@@ -1602,7 +1602,7 @@ func (this *Context) SetInlineUdf(udf string, expr expression.Expression, varNam
 
 func (this *opContext) EvaluateSubquery(query *algebra.Select, parent value.Value) (value.Value, error) {
 
-	var subplan, subplanIsks interface{}
+	var subplan, subplanIsks any
 	var err error
 	planFound := false
 
@@ -1768,11 +1768,11 @@ func (this *Context) DatastoreURL() string {
 	return this.datastore.URL()
 }
 
-func (this *Context) getSubqueryTimes() interface{} {
+func (this *Context) getSubqueryTimes() any {
 	trees := this.contextSubExecTrees()
 	if trees != nil {
 		trees.mutex.RLock()
-		times := make([]interface{}, 0, len(trees.entries))
+		times := make([]any, 0, len(trees.entries))
 		for q, e := range trees.entries {
 			var t Operator
 
@@ -1802,7 +1802,7 @@ func (this *Context) getSubqueryTimes() interface{} {
 			mq := q.String()
 			mt, err := json.Marshal(t)
 			if err == nil {
-				times = append(times, map[string]interface{}{"subquery": mq, "correlated": q.IsCorrelated(),
+				times = append(times, map[string]any{"subquery": mq, "correlated": q.IsCorrelated(),
 					"executionTimings": value.NewValue(mt)})
 			}
 		}
@@ -1815,18 +1815,18 @@ func (this *Context) getSubqueryTimes() interface{} {
 	return nil
 }
 
-func (this *Context) getUdfStmtTimes() interface{} {
+func (this *Context) getUdfStmtTimes() any {
 
 	trees := this.contextUdfStmtExecTrees()
 
 	if trees != nil {
 		trees.mutex.RLock()
-		times := make([]interface{}, 0, len(trees.trees))
+		times := make([]any, 0, len(trees.trees))
 
 		for _, t := range trees.trees {
 			et, err := json.Marshal(t.root)
 			if err == nil {
-				prof := map[string]interface{}{"statement": t.query, "function": t.funcKey, "executionTimings": value.NewValue(et)}
+				prof := map[string]any{"statement": t.query, "function": t.funcKey, "executionTimings": value.NewValue(et)}
 				times = append(times, prof)
 			}
 		}
@@ -1947,23 +1947,23 @@ func (this *Context) initSubresults() *subqueryMap {
 // Synchronized map
 type subqueryMap struct {
 	mutex   sync.RWMutex
-	entries map[*algebra.Select]interface{}
+	entries map[*algebra.Select]any
 }
 
 func newSubqueryMap(plan bool) *subqueryMap {
 	rv := &subqueryMap{}
-	rv.entries = make(map[*algebra.Select]interface{})
+	rv.entries = make(map[*algebra.Select]any)
 	return rv
 }
 
-func (this *subqueryMap) get(key *algebra.Select) (interface{}, bool) {
+func (this *subqueryMap) get(key *algebra.Select) (any, bool) {
 	this.mutex.RLock()
 	rv, ok := this.entries[key]
 	this.mutex.RUnlock()
 	return rv, ok
 }
 
-func (this *subqueryMap) set(key *algebra.Select, value interface{}) {
+func (this *subqueryMap) set(key *algebra.Select, value any) {
 	this.mutex.Lock()
 	this.entries[key] = value
 	this.mutex.Unlock()
@@ -2303,7 +2303,7 @@ func (this *Context) getExternalFilters(alias string) expression.Expression {
 	return eft.getExternalFilters()
 }
 
-func (this *Context) setExternalFilter(alias string, term expression.Expression, nTerms int, vals []interface{}) {
+func (this *Context) setExternalFilter(alias string, term expression.Expression, nTerms int, vals []any) {
 	if this.externalFilterMap == nil {
 		this.externalFilterLock.Lock()
 		if this.externalFilterMap == nil {
@@ -2377,7 +2377,7 @@ func (this *Context) AddKeyToSkip(key string) bool {
 
 func (this *Context) ReleaseSkipKeys() {
 	if this.UseRequestQuota() {
-		this.keysToSkip.Range(func(key, value interface{}) bool {
+		this.keysToSkip.Range(func(key, value any) bool {
 			this.ReleaseValueSize(uint64(len(key.(string))))
 			return true
 		})
@@ -2447,49 +2447,49 @@ func (this *Context) Fatala(f func() string) {
 	}
 }
 
-func (this *Context) Logf(l logging.Level, f string, args ...interface{}) {
+func (this *Context) Logf(l logging.Level, f string, args ...any) {
 	if this.logLevel >= l {
 		this.output.Loga(l, func() string { return fmt.Sprintf(f, args...) })
 	}
 }
 
-func (this *Context) Debugf(f string, args ...interface{}) {
+func (this *Context) Debugf(f string, args ...any) {
 	if this.logLevel >= logging.DEBUG {
 		this.output.Loga(logging.DEBUG, func() string { return fmt.Sprintf(f, args...) })
 	}
 }
 
-func (this *Context) Tracef(f string, args ...interface{}) {
+func (this *Context) Tracef(f string, args ...any) {
 	if this.logLevel >= logging.TRACE {
 		this.output.Loga(logging.TRACE, func() string { return fmt.Sprintf(f, args...) })
 	}
 }
 
-func (this *Context) Infof(f string, args ...interface{}) {
+func (this *Context) Infof(f string, args ...any) {
 	if this.logLevel >= logging.INFO {
 		this.output.Loga(logging.INFO, func() string { return fmt.Sprintf(f, args...) })
 	}
 }
 
-func (this *Context) Warnf(f string, args ...interface{}) {
+func (this *Context) Warnf(f string, args ...any) {
 	if this.logLevel >= logging.WARN {
 		this.output.Loga(logging.WARN, func() string { return fmt.Sprintf(f, args...) })
 	}
 }
 
-func (this *Context) Errorf(f string, args ...interface{}) {
+func (this *Context) Errorf(f string, args ...any) {
 	if this.logLevel >= logging.ERROR {
 		this.output.Loga(logging.ERROR, func() string { return fmt.Sprintf(f, args...) })
 	}
 }
 
-func (this *Context) Severef(f string, args ...interface{}) {
+func (this *Context) Severef(f string, args ...any) {
 	if this.logLevel >= logging.SEVERE {
 		this.output.Loga(logging.SEVERE, func() string { return fmt.Sprintf(f, args...) })
 	}
 }
 
-func (this *Context) Fatalf(f string, args ...interface{}) {
+func (this *Context) Fatalf(f string, args ...any) {
 	if this.logLevel >= logging.FATAL {
 		this.output.Loga(logging.FATAL, func() string { return fmt.Sprintf(f, args...) })
 	}
@@ -2661,7 +2661,7 @@ func (this *Context) checkPause(op *base) {
 	}
 }
 
-func (this *Context) LoadX509KeyPair(certFile, keyFile string, passPhrase []byte) (interface{}, error) {
+func (this *Context) LoadX509KeyPair(certFile, keyFile string, passPhrase []byte) (any, error) {
 	return ntls.LoadX509KeyPair(certFile, keyFile, passPhrase)
 }
 

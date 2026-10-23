@@ -33,7 +33,7 @@ func NewIndexCountScan(plan *plan.IndexCountScan, context *Context) *IndexCountS
 	return rv
 }
 
-func (this *IndexCountScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexCountScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIndexCountScan(this)
 }
 
@@ -72,7 +72,7 @@ func (this *IndexCountScan) RunOnce(context *Context, parent value.Value) {
 		var count int64
 
 		for _, span := range spans {
-			util.Fork(func(interface{}) {
+			util.Fork(func(any) {
 				this.scanCount(span, scanVector, countChannel, context)
 			}, nil)
 		}
@@ -130,7 +130,7 @@ func (this *IndexCountScan) scanCount(span *plan.Span, scanVector timestamp.Vect
 }
 
 func (this *IndexCountScan) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

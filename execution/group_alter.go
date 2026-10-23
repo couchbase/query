@@ -34,7 +34,7 @@ func NewAlterGroup(plan *plan.AlterGroup, context *Context) *AlterGroup {
 	return rv
 }
 
-func (this *AlterGroup) Accept(visitor Visitor) (interface{}, error) {
+func (this *AlterGroup) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAlterGroup(this)
 }
 
@@ -104,7 +104,7 @@ func (this *AlterGroup) RunOnce(context *Context, parent value.Value) {
 }
 
 func (this *AlterGroup) MarshalJSON() ([]byte, error) {
-	r := this.plan.MarshalBase(func(r map[string]interface{}) {
+	r := this.plan.MarshalBase(func(r map[string]any) {
 		this.marshalTimes(r)
 	})
 	return json.Marshal(r)

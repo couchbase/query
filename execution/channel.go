@@ -26,7 +26,7 @@ func NewChannel(context *Context) *Channel {
 	return rv
 }
 
-func (this *Channel) Accept(visitor Visitor) (interface{}, error) {
+func (this *Channel) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitChannel(this)
 }
 

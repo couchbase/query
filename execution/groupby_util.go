@@ -35,4 +35,4 @@ func groupKey(item value.Value, keys expression.Expressions, context *opContext)
 	return string(bytes), nil
 }
 
-var _GROUP_KEY_POOL = util.NewMapPool[string, interface{}](16)
+var _GROUP_KEY_POOL = util.NewMapPool[string, any](16)

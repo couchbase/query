@@ -23,7 +23,7 @@ import (
 var _EXTERNALSCAN_OP_POOL util.FastPool
 
 func init() {
-	util.NewFastPool(&_EXTERNALSCAN_OP_POOL, func() interface{} {
+	util.NewFastPool(&_EXTERNALSCAN_OP_POOL, func() any {
 		return &ExternalScan{}
 	})
 }
@@ -37,7 +37,7 @@ type ExternalScan struct {
 	conn       *datastore.IndexConnection
 	scanReport *datastore.IndexScanReport
 	params     *datastore.ExternalScanParams // nil until first scan; shared via Copy()
-	results    []interface{}
+	results    []any
 }
 
 type externalScanDesc struct {
@@ -47,7 +47,7 @@ type externalScanDesc struct {
 	parent       value.Value
 }
 
-func scanExternalFork(p interface{}) {
+func scanExternalFork(p any) {
 	d := p.(externalScanDesc)
 	d.scan.scan(d.inlineFilter, d.context, d.parent, d.scan.conn)
 }
@@ -62,7 +62,7 @@ func NewExternalScan(plan *plan.ExternalScan, context *Context) *ExternalScan {
 	return rv
 }
 
-func (this *ExternalScan) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExternalScan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExternalScan(this)
 }
 
@@ -126,7 +126,7 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 		// use cached results if available
 		if useCache && this.results != nil {
 			for _, act := range this.results {
-				actv := value.NewScopeValue(make(map[string]interface{}), parent)
+				actv := value.NewScopeValue(make(map[string]any), parent)
 				actv.SetField(alias, act)
 				av := value.NewAnnotatedValue(actv)
 				av.SetId("")
@@ -184,10 +184,10 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 		}
 		defer countDocs()
 
-		var results []interface{}
+		var results []any
 		if useCache {
 			this.results = nil
-			results = make([]interface{}, 0, _DEF_RESULT_CACHE_SIZE)
+			results = make([]any, 0, _DEF_RESULT_CACHE_SIZE)
 		}
 		for ok {
 			entry, cont := this.getItemEntry(this.conn)
@@ -195,7 +195,7 @@ func (this *ExternalScan) RunOnce(context *Context, parent value.Value) {
 				if entry != nil {
 					this.addInDocs(1)
 					act := entry.EntryKey[0]
-					actv := value.NewScopeValue(make(map[string]interface{}), parent)
+					actv := value.NewScopeValue(make(map[string]any), parent)
 					actv.SetField(alias, act)
 					av := value.NewAnnotatedValue(actv)
 					av.SetId(entry.PrimaryKey)
@@ -236,9 +236,9 @@ func (this *ExternalScan) MarshalJSON() ([]byte, error) {
 		this.marshalTimes(r)
 		if this.scanReport != nil {
 			if rv := this.scanReport.GetScanReport(); len(rv) > 0 {
-				stats, ok := r["#stats"].(map[string]interface{})
+				stats, ok := r["#stats"].(map[string]any)
 				if !ok {
-					stats = make(map[string]interface{}, len(rv))
+					stats = make(map[string]any, len(rv))
 					r["#stats"] = stats
 				}
 				for k, v := range rv {
@@ -331,7 +331,7 @@ func (this *ExternalScan) scan(filter expression.Expression, context *Context, p
 // operator's shared scan report: numeric counters are summed (an operator instance under a
 // nested-loop join may invoke the datastore scan more than once), everything else is
 // overwritten since it's expected to be identical across invocations of the same scan.
-func aggregateExternalScanStats(v1, v2 map[string]interface{}) {
+func aggregateExternalScanStats(v1, v2 map[string]any) {
 	for k, v := range v2 {
 		if i2, ok := v.(int64); ok {
 			if i1, ok := v1[k].(int64); ok {
