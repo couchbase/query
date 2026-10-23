@@ -320,13 +320,61 @@ func SargForFilters(filters base.Filters, vpred expression.Expression, entry *in
 		return nil, false, nil, false, nil
 	}
 
+	// if index spans are truncated, filters on the truncated index keys are no longer
+	// evaluated by the index spans
+	if len(exactFilters) > 0 {
+		if pos := sargSpansTruncatedPos(sargSpans, false); pos >= 0 {
+			for fl, _ := range exactFilters {
+				for _, sargKey := range sargKeys[pos:] {
+					if fl.FltrExpr().DependsOn(sargKey.Expr) {
+						delete(exactFilters, fl)
+						break
+					}
+				}
+			}
+		}
+	}
+
 	var sargSpan, includeSpan SargSpans
 	var err error
 	sargSpan, exactSpan, err = composeSargSpan(sargSpans, exactSpan, false)
 	if hasInclude && err == nil {
+		// if include spans are truncated, filters on the truncated include columns are
+		// no longer evaluated by the include spans
+		if len(exactIncludeFilters) > 0 {
+			if pos := sargSpansTruncatedPos(includeSpans, true); pos >= 0 {
+				for fl, _ := range exactIncludeFilters {
+					for _, includeExpr := range entry.sargIncludes[pos:] {
+						if fl.FltrExpr().DependsOn(includeExpr) {
+							delete(exactIncludeFilters, fl)
+							break
+						}
+					}
+				}
+			}
+		}
 		includeSpan, exactInclude, err = composeSargSpan(includeSpans, exactInclude, true)
 	}
 	return sargSpan, exactSpan, includeSpan, exactInclude, err
+}
+
+// if composeSargSpan() truncates sarg spans (when there are too many spans), return the
+// position from which the spans are truncated, otherwise return -1
+// (spans from the truncated position are either dropped, or for a vector index, positions
+// before the vector index key are converted to min/max spans, both are not exact)
+func sargSpansTruncatedPos(sargSpans []SargSpans, isInclude bool) int {
+	size := 1
+	for i, spans := range sargSpans {
+		sz := 1
+		if spans != nil {
+			sz = spans.Size()
+		}
+		if sz == 0 || (sz > 1 && size >= 1 && sz*size > util.FullSpanFanout(isInclude)) {
+			return i
+		}
+		size *= sz
+	}
+	return -1
 }
 
 /*
