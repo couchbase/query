@@ -40,7 +40,7 @@ type Lexer struct {
 	// Now used to record last seen line & column from the stack.
 	l, c int
 
-	parseResult interface{}
+	parseResult any
 
 	// The following line makes it easy for scripts to insert fields in the
 	// generated code.
@@ -49695,7 +49695,7 @@ OUTER0:
 
 	return 0
 }
-func (yylex *Lexer) logToken(text string, format string, v ...interface{}) {
+func (yylex *Lexer) logToken(text string, format string, v ...any) {
 	if logging.LogLevel() == logging.TRACE {
 		s := fmt.Sprintf(format, v...)
 		logging.Tracef("Token: >>%s<< - %s", text, s)

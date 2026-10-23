@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *Rewrite) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *Rewrite) VisitFunction(expr expression.Function) (any, error) {
 	if agg, ok := expr.(algebra.Aggregate); ok {
 		if err := this.visitAggregateFunction(agg); err != nil {
 			return expr, err

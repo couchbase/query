@@ -12,22 +12,22 @@ import (
 	"github.com/couchbase/query/algebra"
 )
 
-func (this *SemChecker) VisitStartTransaction(stmt *algebra.StartTransaction) (interface{}, error) {
+func (this *SemChecker) VisitStartTransaction(stmt *algebra.StartTransaction) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitCommitTransaction(stmt *algebra.CommitTransaction) (interface{}, error) {
+func (this *SemChecker) VisitCommitTransaction(stmt *algebra.CommitTransaction) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (interface{}, error) {
+func (this *SemChecker) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (interface{}, error) {
+func (this *SemChecker) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitSavepoint(stmt *algebra.Savepoint) (interface{}, error) {
+func (this *SemChecker) VisitSavepoint(stmt *algebra.Savepoint) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }

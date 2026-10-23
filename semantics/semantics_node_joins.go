@@ -25,7 +25,7 @@ func (this *SemChecker) visitJoin(left algebra.FromTerm, right algebra.SimpleFro
 	return nil
 }
 
-func (this *SemChecker) VisitJoin(node *algebra.Join) (interface{}, error) {
+func (this *SemChecker) VisitJoin(node *algebra.Join) (any, error) {
 	left := skipUnnest(node.Left())
 	switch left := left.(type) {
 	case *algebra.AnsiJoin:
@@ -55,7 +55,7 @@ func (this *SemChecker) VisitJoin(node *algebra.Join) (interface{}, error) {
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
+func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (any, error) {
 	left := skipUnnest(node.Left())
 	switch left := left.(type) {
 	case *algebra.AnsiJoin:
@@ -86,7 +86,7 @@ func (this *SemChecker) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, er
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, err error) {
+func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r any, err error) {
 	left := skipUnnest(node.Left())
 	switch left := left.(type) {
 	case *algebra.Join, *algebra.IndexJoin:
@@ -115,7 +115,7 @@ func (this *SemChecker) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, er
 	return nil, err
 }
 
-func (this *SemChecker) VisitNest(node *algebra.Nest) (interface{}, error) {
+func (this *SemChecker) VisitNest(node *algebra.Nest) (any, error) {
 	left := skipUnnest(node.Left())
 	switch left := left.(type) {
 	case *algebra.AnsiJoin:
@@ -140,7 +140,7 @@ func (this *SemChecker) VisitNest(node *algebra.Nest) (interface{}, error) {
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *SemChecker) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+func (this *SemChecker) VisitIndexNest(node *algebra.IndexNest) (any, error) {
 	left := skipUnnest(node.Left())
 	switch left := left.(type) {
 	case *algebra.AnsiJoin:
@@ -165,7 +165,7 @@ func (this *SemChecker) VisitIndexNest(node *algebra.IndexNest) (interface{}, er
 	return nil, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (r interface{}, err error) {
+func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (r any, err error) {
 	left := skipUnnest(node.Left())
 	switch left := left.(type) {
 	case *algebra.Join, *algebra.IndexJoin:
@@ -187,7 +187,7 @@ func (this *SemChecker) VisitAnsiNest(node *algebra.AnsiNest) (r interface{}, er
 	return nil, err
 }
 
-func (this *SemChecker) VisitUnnest(node *algebra.Unnest) (interface{}, error) {
+func (this *SemChecker) VisitUnnest(node *algebra.Unnest) (any, error) {
 	_, err := node.Left().Accept(this)
 	if err != nil {
 		return nil, err

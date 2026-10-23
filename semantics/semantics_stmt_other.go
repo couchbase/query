@@ -100,8 +100,8 @@ func validateGroups(groups []string) errors.Error {
 		return err
 	}
 	gm := make(map[string]bool)
-	for _, sg := range val.Actual().([]interface{}) {
-		if g, ok := sg.(map[string]interface{}); ok {
+	for _, sg := range val.Actual().([]any) {
+		if g, ok := sg.(map[string]any); ok {
 			gm[g["id"].(string)] = true
 		}
 	}
@@ -157,7 +157,7 @@ func validateGroupRoles(roles []string) errors.Error {
 	return nil
 }
 
-func (this *SemChecker) VisitCreateUser(stmt *algebra.CreateUser) (interface{}, error) {
+func (this *SemChecker) VisitCreateUser(stmt *algebra.CreateUser) (any, error) {
 	parts := strings.Split(stmt.User(), ":")
 	if len(parts) == 1 || parts[0] == "local" {
 		if _, ok := stmt.Password(); !ok {
@@ -180,7 +180,7 @@ func (this *SemChecker) VisitCreateUser(stmt *algebra.CreateUser) (interface{}, 
 	return nil, nil
 }
 
-func (this *SemChecker) VisitAlterUser(stmt *algebra.AlterUser) (interface{}, error) {
+func (this *SemChecker) VisitAlterUser(stmt *algebra.AlterUser) (any, error) {
 	parts := strings.Split(stmt.User(), ":")
 	if len(parts) > 1 && parts[0] == "external" {
 		if _, ok := stmt.Password(); ok {
@@ -199,11 +199,11 @@ func (this *SemChecker) VisitAlterUser(stmt *algebra.AlterUser) (interface{}, er
 	return nil, nil
 }
 
-func (this *SemChecker) VisitDropUser(stmt *algebra.DropUser) (interface{}, error) {
+func (this *SemChecker) VisitDropUser(stmt *algebra.DropUser) (any, error) {
 	return nil, nil
 }
 
-func (this *SemChecker) VisitCreateGroup(stmt *algebra.CreateGroup) (interface{}, error) {
+func (this *SemChecker) VisitCreateGroup(stmt *algebra.CreateGroup) (any, error) {
 	if r, ok := stmt.Roles(); ok {
 		return nil, validateGroupRoles(r)
 	} else {
@@ -215,7 +215,7 @@ func (this *SemChecker) VisitCreateGroup(stmt *algebra.CreateGroup) (interface{}
 	return nil, nil
 }
 
-func (this *SemChecker) VisitAlterGroup(stmt *algebra.AlterGroup) (interface{}, error) {
+func (this *SemChecker) VisitAlterGroup(stmt *algebra.AlterGroup) (any, error) {
 	if r, ok := stmt.Roles(); ok {
 		return nil, validateGroupRoles(r)
 	} else {
@@ -227,11 +227,11 @@ func (this *SemChecker) VisitAlterGroup(stmt *algebra.AlterGroup) (interface{}, 
 	return nil, nil
 }
 
-func (this *SemChecker) VisitDropGroup(stmt *algebra.DropGroup) (interface{}, error) {
+func (this *SemChecker) VisitDropGroup(stmt *algebra.DropGroup) (any, error) {
 	return nil, nil
 }
 
-func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
+func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (any, error) {
 	err := validateRoles(stmt)
 	if err != nil {
 		return nil, err
@@ -239,7 +239,7 @@ func (this *SemChecker) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, er
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, error) {
+func (this *SemChecker) VisitRevokeRole(stmt *algebra.RevokeRole) (any, error) {
 	err := validateRoles(stmt)
 	if err != nil {
 		return nil, err
@@ -247,7 +247,7 @@ func (this *SemChecker) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, 
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
+func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (any, error) {
 	saveStmtType := stmt.Type()
 	defer func() { this.stmtType = saveStmtType }()
 	this.stmtType = stmt.Statement().Type()
@@ -255,11 +255,11 @@ func (this *SemChecker) VisitExplain(stmt *algebra.Explain) (interface{}, error)
 	return stmt.Statement().Accept(this)
 }
 
-func (this *SemChecker) VisitExplainFunction(stmt *algebra.ExplainFunction) (interface{}, error) {
+func (this *SemChecker) VisitExplainFunction(stmt *algebra.ExplainFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
+func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (any, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("Advise", "semantics.visit_advise")
 	}
@@ -276,7 +276,7 @@ func (this *SemChecker) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
 	}
 }
 
-func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
+func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (any, error) {
 	if stmt.Save() && !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("SAVE option for PREPARE statement", "semantics_visit_prepare")
 	}
@@ -286,19 +286,19 @@ func (this *SemChecker) VisitPrepare(stmt *algebra.Prepare) (interface{}, error)
 	return stmt.Statement().Accept(this)
 }
 
-func (this *SemChecker) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
+func (this *SemChecker) VisitExecute(stmt *algebra.Execute) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{}, error) {
+func (this *SemChecker) VisitInferKeyspace(stmt *algebra.InferKeyspace) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitInferExpression(stmt *algebra.InferExpression) (interface{}, error) {
+func (this *SemChecker) VisitInferExpression(stmt *algebra.InferExpression) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
+func (this *SemChecker) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (any, error) {
 	if !this.hasSemFlag(_SEM_ENTERPRISE) {
 		return nil, errors.NewEnterpriseFeature("Update Statistics", "semantics.visit_update_statistics")
 	}

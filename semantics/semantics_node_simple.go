@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func (this *SemChecker) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
+func (this *SemChecker) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (any, error) {
 	if this.hasSemFlag(_SEM_FROM) && !node.IsAnsiJoinOp() && !node.HasTransferJoinHint() &&
 		node.JoinHint() != algebra.JOIN_HINT_NONE {
 		return nil, errors.NewFirstTermJoinHintError(node.Alias())
@@ -21,7 +21,7 @@ func (this *SemChecker) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface
 	return nil, node.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
+func (this *SemChecker) VisitExpressionTerm(node *algebra.ExpressionTerm) (any, error) {
 	if node.IsKeyspace() {
 		return node.KeyspaceTerm().Accept(this)
 	}
@@ -32,7 +32,7 @@ func (this *SemChecker) VisitExpressionTerm(node *algebra.ExpressionTerm) (inter
 	return node.ExpressionTerm().Accept(this)
 }
 
-func (this *SemChecker) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+func (this *SemChecker) VisitSubqueryTerm(node *algebra.SubqueryTerm) (any, error) {
 	if this.hasSemFlag(_SEM_FROM) && !node.IsAnsiJoinOp() && !node.HasTransferJoinHint() &&
 		node.JoinHint() != algebra.JOIN_HINT_NONE {
 		return nil, errors.NewFirstTermJoinHintError(node.Alias())

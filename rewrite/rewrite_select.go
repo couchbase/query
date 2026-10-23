@@ -13,15 +13,15 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *Rewrite) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
+func (this *Rewrite) VisitSelectTerm(node *algebra.SelectTerm) (any, error) {
 	return node.Select().Accept(this)
 }
 
-func (this *Rewrite) VisitSubselect(node *algebra.Subselect) (r interface{}, err error) {
+func (this *Rewrite) VisitSubselect(node *algebra.Subselect) (r any, err error) {
 	return node, node.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitSubquery(expr expression.Subquery) (r interface{}, err error) {
+func (this *Rewrite) VisitSubquery(expr expression.Subquery) (r any, err error) {
 	if node, ok := expr.(*algebra.Subquery); ok {
 		_, err = node.Select().Accept(this)
 	}

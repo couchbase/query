@@ -12,66 +12,66 @@ import (
 	"github.com/couchbase/query/algebra"
 )
 
-func (this *Rewrite) VisitCreateUser(stmt *algebra.CreateUser) (interface{}, error) {
+func (this *Rewrite) VisitCreateUser(stmt *algebra.CreateUser) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitAlterUser(stmt *algebra.AlterUser) (interface{}, error) {
+func (this *Rewrite) VisitAlterUser(stmt *algebra.AlterUser) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitDropUser(stmt *algebra.DropUser) (interface{}, error) {
+func (this *Rewrite) VisitDropUser(stmt *algebra.DropUser) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitCreateGroup(stmt *algebra.CreateGroup) (interface{}, error) {
+func (this *Rewrite) VisitCreateGroup(stmt *algebra.CreateGroup) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitAlterGroup(stmt *algebra.AlterGroup) (interface{}, error) {
+func (this *Rewrite) VisitAlterGroup(stmt *algebra.AlterGroup) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitDropGroup(stmt *algebra.DropGroup) (interface{}, error) {
+func (this *Rewrite) VisitDropGroup(stmt *algebra.DropGroup) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitGrantRole(stmt *algebra.GrantRole) (interface{}, error) {
+func (this *Rewrite) VisitGrantRole(stmt *algebra.GrantRole) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitRevokeRole(stmt *algebra.RevokeRole) (interface{}, error) {
+func (this *Rewrite) VisitRevokeRole(stmt *algebra.RevokeRole) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitExplain(stmt *algebra.Explain) (interface{}, error) {
+func (this *Rewrite) VisitExplain(stmt *algebra.Explain) (any, error) {
 	return stmt.Statement().Accept(this)
 }
 
-func (this *Rewrite) VisitExplainFunction(stmt *algebra.ExplainFunction) (interface{}, error) {
+func (this *Rewrite) VisitExplainFunction(stmt *algebra.ExplainFunction) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
+func (this *Rewrite) VisitAdvise(stmt *algebra.Advise) (any, error) {
 	return stmt.Statement().Accept(this)
 }
 
-func (this *Rewrite) VisitPrepare(stmt *algebra.Prepare) (interface{}, error) {
+func (this *Rewrite) VisitPrepare(stmt *algebra.Prepare) (any, error) {
 	return stmt.Statement().Accept(this)
 }
 
-func (this *Rewrite) VisitExecute(stmt *algebra.Execute) (interface{}, error) {
+func (this *Rewrite) VisitExecute(stmt *algebra.Execute) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitInferKeyspace(stmt *algebra.InferKeyspace) (interface{}, error) {
+func (this *Rewrite) VisitInferKeyspace(stmt *algebra.InferKeyspace) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitInferExpression(stmt *algebra.InferExpression) (interface{}, error) {
+func (this *Rewrite) VisitInferExpression(stmt *algebra.InferExpression) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (interface{}, error) {
+func (this *Rewrite) VisitUpdateStatistics(stmt *algebra.UpdateStatistics) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }

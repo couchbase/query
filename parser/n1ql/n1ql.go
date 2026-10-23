@@ -23,9 +23,9 @@ import (
 	"github.com/couchbase/query/logging"
 )
 
-var namespaces map[string]interface{}
+var namespaces map[string]any
 
-func SetNamespaces(ns map[string]interface{}) {
+func SetNamespaces(ns map[string]any) {
 	namespaces = ns
 }
 

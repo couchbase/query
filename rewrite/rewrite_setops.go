@@ -12,42 +12,42 @@ import (
 	"github.com/couchbase/query/algebra"
 )
 
-func (this *Rewrite) VisitUnion(node *algebra.Union) (r interface{}, err error) {
+func (this *Rewrite) VisitUnion(node *algebra.Union) (r any, err error) {
 	if _, err = node.First().Accept(this); err == nil {
 		_, err = node.Second().Accept(this)
 	}
 	return node, err
 }
 
-func (this *Rewrite) VisitUnionAll(node *algebra.UnionAll) (r interface{}, err error) {
+func (this *Rewrite) VisitUnionAll(node *algebra.UnionAll) (r any, err error) {
 	if _, err = node.First().Accept(this); err == nil {
 		_, err = node.Second().Accept(this)
 	}
 	return node, err
 }
 
-func (this *Rewrite) VisitIntersect(node *algebra.Intersect) (r interface{}, err error) {
+func (this *Rewrite) VisitIntersect(node *algebra.Intersect) (r any, err error) {
 	if _, err = node.First().Accept(this); err == nil {
 		_, err = node.Second().Accept(this)
 	}
 	return node, err
 }
 
-func (this *Rewrite) VisitIntersectAll(node *algebra.IntersectAll) (r interface{}, err error) {
+func (this *Rewrite) VisitIntersectAll(node *algebra.IntersectAll) (r any, err error) {
 	if _, err = node.First().Accept(this); err == nil {
 		_, err = node.Second().Accept(this)
 	}
 	return node, err
 }
 
-func (this *Rewrite) VisitExcept(node *algebra.Except) (r interface{}, err error) {
+func (this *Rewrite) VisitExcept(node *algebra.Except) (r any, err error) {
 	if _, err = node.First().Accept(this); err == nil {
 		_, err = node.Second().Accept(this)
 	}
 	return node, err
 }
 
-func (this *Rewrite) VisitExceptAll(node *algebra.ExceptAll) (r interface{}, err error) {
+func (this *Rewrite) VisitExceptAll(node *algebra.ExceptAll) (r any, err error) {
 	if _, err = node.First().Accept(this); err == nil {
 		_, err = node.Second().Accept(this)
 	}

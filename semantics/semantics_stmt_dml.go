@@ -16,7 +16,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err error) {
+func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r any, err error) {
 	prevStmtType := this.stmtType
 	prevObyVectorDist := this.hasSemFlag(_SEM_ORDERBY_VECTOR_DIST)
 	defer func() {
@@ -124,7 +124,7 @@ func (this *SemChecker) VisitSelect(stmt *algebra.Select) (r interface{}, err er
 	return nil, nil
 }
 
-func (this *SemChecker) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
+func (this *SemChecker) VisitInsert(stmt *algebra.Insert) (any, error) {
 	if stmt.Select() != nil {
 		if r, err := stmt.Select().Accept(this); err != nil {
 			return r, err
@@ -134,7 +134,7 @@ func (this *SemChecker) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	return nil, stmt.MapExpressionsNoSelect(this)
 }
 
-func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
+func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (any, error) {
 	if stmt.Select() != nil {
 		if r, err := stmt.Select().Accept(this); err != nil {
 			return r, err
@@ -144,7 +144,7 @@ func (this *SemChecker) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	return nil, stmt.MapExpressionsNoSelect(this)
 }
 
-func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r interface{}, err error) {
+func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r any, err error) {
 	if stmt.KeyspaceRef().Path() == nil {
 		if stmt.Keys() == nil {
 			return nil, errors.NewMissingUseKeysError("<placeholder>", "semantic.delete")
@@ -190,7 +190,7 @@ func (this *SemChecker) VisitDelete(stmt *algebra.Delete) (r interface{}, err er
 	return nil, nil
 }
 
-func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (r interface{}, err error) {
+func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (r any, err error) {
 	if stmt.KeyspaceRef().Path() == nil {
 		if stmt.Keys() == nil {
 			return nil, errors.NewMissingUseKeysError("<placeholder>", "semantic.update")
@@ -248,7 +248,7 @@ func (this *SemChecker) VisitUpdate(stmt *algebra.Update) (r interface{}, err er
 	return nil, nil
 }
 
-func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (r interface{}, err error) {
+func (this *SemChecker) VisitMerge(stmt *algebra.Merge) (r any, err error) {
 
 	actions := stmt.Actions()
 	insert := actions.Insert()

@@ -14,11 +14,11 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *SemChecker) VisitSelectTerm(node *algebra.SelectTerm) (interface{}, error) {
+func (this *SemChecker) VisitSelectTerm(node *algebra.SelectTerm) (any, error) {
 	return node.Select().Accept(this)
 }
 
-func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, err error) {
+func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r any, err error) {
 	saveSemFlag := this.semFlag
 	defer func() { this.semFlag = saveSemFlag }()
 	this.unsetSemFlag(_SEM_WHERE | _SEM_ON | _SEM_PROJECTION | _SEM_ADVISOR_FUNC | _SEM_FROM)
@@ -78,7 +78,7 @@ func (this *SemChecker) VisitSubselect(node *algebra.Subselect) (r interface{}, 
 	return nil, nil
 }
 
-func (this *SemChecker) VisitSubquery(expr expression.Subquery) (r interface{}, err error) {
+func (this *SemChecker) VisitSubquery(expr expression.Subquery) (r any, err error) {
 	if node, ok := expr.(*algebra.Subquery); ok {
 		_, err = node.Select().Accept(this)
 	}

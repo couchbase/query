@@ -18,7 +18,7 @@ import (
 	"github.com/couchbase/query/expression/search"
 )
 
-func (this *SemChecker) VisitFunction(expr expression.Function) (interface{}, error) {
+func (this *SemChecker) VisitFunction(expr expression.Function) (any, error) {
 	switch nexpr := expr.(type) {
 	case algebra.Aggregate:
 		return expr, this.visitAggregateFunction(nexpr)
@@ -86,7 +86,7 @@ func (this *SemChecker) visitAdvisorFunction(advisor *expression.Advisor) (err e
 	return nil
 }
 
-func (this *SemChecker) VisitAll(expr *expression.All) (interface{}, error) {
+func (this *SemChecker) VisitAll(expr *expression.All) (any, error) {
 
 	if this.stmtType != "CREATE_INDEX" && this.stmtType != "UPDATE_STATISTICS" {
 		return expr, errors.NewAllDistinctNotAllowed(expr.String(), expr.ErrorContext())

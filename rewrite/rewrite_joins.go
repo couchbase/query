@@ -20,31 +20,31 @@ func (this *Rewrite) visitJoin(left algebra.FromTerm, right algebra.SimpleFromTe
 	return err
 }
 
-func (this *Rewrite) VisitJoin(node *algebra.Join) (r interface{}, err error) {
+func (this *Rewrite) VisitJoin(node *algebra.Join) (r any, err error) {
 	return node, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *Rewrite) VisitIndexJoin(node *algebra.IndexJoin) (interface{}, error) {
+func (this *Rewrite) VisitIndexJoin(node *algebra.IndexJoin) (any, error) {
 	return node, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *Rewrite) VisitAnsiJoin(node *algebra.AnsiJoin) (r interface{}, err error) {
+func (this *Rewrite) VisitAnsiJoin(node *algebra.AnsiJoin) (r any, err error) {
 	return node, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *Rewrite) VisitNest(node *algebra.Nest) (interface{}, error) {
+func (this *Rewrite) VisitNest(node *algebra.Nest) (any, error) {
 	return node, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *Rewrite) VisitIndexNest(node *algebra.IndexNest) (interface{}, error) {
+func (this *Rewrite) VisitIndexNest(node *algebra.IndexNest) (any, error) {
 	return node, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *Rewrite) VisitAnsiNest(node *algebra.AnsiNest) (r interface{}, err error) {
+func (this *Rewrite) VisitAnsiNest(node *algebra.AnsiNest) (r any, err error) {
 	return node, this.visitJoin(node.Left(), node.Right())
 }
 
-func (this *Rewrite) VisitUnnest(node *algebra.Unnest) (r interface{}, err error) {
+func (this *Rewrite) VisitUnnest(node *algebra.Unnest) (r any, err error) {
 	if _, err = node.Left().Accept(this); err == nil {
 		_, err = this.Map(node.Expression())
 	}

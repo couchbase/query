@@ -12,7 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 )
 
-func (this *SemChecker) visitSetop(first algebra.Subresult, second algebra.Subresult) (interface{}, error) {
+func (this *SemChecker) visitSetop(first algebra.Subresult, second algebra.Subresult) (any, error) {
 	f, err := first.Accept(this)
 	if err != nil {
 		return f, err
@@ -20,26 +20,26 @@ func (this *SemChecker) visitSetop(first algebra.Subresult, second algebra.Subre
 	return second.Accept(this)
 }
 
-func (this *SemChecker) VisitUnion(node *algebra.Union) (interface{}, error) {
+func (this *SemChecker) VisitUnion(node *algebra.Union) (any, error) {
 	return this.visitSetop(node.First(), node.Second())
 }
 
-func (this *SemChecker) VisitUnionAll(node *algebra.UnionAll) (interface{}, error) {
+func (this *SemChecker) VisitUnionAll(node *algebra.UnionAll) (any, error) {
 	return this.visitSetop(node.First(), node.Second())
 }
 
-func (this *SemChecker) VisitIntersect(node *algebra.Intersect) (interface{}, error) {
+func (this *SemChecker) VisitIntersect(node *algebra.Intersect) (any, error) {
 	return this.visitSetop(node.First(), node.Second())
 }
 
-func (this *SemChecker) VisitIntersectAll(node *algebra.IntersectAll) (interface{}, error) {
+func (this *SemChecker) VisitIntersectAll(node *algebra.IntersectAll) (any, error) {
 	return this.visitSetop(node.First(), node.Second())
 }
 
-func (this *SemChecker) VisitExcept(node *algebra.Except) (interface{}, error) {
+func (this *SemChecker) VisitExcept(node *algebra.Except) (any, error) {
 	return this.visitSetop(node.First(), node.Second())
 }
 
-func (this *SemChecker) VisitExceptAll(node *algebra.ExceptAll) (interface{}, error) {
+func (this *SemChecker) VisitExceptAll(node *algebra.ExceptAll) (any, error) {
 	return this.visitSetop(node.First(), node.Second())
 }

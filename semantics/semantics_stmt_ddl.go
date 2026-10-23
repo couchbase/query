@@ -19,14 +19,14 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (interface{}, error) {
+func (this *SemChecker) VisitCreatePrimaryIndex(stmt *algebra.CreatePrimaryIndex) (any, error) {
 	if stmt.Using() == datastore.FTS {
 		return nil, errors.NewIndexNotAllowed("Primary index with USING FTS", "")
 	}
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}, error) {
+func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (any, error) {
 	gsi := stmt.Using() == datastore.GSI || stmt.Using() == datastore.DEFAULT
 	if !gsi && stmt.Partition() != nil {
 		return nil, errors.NewIndexNotAllowed("PARTITION BY USING FTS", "")
@@ -123,44 +123,44 @@ func (this *SemChecker) VisitCreateIndex(stmt *algebra.CreateIndex) (interface{}
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitDropIndex(stmt *algebra.DropIndex) (interface{}, error) {
+func (this *SemChecker) VisitDropIndex(stmt *algebra.DropIndex) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitAlterIndex(stmt *algebra.AlterIndex) (interface{}, error) {
+func (this *SemChecker) VisitAlterIndex(stmt *algebra.AlterIndex) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitBuildIndexes(stmt *algebra.BuildIndexes) (interface{}, error) {
+func (this *SemChecker) VisitBuildIndexes(stmt *algebra.BuildIndexes) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
 type bucketFieldDef struct {
 	typ      value.Type
 	canAlter bool
-	minValue interface{}
-	maxValue interface{}
-	values   []interface{}
+	minValue any
+	maxValue any
+	values   []any
 }
 
 var bucketFieldDefinitions = map[string]bucketFieldDef{
 	"name":                   {value.STRING, false, nil, nil, nil},
-	"bucketType":             {value.STRING, false, nil, nil, []interface{}{"couchbase", "ephemeral", "memcached"}},
-	"replicaIndex":           {value.NUMBER, false, 0, 1, []interface{}{0, 1}},
-	"conflictResolutionType": {value.STRING, false, nil, nil, []interface{}{"seqno", "lww"}},
-	"storageBackend":         {value.STRING, false, nil, nil, []interface{}{"couchstore", "magma"}},
-	"numVBuckets":            {value.NUMBER, false, nil, nil, []interface{}{128, 1024}},
-	"evictionPolicy": {value.STRING, true, nil, nil, []interface{}{
+	"bucketType":             {value.STRING, false, nil, nil, []any{"couchbase", "ephemeral", "memcached"}},
+	"replicaIndex":           {value.NUMBER, false, 0, 1, []any{0, 1}},
+	"conflictResolutionType": {value.STRING, false, nil, nil, []any{"seqno", "lww"}},
+	"storageBackend":         {value.STRING, false, nil, nil, []any{"couchstore", "magma"}},
+	"numVBuckets":            {value.NUMBER, false, nil, nil, []any{128, 1024}},
+	"evictionPolicy": {value.STRING, true, nil, nil, []any{
 		"valueOnly", "fullEviction", "noEviction", "nruEviction"}},
-	"durabilityMinLevel": {value.STRING, true, nil, nil, []interface{}{
+	"durabilityMinLevel": {value.STRING, true, nil, nil, []any{
 		"none", "majority", "majorityAndPersistActive", "persistToMajority"}},
 
 	"ramQuota":                                   {value.NUMBER, true, 100, nil, nil},
-	"threadsNumber":                              {value.NUMBER, true, 3, 8, []interface{}{3, 8}},
-	"replicaNumber":                              {value.NUMBER, true, 0, 3, []interface{}{0, 1, 2, 3}},
-	"compressionMode":                            {value.STRING, true, nil, nil, []interface{}{"off", "passive", "active"}},
+	"threadsNumber":                              {value.NUMBER, true, 3, 8, []any{3, 8}},
+	"replicaNumber":                              {value.NUMBER, true, 0, 3, []any{0, 1, 2, 3}},
+	"compressionMode":                            {value.STRING, true, nil, nil, []any{"off", "passive", "active"}},
 	"maxTTL":                                     {value.NUMBER, true, 0, 2147483647, nil},
-	"flushEnabled":                               {value.NUMBER, true, 0, 1, []interface{}{0, 1}},
+	"flushEnabled":                               {value.NUMBER, true, 0, 1, []any{0, 1}},
 	"magmaSeqTreeDataBlockSize":                  {value.NUMBER, true, 4096, 131072, nil},
 	"historyRetentionCollectionDefault":          {value.BOOLEAN, true, nil, nil, nil},
 	"historyRetentionBytes":                      {value.NUMBER, true, 2147483648, nil, nil},
@@ -236,7 +236,7 @@ func validateBucketOptions(with value.Value, alter bool) errors.Error {
 	return nil
 }
 
-func (this *SemChecker) VisitCreateBucket(stmt *algebra.CreateBucket) (interface{}, error) {
+func (this *SemChecker) VisitCreateBucket(stmt *algebra.CreateBucket) (any, error) {
 	err := validateBucketOptions(stmt.With(), false)
 	if err != nil {
 		return nil, err
@@ -244,7 +244,7 @@ func (this *SemChecker) VisitCreateBucket(stmt *algebra.CreateBucket) (interface
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitAlterBucket(stmt *algebra.AlterBucket) (interface{}, error) {
+func (this *SemChecker) VisitAlterBucket(stmt *algebra.AlterBucket) (any, error) {
 	err := validateBucketOptions(stmt.With(), true)
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func (this *SemChecker) VisitAlterBucket(stmt *algebra.AlterBucket) (interface{}
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitDropBucket(stmt *algebra.DropBucket) (interface{}, error) {
+func (this *SemChecker) VisitDropBucket(stmt *algebra.DropBucket) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
@@ -326,15 +326,15 @@ func (this *SemChecker) VisitAlterCollection(stmt *algebra.AlterCollection) (any
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitCreateScope(stmt *algebra.CreateScope) (interface{}, error) {
+func (this *SemChecker) VisitCreateScope(stmt *algebra.CreateScope) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitDropScope(stmt *algebra.DropScope) (interface{}, error) {
+func (this *SemChecker) VisitDropScope(stmt *algebra.DropScope) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitCreateCollection(stmt *algebra.CreateCollection) (interface{}, error) {
+func (this *SemChecker) VisitCreateCollection(stmt *algebra.CreateCollection) (any, error) {
 	if stmt.Keyspace().Path().Namespace() == "" {
 		return nil, errors.NewFieldEmpty(stmt.Type(), "namespace")
 	}
@@ -358,7 +358,7 @@ func (this *SemChecker) VisitCreateCollection(stmt *algebra.CreateCollection) (i
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitDropCollection(stmt *algebra.DropCollection) (interface{}, error) {
+func (this *SemChecker) VisitDropCollection(stmt *algebra.DropCollection) (any, error) {
 	if stmt.Keyspace().Path().Namespace() == "" {
 		return nil, errors.NewFieldEmpty(stmt.Type(), "namespace")
 	}
@@ -374,7 +374,7 @@ func (this *SemChecker) VisitDropCollection(stmt *algebra.DropCollection) (inter
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitFlushCollection(stmt *algebra.FlushCollection) (interface{}, error) {
+func (this *SemChecker) VisitFlushCollection(stmt *algebra.FlushCollection) (any, error) {
 	if stmt.Keyspace().Path().Namespace() == "" {
 		return nil, errors.NewFieldEmpty(stmt.Type(), "namespace")
 	}
@@ -430,19 +430,19 @@ func semCheckFlattenKeys(exprs expression.Expressions) (err error) {
 	return err
 }
 
-func (this *SemChecker) VisitCreateSequence(stmt *algebra.CreateSequence) (interface{}, error) {
+func (this *SemChecker) VisitCreateSequence(stmt *algebra.CreateSequence) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitDropSequence(stmt *algebra.DropSequence) (interface{}, error) {
+func (this *SemChecker) VisitDropSequence(stmt *algebra.DropSequence) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitAlterSequence(stmt *algebra.AlterSequence) (interface{}, error) {
+func (this *SemChecker) VisitAlterSequence(stmt *algebra.AlterSequence) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (interface{}, error) {
+func (this *SemChecker) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (any, error) {
 	// in both forms, the value has to be knowable (or at least type-checkable) independent of any
 	// query context: there's no FROM-clause keyspace or per-row context to evaluate a general
 	// expression against, so it's restricted to constants and named/positional parameters
@@ -478,7 +478,7 @@ func (this *SemChecker) VisitCreateKnowledge(stmt *algebra.CreateKnowledge) (int
 	return nil, stmt.MapExpressions(this)
 }
 
-func (this *SemChecker) VisitDropKnowledge(stmt *algebra.DropKnowledge) (interface{}, error) {
+func (this *SemChecker) VisitDropKnowledge(stmt *algebra.DropKnowledge) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }
 

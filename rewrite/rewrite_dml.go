@@ -12,7 +12,7 @@ import (
 	"github.com/couchbase/query/algebra"
 )
 
-func (this *Rewrite) VisitSelect(stmt *algebra.Select) (r interface{}, err error) {
+func (this *Rewrite) VisitSelect(stmt *algebra.Select) (r any, err error) {
 	windowTerms := this.windowTerms
 
 	defer func() {
@@ -61,22 +61,22 @@ func (this *Rewrite) VisitSelect(stmt *algebra.Select) (r interface{}, err error
 	return stmt, nil
 }
 
-func (this *Rewrite) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (interface{}, error) {
+func (this *Rewrite) VisitKeyspaceTerm(node *algebra.KeyspaceTerm) (any, error) {
 	return node, node.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitExpressionTerm(node *algebra.ExpressionTerm) (interface{}, error) {
+func (this *Rewrite) VisitExpressionTerm(node *algebra.ExpressionTerm) (any, error) {
 	if node.IsKeyspace() {
 		return node.KeyspaceTerm().Accept(this)
 	}
 	return node.ExpressionTerm().Accept(this)
 }
 
-func (this *Rewrite) VisitSubqueryTerm(node *algebra.SubqueryTerm) (interface{}, error) {
+func (this *Rewrite) VisitSubqueryTerm(node *algebra.SubqueryTerm) (any, error) {
 	return node.Subquery().Accept(this)
 }
 
-func (this *Rewrite) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
+func (this *Rewrite) VisitInsert(stmt *algebra.Insert) (any, error) {
 	if stmt.Select() != nil {
 		if r, err := stmt.Select().Accept(this); err != nil {
 			return r, err
@@ -86,7 +86,7 @@ func (this *Rewrite) VisitInsert(stmt *algebra.Insert) (interface{}, error) {
 	return stmt, stmt.MapExpressionsNoSelect(this)
 }
 
-func (this *Rewrite) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
+func (this *Rewrite) VisitUpsert(stmt *algebra.Upsert) (any, error) {
 	if stmt.Select() != nil {
 		if r, err := stmt.Select().Accept(this); err != nil {
 			return r, err
@@ -96,15 +96,15 @@ func (this *Rewrite) VisitUpsert(stmt *algebra.Upsert) (interface{}, error) {
 	return stmt, stmt.MapExpressionsNoSelect(this)
 }
 
-func (this *Rewrite) VisitDelete(stmt *algebra.Delete) (r interface{}, err error) {
+func (this *Rewrite) VisitDelete(stmt *algebra.Delete) (r any, err error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitUpdate(stmt *algebra.Update) (r interface{}, err error) {
+func (this *Rewrite) VisitUpdate(stmt *algebra.Update) (r any, err error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitMerge(stmt *algebra.Merge) (r interface{}, err error) {
+func (this *Rewrite) VisitMerge(stmt *algebra.Merge) (r any, err error) {
 	source := stmt.Source()
 	if source.SubqueryTerm() != nil {
 		r, err = source.SubqueryTerm().Accept(this)

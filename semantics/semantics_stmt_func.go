@@ -13,7 +13,7 @@ import (
 	"github.com/couchbase/query/expression"
 )
 
-func (this *SemChecker) VisitCreateFunction(stmt *algebra.CreateFunction) (interface{}, error) {
+func (this *SemChecker) VisitCreateFunction(stmt *algebra.CreateFunction) (any, error) {
 
 	// this code cannot go in algebra, functions or functions/inline because of circular references
 	// between algebra, expression and functions
@@ -27,10 +27,10 @@ func (this *SemChecker) VisitCreateFunction(stmt *algebra.CreateFunction) (inter
 	return nil, nil
 }
 
-func (this *SemChecker) VisitDropFunction(stmt *algebra.DropFunction) (interface{}, error) {
+func (this *SemChecker) VisitDropFunction(stmt *algebra.DropFunction) (any, error) {
 	return nil, nil
 }
 
-func (this *SemChecker) VisitExecuteFunction(stmt *algebra.ExecuteFunction) (interface{}, error) {
+func (this *SemChecker) VisitExecuteFunction(stmt *algebra.ExecuteFunction) (any, error) {
 	return nil, stmt.MapExpressions(this)
 }

@@ -12,22 +12,22 @@ import (
 	"github.com/couchbase/query/algebra"
 )
 
-func (this *Rewrite) VisitStartTransaction(stmt *algebra.StartTransaction) (interface{}, error) {
+func (this *Rewrite) VisitStartTransaction(stmt *algebra.StartTransaction) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitCommitTransaction(stmt *algebra.CommitTransaction) (interface{}, error) {
+func (this *Rewrite) VisitCommitTransaction(stmt *algebra.CommitTransaction) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (interface{}, error) {
+func (this *Rewrite) VisitRollbackTransaction(stmt *algebra.RollbackTransaction) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (interface{}, error) {
+func (this *Rewrite) VisitTransactionIsolation(stmt *algebra.TransactionIsolation) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
 
-func (this *Rewrite) VisitSavepoint(stmt *algebra.Savepoint) (interface{}, error) {
+func (this *Rewrite) VisitSavepoint(stmt *algebra.Savepoint) (any, error) {
 	return stmt, stmt.MapExpressions(this)
 }
