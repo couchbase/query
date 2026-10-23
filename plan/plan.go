@@ -29,6 +29,7 @@ const REPREPARE_CHECK uint64 = math.MaxUint64
 type QueryPlan struct {
 	op         Operator
 	subqueries map[*algebra.Select]Operator
+	subqTerms  map[*algebra.Select]bool
 	extraPrivs *auth.Privileges
 }
 
@@ -51,6 +52,22 @@ func (this *QueryPlan) AddSubquery(subq *algebra.Select, op Operator) {
 		this.subqueries = make(map[*algebra.Select]Operator, 8)
 	}
 	this.subqueries[subq] = op
+}
+
+// a SubqueryTerm under inner of nested-loop join is planned as part of the parent query
+// (ExpressionScan on top of the subquery); its plan is added to "~subqueries" for explain
+// only, and should not be used to execute the subquery (MB-74674, the plan maybe missing
+// covering transformation for example)
+func (this *QueryPlan) AddSubqueryTerm(subq *algebra.Select, op Operator) {
+	this.AddSubquery(subq, op)
+	if this.subqTerms == nil {
+		this.subqTerms = make(map[*algebra.Select]bool, 4)
+	}
+	this.subqTerms[subq] = true
+}
+
+func (this *QueryPlan) IsSubqueryTerm(subq *algebra.Select) bool {
+	return this.subqTerms[subq]
 }
 
 func (this *QueryPlan) HasSubquery(subq *algebra.Select) bool {

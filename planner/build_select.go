@@ -313,7 +313,7 @@ func addFromSubqueries(qp *plan.QueryPlan, optimHints *algebra.OptimHints, ops .
 				o := op.SubqueryPlan()
 				if o != nil {
 					subSelect := subq.Select()
-					qp.AddSubquery(subSelect, o)
+					qp.AddSubqueryTerm(subSelect, o)
 					// optimizer hints from the SubqueryTerm was added to
 					// the parent query's optimizer hints; since the SubqueryTerm
 					// now appears in "~subqueries" section it'll have its own

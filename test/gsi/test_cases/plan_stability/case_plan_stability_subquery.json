@@ -153,6 +153,9 @@
 	"testcase": "Execute the prepared statement",
         "statements":"EXECUTE subq2",
         "results": [
+            {
+                "c21": 1
+            }
         ]
     },
     {
