@@ -347,6 +347,11 @@ func (this *httpRequest) Execute(srvr *server.Server, context *execution.Context
 			tenant.RefundUnits(context.TenantCtx(), this.TenantUnits())
 		}
 	}
+
+	// MB-74759 scans stopped early may still be waiting on their scan report: wait for them
+	// before the profile is written, as completed requests will reuse it
+	context.WaitScanReports()
+
 	state := this.State()
 	switch this.format {
 	case XML:
