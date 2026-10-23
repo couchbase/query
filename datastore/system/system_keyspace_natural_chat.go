@@ -392,6 +392,7 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 	updatedCount := 0
 	var updated value.Pairs
 
+	// algebra.ValidateSystemUpdate only allows SET of inactivityTimeout, so no other field needs checking
 	for _, pair := range updates {
 		name := pair.Name
 		var err errors.Error
@@ -400,64 +401,29 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 		prefixlen := len(natural.CHAT_DOC_PREFIX)
 		if len(name) > prefixlen && name[:prefixlen] == natural.CHAT_DOC_PREFIX {
 			err = errors.NewSystemNotSupportedError(nil, fmt.Sprintf("UPDATE not supported for paused chats in system:natural_chats, chatid: %s", name[prefixlen:]))
+		} else if t, ok := pair.Value.Field("inactivityTimeout"); !ok {
+			err = errors.NewUpdateInvalidField(name, "inactivityTimeout", true)
+		} else if timeout, perr := natural.ParseChatTimeout(t.Actual()); perr != nil {
+			// validate here so remote chats fail the same way as local ones
+			err = errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, perr)
 		} else {
 			node, localKey := distributed.RemoteAccess().SplitKey(name)
 
 			if node == whoAmI {
-				rv := natural.GetConversation(localKey)
-				if rv != nil {
-					ce := rv.(*natural.ChatEntry)
-					if err = ce.CheckUser(users); err == nil {
-						item := natural.FormatChatEntry(ce)
-						for field, v := range pair.Value.Fields() {
-							if field == "node" || field == "inactivityTimeout" {
-								continue
-							}
-							if cv, ok := item[field]; !ok || value.NewValue(v).Equals(value.NewValue(cv)) != value.TRUE_VALUE {
-								errs = append(errs, errors.NewUpdateInvalidField(name, field, false))
-								delete(item, field)
-							}
-						}
-						for field, _ := range item {
-							if field == "node" || field == "inactivityTimeout" {
-								continue
-							}
-							if _, ok := pair.Value.Field(field); !ok {
-								errs = append(errs, errors.NewUpdateInvalidField(name, field, true))
-							}
-						}
-
-						if t, ok := pair.Value.Field("inactivityTimeout"); ok {
-							timeout, perr := natural.ParseChatTimeout(t.Actual())
-							if perr != nil {
-								err = errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_CHAT_TIMEOUT, perr)
-							} else {
-								err = ce.AlterTimeout(users, timeout)
-							}
-						} else {
-							err = errors.NewUpdateInvalidField(name, "inactivityTimeout", true)
-						}
-					}
-				} else {
-					err = errors.NewNaturalLanguageRequestError(errors.E_NL_NO_SUCH_CHAT, localKey)
-				}
+				err = natural.ProcessAlterChat(localKey, users, timeout)
 			} else {
-				if t, ok := pair.Value.Field("inactivityTimeout"); ok {
-					data := map[string]any{
-						"inactivityTimeout": t.Actual(),
-					}
-					dt, derr := json.Marshal(data)
-					if derr == nil {
-						distributed.RemoteAccess().DoRemoteOps([]string{node}, "natural_chats", "PATCH", localKey, string(dt),
-							func(warn errors.Error, queryNode string) {
-								if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) &&
-									!warn.HasICause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
-									context.Warning(warn)
-								}
-							}, creds, "")
-					}
-				} else {
-					err = errors.NewUpdateInvalidField(name, "inactivityTimeout", true)
+				data := map[string]interface{}{
+					"inactivityTimeout": t.Actual(),
+				}
+				dt, derr := json.Marshal(data)
+				if derr == nil {
+					distributed.RemoteAccess().DoRemoteOps([]string{node}, "natural_chats", "PATCH", localKey, string(dt),
+						func(warn errors.Error, queryNode string) {
+							if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) &&
+								!warn.HasICause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
+								context.Warning(warn)
+							}
+						}, creds, "")
 				}
 			}
 		}

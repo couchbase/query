@@ -48,6 +48,123 @@
         ]
     },
     {
+        "testcase": "UPDATE system:natural_chats SET inactivityTimeout",
+        "statements": "UPDATE system:natural_chats SET inactivityTimeout = \"2h\"",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "results": []
+    },
+    {
+        "testcase": "inactivityTimeout updated",
+        "statements": "SELECT inactivityTimeout FROM system:natural_chats",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "results": [
+            {
+                "inactivityTimeout": "2h0m0s"
+            }
+        ]
+    },
+    {
+        "testcase": "UPDATE system:natural_chats SET alias qualified inactivityTimeout",
+        "statements": "UPDATE system:natural_chats AS c SET c.inactivityTimeout = \"3h\"",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "results": []
+    },
+    {
+        "testcase": "alias qualified inactivityTimeout updated",
+        "statements": "SELECT inactivityTimeout FROM system:natural_chats",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "results": [
+            {
+                "inactivityTimeout": "3h0m0s"
+            }
+        ]
+    },
+    {
+        "testcase": "UPDATE system:natural_chats SET of other field is rejected",
+        "statements": "UPDATE system:natural_chats SET users = []",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 5130
+    },
+    {
+        "testcase": "UPDATE system:natural_chats SET of other field with inactivityTimeout is rejected",
+        "statements": "UPDATE system:natural_chats SET inactivityTimeout = \"1h\", summary = \"x\"",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 5130
+    },
+    {
+        "testcase": "UPDATE system:natural_chats SET of nested inactivityTimeout is rejected",
+        "statements": "UPDATE system:natural_chats AS c SET c.prompt.inactivityTimeout = \"1h\"",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 5130
+    },
+    {
+        "testcase": "UPDATE system:natural_chats SET of META() path is rejected",
+        "statements": "UPDATE system:natural_chats SET META().expiration = 10",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 5130
+    },
+    {
+        "testcase": "UPDATE system:natural_chats UNSET inactivityTimeout is rejected",
+        "statements": "UPDATE system:natural_chats UNSET inactivityTimeout",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 5130
+    },
+    {
+        "testcase": "UPDATE system:natural_chats SET with UNSET is rejected",
+        "statements": "UPDATE system:natural_chats SET inactivityTimeout = \"1h\" UNSET summary",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 5130
+    },
+    {
+        "testcase": "UPDATE of system:natural_chats through a keyspace parameter is validated",
+        "statements": "UPDATE $1 AS c USE KEYS (SELECT RAW META(q).id FROM system:natural_chats q) SET c.users = []",
+        "positionalArgs": ["#system:natural_chats"],
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 5130
+    },
+    {
+        "testcase": "UPDATE system:natural_chats SET invalid inactivityTimeout",
+        "statements": "UPDATE system:natural_chats SET inactivityTimeout = \"1m\"",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "errorCode": 19246
+    },
+    {
+        "testcase": "rejected UPDATEs leave inactivityTimeout unchanged",
+        "statements": "SELECT inactivityTimeout FROM system:natural_chats",
+        "userArgs": {
+            "ordersowner": "orderspass"
+        },
+        "results": [
+            {
+                "inactivityTimeout": "3h0m0s"
+            }
+        ]
+    },
+    {
         "statements":"DELETE FROM system:natural_chats",
         "userArgs": {
             "testAdmin": "testAdminpass"
