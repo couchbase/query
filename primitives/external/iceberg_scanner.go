@@ -1621,7 +1621,7 @@ func (s *Scanner) ensureRowMatcher() {
 	case variantMatcher == nil:
 		s.rowMatcher = schemaMatcher
 	default:
-		s.rowMatcher = func(row map[string]interface{}) bool {
+		s.rowMatcher = func(row map[string]any) bool {
 			return schemaMatcher(row) && variantMatcher(row)
 		}
 	}
@@ -1630,7 +1630,7 @@ func (s *Scanner) ensureRowMatcher() {
 // emitRow applies the per-row filter (if any) and sends the row to resultChan.
 // Returns false if the context was cancelled. The parallel-files stream functions
 // use this to enforce filter pushdown that iceberg-go would apply via ToArrowRecords.
-func (s *Scanner) emitRow(ctx go_context.Context, resultChan chan<- map[string]interface{}, row map[string]interface{}) bool {
+func (s *Scanner) emitRow(ctx go_context.Context, resultChan chan<- map[string]any, row map[string]any) bool {
 	if s.rowMatcher != nil && !s.rowMatcher(row) {
 		return true
 	}
@@ -1680,13 +1680,13 @@ func (s *Scanner) CountRows(ctx go_context.Context) (int64, error) {
 }
 
 // ScanAndConvertWithPlanFiles reads data using PlanFiles approach to avoid NESSIE context cancellation
-func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan map[string]interface{}, <-chan error) {
+func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan map[string]any, <-chan error) {
 	logging.Debugf("Iceberg ScanAndConvertWithPlanFiles: starting NESSIE multi-file scan for %s.%s", s.databaseName, s.tableName)
 
 	scan, err := s.Scan(ctx)
 	if err != nil {
 		logging.Errorf("Iceberg ScanAndConvertWithPlanFiles: failed to create scan: %v", err)
-		resultChan := make(chan map[string]interface{})
+		resultChan := make(chan map[string]any)
 		errorChan := make(chan error, 1)
 		errorChan <- err
 		close(resultChan)
@@ -1698,7 +1698,7 @@ func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan ma
 	fileTasks, err := planFilesWithRecovery(scan, ctx)
 	if err != nil {
 		logging.Errorf("Iceberg ScanAndConvertWithPlanFiles: failed to plan files: %v", err)
-		resultChan := make(chan map[string]interface{})
+		resultChan := make(chan map[string]any)
 		errorChan := make(chan error, 1)
 		errorChan <- err
 		close(resultChan)
@@ -1717,7 +1717,7 @@ func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan ma
 		atomic.AddInt64(&s.bytesPlanned, sz)
 	}
 
-	resultChan := make(chan map[string]interface{}, 100)
+	resultChan := make(chan map[string]any, 100)
 	errorChan := make(chan error, 1)
 
 	go func() {
@@ -1764,7 +1764,7 @@ func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan ma
 			// Convert each row in this batch
 			for rowIdx := 0; rowIdx < int(recordBatch.NumRows()); rowIdx++ {
 				// Extract row data
-				rowData := make(map[string]interface{})
+				rowData := make(map[string]any)
 				for colIdx, field := range schema.Fields() {
 					column := recordBatch.Column(colIdx)
 					if rowIdx < int(column.Len()) {
@@ -1801,7 +1801,7 @@ func (s *Scanner) ScanAndConvertWithPlanFiles(ctx go_context.Context) (<-chan ma
 }
 
 // convertArrowValue converts an Arrow array value at index to Go interface{} (used by NESSIE multi-file workaround)
-func (s *Scanner) convertArrowValue(column arrow.Array, rowIdx int, fieldType arrow.DataType) (interface{}, error) {
+func (s *Scanner) convertArrowValue(column arrow.Array, rowIdx int, fieldType arrow.DataType) (any, error) {
 	switch arr := column.(type) {
 	case *array.String:
 		return arr.Value(rowIdx), nil
@@ -1868,7 +1868,7 @@ func (s *Scanner) convertArrowValue(column arrow.Array, rowIdx int, fieldType ar
 }
 
 // ScanAndConvertStream reads data and converts to JSON format with streaming
-func (s *Scanner) ScanAndConvertStream(ctx go_context.Context) (<-chan map[string]interface{}, <-chan error) {
+func (s *Scanner) ScanAndConvertStream(ctx go_context.Context) (<-chan map[string]any, <-chan error) {
 	logging.Debugf("Iceberg ScanAndConvertStream: starting scan for %s.%s", s.databaseName, s.tableName)
 
 	// If collection credential is set (AWS or GCP), use direct parallel file reading path.
@@ -1897,7 +1897,7 @@ func (s *Scanner) ScanAndConvertStream(ctx go_context.Context) (<-chan map[strin
 		scan, err := s.Scan(ctx)
 		if err != nil {
 			logging.Errorf("Iceberg ScanAndConvertStream: failed to create scan: %v", err)
-			resultChan := make(chan map[string]interface{})
+			resultChan := make(chan map[string]any)
 			errorChan := make(chan error, 1)
 			errorChan <- err
 			close(resultChan)
@@ -1927,12 +1927,12 @@ func (s *Scanner) ScanAndConvertStream(ctx go_context.Context) (<-chan map[strin
 }
 
 // scanAndConvertStreamFallback is the original streaming approach
-func (s *Scanner) scanAndConvertStreamFallback(ctx go_context.Context) (<-chan map[string]interface{}, <-chan error) {
+func (s *Scanner) scanAndConvertStreamFallback(ctx go_context.Context) (<-chan map[string]any, <-chan error) {
 
 	reader, err := s.CreateReader(ctx)
 	if err != nil {
 		logging.Errorf("Iceberg ScanAndConvertStream: failed to create reader: %v", err)
-		resultChan := make(chan map[string]interface{})
+		resultChan := make(chan map[string]any)
 		errorChan := make(chan error, 1)
 		errorChan <- err
 		close(resultChan)
@@ -1943,7 +1943,7 @@ func (s *Scanner) scanAndConvertStreamFallback(ctx go_context.Context) (<-chan m
 	logging.Debugf("Iceberg ScanAndConvertStream: reader created successfully, starting iteration")
 	iterator := NewIterator(reader)
 
-	resultChan := make(chan map[string]interface{}, s.parallelScans*_ICEBERG_RESULT_CHAN_PER_WORKER)
+	resultChan := make(chan map[string]any, s.parallelScans*_ICEBERG_RESULT_CHAN_PER_WORKER)
 	errorChan := make(chan error, 1)
 
 	go func() {
@@ -2351,8 +2351,8 @@ func buildGCSClient(ctx go_context.Context, cred *cbauth.Credential) (*storage.C
 // ScanAndConvertParallelFiles uses PlanFiles to obtain the data file list from the catalog,
 // then reads each file independently and in parallel using the collection credential.
 // Supported: parquet, arrow IPC, avro (OCF). ORC is skipped with a warning.
-func (s *Scanner) ScanAndConvertParallelFiles(ctx go_context.Context) (<-chan map[string]interface{}, <-chan error) {
-	resultChan := make(chan map[string]interface{}, s.parallelScans*_ICEBERG_RESULT_CHAN_PER_WORKER)
+func (s *Scanner) ScanAndConvertParallelFiles(ctx go_context.Context) (<-chan map[string]any, <-chan error) {
+	resultChan := make(chan map[string]any, s.parallelScans*_ICEBERG_RESULT_CHAN_PER_WORKER)
 	errorChan := make(chan error, 1)
 
 	go func() {
@@ -2441,7 +2441,7 @@ func (s *Scanner) ScanAndConvertParallelFiles(ctx go_context.Context) (<-chan ma
 
 // streamFileTask downloads a single data file and streams its rows to resultChan.
 func (s *Scanner) streamFileTask(ctx go_context.Context, dl fileDownloader, task table.FileScanTask,
-	resultChan chan<- map[string]interface{}) error {
+	resultChan chan<- map[string]any) error {
 
 	filePath := task.File.FilePath()
 	format := task.File.FileFormat()
@@ -2494,7 +2494,7 @@ func (s *Scanner) streamFileTask(ctx go_context.Context, dl fileDownloader, task
 // rangeReaderDownloader) that fetches only the footer and the column chunks
 // resolveColumnIndices selects.
 func (s *Scanner) streamParquetFile(ctx go_context.Context, r parquet.ReaderAtSeeker,
-	resultChan chan<- map[string]interface{}) error {
+	resultChan chan<- map[string]any) error {
 	pqReader, err := pqfile.NewParquetReader(r)
 	if err != nil {
 		return fmt.Errorf("failed to open parquet reader: %w", err)
@@ -2540,7 +2540,7 @@ func (s *Scanner) streamParquetFile(ctx go_context.Context, r parquet.ReaderAtSe
 		rec := rr.Record()
 		schema := rec.Schema()
 		for rowIdx := 0; rowIdx < int(rec.NumRows()); rowIdx++ {
-			row := make(map[string]interface{}, schema.NumFields())
+			row := make(map[string]any, schema.NumFields())
 			for colIdx, field := range schema.Fields() {
 				col := rec.Column(colIdx)
 				if col.IsNull(rowIdx) {
@@ -2560,7 +2560,7 @@ func (s *Scanner) streamParquetFile(ctx go_context.Context, r parquet.ReaderAtSe
 }
 
 // streamArrowIPCFile reads an Arrow IPC file and sends rows to resultChan.
-func (s *Scanner) streamArrowIPCFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]interface{}) error {
+func (s *Scanner) streamArrowIPCFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]any) error {
 	ipcReader, err := ipc.NewReader(bytes.NewReader(data), ipc.WithAllocator(memory.DefaultAllocator))
 	if err != nil {
 		return fmt.Errorf("failed to create Arrow IPC reader: %w", err)
@@ -2574,7 +2574,7 @@ func (s *Scanner) streamArrowIPCFile(ctx go_context.Context, data []byte, result
 		rec := ipcReader.Record()
 		schema := rec.Schema()
 		for rowIdx := 0; rowIdx < int(rec.NumRows()); rowIdx++ {
-			row := make(map[string]interface{}, schema.NumFields())
+			row := make(map[string]any, schema.NumFields())
 			for colIdx, field := range schema.Fields() {
 				if fieldSet != nil && !fieldSet[field.Name] {
 					continue
@@ -2596,7 +2596,7 @@ func (s *Scanner) streamArrowIPCFile(ctx go_context.Context, data []byte, result
 
 // streamAvroFile reads an Avro OCF file and sends rows to resultChan.
 // Row values are decoded into map[string]interface{} via iskorotkov/avro.
-func (s *Scanner) streamAvroFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]interface{}) error {
+func (s *Scanner) streamAvroFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]any) error {
 	dec, err := ocf.NewDecoder(bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("failed to create Avro OCF decoder: %w", err)
@@ -2611,17 +2611,17 @@ func (s *Scanner) streamAvroFile(ctx go_context.Context, data []byte, resultChan
 			return fmt.Errorf("avro decode error: %w", err)
 		}
 
-		var row map[string]interface{}
+		var row map[string]any
 		switch v := raw.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			row = v
 		default:
 			// Wrap non-record types under a synthetic key.
-			row = map[string]interface{}{"value": raw}
+			row = map[string]any{"value": raw}
 		}
 
 		if fieldSet != nil {
-			filtered := make(map[string]interface{}, len(fieldSet))
+			filtered := make(map[string]any, len(fieldSet))
 			for k, v := range row {
 				if fieldSet[k] {
 					filtered[k] = v
@@ -2639,7 +2639,7 @@ func (s *Scanner) streamAvroFile(ctx go_context.Context, data []byte, resultChan
 
 // streamFileByExtension detects the file format from the extension and streams rows.
 func (s *Scanner) streamFileByExtension(ctx go_context.Context, data []byte, filePath string,
-	resultChan chan<- map[string]interface{}) error {
+	resultChan chan<- map[string]any) error {
 
 	lower := strings.ToLower(filePath)
 	switch {
@@ -2669,7 +2669,7 @@ func (s *sizedBytesReader) ReadAt(p []byte, off int64) (int, error) { return s.r
 func (s *sizedBytesReader) Size() int64                             { return s.size }
 
 // streamOrcFile reads an ORC file using scritchley/orc and sends rows to resultChan.
-func (s *Scanner) streamOrcFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]interface{}) error {
+func (s *Scanner) streamOrcFile(ctx go_context.Context, data []byte, resultChan chan<- map[string]any) error {
 	// bytes.Reader satisfies io.ReaderAt; wrap it to also expose Size().
 	sr := &sizedBytesReader{r: bytes.NewReader(data), size: int64(len(data))}
 
@@ -2700,7 +2700,7 @@ func (s *Scanner) streamOrcFile(ctx go_context.Context, data []byte, resultChan 
 			return ctx.Err()
 		}
 		vals := cursor.Row()
-		row := make(map[string]interface{}, len(selected))
+		row := make(map[string]any, len(selected))
 		for i, f := range selected {
 			if i < len(vals) {
 				row[f] = vals[i]
@@ -3003,7 +3003,7 @@ func (s *Scanner) selectRowGroups(pqReader *pqfile.Reader, manifest *pqarrow.Sch
 }
 
 // GetSchema returns the table schema
-func (s *Scanner) GetSchema() interface{} {
+func (s *Scanner) GetSchema() any {
 	if s.table == nil {
 		return nil
 	}
@@ -3124,10 +3124,10 @@ type TableInfo struct {
 // Pass 0 to list namespaces and table names only.
 func LoadCatalogMetadata(ctx go_context.Context, entry *extparams.CatalogEntry, cred *cbauth.Credential, infoFlags uint64) (*CatalogMetadata, error) {
 	if entry.URI != "" {
-		var allowlist map[string]interface{}
+		var allowlist map[string]any
 		if cred != nil && cred.Meta.Guardrails.URLWhitelist != nil {
 			wl := cred.Meta.Guardrails.URLWhitelist
-			allowlist = map[string]interface{}{
+			allowlist = map[string]any{
 				util.AllowlistKeyAllAccess:      wl.AllAccess,
 				util.AllowlistKeyAllowedURLs:    wl.AllowedURLs,
 				util.AllowlistKeyDisallowedURLs: wl.DisallowedURLs,

@@ -122,7 +122,7 @@ func buildShreddedVariantParquet(t *testing.T) *pqarrow.FileReader {
 // decodeVariantColumn reads colIndices from arrowReader and decodes every row of
 // the (single) "variant" column via this package's own decodeVariantScalar, exactly
 // as the production Parquet scan path does.
-func decodeVariantColumn(t *testing.T, arrowReader *pqarrow.FileReader, colIndices []int) []map[string]interface{} {
+func decodeVariantColumn(t *testing.T, arrowReader *pqarrow.FileReader, colIndices []int) []map[string]any {
 	t.Helper()
 
 	rr, err := arrowReader.GetRecordReader(go_context.Background(), colIndices, nil)
@@ -131,7 +131,7 @@ func decodeVariantColumn(t *testing.T, arrowReader *pqarrow.FileReader, colIndic
 	}
 	defer rr.Release()
 
-	var rows []map[string]interface{}
+	var rows []map[string]any
 	for rr.Next() {
 		rec := rr.Record()
 		va, ok := rec.Column(0).(*extensions.VariantArray)
@@ -145,7 +145,7 @@ func decodeVariantColumn(t *testing.T, arrowReader *pqarrow.FileReader, colIndic
 				rec.Release()
 				t.Fatalf("Value(%d): %v", i, err)
 			}
-			obj, ok := decodeVariantScalar(v, false).(map[string]interface{})
+			obj, ok := decodeVariantScalar(v, false).(map[string]any)
 			if !ok {
 				rec.Release()
 				t.Fatalf("row %d: expected map[string]interface{}", i)
@@ -246,7 +246,7 @@ func TestResolveColumnIndicesVariantNestedSubFieldPruning(t *testing.T) {
 		t.Fatalf("expected 2 rows, got %d", len(rows))
 	}
 	for i, obj := range rows {
-		geo, ok := obj["geo"].(map[string]interface{})
+		geo, ok := obj["geo"].(map[string]any)
 		if !ok {
 			t.Fatalf("row %d: expected 'geo' present as an object, decoded object: %v", i, obj)
 		}
@@ -374,7 +374,7 @@ func buildPlainStructParquet(t *testing.T) *pqarrow.FileReader {
 // decodeStructColumn reads colIndices from arrowReader and decodes every row of the
 // (single) "address" column via this package's own Reader.getColumnValue, exactly
 // as the production Parquet scan path does.
-func decodeStructColumn(t *testing.T, arrowReader *pqarrow.FileReader, colIndices []int) []map[string]interface{} {
+func decodeStructColumn(t *testing.T, arrowReader *pqarrow.FileReader, colIndices []int) []map[string]any {
 	t.Helper()
 
 	rr, err := arrowReader.GetRecordReader(go_context.Background(), colIndices, nil)
@@ -384,12 +384,12 @@ func decodeStructColumn(t *testing.T, arrowReader *pqarrow.FileReader, colIndice
 	defer rr.Release()
 
 	helper := &Reader{}
-	var rows []map[string]interface{}
+	var rows []map[string]any
 	for rr.Next() {
 		rec := rr.Record()
 		col := rec.Column(0)
 		for i := 0; i < int(rec.NumRows()); i++ {
-			rows = append(rows, helper.getColumnValue(col, i).(map[string]interface{}))
+			rows = append(rows, helper.getColumnValue(col, i).(map[string]any))
 		}
 		rec.Release()
 	}

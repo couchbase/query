@@ -47,7 +47,7 @@ type Reader struct {
 	stopRecords      func()                                  // releases the pull iterator; safe to call more than once
 	currentRecord    arrow.RecordBatch
 	currentRow       int
-	schema           interface{}
+	schema           any
 	columnFilter     func(string) bool // Optional column filter function
 	decimalToDouble  bool              // When true, Decimal128/256 columns yield float64 instead of string
 	temporalToString bool              // When true, TIMESTAMP/DATE/TIME columns render as ISO-8601 strings instead of raw epoch ints
@@ -222,13 +222,13 @@ func (r *Reader) loadNextRecord() error {
 
 // Row represents a single row from Iceberg table
 type Row struct {
-	data map[string]interface{}
+	data map[string]any
 }
 
 // Data returns the row data as a map
-func (r *Row) Data() (map[string]interface{}, error) {
+func (r *Row) Data() (map[string]any, error) {
 	if r.data == nil {
-		return make(map[string]interface{}), nil
+		return make(map[string]any), nil
 	}
 	return r.data, nil
 }
@@ -243,7 +243,7 @@ func (r *Row) Bytes() ([]byte, error) {
 }
 
 // GetCurrentRow converts the current arrow record row to a map
-func (r *Reader) GetCurrentRow() (map[string]interface{}, error) {
+func (r *Reader) GetCurrentRow() (map[string]any, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -259,7 +259,7 @@ func (r *Reader) GetCurrentRow() (map[string]interface{}, error) {
 	// Use r.currentRow - 1 because currentRow uses 1-based indexing after increment, but array is 0-based
 	rowIndex := r.currentRow - 1
 
-	row := make(map[string]interface{})
+	row := make(map[string]any)
 	schema := r.arrowSchema
 
 	logging.Debugf("Iceberg GetCurrentRow: reading row at array index %d (1-based currentRow=%d) from record with %d rows, %d columns",
@@ -296,7 +296,7 @@ func (r *Reader) GetCurrentRow() (map[string]interface{}, error) {
 }
 
 // getColumnValue extracts a value from an arrow array at a specific position
-func (r *Reader) getColumnValue(col arrow.Array, pos int) interface{} {
+func (r *Reader) getColumnValue(col arrow.Array, pos int) any {
 	switch arr := col.(type) {
 	case *array.Boolean:
 		return arr.Value(pos)
@@ -399,7 +399,7 @@ func (r *Reader) getColumnValue(col arrow.Array, pos int) interface{} {
 // getVariantValue decodes a Parquet Variant (a binary-encoded superset of JSON) into
 // native Go values (map[string]interface{}, []interface{}, string, int64, float64, bool,
 // nil, ...) so it flows through the rest of the pipeline like any other JSON-shaped column.
-func getVariantValue(arr *extensions.VariantArray, pos int, decimalToDouble bool) interface{} {
+func getVariantValue(arr *extensions.VariantArray, pos int, decimalToDouble bool) any {
 	if arr.IsNull(pos) {
 		return nil
 	}
@@ -423,7 +423,7 @@ func getVariantValue(arr *extensions.VariantArray, pos int, decimalToDouble bool
 // (variant.Value's Date32/Timestamp/Time64 cases don't carry that themselves the way an
 // arrow.DataType does), and updating compareValues'/buildVariantRowGroupMatcher's variant
 // comparators to match. Left as a follow-up rather than done here.
-func decodeVariantScalar(vv variant.Value, decimalToDouble bool) interface{} {
+func decodeVariantScalar(vv variant.Value, decimalToDouble bool) any {
 	switch t := vv.Value().(type) {
 	case nil, bool, int8, int16, int32, int64, float32, float64, string:
 		return t
@@ -444,13 +444,13 @@ func decodeVariantScalar(vv variant.Value, decimalToDouble bool) interface{} {
 	case variant.DecimalValue[decimal.Decimal128]:
 		return decodeVariantDecimal(t, decimalToDouble)
 	case variant.ObjectValue:
-		result := make(map[string]interface{}, t.NumElements())
+		result := make(map[string]any, t.NumElements())
 		for key, fieldVal := range t.Values() {
 			result[key] = decodeVariantScalar(fieldVal, decimalToDouble)
 		}
 		return result
 	case variant.ArrayValue:
-		result := make([]interface{}, 0, t.Len())
+		result := make([]any, 0, t.Len())
 		for elemVal := range t.Values() {
 			result = append(result, decodeVariantScalar(elemVal, decimalToDouble))
 		}
@@ -461,7 +461,7 @@ func decodeVariantScalar(vv variant.Value, decimalToDouble bool) interface{} {
 	}
 }
 
-func decodeVariantDecimal[T decimal.DecimalTypes](d variant.DecimalValue[T], decimalToDouble bool) interface{} {
+func decodeVariantDecimal[T decimal.DecimalTypes](d variant.DecimalValue[T], decimalToDouble bool) any {
 	if decimalToDouble {
 		return d.Value.ToFloat64(int32(d.Scale))
 	}
@@ -469,8 +469,8 @@ func decodeVariantDecimal[T decimal.DecimalTypes](d variant.DecimalValue[T], dec
 }
 
 // getStructValue extracts a struct value
-func (r *Reader) getStructValue(arr *array.Struct, pos int) map[string]interface{} {
-	result := make(map[string]interface{})
+func (r *Reader) getStructValue(arr *array.Struct, pos int) map[string]any {
+	result := make(map[string]any)
 
 	// Get the struct type to access field names
 	dataType := arr.DataType()
@@ -491,7 +491,7 @@ func (r *Reader) getStructValue(arr *array.Struct, pos int) map[string]interface
 }
 
 // getListValue extracts a list value
-func (r *Reader) getListValue(arr *array.List, pos int) []interface{} {
+func (r *Reader) getListValue(arr *array.List, pos int) []any {
 	list := arr.ListValues()
 	if list == nil {
 		return nil
@@ -499,7 +499,7 @@ func (r *Reader) getListValue(arr *array.List, pos int) []interface{} {
 
 	start, end := arr.ValueOffsets(pos)
 	listLen := int(end - start)
-	result := make([]interface{}, listLen)
+	result := make([]any, listLen)
 	for i := 0; i < listLen; i++ {
 		if list.IsNull(int(start) + i) {
 			result[i] = nil
@@ -511,14 +511,14 @@ func (r *Reader) getListValue(arr *array.List, pos int) []interface{} {
 }
 
 // getLargeListValue extracts a large list value
-func (r *Reader) getLargeListValue(arr *array.LargeList, pos int) []interface{} {
+func (r *Reader) getLargeListValue(arr *array.LargeList, pos int) []any {
 	listValues := arr.ListValues()
 	if listValues == nil {
 		return nil
 	}
 	start, end := arr.ValueOffsets(pos)
 	listLen := int(end - start)
-	result := make([]interface{}, listLen)
+	result := make([]any, listLen)
 	for i := 0; i < listLen; i++ {
 		if listValues.IsNull(int(start) + i) {
 			result[i] = nil
@@ -530,9 +530,9 @@ func (r *Reader) getLargeListValue(arr *array.LargeList, pos int) []interface{} 
 }
 
 // getFixedSizeListValue extracts a fixed-size list value
-func (r *Reader) getFixedSizeListValue(arr *array.FixedSizeList, pos int) []interface{} {
+func (r *Reader) getFixedSizeListValue(arr *array.FixedSizeList, pos int) []any {
 	listLen := arr.Len()
-	result := make([]interface{}, listLen)
+	result := make([]any, listLen)
 	itemArr := arr.ListValues()
 	for i := 0; i < listLen; i++ {
 		if itemArr.IsNull(pos*listLen + i) {
@@ -545,8 +545,8 @@ func (r *Reader) getFixedSizeListValue(arr *array.FixedSizeList, pos int) []inte
 }
 
 // getMapValue extracts a map value
-func (r *Reader) getMapValue(arr *array.Map, pos int) map[string]interface{} {
-	result := make(map[string]interface{})
+func (r *Reader) getMapValue(arr *array.Map, pos int) map[string]any {
+	result := make(map[string]any)
 	keyItems := arr.Keys()
 	valueItems := arr.Items()
 	keysStart, keysEnd := arr.ValueOffsets(pos)
@@ -644,7 +644,7 @@ func (it *Iterator) Next() bool {
 }
 
 // Row returns the current row
-func (it *Iterator) Row() (map[string]interface{}, error) {
+func (it *Iterator) Row() (map[string]any, error) {
 	return it.reader.GetCurrentRow()
 }
 
@@ -665,10 +665,10 @@ func (it *Iterator) Close() error {
 }
 
 // ToSlice reads all rows into a slice (use with caution for large datasets)
-func (it *Iterator) ToSlice() ([]map[string]interface{}, error) {
+func (it *Iterator) ToSlice() ([]map[string]any, error) {
 	defer it.Close()
 
-	var results []map[string]interface{}
+	var results []map[string]any
 	for it.Next() {
 		row, err := it.Row()
 		if err != nil {
@@ -1009,7 +1009,7 @@ func (au *ArrowUtility) ArrowToJson(batch arrow.RecordBatch) ([]string, error) {
 	result := make([]string, 0, int(batch.NumRows()))
 
 	for i := int64(0); i < batch.NumRows(); i++ {
-		row := make(map[string]interface{})
+		row := make(map[string]any)
 
 		for j := 0; j < int(schema.NumFields()); j++ {
 			fieldName := schema.Field(j).Name
@@ -1043,7 +1043,7 @@ func (au *ArrowUtility) ArrowToJson(batch arrow.RecordBatch) ([]string, error) {
 }
 
 // getArrowValue extracts a value from an Arrow array at a specific position
-func (au *ArrowUtility) getArrowValue(arr arrow.Array, pos int) interface{} {
+func (au *ArrowUtility) getArrowValue(arr arrow.Array, pos int) any {
 	switch a := arr.(type) {
 	case *array.Boolean:
 		return a.Value(pos)
@@ -1117,8 +1117,8 @@ func (au *ArrowUtility) getArrowValue(arr arrow.Array, pos int) interface{} {
 }
 
 // getStructValue extracts a struct value
-func (au *ArrowUtility) getStructValue(arr *array.Struct, pos int) map[string]interface{} {
-	result := make(map[string]interface{})
+func (au *ArrowUtility) getStructValue(arr *array.Struct, pos int) map[string]any {
+	result := make(map[string]any)
 	dataType := arr.DataType()
 
 	if structType, ok := dataType.(*arrow.StructType); ok {
@@ -1138,7 +1138,7 @@ func (au *ArrowUtility) getStructValue(arr *array.Struct, pos int) map[string]in
 }
 
 // getListValue extracts a list value
-func (au *ArrowUtility) getListValue(arr *array.List, pos int) []interface{} {
+func (au *ArrowUtility) getListValue(arr *array.List, pos int) []any {
 	listValues := arr.ListValues()
 	if listValues == nil {
 		return nil
@@ -1146,7 +1146,7 @@ func (au *ArrowUtility) getListValue(arr *array.List, pos int) []interface{} {
 
 	start, end := arr.ValueOffsets(pos)
 	listLen := int(end - start)
-	result := make([]interface{}, listLen)
+	result := make([]any, listLen)
 
 	for i := 0; i < listLen; i++ {
 		if listValues.IsNull(int(start) + i) {
@@ -1160,7 +1160,7 @@ func (au *ArrowUtility) getListValue(arr *array.List, pos int) []interface{} {
 }
 
 // getLargeListValue extracts a large list value
-func (au *ArrowUtility) getLargeListValue(arr *array.LargeList, pos int) []interface{} {
+func (au *ArrowUtility) getLargeListValue(arr *array.LargeList, pos int) []any {
 	listValues := arr.ListValues()
 	if listValues == nil {
 		return nil
@@ -1168,7 +1168,7 @@ func (au *ArrowUtility) getLargeListValue(arr *array.LargeList, pos int) []inter
 
 	start, end := arr.ValueOffsets(pos)
 	listLen := int(end - start)
-	result := make([]interface{}, listLen)
+	result := make([]any, listLen)
 
 	for i := 0; i < listLen; i++ {
 		if listValues.IsNull(int(start) + i) {
@@ -1182,9 +1182,9 @@ func (au *ArrowUtility) getLargeListValue(arr *array.LargeList, pos int) []inter
 }
 
 // getFixedSizeListValue extracts a fixed-size list value
-func (au *ArrowUtility) getFixedSizeListValue(arr *array.FixedSizeList, pos int) []interface{} {
+func (au *ArrowUtility) getFixedSizeListValue(arr *array.FixedSizeList, pos int) []any {
 	listLen := arr.Len()
-	result := make([]interface{}, listLen)
+	result := make([]any, listLen)
 
 	for i := 0; i < listLen; i++ {
 		itemArr := arr.ListValues()
@@ -1199,8 +1199,8 @@ func (au *ArrowUtility) getFixedSizeListValue(arr *array.FixedSizeList, pos int)
 }
 
 // getMapValue extracts a map value
-func (au *ArrowUtility) getMapValue(arr *array.Map, pos int) map[string]interface{} {
-	result := make(map[string]interface{})
+func (au *ArrowUtility) getMapValue(arr *array.Map, pos int) map[string]any {
+	result := make(map[string]any)
 
 	keyItems := arr.Keys()
 	valueItems := arr.Items()

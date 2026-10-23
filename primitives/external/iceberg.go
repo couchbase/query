@@ -134,13 +134,13 @@ func n1qlToIcebergExpr(expr expression.Expression, alias string, parent value.Va
 		// field: it can restore pruning that a >200-value IN would otherwise have disabled
 		// (see the IN case below), and an empty intersection means the whole AND can never
 		// match, letting the scan skip every file instead of just narrowing them.
-		fieldSets := make(map[string][][]interface{})
+		fieldSets := make(map[string][][]any)
 		fieldIdx := make(map[string][]int)
 		for i, op := range ops {
 			switch o := op.(type) {
 			case *expression.Eq:
 				if field, val, ok := icebergEqFieldValue(o, alias, parent); ok {
-					fieldSets[field] = append(fieldSets[field], []interface{}{val})
+					fieldSets[field] = append(fieldSets[field], []any{val})
 					fieldIdx[field] = append(fieldIdx[field], i)
 				}
 			case *expression.In:
@@ -366,7 +366,7 @@ func n1qlToIcebergExpr(expr expression.Expression, alias string, parent value.Va
 // icebergEqFieldValue returns the (field, constant) pair for a direct `field = const`
 // equality, trying both operand orders. ok is false unless exactly one side is a plain
 // field reference and the other a constant.
-func icebergEqFieldValue(e *expression.Eq, alias string, parent value.Value) (string, interface{}, bool) {
+func icebergEqFieldValue(e *expression.Eq, alias string, parent value.Value) (string, any, bool) {
 	firstVal := n1qlExtractValue(e.First(), parent)
 	secondVal := n1qlExtractValue(e.Second(), parent)
 	switch {
@@ -384,7 +384,7 @@ func icebergEqFieldValue(e *expression.Eq, alias string, parent value.Value) (st
 // scalarInList reports whether target is present in vals, comparing only the scalar
 // types n1qlValueToLiteral supports (string, float64, bool). Non-scalar or mismatched
 // types compare unequal rather than risking a panic on interface comparison.
-func scalarInList(target interface{}, vals []interface{}) bool {
+func scalarInList(target any, vals []any) bool {
 	for _, v := range vals {
 		switch tv := target.(type) {
 		case string:
@@ -406,11 +406,11 @@ func scalarInList(target interface{}, vals []interface{}) bool {
 
 // intersectValueSets returns the intersection of two or more value sets (order taken
 // from the first set, deduplicated), comparing elements via scalarInList.
-func intersectValueSets(sets [][]interface{}) []interface{} {
+func intersectValueSets(sets [][]any) []any {
 	if len(sets) == 0 {
 		return nil
 	}
-	result := make([]interface{}, 0, len(sets[0]))
+	result := make([]any, 0, len(sets[0]))
 	for _, v := range sets[0] {
 		if scalarInList(v, result) {
 			continue // dedup
@@ -437,7 +437,7 @@ func n1qlCompareExpr(op iceberg.Operation, first, second expression.Expression, 
 	secondVal := n1qlExtractValue(second, parent)
 
 	var field string
-	var val interface{}
+	var val any
 	var flip bool
 
 	switch {
@@ -508,7 +508,7 @@ func flipOp(op iceberg.Operation) iceberg.Operation {
 type variantPredicate struct {
 	path string            // e.g. "attrs.color"
 	op   iceberg.Operation // OpEQ, OpLT, OpLTEQ, OpGT, or OpGTEQ
-	lit  interface{}       // from n1qlExtractValue
+	lit  any               // from n1qlExtractValue
 }
 
 // extractVariantPredicates walks expr (mirroring n1qlToIcebergExpr's *expression.Eq/
@@ -555,7 +555,7 @@ func variantCompareExpr(op iceberg.Operation, first, second expression.Expressio
 	secondVal := n1qlExtractValue(second, parent)
 
 	var field string
-	var val interface{}
+	var val any
 	var flip bool
 
 	switch {
@@ -612,7 +612,7 @@ func n1qlFieldPath(expr expression.Expression, alias string) (string, bool) {
 
 // n1qlExtractValue returns the constant value of a N1QL expression as a plain Go value,
 // or nil if the expression is not a constant (or evaluates to NULL/MISSING).
-func n1qlExtractValue(expr expression.Expression, parent value.Value) interface{} {
+func n1qlExtractValue(expr expression.Expression, parent value.Value) any {
 	if v := expr.Value(); v != nil {
 		act := v.Actual()
 		if act == nil {
@@ -636,9 +636,9 @@ func n1qlExtractValue(expr expression.Expression, parent value.Value) interface{
 //     *expression.Constant, which is how the join-driven runtime filter
 //     (execution/external_filter.go) wraps the IN-list values
 //   - falls back to evaluating against parent for correlated references
-func n1qlArrayValues(expr expression.Expression, parent value.Value) []interface{} {
+func n1qlArrayValues(expr expression.Expression, parent value.Value) []any {
 	if arr, ok := expr.(*expression.ArrayConstruct); ok {
-		result := make([]interface{}, 0, len(arr.Operands()))
+		result := make([]any, 0, len(arr.Operands()))
 		for _, op := range arr.Operands() {
 			if v := n1qlExtractValue(op, parent); v != nil {
 				result = append(result, v)
@@ -647,13 +647,13 @@ func n1qlArrayValues(expr expression.Expression, parent value.Value) []interface
 		return result
 	}
 	if v := expr.Value(); v != nil {
-		if arr, ok := v.Actual().([]interface{}); ok {
+		if arr, ok := v.Actual().([]any); ok {
 			return arr
 		}
 	}
 	if parent != nil {
 		if v, err := expr.Evaluate(parent, nil); err == nil && v != nil && v.Type() != value.MISSING {
-			if arr, ok := v.Actual().([]interface{}); ok {
+			if arr, ok := v.Actual().([]any); ok {
 				return arr
 			}
 		}
@@ -664,7 +664,7 @@ func n1qlArrayValues(expr expression.Expression, parent value.Value) []interface
 // n1qlValueToLiteral converts a plain Go value (from value.Actual()) to an iceberg.Literal.
 // N1QL stores all JSON numbers as float64; whole-number floats are converted to int64
 // so that iceberg can coerce them to the column's actual integer type during binding.
-func n1qlValueToLiteral(val interface{}) iceberg.Literal {
+func n1qlValueToLiteral(val any) iceberg.Literal {
 	if v, ok := val.(value.Value); ok {
 		val = v.Actual()
 	}

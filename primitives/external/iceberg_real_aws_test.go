@@ -245,7 +245,7 @@ func (env realAWSTestEnv) storageCredential(t *testing.T, ctx context.Context) *
 // scanResult captures what a real scan returned plus the pruning stats
 // resolveColumnIndices/selectRowGroups recorded along the way.
 type scanResult struct {
-	rows                          []map[string]interface{}
+	rows                          []map[string]any
 	rowGroupsKept, rowGroupsTotal int64
 	colsSelected, colsTotal       int64
 }
@@ -277,7 +277,7 @@ func (env realAWSTestEnv) scan(t *testing.T, ctx context.Context, tableName stri
 	}
 
 	rowsCh, errCh := scanner.ScanAndConvertStream(ctx)
-	var rows []map[string]interface{}
+	var rows []map[string]any
 	for row := range rowsCh {
 		rows = append(rows, row)
 	}
@@ -379,7 +379,7 @@ func TestRealAWSIcebergNonVariantStruct(t *testing.T) {
 			t.Fatalf("expected 2 rows, got %d: %v", len(res.rows), res.rows)
 		}
 		for _, r := range res.rows {
-			addr, ok := r["address"].(map[string]interface{})
+			addr, ok := r["address"].(map[string]any)
 			if !ok || addr["city"] == nil || addr["state"] == nil {
 				t.Errorf("expected both city and state present, got %v", r)
 			}
@@ -395,7 +395,7 @@ func TestRealAWSIcebergNonVariantStruct(t *testing.T) {
 			t.Errorf("expected fewer columns selected (%d) than total (%d)", res.colsSelected, res.colsTotal)
 		}
 		for _, r := range res.rows {
-			addr := r["address"].(map[string]interface{})
+			addr := r["address"].(map[string]any)
 			if _, present := addr["state"]; present {
 				t.Errorf("expected state absent from pruned decode, got %v", addr)
 			}
@@ -414,7 +414,7 @@ func TestRealAWSIcebergNonVariantStruct(t *testing.T) {
 		if res.rowGroupsKept >= res.rowGroupsTotal {
 			t.Errorf("expected row-group pruning: kept=%d total=%d", res.rowGroupsKept, res.rowGroupsTotal)
 		}
-		addr := res.rows[0]["address"].(map[string]interface{})
+		addr := res.rows[0]["address"].(map[string]any)
 		if addr["city"] != "NYC" {
 			t.Errorf("expected city=NYC, got %v", addr)
 		}
@@ -500,7 +500,7 @@ func TestRealAWSIcebergVariantUnshredded(t *testing.T) {
 			t.Fatalf("expected 2 rows, got %d: %v", len(res.rows), res.rows)
 		}
 		for _, r := range res.rows {
-			attrs, ok := r["attrs"].(map[string]interface{})
+			attrs, ok := r["attrs"].(map[string]any)
 			if !ok || attrs["color"] == nil || attrs["size"] == nil {
 				t.Errorf("expected color and size present, got %v", r)
 			}
@@ -516,7 +516,7 @@ func TestRealAWSIcebergVariantUnshredded(t *testing.T) {
 			t.Fatalf("expected 2 rows, got %d", len(res.rows))
 		}
 		for _, r := range res.rows {
-			attrs := r["attrs"].(map[string]interface{})
+			attrs := r["attrs"].(map[string]any)
 			if attrs["color"] == nil {
 				t.Errorf("expected color present, got %v", attrs)
 			}
@@ -628,7 +628,7 @@ func TestRealAWSIcebergVariantShredded(t *testing.T) {
 			t.Fatalf("expected 4 rows, got %d: %v", len(res.rows), res.rows)
 		}
 		for _, r := range res.rows {
-			attrs, ok := r["attrs"].(map[string]interface{})
+			attrs, ok := r["attrs"].(map[string]any)
 			if !ok || attrs["color"] == nil || attrs["size"] == nil {
 				t.Errorf("expected color and size present, got %v", r)
 			}
@@ -644,7 +644,7 @@ func TestRealAWSIcebergVariantShredded(t *testing.T) {
 			t.Errorf("expected pruning: selected=%d total=%d", res.colsSelected, res.colsTotal)
 		}
 		for _, r := range res.rows {
-			attrs := r["attrs"].(map[string]interface{})
+			attrs := r["attrs"].(map[string]any)
 			if _, present := attrs["size"]; present {
 				t.Errorf("expected size absent from pruned decode, got %v", attrs)
 			}
@@ -663,8 +663,8 @@ func TestRealAWSIcebergVariantShredded(t *testing.T) {
 			t.Errorf("expected pruning: selected=%d total=%d", res.colsSelected, res.colsTotal)
 		}
 		for _, r := range res.rows {
-			attrs := r["attrs"].(map[string]interface{})
-			geo, ok := attrs["geo"].(map[string]interface{})
+			attrs := r["attrs"].(map[string]any)
+			geo, ok := attrs["geo"].(map[string]any)
 			if !ok {
 				t.Fatalf("expected 'geo' present as an object, got %v", attrs)
 			}
@@ -689,7 +689,7 @@ func TestRealAWSIcebergVariantShredded(t *testing.T) {
 		if res.rowGroupsKept >= res.rowGroupsTotal {
 			t.Errorf("expected row-group pruning: kept=%d total=%d", res.rowGroupsKept, res.rowGroupsTotal)
 		}
-		attrs := res.rows[0]["attrs"].(map[string]interface{})
+		attrs := res.rows[0]["attrs"].(map[string]any)
 		if attrs["color"] != "blue" {
 			t.Errorf("expected color=blue, got %v", attrs)
 		}
@@ -708,8 +708,8 @@ func TestRealAWSIcebergVariantShredded(t *testing.T) {
 			t.Errorf("expected exactly 1 row group kept, got %d/%d", res.rowGroupsKept, res.rowGroupsTotal)
 		}
 		for _, r := range res.rows {
-			attrs := r["attrs"].(map[string]interface{})
-			geo := attrs["geo"].(map[string]interface{})
+			attrs := r["attrs"].(map[string]any)
+			geo := attrs["geo"].(map[string]any)
 			floor := geo["floor"]
 			// decodeVariantScalar sizes decoded integers to the smallest Go
 			// type that fits the value (int8/int16/int32/int64), so compare
@@ -736,7 +736,7 @@ func TestRealAWSIcebergVariantShredded(t *testing.T) {
 			t.Errorf("expected exactly 1 row group kept (row groups 1 and 2 are red/blue, prunable), got %d/%d",
 				res.rowGroupsKept, res.rowGroupsTotal)
 		}
-		attrs := res.rows[0]["attrs"].(map[string]interface{})
+		attrs := res.rows[0]["attrs"].(map[string]any)
 		if attrs["color"] != "green" {
 			t.Errorf("expected color=green, got %v", attrs)
 		}

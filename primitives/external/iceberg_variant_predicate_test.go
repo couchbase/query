@@ -386,8 +386,8 @@ func TestBuildVariantRowMatcher(t *testing.T) {
 		if matcher == nil {
 			t.Fatalf("expected a non-nil matcher")
 		}
-		redRow := map[string]interface{}{"attrs": map[string]interface{}{"color": "red", "size": int64(10)}}
-		blueRow := map[string]interface{}{"attrs": map[string]interface{}{"color": "blue", "size": int64(20)}}
+		redRow := map[string]any{"attrs": map[string]any{"color": "red", "size": int64(10)}}
+		blueRow := map[string]any{"attrs": map[string]any{"color": "blue", "size": int64(20)}}
 		if matcher(redRow) {
 			t.Errorf("expected the red row to be dropped")
 		}
@@ -403,8 +403,8 @@ func TestBuildVariantRowMatcher(t *testing.T) {
 		if matcher == nil {
 			t.Fatalf("expected a non-nil matcher")
 		}
-		floor1 := map[string]interface{}{"attrs": map[string]interface{}{"geo": map[string]interface{}{"floor": int64(1)}}}
-		floor2 := map[string]interface{}{"attrs": map[string]interface{}{"geo": map[string]interface{}{"floor": int64(2)}}}
+		floor1 := map[string]any{"attrs": map[string]any{"geo": map[string]any{"floor": int64(1)}}}
+		floor2 := map[string]any{"attrs": map[string]any{"geo": map[string]any{"floor": int64(2)}}}
 		if matcher(floor1) {
 			t.Errorf("expected floor=1 to be dropped for floor > 1")
 		}
@@ -420,7 +420,7 @@ func TestBuildVariantRowMatcher(t *testing.T) {
 		if matcher == nil {
 			t.Fatalf("expected a non-nil matcher")
 		}
-		row := map[string]interface{}{"attrs": map[string]interface{}{"color": "red"}}
+		row := map[string]any{"attrs": map[string]any{"color": "red"}}
 		if !matcher(row) {
 			t.Errorf("expected the row to be kept when the path can't be resolved")
 		}
@@ -434,8 +434,8 @@ func TestBuildVariantRowMatcher(t *testing.T) {
 		if matcher == nil {
 			t.Fatalf("expected a non-nil matcher")
 		}
-		blueSmall := map[string]interface{}{"attrs": map[string]interface{}{"color": "blue", "size": int64(10)}}
-		blueBig := map[string]interface{}{"attrs": map[string]interface{}{"color": "blue", "size": int64(20)}}
+		blueSmall := map[string]any{"attrs": map[string]any{"color": "blue", "size": int64(10)}}
+		blueBig := map[string]any{"attrs": map[string]any{"color": "blue", "size": int64(20)}}
 		if matcher(blueSmall) {
 			t.Errorf("expected blueSmall to be dropped (size predicate fails)")
 		}

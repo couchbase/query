@@ -106,7 +106,7 @@ func TestDecodeVariantScalar(t *testing.T) {
 
 	t.Run("decimalToDouble=false", func(t *testing.T) {
 		decoded := decodeVariantScalar(vv, false)
-		obj, ok := decoded.(map[string]interface{})
+		obj, ok := decoded.(map[string]any)
 		if !ok {
 			t.Fatalf("expected map[string]interface{}, got %T", decoded)
 		}
@@ -133,7 +133,7 @@ func TestDecodeVariantScalar(t *testing.T) {
 		if !ok || string(rawBytes) != string([]byte{0xDE, 0xAD, 0xBE, 0xEF}) {
 			t.Errorf("raw: got %v (%T), want []byte{0xDE, 0xAD, 0xBE, 0xEF}", obj["raw"], obj["raw"])
 		}
-		tags, ok := obj["tags"].([]interface{})
+		tags, ok := obj["tags"].([]any)
 		if !ok || len(tags) != 2 || tags[0] != "a" || tags[1] != "b" {
 			t.Errorf("tags: got %v (%T), want [a b]", obj["tags"], obj["tags"])
 		}
@@ -141,7 +141,7 @@ func TestDecodeVariantScalar(t *testing.T) {
 
 	t.Run("decimalToDouble=true", func(t *testing.T) {
 		decoded := decodeVariantScalar(vv, true)
-		obj := decoded.(map[string]interface{})
+		obj := decoded.(map[string]any)
 		price, ok := obj["price"].(float64)
 		if !ok || price != 12.50 {
 			t.Errorf("price: got %v (%T), want float64(12.50)", obj["price"], obj["price"])
@@ -174,7 +174,7 @@ func TestDecodeVariantScalarTemporalTypes(t *testing.T) {
 	}
 
 	decoded := decodeVariantScalar(vv, false)
-	obj, ok := decoded.(map[string]interface{})
+	obj, ok := decoded.(map[string]any)
 	if !ok {
 		t.Fatalf("expected map[string]interface{}, got %T", decoded)
 	}

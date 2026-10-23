@@ -22,7 +22,7 @@ import (
 
 // rowMatcher reports whether a converted row passes the pushed-down filter.
 // A nil rowMatcher means no filter is applied; every row matches.
-type rowMatcher func(row map[string]interface{}) bool
+type rowMatcher func(row map[string]any) bool
 
 // buildRowMatcher returns a row-level evaluator for an iceberg filter expression.
 // The parallel-files scan path reads raw Parquet/Avro/Arrow/ORC bytes directly and
@@ -37,7 +37,7 @@ func buildRowMatcher(schema *iceberg.Schema, expr iceberg.BooleanExpression) (ro
 		return nil, nil
 	}
 	if _, isFalse := expr.(iceberg.AlwaysFalse); isFalse {
-		return func(map[string]interface{}) bool { return false }, nil
+		return func(map[string]any) bool { return false }, nil
 	}
 
 	bound, err := iceberg.BindExpr(schema, expr, true)
@@ -48,10 +48,10 @@ func buildRowMatcher(schema *iceberg.Schema, expr iceberg.BooleanExpression) (ro
 		return nil, nil
 	}
 	if _, isFalse := bound.(iceberg.AlwaysFalse); isFalse {
-		return func(map[string]interface{}) bool { return false }, nil
+		return func(map[string]any) bool { return false }, nil
 	}
 
-	return func(row map[string]interface{}) bool {
+	return func(row map[string]any) bool {
 		ev := &rowEvaluator{row: row, schema: schema}
 		result, err := iceberg.VisitExpr(bound, ev)
 		if err != nil {
@@ -72,7 +72,7 @@ func buildRowMatcher(schema *iceberg.Schema, expr iceberg.BooleanExpression) (ro
 // bound reference whose Field() only carries the leaf name. We walk that path
 // through nested struct maps in the row.
 type rowEvaluator struct {
-	row    map[string]interface{}
+	row    map[string]any
 	schema *iceberg.Schema
 }
 
@@ -92,7 +92,7 @@ func (e *rowEvaluator) VisitBound(pred iceberg.BoundPredicate) bool {
 	return iceberg.VisitBoundPredicate[bool](pred, e)
 }
 
-func (e *rowEvaluator) fieldValue(term iceberg.BoundTerm) (interface{}, bool) {
+func (e *rowEvaluator) fieldValue(term iceberg.BoundTerm) (any, bool) {
 	fieldID := term.Ref().Field().ID
 	path, ok := e.schema.FindColumnName(fieldID)
 	if !ok {
@@ -108,12 +108,12 @@ func (e *rowEvaluator) fieldValue(term iceberg.BoundTerm) (interface{}, bool) {
 // Some format readers return nested structs as named map types
 // (e.g. scritchley/orc.Struct = map[string]interface{}), so we fall back to
 // reflection when the direct type assertion fails.
-func navigateRow(row map[string]interface{}, path string) (interface{}, bool) {
+func navigateRow(row map[string]any, path string) (any, bool) {
 	if !strings.Contains(path, ".") {
 		v, ok := row[path]
 		return v, ok
 	}
-	var cur interface{} = row
+	var cur any = row
 	start := 0
 	for i := 0; i <= len(path); i++ {
 		if i == len(path) || path[i] == '.' {
@@ -131,8 +131,8 @@ func navigateRow(row map[string]interface{}, path string) (interface{}, bool) {
 
 // lookupMapKey reads a key from a string-keyed map value, accepting both
 // plain map[string]interface{} and named types whose underlying type is one.
-func lookupMapKey(m interface{}, key string) (interface{}, bool) {
-	if mm, ok := m.(map[string]interface{}); ok {
+func lookupMapKey(m any, key string) (any, bool) {
+	if mm, ok := m.(map[string]any); ok {
 		v, ok := mm[key]
 		return v, ok
 	}
@@ -294,7 +294,7 @@ func (e *rowEvaluator) VisitNotIn(term iceberg.BoundTerm, lits iceberg.Set[icebe
 // compareToLiteral compares a row value to an iceberg literal, returning
 // -1/0/1 like bytes.Compare. The second result is false if the two values
 // aren't comparable (e.g. comparing a string row value to a numeric literal).
-func compareToLiteral(rowVal interface{}, lit iceberg.Literal) (int, bool) {
+func compareToLiteral(rowVal any, lit iceberg.Literal) (int, bool) {
 	return compareValues(rowVal, lit.Any())
 }
 
@@ -303,7 +303,7 @@ func compareToLiteral(rowVal interface{}, lit iceberg.Literal) (int, bool) {
 // to unwrap in the first place (see buildVariantRowGroupMatcher, which works from
 // N1QL-extracted Go values directly since VARIANT sub-paths can't bind to an
 // iceberg.Literal at all).
-func compareValues(rowVal interface{}, litVal interface{}) (int, bool) {
+func compareValues(rowVal any, litVal any) (int, bool) {
 	switch lv := litVal.(type) {
 	case string:
 		if rv, ok := rowVal.(string); ok {
@@ -378,7 +378,7 @@ func compareValues(rowVal interface{}, litVal interface{}) (int, bool) {
 
 // compareRowValToInt64 compares a row value against an int64-valued literal,
 // falling back to a float comparison if the row value isn't itself integral.
-func compareRowValToInt64(rowVal interface{}, li int64) (int, bool) {
+func compareRowValToInt64(rowVal any, li int64) (int, bool) {
 	if ri, ok := toInt64(rowVal); ok {
 		switch {
 		case ri < li:
@@ -393,7 +393,7 @@ func compareRowValToInt64(rowVal interface{}, li int64) (int, bool) {
 }
 
 // compareRowValToFloat64 compares a row value against a float64-valued literal.
-func compareRowValToFloat64(rowVal interface{}, lf float64) (int, bool) {
+func compareRowValToFloat64(rowVal any, lf float64) (int, bool) {
 	if rf, ok := toFloat64(rowVal); ok {
 		switch {
 		case rf < lf:
@@ -407,7 +407,7 @@ func compareRowValToFloat64(rowVal interface{}, lf float64) (int, bool) {
 	return 0, false
 }
 
-func toInt64(v interface{}) (int64, bool) {
+func toInt64(v any) (int64, bool) {
 	switch x := v.(type) {
 	case int:
 		return int64(x), true
@@ -608,7 +608,7 @@ func buildVariantRowGroupMatcher(manifest *pqarrow.SchemaManifest, preds []varia
 	type resolved struct {
 		colIdx int
 		op     iceberg.Operation
-		lit    interface{}
+		lit    any
 	}
 	var leaves []resolved
 	for _, p := range preds {
@@ -645,7 +645,7 @@ func buildVariantRowGroupMatcher(manifest *pqarrow.SchemaManifest, preds []varia
 // rowGroupEvaluator.VisitEqual/VisitGreaterEqual/etc.'s range-check logic exactly
 // (same compareValues comparator), just without an iceberg.BoundTerm/Literal to
 // visit through.
-func variantStatsCouldMatch(op iceberg.Operation, min, max, lit interface{}) bool {
+func variantStatsCouldMatch(op iceberg.Operation, min, max, lit any) bool {
 	switch op {
 	case iceberg.OpEQ:
 		cmin, okMin := compareValues(min, lit)
@@ -681,7 +681,7 @@ func buildVariantRowMatcher(preds []variantPredicate) rowMatcher {
 	if len(preds) == 0 {
 		return nil
 	}
-	return func(row map[string]interface{}) bool {
+	return func(row map[string]any) bool {
 		for _, p := range preds {
 			val, ok := navigateRow(row, p.path)
 			if !ok {
@@ -698,7 +698,7 @@ func buildVariantRowMatcher(preds []variantPredicate) rowMatcher {
 // variantValueMatches answers `val OP lit` exactly, given the row's actual decoded
 // value -- unlike variantStatsCouldMatch's min/max range check, this can return a
 // definite no-match.
-func variantValueMatches(op iceberg.Operation, val, lit interface{}) bool {
+func variantValueMatches(op iceberg.Operation, val, lit any) bool {
 	c, ok := compareValues(val, lit)
 	if !ok {
 		return true // can't compare these types -- don't drop the row
@@ -749,7 +749,7 @@ func (e *rowGroupEvaluator) VisitBound(pred iceberg.BoundPredicate) bool {
 // resolved at all (unmapped column, read error, or an unsupported physical
 // stat type); callers must treat that as "keep, can't prune".
 type colStats struct {
-	min, max     interface{}
+	min, max     any
 	hasMinMax    bool
 	nullCount    int64
 	hasNullCount bool
@@ -804,7 +804,7 @@ func statsForColIndex(rgMeta *metadata.RowGroupMetaData, colIdx int) colStats {
 // types compareValues expects. ok is false for a physical stat type not worth
 // decoding (Int96/Float16, or any future type) -- callers must treat that as
 // "keep, can't prune", same as a missing/absent stats object entirely.
-func decodeMinMax(stats metadata.TypedStatistics) (min, max interface{}, ok bool) {
+func decodeMinMax(stats metadata.TypedStatistics) (min, max any, ok bool) {
 	switch st := stats.(type) {
 	case *metadata.Int32Statistics:
 		return int64(st.Min()), int64(st.Max()), true
@@ -938,7 +938,7 @@ func (e *rowGroupEvaluator) VisitNotIn(iceberg.BoundTerm, iceberg.Set[iceberg.Li
 	return true // could only prune a single-distinct-value row group; not worth the complexity
 }
 
-func toFloat64(v interface{}) (float64, bool) {
+func toFloat64(v any) (float64, bool) {
 	switch x := v.(type) {
 	case float32:
 		return float64(x), true
