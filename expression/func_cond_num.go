@@ -41,7 +41,7 @@ func NewIfInf(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IfInf) Accept(visitor Visitor) (interface{}, error) {
+func (this *IfInf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -129,7 +129,7 @@ func NewIfNaN(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IfNaN) Accept(visitor Visitor) (interface{}, error) {
+func (this *IfNaN) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -213,7 +213,7 @@ func NewIfNaNOrInf(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IfNaNOrInf) Accept(visitor Visitor) (interface{}, error) {
+func (this *IfNaNOrInf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -296,7 +296,7 @@ func NewNaNIf(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *NaNIf) Accept(visitor Visitor) (interface{}, error) {
+func (this *NaNIf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -365,7 +365,7 @@ func NewNegInfIf(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *NegInfIf) Accept(visitor Visitor) (interface{}, error) {
+func (this *NegInfIf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -436,7 +436,7 @@ func NewPosInfIf(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *PosInfIf) Accept(visitor Visitor) (interface{}, error) {
+func (this *PosInfIf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

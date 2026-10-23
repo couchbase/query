@@ -40,7 +40,7 @@ func NewAbs(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Abs) Accept(visitor Visitor) (interface{}, error) {
+func (this *Abs) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -101,7 +101,7 @@ func NewAcos(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Acos) Accept(visitor Visitor) (interface{}, error) {
+func (this *Acos) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -159,7 +159,7 @@ func NewAsin(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Asin) Accept(visitor Visitor) (interface{}, error) {
+func (this *Asin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -217,7 +217,7 @@ func NewAtan(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Atan) Accept(visitor Visitor) (interface{}, error) {
+func (this *Atan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -275,7 +275,7 @@ func NewAtan2(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Atan2) Accept(visitor Visitor) (interface{}, error) {
+func (this *Atan2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -341,7 +341,7 @@ func NewCeil(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Ceil) Accept(visitor Visitor) (interface{}, error) {
+func (this *Ceil) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -400,7 +400,7 @@ func NewCos(operand Expression) Function {
 /*
 visitor pattern.
 */
-func (this *Cos) Accept(visitor Visitor) (interface{}, error) {
+func (this *Cos) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -458,7 +458,7 @@ func NewDegrees(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Degrees) Accept(visitor Visitor) (interface{}, error) {
+func (this *Degrees) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -518,7 +518,7 @@ func NewE() Function {
 /*
 Visitor pattern.
 */
-func (this *E) Accept(visitor Visitor) (interface{}, error) {
+func (this *E) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -584,7 +584,7 @@ func NewExp(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Exp) Accept(visitor Visitor) (interface{}, error) {
+func (this *Exp) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -637,7 +637,7 @@ func NewLn(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Ln) Accept(visitor Visitor) (interface{}, error) {
+func (this *Ln) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -690,7 +690,7 @@ func NewLog(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Log) Accept(visitor Visitor) (interface{}, error) {
+func (this *Log) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -744,7 +744,7 @@ func NewFloor(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Floor) Accept(visitor Visitor) (interface{}, error) {
+func (this *Floor) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -798,7 +798,7 @@ func NewNaN() Function {
 /*
 Visitor pattern.
 */
-func (this *NaN) Accept(visitor Visitor) (interface{}, error) {
+func (this *NaN) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -865,7 +865,7 @@ func NewNegInf() Function {
 /*
 Visitor pattern.
 */
-func (this *NegInf) Accept(visitor Visitor) (interface{}, error) {
+func (this *NegInf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -932,7 +932,7 @@ func NewPI() Function {
 /*
 Visitor pattern.
 */
-func (this *PI) Accept(visitor Visitor) (interface{}, error) {
+func (this *PI) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -998,7 +998,7 @@ func NewPosInf() Function {
 /*
 Visitor pattern.
 */
-func (this *PosInf) Accept(visitor Visitor) (interface{}, error) {
+func (this *PosInf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1065,7 +1065,7 @@ func NewPower(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Power) Accept(visitor Visitor) (interface{}, error) {
+func (this *Power) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1136,7 +1136,7 @@ func NewRadians(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Radians) Accept(visitor Visitor) (interface{}, error) {
+func (this *Radians) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1203,7 +1203,7 @@ func NewRandom(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Random) Accept(visitor Visitor) (interface{}, error) {
+func (this *Random) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1292,7 +1292,7 @@ func NewRound(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Round) Accept(visitor Visitor) (interface{}, error) {
+func (this *Round) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1378,7 +1378,7 @@ func NewRoundNearest(operands ...Expression) Function {
 	return rv
 }
 
-func (this *RoundNearest) Accept(visitor Visitor) (interface{}, error) {
+func (this *RoundNearest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1469,7 +1469,7 @@ func NewSign(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Sign) Accept(visitor Visitor) (interface{}, error) {
+func (this *Sign) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1537,7 +1537,7 @@ func NewSin(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Sin) Accept(visitor Visitor) (interface{}, error) {
+func (this *Sin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1595,7 +1595,7 @@ func NewSqrt(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Sqrt) Accept(visitor Visitor) (interface{}, error) {
+func (this *Sqrt) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1653,7 +1653,7 @@ func NewTan(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Tan) Accept(visitor Visitor) (interface{}, error) {
+func (this *Tan) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1713,7 +1713,7 @@ func NewTrunc(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Trunc) Accept(visitor Visitor) (interface{}, error) {
+func (this *Trunc) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

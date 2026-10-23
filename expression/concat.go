@@ -43,7 +43,7 @@ func NewConcat(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Concat) Accept(visitor Visitor) (interface{}, error) {
+func (this *Concat) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitConcat(this)
 }
 
@@ -133,7 +133,7 @@ func NewConcat2(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Concat2) Accept(visitor Visitor) (interface{}, error) {
+func (this *Concat2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -181,7 +181,7 @@ func (this *Concat2) Evaluate(item value.Value, context Context) (value.Value, e
 					addSp = true
 				}
 			} else if arg.Type() == value.ARRAY {
-				for _, ae := range arg.Actual().([]interface{}) {
+				for _, ae := range arg.Actual().([]any) {
 					ael := value.NewValue(ae)
 					if ael.Type() == value.MISSING {
 						return value.MISSING_VALUE, nil

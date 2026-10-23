@@ -58,7 +58,7 @@ func (this *Stringer) VisitShared(expr Expression) {
 
 // Arithmetic
 
-func (this *Stringer) VisitAdd(expr *Add) (interface{}, error) {
+func (this *Stringer) VisitAdd(expr *Add) (any, error) {
 	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
@@ -70,7 +70,7 @@ func (this *Stringer) VisitAdd(expr *Add) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitDiv(expr *Div) (interface{}, error) {
+func (this *Stringer) VisitDiv(expr *Div) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" / ")
@@ -79,7 +79,7 @@ func (this *Stringer) VisitDiv(expr *Div) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitMod(expr *Mod) (interface{}, error) {
+func (this *Stringer) VisitMod(expr *Mod) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" % ")
@@ -88,7 +88,7 @@ func (this *Stringer) VisitMod(expr *Mod) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitMult(expr *Mult) (interface{}, error) {
+func (this *Stringer) VisitMult(expr *Mult) (any, error) {
 	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
@@ -100,14 +100,14 @@ func (this *Stringer) VisitMult(expr *Mult) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitNeg(expr *Neg) (interface{}, error) {
+func (this *Stringer) VisitNeg(expr *Neg) (any, error) {
 	this.WriteString("(-")
 	this.VisitShared(expr.Operand())
 	this.WriteString(")")
 	return nil, nil
 }
 
-func (this *Stringer) VisitSub(expr *Sub) (interface{}, error) {
+func (this *Stringer) VisitSub(expr *Sub) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" - ")
@@ -118,7 +118,7 @@ func (this *Stringer) VisitSub(expr *Sub) (interface{}, error) {
 
 // Case
 
-func (this *Stringer) VisitSearchedCase(expr *SearchedCase) (interface{}, error) {
+func (this *Stringer) VisitSearchedCase(expr *SearchedCase) (any, error) {
 	this.WriteString("case")
 	for _, when := range expr.whenTerms {
 		this.WriteString(" when ")
@@ -134,7 +134,7 @@ func (this *Stringer) VisitSearchedCase(expr *SearchedCase) (interface{}, error)
 	return nil, nil
 }
 
-func (this *Stringer) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
+func (this *Stringer) VisitSimpleCase(expr *SimpleCase) (any, error) {
 	this.WriteString("case ")
 	this.VisitShared(expr.searchTerm)
 	for _, when := range expr.whenTerms {
@@ -153,7 +153,7 @@ func (this *Stringer) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
 
 // Collection
 
-func (this *Stringer) VisitAny(expr *Any) (interface{}, error) {
+func (this *Stringer) VisitAny(expr *Any) (any, error) {
 	this.WriteString("any ")
 	this.visitBindings(expr.bindings, " in ", " within ")
 	this.WriteString(" satisfies ")
@@ -162,7 +162,7 @@ func (this *Stringer) VisitAny(expr *Any) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitEvery(expr *Every) (interface{}, error) {
+func (this *Stringer) VisitEvery(expr *Every) (any, error) {
 	this.WriteString("every ")
 	this.visitBindings(expr.bindings, " in ", " within ")
 	this.WriteString(" satisfies ")
@@ -171,7 +171,7 @@ func (this *Stringer) VisitEvery(expr *Every) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+func (this *Stringer) VisitAnyEvery(expr *AnyEvery) (any, error) {
 	this.WriteString("any and every ")
 	this.visitBindings(expr.bindings, " in ", " within ")
 	this.WriteString(" satisfies ")
@@ -180,7 +180,7 @@ func (this *Stringer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitArray(expr *Array) (interface{}, error) {
+func (this *Stringer) VisitArray(expr *Array) (any, error) {
 	this.WriteString("array ")
 	this.VisitShared(expr.valueMapping)
 	this.WriteString(" for ")
@@ -193,7 +193,7 @@ func (this *Stringer) VisitArray(expr *Array) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitFirst(expr *First) (interface{}, error) {
+func (this *Stringer) VisitFirst(expr *First) (any, error) {
 	this.WriteString("first ")
 	this.VisitShared(expr.valueMapping)
 	this.WriteString(" for ")
@@ -206,7 +206,7 @@ func (this *Stringer) VisitFirst(expr *First) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitObject(expr *Object) (interface{}, error) {
+func (this *Stringer) VisitObject(expr *Object) (any, error) {
 	this.WriteString("object ")
 	this.VisitShared(expr.nameMapping)
 	this.WriteString(" : ")
@@ -221,14 +221,14 @@ func (this *Stringer) VisitObject(expr *Object) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitExists(expr *Exists) (interface{}, error) {
+func (this *Stringer) VisitExists(expr *Exists) (any, error) {
 	this.WriteString("(exists ")
 	this.VisitShared(expr.Operand())
 	this.WriteString(")")
 	return nil, nil
 }
 
-func (this *Stringer) VisitIn(expr *In) (interface{}, error) {
+func (this *Stringer) VisitIn(expr *In) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" in ")
@@ -237,7 +237,7 @@ func (this *Stringer) VisitIn(expr *In) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitWithin(expr *Within) (interface{}, error) {
+func (this *Stringer) VisitWithin(expr *Within) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" within ")
@@ -248,7 +248,7 @@ func (this *Stringer) VisitWithin(expr *Within) (interface{}, error) {
 
 // Comparison
 
-func (this *Stringer) VisitBetween(expr *Between) (interface{}, error) {
+func (this *Stringer) VisitBetween(expr *Between) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" between ")
@@ -259,7 +259,7 @@ func (this *Stringer) VisitBetween(expr *Between) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitEq(expr *Eq) (interface{}, error) {
+func (this *Stringer) VisitEq(expr *Eq) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" = ")
@@ -268,7 +268,7 @@ func (this *Stringer) VisitEq(expr *Eq) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitLE(expr *LE) (interface{}, error) {
+func (this *Stringer) VisitLE(expr *LE) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" <= ")
@@ -277,7 +277,7 @@ func (this *Stringer) VisitLE(expr *LE) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitLike(expr *Like) (interface{}, error) {
+func (this *Stringer) VisitLike(expr *Like) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" like ")
@@ -290,7 +290,7 @@ func (this *Stringer) VisitLike(expr *Like) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitLT(expr *LT) (interface{}, error) {
+func (this *Stringer) VisitLT(expr *LT) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(" < ")
@@ -299,42 +299,42 @@ func (this *Stringer) VisitLT(expr *LT) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitIsMissing(expr *IsMissing) (interface{}, error) {
+func (this *Stringer) VisitIsMissing(expr *IsMissing) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.Operand())
 	this.WriteString(" is missing)")
 	return nil, nil
 }
 
-func (this *Stringer) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
+func (this *Stringer) VisitIsNotMissing(expr *IsNotMissing) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.Operand())
 	this.WriteString(" is not missing)")
 	return nil, nil
 }
 
-func (this *Stringer) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
+func (this *Stringer) VisitIsNotNull(expr *IsNotNull) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.Operand())
 	this.WriteString(" is not null)")
 	return nil, nil
 }
 
-func (this *Stringer) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
+func (this *Stringer) VisitIsNotValued(expr *IsNotValued) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.Operand())
 	this.WriteString(" is not valued)")
 	return nil, nil
 }
 
-func (this *Stringer) VisitIsNull(expr *IsNull) (interface{}, error) {
+func (this *Stringer) VisitIsNull(expr *IsNull) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.Operand())
 	this.WriteString(" is null)")
 	return nil, nil
 }
 
-func (this *Stringer) VisitIsValued(expr *IsValued) (interface{}, error) {
+func (this *Stringer) VisitIsValued(expr *IsValued) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.Operand())
 	this.WriteString(" is valued)")
@@ -342,7 +342,7 @@ func (this *Stringer) VisitIsValued(expr *IsValued) (interface{}, error) {
 }
 
 // Concat
-func (this *Stringer) VisitConcat(expr *Concat) (interface{}, error) {
+func (this *Stringer) VisitConcat(expr *Concat) (any, error) {
 	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
@@ -355,7 +355,7 @@ func (this *Stringer) VisitConcat(expr *Concat) (interface{}, error) {
 }
 
 // Constant
-func (this *Stringer) VisitConstant(expr *Constant) (interface{}, error) {
+func (this *Stringer) VisitConstant(expr *Constant) (any, error) {
 	if expr.value.Type() == value.MISSING {
 		this.WriteString(expr.value.String())
 	} else {
@@ -366,7 +366,7 @@ func (this *Stringer) VisitConstant(expr *Constant) (interface{}, error) {
 }
 
 // Identifier
-func (this *Stringer) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *Stringer) VisitIdentifier(expr *Identifier) (any, error) {
 	identifier := expr.identifier
 	this.WriteString("`")
 	this.WriteString(identifier)
@@ -379,7 +379,7 @@ func (this *Stringer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 
 // Construction
 
-func (this *Stringer) VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error) {
+func (this *Stringer) VisitArrayConstruct(expr *ArrayConstruct) (any, error) {
 	this.WriteString("[")
 	for i, op := range expr.operands {
 		if i > 0 {
@@ -391,7 +391,7 @@ func (this *Stringer) VisitArrayConstruct(expr *ArrayConstruct) (interface{}, er
 	return nil, nil
 }
 
-func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error) {
+func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (any, error) {
 	this.WriteString("{")
 	// Sort names
 	var nameBuf [_NAME_CAP]string
@@ -427,7 +427,7 @@ func (this *Stringer) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, 
 
 // Logic
 
-func (this *Stringer) VisitAnd(expr *And) (interface{}, error) {
+func (this *Stringer) VisitAnd(expr *And) (any, error) {
 	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
@@ -439,14 +439,14 @@ func (this *Stringer) VisitAnd(expr *And) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitNot(expr *Not) (interface{}, error) {
+func (this *Stringer) VisitNot(expr *Not) (any, error) {
 	this.WriteString("(not ")
 	this.VisitShared(expr.Operand())
 	this.WriteString(")")
 	return nil, nil
 }
 
-func (this *Stringer) VisitOr(expr *Or) (interface{}, error) {
+func (this *Stringer) VisitOr(expr *Or) (any, error) {
 	this.WriteString("(")
 	for i, op := range expr.operands {
 		if i > 0 {
@@ -460,7 +460,7 @@ func (this *Stringer) VisitOr(expr *Or) (interface{}, error) {
 
 // Navigation
 
-func (this *Stringer) VisitElement(expr *Element) (interface{}, error) {
+func (this *Stringer) VisitElement(expr *Element) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString("[")
@@ -469,7 +469,7 @@ func (this *Stringer) VisitElement(expr *Element) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
+func (this *Stringer) VisitField(expr *Field) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.First())
 	this.WriteString(".")
@@ -488,7 +488,7 @@ func (this *Stringer) VisitField(expr *Field) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitFieldName(expr *FieldName) (interface{}, error) {
+func (this *Stringer) VisitFieldName(expr *FieldName) (any, error) {
 	this.WriteString("`")
 	this.WriteString(expr.name)
 	this.WriteString("`")
@@ -498,7 +498,7 @@ func (this *Stringer) VisitFieldName(expr *FieldName) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *Stringer) VisitSlice(expr *Slice) (interface{}, error) {
+func (this *Stringer) VisitSlice(expr *Slice) (any, error) {
 	this.WriteString("(")
 	this.VisitShared(expr.Operands()[0])
 	this.WriteString("[")
@@ -514,13 +514,13 @@ func (this *Stringer) VisitSlice(expr *Slice) (interface{}, error) {
 }
 
 // Self
-func (this *Stringer) VisitSelf(expr *Self) (interface{}, error) {
+func (this *Stringer) VisitSelf(expr *Self) (any, error) {
 	this.WriteString("self")
 	return nil, nil
 }
 
 // Function
-func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
+func (this *Stringer) VisitFunction(expr Function) (any, error) {
 	if expr.Aggregate() {
 		if ab, ok := expr.(interface{ WriteToStringer(*Stringer) }); ok {
 			ab.WriteToStringer(this)
@@ -591,31 +591,31 @@ func (this *Stringer) VisitFunction(expr Function) (interface{}, error) {
 }
 
 // Subquery
-func (this *Stringer) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *Stringer) VisitSubquery(expr Subquery) (any, error) {
 	this.WriteString(expr.String())
 	return nil, nil
 }
 
 // InferUnderParenthesis
-func (this *Stringer) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+func (this *Stringer) VisitParenInfer(expr ParenInfer) (any, error) {
 	this.WriteString(expr.String())
 	return nil, nil
 }
 
 // NamedParameter
-func (this *Stringer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+func (this *Stringer) VisitNamedParameter(expr NamedParameter) (any, error) {
 	this.WriteString("$" + expr.Name())
 	return nil, nil
 }
 
 // PositionalParameter
-func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+func (this *Stringer) VisitPositionalParameter(expr PositionalParameter) (any, error) {
 	this.WriteString("$" + strconv.Itoa(expr.Position()))
 	return nil, nil
 }
 
 // Cover
-func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
+func (this *Stringer) VisitCover(expr *Cover) (any, error) {
 	if expr.FullCover() {
 		this.WriteString("cover (")
 	} else if expr.IsIndexKey() {
@@ -631,7 +631,7 @@ func (this *Stringer) VisitCover(expr *Cover) (interface{}, error) {
 }
 
 // All
-func (this *Stringer) VisitAll(expr *All) (interface{}, error) {
+func (this *Stringer) VisitAll(expr *All) (any, error) {
 	if expr.Distinct() {
 		this.WriteString("(distinct (")
 	} else {
@@ -665,7 +665,7 @@ func (this *Stringer) visitBindings(bindings Bindings, in string, within string)
 	}
 }
 
-func (this *Stringer) visitFlattenKeys(fk *FlattenKeys) (interface{}, error) {
+func (this *Stringer) visitFlattenKeys(fk *FlattenKeys) (any, error) {
 	this.WriteString(fk.Name())
 	this.WriteString("(")
 	for i, op := range fk.Operands() {

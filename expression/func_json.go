@@ -43,7 +43,7 @@ func NewJSONDecode(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *JSONDecode) Accept(visitor Visitor) (interface{}, error) {
+func (this *JSONDecode) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -74,7 +74,7 @@ func (this *JSONDecode) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
-	var p interface{}
+	var p any
 	err = json.Unmarshal([]byte(s), &p)
 	if err != nil {
 		return value.NULL_VALUE, nil
@@ -118,7 +118,7 @@ func NewJSONEncode(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *JSONEncode) Accept(visitor Visitor) (interface{}, error) {
+func (this *JSONEncode) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -181,7 +181,7 @@ func NewEncodedSize(operand Expression) Function {
 /*
 visitor pattern.
 */
-func (this *EncodedSize) Accept(visitor Visitor) (interface{}, error) {
+func (this *EncodedSize) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -230,7 +230,7 @@ func NewPairs(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Pairs) Accept(visitor Visitor) (interface{}, error) {
+func (this *Pairs) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -246,16 +246,16 @@ func (this *Pairs) Evaluate(item value.Value, context Context) (value.Value, err
 	actual := arg.Actual()
 	switch arg.Type() {
 	case value.OBJECT:
-		bufcap = 2 * len(actual.(map[string]interface{}))
+		bufcap = 2 * len(actual.(map[string]any))
 	case value.ARRAY:
-		bufcap = 2 * len(actual.([]interface{}))
+		bufcap = 2 * len(actual.([]any))
 	case value.MISSING:
 		return value.MISSING_VALUE, nil
 	default:
 		return value.NULL_VALUE, nil
 	}
 
-	buffer := traversePairs(actual, make([]interface{}, 0, bufcap))
+	buffer := traversePairs(actual, make([]any, 0, bufcap))
 	return value.NewValue(buffer), nil
 }
 
@@ -297,7 +297,7 @@ func NewPolyLength(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *PolyLength) Accept(visitor Visitor) (interface{}, error) {
+func (this *PolyLength) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -314,9 +314,9 @@ func (this *PolyLength) Evaluate(item value.Value, context Context) (value.Value
 	switch oa := arg.Actual().(type) {
 	case string:
 		return value.NewValue(len(oa)), nil
-	case []interface{}:
+	case []any:
 		return value.NewValue(len(oa)), nil
-	case map[string]interface{}:
+	case map[string]any:
 		return value.NewValue(len(oa)), nil
 	default:
 		return value.NULL_VALUE, nil
@@ -332,13 +332,13 @@ func (this *PolyLength) Constructor() FunctionConstructor {
 	}
 }
 
-func traversePairs(actual interface{}, buffer []interface{}) []interface{} {
+func traversePairs(actual any, buffer []any) []any {
 	length := 0
 
 	switch actual := actual.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		length = len(actual)
-	case []interface{}:
+	case []any:
 		length = len(actual)
 	default:
 		// Do nothing
@@ -351,23 +351,23 @@ func traversePairs(actual interface{}, buffer []interface{}) []interface{} {
 	buffer = ensureBuffer(buffer, len(buffer)+length)
 
 	switch actual := actual.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for n, v := range actual {
-			buffer = append(buffer, []interface{}{n, v})
+			buffer = append(buffer, []any{n, v})
 
 			v = value.NewValue(v).Actual()
 
 			switch v := v.(type) {
-			case []interface{}:
+			case []any:
 				buffer = ensureBuffer(buffer, len(buffer)+len(v))
 				for _, vv := range v {
-					buffer = append(buffer, []interface{}{n, vv})
+					buffer = append(buffer, []any{n, vv})
 				}
 			}
 
 			buffer = traversePairs(v, buffer)
 		}
-	case []interface{}:
+	case []any:
 		for _, v := range actual {
 			v = value.NewValue(v).Actual()
 			buffer = traversePairs(v, buffer)
@@ -377,12 +377,12 @@ func traversePairs(actual interface{}, buffer []interface{}) []interface{} {
 	return buffer
 }
 
-func ensureBuffer(buffer []interface{}, length int) []interface{} {
+func ensureBuffer(buffer []any, length int) []any {
 	if cap(buffer) >= length {
 		return buffer
 	}
 
-	buffer2 := make([]interface{}, 0, util.MaxInt(length, 2*cap(buffer)))
+	buffer2 := make([]any, 0, util.MaxInt(length, 2*cap(buffer)))
 	return append(buffer2, buffer...)
 }
 

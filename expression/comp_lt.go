@@ -31,7 +31,7 @@ func NewLT(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *LT) Accept(visitor Visitor) (interface{}, error) {
+func (this *LT) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitLT(this)
 }
 

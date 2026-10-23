@@ -71,7 +71,7 @@ func NewMultiKeyObjects(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *MultiKeyObjects) Accept(visitor Visitor) (interface{}, error) {
+func (this *MultiKeyObjects) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -287,8 +287,8 @@ occurrence -- is dropped from the final array entirely, rather than
 surfaced as a spurious empty object; a result object with at least one
 field set is kept as-is, missing fields and all.
 */
-func multiKeyObjectsFinalize(groups []*multiKeyObjectsGroup, item value.Value, context Context) ([]interface{}, error) {
-	combos := []map[string]interface{}{make(map[string]interface{})}
+func multiKeyObjectsFinalize(groups []*multiKeyObjectsGroup, item value.Value, context Context) ([]any, error) {
+	combos := []map[string]any{make(map[string]any)}
 
 	for _, g := range groups {
 		baseVal, err := g.base.Evaluate(item, context)
@@ -299,7 +299,7 @@ func multiKeyObjectsFinalize(groups []*multiKeyObjectsGroup, item value.Value, c
 		combos = multiKeyObjectsCombine(combos, evalMultiKeyObjectsNode(g.root, baseVal))
 	}
 
-	rv := make([]interface{}, 0, len(combos))
+	rv := make([]any, 0, len(combos))
 	for _, c := range combos {
 		if len(c) == 0 {
 			continue
@@ -327,14 +327,14 @@ sibling field's path (e.g. "item": items alongside "sku": items.sku)
 takes each element's own value, without being expanded any further
 itself.
 */
-func evalMultiKeyObjectsNode(node *multiKeyObjectsNode, v value.Value) []map[string]interface{} {
+func evalMultiKeyObjectsNode(node *multiKeyObjectsNode, v value.Value) []map[string]any {
 	if len(node.children) == 0 {
 		return multiKeyObjectsLeafRows(node.fieldNames, v)
 	}
 
 	if v.Type() == value.ARRAY {
-		elems := v.Actual().([]interface{})
-		rv := make([]map[string]interface{}, 0, len(elems))
+		elems := v.Actual().([]any)
+		rv := make([]map[string]any, 0, len(elems))
 		for _, e := range elems {
 			for _, row := range multiKeyObjectsAccessChildren(node, value.NewValue(e)) {
 				for _, fn := range node.fieldNames {
@@ -363,12 +363,12 @@ array, one row per element (one level of expansion, elements used
 as-is); otherwise a single row, with every field name omitted if v is
 missing.
 */
-func multiKeyObjectsLeafRows(fieldNames []string, v value.Value) []map[string]interface{} {
+func multiKeyObjectsLeafRows(fieldNames []string, v value.Value) []map[string]any {
 	if v.Type() == value.ARRAY {
-		elems := v.Actual().([]interface{})
-		rv := make([]map[string]interface{}, 0, len(elems))
+		elems := v.Actual().([]any)
+		rv := make([]map[string]any, 0, len(elems))
 		for _, e := range elems {
-			row := make(map[string]interface{}, len(fieldNames))
+			row := make(map[string]any, len(fieldNames))
 			for _, fn := range fieldNames {
 				row[fn] = e
 			}
@@ -377,13 +377,13 @@ func multiKeyObjectsLeafRows(fieldNames []string, v value.Value) []map[string]in
 		return rv
 	}
 
-	row := make(map[string]interface{}, len(fieldNames))
+	row := make(map[string]any, len(fieldNames))
 	for _, fn := range fieldNames {
 		if v.Type() != value.MISSING {
 			row[fn] = v.Actual()
 		}
 	}
-	return []map[string]interface{}{row}
+	return []map[string]any{row}
 }
 
 /*
@@ -396,8 +396,8 @@ via an ordinary cartesian product -- since, at a single node, different
 named children are, by definition, different fields and have nothing
 further to correlate against each other.
 */
-func multiKeyObjectsAccessChildren(node *multiKeyObjectsNode, v value.Value) []map[string]interface{} {
-	combos := []map[string]interface{}{make(map[string]interface{})}
+func multiKeyObjectsAccessChildren(node *multiKeyObjectsNode, v value.Value) []map[string]any {
+	combos := []map[string]any{make(map[string]any)}
 
 	for name, child := range node.children {
 		var cv value.Value
@@ -423,15 +423,15 @@ field name. An empty subRows list (no possibilities at all) makes the
 whole combination contribute nothing further from that side, without
 otherwise affecting combos -- i.e. its field(s) are simply omitted.
 */
-func multiKeyObjectsCombine(combos []map[string]interface{}, subRows []map[string]interface{}) []map[string]interface{} {
+func multiKeyObjectsCombine(combos []map[string]any, subRows []map[string]any) []map[string]any {
 	if len(subRows) == 0 {
 		return combos
 	}
 
-	next := make([]map[string]interface{}, 0, len(combos)*len(subRows))
+	next := make([]map[string]any, 0, len(combos)*len(subRows))
 	for _, c := range combos {
 		for _, s := range subRows {
-			merged := make(map[string]interface{}, len(c)+len(s))
+			merged := make(map[string]any, len(c)+len(s))
 			for k, v := range c {
 				merged[k] = v
 			}

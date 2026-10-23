@@ -68,18 +68,18 @@ func (*testContextStub) ExternalCredential(_ string) (*cbauth.Credential, error)
 	return nil, nil
 }
 func (*testContextStub) DatastoreVersion() string                                { return "" }
-func (*testContextStub) NewQueryContext(_ string, _ bool) interface{}            { return nil }
-func (*testContextStub) AdminContext() (interface{}, error)                      { return nil, nil }
+func (*testContextStub) NewQueryContext(_ string, _ bool) any                    { return nil }
+func (*testContextStub) AdminContext() (any, error)                              { return nil, nil }
 func (*testContextStub) QueryContext() string                                    { return "" }
 func (*testContextStub) QueryContextParts() []string                             { return nil }
-func (*testContextStub) GetTxContext() interface{}                               { return nil }
-func (*testContextStub) SetTxContext(_ interface{})                              {}
+func (*testContextStub) GetTxContext() any                                       { return nil }
+func (*testContextStub) SetTxContext(_ any)                                      {}
 func (*testContextStub) Readonly() bool                                          { return false }
 func (*testContextStub) SetAdvisor()                                             {}
 func (*testContextStub) IncRecursionCount(_ int) int                             { return 0 }
 func (*testContextStub) RecursionCount() int                                     { return 0 }
-func (*testContextStub) StoreValue(_ string, _ interface{})                      {}
-func (*testContextStub) RetrieveValue(_ string) interface{}                      { return nil }
+func (*testContextStub) StoreValue(_ string, _ any)                              {}
+func (*testContextStub) RetrieveValue(_ string) any                              { return nil }
 func (*testContextStub) ReleaseValue(_ string)                                   {}
 func (*testContextStub) SetTracked(_ bool)                                       {}
 func (*testContextStub) IsTracked() bool                                         { return false }
@@ -88,9 +88,9 @@ func (*testContextStub) SetPreserveProjectionOrder(_ bool) bool                 
 func (*testContextStub) IsAdmin() bool                                           { return false }
 func (*testContextStub) IsPrepared() bool                                        { return false }
 func (*testContextStub) SanitizeStatement(_ string) (string, value.Value, error) { return "", nil, nil }
-func (*testContextStub) Parse(_ string) (interface{}, error)                     { return nil, nil }
+func (*testContextStub) Parse(_ string) (any, error)                             { return nil, nil }
 func (*testContextStub) Infer(_ value.Value, _ value.Value) (value.Value, error) { return nil, nil }
-func (*testContextStub) InferKeyspace(_ interface{}, _ value.Value) (value.Value, error) {
+func (*testContextStub) InferKeyspace(_ any, _ value.Value) (value.Value, error) {
 	return nil, nil
 }
 func (*testContextStub) EvaluateStatement(_ string, _ map[string]value.Value, _ value.Values, _, _ bool, _ bool, _ string) (value.Value, uint64, error) {
@@ -102,22 +102,22 @@ func (*testContextStub) OpenStatement(_ string, _ map[string]value.Value, _ valu
 func (*testContextStub) Release() {}
 
 // logging.Log no-ops
-func (*testContextStub) Loga(_ logging.Level, _ func() string)            {}
-func (*testContextStub) Debuga(_ func() string)                           {}
-func (*testContextStub) Tracea(_ func() string)                           {}
-func (*testContextStub) Infoa(_ func() string)                            {}
-func (*testContextStub) Warna(_ func() string)                            {}
-func (*testContextStub) Errora(_ func() string)                           {}
-func (*testContextStub) Severea(_ func() string)                          {}
-func (*testContextStub) Fatala(_ func() string)                           {}
-func (*testContextStub) Logf(_ logging.Level, _ string, _ ...interface{}) {}
-func (*testContextStub) Debugf(_ string, _ ...interface{})                {}
-func (*testContextStub) Tracef(_ string, _ ...interface{})                {}
-func (*testContextStub) Infof(_ string, _ ...interface{})                 {}
-func (*testContextStub) Warnf(_ string, _ ...interface{})                 {}
-func (*testContextStub) Errorf(_ string, _ ...interface{})                {}
-func (*testContextStub) Severef(_ string, _ ...interface{})               {}
-func (*testContextStub) Fatalf(_ string, _ ...interface{})                {}
+func (*testContextStub) Loga(_ logging.Level, _ func() string)    {}
+func (*testContextStub) Debuga(_ func() string)                   {}
+func (*testContextStub) Tracea(_ func() string)                   {}
+func (*testContextStub) Infoa(_ func() string)                    {}
+func (*testContextStub) Warna(_ func() string)                    {}
+func (*testContextStub) Errora(_ func() string)                   {}
+func (*testContextStub) Severea(_ func() string)                  {}
+func (*testContextStub) Fatala(_ func() string)                   {}
+func (*testContextStub) Logf(_ logging.Level, _ string, _ ...any) {}
+func (*testContextStub) Debugf(_ string, _ ...any)                {}
+func (*testContextStub) Tracef(_ string, _ ...any)                {}
+func (*testContextStub) Infof(_ string, _ ...any)                 {}
+func (*testContextStub) Warnf(_ string, _ ...any)                 {}
+func (*testContextStub) Errorf(_ string, _ ...any)                {}
+func (*testContextStub) Severef(_ string, _ ...any)               {}
+func (*testContextStub) Fatalf(_ string, _ ...any)                {}
 
 // mockCredContext embeds testContextStub and overrides ExternalCredential so
 // tests can inject any *cbauthimpl.Credential value (or a controlled error)
@@ -207,10 +207,10 @@ type mockCurlContext struct {
 	mockCredContext
 }
 
-func (m *mockCurlContext) GetAllowlist() map[string]interface{}      { return nil }
+func (m *mockCurlContext) GetAllowlist() map[string]any              { return nil }
 func (m *mockCurlContext) UrlCredentials(_ string) *auth.Credentials { return nil }
 func (m *mockCurlContext) DatastoreURL() string                      { return "" }
-func (m *mockCurlContext) LoadX509KeyPair(cert, key string, passphrase []byte) (interface{}, error) {
+func (m *mockCurlContext) LoadX509KeyPair(cert, key string, passphrase []byte) (any, error) {
 	return tls.Certificate{}, nil
 }
 

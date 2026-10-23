@@ -30,7 +30,7 @@ var EMPTY_STRING_EXPR = NewConstant(value.EMPTY_STRING_VALUE)
 var EMPTY_ARRAY_EXPR = NewConstant(value.EMPTY_ARRAY_VALUE)
 var EMPTY_OBJECT_EXPR = NewConstant(value.EMPTY_OBJECT_VALUE)
 
-func NewConstant(val interface{}) Expression {
+func NewConstant(val any) Expression {
 	rv := &Constant{
 		value: value.NewValue(val),
 	}
@@ -42,7 +42,7 @@ func NewConstant(val interface{}) Expression {
 /*
 Visitor pattern.
 */
-func (this *Constant) Accept(visitor Visitor) (interface{}, error) {
+func (this *Constant) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitConstant(this)
 }
 

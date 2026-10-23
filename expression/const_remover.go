@@ -41,7 +41,7 @@ func newConstRemover() *constRemover {
 	return rv
 }
 
-func (this *constRemover) VisitAnd(expr *And) (interface{}, error) {
+func (this *constRemover) VisitAnd(expr *And) (any, error) {
 	operands := expr.Operands()
 	terms := make(Expressions, 0, len(operands))
 	for _, op := range operands {
@@ -66,7 +66,7 @@ func (this *constRemover) VisitAnd(expr *And) (interface{}, error) {
 	return NewAnd(terms...), nil
 }
 
-func (this *constRemover) VisitOr(expr *Or) (interface{}, error) {
+func (this *constRemover) VisitOr(expr *Or) (any, error) {
 	operands := expr.Operands()
 	terms := make(Expressions, 0, len(operands))
 	for _, op := range operands {

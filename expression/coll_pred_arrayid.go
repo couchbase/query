@@ -37,15 +37,15 @@ func newAssignArrayId(arrayId int) *assignArrayId {
 	return rv
 }
 
-func (this *assignArrayId) VisitAny(pred *Any) (interface{}, error) {
+func (this *assignArrayId) VisitAny(pred *Any) (any, error) {
 	return nil, this.visitCollPredBase(&pred.collPredBase)
 }
 
-func (this *assignArrayId) VisitAnyEvery(pred *AnyEvery) (interface{}, error) {
+func (this *assignArrayId) VisitAnyEvery(pred *AnyEvery) (any, error) {
 	return nil, this.visitCollPredBase(&pred.collPredBase)
 }
 
-func (this *assignArrayId) VisitEvery(pred *Every) (interface{}, error) {
+func (this *assignArrayId) VisitEvery(pred *Every) (any, error) {
 	return nil, this.visitCollPredBase(&pred.collPredBase)
 }
 

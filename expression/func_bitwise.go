@@ -46,7 +46,7 @@ func NewBitAnd(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitAnd) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitAnd) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -128,7 +128,7 @@ func NewBitOr(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitOr) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitOr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -210,7 +210,7 @@ func NewBitXor(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitXor) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitXor) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -292,7 +292,7 @@ func NewBitNot(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitNot) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitNot) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -363,7 +363,7 @@ func NewBitShift(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitShift) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitShift) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -474,7 +474,7 @@ func NewBitSet(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitSet) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitSet) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -524,7 +524,7 @@ func NewBitClear(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitClear) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitClear) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -574,7 +574,7 @@ func NewBitTest(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *BitTest) Accept(visitor Visitor) (interface{}, error) {
+func (this *BitTest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -696,16 +696,16 @@ func bitPositions(arg value.Value) (uint64, bool) {
 	var pp, ppos int64
 	var ok bool
 
-	var pos []interface{}
+	var pos []any
 	num1 := uint64(0)
 
 	if arg.Type() == value.NUMBER {
 		if pp, ok = value.IsIntValue(arg); !ok {
 			return num1, false
 		}
-		pos = []interface{}{pp}
+		pos = []any{pp}
 	} else {
-		pos = arg.Actual().([]interface{})
+		pos = arg.Actual().([]any)
 	}
 
 	// now that the array or positions has been populated.

@@ -36,7 +36,7 @@ func NewSearchedCase(whenTerms WhenTerms, elseTerm Expression) Expression {
 /*
 Visitor pattern.
 */
-func (this *SearchedCase) Accept(visitor Visitor) (interface{}, error) {
+func (this *SearchedCase) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSearchedCase(this)
 }
 

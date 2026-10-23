@@ -48,171 +48,171 @@ type gatherAny struct {
 
 // Arithmetic
 
-func (this *gatherAny) VisitAdd(expr *Add) (interface{}, error) {
+func (this *gatherAny) VisitAdd(expr *Add) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitDiv(expr *Div) (interface{}, error) {
+func (this *gatherAny) VisitDiv(expr *Div) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitMod(expr *Mod) (interface{}, error) {
+func (this *gatherAny) VisitMod(expr *Mod) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitMult(expr *Mult) (interface{}, error) {
+func (this *gatherAny) VisitMult(expr *Mult) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitNeg(expr *Neg) (interface{}, error) {
+func (this *gatherAny) VisitNeg(expr *Neg) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitSub(expr *Sub) (interface{}, error) {
+func (this *gatherAny) VisitSub(expr *Sub) (any, error) {
 	return this.visit(expr)
 }
 
 // Case
 
-func (this *gatherAny) VisitSearchedCase(expr *SearchedCase) (interface{}, error) {
+func (this *gatherAny) VisitSearchedCase(expr *SearchedCase) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
+func (this *gatherAny) VisitSimpleCase(expr *SimpleCase) (any, error) {
 	return this.visit(expr)
 }
 
 // Collection
 
-func (this *gatherAny) VisitArray(expr *Array) (interface{}, error) {
+func (this *gatherAny) VisitArray(expr *Array) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitExists(expr *Exists) (interface{}, error) {
+func (this *gatherAny) VisitExists(expr *Exists) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitFirst(expr *First) (interface{}, error) {
+func (this *gatherAny) VisitFirst(expr *First) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitObject(expr *Object) (interface{}, error) {
+func (this *gatherAny) VisitObject(expr *Object) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitIn(expr *In) (interface{}, error) {
+func (this *gatherAny) VisitIn(expr *In) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitWithin(expr *Within) (interface{}, error) {
+func (this *gatherAny) VisitWithin(expr *Within) (any, error) {
 	return nil, nil
 }
 
 // Comparison
 
-func (this *gatherAny) VisitBetween(expr *Between) (interface{}, error) {
+func (this *gatherAny) VisitBetween(expr *Between) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitEq(expr *Eq) (interface{}, error) {
+func (this *gatherAny) VisitEq(expr *Eq) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitLE(expr *LE) (interface{}, error) {
+func (this *gatherAny) VisitLE(expr *LE) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitLike(expr *Like) (interface{}, error) {
+func (this *gatherAny) VisitLike(expr *Like) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitLT(expr *LT) (interface{}, error) {
+func (this *gatherAny) VisitLT(expr *LT) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) VisitIsMissing(expr *IsMissing) (interface{}, error) {
+func (this *gatherAny) VisitIsMissing(expr *IsMissing) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
+func (this *gatherAny) VisitIsNotMissing(expr *IsNotMissing) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
+func (this *gatherAny) VisitIsNotNull(expr *IsNotNull) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
+func (this *gatherAny) VisitIsNotValued(expr *IsNotValued) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitIsNull(expr *IsNull) (interface{}, error) {
+func (this *gatherAny) VisitIsNull(expr *IsNull) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitIsValued(expr *IsValued) (interface{}, error) {
+func (this *gatherAny) VisitIsValued(expr *IsValued) (any, error) {
 	return nil, nil
 }
 
 // Concat
-func (this *gatherAny) VisitConcat(expr *Concat) (interface{}, error) {
+func (this *gatherAny) VisitConcat(expr *Concat) (any, error) {
 	return nil, nil
 }
 
 // Constant
-func (this *gatherAny) VisitConstant(expr *Constant) (interface{}, error) {
+func (this *gatherAny) VisitConstant(expr *Constant) (any, error) {
 	return nil, nil
 }
 
 // Identifier
-func (this *gatherAny) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *gatherAny) VisitIdentifier(expr *Identifier) (any, error) {
 	return nil, nil
 }
 
 // Construction
 
-func (this *gatherAny) VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error) {
+func (this *gatherAny) VisitArrayConstruct(expr *ArrayConstruct) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error) {
+func (this *gatherAny) VisitObjectConstruct(expr *ObjectConstruct) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitNot(expr *Not) (interface{}, error) {
+func (this *gatherAny) VisitNot(expr *Not) (any, error) {
 	return this.visit(expr)
 }
 
 // Navigation
 
-func (this *gatherAny) VisitElement(expr *Element) (interface{}, error) {
+func (this *gatherAny) VisitElement(expr *Element) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitField(expr *Field) (interface{}, error) {
+func (this *gatherAny) VisitField(expr *Field) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitFieldName(expr *FieldName) (interface{}, error) {
+func (this *gatherAny) VisitFieldName(expr *FieldName) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitSlice(expr *Slice) (interface{}, error) {
+func (this *gatherAny) VisitSlice(expr *Slice) (any, error) {
 	return nil, nil
 }
 
 // Self
-func (this *gatherAny) VisitSelf(expr *Self) (interface{}, error) {
+func (this *gatherAny) VisitSelf(expr *Self) (any, error) {
 	return nil, nil
 }
 
 // Function
-func (this *gatherAny) VisitFunction(expr Function) (interface{}, error) {
+func (this *gatherAny) VisitFunction(expr Function) (any, error) {
 	return this.visit(expr)
 }
 
 // Subquery
-func (this *gatherAny) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *gatherAny) VisitSubquery(expr Subquery) (any, error) {
 	if this.renamedBindings && expr.IsCorrelated() {
 		return nil, fmt.Errorf("binding variables differ and correlated subquery")
 	}
@@ -220,41 +220,41 @@ func (this *gatherAny) VisitSubquery(expr Subquery) (interface{}, error) {
 }
 
 // InferUnderParenthesis
-func (this *gatherAny) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+func (this *gatherAny) VisitParenInfer(expr ParenInfer) (any, error) {
 	return this.visit(expr)
 }
 
 // NamedParameter
-func (this *gatherAny) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+func (this *gatherAny) VisitNamedParameter(expr NamedParameter) (any, error) {
 	return nil, nil
 }
 
 // PositionalParameter
-func (this *gatherAny) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+func (this *gatherAny) VisitPositionalParameter(expr PositionalParameter) (any, error) {
 	return nil, nil
 }
 
 // Cover
-func (this *gatherAny) VisitCover(expr *Cover) (interface{}, error) {
+func (this *gatherAny) VisitCover(expr *Cover) (any, error) {
 	return nil, nil
 }
 
 // All
-func (this *gatherAny) VisitAll(expr *All) (interface{}, error) {
+func (this *gatherAny) VisitAll(expr *All) (any, error) {
 	return nil, nil
 }
 
 // For OR, return the intersection over the children
-func (this *gatherAny) VisitOr(expr *Or) (interface{}, error) {
+func (this *gatherAny) VisitOr(expr *Or) (any, error) {
 	return this.visit(expr)
 }
 
 // For AND, return the union over the children
-func (this *gatherAny) VisitAnd(expr *And) (interface{}, error) {
+func (this *gatherAny) VisitAnd(expr *And) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *gatherAny) visit(expr Expression) (interface{}, error) {
+func (this *gatherAny) visit(expr Expression) (any, error) {
 	for _, op := range expr.Children() {
 		_, err := op.Accept(this)
 		if err != nil {
@@ -264,15 +264,15 @@ func (this *gatherAny) visit(expr Expression) (interface{}, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+func (this *gatherAny) VisitAnyEvery(expr *AnyEvery) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitEvery(expr *Every) (interface{}, error) {
+func (this *gatherAny) VisitEvery(expr *Every) (any, error) {
 	return nil, nil
 }
 
-func (this *gatherAny) VisitAny(expr *Any) (interface{}, error) {
+func (this *gatherAny) VisitAny(expr *Any) (any, error) {
 	all, ok := this.arrayKey.(*All)
 	if !ok {
 		return nil, nil

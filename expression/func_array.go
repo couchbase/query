@@ -43,14 +43,14 @@ func NewArrayAppend(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayAppend) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayAppend) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *ArrayAppend) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Value, error) {
-	var f []interface{}
+	var f []any
 	null := false
 	missing := false
 	for i, op := range this.operands {
@@ -62,9 +62,9 @@ func (this *ArrayAppend) Evaluate(item value.Value, context Context) (value.Valu
 		} else if i == 0 && arg.Type() != value.ARRAY {
 			null = true
 		} else if i == 0 {
-			fa := arg.Actual().([]interface{})
+			fa := arg.Actual().([]any)
 			// return a  new array, for recursive cte use-cases
-			f = make([]interface{}, len(fa), len(fa)+len(this.operands)-1)
+			f = make([]any, len(fa), len(fa)+len(this.operands)-1)
 			copy(f, fa)
 		} else if !missing && !null {
 			f = append(f, arg)
@@ -126,7 +126,7 @@ func NewArrayAvg(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayAvg) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayAvg) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -151,7 +151,7 @@ func (this *ArrayAvg) Evaluate(item value.Value, context Context) (value.Value, 
 
 	sum := value.ZERO_NUMBER
 	count := 0
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Type() == value.NUMBER {
@@ -202,18 +202,18 @@ func NewArrayConcat(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayConcat) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayConcat) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *ArrayConcat) Type() value.Type { return value.ARRAY }
 
 func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Value, error) {
-	var f []interface{}
+	var f []any
 	null := false
 	missing := false
 
-	var first []interface{}
+	var first []any
 	for i, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
 		if err != nil {
@@ -223,15 +223,15 @@ func (this *ArrayConcat) Evaluate(item value.Value, context Context) (value.Valu
 		} else if arg.Type() != value.ARRAY {
 			null = true
 		} else if i == 0 {
-			first = arg.Actual().([]interface{})
+			first = arg.Actual().([]any)
 		} else if !missing && !null {
-			act := arg.Actual().([]interface{})
+			act := arg.Actual().([]any)
 			if f == nil {
-				f = make([]interface{}, len(first), len(first)+len(act))
+				f = make([]any, len(first), len(first)+len(act))
 				copy(f, first)
 			}
 
-			f = append(f, arg.Actual().([]interface{})...)
+			f = append(f, arg.Actual().([]any)...)
 		}
 	}
 	if missing {
@@ -285,7 +285,7 @@ func NewArrayContains(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayContains) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayContains) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -315,7 +315,7 @@ func (this *ArrayContains) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	fa := first.Actual().([]interface{})
+	fa := first.Actual().([]any)
 	for _, f := range fa {
 		fv := value.NewValue(f)
 		if second.Equals(fv).Truth() {
@@ -376,7 +376,7 @@ func NewArrayContainsAny(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayContainsAny) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayContainsAny) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -401,9 +401,9 @@ func (this *ArrayContainsAny) Evaluate(item value.Value, context Context) (value
 		return value.NULL_VALUE, nil
 	}
 
-	fa := first.Actual().([]interface{})
+	fa := first.Actual().([]any)
 	if second.Type() == value.ARRAY {
-		sa := second.Actual().([]interface{})
+		sa := second.Actual().([]any)
 		for _, f := range fa {
 			if f == nil {
 				continue
@@ -481,7 +481,7 @@ func NewArrayContainsAll(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayContainsAll) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayContainsAll) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -506,16 +506,16 @@ func (this *ArrayContainsAll) Evaluate(item value.Value, context Context) (value
 		return value.NULL_VALUE, nil
 	}
 
-	var list []interface{}
+	var list []any
 	if second.Type() != value.ARRAY {
 		// make an array with it as the only element to keep things simple
-		list = make([]interface{}, 1)
+		list = make([]any, 1)
 		list[0] = second
 	} else {
-		list = second.Actual().([]interface{})
+		list = second.Actual().([]any)
 	}
 
-	cont := first.Actual().([]interface{})
+	cont := first.Actual().([]any)
 	vcont := make([]value.Value, len(cont))
 	c := 0
 	for i, item := range list {
@@ -587,7 +587,7 @@ func NewArrayCount(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayCount) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayCount) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -610,7 +610,7 @@ func (this *ArrayCount) Evaluate(item value.Value, context Context) (value.Value
 	}
 
 	count := 0
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL {
@@ -656,7 +656,7 @@ func NewArrayDistinct(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayDistinct) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayDistinct) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -678,8 +678,8 @@ func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	aa := arg.Actual().([]interface{})
-	naa := make([]interface{}, 0, len(aa))
+	aa := arg.Actual().([]any)
+	naa := make([]any, 0, len(aa))
 	set := value.NewSet(len(aa), false, false)
 	for _, a := range aa {
 		av := value.NewValue(a)
@@ -727,7 +727,7 @@ func NewArrayFlatten(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayFlatten) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayFlatten) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -749,7 +749,7 @@ func (this *ArrayFlatten) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	arr := first.Actual().([]interface{})
+	arr := first.Actual().([]any)
 	fdepth := second.Actual().(float64)
 
 	// Second parameter must be an integer.
@@ -758,12 +758,12 @@ func (this *ArrayFlatten) Evaluate(item value.Value, context Context) (value.Val
 	}
 	depth := int(fdepth)
 
-	destArr := make([]interface{}, 0, 4*len(arr))
+	destArr := make([]any, 0, 4*len(arr))
 	destArr = arrayFlattenInto(arr, destArr, depth)
 	return value.NewValue(destArr), nil
 }
 
-func arrayFlattenInto(sourceArr, destArr []interface{}, depth int) []interface{} {
+func arrayFlattenInto(sourceArr, destArr []any, depth int) []any {
 	// Just copy the contents of the source array into the destination array.
 	if depth == 0 {
 		return append(destArr, sourceArr...)
@@ -774,7 +774,7 @@ func arrayFlattenInto(sourceArr, destArr []interface{}, depth int) []interface{}
 	for _, elem := range sourceArr {
 		el := value.NewValue(elem)
 		if el.Type() == value.ARRAY {
-			subArr := el.Actual().([]interface{})
+			subArr := el.Actual().([]any)
 			destArr = arrayFlattenInto(subArr, destArr, depth-1)
 		} else {
 			destArr = append(destArr, elem)
@@ -819,7 +819,7 @@ func NewArrayIfNull(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayIfNull) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayIfNull) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -840,7 +840,7 @@ func (this *ArrayIfNull) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL {
@@ -885,7 +885,7 @@ func NewArrayInsert(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayInsert) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayInsert) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -896,10 +896,10 @@ This method inserts the third and subsequent values into the first
 array at the second position.
 */
 func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Value, error) {
-	var s []interface{}
+	var s []any
 	var f float64
 	var n int
-	var ra []interface{}
+	var ra []any
 	null := false
 	missing := false
 
@@ -916,7 +916,7 @@ func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Valu
 				if arg.Type() != value.ARRAY {
 					null = true
 				} else {
-					s = arg.Actual().([]interface{})
+					s = arg.Actual().([]any)
 				}
 			case 1:
 				if arg.Type() != value.NUMBER {
@@ -938,7 +938,7 @@ func (this *ArrayInsert) Evaluate(item value.Value, context Context) (value.Valu
 						if n < 0 || n > len(s) {
 							null = true
 						} else {
-							ra = make([]interface{}, 0, len(s)+len(this.operands)-2)
+							ra = make([]any, 0, len(s)+len(this.operands)-2)
 							if n == len(s) {
 								ra = append(ra, s...)
 							} else {
@@ -1011,7 +1011,7 @@ func NewArrayIntersect(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayIntersect) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayIntersect) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1036,7 +1036,7 @@ func (this *ArrayIntersect) Evaluate(item value.Value, context Context) (value.V
 			null = true
 		} else if !missing && !null {
 			args[i] = arg
-			l := len(arg.Actual().([]interface{}))
+			l := len(arg.Actual().([]any))
 			if l < min {
 				min = l
 			} else if l > max {
@@ -1055,7 +1055,7 @@ func (this *ArrayIntersect) Evaluate(item value.Value, context Context) (value.V
 	set := _ARRAY_SET_POOL.Get()
 	defer _ARRAY_SET_POOL.Put(set)
 	for _, arg := range args {
-		a := arg.Actual().([]interface{})
+		a := arg.Actual().([]any)
 		// De-dup each array
 		for _, elem := range a {
 			set.Add(value.NewValue(elem))
@@ -1070,7 +1070,7 @@ func (this *ArrayIntersect) Evaluate(item value.Value, context Context) (value.V
 		set.Clear()
 	}
 
-	ra := make([]interface{}, 0, min)
+	ra := make([]any, 0, min)
 	n = len(args)
 	for _, entry := range bag.Entries() {
 		if entry.Count == n {
@@ -1123,7 +1123,7 @@ func NewArrayLength(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayLength) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayLength) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1144,7 +1144,7 @@ func (this *ArrayLength) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	return value.NewValue(len(aa)), nil
 }
 
@@ -1183,7 +1183,7 @@ func NewArrayMax(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayMax) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayMax) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1206,7 +1206,7 @@ func (this *ArrayMax) Evaluate(item value.Value, context Context) (value.Value, 
 	}
 
 	rv := value.NULL_VALUE
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Collate(rv) > 0 {
@@ -1252,7 +1252,7 @@ func NewArrayMin(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayMin) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayMin) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1275,7 +1275,7 @@ func (this *ArrayMin) Evaluate(item value.Value, context Context) (value.Value, 
 	}
 
 	rv := value.NULL_VALUE
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Type() > value.NULL &&
@@ -1322,7 +1322,7 @@ func NewArrayPosition(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayPosition) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayPosition) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1350,7 +1350,7 @@ func (this *ArrayPosition) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	fa := first.Actual().([]interface{})
+	fa := first.Actual().([]any)
 	for i, f := range fa {
 		fv := value.NewValue(f)
 		if second.Equals(fv).Truth() {
@@ -1395,7 +1395,7 @@ func NewArrayPrepend(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayPrepend) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayPrepend) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1422,8 +1422,8 @@ func (this *ArrayPrepend) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	s := args[n].Actual().([]interface{})
-	ra := make([]interface{}, 0, len(s)+n)
+	s := args[n].Actual().([]any)
+	ra := make([]any, 0, len(s)+n)
 	for _, arg := range args[:n] {
 		ra = append(ra, arg)
 	}
@@ -1479,7 +1479,7 @@ func NewArrayPut(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayPut) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayPut) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1510,8 +1510,8 @@ func (this *ArrayPut) Evaluate(item value.Value, context Context) (value.Value, 
 		return value.NULL_VALUE, nil
 	}
 
-	fa := args[0].Actual().([]interface{})
-	ra := make([]interface{}, 0, len(fa))
+	fa := args[0].Actual().([]any)
+	ra := make([]any, 0, len(fa))
 	ra = append(ra, fa...)
 	pa := args[1:]
 ploop:
@@ -1574,7 +1574,7 @@ func NewArrayRange(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayRange) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayRange) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1641,7 +1641,7 @@ func (this *ArrayRange) Evaluate(item value.Value, context Context) (value.Value
 		return nil, err
 	}
 
-	rv := make([]interface{}, 0, capacity)
+	rv := make([]any, 0, capacity)
 	for v := start; (step > 0.0 && v < end) || (step < 0.0 && v > end); v += step {
 		rv = append(rv, v)
 	}
@@ -1691,7 +1691,7 @@ func NewArrayRemove(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayRemove) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayRemove) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1722,13 +1722,13 @@ func (this *ArrayRemove) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	fa := args[0].Actual().([]interface{})
+	fa := args[0].Actual().([]any)
 	if len(fa) == 0 {
 		return args[0], nil
 	}
 
 	aa := args[1:]
-	ra := make([]interface{}, 0, len(fa))
+	ra := make([]any, 0, len(fa))
 floop:
 	for _, f := range fa {
 		fv := value.NewValue(f)
@@ -1786,7 +1786,7 @@ func NewArrayRepeat(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayRepeat) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayRepeat) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1825,7 +1825,7 @@ func (this *ArrayRepeat) Evaluate(item value.Value, context Context) (value.Valu
 		return nil, err
 	}
 
-	ra := make([]interface{}, n)
+	ra := make([]any, n)
 	for i := 0; i < n; i++ {
 		ra[i] = first
 	}
@@ -1873,7 +1873,7 @@ func NewArrayReplace(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayReplace) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayReplace) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1918,8 +1918,8 @@ func (this *ArrayReplace) Evaluate(item value.Value, context Context) (value.Val
 		num_replacements = int64(f)
 	}
 
-	aa := av.Actual().([]interface{})
-	ra := make([]interface{}, 0, len(aa))
+	aa := av.Actual().([]any)
+	ra := make([]any, 0, len(aa))
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if num_replacements > 0 && v1.Equals(v).Truth() {
@@ -1972,7 +1972,7 @@ func NewArrayReplaceEquivalent(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ArrayReplaceEquivalent) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayReplaceEquivalent) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2017,8 +2017,8 @@ func (this *ArrayReplaceEquivalent) Evaluate(item value.Value, context Context) 
 		num_replacements = int64(f)
 	}
 
-	aa := av.Actual().([]interface{})
-	ra := make([]interface{}, 0, len(aa))
+	aa := av.Actual().([]any)
+	ra := make([]any, 0, len(aa))
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if num_replacements > 0 && doIsNotDistinct(v1, v) {
@@ -2082,7 +2082,7 @@ func NewArrayReverse(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayReverse) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayReverse) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2103,9 +2103,9 @@ func (this *ArrayReverse) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	n := len(aa)
-	ra := make([]interface{}, n)
+	ra := make([]any, n)
 	n--
 	for i, _ := range aa {
 		ra[i] = aa[n-i]
@@ -2149,7 +2149,7 @@ func NewArraySort(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArraySort) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArraySort) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2211,7 +2211,7 @@ func NewArrayStar(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayStar) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayStar) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2238,7 +2238,7 @@ func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value,
 		return value.NULL_VALUE, nil
 	}
 
-	actual := arg.Actual().([]interface{})
+	actual := arg.Actual().([]any)
 	if len(actual) == 0 {
 		return _EMPTY_OBJECT, nil
 	}
@@ -2258,7 +2258,7 @@ func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value,
 	}
 
 	// Collect all the names in the elements
-	pairs := make(map[string]interface{}, len(dup[0].Fields()))
+	pairs := make(map[string]any, len(dup[0].Fields()))
 	for _, d := range dup {
 		fields := d.Fields()
 		for f, _ := range fields {
@@ -2268,7 +2268,7 @@ func (this *ArrayStar) Evaluate(item value.Value, context Context) (value.Value,
 
 	// Allocate and populate array for each name
 	for name, _ := range pairs {
-		vals := make([]interface{}, len(dup))
+		vals := make([]any, len(dup))
 		pairs[name] = vals
 
 		for i, d := range dup {
@@ -2316,7 +2316,7 @@ func NewArraySum(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArraySum) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArraySum) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2340,7 +2340,7 @@ func (this *ArraySum) Evaluate(item value.Value, context Context) (value.Value, 
 	}
 
 	sum := value.ZERO_NUMBER
-	aa := arg.Actual().([]interface{})
+	aa := arg.Actual().([]any)
 	for _, a := range aa {
 		v := value.NewValue(a)
 		if v.Type() == value.NUMBER {
@@ -2387,7 +2387,7 @@ func NewArraySymdiff1(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArraySymdiff1) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArraySymdiff1) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2423,13 +2423,13 @@ func (this *ArraySymdiff1) Evaluate(item value.Value, context Context) (value.Va
 	for _, arg := range args {
 		set := _ARRAY_SET_POOL.Get()
 		defer _ARRAY_SET_POOL.Put(set)
-		a := arg.Actual().([]interface{})
+		a := arg.Actual().([]any)
 		set.AddAll(a)
 		bag.AddAll(set.Items())
 	}
 
 	entries := bag.Entries()
-	rv := make([]interface{}, 0, len(entries))
+	rv := make([]any, 0, len(entries))
 	for _, entry := range entries {
 		if entry.Count == 1 {
 			rv = append(rv, entry.Value)
@@ -2483,7 +2483,7 @@ func NewArraySymdiffn(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArraySymdiffn) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArraySymdiffn) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2519,13 +2519,13 @@ func (this *ArraySymdiffn) Evaluate(item value.Value, context Context) (value.Va
 	for _, arg := range args {
 		set := _ARRAY_SET_POOL.Get()
 		defer _ARRAY_SET_POOL.Put(set)
-		a := arg.Actual().([]interface{})
+		a := arg.Actual().([]any)
 		set.AddAll(a)
 		bag.AddAll(set.Items())
 	}
 
 	entries := bag.Entries()
-	rv := make([]interface{}, 0, len(entries))
+	rv := make([]any, 0, len(entries))
 	for _, entry := range entries {
 		if (entry.Count & 1) == 1 {
 			rv = append(rv, entry.Value)
@@ -2577,7 +2577,7 @@ func NewArrayUnion(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayUnion) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayUnion) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2612,7 +2612,7 @@ func (this *ArrayUnion) Evaluate(item value.Value, context Context) (value.Value
 	set := _ARRAY_SET_POOL.Get()
 	defer _ARRAY_SET_POOL.Put(set)
 	for _, arg := range args {
-		a := arg.Actual().([]interface{})
+		a := arg.Actual().([]any)
 		set.AddAll(a)
 	}
 
@@ -2664,7 +2664,7 @@ func NewArraySwap(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *ArraySwap) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArraySwap) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2702,7 +2702,7 @@ func (this *ArraySwap) Evaluate(item value.Value, context Context) (value.Value,
 	op := int(oldPos)
 	np := int(newPos)
 
-	a := first.Actual().([]interface{})
+	a := first.Actual().([]any)
 	length := len(a)
 
 	//out of range check on the index.
@@ -2718,7 +2718,7 @@ func (this *ArraySwap) Evaluate(item value.Value, context Context) (value.Value,
 		return first, nil
 	}
 
-	ra := make([]interface{}, 0, length)
+	ra := make([]any, 0, length)
 	ra = append(ra, a...)
 	ra[op], ra[np] = ra[np], ra[op]
 	return value.NewValue(ra), nil
@@ -2761,7 +2761,7 @@ func NewArrayMove(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *ArrayMove) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayMove) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2799,7 +2799,7 @@ func (this *ArrayMove) Evaluate(item value.Value, context Context) (value.Value,
 	op := int(oldPos)
 	np := int(newPos)
 
-	oa := first.Actual().([]interface{})
+	oa := first.Actual().([]any)
 	length := len(oa)
 
 	//out of range check on the index.
@@ -2815,7 +2815,7 @@ func (this *ArrayMove) Evaluate(item value.Value, context Context) (value.Value,
 		return first, nil
 	}
 
-	a := make([]interface{}, 0, length)
+	a := make([]any, 0, length)
 	a = append(a, oa...)
 	v := a[op]
 
@@ -2871,7 +2871,7 @@ func NewArrayExcept(first, second Expression) Function {
 	return rv
 }
 
-func (this *ArrayExcept) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayExcept) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2895,8 +2895,8 @@ func (this *ArrayExcept) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	a := first.Actual().([]interface{})
-	b := second.Actual().([]interface{})
+	a := first.Actual().([]any)
+	b := second.Actual().([]any)
 	if len(a) == 0 || len(b) == 0 {
 		return first, nil
 	}
@@ -2904,7 +2904,7 @@ func (this *ArrayExcept) Evaluate(item value.Value, context Context) (value.Valu
 	set := _ARRAY_SET_POOL.Get()
 	defer _ARRAY_SET_POOL.Put(set)
 	set.AddAll(b)
-	r := make([]interface{}, 0, len(a))
+	r := make([]any, 0, len(a))
 
 	for i, _ := range a {
 		v := value.NewValue(a[i])
@@ -2951,7 +2951,7 @@ func NewArrayBinarySearch(first, second Expression) Function {
 	return rv
 }
 
-func (this *ArrayBinarySearch) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayBinarySearch) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2975,7 +2975,7 @@ func (this *ArrayBinarySearch) Evaluate(item value.Value, context Context) (valu
 		return value.NULL_VALUE, nil
 	}
 
-	a := first.Actual().([]interface{})
+	a := first.Actual().([]any)
 	low := 0
 	high := len(a) - 1
 

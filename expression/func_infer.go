@@ -30,7 +30,7 @@ func NewInferValue(operands ...Expression) Function {
 	return rv
 }
 
-func (this *InferValue) Accept(visitor Visitor) (interface{}, error) {
+func (this *InferValue) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

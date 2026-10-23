@@ -31,7 +31,7 @@ func NewIMod(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IMod) Accept(visitor Visitor) (interface{}, error) {
+func (this *IMod) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

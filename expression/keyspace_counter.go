@@ -63,7 +63,7 @@ func newKeyspaceCounter(baseKeyspaces map[string]string) *keyspaceCounter {
 	return rv
 }
 
-func (this *keyspaceCounter) VisitField(expr *Field) (interface{}, error) {
+func (this *keyspaceCounter) VisitField(expr *Field) (any, error) {
 	err := this.Traverse(expr.First())
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (this *keyspaceCounter) VisitField(expr *Field) (interface{}, error) {
 	return nil, err
 }
 
-func (this *keyspaceCounter) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *keyspaceCounter) VisitIdentifier(expr *Identifier) (any, error) {
 	keyspace := expr.Identifier()
 	if len(keyspace) == 0 {
 		return nil, errors.NewPlanInternalError("keyspaceCounter.VisitIdentifier: empty keyspace name")

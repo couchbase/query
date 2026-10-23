@@ -34,7 +34,7 @@ func NewArrayConstruct(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ArrayConstruct) Accept(visitor Visitor) (interface{}, error) {
+func (this *ArrayConstruct) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitArrayConstruct(this)
 }
 
@@ -48,7 +48,7 @@ func (this *ArrayConstruct) Evaluate(item value.Value, context Context) (value.V
 	if len(this.operands) == 1 && this.HasExprFlag(EXPR_CAN_FLATTEN) {
 		return this.operands[0].Evaluate(item, context)
 	} else {
-		aa := make([]interface{}, len(this.operands))
+		aa := make([]any, len(this.operands))
 		for i, _ := range this.operands {
 			arg, err := this.operands[i].Evaluate(item, context)
 			if err != nil {
@@ -65,8 +65,8 @@ func (this *ArrayConstruct) EquivalentTo(other Expression) bool {
 		thisVal := this.Value()
 		otherVal := other.Value()
 		if thisVal != nil && otherVal != nil {
-			thisVals, ok1 := thisVal.Actual().([]interface{})
-			otherVals, ok2 := otherVal.Actual().([]interface{})
+			thisVals, ok1 := thisVal.Actual().([]any)
+			otherVals, ok2 := otherVal.Actual().([]any)
 			if ok1 && ok2 {
 				thisVals = SortValArr(thisVals)
 				otherVals = SortValArr(otherVals)
@@ -109,7 +109,7 @@ func (this *ArrayConstruct) Constructor() FunctionConstructor {
 	return NewArrayConstruct
 }
 
-func SortValArr(vals []interface{}) []interface{} {
+func SortValArr(vals []any) []any {
 	set := value.NewSet(len(vals), true, false)
 	set.AddAll(vals)
 	vals = set.Actuals()

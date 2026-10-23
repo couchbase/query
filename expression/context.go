@@ -34,26 +34,26 @@ type Context interface {
 	Credential() cbauth.Creds
 	ExternalCredential(credId string) (*cbauth.Credential, error)
 	DatastoreVersion() string
-	NewQueryContext(queryContext string, readonly bool) interface{}
-	AdminContext() (interface{}, error)
+	NewQueryContext(queryContext string, readonly bool) any
+	AdminContext() (any, error)
 	QueryContext() string
 	QueryContextParts() []string
-	GetTxContext() interface{}
-	SetTxContext(t interface{})
+	GetTxContext() any
+	SetTxContext(t any)
 	Readonly() bool
 	SetAdvisor()
 	IncRecursionCount(inc int) int
 	RecursionCount() int
-	StoreValue(key string, val interface{})
-	RetrieveValue(key string) interface{}
+	StoreValue(key string, val any)
+	RetrieveValue(key string) any
 	ReleaseValue(key string)
 	EvaluateStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool,
 		profileUdfExecTrees bool, funcKey string) (value.Value, uint64, error)
 	OpenStatement(statement string, namedArgs map[string]value.Value, positionalArgs value.Values, subquery, readonly bool,
 		profileUdfExecTrees bool, funcKey string) (functions.Handle, error)
-	Parse(s string) (interface{}, error)
+	Parse(s string) (any, error)
 	Infer(value.Value, value.Value) (value.Value, error)
-	InferKeyspace(ks interface{}, with value.Value) (value.Value, error)
+	InferKeyspace(ks any, with value.Value) (value.Value, error)
 	SetTracked(bool)
 	IsTracked() bool
 	RecordJsCU(d time.Duration, m uint64)
@@ -71,10 +71,10 @@ type ExecutionHandle interface {
 
 type CurlContext interface {
 	Context
-	GetAllowlist() map[string]interface{}
+	GetAllowlist() map[string]any
 	UrlCredentials(urlS string) *auth.Credentials
 	DatastoreURL() string
-	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (interface{}, error)
+	LoadX509KeyPair(certFile, keyFile string, privateKeyPassphrase []byte) (any, error)
 }
 
 type InlistContext interface {
@@ -111,10 +111,10 @@ type QuotaContext interface {
 // Created to avoid import cycles between plan and expression package
 type ParkableExecutePreparedContext interface {
 	ParkableContext
-	PrepareStatementExt(statement string) (interface{}, error)
+	PrepareStatementExt(statement string) (any, error)
 
 	// Only accepts non-prepared statements
-	ExecutePreparedExt(prepared interface{}, namedArgs map[string]value.Value, positionalArgs value.Values) (
+	ExecutePreparedExt(prepared any, namedArgs map[string]value.Value, positionalArgs value.Values) (
 		value.Value, uint64, error)
 }
 

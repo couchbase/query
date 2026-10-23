@@ -29,7 +29,7 @@ type IdentifiersRetriever struct {
 	names map[string]Expression
 }
 
-func (this *IdentifiersRetriever) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *IdentifiersRetriever) VisitIdentifier(expr *Identifier) (any, error) {
 	this.names[expr.Alias()] = expr
 	return expr, nil
 }

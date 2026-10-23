@@ -50,7 +50,7 @@ func NewClockMillis() Function {
 	return rv
 }
 
-func (this *ClockMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *ClockMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -92,7 +92,7 @@ func NewClockStr(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ClockStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *ClockStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -156,7 +156,7 @@ func NewClockTZ(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ClockTZ) Accept(visitor Visitor) (interface{}, error) {
+func (this *ClockTZ) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -165,7 +165,7 @@ func (this *ClockTZ) Type() value.Type { return value.STRING }
 func (this *ClockTZ) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	fmt := ""
-	var info map[string]interface{}
+	var info map[string]any
 
 	// Get current time
 	timeVal := time.Now()
@@ -253,7 +253,7 @@ func NewClockUTC(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ClockUTC) Accept(visitor Visitor) (interface{}, error) {
+func (this *ClockUTC) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -320,7 +320,7 @@ func NewDateAddMillis(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *DateAddMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateAddMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -329,7 +329,7 @@ func (this *DateAddMillis) Type() value.Type { return value.NUMBER }
 func (this *DateAddMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	date, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -415,7 +415,7 @@ func NewDateAddStr(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *DateAddStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateAddStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -424,7 +424,7 @@ func (this *DateAddStr) Type() value.Type { return value.STRING }
 func (this *DateAddStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	date, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -521,7 +521,7 @@ func NewDateDiffMillis(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *DateDiffMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateDiffMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -530,7 +530,7 @@ func (this *DateDiffMillis) Type() value.Type { return value.NUMBER }
 func (this *DateDiffMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -615,7 +615,7 @@ func NewDateDiffStr(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *DateDiffStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateDiffStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -624,7 +624,7 @@ func (this *DateDiffStr) Type() value.Type { return value.NUMBER }
 func (this *DateDiffStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -712,7 +712,7 @@ func NewDateDiffAbsMillis(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *DateDiffAbsMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateDiffAbsMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -721,7 +721,7 @@ func (this *DateDiffAbsMillis) Type() value.Type { return value.NUMBER }
 func (this *DateDiffAbsMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -805,7 +805,7 @@ func NewDateDiffAbsStr(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *DateDiffAbsStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateDiffAbsStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -814,7 +814,7 @@ func (this *DateDiffAbsStr) Type() value.Type { return value.NUMBER }
 func (this *DateDiffAbsStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	date1, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -901,7 +901,7 @@ func NewDateFormatStr(operands ...Expression) Function {
 	return rv
 }
 
-func (this *DateFormatStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateFormatStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -910,7 +910,7 @@ func (this *DateFormatStr) Type() value.Type { return value.STRING }
 func (this *DateFormatStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -1009,7 +1009,7 @@ func NewDatePartMillis(operands ...Expression) Function {
 	return rv
 }
 
-func (this *DatePartMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *DatePartMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1018,7 +1018,7 @@ func (this *DatePartMillis) Type() value.Type { return value.NUMBER }
 func (this *DatePartMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -1125,7 +1125,7 @@ func NewDatePartStr(first, second Expression) Function {
 	return rv
 }
 
-func (this *DatePartStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DatePartStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1134,7 +1134,7 @@ func (this *DatePartStr) Type() value.Type { return value.NUMBER }
 func (this *DatePartStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -1203,7 +1203,7 @@ func NewDateRangeStr(operands ...Expression) Function {
 	return rv
 }
 
-func (this *DateRangeStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateRangeStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1212,7 +1212,7 @@ func (this *DateRangeStr) Type() value.Type { return value.ARRAY }
 func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	// Populate the args
 	// If input arguments are missing then return missing, and if they arent valid types,
 	// return null.
@@ -1306,7 +1306,7 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 			setWarning(context, warn)
 		}
 		setWarning(context, errors.W_DATE_INVALID_ARGUMENT, invalidArgValue(3, n))
-		return value.NewValue([]interface{}{ts}), nil
+		return value.NewValue([]any{ts}), nil
 	}
 
 	// If the two dates are the same, return an empty array.
@@ -1350,7 +1350,7 @@ func (this *DateRangeStr) Evaluate(item value.Value, context Context) (value.Val
 		return nil, errors.NewRangeError("DATE_RANGE_STR()")
 	}
 
-	rv := make([]interface{}, 0, capacity)
+	rv := make([]any, 0, capacity)
 
 	// Max date value is end date/ t2.
 	// Keep incrementing start date by step for part, and add it to
@@ -1442,7 +1442,7 @@ func NewDateRangeMillis(operands ...Expression) Function {
 	return rv
 }
 
-func (this *DateRangeMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateRangeMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1451,7 +1451,7 @@ func (this *DateRangeMillis) Type() value.Type { return value.ARRAY }
 func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	// Populate the args
 	// If input arguments are missing then return missing, and if they arent valid types,
 	// return null.
@@ -1538,7 +1538,7 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 	var s = int64(step)
 	if s == 0 {
 		ts := timeToMillis(t1)
-		return value.NewValue([]interface{}{ts}), nil
+		return value.NewValue([]any{ts}), nil
 	}
 
 	// If the two dates are the same, return an empty array.
@@ -1581,7 +1581,7 @@ func (this *DateRangeMillis) Evaluate(item value.Value, context Context) (value.
 		return nil, errors.NewRangeError("DATE_RANGE_MILLIS()")
 	}
 
-	rv := make([]interface{}, 0, capacity)
+	rv := make([]any, 0, capacity)
 
 	// Max date value is end date/ t2.
 	// Keep incrementing start date by step for part, and add it to
@@ -1659,7 +1659,7 @@ func NewDateTruncMillis(first, second Expression) Function {
 	return rv
 }
 
-func (this *DateTruncMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateTruncMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1668,7 +1668,7 @@ func (this *DateTruncMillis) Type() value.Type { return value.NUMBER }
 func (this *DateTruncMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -1738,7 +1738,7 @@ func NewDateTruncStr(operands ...Expression) Function {
 	return rv
 }
 
-func (this *DateTruncStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DateTruncStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1747,7 +1747,7 @@ func (this *DateTruncStr) Type() value.Type { return value.STRING }
 func (this *DateTruncStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -1844,7 +1844,7 @@ func NewMillisToStr(operands ...Expression) Function {
 	return rv
 }
 
-func (this *MillisToStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *MillisToStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1853,7 +1853,7 @@ func (this *MillisToStr) Type() value.Type { return value.STRING }
 func (this *MillisToStr) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	ev, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -1928,7 +1928,7 @@ func NewMillisToUTC(operands ...Expression) Function {
 	return rv
 }
 
-func (this *MillisToUTC) Accept(visitor Visitor) (interface{}, error) {
+func (this *MillisToUTC) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1937,7 +1937,7 @@ func (this *MillisToUTC) Type() value.Type { return value.STRING }
 func (this *MillisToUTC) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	ev, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -2014,7 +2014,7 @@ func NewMillisToZoneName(operands ...Expression) Function {
 	return rv
 }
 
-func (this *MillisToZoneName) Accept(visitor Visitor) (interface{}, error) {
+func (this *MillisToZoneName) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2023,7 +2023,7 @@ func (this *MillisToZoneName) Type() value.Type { return value.STRING }
 func (this *MillisToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	ev, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -2119,7 +2119,7 @@ func NewNowMillis() Function {
 	return rv
 }
 
-func (this *NowMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *NowMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2165,7 +2165,7 @@ func NewNowStr(operands ...Expression) Function {
 	return rv
 }
 
-func (this *NowStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *NowStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2234,7 +2234,7 @@ func NewNowTZ(operands ...Expression) Function {
 	return rv
 }
 
-func (this *NowTZ) Accept(visitor Visitor) (interface{}, error) {
+func (this *NowTZ) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2247,7 +2247,7 @@ func (this *NowTZ) Evaluate(item value.Value, context Context) (value.Value, err
 	missing := false
 	fmt := ""
 	now := context.Now()
-	var info map[string]interface{}
+	var info map[string]any
 
 	tz, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -2333,7 +2333,7 @@ func NewNowUTC(operands ...Expression) Function {
 	return rv
 }
 
-func (this *NowUTC) Accept(visitor Visitor) (interface{}, error) {
+func (this *NowUTC) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2399,7 +2399,7 @@ func NewStrToMillis(operands ...Expression) Function {
 	return rv
 }
 
-func (this *StrToMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *StrToMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2473,7 +2473,7 @@ func NewStrToUTC(operands ...Expression) Function {
 	return rv
 }
 
-func (this *StrToUTC) Accept(visitor Visitor) (interface{}, error) {
+func (this *StrToUTC) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2573,7 +2573,7 @@ func NewStrToZoneName(operands ...Expression) Function {
 	return rv
 }
 
-func (this *StrToZoneName) Accept(visitor Visitor) (interface{}, error) {
+func (this *StrToZoneName) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2582,7 +2582,7 @@ func (this *StrToZoneName) Type() value.Type { return value.STRING }
 func (this *StrToZoneName) Evaluate(item value.Value, context Context) (value.Value, error) {
 	null := false
 	missing := false
-	var info map[string]interface{}
+	var info map[string]any
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -2703,7 +2703,7 @@ func NewDurationToStr(operands ...Expression) Function {
 	return rv
 }
 
-func (this *DurationToStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *DurationToStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2786,7 +2786,7 @@ func NewStrToDuration(operands ...Expression) Function {
 	return rv
 }
 
-func (this *StrToDuration) Accept(visitor Visitor) (interface{}, error) {
+func (this *StrToDuration) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2866,7 +2866,7 @@ func NewWeekdayMillis(operands ...Expression) Function {
 	return rv
 }
 
-func (this *WeekdayMillis) Accept(visitor Visitor) (interface{}, error) {
+func (this *WeekdayMillis) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2875,7 +2875,7 @@ func (this *WeekdayMillis) Type() value.Type { return value.STRING }
 func (this *WeekdayMillis) Evaluate(item value.Value, context Context) (value.Value, error) {
 	missing := false
 	null := false
-	var info map[string]interface{}
+	var info map[string]any
 	first, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
 		return nil, err
@@ -2967,7 +2967,7 @@ func NewWeekdayStr(first Expression) Function {
 	return rv
 }
 
-func (this *WeekdayStr) Accept(visitor Visitor) (interface{}, error) {
+func (this *WeekdayStr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -3478,10 +3478,10 @@ const (
 	noPad
 )
 
-func errorInfo(format string, fpos int, input string, ipos int, extra ...interface{}) map[string]interface{} {
-	info := make(map[string]interface{})
+func errorInfo(format string, fpos int, input string, ipos int, extra ...any) map[string]any {
+	info := make(map[string]any)
 	if len(input) > 0 || len(format) == 0 {
-		m := make(map[string]interface{}, 3)
+		m := make(map[string]any, 3)
 		m["value"] = input
 		if ipos >= 0 {
 			m["~~~~~"] = strings.Repeat("-", ipos) + "^"
@@ -3490,7 +3490,7 @@ func errorInfo(format string, fpos int, input string, ipos int, extra ...interfa
 		info["input"] = m
 	}
 	if len(format) > 0 {
-		m := make(map[string]interface{}, 3)
+		m := make(map[string]any, 3)
 		m["value"] = format
 		if fpos >= 0 {
 			m["~~~~~"] = strings.Repeat("-", fpos) + "^"
@@ -3515,7 +3515,7 @@ func errorInfo(format string, fpos int, input string, ipos int, extra ...interfa
 	return info
 }
 
-func processParseError(code errors.ErrorCode, e interface{}) errors.Error {
+func processParseError(code errors.ErrorCode, e any) errors.Error {
 	if pe, ok := e.(*time.ParseError); ok {
 		m := strings.TrimPrefix(pe.Message, ": ")
 		off := 0
@@ -6311,8 +6311,8 @@ func yearDay(year int, yday int) (int, int) {
 	}
 }
 
-func invalidArgInfo(arg int, v value.Value) map[string]interface{} {
-	info := make(map[string]interface{})
+func invalidArgInfo(arg int, v value.Value) map[string]any {
+	info := make(map[string]any)
 	info["argument"] = arg
 	if v != nil {
 		info["type"] = v.Type().String()
@@ -6320,8 +6320,8 @@ func invalidArgInfo(arg int, v value.Value) map[string]interface{} {
 	return info
 }
 
-func invalidArgValue(arg int, v value.Value) map[string]interface{} {
-	info := make(map[string]interface{})
+func invalidArgValue(arg int, v value.Value) map[string]any {
+	info := make(map[string]any)
 	info["argument"] = arg
 	if v != nil {
 		info["value"] = v.Actual()
@@ -6329,7 +6329,7 @@ func invalidArgValue(arg int, v value.Value) map[string]interface{} {
 	return info
 }
 
-func setWarning(context Context, other ...interface{}) (value.Value, errors.Error) {
+func setWarning(context Context, other ...any) (value.Value, errors.Error) {
 	if c, ok := context.(interface {
 		Warning(errors.Error)
 		IsFeatureEnabled(uint64) bool

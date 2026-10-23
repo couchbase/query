@@ -33,7 +33,7 @@ func newKeyspaceTrimmer(keyspace string) *keyspaceTrimmer {
 	return rv
 }
 
-func (this *keyspaceTrimmer) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *keyspaceTrimmer) VisitIdentifier(expr *Identifier) (any, error) {
 	ident := expr.Identifier()
 	if ident == this.keyspace {
 		// cannot return a nil pointer for mapper, use MISSING_EXPR instead
@@ -42,7 +42,7 @@ func (this *keyspaceTrimmer) VisitIdentifier(expr *Identifier) (interface{}, err
 	return expr, nil
 }
 
-func (this *keyspaceTrimmer) VisitField(expr *Field) (interface{}, error) {
+func (this *keyspaceTrimmer) VisitField(expr *Field) (any, error) {
 	first, err := this.Map(expr.First())
 	if err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (this *keyspaceTrimmer) VisitField(expr *Field) (interface{}, error) {
 	return second, nil
 }
 
-func (this *keyspaceTrimmer) VisitFunction(expr Function) (interface{}, error) {
+func (this *keyspaceTrimmer) VisitFunction(expr Function) (any, error) {
 	err := expr.MapChildren(this)
 	if err != nil {
 		return expr, err
@@ -83,7 +83,7 @@ func (this *keyspaceTrimmer) VisitFunction(expr Function) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *keyspaceTrimmer) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *keyspaceTrimmer) VisitSubquery(expr Subquery) (any, error) {
 	// since a Subquery expression is not copied via Copy() call,
 	// do not traverse inside the subquery
 	return expr, nil

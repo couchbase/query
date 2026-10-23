@@ -108,7 +108,7 @@ func NewCurl(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Curl) Accept(visitor Visitor) (interface{}, error) {
+func (this *Curl) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -156,7 +156,7 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 	curl_url := first.ToString()
 
 	// Empty options to pass into curl.
-	options := make(map[string]interface{})
+	options := make(map[string]any)
 
 	// If we have options then process them.
 	if arg2 != nil {
@@ -166,7 +166,7 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 			return value.MISSING_VALUE, nil
 		} else if second.Type() == value.OBJECT {
 			//Process the options
-			for k, v := range second.Actual().(map[string]interface{}) {
+			for k, v := range second.Actual().(map[string]any) {
 				k = strings.TrimPrefix(strings.TrimPrefix(k, "--"), "-")
 				options[k] = v
 			}
@@ -187,11 +187,11 @@ func (this *Curl) DoEvaluate(context Context, arg1, arg2 value.Value) (value.Val
 
 	// For Silent mode where we dont want any output.
 	switch results := result.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		if len(results) == 0 {
 			return value.MISSING_VALUE, nil
 		}
-	case []interface{}:
+	case []any:
 		if len(results) == 0 {
 			return value.MISSING_VALUE, nil
 		}
@@ -682,7 +682,7 @@ func handleCurl(urlS string, options map[string]any, context Context) (
 
 	// The return type can either be and ARRAY or an OBJECT
 	if b.Len() != 0 {
-		var dat interface{}
+		var dat any
 
 		if err := json.Unmarshal(b.Bytes(), &dat); err != nil {
 			if show_error == true {
@@ -710,7 +710,7 @@ func handleCurl(urlS string, options map[string]any, context Context) (
 }
 
 // encodeData: if val is to be url encoded
-func handleData(encodedData bool, val interface{}, show_error bool) (string, error) {
+func handleData(encodedData bool, val any, show_error bool) (string, error) {
 
 	// used to create the data string when "data" option is set
 	stringData := ""
@@ -718,9 +718,9 @@ func handleData(encodedData bool, val interface{}, show_error bool) (string, err
 	dataVal := value.NewValue(val).Actual()
 
 	switch dataVal.(type) {
-	case []interface{}:
+	case []any:
 	case string:
-		dataVal = []interface{}{dataVal}
+		dataVal = []any{dataVal}
 	default:
 		if show_error == true {
 			return "", fmt.Errorf("Incorrect type for data option in CURL.It needs to be a string. ")
@@ -729,7 +729,7 @@ func handleData(encodedData bool, val interface{}, show_error bool) (string, err
 		}
 	}
 
-	dv := dataVal.([]interface{})
+	dv := dataVal.([]any)
 
 	var params url.Values
 	if encodedData {
@@ -835,7 +835,7 @@ func cipherStringToIds(val string, cbDefault bool) ([]uint16, error) {
 // returns "GET" if explicitly set to a GET request
 // returns "POST" if explicitly set to a POST request
 // returns an empty string "" if a request type is not explicitly set
-func getAndRequestOptionProcessing(options map[string]interface{}) (string, error) {
+func getAndRequestOptionProcessing(options map[string]any) (string, error) {
 
 	// Process 'get' option
 	getTrue := false
@@ -888,7 +888,7 @@ func getAndRequestOptionProcessing(options map[string]interface{}) (string, erro
 }
 
 // Process the "header" option
-func headerOptionProcessing(options map[string]interface{}) (http.Header, error) {
+func headerOptionProcessing(options map[string]any) (http.Header, error) {
 	header := http.Header{}
 	hVal, ok := options["headers"]
 
@@ -906,10 +906,10 @@ func headerOptionProcessing(options map[string]interface{}) (http.Header, error)
 		// Get the value
 		headerVal := val.Actual()
 		switch headerVal.(type) {
-		case []interface{}:
+		case []any:
 			//Do nothing
 		case string:
-			headerVal = []interface{}{headerVal}
+			headerVal = []any{headerVal}
 		default:
 			return nil, fmt.Errorf("Incorrect type for header option %s"+
 				" in CURL. Header option should be a string value or an array of strings.  ",
@@ -918,7 +918,7 @@ func headerOptionProcessing(options map[string]interface{}) (http.Header, error)
 
 		// We have an array of interfaces that represent different fields in the Header.
 		// Add all the headers to a []string to pass to OPT_HTTPHEADER
-		for _, hval := range headerVal.([]interface{}) {
+		for _, hval := range headerVal.([]any) {
 			newHval := value.NewValue(hval)
 			if newHval.Type() != value.STRING {
 				return nil, fmt.Errorf("Incorrect type for header option %s"+

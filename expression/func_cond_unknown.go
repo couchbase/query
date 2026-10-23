@@ -40,7 +40,7 @@ func NewIfMissing(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IfMissing) Accept(visitor Visitor) (interface{}, error) {
+func (this *IfMissing) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -116,7 +116,7 @@ func NewIfMissingOrNull(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IfMissingOrNull) Accept(visitor Visitor) (interface{}, error) {
+func (this *IfMissingOrNull) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -190,7 +190,7 @@ func NewIfNull(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IfNull) Accept(visitor Visitor) (interface{}, error) {
+func (this *IfNull) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -263,7 +263,7 @@ func NewMissingIf(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *MissingIf) Accept(visitor Visitor) (interface{}, error) {
+func (this *MissingIf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -337,7 +337,7 @@ func NewNullIf(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *NullIf) Accept(visitor Visitor) (interface{}, error) {
+func (this *NullIf) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -415,7 +415,7 @@ func NewNVL(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *NVL) Accept(visitor Visitor) (interface{}, error) {
+func (this *NVL) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -481,7 +481,7 @@ func NewNVL2(first, second, third Expression) Function {
 	return rv
 }
 
-func (this *NVL2) Accept(visitor Visitor) (interface{}, error) {
+func (this *NVL2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -545,7 +545,7 @@ func NewDecode(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Decode) Accept(visitor Visitor) (interface{}, error) {
+func (this *Decode) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

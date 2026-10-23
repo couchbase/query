@@ -33,7 +33,7 @@ func NewFirst(mapping Expression, bindings Bindings, when Expression) Expression
 	return rv
 }
 
-func (this *First) Accept(visitor Visitor) (interface{}, error) {
+func (this *First) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFirst(this)
 }
 
@@ -55,7 +55,7 @@ func (this *First) Evaluate(item value.Value, context Context) (value.Value, err
 	}
 
 	for i := 0; i < n; i++ {
-		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
+		cv := value.NewScopeValue(make(map[string]any, len(this.bindings)), item)
 		for j, b := range this.bindings {
 			if b.NameVariable() == "" {
 				cv.SetField(b.Variable(), bvals[j][i])

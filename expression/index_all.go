@@ -37,7 +37,7 @@ func NewAll(array Expression, distinct bool) *All {
 /*
 Visitor pattern.
 */
-func (this *All) Accept(visitor Visitor) (interface{}, error) {
+func (this *All) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAll(this)
 }
 
@@ -62,7 +62,7 @@ func (this *All) EvaluateForIndex(item value.Value, context Context) (value.Valu
 	var rv value.Values
 	switch val.Type() {
 	case value.ARRAY:
-		act := val.Actual().([]interface{})
+		act := val.Actual().([]any)
 		rv = make(value.Values, len(act))
 		for i, a := range act {
 			rv[i] = value.NewValue(a)

@@ -30,30 +30,30 @@ func testObjectPut(e1, e2, e3 Expression, er value.Value, t *testing.T) {
 func TestObjectPut_add(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1}))
+	e1 := NewConstant(value.NewValue(map[string]any{"f1": 1}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(2)
-	er := value.NewValue(map[string]interface{}{"f1": 1, "f2": 2})
+	er := value.NewValue(map[string]any{"f1": 1, "f2": 2})
 	testObjectPut(e1, e2, e3, er, t)
 }
 
 func TestObjectPut_replace(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1, "f2": 2}))
+	e1 := NewConstant(value.NewValue(map[string]any{"f1": 1, "f2": 2}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(3)
-	er := value.NewValue(map[string]interface{}{"f1": 1, "f2": 3})
+	er := value.NewValue(map[string]any{"f1": 1, "f2": 3})
 	testObjectPut(e1, e2, e3, er, t)
 }
 
 func TestObjectPut_remove(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1, "f2": 2}))
+	e1 := NewConstant(value.NewValue(map[string]any{"f1": 1, "f2": 2}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(value.MISSING_VALUE)
-	er := value.NewValue(map[string]interface{}{"f1": 1})
+	er := value.NewValue(map[string]any{"f1": 1})
 	testObjectPut(e1, e2, e3, er, t)
 }
 
@@ -76,30 +76,30 @@ func testObjectAdd(e1, e2, e3 Expression, er value.Value, fail bool, t *testing.
 func TestObjectAdd_add(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1}))
+	e1 := NewConstant(value.NewValue(map[string]any{"f1": 1}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(2)
-	er := value.NewValue(map[string]interface{}{"f1": 1, "f2": 2})
+	er := value.NewValue(map[string]any{"f1": 1, "f2": 2})
 	testObjectAdd(e1, e2, e3, er, false, t)
 }
 
 func TestObjectAdd_replace(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1, "f2": 2}))
+	e1 := NewConstant(value.NewValue(map[string]any{"f1": 1, "f2": 2}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(3)
-	er := value.NewValue(map[string]interface{}{"f1": 1, "f2": 2})
+	er := value.NewValue(map[string]any{"f1": 1, "f2": 2})
 	testObjectAdd(e1, e2, e3, er, false, t)
 }
 
 func TestObjectAdd_remove(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1, "f2": 2}))
+	e1 := NewConstant(value.NewValue(map[string]any{"f1": 1, "f2": 2}))
 	e2 := NewConstant("f2")
 	e3 := NewConstant(value.MISSING_VALUE)
-	er := value.NewValue(map[string]interface{}{"f1": 1, "f2": 2})
+	er := value.NewValue(map[string]any{"f1": 1, "f2": 2})
 	testObjectAdd(e1, e2, e3, er, false, t)
 }
 
@@ -117,9 +117,9 @@ func testObjectRemove(e1, e2 Expression, er value.Value, t *testing.T) {
 func TestObjectRemove_remove(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant(value.NewValue(map[string]interface{}{"f1": 1, "f2": 2}))
+	e1 := NewConstant(value.NewValue(map[string]any{"f1": 1, "f2": 2}))
 	e2 := NewConstant("f2")
-	er := value.NewValue(map[string]interface{}{"f1": 1})
+	er := value.NewValue(map[string]any{"f1": 1})
 	testObjectRemove(e1, e2, er, t)
 }
 

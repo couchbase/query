@@ -44,7 +44,7 @@ type Expression interface {
 	/*
 	   Visitor pattern.
 	*/
-	Accept(visitor Visitor) (interface{}, error)
+	Accept(visitor Visitor) (any, error)
 
 	/*
 	   Type() returns the N1QL data type of the result of this

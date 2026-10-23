@@ -44,7 +44,7 @@ func NewNodeName() Function {
 /*
 Visitor pattern.
 */
-func (this *NodeName) Accept(visitor Visitor) (interface{}, error) {
+func (this *NodeName) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -104,7 +104,7 @@ func NewNodeUUID(operand Expression) Function {
 	return rv
 }
 
-func (this *NodeUUID) Accept(visitor Visitor) (interface{}, error) {
+func (this *NodeUUID) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

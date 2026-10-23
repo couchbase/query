@@ -33,7 +33,7 @@ func NewEq(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Eq) Accept(visitor Visitor) (interface{}, error) {
+func (this *Eq) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitEq(this)
 }
 

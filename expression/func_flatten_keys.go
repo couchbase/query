@@ -46,14 +46,14 @@ func NewFlattenKeys(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *FlattenKeys) Accept(visitor Visitor) (interface{}, error) {
+func (this *FlattenKeys) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *FlattenKeys) Type() value.Type { return value.ARRAY }
 
 func (this *FlattenKeys) Evaluate(item value.Value, context Context) (value.Value, error) {
-	var f []interface{}
+	var f []any
 	for _, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
 		if err != nil {

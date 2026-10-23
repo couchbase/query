@@ -32,7 +32,7 @@ func NewAny(bindings Bindings, satisfies Expression) Expression {
 	return rv
 }
 
-func (this *Any) Accept(visitor Visitor) (interface{}, error) {
+func (this *Any) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAny(this)
 }
 
@@ -54,7 +54,7 @@ func (this *Any) Evaluate(item value.Value, context Context) (value.Value, error
 	}
 
 	for i := 0; i < n; i++ {
-		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
+		cv := value.NewScopeValue(make(map[string]any, len(this.bindings)), item)
 		for j, b := range this.bindings {
 			if b.NameVariable() == "" {
 				cv.SetField(b.Variable(), bvals[j][i])

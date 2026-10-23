@@ -30,20 +30,20 @@ func testArrayInsert_eval(e1, e2, e3 Expression, er value.Value, t *testing.T) {
 func TestArrayInsert_start(t *testing.T) {
 
 	/* tests insert of value in array at start */
-	e1 := NewConstant([]interface{}{1, 2, 3})
+	e1 := NewConstant([]any{1, 2, 3})
 	e2 := NewConstant(0)
 	e3 := NewConstant(4)
-	er := value.NewValue([]interface{}{4, 1, 2, 3})
+	er := value.NewValue([]any{4, 1, 2, 3})
 	testArrayInsert_eval(e1, e2, e3, er, t)
 }
 
 func TestArrayInsert_end(t *testing.T) {
 
 	/* tests insert of value in array at end */
-	e1 := NewConstant([]interface{}{1, 2, 3})
+	e1 := NewConstant([]any{1, 2, 3})
 	e2 := NewConstant(0)
 	e3 := NewConstant(4)
-	er := value.NewValue([]interface{}{4, 1, 2, 3})
+	er := value.NewValue([]any{4, 1, 2, 3})
 	testArrayInsert_eval(e1, e2, e3, er, t)
 }
 

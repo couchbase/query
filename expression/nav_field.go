@@ -44,7 +44,7 @@ func NewField(first, second Expression) *Field {
 /*
 Visitor pattern.
 */
-func (this *Field) Accept(visitor Visitor) (interface{}, error) {
+func (this *Field) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitField(this)
 }
 
@@ -137,8 +137,8 @@ func (this *Field) doEvaluate(context Context, first, second value.Value, walk b
 // for each element in the array, look for the field in question and return all results as an array
 // do NOT processes nested arrays recursively
 func (this *Field) doArrayEvaluate(context Context, first, second value.Value) (value.Value, error) {
-	rv := make([]interface{}, 0, 16)
-	fa, _ := first.Actual().([]interface{})
+	rv := make([]any, 0, 16)
+	fa, _ := first.Actual().([]any)
 	for _, ff := range fa {
 		fv := value.NewValue(ff)
 		v, e := this.doEvaluate(context, fv, second, true)
@@ -146,7 +146,7 @@ func (this *Field) doArrayEvaluate(context Context, first, second value.Value) (
 			return nil, e
 		} else if v.Type() == value.ARRAY {
 			// flatten first level
-			for _, e := range v.Actual().([]interface{}) {
+			for _, e := range v.Actual().([]any) {
 				rv = append(rv, e)
 			}
 		} else if v.Type() != value.MISSING {
@@ -455,7 +455,7 @@ func NewFieldName(name string, caseInsensitive bool) Expression {
 /*
 Visitor pattern.
 */
-func (this *FieldName) Accept(visitor Visitor) (interface{}, error) {
+func (this *FieldName) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFieldName(this)
 }
 

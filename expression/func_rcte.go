@@ -31,7 +31,7 @@ func NewRecursiveCte(operands ...Expression) Function {
 	return rv
 }
 
-func (this *RecursiveCte) Accept(visitor Visitor) (interface{}, error) {
+func (this *RecursiveCte) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -101,7 +101,7 @@ func (this *RecursiveCte) Evaluate(item value.Value, context Context) (value.Val
 	}
 
 	// append recursive results into anchorRvA , for next level's recursive phase
-	anchorRvA, ok := anchorRv.Actual().([]interface{})
+	anchorRvA, ok := anchorRv.Actual().([]any)
 	if !ok {
 		// anchor is not a collection type so can't type cast
 		return nil, errors.NewExecutionInternalError("anchor results is not an array")
@@ -114,11 +114,11 @@ func (this *RecursiveCte) Evaluate(item value.Value, context Context) (value.Val
 
 	// add visit entries for anchor docs
 	var hashTab map[string]bool
-	var hashVal map[string]interface{}
+	var hashVal map[string]any
 	if len(configRv.cycleDetect) > 0 {
 
 		hashTab = make(map[string]bool, 1024)
-		hashVal = make(map[string]interface{})
+		hashVal = make(map[string]any)
 
 		// clean up
 		defer func(hashTab map[string]bool) {
@@ -166,7 +166,7 @@ func (this *RecursiveCte) Evaluate(item value.Value, context Context) (value.Val
 			return nil, errExecRecursive
 		}
 
-		recursiveRvA, ok := recursiveRv.Actual().([]interface{})
+		recursiveRvA, ok := recursiveRv.Actual().([]any)
 		if !ok {
 			continue
 		}
@@ -203,7 +203,7 @@ func (this *RecursiveCte) Constructor() FunctionConstructor {
 	return NewRecursiveCte
 }
 
-func (this *RecursiveCte) getExplain(anchorPlan interface{}, recursivePlan interface{}, context Context) {
+func (this *RecursiveCte) getExplain(anchorPlan any, recursivePlan any, context Context) {
 
 	ap, _ := json.Marshal(anchorPlan)
 	rp, _ := json.Marshal(recursivePlan)
@@ -214,10 +214,10 @@ func (this *RecursiveCte) getExplain(anchorPlan interface{}, recursivePlan inter
 }
 
 // trim collection based on cycle detection
-func (this *RecursiveCte) checkCycle(hashTab map[string]bool, hashValMap map[string]interface{}, cycleFields Expressions,
-	objects []interface{}, context Context) []interface{} {
+func (this *RecursiveCte) checkCycle(hashTab map[string]bool, hashValMap map[string]any, cycleFields Expressions,
+	objects []any, context Context) []any {
 
-	noCycleObjects := []interface{}{}
+	noCycleObjects := []any{}
 
 	for _, object := range objects {
 		objv := value.NewValue(object)
@@ -240,7 +240,7 @@ func (this *RecursiveCte) checkCycle(hashTab map[string]bool, hashValMap map[str
 }
 
 // given a cycleFields:list of identifiers/field names, modifies hashval map for new values
-func (this *RecursiveCte) hashVal(item value.Value, hashValMap map[string]interface{}, cycleFields Expressions,
+func (this *RecursiveCte) hashVal(item value.Value, hashValMap map[string]any, cycleFields Expressions,
 	context Context) error {
 
 	for pos, exp := range cycleFields {
@@ -263,7 +263,7 @@ func (this *RecursiveCte) hashVal(item value.Value, hashValMap map[string]interf
 }
 
 func (this *Config) validateCycleFields(cycleFieldsArg value.Value, context Context) {
-	cycleDetectA, ok := cycleFieldsArg.Actual().([]interface{})
+	cycleDetectA, ok := cycleFieldsArg.Actual().([]any)
 
 	validCycleFields := Expressions{}
 	if !ok {
@@ -348,14 +348,14 @@ func (this *Config) getConfig(confVal value.Value, context Context) {
 
 	if argumentsV, argumentsFlag := confVal.Field("arguments"); argumentsFlag == true {
 		switch argT := argumentsV.Actual().(type) {
-		case []interface{}:
+		case []any:
 			this.posArgs = make(value.Values, len(argT))
 
 			for id, v := range argT {
 				this.posArgs[id] = value.NewValue(v)
 			}
 
-		case map[string]interface{}:
+		case map[string]any:
 			for k, v := range argT {
 				this.namedArgs[k] = value.NewValue(v)
 			}

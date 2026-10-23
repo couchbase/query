@@ -31,7 +31,7 @@ func NewLE(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *LE) Accept(visitor Visitor) (interface{}, error) {
+func (this *LE) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitLE(this)
 }
 

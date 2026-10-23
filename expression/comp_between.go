@@ -32,7 +32,7 @@ func NewBetween(item, low, high Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Between) Accept(visitor Visitor) (interface{}, error) {
+func (this *Between) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitBetween(this)
 }
 

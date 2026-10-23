@@ -15,7 +15,7 @@ import (
 
 // GetModelProvidersFunc is set by the natural package at init time to avoid an import cycle.
 // expression → natural → execution → expression
-var GetModelProvidersFunc func(nlCred, nlOrgId string, enabledOnly bool) (interface{}, errors.Error)
+var GetModelProvidersFunc func(nlCred, nlOrgId string, enabledOnly bool) (any, errors.Error)
 
 ///////////////////////////////////////////////////
 //
@@ -38,7 +38,7 @@ func NewModelProviders(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ModelProviders) Accept(visitor Visitor) (interface{}, error) {
+func (this *ModelProviders) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

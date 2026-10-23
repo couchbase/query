@@ -38,7 +38,7 @@ func NewAbort(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Abort) Accept(visitor Visitor) (interface{}, error) {
+func (this *Abort) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

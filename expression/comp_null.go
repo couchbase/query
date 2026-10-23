@@ -27,7 +27,7 @@ func NewIsNull(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsNull) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsNull) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIsNull(this)
 }
 
@@ -91,7 +91,7 @@ func NewIsNotNull(operand Expression) Function {
 	return rv
 }
 
-func (this *IsNotNull) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsNotNull) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIsNotNull(this)
 }
 

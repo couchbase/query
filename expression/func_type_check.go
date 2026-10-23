@@ -37,7 +37,7 @@ func NewIsArray(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsArray) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsArray) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -105,7 +105,7 @@ func NewIsAtom(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsAtom) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsAtom) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -181,7 +181,7 @@ func NewIsBinary(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsBinary) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsBinary) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -248,7 +248,7 @@ func NewIsBoolean(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsBoolean) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsBoolean) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -315,7 +315,7 @@ func NewIsNumber(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsNumber) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsNumber) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -382,7 +382,7 @@ func NewIsObject(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsObject) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsObject) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -449,7 +449,7 @@ func NewIsString(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsString) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsString) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -516,7 +516,7 @@ func NewType(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Type) Accept(visitor Visitor) (interface{}, error) {
+func (this *Type) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

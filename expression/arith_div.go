@@ -32,7 +32,7 @@ func NewDiv(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Div) Accept(visitor Visitor) (interface{}, error) {
+func (this *Div) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitDiv(this)
 }
 

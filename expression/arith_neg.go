@@ -31,7 +31,7 @@ func NewNeg(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Neg) Accept(visitor Visitor) (interface{}, error) {
+func (this *Neg) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitNeg(this)
 }
 

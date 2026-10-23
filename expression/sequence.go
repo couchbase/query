@@ -100,7 +100,7 @@ func quoteIfNecessary(s string) string {
 	return s
 }
 
-func (this *SequenceOperation) Accept(visitor Visitor) (interface{}, error) {
+func (this *SequenceOperation) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

@@ -26,7 +26,7 @@ func NewInliner(mappings map[string]Expression) *Inliner {
 	return rv
 }
 
-func (this *Inliner) VisitIdentifier(id *Identifier) (interface{}, error) {
+func (this *Inliner) VisitIdentifier(id *Identifier) (any, error) {
 	repl, ok := this.mappings[id.Identifier()]
 	if ok {
 		this.modified = true

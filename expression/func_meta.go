@@ -42,7 +42,7 @@ func NewBase64Encode(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Base64Encode) Accept(visitor Visitor) (interface{}, error) {
+func (this *Base64Encode) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -95,7 +95,7 @@ func NewBase64Decode(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Base64Decode) Accept(visitor Visitor) (interface{}, error) {
+func (this *Base64Decode) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -158,7 +158,7 @@ func NewMeta(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Meta) Accept(visitor Visitor) (interface{}, error) {
+func (this *Meta) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -255,7 +255,7 @@ func NewSelf() Function {
 /*
 Visitor pattern.
 */
-func (this *Self) Accept(visitor Visitor) (interface{}, error) {
+func (this *Self) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSelf(this)
 }
 
@@ -334,7 +334,7 @@ func NewUuid() Function {
 /*
 Visitor pattern.
 */
-func (this *Uuid) Accept(visitor Visitor) (interface{}, error) {
+func (this *Uuid) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -386,7 +386,7 @@ func NewVersion() Function {
 /*
 Visitor pattern.
 */
-func (this *Version) Accept(visitor Visitor) (interface{}, error) {
+func (this *Version) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -442,7 +442,7 @@ func NewMinVersion() Function {
 /*
 Visitor pattern.
 */
-func (this *MinVersion) Accept(visitor Visitor) (interface{}, error) {
+func (this *MinVersion) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -493,7 +493,7 @@ func NewCurrentUser() Function {
 	return rv
 }
 
-func (this *CurrentUser) Accept(visitor Visitor) (interface{}, error) {
+func (this *CurrentUser) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -562,7 +562,7 @@ func NewCurrentUsers() Function {
 /*
 Visitor pattern.
 */
-func (this *CurrentUsers) Accept(visitor Visitor) (interface{}, error) {
+func (this *CurrentUsers) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -573,7 +573,7 @@ func (this *CurrentUsers) Evaluate(item value.Value, context Context) (value.Val
 		return nil, errors.NewNilEvaluateParamError("context")
 	}
 	authUsers := context.Credentials().AuthenticatedUsers
-	arr := make([]interface{}, len(authUsers))
+	arr := make([]any, len(authUsers))
 	for i, user := range authUsers {
 		arr[i] = user
 	}
@@ -620,7 +620,7 @@ func NewDsVersion() Function {
 /*
 Visitor pattern.
 */
-func (this *DsVersion) Accept(visitor Visitor) (interface{}, error) {
+func (this *DsVersion) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

@@ -95,7 +95,7 @@ func NewIndexCondition(covered Expression) *Cover {
 /*
 Visitor pattern.
 */
-func (this *Cover) Accept(visitor Visitor) (interface{}, error) {
+func (this *Cover) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitCover(this)
 }
 

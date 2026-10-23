@@ -290,7 +290,7 @@ func pemParsePrivateKey(der, passphrase []byte) (crypto.PrivateKey, error) {
 
 // pemVerifyKeyPair confirms that the public key from the certificate and the
 // private key are a matching pair, mirroring goutils/tls.x509KeyPair's check.
-func pemVerifyKeyPair(pub interface{}, priv crypto.PrivateKey) error {
+func pemVerifyKeyPair(pub any, priv crypto.PrivateKey) error {
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
 		pk, ok := priv.(*rsa.PrivateKey)

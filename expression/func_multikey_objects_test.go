@@ -20,7 +20,7 @@ func TestMultiKeyObjects_bareConstantHasNoAliasYieldsMissing(t *testing.T) {
 	   implicit alias, so there is no field name to build the implied
 	   {"<alias>": doc} object construction with -- the result is
 	   missing, even though doc itself is a present, non-missing value */
-	doc := map[string]interface{}{"id": 1, "tags": []interface{}{"a", "b"}}
+	doc := map[string]any{"id": 1, "tags": []any{"a", "b"}}
 	rv, err := NewMultiKeyObjects(NewConstant(doc)).Evaluate(nil, nil)
 	if err != nil {
 		t.Fatalf("received error %v", err)
@@ -64,14 +64,14 @@ func TestMultiKeyObjects_barePathNotPresentOmitsKeyLikeObjectConstruct(t *testin
 	   (sole) result object with no fields set at all, it is dropped
 	   entirely, rather than surfaced as a spurious empty object; the
 	   overall result is an empty array, not missing */
-	item := value.NewValue(map[string]interface{}{"x": map[string]interface{}{}})
+	item := value.NewValue(map[string]any{"x": map[string]any{}})
 	rv, err := NewMultiKeyObjects(
 		NewField(NewIdentifier("x"), NewFieldName("y", false)),
 	).Evaluate(item, nil)
 	if err != nil {
 		t.Fatalf("received error %v", err)
 	}
-	expected := value.NewValue([]interface{}{})
+	expected := value.NewValue([]any{})
 	if expected.Collate(rv) != 0 {
 		t.Errorf("expected %v, got %v", expected.Actual(), rv.Actual())
 	}
@@ -83,7 +83,7 @@ func TestMultiKeyObjects_bareIdentifierArrayExpandsLikeObjectConstruct(t *testin
 	   MULTIKEY_OBJECTS({"tags": tags})) must be the same: tags has an
 	   implicit alias ("tags"), so the array is walked and denormalized
 	   exactly as it would be as an object-construct field */
-	item := value.NewValue(map[string]interface{}{"id": 1, "tags": []interface{}{"a", "b"}})
+	item := value.NewValue(map[string]any{"id": 1, "tags": []any{"a", "b"}})
 
 	bare, err := NewMultiKeyObjects(NewIdentifier("tags")).Evaluate(item, nil)
 	if err != nil {
@@ -101,9 +101,9 @@ func TestMultiKeyObjects_bareIdentifierArrayExpandsLikeObjectConstruct(t *testin
 		t.Errorf("expected MULTIKEY_OBJECTS(tags) == MULTIKEY_OBJECTS({tags}), got %v vs %v", bare.Actual(), braced.Actual())
 	}
 
-	expected := []interface{}{
-		map[string]interface{}{"tags": "a"},
-		map[string]interface{}{"tags": "b"},
+	expected := []any{
+		map[string]any{"tags": "a"},
+		map[string]any{"tags": "b"},
 	}
 	testMultiKeyObjectsPath_eval(map[Expression]Expression{NewConstant("tags"): NewIdentifier("tags")}, item, expected, t)
 }
@@ -115,15 +115,15 @@ func TestMultiKeyObjects_bareIdentifierNonArrayIsWrappedUnderAlias(t *testing.T)
 	   alias, same as MULTIKEY_OBJECTS({"doc": doc}) would be -- unlike
 	   TestMultiKeyObjects_bareConstantHasNoAliasYieldsMissing's Constant
 	   case */
-	item := value.NewValue(map[string]interface{}{
-		"doc": map[string]interface{}{"id": 1, "tags": []interface{}{"a", "b"}},
+	item := value.NewValue(map[string]any{
+		"doc": map[string]any{"id": 1, "tags": []any{"a", "b"}},
 	})
 	rv, err := NewMultiKeyObjects(NewIdentifier("doc")).Evaluate(item, nil)
 	if err != nil {
 		t.Fatalf("received error %v", err)
 	}
-	expected := value.NewValue([]interface{}{
-		map[string]interface{}{"doc": map[string]interface{}{"id": 1, "tags": []interface{}{"a", "b"}}},
+	expected := value.NewValue([]any{
+		map[string]any{"doc": map[string]any{"id": 1, "tags": []any{"a", "b"}}},
 	})
 	if expected.Collate(rv) != 0 {
 		t.Errorf("expected %v, got %v", expected.Actual(), rv.Actual())
@@ -137,12 +137,12 @@ func TestMultiKeyObjects_bareIdentifierEmptyArrayMatchesObjectConstruct(t *testi
 	   which -- since tags is the sole field -- contributes no value at
 	   all, leaving nothing set; that result object is dropped, so the
 	   overall result is an empty array */
-	item := value.NewValue(map[string]interface{}{"tags": []interface{}{}})
+	item := value.NewValue(map[string]any{"tags": []any{}})
 	rv, err := NewMultiKeyObjects(NewIdentifier("tags")).Evaluate(item, nil)
 	if err != nil {
 		t.Fatalf("received error %v", err)
 	}
-	expected := value.NewValue([]interface{}{})
+	expected := value.NewValue([]any{})
 	if expected.Collate(rv) != 0 {
 		t.Errorf("expected %v, got %v", expected.Actual(), rv.Actual())
 	}
@@ -156,11 +156,11 @@ func TestMultiKeyObjects_barePathPartiallyMissingAcrossArrayOmitsKeyPerElement(t
 	   "sku" is the sole field, that leaves those elements' result
 	   objects with nothing set at all, so they're dropped entirely;
 	   elements that do have "sku" still expand normally */
-	item := value.NewValue(map[string]interface{}{
-		"items": []interface{}{
-			map[string]interface{}{"sku": "A1"},
-			map[string]interface{}{"other": "x"},
-			map[string]interface{}{"sku": "B2"},
+	item := value.NewValue(map[string]any{
+		"items": []any{
+			map[string]any{"sku": "A1"},
+			map[string]any{"other": "x"},
+			map[string]any{"sku": "B2"},
 		},
 	})
 	rv, err := NewMultiKeyObjects(
@@ -169,9 +169,9 @@ func TestMultiKeyObjects_barePathPartiallyMissingAcrossArrayOmitsKeyPerElement(t
 	if err != nil {
 		t.Fatalf("received error %v", err)
 	}
-	expected := value.NewValue([]interface{}{
-		map[string]interface{}{"sku": "A1"},
-		map[string]interface{}{"sku": "B2"},
+	expected := value.NewValue([]any{
+		map[string]any{"sku": "A1"},
+		map[string]any{"sku": "B2"},
 	})
 	if expected.Collate(rv) != 0 {
 		t.Errorf("expected %v, got %v", expected.Actual(), rv.Actual())
@@ -183,13 +183,13 @@ Evaluates MULTIKEY_OBJECTS(objectConstructExpr) against the given
 top-level item, using the same order-insensitive comparison as
 testMultiKeyObjectsPath_eval's callers rely on.
 */
-func testMultiKeyObjectsPath_eval(mapping map[Expression]Expression, item value.Value, expected []interface{}, t *testing.T) {
+func testMultiKeyObjectsPath_eval(mapping map[Expression]Expression, item value.Value, expected []any, t *testing.T) {
 	rv, err := NewMultiKeyObjects(NewObjectConstruct(mapping)).Evaluate(item, nil)
 	if err != nil {
 		t.Fatalf("received error %v", err)
 	}
 
-	actual, ok := rv.Actual().([]interface{})
+	actual, ok := rv.Actual().([]any)
 	if !ok {
 		t.Fatalf("expected array result, got %T: %v", rv.Actual(), rv.Actual())
 	}
@@ -221,14 +221,14 @@ func TestMultiKeyObjects_singleArray(t *testing.T) {
 
 	/* MULTIKEY_OBJECTS({"id": id, "tags": tags}): one array field is
 	   expanded, one object per element */
-	item := value.NewValue(map[string]interface{}{"id": 1, "tags": []interface{}{"a", "b"}})
+	item := value.NewValue(map[string]any{"id": 1, "tags": []any{"a", "b"}})
 	mapping := map[Expression]Expression{
 		NewConstant("id"):   NewIdentifier("id"),
 		NewConstant("tags"): NewIdentifier("tags"),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"id": 1, "tags": "a"},
-		map[string]interface{}{"id": 1, "tags": "b"},
+	expected := []any{
+		map[string]any{"id": 1, "tags": "a"},
+		map[string]any{"id": 1, "tags": "b"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -237,19 +237,19 @@ func TestMultiKeyObjects_multipleArrays_cartesianProduct(t *testing.T) {
 
 	/* MULTIKEY_OBJECTS({"id": id, "a": a, "b": b}): two array fields
 	   multiply out instead of returning null */
-	item := value.NewValue(map[string]interface{}{
-		"id": 1, "a": []interface{}{1, 2}, "b": []interface{}{"x", "y"},
+	item := value.NewValue(map[string]any{
+		"id": 1, "a": []any{1, 2}, "b": []any{"x", "y"},
 	})
 	mapping := map[Expression]Expression{
 		NewConstant("id"): NewIdentifier("id"),
 		NewConstant("a"):  NewIdentifier("a"),
 		NewConstant("b"):  NewIdentifier("b"),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"id": 1, "a": 1, "b": "x"},
-		map[string]interface{}{"id": 1, "a": 1, "b": "y"},
-		map[string]interface{}{"id": 1, "a": 2, "b": "x"},
-		map[string]interface{}{"id": 1, "a": 2, "b": "y"},
+	expected := []any{
+		map[string]any{"id": 1, "a": 1, "b": "x"},
+		map[string]any{"id": 1, "a": 1, "b": "y"},
+		map[string]any{"id": 1, "a": 2, "b": "x"},
+		map[string]any{"id": 1, "a": 2, "b": "y"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -259,20 +259,20 @@ func TestMultiKeyObjects_arrayOfObjectsIsNotExpandedFurther(t *testing.T) {
 	/* MULTIKEY_OBJECTS({"id": id, "d": d}): a top-level array field is
 	   expanded one level -- its elements (here, objects with their own
 	   nested arrays) are used as-is, without any further recursion */
-	item := value.NewValue(map[string]interface{}{
+	item := value.NewValue(map[string]any{
 		"id": 1,
-		"d": []interface{}{
-			map[string]interface{}{"e": []interface{}{1, 2}},
-			map[string]interface{}{"e": []interface{}{3}},
+		"d": []any{
+			map[string]any{"e": []any{1, 2}},
+			map[string]any{"e": []any{3}},
 		},
 	})
 	mapping := map[Expression]Expression{
 		NewConstant("id"): NewIdentifier("id"),
 		NewConstant("d"):  NewIdentifier("d"),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"id": 1, "d": map[string]interface{}{"e": []interface{}{1, 2}}},
-		map[string]interface{}{"id": 1, "d": map[string]interface{}{"e": []interface{}{3}}},
+	expected := []any{
+		map[string]any{"id": 1, "d": map[string]any{"e": []any{1, 2}}},
+		map[string]any{"id": 1, "d": map[string]any{"e": []any{3}}},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -286,11 +286,11 @@ func TestMultiKeyObjects_correlatedFieldsFromSameArray(t *testing.T) {
 	field := func(base Expression, name string) Expression {
 		return NewField(base, NewFieldName(name, false))
 	}
-	item := value.NewValue(map[string]interface{}{
+	item := value.NewValue(map[string]any{
 		"id": 1,
-		"items": []interface{}{
-			map[string]interface{}{"sku": "A1", "tags": []interface{}{"x", "y"}},
-			map[string]interface{}{"sku": "B2", "tags": []interface{}{"z"}},
+		"items": []any{
+			map[string]any{"sku": "A1", "tags": []any{"x", "y"}},
+			map[string]any{"sku": "B2", "tags": []any{"z"}},
 		},
 	})
 	mapping := map[Expression]Expression{
@@ -298,10 +298,10 @@ func TestMultiKeyObjects_correlatedFieldsFromSameArray(t *testing.T) {
 		NewConstant("sku"): field(NewIdentifier("items"), "sku"),
 		NewConstant("tag"): field(NewIdentifier("items"), "tags"),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"id": 1, "sku": "A1", "tag": "x"},
-		map[string]interface{}{"id": 1, "sku": "A1", "tag": "y"},
-		map[string]interface{}{"id": 1, "sku": "B2", "tag": "z"},
+	expected := []any{
+		map[string]any{"id": 1, "sku": "A1", "tag": "x"},
+		map[string]any{"id": 1, "sku": "A1", "tag": "y"},
+		map[string]any{"id": 1, "sku": "B2", "tag": "z"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -314,21 +314,21 @@ func TestMultiKeyObjects_unrelatedArraysStillCartesianProduct(t *testing.T) {
 	field := func(base Expression, name string) Expression {
 		return NewField(base, NewFieldName(name, false))
 	}
-	item := value.NewValue(map[string]interface{}{
+	item := value.NewValue(map[string]any{
 		"id":    1,
-		"items": []interface{}{map[string]interface{}{"sku": "A1"}, map[string]interface{}{"sku": "B2"}},
-		"addr":  []interface{}{map[string]interface{}{"city": "NYC"}, map[string]interface{}{"city": "LA"}},
+		"items": []any{map[string]any{"sku": "A1"}, map[string]any{"sku": "B2"}},
+		"addr":  []any{map[string]any{"city": "NYC"}, map[string]any{"city": "LA"}},
 	})
 	mapping := map[Expression]Expression{
 		NewConstant("id"):   NewIdentifier("id"),
 		NewConstant("sku"):  field(NewIdentifier("items"), "sku"),
 		NewConstant("city"): field(NewIdentifier("addr"), "city"),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"id": 1, "sku": "A1", "city": "NYC"},
-		map[string]interface{}{"id": 1, "sku": "A1", "city": "LA"},
-		map[string]interface{}{"id": 1, "sku": "B2", "city": "NYC"},
-		map[string]interface{}{"id": 1, "sku": "B2", "city": "LA"},
+	expected := []any{
+		map[string]any{"id": 1, "sku": "A1", "city": "NYC"},
+		map[string]any{"id": 1, "sku": "A1", "city": "LA"},
+		map[string]any{"id": 1, "sku": "B2", "city": "NYC"},
+		map[string]any{"id": 1, "sku": "B2", "city": "LA"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -338,17 +338,17 @@ func TestMultiKeyObjects_emptyArrayFieldOmitted(t *testing.T) {
 	/* MULTIKEY_OBJECTS({"id": id, "a": a, "tags": tags}): an empty array
 	   field is omitted from the result objects; a sibling array field
 	   still expands normally */
-	item := value.NewValue(map[string]interface{}{
-		"id": 1, "a": []interface{}{1, 2}, "tags": []interface{}{},
+	item := value.NewValue(map[string]any{
+		"id": 1, "a": []any{1, 2}, "tags": []any{},
 	})
 	mapping := map[Expression]Expression{
 		NewConstant("id"):   NewIdentifier("id"),
 		NewConstant("a"):    NewIdentifier("a"),
 		NewConstant("tags"): NewIdentifier("tags"),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"id": 1, "a": 1},
-		map[string]interface{}{"id": 1, "a": 2},
+	expected := []any{
+		map[string]any{"id": 1, "a": 1},
+		map[string]any{"id": 1, "a": 2},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -357,13 +357,13 @@ func TestMultiKeyObjects_noArrayField(t *testing.T) {
 
 	/* MULTIKEY_OBJECTS({"id": id, "name": name}): no array fields, so the
 	   object is returned unchanged, as a single-element array */
-	item := value.NewValue(map[string]interface{}{"id": 1, "name": "foo"})
+	item := value.NewValue(map[string]any{"id": 1, "name": "foo"})
 	mapping := map[Expression]Expression{
 		NewConstant("id"):   NewIdentifier("id"),
 		NewConstant("name"): NewIdentifier("name"),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"id": 1, "name": "foo"},
+	expected := []any{
+		map[string]any{"id": 1, "name": "foo"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -372,18 +372,18 @@ func TestMultiKeyObjects_pathWalksThroughArrayWithoutExplicitBrackets(t *testing
 
 	/* a.b, where a is an array of objects, walks each element for "b"
 	   as if written a[].b, without needing [] to be written explicitly */
-	item := value.NewValue(map[string]interface{}{
-		"a": []interface{}{
-			map[string]interface{}{"b": 1},
-			map[string]interface{}{"b": 2},
+	item := value.NewValue(map[string]any{
+		"a": []any{
+			map[string]any{"b": 1},
+			map[string]any{"b": 2},
 		},
 	})
 	mapping := map[Expression]Expression{
 		NewConstant("x"): NewField(NewIdentifier("a"), NewFieldName("b", false)),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"x": 1},
-		map[string]interface{}{"x": 2},
+	expected := []any{
+		map[string]any{"x": 1},
+		map[string]any{"x": 2},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -392,8 +392,8 @@ func TestMultiKeyObjects_pathPastScalarProducesNull(t *testing.T) {
 
 	/* a.b.c, where a.b is a scalar, cannot be navigated any further:
 	   it produces null rather than missing */
-	item := value.NewValue(map[string]interface{}{
-		"a": map[string]interface{}{"b": 5},
+	item := value.NewValue(map[string]any{
+		"a": map[string]any{"b": 5},
 	})
 	mapping := map[Expression]Expression{
 		NewConstant("x"): NewField(
@@ -401,8 +401,8 @@ func TestMultiKeyObjects_pathPastScalarProducesNull(t *testing.T) {
 			NewFieldName("c", false),
 		),
 	}
-	expected := []interface{}{
-		map[string]interface{}{"x": nil},
+	expected := []any{
+		map[string]any{"x": nil},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -413,15 +413,15 @@ func TestMultiKeyObjects_bareDIdentifierWrapsWholeDocument(t *testing.T) {
 	   Identifier, so it has an implicit alias): wrapped under that
 	   alias, as a single-element array, exactly like
 	   MULTIKEY_OBJECTS({d}) == MULTIKEY_OBJECTS({"d": d}) would be */
-	doc := map[string]interface{}{"id": 1, "tags": []interface{}{"a", "b"}}
-	item := value.NewValue(map[string]interface{}{"d": doc})
+	doc := map[string]any{"id": 1, "tags": []any{"a", "b"}}
+	item := value.NewValue(map[string]any{"d": doc})
 
 	rv, err := NewMultiKeyObjects(NewIdentifier("d")).Evaluate(item, nil)
 	if err != nil {
 		t.Fatalf("received error %v", err)
 	}
-	expected := value.NewValue([]interface{}{
-		map[string]interface{}{"d": doc},
+	expected := value.NewValue([]any{
+		map[string]any{"d": doc},
 	})
 	if expected.Collate(rv) != 0 {
 		t.Errorf("expected %v, got %v", expected.Actual(), rv.Actual())
@@ -441,19 +441,19 @@ func TestMultiKeyObjects_siblingScalarAndArrayShareBaseCartesianProduct(t *testi
 		NewConstant("tags"): field("tags"),
 	}
 
-	row1 := value.NewValue(map[string]interface{}{
-		"d": map[string]interface{}{"sku": "A1", "tags": []interface{}{"x", "y"}},
+	row1 := value.NewValue(map[string]any{
+		"d": map[string]any{"sku": "A1", "tags": []any{"x", "y"}},
 	})
-	testMultiKeyObjectsPath_eval(mapping, row1, []interface{}{
-		map[string]interface{}{"sku": "A1", "tags": "x"},
-		map[string]interface{}{"sku": "A1", "tags": "y"},
+	testMultiKeyObjectsPath_eval(mapping, row1, []any{
+		map[string]any{"sku": "A1", "tags": "x"},
+		map[string]any{"sku": "A1", "tags": "y"},
 	}, t)
 
-	row2 := value.NewValue(map[string]interface{}{
-		"d": map[string]interface{}{"sku": "B2", "tags": []interface{}{"z"}},
+	row2 := value.NewValue(map[string]any{
+		"d": map[string]any{"sku": "B2", "tags": []any{"z"}},
 	})
-	testMultiKeyObjectsPath_eval(mapping, row2, []interface{}{
-		map[string]interface{}{"sku": "B2", "tags": "z"},
+	testMultiKeyObjectsPath_eval(mapping, row2, []any{
+		map[string]any{"sku": "B2", "tags": "z"},
 	}, t)
 }
 
@@ -469,18 +469,18 @@ func TestMultiKeyObjects_nestedBaseCorrelatedSiblingFields(t *testing.T) {
 		NewConstant("sku"):  field(field(NewIdentifier("d"), "items"), "sku"),
 		NewConstant("tags"): field(field(NewIdentifier("d"), "items"), "tags"),
 	}
-	item := value.NewValue(map[string]interface{}{
-		"d": map[string]interface{}{
-			"items": []interface{}{
-				map[string]interface{}{"sku": "A1", "tags": []interface{}{"x", "y"}},
-				map[string]interface{}{"sku": "B2", "tags": []interface{}{"z"}},
+	item := value.NewValue(map[string]any{
+		"d": map[string]any{
+			"items": []any{
+				map[string]any{"sku": "A1", "tags": []any{"x", "y"}},
+				map[string]any{"sku": "B2", "tags": []any{"z"}},
 			},
 		},
 	})
-	expected := []interface{}{
-		map[string]interface{}{"sku": "A1", "tags": "x"},
-		map[string]interface{}{"sku": "A1", "tags": "y"},
-		map[string]interface{}{"sku": "B2", "tags": "z"},
+	expected := []any{
+		map[string]any{"sku": "A1", "tags": "x"},
+		map[string]any{"sku": "A1", "tags": "y"},
+		map[string]any{"sku": "B2", "tags": "z"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -498,31 +498,31 @@ func TestMultiKeyObjects_nestedBaseCorrelatedSiblingFieldsOfObjects(t *testing.T
 		NewConstant("sku"):  field(field(NewIdentifier("d"), "items"), "sku"),
 		NewConstant("tags"): field(field(NewIdentifier("d"), "items"), "tags"),
 	}
-	item := value.NewValue(map[string]interface{}{
-		"d": map[string]interface{}{
-			"items": []interface{}{
-				map[string]interface{}{
+	item := value.NewValue(map[string]any{
+		"d": map[string]any{
+			"items": []any{
+				map[string]any{
 					"sku": "A1",
-					"tags": []interface{}{
-						map[string]interface{}{"x": "x"},
-						map[string]interface{}{"y": []interface{}{"y1", "y2"}},
+					"tags": []any{
+						map[string]any{"x": "x"},
+						map[string]any{"y": []any{"y1", "y2"}},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"sku": "B1",
-					"tags": []interface{}{
-						map[string]interface{}{"x": "x1"},
-						map[string]interface{}{"y": []interface{}{"y11", "y12"}},
+					"tags": []any{
+						map[string]any{"x": "x1"},
+						map[string]any{"y": []any{"y11", "y12"}},
 					},
 				},
 			},
 		},
 	})
-	expected := []interface{}{
-		map[string]interface{}{"sku": "A1", "tags": map[string]interface{}{"x": "x"}},
-		map[string]interface{}{"sku": "A1", "tags": map[string]interface{}{"y": []interface{}{"y1", "y2"}}},
-		map[string]interface{}{"sku": "B1", "tags": map[string]interface{}{"x": "x1"}},
-		map[string]interface{}{"sku": "B1", "tags": map[string]interface{}{"y": []interface{}{"y11", "y12"}}},
+	expected := []any{
+		map[string]any{"sku": "A1", "tags": map[string]any{"x": "x"}},
+		map[string]any{"sku": "A1", "tags": map[string]any{"y": []any{"y1", "y2"}}},
+		map[string]any{"sku": "B1", "tags": map[string]any{"x": "x1"}},
+		map[string]any{"sku": "B1", "tags": map[string]any{"y": []any{"y11", "y12"}}},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -542,33 +542,33 @@ func TestMultiKeyObjects_deeperPathIntoArrayOfMixedSchemaObjects(t *testing.T) {
 		NewConstant("sku"): field(dItems(), "sku"),
 		NewConstant("y"):   field(field(dItems(), "tags"), "y"),
 	}
-	item := value.NewValue(map[string]interface{}{
-		"d": map[string]interface{}{
-			"items": []interface{}{
-				map[string]interface{}{
+	item := value.NewValue(map[string]any{
+		"d": map[string]any{
+			"items": []any{
+				map[string]any{
 					"sku": "A1",
-					"tags": []interface{}{
-						map[string]interface{}{"x": "x"},
-						map[string]interface{}{"y": []interface{}{"y1", "y2"}},
+					"tags": []any{
+						map[string]any{"x": "x"},
+						map[string]any{"y": []any{"y1", "y2"}},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"sku": "B1",
-					"tags": []interface{}{
-						map[string]interface{}{"x": "x1"},
-						map[string]interface{}{"y": []interface{}{"y11", "y12"}},
+					"tags": []any{
+						map[string]any{"x": "x1"},
+						map[string]any{"y": []any{"y11", "y12"}},
 					},
 				},
 			},
 		},
 	})
-	expected := []interface{}{
-		map[string]interface{}{"sku": "A1"},
-		map[string]interface{}{"sku": "A1", "y": "y1"},
-		map[string]interface{}{"sku": "A1", "y": "y2"},
-		map[string]interface{}{"sku": "B1"},
-		map[string]interface{}{"sku": "B1", "y": "y11"},
-		map[string]interface{}{"sku": "B1", "y": "y12"},
+	expected := []any{
+		map[string]any{"sku": "A1"},
+		map[string]any{"sku": "A1", "y": "y1"},
+		map[string]any{"sku": "A1", "y": "y2"},
+		map[string]any{"sku": "B1"},
+		map[string]any{"sku": "B1", "y": "y11"},
+		map[string]any{"sku": "B1", "y": "y12"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -589,20 +589,20 @@ func TestMultiKeyObjects_twoUnrelatedArraysUnderSharedNonArrayBase(t *testing.T)
 		NewConstant("tags"):  field(dItem(), "tags"),
 		NewConstant("names"): field(dItem(), "names"),
 	}
-	item := value.NewValue(map[string]interface{}{
-		"d": map[string]interface{}{
-			"item": map[string]interface{}{
+	item := value.NewValue(map[string]any{
+		"d": map[string]any{
+			"item": map[string]any{
 				"sku":   "A1",
-				"tags":  []interface{}{"x", "y"},
-				"names": []interface{}{"n1", "n2"},
+				"tags":  []any{"x", "y"},
+				"names": []any{"n1", "n2"},
 			},
 		},
 	})
-	expected := []interface{}{
-		map[string]interface{}{"sku": "A1", "tags": "x", "names": "n1"},
-		map[string]interface{}{"sku": "A1", "tags": "x", "names": "n2"},
-		map[string]interface{}{"sku": "A1", "tags": "y", "names": "n1"},
-		map[string]interface{}{"sku": "A1", "tags": "y", "names": "n2"},
+	expected := []any{
+		map[string]any{"sku": "A1", "tags": "x", "names": "n1"},
+		map[string]any{"sku": "A1", "tags": "x", "names": "n2"},
+		map[string]any{"sku": "A1", "tags": "y", "names": "n1"},
+		map[string]any{"sku": "A1", "tags": "y", "names": "n2"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }
@@ -622,31 +622,31 @@ func TestMultiKeyObjects_ordinaryFieldDropsEmptyOccurrencesAcrossArray(t *testin
 	mapping := map[Expression]Expression{
 		NewConstant("y"): field(tagsPath(), "y"),
 	}
-	item := value.NewValue(map[string]interface{}{
-		"d": map[string]interface{}{
-			"items": []interface{}{
-				map[string]interface{}{
+	item := value.NewValue(map[string]any{
+		"d": map[string]any{
+			"items": []any{
+				map[string]any{
 					"sku": "A1",
-					"tags": []interface{}{
-						map[string]interface{}{"x": "x"},
-						map[string]interface{}{"y": []interface{}{"y1", "y2"}},
+					"tags": []any{
+						map[string]any{"x": "x"},
+						map[string]any{"y": []any{"y1", "y2"}},
 					},
 				},
-				map[string]interface{}{
+				map[string]any{
 					"sku": "B1",
-					"tags": []interface{}{
-						map[string]interface{}{"x": "x1"},
-						map[string]interface{}{"y": []interface{}{"y11", "y12"}},
+					"tags": []any{
+						map[string]any{"x": "x1"},
+						map[string]any{"y": []any{"y11", "y12"}},
 					},
 				},
 			},
 		},
 	})
-	expected := []interface{}{
-		map[string]interface{}{"y": "y1"},
-		map[string]interface{}{"y": "y2"},
-		map[string]interface{}{"y": "y11"},
-		map[string]interface{}{"y": "y12"},
+	expected := []any{
+		map[string]any{"y": "y1"},
+		map[string]any{"y": "y2"},
+		map[string]any{"y": "y11"},
+		map[string]any{"y": "y12"},
 	}
 	testMultiKeyObjectsPath_eval(mapping, item, expected, t)
 }

@@ -31,7 +31,7 @@ func NewSub(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Sub) Accept(visitor Visitor) (interface{}, error) {
+func (this *Sub) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSub(this)
 }
 

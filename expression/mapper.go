@@ -35,7 +35,7 @@ func (this *MapperBase) Map(expr Expression) (Expression, error) {
 	return exp.(Expression), nil
 }
 
-func (this *MapperBase) visit(expr Expression) (interface{}, error) {
+func (this *MapperBase) visit(expr Expression) (any, error) {
 	if this.mapFunc != nil {
 		return this.mapFunc(expr)
 	} else {
@@ -45,223 +45,223 @@ func (this *MapperBase) visit(expr Expression) (interface{}, error) {
 
 // Arithmetic
 
-func (this *MapperBase) VisitAdd(expr *Add) (interface{}, error) {
+func (this *MapperBase) VisitAdd(expr *Add) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitDiv(expr *Div) (interface{}, error) {
+func (this *MapperBase) VisitDiv(expr *Div) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitMod(expr *Mod) (interface{}, error) {
+func (this *MapperBase) VisitMod(expr *Mod) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitMult(expr *Mult) (interface{}, error) {
+func (this *MapperBase) VisitMult(expr *Mult) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitNeg(expr *Neg) (interface{}, error) {
+func (this *MapperBase) VisitNeg(expr *Neg) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitSub(expr *Sub) (interface{}, error) {
+func (this *MapperBase) VisitSub(expr *Sub) (any, error) {
 	return this.visit(expr)
 }
 
 // Case
 
-func (this *MapperBase) VisitSearchedCase(expr *SearchedCase) (interface{}, error) {
+func (this *MapperBase) VisitSearchedCase(expr *SearchedCase) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
+func (this *MapperBase) VisitSimpleCase(expr *SimpleCase) (any, error) {
 	return this.visit(expr)
 }
 
 // Collection
 
-func (this *MapperBase) VisitExists(expr *Exists) (interface{}, error) {
+func (this *MapperBase) VisitExists(expr *Exists) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitIn(expr *In) (interface{}, error) {
+func (this *MapperBase) VisitIn(expr *In) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitWithin(expr *Within) (interface{}, error) {
+func (this *MapperBase) VisitWithin(expr *Within) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitAny(expr *Any) (interface{}, error) {
+func (this *MapperBase) VisitAny(expr *Any) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitEvery(expr *Every) (interface{}, error) {
+func (this *MapperBase) VisitEvery(expr *Every) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+func (this *MapperBase) VisitAnyEvery(expr *AnyEvery) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitArray(expr *Array) (interface{}, error) {
+func (this *MapperBase) VisitArray(expr *Array) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitFirst(expr *First) (interface{}, error) {
+func (this *MapperBase) VisitFirst(expr *First) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitObject(expr *Object) (interface{}, error) {
+func (this *MapperBase) VisitObject(expr *Object) (any, error) {
 	return this.visit(expr)
 }
 
 // Comparison
 
-func (this *MapperBase) VisitBetween(expr *Between) (interface{}, error) {
+func (this *MapperBase) VisitBetween(expr *Between) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitEq(expr *Eq) (interface{}, error) {
+func (this *MapperBase) VisitEq(expr *Eq) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitLE(expr *LE) (interface{}, error) {
+func (this *MapperBase) VisitLE(expr *LE) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitLike(expr *Like) (interface{}, error) {
+func (this *MapperBase) VisitLike(expr *Like) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitLT(expr *LT) (interface{}, error) {
+func (this *MapperBase) VisitLT(expr *LT) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitIsMissing(expr *IsMissing) (interface{}, error) {
+func (this *MapperBase) VisitIsMissing(expr *IsMissing) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
+func (this *MapperBase) VisitIsNotMissing(expr *IsNotMissing) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
+func (this *MapperBase) VisitIsNotNull(expr *IsNotNull) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
+func (this *MapperBase) VisitIsNotValued(expr *IsNotValued) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitIsNull(expr *IsNull) (interface{}, error) {
+func (this *MapperBase) VisitIsNull(expr *IsNull) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitIsValued(expr *IsValued) (interface{}, error) {
+func (this *MapperBase) VisitIsValued(expr *IsValued) (any, error) {
 	return this.visit(expr)
 }
 
 // Concat
 
-func (this *MapperBase) VisitConcat(expr *Concat) (interface{}, error) {
+func (this *MapperBase) VisitConcat(expr *Concat) (any, error) {
 	return this.visit(expr)
 }
 
 // Constant
 
-func (this *MapperBase) VisitConstant(expr *Constant) (interface{}, error) {
+func (this *MapperBase) VisitConstant(expr *Constant) (any, error) {
 	return this.visit(expr)
 }
 
 // Identifier
 
-func (this *MapperBase) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *MapperBase) VisitIdentifier(expr *Identifier) (any, error) {
 	return this.visit(expr)
 }
 
 // Construction
 
-func (this *MapperBase) VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error) {
+func (this *MapperBase) VisitArrayConstruct(expr *ArrayConstruct) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error) {
+func (this *MapperBase) VisitObjectConstruct(expr *ObjectConstruct) (any, error) {
 	return this.visit(expr)
 }
 
 // Logic
 
-func (this *MapperBase) VisitAnd(expr *And) (interface{}, error) {
+func (this *MapperBase) VisitAnd(expr *And) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitNot(expr *Not) (interface{}, error) {
+func (this *MapperBase) VisitNot(expr *Not) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitOr(expr *Or) (interface{}, error) {
+func (this *MapperBase) VisitOr(expr *Or) (any, error) {
 	return this.visit(expr)
 }
 
 // Navigation
 
-func (this *MapperBase) VisitElement(expr *Element) (interface{}, error) {
+func (this *MapperBase) VisitElement(expr *Element) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitField(expr *Field) (interface{}, error) {
+func (this *MapperBase) VisitField(expr *Field) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitFieldName(expr *FieldName) (interface{}, error) {
+func (this *MapperBase) VisitFieldName(expr *FieldName) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitSlice(expr *Slice) (interface{}, error) {
+func (this *MapperBase) VisitSlice(expr *Slice) (any, error) {
 	return this.visit(expr)
 }
 
 // Self
 
-func (this *MapperBase) VisitSelf(expr *Self) (interface{}, error) {
+func (this *MapperBase) VisitSelf(expr *Self) (any, error) {
 	return this.visit(expr)
 }
 
 // Function
 
-func (this *MapperBase) VisitFunction(expr Function) (interface{}, error) {
+func (this *MapperBase) VisitFunction(expr Function) (any, error) {
 	return this.visit(expr)
 }
 
 // Subquery
-func (this *MapperBase) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *MapperBase) VisitSubquery(expr Subquery) (any, error) {
 	return this.visit(expr)
 }
 
 // InferUnderParenthesis
-func (this *MapperBase) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+func (this *MapperBase) VisitParenInfer(expr ParenInfer) (any, error) {
 	return this.visit(expr)
 }
 
 // Parameters
 
-func (this *MapperBase) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+func (this *MapperBase) VisitNamedParameter(expr NamedParameter) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *MapperBase) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+func (this *MapperBase) VisitPositionalParameter(expr PositionalParameter) (any, error) {
 	return this.visit(expr)
 }
 
 // Cover
-func (this *MapperBase) VisitCover(expr *Cover) (interface{}, error) {
+func (this *MapperBase) VisitCover(expr *Cover) (any, error) {
 	return this.visit(expr)
 }
 
 // All
-func (this *MapperBase) VisitAll(expr *All) (interface{}, error) {
+func (this *MapperBase) VisitAll(expr *All) (any, error) {
 	return this.visit(expr)
 }
 

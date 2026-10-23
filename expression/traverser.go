@@ -42,223 +42,223 @@ func (this *TraverserBase) TraverseList(exprs Expressions) (err error) {
 
 // Arithmetic
 
-func (this *TraverserBase) VisitAdd(expr *Add) (interface{}, error) {
+func (this *TraverserBase) VisitAdd(expr *Add) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitDiv(expr *Div) (interface{}, error) {
+func (this *TraverserBase) VisitDiv(expr *Div) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitMod(expr *Mod) (interface{}, error) {
+func (this *TraverserBase) VisitMod(expr *Mod) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitMult(expr *Mult) (interface{}, error) {
+func (this *TraverserBase) VisitMult(expr *Mult) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitNeg(expr *Neg) (interface{}, error) {
+func (this *TraverserBase) VisitNeg(expr *Neg) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitSub(expr *Sub) (interface{}, error) {
+func (this *TraverserBase) VisitSub(expr *Sub) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Case
 
-func (this *TraverserBase) VisitSearchedCase(expr *SearchedCase) (interface{}, error) {
+func (this *TraverserBase) VisitSearchedCase(expr *SearchedCase) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
+func (this *TraverserBase) VisitSimpleCase(expr *SimpleCase) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Collection
 
-func (this *TraverserBase) VisitExists(expr *Exists) (interface{}, error) {
+func (this *TraverserBase) VisitExists(expr *Exists) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitIn(expr *In) (interface{}, error) {
+func (this *TraverserBase) VisitIn(expr *In) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitWithin(expr *Within) (interface{}, error) {
+func (this *TraverserBase) VisitWithin(expr *Within) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitAny(expr *Any) (interface{}, error) {
+func (this *TraverserBase) VisitAny(expr *Any) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitEvery(expr *Every) (interface{}, error) {
+func (this *TraverserBase) VisitEvery(expr *Every) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+func (this *TraverserBase) VisitAnyEvery(expr *AnyEvery) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitArray(expr *Array) (interface{}, error) {
+func (this *TraverserBase) VisitArray(expr *Array) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitFirst(expr *First) (interface{}, error) {
+func (this *TraverserBase) VisitFirst(expr *First) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitObject(expr *Object) (interface{}, error) {
+func (this *TraverserBase) VisitObject(expr *Object) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Comparison
 
-func (this *TraverserBase) VisitBetween(expr *Between) (interface{}, error) {
+func (this *TraverserBase) VisitBetween(expr *Between) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitEq(expr *Eq) (interface{}, error) {
+func (this *TraverserBase) VisitEq(expr *Eq) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitLE(expr *LE) (interface{}, error) {
+func (this *TraverserBase) VisitLE(expr *LE) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitLike(expr *Like) (interface{}, error) {
+func (this *TraverserBase) VisitLike(expr *Like) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitLT(expr *LT) (interface{}, error) {
+func (this *TraverserBase) VisitLT(expr *LT) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitIsMissing(expr *IsMissing) (interface{}, error) {
+func (this *TraverserBase) VisitIsMissing(expr *IsMissing) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
+func (this *TraverserBase) VisitIsNotMissing(expr *IsNotMissing) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
+func (this *TraverserBase) VisitIsNotNull(expr *IsNotNull) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
+func (this *TraverserBase) VisitIsNotValued(expr *IsNotValued) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitIsNull(expr *IsNull) (interface{}, error) {
+func (this *TraverserBase) VisitIsNull(expr *IsNull) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitIsValued(expr *IsValued) (interface{}, error) {
+func (this *TraverserBase) VisitIsValued(expr *IsValued) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Concat
 
-func (this *TraverserBase) VisitConcat(expr *Concat) (interface{}, error) {
+func (this *TraverserBase) VisitConcat(expr *Concat) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Constant
 
-func (this *TraverserBase) VisitConstant(expr *Constant) (interface{}, error) {
+func (this *TraverserBase) VisitConstant(expr *Constant) (any, error) {
 	return expr, nil
 }
 
 // Identifier
 
-func (this *TraverserBase) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *TraverserBase) VisitIdentifier(expr *Identifier) (any, error) {
 	return expr, nil
 }
 
 // Construction
 
-func (this *TraverserBase) VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error) {
+func (this *TraverserBase) VisitArrayConstruct(expr *ArrayConstruct) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error) {
+func (this *TraverserBase) VisitObjectConstruct(expr *ObjectConstruct) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Logic
 
-func (this *TraverserBase) VisitAnd(expr *And) (interface{}, error) {
+func (this *TraverserBase) VisitAnd(expr *And) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitNot(expr *Not) (interface{}, error) {
+func (this *TraverserBase) VisitNot(expr *Not) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitOr(expr *Or) (interface{}, error) {
+func (this *TraverserBase) VisitOr(expr *Or) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Navigation
 
-func (this *TraverserBase) VisitElement(expr *Element) (interface{}, error) {
+func (this *TraverserBase) VisitElement(expr *Element) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitField(expr *Field) (interface{}, error) {
+func (this *TraverserBase) VisitField(expr *Field) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitFieldName(expr *FieldName) (interface{}, error) {
+func (this *TraverserBase) VisitFieldName(expr *FieldName) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitSlice(expr *Slice) (interface{}, error) {
+func (this *TraverserBase) VisitSlice(expr *Slice) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Self
 
-func (this *TraverserBase) VisitSelf(expr *Self) (interface{}, error) {
+func (this *TraverserBase) VisitSelf(expr *Self) (any, error) {
 	return nil, nil
 }
 
 // Function
 
-func (this *TraverserBase) VisitFunction(expr Function) (interface{}, error) {
+func (this *TraverserBase) VisitFunction(expr Function) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Subquery
-func (this *TraverserBase) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *TraverserBase) VisitSubquery(expr Subquery) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // InferUnderParenthesis
-func (this *TraverserBase) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+func (this *TraverserBase) VisitParenInfer(expr ParenInfer) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Parameters
 
-func (this *TraverserBase) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+func (this *TraverserBase) VisitNamedParameter(expr NamedParameter) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
-func (this *TraverserBase) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+func (this *TraverserBase) VisitPositionalParameter(expr PositionalParameter) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // Cover
-func (this *TraverserBase) VisitCover(expr *Cover) (interface{}, error) {
+func (this *TraverserBase) VisitCover(expr *Cover) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 
 // All
-func (this *TraverserBase) VisitAll(expr *All) (interface{}, error) {
+func (this *TraverserBase) VisitAll(expr *All) (any, error) {
 	return nil, this.TraverseList(expr.Children())
 }
 

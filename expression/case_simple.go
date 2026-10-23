@@ -39,7 +39,7 @@ func NewSimpleCase(searchTerm Expression, whenTerms WhenTerms, elseTerm Expressi
 /*
 Visitor pattern.
 */
-func (this *SimpleCase) Accept(visitor Visitor) (interface{}, error) {
+func (this *SimpleCase) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSimpleCase(this)
 }
 

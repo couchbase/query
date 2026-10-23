@@ -31,7 +31,7 @@ func NewAnd(operands ...Expression) *And {
 /*
 Visitor pattern.
 */
-func (this *And) Accept(visitor Visitor) (interface{}, error) {
+func (this *And) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAnd(this)
 }
 

@@ -93,7 +93,7 @@ func (this *IndexContext) ParkableOpenStatement(statement string, namedArgs map[
 	return nil, nil
 }
 
-func (this *IndexContext) Parse(s string) (interface{}, error) {
+func (this *IndexContext) Parse(s string) (any, error) {
 	return nil, nil
 }
 
@@ -101,7 +101,7 @@ func (this *IndexContext) Infer(value.Value, value.Value) (value.Value, error) {
 	return nil, nil
 }
 
-func (this *IndexContext) InferKeyspace(ks interface{}, with value.Value) (value.Value, error) {
+func (this *IndexContext) InferKeyspace(ks any, with value.Value) (value.Value, error) {
 	return nil, nil
 }
 
@@ -113,11 +113,11 @@ func (this *IndexContext) Readonly() bool {
 	return true
 }
 
-func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) interface{} {
+func (this *IndexContext) NewQueryContext(queryContext string, readonly bool) any {
 	return nil
 }
 
-func (this *IndexContext) AdminContext() (interface{}, error) {
+func (this *IndexContext) AdminContext() (any, error) {
 	return nil, nil
 }
 
@@ -129,11 +129,11 @@ func (this *IndexContext) QueryContextParts() []string {
 	return nil
 }
 
-func (this *IndexContext) GetTxContext() interface{} {
+func (this *IndexContext) GetTxContext() any {
 	return nil
 }
 
-func (this *IndexContext) SetTxContext(c interface{}) {
+func (this *IndexContext) SetTxContext(c any) {
 	// no-op
 }
 
@@ -153,11 +153,11 @@ func (this *IndexContext) RecursionCount() int {
 	return 0
 }
 
-func (this *IndexContext) StoreValue(key string, val interface{}) {
+func (this *IndexContext) StoreValue(key string, val any) {
 	// no-op
 }
 
-func (this *IndexContext) RetrieveValue(key string) interface{} {
+func (this *IndexContext) RetrieveValue(key string) any {
 	return nil
 }
 
@@ -188,22 +188,22 @@ func (this *IndexContext) Resume(changeCallerState bool) {
 	// no-op
 }
 
-func (this *IndexContext) Loga(level logging.Level, f func() string)               {}
-func (this *IndexContext) Debuga(f func() string)                                  {}
-func (this *IndexContext) Tracea(f func() string)                                  {}
-func (this *IndexContext) Infoa(f func() string)                                   {}
-func (this *IndexContext) Warna(f func() string)                                   {}
-func (this *IndexContext) Errora(f func() string)                                  {}
-func (this *IndexContext) Severea(f func() string)                                 {}
-func (this *IndexContext) Fatala(f func() string)                                  {}
-func (this *IndexContext) Logf(level logging.Level, f string, args ...interface{}) {}
-func (this *IndexContext) Debugf(f string, args ...interface{})                    {}
-func (this *IndexContext) Tracef(f string, args ...interface{})                    {}
-func (this *IndexContext) Infof(f string, args ...interface{})                     {}
-func (this *IndexContext) Warnf(f string, args ...interface{})                     {}
-func (this *IndexContext) Errorf(f string, args ...interface{})                    {}
-func (this *IndexContext) Severef(f string, args ...interface{})                   {}
-func (this *IndexContext) Fatalf(f string, args ...interface{})                    {}
+func (this *IndexContext) Loga(level logging.Level, f func() string)       {}
+func (this *IndexContext) Debuga(f func() string)                          {}
+func (this *IndexContext) Tracea(f func() string)                          {}
+func (this *IndexContext) Infoa(f func() string)                           {}
+func (this *IndexContext) Warna(f func() string)                           {}
+func (this *IndexContext) Errora(f func() string)                          {}
+func (this *IndexContext) Severea(f func() string)                         {}
+func (this *IndexContext) Fatala(f func() string)                          {}
+func (this *IndexContext) Logf(level logging.Level, f string, args ...any) {}
+func (this *IndexContext) Debugf(f string, args ...any)                    {}
+func (this *IndexContext) Tracef(f string, args ...any)                    {}
+func (this *IndexContext) Infof(f string, args ...any)                     {}
+func (this *IndexContext) Warnf(f string, args ...any)                     {}
+func (this *IndexContext) Errorf(f string, args ...any)                    {}
+func (this *IndexContext) Severef(f string, args ...any)                   {}
+func (this *IndexContext) Fatalf(f string, args ...any)                    {}
 
 func (this *IndexContext) IsPrepared() bool {
 	return false

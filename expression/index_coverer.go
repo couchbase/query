@@ -74,21 +74,21 @@ func (this *Coverer) FilterCovers() map[*Cover]value.Value {
 
 // Constant
 
-func (this *Coverer) VisitConstant(expr *Constant) (interface{}, error) {
+func (this *Coverer) VisitConstant(expr *Constant) (any, error) {
 	return expr, nil
 }
 
 // Parameters
 
-func (this *Coverer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+func (this *Coverer) VisitNamedParameter(expr NamedParameter) (any, error) {
 	return expr, nil
 }
 
-func (this *Coverer) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+func (this *Coverer) VisitPositionalParameter(expr PositionalParameter) (any, error) {
 	return expr, nil
 }
 
 // Cover
-func (this *Coverer) VisitCover(expr *Cover) (interface{}, error) {
+func (this *Coverer) VisitCover(expr *Cover) (any, error) {
 	return expr, nil
 }

@@ -67,7 +67,7 @@ func NewRenamer(from, to Bindings) *Renamer {
 	return rv
 }
 
-func (this *Renamer) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *Renamer) VisitIdentifier(expr *Identifier) (any, error) {
 	name, ok := this.names[expr.identifier]
 	if ok {
 		return name, nil
@@ -76,7 +76,7 @@ func (this *Renamer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 	}
 }
 
-func (this *Renamer) VisitAll(expr *All) (interface{}, error) {
+func (this *Renamer) VisitAll(expr *All) (any, error) {
 	if array, ok := expr.array.(*Array); ok {
 		for _, b := range array.Bindings() {
 			if name, ok := this.names[b.variable]; ok {
@@ -90,7 +90,7 @@ func (this *Renamer) VisitAll(expr *All) (interface{}, error) {
 	return expr, expr.MapChildren(this)
 }
 
-func (this *Renamer) VisitAny(expr *Any) (interface{}, error) {
+func (this *Renamer) VisitAny(expr *Any) (any, error) {
 	for _, b := range expr.Bindings() {
 		if name, ok := this.names[b.variable]; ok {
 			b.variable = name.Alias()
@@ -102,7 +102,7 @@ func (this *Renamer) VisitAny(expr *Any) (interface{}, error) {
 	return expr, expr.MapChildren(this)
 }
 
-func (this *Renamer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+func (this *Renamer) VisitAnyEvery(expr *AnyEvery) (any, error) {
 	for _, b := range expr.Bindings() {
 		if name, ok := this.names[b.variable]; ok {
 			b.variable = name.Alias()
@@ -138,7 +138,7 @@ func NewAnyRenamer(arrayKey *All) *AnyRenamer {
 	return rv
 }
 
-func (this *AnyRenamer) VisitAny(expr *Any) (interface{}, error) {
+func (this *AnyRenamer) VisitAny(expr *Any) (any, error) {
 	array, ok := this.arrayKey.Array().(*Array)
 	if ok && equivalentBindingsWithExpression(expr.Bindings(), array.Bindings(), nil, nil) {
 		arrayKey := this.arrayKey

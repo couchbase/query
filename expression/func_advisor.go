@@ -60,7 +60,7 @@ func NewAdvisor(operand Expression) Function {
 	return rv
 }
 
-func (this *Advisor) Accept(visitor Visitor) (interface{}, error) {
+func (this *Advisor) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -93,7 +93,7 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 		if err != nil {
 			return nil, err
 		}
-		actual := arg.Actual().(map[string]interface{})
+		actual := arg.Actual().(map[string]any)
 		vali, ok := actual["action"]
 		if ok {
 			newContext := context
@@ -128,7 +128,7 @@ func (this *Advisor) Evaluate(item value.Value, context Context) (value.Value, e
 					return nil, err
 				}
 
-				m := make(map[string]interface{}, 1)
+				m := make(map[string]any, 1)
 				m["session"] = sessionName
 				return value.NewValue(m), nil
 			} else if val == "get" {
@@ -235,7 +235,7 @@ func (this *Advisor) Privileges() *auth.Privileges {
 func (this *Advisor) isSession() bool {
 	arg := this.operands[0].Value()
 	if arg != nil && arg.Type() == value.OBJECT {
-		actual := arg.Actual().(map[string]interface{})
+		actual := arg.Actual().(map[string]any)
 		if _, ok := actual["action"]; ok {
 			return true
 		}
@@ -243,7 +243,7 @@ func (this *Advisor) isSession() bool {
 	return false
 }
 
-func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]interface{},
+func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, context Context, settings map[string]any,
 	query string, args map[string]value.Value) error {
 
 	// MB-73749: the ADVISOR collects the workload to run ADVISE on as a task run
@@ -259,7 +259,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 	}
 
 	return scheduler.ScheduleTask(sessionName, _CLASS, _ANALYZE, duration,
-		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+		func(context scheduler.Context, parms any) (any, []errors.Error) {
 			if releaseTaskCtx {
 				defer context.Release()
 			}
@@ -275,7 +275,7 @@ func (this *Advisor) scheduleTask(sessionName string, duration time.Duration, co
 		},
 
 		// stop task
-		func(context scheduler.Context, parms interface{}) (interface{}, []errors.Error) {
+		func(context scheduler.Context, parms any) (any, []errors.Error) {
 			if releaseTaskCtx {
 				defer context.Release()
 			}
@@ -449,10 +449,10 @@ func validateSessionArgs(arg value.Value) error {
 	return nil
 }
 
-func getSettings(profile, tag, response_limit string, query_count float64, numberOfNodes int, start bool) map[string]interface{} {
+func getSettings(profile, tag, response_limit string, query_count float64, numberOfNodes int, start bool) map[string]any {
 	n, _ := strconv.ParseInt(response_limit, 10, 64)
-	settings := make(map[string]interface{}, 2)
-	tagMap := make(map[string]interface{}, 3)
+	settings := make(map[string]any, 2)
+	tagMap := make(map[string]any, 3)
 	if numberOfNodes == 0 {
 		numberOfNodes = 1
 	}
@@ -487,7 +487,7 @@ func getSettings(profile, tag, response_limit string, query_count float64, numbe
 	return settings
 }
 
-func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response_limit string, duration time.Duration,
+func (this *Advisor) getSettingInfo(m map[string]any) (profile, response_limit string, duration time.Duration,
 	query_count float64, err error) {
 
 	val1, ok := m["profile"]
@@ -543,7 +543,7 @@ func (this *Advisor) getSettingInfo(m map[string]interface{}) (profile, response
 	return
 }
 
-func (this *Advisor) getSession(m map[string]interface{}) (string, error) {
+func (this *Advisor) getSession(m map[string]any) (string, error) {
 	val, ok := m["session"]
 	if !ok || (ok && (val == nil || val.(value.Value).Type() != value.STRING)) {
 		return "", fmt.Errorf("%s() not valid argument for 'session'", this.Name())
@@ -578,7 +578,7 @@ func isSessionNameValid(s string) bool {
 	return true
 }
 
-func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
+func (this *Advisor) getStatus(m map[string]any) (string, error) {
 	val, ok := m["status"]
 	if !ok {
 		return _ALL, nil
@@ -593,26 +593,26 @@ func (this *Advisor) getStatus(m map[string]interface{}) (string, error) {
 }
 
 func (this *Advisor) processResult(obj *queryObject, res value.Value, curMap, recIdxMap, recCidxMap map[string]*mapEntry) {
-	val := res.Actual().([]interface{})
+	val := res.Actual().([]any)
 	for _, v := range val {
-		v := value.NewValue(v).Actual().(map[string]interface{})
+		v := value.NewValue(v).Actual().(map[string]any)
 		v1, ok := v["advice"]
 		if !ok {
 			continue
 		}
-		v1a := value.NewValue(v1).Actual().(map[string]interface{})
+		v1a := value.NewValue(v1).Actual().(map[string]any)
 		v2, ok := v1a["adviseinfo"]
 		if !ok {
 			continue
 		}
-		v2a, ok := value.NewValue(v2).Actual().(map[string]interface{})
+		v2a, ok := value.NewValue(v2).Actual().(map[string]any)
 		if !ok {
 			continue
 		}
 		for k3, v3 := range v2a {
 			if k3 == "recommended_indexes" {
 				v4 := value.NewValue(v3).Actual()
-				v4a, ok := v4.(map[string]interface{})
+				v4a, ok := v4.(map[string]any)
 				if !ok {
 					continue
 				}
@@ -630,10 +630,10 @@ func (this *Advisor) processResult(obj *queryObject, res value.Value, curMap, re
 	}
 }
 
-func addToMap(m map[string]*mapEntry, v interface{}, obj *queryObject) {
-	v1 := value.NewValue(v).Actual().([]interface{})
+func addToMap(m map[string]*mapEntry, v any, obj *queryObject) {
+	v1 := value.NewValue(v).Actual().([]any)
 	for _, v2 := range v1 {
-		v2 := value.NewValue(v2).Actual().(map[string]interface{})
+		v2 := value.NewValue(v2).Actual().(map[string]any)
 		if v3, ok := v2["index_statement"]; ok {
 			_, ok := m[v3.(string)]
 			if !ok {
@@ -673,7 +673,7 @@ func (this *Advisor) extractStrs(arg value.Value) (map[string]*queryObject, erro
 	actuals := arg.Actual()
 
 	switch actuals := actuals.(type) {
-	case []interface{}:
+	case []any:
 		for _, key := range actuals {
 			k := value.NewValue(key).Actual()
 			if str, ok := k.(string); ok {
@@ -685,7 +685,7 @@ func (this *Advisor) extractStrs(arg value.Value) (map[string]*queryObject, erro
 
 					}
 				}
-			} else if m, ok := k.(map[string]interface{}); ok {
+			} else if m, ok := k.(map[string]any); ok {
 				if stmt, ok := m["statement"]; ok {
 					str := stmt.(value.Value).ToString()
 					if validateStmt(str) {
@@ -762,8 +762,8 @@ func (this *queryObject) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *queryObject) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{
+func (this *queryObject) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{
 		"statement": this.stmt,
 		"run_count": this.cnt,
 	}
@@ -857,8 +857,8 @@ func (this *indexMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *indexMap) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{
+func (this *indexMap) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{
 		"index":      this.index,
 		"statements": this.queries,
 	}
@@ -946,8 +946,8 @@ func (this *report) MarshalJSON() ([]byte, error) {
 	return json.Marshal(this.MarshalBase(nil))
 }
 
-func (this *report) MarshalBase(f func(map[string]interface{})) map[string]interface{} {
-	r := map[string]interface{}{}
+func (this *report) MarshalBase(f func(map[string]any)) map[string]any {
+	r := map[string]any{}
 
 	if len(this.currentIdxs) > 0 {
 		r["current_used_indexes"] = this.currentIdxs
@@ -962,12 +962,12 @@ func (this *report) MarshalBase(f func(map[string]interface{})) map[string]inter
 	}
 
 	if len(this.errors) > 0 {
-		errs := make([]interface{}, 0, len(this.errors))
+		errs := make([]any, 0, len(this.errors))
 		for _, e := range this.errors {
 			if e == nil {
 				continue
 			}
-			ae := make(map[string]interface{}, 4)
+			ae := make(map[string]any, 4)
 			ae["error"] = e.err.Error()
 			ae["statement"] = e.query.stmt
 			ae["run_count"] = e.query.cnt

@@ -35,7 +35,7 @@ func NewIn(first, second Expression) Function {
 	return rv
 }
 
-func (this *In) Accept(visitor Visitor) (interface{}, error) {
+func (this *In) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIn(this)
 }
 
@@ -61,7 +61,7 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 		return value.NULL_VALUE, nil
 	}
 
-	sa := second.Actual().([]interface{})
+	sa := second.Actual().([]any)
 
 	if first.Type() == value.NULL {
 		if len(sa) == 0 {

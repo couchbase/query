@@ -14,7 +14,7 @@ import (
 )
 
 func collEval(bindings Bindings, item value.Value, context Context) (
-	bvals, buffers [][]interface{}, bpairs [][]util.IPair, n int, missing, null bool, err error) {
+	bvals, buffers [][]any, bpairs [][]util.IPair, n int, missing, null bool, err error) {
 	var bv value.Value
 
 	for i, b := range bindings {
@@ -52,7 +52,7 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 				if bvals == nil {
 					bvals = _INTERFACES_POOL.GetSized(len(bindings))
 				}
-				bvals[i] = bv.Actual().([]interface{})
+				bvals[i] = bv.Actual().([]any)
 			default:
 				null = true
 			}
@@ -85,7 +85,7 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 						_NAME_POOL.Put(names)
 					}
 				case value.ARRAY:
-					for n, v := range bv.Actual().([]interface{}) {
+					for n, v := range bv.Actual().([]any) {
 						bp = append(bp, util.IPair{n, v})
 					}
 				}
@@ -124,7 +124,7 @@ func collEval(bindings Bindings, item value.Value, context Context) (
 }
 
 // Release buffers to pools
-func collReleaseBuffers(bvals, buffers [][]interface{}, bpairs [][]util.IPair) {
+func collReleaseBuffers(bvals, buffers [][]any, bpairs [][]util.IPair) {
 	for _, b := range buffers {
 		if b != nil {
 			_INTERFACE_POOL.Put(b)
@@ -150,8 +150,8 @@ func collReleaseBuffers(bvals, buffers [][]interface{}, bpairs [][]util.IPair) {
 	}
 }
 
-var _INTERFACE_POOL = util.NewSlicePool[interface{}](1024)
+var _INTERFACE_POOL = util.NewSlicePool[any](1024)
 var _IPAIR_POOL = util.NewSlicePool[util.IPair](1024)
 
-var _INTERFACES_POOL = util.NewSlicePool[[]interface{}](8)
+var _INTERFACES_POOL = util.NewSlicePool[[]any](8)
 var _IPAIRS_POOL = util.NewSlicePool[[]util.IPair](8)

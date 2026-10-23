@@ -80,196 +80,196 @@ type exprBindings struct {
 
 // Arithmetic
 
-func (this *exprBindings) VisitAdd(expr *Add) (interface{}, error) {
+func (this *exprBindings) VisitAdd(expr *Add) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitDiv(expr *Div) (interface{}, error) {
+func (this *exprBindings) VisitDiv(expr *Div) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitMod(expr *Mod) (interface{}, error) {
+func (this *exprBindings) VisitMod(expr *Mod) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitMult(expr *Mult) (interface{}, error) {
+func (this *exprBindings) VisitMult(expr *Mult) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitNeg(expr *Neg) (interface{}, error) {
+func (this *exprBindings) VisitNeg(expr *Neg) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitSub(expr *Sub) (interface{}, error) {
+func (this *exprBindings) VisitSub(expr *Sub) (any, error) {
 	return this.visit(expr)
 }
 
 // Case
 
-func (this *exprBindings) VisitSearchedCase(expr *SearchedCase) (interface{}, error) {
+func (this *exprBindings) VisitSearchedCase(expr *SearchedCase) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitSimpleCase(expr *SimpleCase) (interface{}, error) {
+func (this *exprBindings) VisitSimpleCase(expr *SimpleCase) (any, error) {
 	return this.visit(expr)
 }
 
 // Collection
 
-func (this *exprBindings) VisitArray(expr *Array) (interface{}, error) {
+func (this *exprBindings) VisitArray(expr *Array) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitExists(expr *Exists) (interface{}, error) {
+func (this *exprBindings) VisitExists(expr *Exists) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitFirst(expr *First) (interface{}, error) {
+func (this *exprBindings) VisitFirst(expr *First) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitObject(expr *Object) (interface{}, error) {
+func (this *exprBindings) VisitObject(expr *Object) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitIn(expr *In) (interface{}, error) {
+func (this *exprBindings) VisitIn(expr *In) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitWithin(expr *Within) (interface{}, error) {
+func (this *exprBindings) VisitWithin(expr *Within) (any, error) {
 	return nil, nil
 }
 
 // Comparison
 
-func (this *exprBindings) VisitBetween(expr *Between) (interface{}, error) {
+func (this *exprBindings) VisitBetween(expr *Between) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitEq(expr *Eq) (interface{}, error) {
+func (this *exprBindings) VisitEq(expr *Eq) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitLE(expr *LE) (interface{}, error) {
+func (this *exprBindings) VisitLE(expr *LE) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitLike(expr *Like) (interface{}, error) {
+func (this *exprBindings) VisitLike(expr *Like) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitLT(expr *LT) (interface{}, error) {
+func (this *exprBindings) VisitLT(expr *LT) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) VisitIsMissing(expr *IsMissing) (interface{}, error) {
+func (this *exprBindings) VisitIsMissing(expr *IsMissing) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitIsNotMissing(expr *IsNotMissing) (interface{}, error) {
+func (this *exprBindings) VisitIsNotMissing(expr *IsNotMissing) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitIsNotNull(expr *IsNotNull) (interface{}, error) {
+func (this *exprBindings) VisitIsNotNull(expr *IsNotNull) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitIsNotValued(expr *IsNotValued) (interface{}, error) {
+func (this *exprBindings) VisitIsNotValued(expr *IsNotValued) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitIsNull(expr *IsNull) (interface{}, error) {
+func (this *exprBindings) VisitIsNull(expr *IsNull) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitIsValued(expr *IsValued) (interface{}, error) {
+func (this *exprBindings) VisitIsValued(expr *IsValued) (any, error) {
 	return nil, nil
 }
 
 // Concat
-func (this *exprBindings) VisitConcat(expr *Concat) (interface{}, error) {
+func (this *exprBindings) VisitConcat(expr *Concat) (any, error) {
 	return nil, nil
 }
 
 // Constant
-func (this *exprBindings) VisitConstant(expr *Constant) (interface{}, error) {
+func (this *exprBindings) VisitConstant(expr *Constant) (any, error) {
 	return nil, nil
 }
 
 // Identifier
-func (this *exprBindings) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *exprBindings) VisitIdentifier(expr *Identifier) (any, error) {
 	return nil, nil
 }
 
 // Construction
 
-func (this *exprBindings) VisitArrayConstruct(expr *ArrayConstruct) (interface{}, error) {
+func (this *exprBindings) VisitArrayConstruct(expr *ArrayConstruct) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitObjectConstruct(expr *ObjectConstruct) (interface{}, error) {
+func (this *exprBindings) VisitObjectConstruct(expr *ObjectConstruct) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitNot(expr *Not) (interface{}, error) {
+func (this *exprBindings) VisitNot(expr *Not) (any, error) {
 	return this.visit(expr)
 }
 
 // Navigation
 
-func (this *exprBindings) VisitElement(expr *Element) (interface{}, error) {
+func (this *exprBindings) VisitElement(expr *Element) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitField(expr *Field) (interface{}, error) {
+func (this *exprBindings) VisitField(expr *Field) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitFieldName(expr *FieldName) (interface{}, error) {
+func (this *exprBindings) VisitFieldName(expr *FieldName) (any, error) {
 	return nil, nil
 }
 
-func (this *exprBindings) VisitSlice(expr *Slice) (interface{}, error) {
+func (this *exprBindings) VisitSlice(expr *Slice) (any, error) {
 	return nil, nil
 }
 
 // Self
-func (this *exprBindings) VisitSelf(expr *Self) (interface{}, error) {
+func (this *exprBindings) VisitSelf(expr *Self) (any, error) {
 	return nil, nil
 }
 
 // Function
-func (this *exprBindings) VisitFunction(expr Function) (interface{}, error) {
+func (this *exprBindings) VisitFunction(expr Function) (any, error) {
 	return this.visit(expr)
 }
 
 // Subquery
-func (this *exprBindings) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *exprBindings) VisitSubquery(expr Subquery) (any, error) {
 	return nil, nil
 }
 
 // InferUnderParenthesis
-func (this *exprBindings) VisitParenInfer(expr ParenInfer) (interface{}, error) {
+func (this *exprBindings) VisitParenInfer(expr ParenInfer) (any, error) {
 	return nil, nil
 }
 
 // NamedParameter
-func (this *exprBindings) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+func (this *exprBindings) VisitNamedParameter(expr NamedParameter) (any, error) {
 	return nil, nil
 }
 
 // PositionalParameter
-func (this *exprBindings) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+func (this *exprBindings) VisitPositionalParameter(expr PositionalParameter) (any, error) {
 	return nil, nil
 }
 
 // Cover
-func (this *exprBindings) VisitCover(expr *Cover) (interface{}, error) {
+func (this *exprBindings) VisitCover(expr *Cover) (any, error) {
 	return nil, nil
 }
 
 // All
-func (this *exprBindings) VisitAll(expr *All) (interface{}, error) {
+func (this *exprBindings) VisitAll(expr *All) (any, error) {
 	var rv []Bindings
 	all := expr
 	for {
@@ -289,7 +289,7 @@ func (this *exprBindings) VisitAll(expr *All) (interface{}, error) {
 	return rv, nil
 }
 
-func (this *exprBindings) VisitAny(expr *Any) (interface{}, error) {
+func (this *exprBindings) VisitAny(expr *Any) (any, error) {
 	var rv []Bindings
 	rv = append(rv, expr.Bindings())
 	sv, err := expr.Satisfies().Accept(this)
@@ -303,7 +303,7 @@ func (this *exprBindings) VisitAny(expr *Any) (interface{}, error) {
 	return rv, err
 }
 
-func (this *exprBindings) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+func (this *exprBindings) VisitAnyEvery(expr *AnyEvery) (any, error) {
 	var rv []Bindings
 	rv = append(rv, expr.Bindings())
 	sv, err := expr.Satisfies().Accept(this)
@@ -317,21 +317,21 @@ func (this *exprBindings) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 	return rv, err
 }
 
-func (this *exprBindings) VisitEvery(expr *Every) (interface{}, error) {
+func (this *exprBindings) VisitEvery(expr *Every) (any, error) {
 	return nil, nil
 }
 
 // For OR, return the intersection over the children
-func (this *exprBindings) VisitOr(expr *Or) (interface{}, error) {
+func (this *exprBindings) VisitOr(expr *Or) (any, error) {
 	return this.visit(expr)
 }
 
 // For AND, return the union over the children
-func (this *exprBindings) VisitAnd(expr *And) (interface{}, error) {
+func (this *exprBindings) VisitAnd(expr *And) (any, error) {
 	return this.visit(expr)
 }
 
-func (this *exprBindings) visit(expr Expression) (interface{}, error) {
+func (this *exprBindings) visit(expr Expression) (any, error) {
 	var rv []Bindings
 	for _, op := range expr.Children() {
 		cv, err := op.Accept(this)

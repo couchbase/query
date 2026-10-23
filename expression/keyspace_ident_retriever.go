@@ -38,7 +38,7 @@ func NewKSIdentRetriever(keyspace string) *ksIdentRetriever {
 	return rv
 }
 
-func (this *ksIdentRetriever) VisitIdentifier(ident *Identifier) (interface{}, error) {
+func (this *ksIdentRetriever) VisitIdentifier(ident *Identifier) (any, error) {
 	if this.ident == nil {
 		if this.keyspace == ident.Identifier() ||
 			(ident.CaseInsensitive() && strings.ToLower(this.keyspace) == strings.ToLower(ident.Identifier())) {

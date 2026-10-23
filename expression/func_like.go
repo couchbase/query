@@ -49,7 +49,7 @@ func NewLikePrefix(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *LikePrefix) Accept(visitor Visitor) (interface{}, error) {
+func (this *LikePrefix) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -121,7 +121,7 @@ func NewLikeStop(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *LikeStop) Accept(visitor Visitor) (interface{}, error) {
+func (this *LikeStop) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -204,7 +204,7 @@ func NewLikeSuffix(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *LikeSuffix) Accept(visitor Visitor) (interface{}, error) {
+func (this *LikeSuffix) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -278,7 +278,7 @@ func NewRegexpPrefix(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpPrefix) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpPrefix) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -336,7 +336,7 @@ func NewRegexpStop(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpStop) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpStop) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -405,7 +405,7 @@ func NewRegexpSuffix(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpSuffix) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpSuffix) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

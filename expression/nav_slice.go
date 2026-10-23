@@ -65,7 +65,7 @@ func (this *Slice) End() Expression {
 /*
 Visitor pattern.
 */
-func (this *Slice) Accept(visitor Visitor) (interface{}, error) {
+func (this *Slice) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitSlice(this)
 }
 

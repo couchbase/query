@@ -37,7 +37,7 @@ func NewUnnestPosition(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *UnnestPosition) Accept(visitor Visitor) (interface{}, error) {
+func (this *UnnestPosition) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

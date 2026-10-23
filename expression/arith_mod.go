@@ -33,7 +33,7 @@ func NewMod(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Mod) Accept(visitor Visitor) (interface{}, error) {
+func (this *Mod) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitMod(this)
 }
 

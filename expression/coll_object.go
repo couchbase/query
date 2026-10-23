@@ -34,7 +34,7 @@ func NewObject(nameMapping, valueMapping Expression, bindings Bindings, when Exp
 	return rv
 }
 
-func (this *Object) Accept(visitor Visitor) (interface{}, error) {
+func (this *Object) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitObject(this)
 }
 
@@ -55,9 +55,9 @@ func (this *Object) Evaluate(item value.Value, context Context) (value.Value, er
 		return value.NULL_VALUE, nil
 	}
 
-	rv := make(map[string]interface{}, n)
+	rv := make(map[string]any, n)
 	for i := 0; i < n; i++ {
-		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
+		cv := value.NewScopeValue(make(map[string]any, len(this.bindings)), item)
 		for j, b := range this.bindings {
 			if b.NameVariable() == "" {
 				cv.SetField(b.Variable(), bvals[j][i])

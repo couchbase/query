@@ -35,7 +35,7 @@ func NewContainsToken(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ContainsToken) Accept(visitor Visitor) (interface{}, error) {
+func (this *ContainsToken) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -134,7 +134,7 @@ func NewContainsTokenLike(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ContainsTokenLike) Accept(visitor Visitor) (interface{}, error) {
+func (this *ContainsTokenLike) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -190,7 +190,7 @@ func (this *ContainsTokenLike) Evaluate(item value.Value, context Context) (valu
 		}
 	}
 
-	matcher := func(token interface{}) bool {
+	matcher := func(token any) bool {
 		str, ok := token.(string)
 		if !ok {
 			return false
@@ -256,7 +256,7 @@ func NewContainsTokenRegexp(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ContainsTokenRegexp) Accept(visitor Visitor) (interface{}, error) {
+func (this *ContainsTokenRegexp) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -325,7 +325,7 @@ func (this *ContainsTokenRegexp) Evaluate(item value.Value, context Context) (va
 		}
 	}
 
-	matcher := func(token interface{}) bool {
+	matcher := func(token any) bool {
 		str, ok := token.(string)
 		if !ok {
 			return false
@@ -393,7 +393,7 @@ func NewTokens(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Tokens) Accept(visitor Visitor) (interface{}, error) {
+func (this *Tokens) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -445,4 +445,4 @@ func (this *Tokens) Constructor() FunctionConstructor {
 	return NewTokens
 }
 
-var _EMPTY_OPTIONS = value.NewValue(map[string]interface{}{})
+var _EMPTY_OPTIONS = value.NewValue(map[string]any{})

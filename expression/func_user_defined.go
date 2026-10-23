@@ -57,7 +57,7 @@ func NewUserDefinedFunction(name functions.FunctionName, operands ...Expression)
 /*
 Visitor pattern.
 */
-func (this *UserDefinedFunction) Accept(visitor Visitor) (interface{}, error) {
+func (this *UserDefinedFunction) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

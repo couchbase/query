@@ -25,7 +25,7 @@ const hexPattern = `^(urn\:uuid\:)?[\{(\[]?([A-Fa-f0-9]{8})-?([A-Fa-f0-9]{4})-?(
 	`?([A-Fa-f0-9]{4})-?([A-Fa-f0-9]{12})[\]\})]?$`
 
 func TestNewBase64Decode(t *testing.T) {
-	inEx := NewConstant([]interface{}{1, 2, 3})
+	inEx := NewConstant([]any{1, 2, 3})
 	encEx := NewBase64Encode(inEx)
 	rv, err := encEx.Evaluate(nil, nil)
 	if err != nil {

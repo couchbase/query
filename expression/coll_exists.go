@@ -27,7 +27,7 @@ func NewExists(operand Expression) *Exists {
 	return rv
 }
 
-func (this *Exists) Accept(visitor Visitor) (interface{}, error) {
+func (this *Exists) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitExists(this)
 }
 
@@ -42,7 +42,7 @@ func (this *Exists) Evaluate(item value.Value, context Context) (value.Value, er
 	if err != nil {
 		return nil, err
 	} else if arg.Type() == value.ARRAY {
-		a := arg.Actual().([]interface{})
+		a := arg.Actual().([]any)
 		return value.NewValue(len(a) > 0), nil
 	} else if arg.Type() == value.MISSING {
 		return value.MISSING_VALUE, nil

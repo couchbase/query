@@ -43,7 +43,7 @@ func NewSubqueryLister(descend bool) *SubqueryLister {
 	return rv
 }
 
-func (this *SubqueryLister) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *SubqueryLister) VisitSubquery(expr Subquery) (any, error) {
 	this.subqueries = append(this.subqueries, expr)
 
 	if this.descend {

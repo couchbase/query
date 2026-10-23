@@ -426,7 +426,7 @@ func (this *FusionBase) parallelArgEvaluate(index int, wg *sync.WaitGroup, opera
 	}()
 	defer wg.Done()
 	var mrv map[string]float64
-	if ctx, ok := context.(interface{ CopyOpContext() interface{} }); ok {
+	if ctx, ok := context.(interface{ CopyOpContext() any }); ok {
 		// context
 		if lctx, ok := ctx.CopyOpContext().(Context); ok {
 			context = lctx
@@ -498,7 +498,7 @@ func (this *ReciprocalFusion) Copy() Expression {
 	return rv
 }
 
-func (this *ReciprocalFusion) Accept(visitor Visitor) (interface{}, error) {
+func (this *ReciprocalFusion) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -526,7 +526,7 @@ func (this *ReciprocalFusion) Evaluate(item value.Value, context Context) (value
 		l += len(this.args) + 1
 	}
 	for id, score := range mv {
-		obj := make(map[string]interface{}, l)
+		obj := make(map[string]any, l)
 		obj[_FUSION_PATHID] = id
 		if this.score {
 			obj[_FUSION_PATHSCORE] = score

@@ -39,7 +39,7 @@ func NewGreatest(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Greatest) Accept(visitor Visitor) (interface{}, error) {
+func (this *Greatest) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -107,7 +107,7 @@ func NewLeast(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Least) Accept(visitor Visitor) (interface{}, error) {
+func (this *Least) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -176,7 +176,7 @@ func NewSuccessor(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Successor) Accept(visitor Visitor) (interface{}, error) {
+func (this *Successor) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

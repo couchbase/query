@@ -24,7 +24,7 @@ func NewIsDistinctFrom(first, second Expression) Function {
 	return rv
 }
 
-func (this *IsDistinctFrom) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsDistinctFrom) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -92,7 +92,7 @@ func NewIsNotDistinctFrom(first, second Expression) Function {
 	return rv
 }
 
-func (this *IsNotDistinctFrom) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsNotDistinctFrom) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

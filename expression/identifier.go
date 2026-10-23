@@ -59,7 +59,7 @@ func NewIdentifier(identifier string) *Identifier {
 /*
 Visitor pattern.
 */
-func (this *Identifier) Accept(visitor Visitor) (interface{}, error) {
+func (this *Identifier) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIdentifier(this)
 }
 

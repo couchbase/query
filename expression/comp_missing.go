@@ -27,7 +27,7 @@ func NewIsMissing(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsMissing) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsMissing) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIsMissing(this)
 }
 
@@ -96,7 +96,7 @@ func NewIsNotMissing(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsNotMissing) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsNotMissing) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIsNotMissing(this)
 }
 

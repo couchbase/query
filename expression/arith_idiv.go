@@ -32,7 +32,7 @@ func NewIDiv(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IDiv) Accept(visitor Visitor) (interface{}, error) {
+func (this *IDiv) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

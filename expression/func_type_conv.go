@@ -44,7 +44,7 @@ func NewToArray(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ToArray) Accept(visitor Visitor) (interface{}, error) {
+func (this *ToArray) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -62,7 +62,7 @@ func (this *ToArray) Evaluate(item value.Value, context Context) (value.Value, e
 		return value.NULL_VALUE, nil
 	}
 
-	return value.NewValue([]interface{}{arg.Actual()}), nil
+	return value.NewValue([]any{arg.Actual()}), nil
 }
 
 /*
@@ -103,7 +103,7 @@ func NewToAtom(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ToAtom) Accept(visitor Visitor) (interface{}, error) {
+func (this *ToAtom) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -130,11 +130,11 @@ func (this *ToAtom) DoEvaluate(context Context, arg value.Value) (value.Value, e
 		return arg, nil
 	} else {
 		switch a := arg.Actual().(type) {
-		case []interface{}:
+		case []any:
 			if len(a) == 1 {
 				return this.DoEvaluate(context, value.NewValue(a[0]))
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			if len(a) == 1 {
 				for _, v := range a {
 					return this.DoEvaluate(context, value.NewValue(v))
@@ -183,7 +183,7 @@ func NewToBoolean(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ToBoolean) Accept(visitor Visitor) (interface{}, error) {
+func (this *ToBoolean) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -205,9 +205,9 @@ func (this *ToBoolean) Evaluate(item value.Value, context Context) (value.Value,
 			return value.NewValue(len(a) > 0), nil
 		case []byte:
 			return value.NewValue(len(a) > 0), nil
-		case []interface{}:
+		case []any:
 			return value.NewValue(len(a) > 0), nil
-		case map[string]interface{}:
+		case map[string]any:
 			return value.NewValue(len(a) > 0), nil
 		default:
 			return value.NULL_VALUE, nil
@@ -252,7 +252,7 @@ func NewToNumber(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ToNumber) Accept(visitor Visitor) (interface{}, error) {
+func (this *ToNumber) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -364,13 +364,13 @@ func NewToObject(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ToObject) Accept(visitor Visitor) (interface{}, error) {
+func (this *ToObject) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *ToObject) Type() value.Type { return value.OBJECT }
 
-var _EMPTY_OBJECT = value.NewValue(map[string]interface{}{})
+var _EMPTY_OBJECT = value.NewValue(map[string]any{})
 
 func (this *ToObject) Evaluate(item value.Value, context Context) (value.Value, error) {
 	arg, err := this.operands[0].Evaluate(item, context)
@@ -422,7 +422,7 @@ func NewToString(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ToString) Accept(visitor Visitor) (interface{}, error) {
+func (this *ToString) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

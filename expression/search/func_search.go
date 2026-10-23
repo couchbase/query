@@ -46,7 +46,7 @@ func NewSearch(operands ...expression.Expression) expression.Function {
 	return rv
 }
 
-func (this *Search) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *Search) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -302,7 +302,7 @@ func NewSearchMeta(operands ...expression.Expression) expression.Function {
 	return rv
 }
 
-func (this *SearchMeta) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *SearchMeta) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -427,7 +427,7 @@ func NewSearchScore(operands ...expression.Expression) expression.Function {
 	return rv
 }
 
-func (this *SearchScore) Accept(visitor expression.Visitor) (interface{}, error) {
+func (this *SearchScore) Accept(visitor expression.Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

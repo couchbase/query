@@ -41,7 +41,7 @@ func NewContains(first, second Expression) Function {
 	return rv
 }
 
-func (this *Contains) Accept(visitor Visitor) (interface{}, error) {
+func (this *Contains) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -98,7 +98,7 @@ func NewLength(operand Expression) Function {
 	return rv
 }
 
-func (this *Length) Accept(visitor Visitor) (interface{}, error) {
+func (this *Length) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -135,7 +135,7 @@ func NewMBLength(operand Expression) Function {
 	return rv
 }
 
-func (this *MBLength) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBLength) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -175,7 +175,7 @@ func NewLower(operand Expression) Function {
 	return rv
 }
 
-func (this *Lower) Accept(visitor Visitor) (interface{}, error) {
+func (this *Lower) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -215,7 +215,7 @@ func NewLTrim(operands ...Expression) Function {
 	return rv
 }
 
-func (this *LTrim) Accept(visitor Visitor) (interface{}, error) {
+func (this *LTrim) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -278,7 +278,7 @@ func NewPosition0(first, second Expression) Function {
 	return rv
 }
 
-func (this *Position0) Accept(visitor Visitor) (interface{}, error) {
+func (this *Position0) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -316,7 +316,7 @@ func NewMBPosition0(first, second Expression) Function {
 	return rv
 }
 
-func (this *MBPosition0) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBPosition0) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -354,7 +354,7 @@ func NewPosition1(first, second Expression) Function {
 	return rv
 }
 
-func (this *Position1) Accept(visitor Visitor) (interface{}, error) {
+func (this *Position1) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -392,7 +392,7 @@ func NewMBPosition1(first, second Expression) Function {
 	return rv
 }
 
-func (this *MBPosition1) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBPosition1) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -447,7 +447,7 @@ func NewRepeat(first, second Expression) Function {
 	return rv
 }
 
-func (this *Repeat) Accept(visitor Visitor) (interface{}, error) {
+func (this *Repeat) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -510,7 +510,7 @@ func NewReplace(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Replace) Accept(visitor Visitor) (interface{}, error) {
+func (this *Replace) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -584,7 +584,7 @@ func NewReverse(operand Expression) Function {
 	return rv
 }
 
-func (this *Reverse) Accept(visitor Visitor) (interface{}, error) {
+func (this *Reverse) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -625,7 +625,7 @@ func NewRTrim(operands ...Expression) Function {
 	return rv
 }
 
-func (this *RTrim) Accept(visitor Visitor) (interface{}, error) {
+func (this *RTrim) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -686,7 +686,7 @@ func NewSplit(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Split) Accept(visitor Visitor) (interface{}, error) {
+func (this *Split) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -726,7 +726,7 @@ func (this *Split) Evaluate(item value.Value, context Context) (value.Value, err
 		sa = strings.Split(s.ToString(), sep.ToString())
 	}
 
-	rv := make([]interface{}, len(sa))
+	rv := make([]any, len(sa))
 	for i, s := range sa {
 		rv[i] = s
 	}
@@ -757,7 +757,7 @@ func NewSubstr0(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Substr0) Accept(visitor Visitor) (interface{}, error) {
+func (this *Substr0) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -798,7 +798,7 @@ func NewMBSubstr0(operands ...Expression) Function {
 	return rv
 }
 
-func (this *MBSubstr0) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBSubstr0) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -839,7 +839,7 @@ func NewSubstr1(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Substr1) Accept(visitor Visitor) (interface{}, error) {
+func (this *Substr1) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -880,7 +880,7 @@ func NewMBSubstr1(operands ...Expression) Function {
 	return rv
 }
 
-func (this *MBSubstr1) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBSubstr1) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1000,7 +1000,7 @@ func NewSuffixes(operand Expression) Function {
 	return rv
 }
 
-func (this *Suffixes) Accept(visitor Visitor) (interface{}, error) {
+func (this *Suffixes) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1017,7 +1017,7 @@ func (this *Suffixes) Evaluate(item value.Value, context Context) (value.Value, 
 	}
 
 	s := arg.ToString()
-	rv := make([]interface{}, 0, len(s))
+	rv := make([]any, 0, len(s))
 	// Range over Unicode code points, not bytes
 	for i, _ := range s {
 		rv = append(rv, s[i:])
@@ -1046,7 +1046,7 @@ func NewTitle(operand Expression) Function {
 	return rv
 }
 
-func (this *Title) Accept(visitor Visitor) (interface{}, error) {
+func (this *Title) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1087,7 +1087,7 @@ func NewTrim(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Trim) Accept(visitor Visitor) (interface{}, error) {
+func (this *Trim) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1148,7 +1148,7 @@ func NewUpper(operand Expression) Function {
 	return rv
 }
 
-func (this *Upper) Accept(visitor Visitor) (interface{}, error) {
+func (this *Upper) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1188,7 +1188,7 @@ func NewMask(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Mask) Accept(visitor Visitor) (interface{}, error) {
+func (this *Mask) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1424,7 +1424,7 @@ func NewLPad(operands ...Expression) Function {
 	return rv
 }
 
-func (this *LPad) Accept(visitor Visitor) (interface{}, error) {
+func (this *LPad) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1456,7 +1456,7 @@ func NewMBLPad(operands ...Expression) Function {
 	return rv
 }
 
-func (this *MBLPad) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBLPad) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1488,7 +1488,7 @@ func NewRPad(operands ...Expression) Function {
 	return rv
 }
 
-func (this *RPad) Accept(visitor Visitor) (interface{}, error) {
+func (this *RPad) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1520,7 +1520,7 @@ func NewMBRPad(operands ...Expression) Function {
 	return rv
 }
 
-func (this *MBRPad) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBRPad) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1552,7 +1552,7 @@ func NewFormalize(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Formalize) Accept(visitor Visitor) (interface{}, error) {
+func (this *Formalize) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1613,7 +1613,7 @@ func NewURLEncode(operand Expression) Function {
 	return rv
 }
 
-func (this *URLEncode) Accept(visitor Visitor) (interface{}, error) {
+func (this *URLEncode) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1653,7 +1653,7 @@ func NewURLDecode(operand Expression) Function {
 	return rv
 }
 
-func (this *URLDecode) Accept(visitor Visitor) (interface{}, error) {
+func (this *URLDecode) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1695,7 +1695,7 @@ func NewCompress(operand Expression) Function {
 	return rv
 }
 
-func (this *Compress) Accept(visitor Visitor) (interface{}, error) {
+func (this *Compress) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 func (this *Compress) Type() value.Type { return value.STRING }
@@ -1737,7 +1737,7 @@ func NewUncompress(operand Expression) Function {
 	return rv
 }
 
-func (this *Uncompress) Accept(visitor Visitor) (interface{}, error) {
+func (this *Uncompress) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 

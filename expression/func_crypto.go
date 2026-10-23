@@ -50,13 +50,13 @@ func NewHashbytes(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Hashbytes) Accept(visitor Visitor) (interface{}, error) {
+func (this *Hashbytes) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
 func (this *Hashbytes) Type() value.Type { return value.STRING }
 
-var algorithms = map[string]interface{}{
+var algorithms = map[string]any{
 	"crc32":      crc32.New,
 	"md4":        md4.New,
 	"md5":        md5.New,

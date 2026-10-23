@@ -171,9 +171,9 @@ func newFormalizer(keyspace string, parent *Formalizer, mapSelf, mapKeyspace boo
 	rv := &Formalizer{
 		keyspace:    keyspace,
 		withs:       withs,
-		allowed:     value.NewScopeValue(make(map[string]interface{}), pv),
-		identifiers: value.NewScopeValue(make(map[string]interface{}, 64), nil),
-		aliases:     value.NewScopeValue(make(map[string]interface{}), av),
+		allowed:     value.NewScopeValue(make(map[string]any), pv),
+		identifiers: value.NewScopeValue(make(map[string]any, 64), nil),
+		aliases:     value.NewScopeValue(make(map[string]any), av),
 		flags:       flags,
 		correlation: correlation,
 	}
@@ -239,7 +239,7 @@ func (this *Formalizer) ClearIndexScope() {
 	this.flags &^= FORM_INDEX_SCOPE
 }
 
-func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
+func (this *Formalizer) VisitAny(expr *Any) (any, error) {
 	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -255,7 +255,7 @@ func (this *Formalizer) VisitAny(expr *Any) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
+func (this *Formalizer) VisitEvery(expr *Every) (any, error) {
 	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -271,7 +271,7 @@ func (this *Formalizer) VisitEvery(expr *Every) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
+func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (any, error) {
 	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -287,7 +287,7 @@ func (this *Formalizer) VisitAnyEvery(expr *AnyEvery) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
+func (this *Formalizer) VisitArray(expr *Array) (any, error) {
 	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -303,7 +303,7 @@ func (this *Formalizer) VisitArray(expr *Array) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
+func (this *Formalizer) VisitFirst(expr *First) (any, error) {
 	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -319,7 +319,7 @@ func (this *Formalizer) VisitFirst(expr *First) (interface{}, error) {
 	return expr, nil
 }
 
-func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
+func (this *Formalizer) VisitObject(expr *Object) (any, error) {
 	err := this.PushBindings(expr.Bindings(), true)
 	if err != nil {
 		return nil, err
@@ -338,7 +338,7 @@ func (this *Formalizer) VisitObject(expr *Object) (interface{}, error) {
 /*
 Formalize Identifier.
 */
-func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
+func (this *Formalizer) VisitIdentifier(expr *Identifier) (any, error) {
 	var identifier string
 	var ident_val value.Value
 	var ok bool
@@ -489,7 +489,7 @@ func (this *Formalizer) VisitIdentifier(expr *Identifier) (interface{}, error) {
 /*
 Formalize SELF functions defined on indexes.
 */
-func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
+func (this *Formalizer) VisitSelf(expr *Self) (any, error) {
 	if this.mapSelf() {
 		keyspaceIdent := NewIdentifier(this.keyspace)
 		keyspaceIdent.SetKeyspaceAlias(true)
@@ -502,7 +502,7 @@ func (this *Formalizer) VisitSelf(expr *Self) (interface{}, error) {
 /*
 Formalize META() functions defined on indexes.
 */
-func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
+func (this *Formalizer) VisitFunction(expr Function) (any, error) {
 	if !this.mapKeyspace() && !this.IsCheckCorrelation() && !this.IsCheckSubquery() {
 		fnName := expr.Name()
 		if fnName == "meta" || fnName == "search_meta" || fnName == "search_score" {
@@ -543,7 +543,7 @@ func (this *Formalizer) VisitFunction(expr Function) (interface{}, error) {
 /*
 Visitor method for Subqueries. Call formalize.
 */
-func (this *Formalizer) VisitSubquery(expr Subquery) (interface{}, error) {
+func (this *Formalizer) VisitSubquery(expr Subquery) (any, error) {
 	err := expr.Formalize(this)
 	if err != nil {
 		return nil, err
@@ -562,9 +562,9 @@ func (this *Formalizer) PushBindings(bindings Bindings, push bool) (err error) {
 	aliases := this.aliases
 
 	if push {
-		allowed = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.allowed)
-		identifiers = value.NewScopeValue(make(map[string]interface{}, 16), this.identifiers)
-		aliases = value.NewScopeValue(make(map[string]interface{}, len(bindings)), this.aliases)
+		allowed = value.NewScopeValue(make(map[string]any, len(bindings)), this.allowed)
+		identifiers = value.NewScopeValue(make(map[string]any, 16), this.identifiers)
+		aliases = value.NewScopeValue(make(map[string]any, len(bindings)), this.aliases)
 	}
 
 	var expr Expression

@@ -27,7 +27,7 @@ func NewIsValued(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsValued) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsValued) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIsValued(this)
 }
 
@@ -94,7 +94,7 @@ func NewIsNotValued(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *IsNotValued) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsNotValued) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitIsNotValued(this)
 }
 

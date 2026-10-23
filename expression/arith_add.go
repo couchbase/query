@@ -31,7 +31,7 @@ func NewAdd(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Add) Accept(visitor Visitor) (interface{}, error) {
+func (this *Add) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitAdd(this)
 }
 

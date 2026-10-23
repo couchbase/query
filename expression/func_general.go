@@ -34,7 +34,7 @@ func NewLen(operand Expression) Function {
 	return rv
 }
 
-func (this *Len) Accept(visitor Visitor) (interface{}, error) {
+func (this *Len) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -67,7 +67,7 @@ func NewMBLen(operand Expression) Function {
 	return rv
 }
 
-func (this *MBLen) Accept(visitor Visitor) (interface{}, error) {
+func (this *MBLen) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -97,10 +97,10 @@ func evaluateLength(arg value.Value, runes bool) (value.Value, error) {
 		}
 		return value.NewValue(arg.Size()), nil
 	case value.OBJECT:
-		oa := arg.Actual().(map[string]interface{})
+		oa := arg.Actual().(map[string]any)
 		return value.NewValue(len(oa)), nil
 	case value.ARRAY:
-		aa := arg.Actual().([]interface{})
+		aa := arg.Actual().([]any)
 		return value.NewValue(len(aa)), nil
 	case value.BINARY:
 		return value.NewValue(arg.Size()), nil
@@ -126,7 +126,7 @@ func NewEvaluate(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Evaluate) Accept(visitor Visitor) (interface{}, error) {
+func (this *Evaluate) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -153,13 +153,13 @@ func (this *Evaluate) Evaluate(item value.Value, context Context) (value.Value, 
 			stmt = arg.ToString()
 		} else {
 			if arg.Type() == value.OBJECT {
-				act := arg.Actual().(map[string]interface{})
+				act := arg.Actual().(map[string]any)
 				named = make(map[string]value.Value, len(act))
 				for k, v := range act {
 					named[k] = value.NewValue(v)
 				}
 			} else if arg.Type() == value.ARRAY {
-				act := arg.Actual().([]interface{})
+				act := arg.Actual().([]any)
 				positional = make(value.Values, 0, len(act))
 				for i := range act {
 					positional = append(positional, value.NewValue(act[i]))
@@ -214,7 +214,7 @@ func NewFinderr(operand Expression) Function {
 	return rv
 }
 
-func (this *Finderr) Accept(visitor Visitor) (interface{}, error) {
+func (this *Finderr) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -239,12 +239,12 @@ func (this *Finderr) Evaluate(item value.Value, context Context) (value.Value, e
 		if err != nil {
 			return value.NULL_VALUE, nil
 		}
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		err = json.Unmarshal(b, &m)
 		if err != nil {
 			return value.NULL_VALUE, nil
 		}
-		res := make([]interface{}, 1)
+		res := make([]any, 1)
 		res[0] = m
 		return value.NewValue(res), nil
 	} else {
@@ -252,13 +252,13 @@ func (this *Finderr) Evaluate(item value.Value, context Context) (value.Value, e
 		if len(errs) == 0 {
 			return value.NULL_VALUE, nil
 		}
-		res := make([]interface{}, 0, len(errs))
+		res := make([]any, 0, len(errs))
 		for _, ed := range errs {
 			b, err := json.Marshal(ed)
 			if err != nil {
 				return value.NULL_VALUE, nil
 			}
-			m := make(map[string]interface{})
+			m := make(map[string]any)
 			err = json.Unmarshal(b, &m)
 			if err != nil {
 				return value.NULL_VALUE, nil
@@ -546,7 +546,7 @@ func buildKnowledgeDDL(kv value.Value, bucket string) string {
 	return b.String()
 }
 
-func (this *ExtractDDL) Accept(visitor Visitor) (interface{}, error) {
+func (this *ExtractDDL) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -581,12 +581,12 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		} else if with.Type() == value.ARRAY {
 			// flags on their own may be given as a bare array - EXTRACTDDL('', ['knowledge']) -
 			// rather than having to be wrapped up as EXTRACTDDL('', {'flags':['knowledge']})
-			with = value.NewValue(map[string]interface{}{"flags": with})
+			with = value.NewValue(map[string]any{"flags": with})
 		} else if with.Type() != value.OBJECT {
 			return value.NULL_VALUE, nil
 		}
 	} else {
-		with = value.NewValue(map[string]interface{}{})
+		with = value.NewValue(map[string]any{})
 	}
 
 	// Strip surrounding backticks from filter if present (e.g., '`travel-sample`' -> 'travel-sample')
@@ -600,7 +600,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		}
 	}
 
-	res := make([]interface{}, 0, 32)
+	res := make([]any, 0, 32)
 	args := make(value.Values, 0, 1)
 
 	var buf strings.Builder
@@ -616,18 +616,18 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 	if err != nil {
 		return value.MISSING_VALUE, err
 	}
-	buckets := v.Actual().([]interface{})
+	buckets := v.Actual().([]any)
 
 	flags := _BUCKET_INFO | _SCOPE_INFO | _COLLECTION_INFO | _INDEX_INFO | _SEQUENCE_INFO | _FUNCTION_INFO | _PREPARED_INFO |
 		_KNOWLEDGE_INFO
 	if f, ok := with.Field("flags"); ok {
 		if f.Type() == value.STRING {
-			f = value.NewValue([]interface{}{f})
+			f = value.NewValue([]any{f})
 		}
 		if f.Type() == value.NUMBER {
 			flags = int(value.AsNumberValue(f).Int64())
 		} else if f.Type() == value.ARRAY {
-			act := f.Actual().([]interface{})
+			act := f.Actual().([]any)
 			flags = 0
 			for i := range act {
 				// Elements are value.Values only when the array was built in the statement
@@ -699,7 +699,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		if err != nil {
 			return value.MISSING_VALUE, err
 		}
-		globalFunctions := v.Actual().([]interface{})
+		globalFunctions := v.Actual().([]any)
 		for _, gf := range globalFunctions {
 			funcVal := value.NewValue(gf)
 			if ddl := buildFunctionDDL(funcVal, ""); ddl != "" {
@@ -717,7 +717,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		if err != nil {
 			return value.MISSING_VALUE, err
 		}
-		catalogs := v.Actual().([]interface{})
+		catalogs := v.Actual().([]any)
 		for _, cat := range catalogs {
 			catVal := value.NewValue(cat)
 			if ddl := buildCatalogDDL(catVal); ddl != "" {
@@ -842,7 +842,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			if err != nil {
 				return value.MISSING_VALUE, err
 			}
-			scopes := v.Actual().([]interface{})
+			scopes := v.Actual().([]any)
 			for j := range scopes {
 				scope := scopes[j].(string)
 				sb.Reset()
@@ -963,7 +963,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			if err != nil {
 				return value.MISSING_VALUE, err
 			}
-			indices := v.Actual().([]interface{})
+			indices := v.Actual().([]any)
 			res = append(res, indices...)
 		}
 
@@ -986,7 +986,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			if err != nil {
 				return value.MISSING_VALUE, err
 			}
-			sequences := v.Actual().([]interface{})
+			sequences := v.Actual().([]any)
 			res = append(res, sequences...)
 		}
 
@@ -999,7 +999,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 			if err != nil {
 				return value.MISSING_VALUE, err
 			}
-			scopedFunctions := v.Actual().([]interface{})
+			scopedFunctions := v.Actual().([]any)
 			for _, sf := range scopedFunctions {
 				funcVal := value.NewValue(sf)
 				if ddl := buildFunctionDDL(funcVal, bucket); ddl != "" {
@@ -1042,7 +1042,7 @@ func (this *ExtractDDL) Evaluate(item value.Value, context Context) (value.Value
 		if err != nil {
 			return value.MISSING_VALUE, err
 		}
-		prepareds := v.Actual().([]interface{})
+		prepareds := v.Actual().([]any)
 		for _, p := range prepareds {
 			pv := value.NewValue(p)
 			stmtVal, ok := pv.Field("statement")
@@ -1091,7 +1091,7 @@ func NewIndexInfo(operands ...Expression) Function {
 	return rv
 }
 
-func (this *IndexInfo) Accept(visitor Visitor) (interface{}, error) {
+func (this *IndexInfo) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1181,7 +1181,7 @@ func NewSanitizeStatement(operands ...Expression) Function {
 	return rv
 }
 
-func (this *SanitizeStatement) Accept(visitor Visitor) (interface{}, error) {
+func (this *SanitizeStatement) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1208,7 +1208,7 @@ func (this *SanitizeStatement) Evaluate(item value.Value, context Context) (valu
 		return nil, err
 	}
 
-	rv := value.NewValue(map[string]interface{}{
+	rv := value.NewValue(map[string]any{
 		"statement":     strStmt,
 		"parametersMap": paramMap,
 	})

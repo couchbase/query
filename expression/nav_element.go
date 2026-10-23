@@ -35,7 +35,7 @@ func NewElement(first, second Expression) *Element {
 /*
 Visitor pattern.
 */
-func (this *Element) Accept(visitor Visitor) (interface{}, error) {
+func (this *Element) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitElement(this)
 }
 
@@ -123,7 +123,7 @@ func NewRandomElement(first Expression) *RandomElement {
 /*
 Visitor pattern.
 */
-func (this *RandomElement) Accept(visitor Visitor) (interface{}, error) {
+func (this *RandomElement) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -152,7 +152,7 @@ func (this *RandomElement) Evaluate(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil
 	}
 
-	a := first.Actual().([]interface{})
+	a := first.Actual().([]any)
 	max := len(a)
 	if max == 0 {
 		return value.NULL_VALUE, nil

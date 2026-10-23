@@ -36,8 +36,8 @@ func newAdvisor() *Advisor {
 	return NewAdvisor(NewConstant(value.NewValue("x"))).(*Advisor)
 }
 
-func sessionMap(v interface{}) map[string]interface{} {
-	return map[string]interface{}{"session": value.NewValue(v)}
+func sessionMap(v any) map[string]any {
+	return map[string]any{"session": value.NewValue(v)}
 }
 
 func TestAdvisorIsSessionNameValid(t *testing.T) {
@@ -104,11 +104,11 @@ func TestAdvisorGetSession(t *testing.T) {
 	}
 
 	// Missing 'session'.
-	if _, err := adv.getSession(map[string]interface{}{}); err == nil {
+	if _, err := adv.getSession(map[string]any{}); err == nil {
 		t.Error("getSession(missing) = nil error, want error")
 	}
 	// Non-string 'session'.
-	if _, err := adv.getSession(map[string]interface{}{"session": value.NewValue(42)}); err == nil {
+	if _, err := adv.getSession(map[string]any{"session": value.NewValue(42)}); err == nil {
 		t.Error("getSession(number) = nil error, want error")
 	}
 }

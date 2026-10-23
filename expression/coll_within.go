@@ -27,7 +27,7 @@ func NewWithin(first, second Expression) Function {
 	return rv
 }
 
-func (this *Within) Accept(visitor Visitor) (interface{}, error) {
+func (this *Within) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitWithin(this)
 }
 

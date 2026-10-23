@@ -22,7 +22,7 @@ import (
 	"github.com/couchbase/query/value"
 )
 
-type nameList []interface{}
+type nameList []any
 
 func (s nameList) Len() int {
 	return len(s)
@@ -38,7 +38,7 @@ func (s nameList) Less(i, j int) bool {
 	return a < b
 }
 
-type mapList []interface{}
+type mapList []any
 
 func (s mapList) Len() int {
 	return len(s)
@@ -49,8 +49,8 @@ func (s mapList) Swap(i, j int) {
 }
 
 func (s mapList) Less(i, j int) bool {
-	a, _ := s[i].(map[string]interface{})
-	b, _ := s[j].(map[string]interface{})
+	a, _ := s[i].(map[string]any)
+	b, _ := s[j].(map[string]any)
 	an, _ := a["name"].(string)
 	bn, _ := b["name"].(string)
 	return an < bn
@@ -84,7 +84,7 @@ func NewObjectAdd(first, second, third Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectAdd) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectAdd) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -178,7 +178,7 @@ func NewObjectConcat(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectConcat) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectConcat) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -262,7 +262,7 @@ func NewObjectInnerPairs(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectInnerPairs) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectInnerPairs) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -289,9 +289,9 @@ func (this *ObjectInnerPairs) Evaluate(item value.Value, context Context) (value
 
 	oa := removeMissing(arg)
 
-	fields := make([]interface{}, 0, len(oa))
+	fields := make([]any, 0, len(oa))
 	for n, v := range oa {
-		fields = append(fields, map[string]interface{}{"name": n, "val": v})
+		fields = append(fields, map[string]any{"name": n, "val": v})
 	}
 
 	sort.Sort(mapList(fields))
@@ -334,7 +334,7 @@ func NewObjectInnerValues(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectInnerValues) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectInnerValues) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -362,7 +362,7 @@ func (this *ObjectInnerValues) Evaluate(item value.Value, context Context) (valu
 
 	oa := removeMissing(arg)
 
-	values := make([]interface{}, 0, len(oa))
+	values := make([]any, 0, len(oa))
 	for name, _ := range oa {
 		values = append(values, name)
 	}
@@ -410,7 +410,7 @@ func NewObjectLength(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectLength) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectLength) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -426,7 +426,7 @@ func (this *ObjectLength) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]any)
 	return value.NewValue(len(oa)), nil
 }
 
@@ -465,7 +465,7 @@ func NewObjectNames(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectNames) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectNames) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -481,9 +481,9 @@ func (this *ObjectNames) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]any)
 
-	names := make([]interface{}, 0, len(oa))
+	names := make([]any, 0, len(oa))
 
 	for name, _ := range oa {
 		names = append(names, name)
@@ -525,7 +525,7 @@ func NewObjectPaths(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ObjectPaths) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectPaths) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -632,11 +632,11 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 	var names []string
 	var l int
 	if arg.Type() == value.OBJECT {
-		o := arg.Actual().(map[string]interface{})
+		o := arg.Actual().(map[string]any)
 
 		l = len(o)
 	} else { // value.ARRAY
-		a := arg.Actual().([]interface{})
+		a := arg.Actual().([]any)
 
 		l = len(a)
 	}
@@ -653,7 +653,7 @@ func (this *ObjectPaths) Evaluate(item value.Value, context Context) (value.Valu
 	names = pf.processValueForNames(names, "", arg)
 
 	sort.Strings(names)
-	ra := make([]interface{}, len(names))
+	ra := make([]any, len(names))
 	i := 0
 	if unique {
 		nprev := ""
@@ -683,7 +683,7 @@ type pathFilter struct {
 	ignoreCase   bool
 }
 
-func (this *pathFilter) getNamesFromArray(names []string, prefix string, a []interface{}) []string {
+func (this *pathFilter) getNamesFromArray(names []string, prefix string, a []any) []string {
 
 	var keep aNotation
 	for i, val := range a {
@@ -698,7 +698,7 @@ func (this *pathFilter) getNamesFromArray(names []string, prefix string, a []int
 	return names
 }
 
-func (this *pathFilter) getNames(names []string, prefix string, m map[string]interface{}) []string {
+func (this *pathFilter) getNames(names []string, prefix string, m map[string]any) []string {
 
 	if len(prefix) > 0 {
 		if this.aNote == belowStar {
@@ -726,16 +726,16 @@ func (this *pathFilter) getNames(names []string, prefix string, m map[string]int
 	return names
 }
 
-func (this *pathFilter) processValueForNames(names []string, prefix string, val interface{}) []string {
+func (this *pathFilter) processValueForNames(names []string, prefix string, val any) []string {
 
-	withAct, ok := val.(interface{ Actual() interface{} })
+	withAct, ok := val.(interface{ Actual() any })
 	if ok {
 		val = withAct.Actual()
 	}
 	switch ov := val.(type) {
-	case []interface{}:
+	case []any:
 		names = this.getNamesFromArray(names, prefix, ov)
-	case map[string]interface{}:
+	case map[string]any:
 		names = this.getNames(names, prefix, ov)
 	default:
 		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern, this.ignoreCase) {
@@ -822,7 +822,7 @@ func NewObjectPairs(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectPairs) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectPairs) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -864,16 +864,16 @@ func (this *ObjectPairs) Evaluate(item value.Value, context Context) (value.Valu
 		}
 	}
 
-	oa := arg.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]any)
 
-	fields := make([]interface{}, 0, len(oa))
+	fields := make([]any, 0, len(oa))
 	if types {
 		for n, v := range oa {
-			fields = append(fields, map[string]interface{}{"name": n, "type": value.NewValue(v).Type().String()})
+			fields = append(fields, map[string]any{"name": n, "type": value.NewValue(v).Type().String()})
 		}
 	} else {
 		for n, v := range oa {
-			fields = append(fields, map[string]interface{}{"name": n, "val": v})
+			fields = append(fields, map[string]any{"name": n, "val": v})
 		}
 	}
 
@@ -917,7 +917,7 @@ func NewObjectPairsNested(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ObjectPairsNested) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectPairsNested) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1018,10 +1018,10 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 	var l int
 
 	if arg.Type() == value.OBJECT {
-		o := arg.Actual().(map[string]interface{})
+		o := arg.Actual().(map[string]any)
 		l = len(o)
 	} else { // value.ARRAY
-		a := arg.Actual().([]interface{})
+		a := arg.Actual().([]any)
 		l = len(a)
 	}
 
@@ -1030,14 +1030,14 @@ func (this *ObjectPairsNested) Evaluate(item value.Value, context Context) (valu
 	pairs = pf.processPairValue(pairs, "", arg, "", nameOnly)
 	sort.Sort(pairs)
 
-	rv := make([]interface{}, len(pairs))
+	rv := make([]any, len(pairs))
 	if types && !pf.index {
 		for i, m := range pairs {
-			rv[i] = map[string]interface{}{"name": m.Name, "type": value.NewValue(m.Value).Type().String()}
+			rv[i] = map[string]any{"name": m.Name, "type": value.NewValue(m.Value).Type().String()}
 		}
 	} else {
 		for i, m := range pairs {
-			rv[i] = map[string]interface{}{"name": m.Name, "val": m.Value}
+			rv[i] = map[string]any{"name": m.Name, "val": m.Value}
 		}
 	}
 
@@ -1052,7 +1052,7 @@ type pairFilter struct {
 	ignoreCase   bool
 }
 
-func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []interface{}, basename string,
+func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []any, basename string,
 	nameOnly bool) util.Pairs {
 
 	if this.index == true {
@@ -1076,7 +1076,7 @@ func (this *pairFilter) getPairsFromArray(pairs util.Pairs, prefix string, a []i
 	return pairs
 }
 
-func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]interface{}, nameOnly bool) util.Pairs {
+func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]any, nameOnly bool) util.Pairs {
 	if len(prefix) > 0 {
 		prefix = prefix + "."
 	}
@@ -1100,17 +1100,17 @@ func (this *pairFilter) getPairs(pairs util.Pairs, prefix string, m map[string]i
 	return pairs
 }
 
-func addComposite(pairs util.Pairs, name string, val interface{}) util.Pairs {
+func addComposite(pairs util.Pairs, name string, val any) util.Pairs {
 	// only add if it is actually a composite value
-	withAct, ok := val.(interface{ Actual() interface{} })
+	withAct, ok := val.(interface{ Actual() any })
 	if ok {
 		val = withAct.Actual()
 	}
 	add := false
 	switch val.(type) {
-	case []interface{}:
+	case []any:
 		add = true
-	case map[string]interface{}:
+	case map[string]any:
 		add = true
 	}
 	if add {
@@ -1119,17 +1119,17 @@ func addComposite(pairs util.Pairs, name string, val interface{}) util.Pairs {
 	return pairs
 }
 
-func (this *pairFilter) processPairValue(pairs util.Pairs, prefix string, val interface{}, basename string,
+func (this *pairFilter) processPairValue(pairs util.Pairs, prefix string, val any, basename string,
 	nameOnly bool) util.Pairs {
 
-	withAct, ok := val.(interface{ Actual() interface{} })
+	withAct, ok := val.(interface{ Actual() any })
 	if ok {
 		val = withAct.Actual()
 	}
 	switch ov := val.(type) {
-	case []interface{}:
+	case []any:
 		pairs = this.getPairsFromArray(pairs, prefix, ov, basename, nameOnly)
-	case map[string]interface{}:
+	case map[string]any:
 		pairs = this.getPairs(pairs, prefix, ov, nameOnly)
 	default:
 		if matchPattern(prefix, this.re, this.fieldPattern, this.ignoreCase) {
@@ -1191,7 +1191,7 @@ func NewObjectPut(first, second, third Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectPut) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectPut) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1278,7 +1278,7 @@ func NewObjectRemove(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectRemove) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectRemove) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1364,7 +1364,7 @@ func NewObjectRemoveFields(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ObjectRemoveFields) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectRemoveFields) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1376,7 +1376,7 @@ func (this *ObjectRemoveFields) Evaluate(item value.Value, context Context) (val
 		return nil, errors.NewNilEvaluateParamError("context")
 	}
 
-	var rv interface{}
+	var rv any
 	var obj value.AnnotatedValue
 	null := false
 	missing := false
@@ -1416,7 +1416,7 @@ func (this *ObjectRemoveFields) Evaluate(item value.Value, context Context) (val
 						}
 					}
 				} else if arg.Type() == value.ARRAY {
-					act := arg.Actual().([]interface{})
+					act := arg.Actual().([]any)
 				act_array:
 					for j := range act {
 						var n string
@@ -1498,7 +1498,7 @@ func NewObjectRename(obj, old_name, new_name Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectRename) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectRename) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1577,7 +1577,7 @@ func NewObjectReplace(obj, old_val, new_val Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectReplace) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectReplace) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1658,7 +1658,7 @@ func NewObjectUnwrap(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectUnwrap) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectUnwrap) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1680,7 +1680,7 @@ func (this *ObjectUnwrap) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]any)
 	if len(oa) == 1 {
 		for _, v := range oa {
 			return value.NewValue(v), nil
@@ -1726,7 +1726,7 @@ func NewObjectValues(operand Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectValues) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectValues) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1748,9 +1748,9 @@ func (this *ObjectValues) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().(map[string]interface{})
+	oa := arg.Actual().(map[string]any)
 
-	values := make([]interface{}, 0, len(oa))
+	values := make([]any, 0, len(oa))
 
 	for name, _ := range oa {
 		values = append(values, name)
@@ -1778,18 +1778,18 @@ func (this *ObjectValues) Constructor() FunctionConstructor {
 Utility function to remove missing array elements for OBJECT_INNERVALUES
 and OBJECT_INNERPAIRS
 */
-func removeMissing(arg value.Value) map[string]interface{} {
-	if len(arg.Actual().(map[string]interface{})) == 1 {
-		return arg.Actual().(map[string]interface{})
+func removeMissing(arg value.Value) map[string]any {
+	if len(arg.Actual().(map[string]any)) == 1 {
+		return arg.Actual().(map[string]any)
 	}
 
-	oa := arg.Copy().Actual().(map[string]interface{})
+	oa := arg.Copy().Actual().(map[string]any)
 	for name, val := range oa {
-		valSlice, ok := val.([]interface{})
+		valSlice, ok := val.([]any)
 		if !ok {
 			continue
 		}
-		newSlice := make([]interface{}, 0, len(valSlice))
+		newSlice := make([]any, 0, len(valSlice))
 		for _, subVal := range valSlice {
 			if value.NewValue(subVal).Type() != value.MISSING {
 				newSlice = append(newSlice, subVal)
@@ -1835,7 +1835,7 @@ func NewObjectExtract(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *ObjectExtract) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectExtract) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1846,7 +1846,7 @@ Filtered ObjectExtract
 */
 func (this *ObjectExtract) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var min, max, pattern string
-	var fields []interface{}
+	var fields []any
 
 	arg, err := this.operands[0].Evaluate(item, context)
 	if err != nil {
@@ -1882,7 +1882,7 @@ func (this *ObjectExtract) Evaluate(item value.Value, context Context) (value.Va
 	}
 
 	pfArg, ok := arg.(interface {
-		ParsedFields(min, max string, re interface{}) []interface{}
+		ParsedFields(min, max string, re any) []any
 	})
 	if ok {
 		if len(pattern) != 0 {
@@ -1900,9 +1900,9 @@ func (this *ObjectExtract) Evaluate(item value.Value, context Context) (value.Va
 		}
 	} else {
 		// fall-back if we don't have the parsed-only interface
-		oa := arg.Actual().(map[string]interface{})
+		oa := arg.Actual().(map[string]any)
 
-		fields = make([]interface{}, 0, len(oa))
+		fields = make([]any, 0, len(oa))
 
 		if len(pattern) != 0 {
 			re := this.re
@@ -1915,19 +1915,19 @@ func (this *ObjectExtract) Evaluate(item value.Value, context Context) (value.Va
 			}
 			for n, v := range oa {
 				if re.FindStringSubmatchIndex(n) != nil {
-					fields = append(fields, map[string]interface{}{"name": n, "val": v})
+					fields = append(fields, map[string]any{"name": n, "val": v})
 				}
 			}
 		} else {
 			if len(min) != 0 || len(max) != 0 {
 				for n, v := range oa {
 					if (len(min) == 0 || strings.Compare(min, n) <= 0) && (len(max) == 0 || strings.Compare(max, n) == 1) {
-						fields = append(fields, map[string]interface{}{"name": n, "val": v})
+						fields = append(fields, map[string]any{"name": n, "val": v})
 					}
 				}
 			} else {
 				for n, v := range oa {
-					fields = append(fields, map[string]interface{}{"name": n, "val": v})
+					fields = append(fields, map[string]any{"name": n, "val": v})
 				}
 			}
 		}
@@ -1973,7 +1973,7 @@ func NewObjectField(first, second Expression) Function {
 	return rv
 }
 
-func (this *ObjectField) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectField) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2048,7 +2048,7 @@ func NewObjectFilter(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ObjectFilter) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectFilter) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2158,12 +2158,12 @@ type fieldFilter struct {
 	ignoreCase   bool
 }
 
-func (this *fieldFilter) getFieldsFromArray(prefix string, a []interface{}) []interface{} {
+func (this *fieldFilter) getFieldsFromArray(prefix string, a []any) []any {
 
-	var res []interface{}
+	var res []any
 	var keep aNotation
 	for i, val := range a {
-		var nv interface{}
+		var nv any
 		if this.aNote == subscript {
 			nv = this.processValueForFields(prefix+fmt.Sprintf("[%d]", i), val)
 		} else {
@@ -2178,7 +2178,7 @@ func (this *fieldFilter) getFieldsFromArray(prefix string, a []interface{}) []in
 	return res
 }
 
-func (this *fieldFilter) getFields(prefix string, m map[string]interface{}) interface{} {
+func (this *fieldFilter) getFields(prefix string, m map[string]any) any {
 
 	if len(prefix) > 0 {
 		if this.aNote == belowStar {
@@ -2187,7 +2187,7 @@ func (this *fieldFilter) getFields(prefix string, m map[string]interface{}) inte
 			prefix = prefix + "."
 		}
 	}
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 	for name, val := range m {
 		var mname string
 		if strings.IndexAny(name, " \t.`") != -1 {
@@ -2209,24 +2209,24 @@ func (this *fieldFilter) getFields(prefix string, m map[string]interface{}) inte
 	return res
 }
 
-func (this *fieldFilter) processValueForFields(prefix string, val interface{}) interface{} {
+func (this *fieldFilter) processValueForFields(prefix string, val any) any {
 
-	var res interface{}
-	var nv interface{}
+	var res any
+	var nv any
 
 	if v, ok := val.(value.Value); ok && v.Type() == value.NULL {
 		// distinguish between a NULL value and nil
 		nv = val
 	}
 
-	if withAct, ok := val.(interface{ Actual() interface{} }); ok {
+	if withAct, ok := val.(interface{ Actual() any }); ok {
 		val = withAct.Actual()
 	}
 
 	switch ov := val.(type) {
-	case []interface{}:
+	case []any:
 		res = this.getFieldsFromArray(prefix, ov)
-	case map[string]interface{}:
+	case map[string]any:
 		res = this.getFields(prefix, ov)
 	default:
 		if !this.comps && matchPattern(prefix, this.re, this.fieldPattern, this.ignoreCase) {
@@ -2237,11 +2237,11 @@ func (this *fieldFilter) processValueForFields(prefix string, val interface{}) i
 			}
 		}
 	}
-	if av, ok := res.([]interface{}); ok {
+	if av, ok := res.([]any); ok {
 		if len(av) == 0 {
 			res = nil
 		}
-	} else if ov, ok := res.(map[string]interface{}); ok {
+	} else if ov, ok := res.(map[string]any); ok {
 		if len(ov) == 0 {
 			res = nil
 		}
@@ -2278,18 +2278,18 @@ func precompilePattern(options value.Value) *regexp.Regexp {
 /*
  * Deletes the field listed in parts in "ref" from the object "i"
  */
-func DeleteFromObject(i interface{}, ref []string) interface{} {
+func DeleteFromObject(i any, ref []string) any {
 	switch t := i.(type) {
 	case value.Value:
 		switch t := t.Actual().(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			return DeleteFromObject(t, ref)
-		case []interface{}:
+		case []any:
 			return DeleteFromObject(t, ref)
 		default:
 			return t
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		switch len(ref) {
 		case 0:
 			return t
@@ -2321,7 +2321,7 @@ func DeleteFromObject(i interface{}, ref []string) interface{} {
 			}
 		}
 		return t
-	case []interface{}:
+	case []any:
 		if len(ref) < 1 {
 			return i
 		} else if len(ref) == 1 {
@@ -2655,7 +2655,7 @@ func checkBinding(item value.AnnotatedValue, ref []string) []string {
 		return ref
 	}
 	v := item.GetValue().Actual()
-	if m, ok := v.(map[string]interface{}); ok {
+	if m, ok := v.(map[string]any); ok {
 		if len(m) != 1 {
 			return ref
 		}
@@ -2696,7 +2696,7 @@ func NewObjectTypes(operand Expression) Function {
 	return rv
 }
 
-func (this *ObjectTypes) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectTypes) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2712,8 +2712,8 @@ func (this *ObjectTypes) Evaluate(item value.Value, context Context) (value.Valu
 		return value.NULL_VALUE, nil
 	}
 
-	oa := arg.Actual().(map[string]interface{})
-	rv := make(map[string]interface{}, len(oa))
+	oa := arg.Actual().(map[string]any)
+	rv := make(map[string]any, len(oa))
 
 	for n, v := range oa {
 		rv[n] = value.NewValue(v).Type().String()
@@ -2740,7 +2740,7 @@ func NewObjectTypesNested(operand Expression) Function {
 	return rv
 }
 
-func (this *ObjectTypesNested) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectTypesNested) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2759,18 +2759,18 @@ func (this *ObjectTypesNested) Evaluate(item value.Value, context Context) (valu
 	return value.NewValue(processTypes(arg.Actual())), nil
 }
 
-func processTypes(v interface{}) interface{} {
+func processTypes(v any) any {
 	switch v := v.(type) {
 	case value.Value:
 		return processTypes(v.Actual())
-	case map[string]interface{}:
-		nm := make(map[string]interface{}, len(v))
+	case map[string]any:
+		nm := make(map[string]any, len(v))
 		for k, mv := range v {
 			nm[k] = processTypes(mv)
 		}
 		return nm
-	case []interface{}:
-		na := make([]interface{}, len(v))
+	case []any:
+		na := make([]any, len(v))
 		for i, av := range v {
 			na[i] = processTypes(av)
 		}
@@ -2804,7 +2804,7 @@ func NewObjectConcat2(operands ...Expression) Function {
 	return rv
 }
 
-func (this *ObjectConcat2) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectConcat2) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -2823,7 +2823,7 @@ func (this *ObjectConcat2) Evaluate(item value.Value, context Context) (value.Va
 		} else if arg.Type() != value.OBJECT && !(arg.Type() == value.ARRAY && i != 0) {
 			null = true
 		} else if arg.Type() == value.ARRAY && !null && !missing {
-			a := arg.Actual().([]interface{})
+			a := arg.Actual().([]any)
 			for _, o := range a {
 				av := value.NewValue(o)
 				if av.Type() != value.OBJECT {

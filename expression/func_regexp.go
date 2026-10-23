@@ -43,7 +43,7 @@ func NewRegexpContains(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpContains) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpContains) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -136,7 +136,7 @@ func NewRegexpLike(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpLike) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpLike) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -256,7 +256,7 @@ func NewRegexpPosition0(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpPosition0) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpPosition0) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -313,7 +313,7 @@ func NewRegexpPosition1(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpPosition1) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpPosition1) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -371,7 +371,7 @@ func NewRegexpReplace(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpReplace) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpReplace) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -554,7 +554,7 @@ func NewRegexpMatches(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpMatches) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpMatches) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -585,7 +585,7 @@ func (this *RegexpMatches) Evaluate(item value.Value, context Context) (value.Va
 		}
 	}
 
-	var res []interface{}
+	var res []any
 	matches := re.FindAll([]byte(first.ToString()), -1)
 	for _, v := range matches {
 		res = append(res, string(v))
@@ -630,7 +630,7 @@ func NewRegexpSplit(first, second Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *RegexpSplit) Accept(visitor Visitor) (interface{}, error) {
+func (this *RegexpSplit) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -661,7 +661,7 @@ func (this *RegexpSplit) Evaluate(item value.Value, context Context) (value.Valu
 		}
 	}
 
-	var res []interface{}
+	var res []any
 	f := []byte(first.ToString())
 	matches := re.FindAllIndex(f, -1)
 	start := 0

@@ -31,7 +31,7 @@ func NewMult(operands ...Expression) Function {
 /*
 Visitor pattern.
 */
-func (this *Mult) Accept(visitor Visitor) (interface{}, error) {
+func (this *Mult) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitMult(this)
 }
 

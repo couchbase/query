@@ -101,7 +101,7 @@ func (this *VectorDistance) Copy() Expression {
 	return rv
 }
 
-func (this *VectorDistance) Accept(visitor Visitor) (interface{}, error) {
+func (this *VectorDistance) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -321,7 +321,7 @@ func (this *ApproxVectorDistance) Copy() Expression {
 	return rv
 }
 
-func (this *ApproxVectorDistance) Accept(visitor Visitor) (interface{}, error) {
+func (this *ApproxVectorDistance) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -456,7 +456,7 @@ func (this *SparseVectorDistance) Copy() Expression {
 	return rv
 }
 
-func (this *SparseVectorDistance) Accept(visitor Visitor) (interface{}, error) {
+func (this *SparseVectorDistance) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -575,7 +575,7 @@ func (this *IsVector) Copy() Expression {
 	return rv
 }
 
-func (this *IsVector) Accept(visitor Visitor) (interface{}, error) {
+func (this *IsVector) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -743,7 +743,7 @@ func NewDecodeVector(operands ...Expression) Function {
 	return rv
 }
 
-func (this *DecodeVector) Accept(visitor Visitor) (interface{}, error) {
+func (this *DecodeVector) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -809,11 +809,11 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	var decodedVector []interface{}
+	var decodedVector []any
 	dims := int(len(decodedString) / BASE_SIZE)
 	switch vType {
 	case _DENSE:
-		decodedVector = make([]interface{}, dims)
+		decodedVector = make([]any, dims)
 		offset := 0
 		// We iterate through the array 4 bytes at a time and convert each of
 		// them to a float32 value by reading them in a little endian notation
@@ -824,8 +824,8 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 
 	case _SPARSE:
 		dims = dims / 2
-		indicesVector := make([]interface{}, dims)
-		valueVector := make([]interface{}, dims)
+		indicesVector := make([]any, dims)
+		valueVector := make([]any, dims)
 		offset := 0
 		for i := 0; i < dims; i++ {
 			indicesVector[i] = byteOrder.Uint32(decodedString[offset : offset+BASE_SIZE])
@@ -859,7 +859,7 @@ func NewEncodeVector(operands ...Expression) Function {
 	return rv
 }
 
-func (this *EncodeVector) Accept(visitor Visitor) (interface{}, error) {
+func (this *EncodeVector) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -988,7 +988,7 @@ func NewNormalizeVector(operands Expression) Function {
 	return rv
 }
 
-func (this *NormalizeVector) Accept(visitor Visitor) (interface{}, error) {
+func (this *NormalizeVector) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -1004,7 +1004,7 @@ func (this *NormalizeVector) Evaluate(item value.Value, context Context) (value.
 	} else if vec.Type() != value.ARRAY {
 		return value.NULL_VALUE, nil
 	}
-	fvec := make([]interface{}, 0, 32)
+	fvec := make([]any, 0, 32)
 	var svf float64
 	for i := 0; ; i++ {
 		vv, vOk := vec.Index(i)

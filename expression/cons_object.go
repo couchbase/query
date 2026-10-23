@@ -39,7 +39,7 @@ func NewObjectConstruct(mapping map[Expression]Expression) Expression {
 /*
 Visitor pattern.
 */
-func (this *ObjectConstruct) Accept(visitor Visitor) (interface{}, error) {
+func (this *ObjectConstruct) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitObjectConstruct(this)
 }
 
@@ -50,7 +50,7 @@ func (this *ObjectConstruct) Evaluate(item value.Value, context Context) (value.
 		return *this.value, nil
 	}
 
-	m := make(map[string]interface{}, len(this.mapping))
+	m := make(map[string]any, len(this.mapping))
 
 	for name, val := range this.mapping {
 		n, err := name.Evaluate(item, context)

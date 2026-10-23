@@ -50,7 +50,7 @@ func NewTimeSeries(operands ...Expression) Function {
 	return rv
 }
 
-func (this *TimeSeries) Accept(visitor Visitor) (interface{}, error) {
+func (this *TimeSeries) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -111,7 +111,7 @@ func (this *TimeSeries) GetOptionFields(arg Expression, item value.Value, contex
 			options = arg.Value()
 		}
 		if oc, ok := arg.(*ObjectConstruct); ok && options == nil {
-			m := make(map[string]interface{}, 6)
+			m := make(map[string]any, 6)
 			for name, val := range oc.Mapping() {
 				n := name.Value()
 				if n == nil || n.Type() != value.STRING {
@@ -223,7 +223,7 @@ func (this *TimeSeries) Evaluate(item value.Value, context Context) (value.Value
 		return rv, err
 	}
 
-	var result []interface{}
+	var result []any
 	if ok, _ := timeSeriesData.Qualified(false); !ok {
 		return value.NewValue(result), nil
 	}
@@ -466,17 +466,17 @@ regular data :
 
 func (this *TimeSeriesData) GetTimeSeriesValue(tdata value.Value, idx int) (value.Value, bool) {
 	var atime int64
-	var m map[string]interface{}
+	var m map[string]any
 	if this.tsInterval > 0 {
 		atime = this.tsStart + int64(idx)*this.tsInterval
 		if !this.tsRanges.ValidRange(atime) {
 			return value.NULL_VALUE, true
 		}
-		m = make(map[string]interface{}, 2)
+		m = make(map[string]any, 2)
 		m["_t"] = atime
 		if this.tsProjectAll {
 			actval := tdata.Actual()
-			if ltval, lok := actval.([]interface{}); lok {
+			if ltval, lok := actval.([]any); lok {
 				for i, v := range ltval {
 					m["_v"+strconv.Itoa(i)] = v
 				}
@@ -500,7 +500,7 @@ func (this *TimeSeriesData) GetTimeSeriesValue(tdata value.Value, idx int) (valu
 		if v, ok := tdata.Index(i); ok {
 			if v.Type() == value.NUMBER {
 				if atime, aok := value.IsIntValue(v); aok && this.tsRanges.ValidRange(atime) {
-					m = make(map[string]interface{}, 2)
+					m = make(map[string]any, 2)
 					m["_t"] = atime
 					if this.tsProjectAll {
 						i++

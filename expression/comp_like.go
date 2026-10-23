@@ -81,7 +81,7 @@ func (this *Like) IsDefaultEscape() bool {
 /*
 Visitor pattern.
 */
-func (this *Like) Accept(visitor Visitor) (interface{}, error) {
+func (this *Like) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitLike(this)
 }
 

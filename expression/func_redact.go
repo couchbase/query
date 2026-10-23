@@ -34,7 +34,7 @@ func NewRedact(operands ...Expression) Function {
 	return rv
 }
 
-func (this *Redact) Accept(visitor Visitor) (interface{}, error) {
+func (this *Redact) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitFunction(this)
 }
 
@@ -193,8 +193,8 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 	var redactV, redactN, strict, omit, fixedLen bool
 	var mask string
 	switch v.(type) {
-	case []interface{}:
-	case map[string]interface{}:
+	case []any:
+	case map[string]any:
 		redactV, redactN, strict, omit, fixedLen, mask = false, false, false, false, false, "x"
 	default:
 		redactV, redactN, strict, omit, fixedLen, mask = this.shouldRedact("", false, false, false, false, "x")
@@ -207,10 +207,10 @@ func (this *Redact) Evaluate(item value.Value, context Context) (value.Value, er
 
 }
 
-func (this *Redact) redact(v interface{}, base string, redactV, redactN, strict, fixedLen bool, mask string) interface{} {
+func (this *Redact) redact(v any, base string, redactV, redactN, strict, fixedLen bool, mask string) any {
 	switch v := v.(type) {
-	case []interface{}:
-		n := make([]interface{}, len(v))
+	case []any:
+		n := make([]any, len(v))
 		for i, v1 := range v {
 			vact := value.NewValue(v1)
 			nredactV, nredactN, nstrict, omit, nfixedLen, nmask := this.shouldRedact("", redactV, redactN, strict, fixedLen, mask)
@@ -220,8 +220,8 @@ func (this *Redact) redact(v interface{}, base string, redactV, redactN, strict,
 			n[i] = value.NewValue(this.redact(vact.Actual(), base, nredactV, nredactN, nstrict, nfixedLen, nmask))
 		}
 		return n
-	case map[string]interface{}:
-		o := make(map[string]interface{}, len(v))
+	case map[string]any:
+		o := make(map[string]any, len(v))
 		i := 0
 		names := make([]string, len(v))
 		for k, _ := range v {

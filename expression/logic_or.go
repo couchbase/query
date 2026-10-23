@@ -32,7 +32,7 @@ func NewOr(operands ...Expression) *Or {
 /*
 Visitor pattern.
 */
-func (this *Or) Accept(visitor Visitor) (interface{}, error) {
+func (this *Or) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitOr(this)
 }
 

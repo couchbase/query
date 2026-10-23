@@ -16,7 +16,7 @@ import (
 // All errors are prefixed with "cluster allowlist:" so callers can distinguish
 // them from credential-allowlist or URL-parse errors.
 func IsUrlAllowedInCluster(urlObj *url.URL, context Context) error {
-	var urlList map[string]interface{}
+	var urlList map[string]any
 
 	if _curlContext, ok := context.(CurlContext); ok {
 		urlList = _curlContext.GetAllowlist()

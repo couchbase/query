@@ -40,7 +40,7 @@ func NewArray(mapping Expression, bindings Bindings, when Expression) Expression
 	return rv
 }
 
-func (this *Array) Accept(visitor Visitor) (interface{}, error) {
+func (this *Array) Accept(visitor Visitor) (any, error) {
 	return visitor.VisitArray(this)
 }
 
@@ -69,9 +69,9 @@ func (this *Array) Evaluate(item value.Value, context Context) (value.Value, err
 		return value.NULL_VALUE, nil
 	}
 
-	rv := make([]interface{}, 0, n)
+	rv := make([]any, 0, n)
 	for i := 0; i < n; i++ {
-		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
+		cv := value.NewScopeValue(make(map[string]any, len(this.bindings)), item)
 		for j, b := range this.bindings {
 			if b.NameVariable() == "" {
 				cv.SetField(b.Variable(), bvals[j][i])
@@ -135,10 +135,10 @@ func (this *Array) EvaluateForIndex(item value.Value, context Context) (value.Va
 		return value.NULL_VALUE, nil, nil
 	}
 
-	rv := make([]interface{}, 0, n)
+	rv := make([]any, 0, n)
 	var rvs value.Values
 	for i := 0; i < n; i++ {
-		cv := value.NewScopeValue(make(map[string]interface{}, len(this.bindings)), item)
+		cv := value.NewScopeValue(make(map[string]any, len(this.bindings)), item)
 		for j, b := range this.bindings {
 			if b.NameVariable() == "" {
 				cv.SetField(b.Variable(), bvals[j][i])
