@@ -144,7 +144,11 @@ func (this *builder) buildSubqueries(stmt algebra.Statement, qp *plan.QueryPlan)
 			qp.AddSubquery(subq, qplan.PlanOp())
 			for s, o := range qplan.Subqueries() {
 				if !qp.HasSubquery(s) {
-					qp.AddSubquery(s, o)
+					if qplan.IsSubqueryTerm(s) {
+						qp.AddSubqueryTerm(s, o)
+					} else {
+						qp.AddSubquery(s, o)
+					}
 				}
 			}
 		} else if !this.indexAdvisor {
