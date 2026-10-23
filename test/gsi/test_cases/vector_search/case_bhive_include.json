@@ -302,7 +302,7 @@
         ]
     },
     {
-        "testcase": "MB-74686 part 3: NOT IN parameter on include column, non-exact include spans, LIMIT not pushed down, not covered (due to rerank)",
+        "testcase": "MB-74686 part 3: NOT IN parameter on include column, non-exact include spans, all predicates in inline filter, ORDER, LIMIT pushed down, cover",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -311,7 +311,7 @@
                     "present": true
                 }
             ],
-            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`spans_include` IS NOT MISSING AND v.`filter` IS NOT MISSING AND v.`limit` IS MISSING END"
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`spans_include` IS NOT MISSING AND CONTAINS(v.`filter`, 'not') AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
         },
         "queryParams": {"query_context": "product._default"},
 	"namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0], "ex": ["nike"]},
@@ -333,7 +333,7 @@
         ]
     },
     {
-        "testcase": "MB-74686 part 4: LIKE on include column, non-exact include spans, LIMIT not pushed down, not covered (due to rerank)",
+        "testcase": "MB-74686 part 4: LIKE on include column, non-exact include spans, all predicates in inline filter, ORDER, LIMIT pushed down, cover",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -342,7 +342,7 @@
                     "present": true
                 }
             ],
-            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`spans_include` IS NOT MISSING AND v.`filter` IS NOT MISSING AND v.`limit` IS MISSING END"
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`spans_include` IS NOT MISSING AND CONTAINS(v.`filter`, 'like') AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
         },
         "queryParams": {"query_context": "product._default"},
 	"namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
@@ -550,6 +550,217 @@
 	"ordered": false,
         "results": [
         4
+        ]
+    },
+    {
+        "testcase": "MB-74687 part 1: LIKE on include column, ORDER BY include columns then vector distance, ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND CONTAINS(v.`filter`, 'like') AND ARRAY_LENGTH(v.`index_order`) = 2 AND v.`limit` IS NOT MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size = 7 AND brand LIKE \"adid%s\" ORDER BY size, brand, approx_vector_distance(vec, $qvec, 'l2_squared', 16, true) LIMIT 4",
+        "ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_5209"
+        },
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        },
+        {
+            "id": "vec_adidas_7_9464"
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74687 part 2: include spans truncated (too many spans), filter on truncated include column kept in inline filter, filter on non-truncated include column evaluated as include spans, ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`spans_include` IS NOT MISSING AND CONTAINS(v.`filter`, 'size') AND NOT CONTAINS(v.`filter`, 'brand') AND v.`limit` IS NOT MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size IN [7, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122] AND brand IN [\"adidas\", \"brand_01\", \"brand_02\", \"brand_03\", \"brand_04\", \"brand_05\", \"brand_06\", \"brand_07\", \"brand_08\", \"brand_09\", \"brand_10\", \"brand_11\", \"brand_12\", \"brand_13\", \"brand_14\", \"brand_15\", \"brand_16\", \"brand_17\", \"brand_18\", \"brand_19\", \"brand_20\", \"brand_21\", \"brand_22\"] ORDER BY approx_vector_distance(vec, $qvec, 'l2_squared', 16, true) LIMIT 4",
+        "ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_5209"
+        },
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        },
+        {
+            "id": "vec_adidas_7_9464"
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74687 part 3: OFFSET not pushed down with inline filter, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND CONTAINS(v.`filter`, 'like') AND v.`limit` IS NOT MISSING AND v.`offset` IS MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size = 7 AND brand LIKE \"adid%s\" ORDER BY approx_vector_distance(vec, $qvec, 'l2_squared', 16, true) LIMIT 2 OFFSET 1",
+        "ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74687 part 4: negative - volatile function in filter not pushed to indexer as inline filter, LIMIT not pushed down",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`limit` IS MISSING AND (v.`filter` IS MISSING OR NOT CONTAINS(LOWER(v.`filter`), 'clock_millis')) END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size = 7 AND brand = \"adidas\" AND CLOCK_MILLIS() > size ORDER BY approx_vector_distance(vec, $qvec, 'l2_squared', 16, true) LIMIT 4",
+        "ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_5209"
+        },
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        },
+        {
+            "id": "vec_adidas_7_9464"
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74687 part 5: negative - context dependent function (CURRENT_USER) in filter not pushed to indexer as inline filter, LIMIT not pushed down, not covered (due to rerank)",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`limit` IS MISSING AND (v.`filter` IS MISSING OR NOT CONTAINS(LOWER(v.`filter`), 'current_user')) END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size = 7 AND brand = \"adidas\" AND LOWER(color) != IFMISSINGORNULL(CURRENT_USER(), \"nouser\") ORDER BY approx_vector_distance(vec, $qvec, 'l2_squared', 16, true) LIMIT 4",
+        "ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_5209"
+        },
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        },
+        {
+            "id": "vec_adidas_7_9464"
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74687 part 6: filter on meta().id with include spans, filter on meta().id kept in inline filter, filters on include columns evaluated as include spans, ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`spans_include` IS NOT MISSING AND CONTAINS(LOWER(v.`filter`), 'meta') AND NOT CONTAINS(v.`filter`, 'brand') AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size = 7 AND brand = \"adidas\" AND META().id IS VALUED ORDER BY approx_vector_distance(vec, $qvec, 'l2_squared', 16, true) LIMIT 4",
+        "ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_5209"
+        },
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        },
+        {
+            "id": "vec_adidas_7_9464"
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74687 part 7: negative - non-indexable function with query parameter (FINDERR($code)) in filter not pushed to indexer as inline filter, LIMIT not pushed down, not covered (due to rerank)",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`limit` IS MISSING AND (v.`filter` IS MISSING OR NOT CONTAINS(LOWER(v.`filter`), 'finderr')) END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"code": 5000, "qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size = 7 AND brand = \"adidas\" AND LOWER(color) != FINDERR($code) ORDER BY approx_vector_distance(vec, $qvec, 'l2_squared', 16, true) LIMIT 4",
+        "ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_5209"
+        },
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        },
+        {
+            "id": "vec_adidas_7_9464"
+        }
         ]
     }
 ]

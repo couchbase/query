@@ -35,7 +35,7 @@
         ]
     },
     {
-        "testcase": "MB-74688 part 2: partial Bhive index, inline filter on include column, not covered (due to rerank)",
+        "testcase": "MB-74688 part 2: partial Bhive index, inline filter on include column, ORDER, LIMIT pushed down, cover",
         "ignore": "index_id",
         "explain": {
             "disabled": false,
@@ -44,7 +44,7 @@
                     "present": true
                 }
             ],
-            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'idx_vec5' AND v.`covers` IS MISSING AND v.`limit` IS MISSING AND v.`spans_include` IS NOT MISSING AND CONTAINS(v.`filter`, 'color') AND NOT CONTAINS(v.`filter`, 'brand') AND NOT CONTAINS(v.`filter`, 'size') END"
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`index` = 'idx_vec5' AND ARRAY_LENGTH(v.`covers`) > 0 AND v.`limit` IS NOT MISSING AND v.`spans_include` IS NOT MISSING AND CONTAINS(v.`filter`, 'color') AND NOT CONTAINS(v.`filter`, 'brand') AND NOT CONTAINS(v.`filter`, 'size') END"
         },
         "queryParams": {
             "query_context": "product._default"

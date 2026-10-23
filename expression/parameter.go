@@ -31,3 +31,30 @@ type PositionalParameter interface {
 	Expression
 	Position() int
 }
+
+/*
+ParamReplacer is a Mapper that replaces all named and positional
+parameters in an expression with the NULL constant. This can be used
+to check properties of an expression (e.g. Indexable()) that do not
+depend on the actual parameter values, since parameters are replaced
+with values before evaluation (in places such as inline filters sent
+to the indexer). Note the mapping is done in place, callers should
+pass in a copy of the expression if the original needs to be preserved.
+*/
+type ParamReplacer struct {
+	MapperBase
+}
+
+func NewParamReplacer() *ParamReplacer {
+	rv := &ParamReplacer{}
+	rv.SetMapper(rv)
+	return rv
+}
+
+func (this *ParamReplacer) VisitNamedParameter(expr NamedParameter) (interface{}, error) {
+	return NULL_EXPR, nil
+}
+
+func (this *ParamReplacer) VisitPositionalParameter(expr PositionalParameter) (interface{}, error) {
+	return NULL_EXPR, nil
+}

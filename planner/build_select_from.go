@@ -1544,6 +1544,17 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 		selec = float64(1.0)
 	}
 
+	skipExactIncludes := false
+	var idInclude expression.Expression
+	if inline && entry != nil {
+		skipExactIncludes, idInclude = getSkipExactIncludes(entry)
+	}
+
+	// whether the inline filter contains all filters on the keyspace (filters evaluated
+	// as exact include spans, filters implied by index condition, and derived filters
+	// without original expression are not needed in the inline filter)
+	allFilters := true
+
 	for _, fl := range filters {
 		// unnest filters can only be evaluated after the UNNEST operation
 		// subquery filters are not pushed down
@@ -1553,21 +1564,33 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 		if fl.IsUnnest() || fl.HasSubq() || (outer && fl.IsDerived()) ||
 			(!allowNow && fl.HasVolatileExpr()) || (allowNow && fl.HasNonNowVolatileExpr()) ||
 			(inline && fl.HasUdf()) {
+			allFilters = false
+			continue
+		}
+		if skipExactIncludes && skipExactInclude(entry, fl, idInclude) {
+			continue
+		}
+		if inline && !inlineFilterEvaluable(fl) {
+			allFilters = false
 			continue
 		}
 
 		if join {
 			if !fl.IsPostjoinFilter(onclause, outer) {
+				allFilters = false
 				continue
 			} else if external && fl.IsJoin() {
 				// this should not be necessary (join set to false for external collections)
 				// but should be safe to do
+				allFilters = false
 				continue
 			}
 		} else {
 			if !unnest && fl.IsJoin() {
+				allFilters = false
 				continue
 			} else if base.IgnoreFilter(fl) {
+				allFilters = false
 				continue
 			}
 		}
@@ -1606,6 +1629,10 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 		}
 	}
 
+	if inline && entry != nil && !allFilters {
+		entry.UnsetFlags(IE_INLINE_FILTER_ALL)
+	}
+
 	var filter expression.Expression
 	if len(terms) == 1 {
 		filter = terms[0]
@@ -1614,6 +1641,102 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 	}
 
 	return filter, selec, nil
+}
+
+// filters used to generate exact include spans of a Bhive index are evaluated by the indexer
+// already, they can be skipped from inline filter if the indexer supports include spans without
+// inline filter and include spans are actually sent to the indexer (see getIncludeSpans())
+// meta().id is treated as the last include column of a Bhive index during planning, but
+// any range on meta().id is removed from the include spans sent to the indexer, thus filters
+// on meta().id cannot be skipped, return the meta().id include expression for such check
+func getSkipExactIncludes(entry *indexEntry) (bool, expression.Expression) {
+	if len(entry.exactIncludeFilters) == 0 {
+		return false, nil
+	}
+	index6, ok := entry.index.(datastore.Index6)
+	if !ok || !includeSpansWithoutFilter(entry.index) || len(getIncludeSpans(entry.index, entry.includeSpans)) == 0 {
+		return false, nil
+	}
+	var idInclude expression.Expression
+	if nIncludes := len(index6.Include()); includesId(entry.index) && len(entry.sargIncludes) > nIncludes {
+		idInclude = entry.sargIncludes[nIncludes]
+	}
+	return true, idInclude
+}
+
+func skipExactInclude(entry *indexEntry, fl *base.Filter, idInclude expression.Expression) bool {
+	_, ok := entry.exactIncludeFilters[fl]
+	return ok && (idInclude == nil || !fl.FltrExpr().DependsOn(idInclude))
+}
+
+// whether the inline filter of a Bhive index (see getFilterForIndex()), together with the
+// filters evaluated as exact include spans, contains all filters on the keyspace
+// this is needed for ORDER/LIMIT pushdown, which is determined before getFilterForIndex()
+// is called, thus the checks in getFilterForIndex() are duplicated here (inline is true,
+// join and allowNow are false), and the two need to be kept in sync
+func (this *builder) inlineFilterHasAllFilters(entry *indexEntry, alias string) bool {
+	baseKeyspace, ok := this.baseKeyspaces[alias]
+	if !ok || baseKeyspace.Outerlevel() > 0 || baseKeyspace.IsUnnest() {
+		return false
+	}
+
+	skipExactIncludes, idInclude := getSkipExactIncludes(entry)
+	for _, fl := range baseKeyspace.Filters() {
+		if fl.IsUnnest() || fl.HasSubq() || fl.HasVolatileExpr() || fl.HasUdf() {
+			return false
+		}
+		if skipExactIncludes && skipExactInclude(entry, fl, idInclude) {
+			continue
+		}
+		if !inlineFilterEvaluable(fl) || fl.IsJoin() || base.IgnoreFilter(fl) {
+			return false
+		}
+	}
+	return true
+}
+
+// whether no filter on the keyspace is excluded from the inline filter of a Bhive index for
+// not being evaluable by the indexer (see getFilterForIndex()), filters evaluated as exact
+// include spans are not included in the inline filter thus are not checked
+func inlineFilterNoExclusion(entry *indexEntry, baseKeyspace *base.BaseKeyspace) bool {
+	if baseKeyspace == nil {
+		return false
+	}
+	skipExactIncludes, idInclude := getSkipExactIncludes(entry)
+	for _, fl := range baseKeyspace.Filters() {
+		if skipExactIncludes && skipExactInclude(entry, fl, idInclude) {
+			continue
+		}
+		if !inlineFilterEvaluable(fl) {
+			return false
+		}
+	}
+	return true
+}
+
+// whether a filter can be evaluated by the indexer as part of the inline filter
+// the indexer evaluates the inline filter with its own (index) context, thus non-indexable
+// expressions, e.g. functions that depend on the query context such as CURRENT_USER(),
+// NODE_NAME(), DS_VERSION(), cannot be included in the inline filter
+// query parameters are replaced with values before the inline filter is sent to the
+// indexer (see IndexScan3), thus they are allowed
+func inlineFilterEvaluable(fl *base.Filter) bool {
+	expr := fl.OrigExpr()
+	if expr == nil {
+		expr = fl.FltrExpr()
+	}
+	return inlineEvaluable(expr)
+}
+
+func inlineEvaluable(expr expression.Expression) bool {
+	if expr.Indexable() {
+		return true
+	}
+	// query parameters are not indexable, replace them with NULL constants before checking
+	// (on a copy since mapping is done in place)
+	paramReplacer := expression.NewParamReplacer()
+	expr, err := paramReplacer.Map(expr.Copy())
+	return err == nil && expr.Indexable()
 }
 
 func (this *builder) adjustForHashFilters(alias string, onclause expression.Expression,

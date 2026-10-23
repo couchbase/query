@@ -63,5 +63,36 @@
             "size": 8
         }
         ]
+    },
+    {
+        "testcase": "Sparse bhive include: LIKE on include column, non-exact include spans, all predicates in inline filter, ORDER, LIMIT pushed down, cover",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND ARRAY_LENGTH(v.`covers`) > 0 AND CONTAINS(v.`filter`, 'like') AND v.`index_order` IS NOT MISSING AND v.`limit` IS NOT MISSING AND v.`index_vector`.`vector_type` = 'sparse' END"
+        },
+        "queryParams": {"query_context": "product._default"},
+        "namedArgs": {"qvec": [[2212, 2221, 2237, 2595, 3077, 3146, 3295, 3385, 4108, 5298, 5858, 6458, 7632, 8124, 9036, 28286], [0.1474, 3.0541, 0.2531, 1.6105, 0.3571, 0.1882, 0.4959, 2.0468, 0.3388, 1.5213, 0.1031, 0.0109, 2.1472, 0.271, 0.1083, 1.468]]},
+        "statements":"SELECT meta().id, brand FROM sparse_vectors WHERE brand LIKE \"pu%a\" ORDER BY sparse_vector_distance(svec, $qvec) LIMIT 3",
+        "ordered": true,
+        "results": [
+        {
+            "id": "svec_657",
+            "brand": "puma"
+        },
+        {
+            "id": "svec_2132",
+            "brand": "puma"
+        },
+        {
+            "id": "svec_3822",
+            "brand": "puma"
+        }
+        ]
     }
 ]

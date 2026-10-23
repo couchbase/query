@@ -50,6 +50,12 @@ const (
 	INDEXER6_VERSION = "8.0.0"
 )
 
+// server release (major.minor) for checking index features (see Index6.ClusterVersionGECheck())
+const (
+	INDEX_RELEASE_85_MAJOR = 8
+	INDEX_RELEASE_85_MINOR = 5
+)
+
 const (
 	_CB_INDEX_NAMESPACE = "default"
 )
@@ -577,6 +583,8 @@ type Index6 interface {
 	Include() expression.Expressions
 	AllowRerank() bool
 	RerankFactor() int32
+	// true if the cluster compatibility version is at least server release major.minor
+	ClusterVersionGECheck(major, minor uint32) bool
 	DefnStorageStatistics(requestid string) (map[uint64][]map[IndexStatType]value.Value, errors.Error)
 
 	Scan6(requestId string, spans, inclSpans Spans2, reverse, distinctAfterProjection bool,
