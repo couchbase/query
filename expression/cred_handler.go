@@ -483,7 +483,8 @@ func applyCouchbasePayload(cred *cbauth.Credential, context Context) (http.Clien
 
 // applyAWSPayload wraps the default client with a SigV4-signing transport.
 // The AWS service name is inferred from the request URL host at signing time
-// (e.g. "bedrock-runtime.us-east-1.amazonaws.com" → service "bedrock-runtime").
+// (e.g. "bedrock-runtime.us-east-1.amazonaws.com" → service "bedrock", via
+// awsServiceSigningNameOverrides).
 // When Endpoint is set the transport rewrites the request's scheme+host to
 // that base URL before signing, enabling S3-compatible services (MinIO, etc.).
 //
@@ -536,7 +537,8 @@ type awsSigV4Transport struct {
 	region          string
 	// service overrides the AWS service name used in the SigV4 credential scope.
 	// When empty, it is inferred from the request URL host (e.g.
-	// "bedrock-runtime.us-east-1.amazonaws.com" → "bedrock-runtime").
+	// "bedrock-runtime.us-east-1.amazonaws.com" → "bedrock", via
+	// awsServiceSigningNameOverrides).
 	// Set explicitly only for GCP HMAC mode, where GCS hosts do not follow
 	// the AWS naming convention and the service must be hardcoded to "s3".
 	service string
@@ -612,9 +614,36 @@ func (t *awsSigV4Transport) RoundTrip(req *http.Request) (*http.Response, error)
 	return t.base.RoundTrip(clone)
 }
 
+// awsServiceSigningNameOverrides corrects the AWS services whose hostname
+// does not match the service name AWS expects in the SigV4 signature. Each
+// entry is matched anywhere in the hostname (not just as a prefix), so it
+// also covers FIPS hosts (e.g. "bedrock-runtime-fips.*") and VPC endpoint
+// hosts (e.g. "vpce-xxx.bedrock-runtime.*.vpce.amazonaws.com"). Entries are
+// checked in order, before falling back to the generic first-label guess
+// below; "bedrock-agentcore" must precede "bedrock-" since it would
+// otherwise also match that broader pattern.
+var awsServiceSigningNameOverrides = []struct {
+	pattern string
+	service string
+}{
+	{"bedrock-agentcore", "bedrock-agentcore"},
+	{"bedrock-", "bedrock"},
+	{".sagemaker.", "sagemaker"},
+	{"lex.", "lex"},
+	{"personalize-", "personalize"},
+	{"data.jobs.iot.", "iot-jobs-data"},
+	{"data.iotevents.", "ioteventsdata"},
+}
+
 func awsServiceFromHost(host string) string {
 	if idx := strings.LastIndex(host, ":"); idx > strings.LastIndex(host, "]") {
 		host = host[:idx]
+	}
+	lower := strings.ToLower(host)
+	for _, o := range awsServiceSigningNameOverrides {
+		if strings.Contains(lower, o.pattern) {
+			return o.service
+		}
 	}
 	if parts := strings.SplitN(host, ".", 2); len(parts) > 0 && parts[0] != "" {
 		return parts[0]

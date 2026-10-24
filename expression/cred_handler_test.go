@@ -1640,7 +1640,36 @@ func TestAWSServiceFromHost(t *testing.T) {
 		host    string
 		service string
 	}{
-		{"bedrock-runtime.us-east-1.amazonaws.com", "bedrock-runtime"},
+		{"bedrock-runtime.us-east-1.amazonaws.com", "bedrock"},
+		{"bedrock-agent-runtime.us-east-1.amazonaws.com", "bedrock"},
+		{"bedrock-agent.us-east-1.amazonaws.com", "bedrock"},
+		{"bedrock-agentcore.us-east-1.amazonaws.com", "bedrock-agentcore"},
+		{"bedrock-agentcore-control.us-east-1.amazonaws.com", "bedrock-agentcore"},
+		{"bedrock-data-automation.us-east-1.amazonaws.com", "bedrock"},
+		{"bedrock-data-automation-runtime.us-east-1.amazonaws.com", "bedrock"},
+		// FIPS hosts: the suffix differs from the plain hosts above, but the
+		// pattern is still found inside the hostname.
+		{"bedrock-runtime-fips.us-east-1.amazonaws.com", "bedrock"},
+		// VPC (PrivateLink) endpoint hosts: the service name is in the
+		// middle of the hostname, not at the start.
+		{"vpce-029dea71225152fde.bedrock-runtime.us-east-1.vpce.amazonaws.com", "bedrock"},
+		{"runtime.sagemaker.us-east-1.amazonaws.com", "sagemaker"},
+		{"edge.sagemaker.us-east-1.amazonaws.com", "sagemaker"},
+		{"featurestore-runtime.sagemaker.us-east-1.amazonaws.com", "sagemaker"},
+		{"api.sagemaker.us-east-1.amazonaws.com", "sagemaker"},
+		{"runtime-fips.sagemaker.us-east-1.amazonaws.com", "sagemaker"},
+		// sagemaker-geospatial has its own signing name, not "sagemaker";
+		// it has no entry in the override list, so it must still resolve
+		// correctly via the first-label fallback below.
+		{"sagemaker-geospatial.us-east-1.amazonaws.com", "sagemaker-geospatial"},
+		{"runtime-v2-lex.us-east-1.amazonaws.com", "lex"},
+		{"runtime.lex.us-east-1.amazonaws.com", "lex"},
+		{"models.lex.us-east-1.amazonaws.com", "lex"},
+		{"models-v2-lex.us-east-1.amazonaws.com", "lex"},
+		{"personalize-runtime.us-east-1.amazonaws.com", "personalize"},
+		{"personalize-events.us-east-1.amazonaws.com", "personalize"},
+		{"data.jobs.iot.us-east-1.amazonaws.com", "iot-jobs-data"},
+		{"data.iotevents.us-east-1.amazonaws.com", "ioteventsdata"},
 		{"s3.amazonaws.com", "s3"},
 		{"s3.amazonaws.com:443", "s3"},
 		{"singlepart", "singlepart"},
