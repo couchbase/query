@@ -406,7 +406,7 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 	this.encoded_plan = encoded_plan
 }
 
-// only valid once the plan has been verified
+// only valid once the plan has been verified; reprepare() only verifies with N1QL_IGNORE_IDXR_META bit set
 func (this *Prepared) HasSeqScan() bool {
 	for _, idx := range this.indexers {
 		if idx.indexer.Name() == datastore.SEQ_SCAN {

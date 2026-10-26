@@ -836,6 +836,10 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 		}
 		if verifyErr != nil {
 			reprepReason = append(reprepReason, verifyErr)
+		} else if !good {
+			// the plan verified good, report why it was reprepared anyway
+			reprepReason = append(reprepReason, errors.NewPlanVerificationError(
+				"sequential scan plan reprepared against the indexes available on this node", nil))
 		}
 		return prepared, nil, reprepReason
 	} else {
