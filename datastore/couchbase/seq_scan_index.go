@@ -164,6 +164,18 @@ func (this *seqScanIndexer) CreatePrimaryIndex3(requestId, name string, indexPar
 }
 
 func (this *seqScanIndexer) Refresh() qe.Error {
+	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
+		return nil
+	}
+
+	// refresh the associated GSI indexer (if there is one) so that MetadataVersion() reflects index changes and
+	// prepared statements using this indexer are reprepared when indices become available
+	// GSI errors are not reported here since they don't affect the sequential scan indexer itself
+	gsi, err := this.keyspace.Indexer(datastore.GSI)
+	if err == nil && gsi != nil {
+		gsi.Refresh()
+	}
+
 	return nil
 }
 
