@@ -707,7 +707,9 @@ var subqPersistLock sync.Mutex
 // if one or more subquery plans are newly generated, persist the new subquery plan
 // should not be called while holding the mutex of the prepared statement's subquery plans
 func PersistSubqueryPlan(prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) errors.Error {
-	if !shouldPersist(prepared, planStabilityMode) {
+	// a sequential scan plan is kept local, same as in addPrepared(); this also covers a newly generated
+	// subquery plan with a sequential scan, since its indexers have been added to the prepared statement
+	if !shouldPersist(prepared, planStabilityMode) || seqScanKeptLocal(prepared) {
 		return nil
 	}
 
@@ -746,6 +748,14 @@ func shouldPersist(prepared *plan.Prepared, planStabilityMode settings.PlanStabi
 	return planStabilityMode == settings.PS_MODE_PREPARED_ONLY ||
 		planStabilityMode == settings.PS_MODE_AD_HOC ||
 		planStabilityMode == settings.PS_MODE_AD_HOC_READ_ONLY
+}
+
+// with N1QL_IGNORE_IDXR_META bit set a plan with a sequential scan is not persisted or distributed: each node
+// makes its own reprepare decision
+// the feature bit check is needed: HasSeqScan() is accurate on any verified plan, but reprepare() only verifies
+// the new plan with the bit set
+func seqScanKeptLocal(prepared *plan.Prepared) bool {
+	return !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) && prepared.HasSeqScan()
 }
 
 // this function does not check whether the prepared has any saved query plans on disk
@@ -938,7 +948,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				if err == nil && replace {
 					// if the reprepared plan has a sequential scan don't persist or distribute it: each node
 					// makes its own reprepare decision
-					err = addPrepared(prepared, planStability, !prepared.HasSeqScan())
+					err = addPrepared(prepared, planStability, !seqScanKeptLocal(prepared))
 				}
 			}
 		}
@@ -1001,6 +1011,16 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
 	log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
 
+	return decodePrepared(prepared_name, queryContext, prepared_stmt, track, phaseTime, reprep, remap,
+		planStability, deferIndexerRace, false, planStabilityMode, planStabilityErrorPolicy, log)
+}
+
+// persisted is set for a plan loaded from the persisted plans
+func decodePrepared(prepared_name string, queryContext string, prepared_stmt string, track bool,
+	phaseTime *time.Duration, reprep, remap, planStability, deferIndexerRace, persisted bool,
+	planStabilityMode settings.PlanStabilityMode, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy,
+	log logging.Log) (*plan.Prepared, errors.Error, errors.Errors) {
+
 	added := true
 
 	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, remap,
@@ -1043,8 +1063,8 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 		// a sequential scan may have been chosen by a node that could not see the indexes at the time:
 		// replan against the indexes this node sees (kept local, not persisted or distributed)
 		// plan stability MODERATE and STRICT don't allow replacing the plan, so leave it be
-		forceReprepare = verifyErr == nil && reprep && prepared.HasSeqScan() &&
-			!util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) &&
+		// a plan loaded from the persisted plans is left be: it is the saved plan, not one distributed by another node
+		forceReprepare = verifyErr == nil && reprep && !persisted && seqScanKeptLocal(prepared) &&
 			(planStabilityMode == settings.PS_MODE_OFF || planStabilityErrorPolicy == settings.PS_ERROR_FLEXIBLE)
 		if verifyErr != nil || forceReprepare {
 			newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability,
@@ -1086,6 +1106,10 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 		}
 		if verifyErr != nil {
 			reprepReason = append(reprepReason, verifyErr)
+		} else if forceReprepare {
+			// the plan verified good, report why it was reprepared anyway
+			reprepReason = append(reprepReason, errors.NewPlanVerificationError(
+				"sequential scan plan reprepared against the indexes available on this node", nil))
 		}
 		return prepared, nil, reprepReason
 	} else {
