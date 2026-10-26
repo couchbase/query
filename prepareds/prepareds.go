@@ -665,6 +665,10 @@ func PreparedDo(name string, f func(*CacheEntry)) {
 }
 
 func AddPrepared(prepared *plan.Prepared, planStability bool) errors.Error {
+	return addPrepared(prepared, planStability, true)
+}
+
+func addPrepared(prepared *plan.Prepared, planStability, distribute bool) errors.Error {
 	added := true
 
 	prepareds.add(prepared, false, false, func(ce *CacheEntry) bool {
@@ -677,6 +681,12 @@ func AddPrepared(prepared *plan.Prepared, planStability bool) errors.Error {
 	if !added {
 		return errors.NewPreparedNameError(
 			fmt.Sprintf("duplicate name: %s", fullName))
+	}
+
+	// a sequential scan plan stays local: persisting it would also spread it to the other nodes and
+	// survive a restart, same as distributing it
+	if !distribute {
+		return nil
 	}
 
 	if prepared.Persist() || planStability {
@@ -920,11 +930,15 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 					prepared = nil
 				}
 			} else if !good || prepared.PreparedTime().IsZero() {
+				// with N1QL_IGNORE_IDXR_META bit set reprepare() calls Verify() on the new plan, recording the indexer
+				// metadata versions so that a later index change is detected
 				var replace bool
 				prepared, replace, err = reprepare(prepared, nil, phaseTime, planStability,
 					planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
 				if err == nil && replace {
-					err = AddPrepared(prepared, planStability)
+					// if the reprepared plan has a sequential scan don't persist or distribute it: each node
+					// makes its own reprepare decision
+					err = addPrepared(prepared, planStability, !prepared.HasSeqScan())
 				}
 			}
 		}
@@ -1022,9 +1036,17 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// for UDF subquery plans performed elsewhere, see VerifySubqueryPlans())
 	add := true
 	var verifyErr errors.Error
+	forceReprepare := false
 	if !prepared.IsInlineUdf() {
 		verifyErr = prepared.Verify()
-		if verifyErr != nil {
+
+		// a sequential scan may have been chosen by a node that could not see the indexes at the time:
+		// replan against the indexes this node sees (kept local, not persisted or distributed)
+		// plan stability MODERATE and STRICT don't allow replacing the plan, so leave it be
+		forceReprepare = verifyErr == nil && reprep && prepared.HasSeqScan() &&
+			!util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) &&
+			(planStabilityMode == settings.PS_MODE_OFF || planStabilityErrorPolicy == settings.PS_ERROR_FLEXIBLE)
+		if verifyErr != nil || forceReprepare {
 			newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability,
 				planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 			if prepErr == nil {
@@ -1037,7 +1059,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	}
 
 	if add {
-		prepareds.add(prepared, verifyErr == nil, track,
+		prepareds.add(prepared, verifyErr == nil && !forceReprepare, track,
 			func(oldEntry *CacheEntry) bool {
 
 				// MB-19509: if the entry exists already, the new plan must
