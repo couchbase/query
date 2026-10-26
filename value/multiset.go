@@ -177,18 +177,20 @@ func (this *MultiSet) Put(key, item Value, cnt int64) {
 			this.strings[k] = vc
 		}
 	case ARRAY:
-		vc := addValueCnt(this.arrays[key.String()], mapItem, cnt)
+		str := key.String()
+		vc := addValueCnt(this.arrays[str], mapItem, cnt)
 		if vc == nil {
-			delete(this.arrays, key.String())
+			delete(this.arrays, str)
 		} else {
-			this.arrays[key.String()] = vc
+			this.arrays[str] = vc
 		}
 	case OBJECT:
-		vc := addValueCnt(this.objects[key.String()], mapItem, cnt)
+		str := key.String()
+		vc := addValueCnt(this.objects[str], mapItem, cnt)
 		if vc == nil {
-			delete(this.objects, key.String())
+			delete(this.objects, str)
 		} else {
-			this.objects[key.String()] = vc
+			this.objects[str] = vc
 		}
 	case BINARY:
 		str := base64.StdEncoding.EncodeToString(key.Actual().([]byte))
@@ -206,6 +208,40 @@ func (this *MultiSet) Put(key, item Value, cnt int64) {
 // Removes a single occurrence of the specified element from this multiset, if present.
 func (this *MultiSet) Remove(key Value) {
 	this.Put(key, key, -1)
+}
+
+/*
+RemoveIfPresent removes a single occurrence of key, if present, and reports
+whether it was present. Array and object keys are marshalled once, rather
+than once each for Has and Remove.
+*/
+func (this *MultiSet) RemoveIfPresent(key Value) bool {
+	if key != nil && !this.numeric {
+		var m map[string]*valueCnt
+		switch key.Type() {
+		case ARRAY:
+			m = this.arrays
+		case OBJECT:
+			m = this.objects
+		}
+		if m != nil {
+			str := key.String()
+			vc, ok := m[str]
+			if !ok {
+				return false
+			}
+			if vc = addValueCnt(vc, nil, -1); vc == nil {
+				delete(m, str)
+			}
+			return true
+		}
+	}
+
+	if !this.Has(key) {
+		return false
+	}
+	this.Remove(key)
+	return true
 }
 
 func (this *MultiSet) Has(key Value) bool {
