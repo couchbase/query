@@ -71,8 +71,8 @@ func PreparedsFromPersisted() {
 		if retried > 0 {
 			time.Sleep(_PRIME_RETRY_DELAY)
 			for _, p := range pendingRetry {
-				_, decErr, reprepareCause := DecodePrepared(p.name, p.encoded_plan, true, false, planStability,
-					planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+				_, decErr, reprepareCause := decodePrepared(p.name, "", p.encoded_plan, false, nil, true, false,
+					planStability, false, true, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 				if decErr == nil {
 					retrySuccess++
 					success++
@@ -117,8 +117,8 @@ func PreparedsFromPersisted() {
 func processPreparedPlan(name, encoded_plan string, persist, planStability bool, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, decodeFailedReason map[string]errors.Error,
 	decodeReprepReason map[string]errors.Errors, pendingRetry *[]struct{ name, encoded_plan string }) (success bool, reprep bool) {
-	_, err, reprepareCause := DecodePreparedWithContext(name, "", encoded_plan, false, nil, true, false,
-		planStability, true, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+	_, err, reprepareCause := decodePrepared(name, "", encoded_plan, false, nil, true, false,
+		planStability, true, true, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 	if err != nil {
 		if isIndexerNotReady(err) {
 			*pendingRetry = append(*pendingRetry, struct{ name, encoded_plan string }{name, encoded_plan})
@@ -146,8 +146,8 @@ func loadPrepared(name string, planStabilityMode settings.PlanStabilityMode,
 		return nil, nil
 	}
 
-	prepared, err, _ := DecodePrepared(name, encoded_plan, true, false, (planStabilityMode != settings.PS_MODE_OFF),
-		planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+	prepared, err, _ := decodePrepared(name, "", encoded_plan, false, nil, true, false,
+		(planStabilityMode != settings.PS_MODE_OFF), false, true, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 
 	return prepared, err
 }
