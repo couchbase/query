@@ -539,6 +539,10 @@ func PreparedDo(name string, f func(*CacheEntry)) {
 }
 
 func AddPrepared(prepared *plan.Prepared) errors.Error {
+	return addPrepared(prepared, true)
+}
+
+func addPrepared(prepared *plan.Prepared, distribute bool) errors.Error {
 	added := true
 
 	prepareds.add(prepared, false, false, func(ce *CacheEntry) bool {
@@ -552,7 +556,9 @@ func AddPrepared(prepared *plan.Prepared) errors.Error {
 		return errors.NewPreparedNameError(
 			fmt.Sprintf("duplicate name: %s", fullName))
 	} else {
-		distributePrepared(fullName, prepared.EncodedPlan())
+		if distribute {
+			distributePrepared(fullName, prepared.EncodedPlan())
+		}
 		return nil
 	}
 }
@@ -703,9 +709,13 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				prepared = nil
 			}
 		} else if !good || prepared.PreparedTime().IsZero() {
+			// with N1QL_IGNORE_IDXR_META bit set reprepare() calls Verify() on the new plan, recording the indexer
+			// metadata versions so that a later index change is detected
 			prepared, err = reprepare(prepared, nil, phaseTime, log)
 			if err == nil {
-				err = AddPrepared(prepared)
+				// if the reprepared plan has a sequential scan don't distribute it: each node makes its own
+				// reprepare decision
+				err = addPrepared(prepared, !prepared.HasSeqScan())
 			}
 		}
 	}
@@ -784,7 +794,15 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 	// check the plan and populate metadata counters
 	// reprepare if no good
 	verifyErr := prepared.Verify()
-	if verifyErr != nil {
+	good := verifyErr == nil
+
+	// a sequential scan may have been chosen by a node that could not see the indexes at the time:
+	// replan against the indexes this node sees (kept local, not distributed)
+	if good && reprep && prepared.HasSeqScan() &&
+		!util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
+		good = false
+	}
+	if !good {
 		newPrepared, prepErr := reprepare(prepared, nil, phaseTime, log)
 		if prepErr == nil {
 			prepared = newPrepared
@@ -793,7 +811,7 @@ func DecodePreparedWithContext(prepared_name string, queryContext string, prepar
 		}
 	}
 
-	prepareds.add(prepared, verifyErr == nil, track,
+	prepareds.add(prepared, good, track,
 		func(oldEntry *CacheEntry) bool {
 
 			// MB-19509: if the entry exists already, the new plan must
