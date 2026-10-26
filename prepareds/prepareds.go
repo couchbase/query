@@ -708,7 +708,7 @@ func PersistSubqueryPlan(prepared *plan.Prepared, planStabilityMode settings.Pla
 
 	// do not save a prepared statement that has been removed from (or replaced in) the cache
 	current := false
-	prepareds.cache.Get(fullName, func(entry interface{}) {
+	prepareds.cache.Get(fullName, func(entry any) {
 		current = entry.(*CacheEntry).Prepared == prepared
 	})
 	if !current {

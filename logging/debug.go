@@ -22,14 +22,14 @@ import (
 	"time"
 )
 
-func DBG(fmt string, args ...interface{}) {
+func DBG(fmt string, args ...any) {
 	if skipLogging(INFO) {
 		return
 	}
 	Infof("DBG:"+fmt+getFileLine(1), args...)
 }
 
-func DBGSTK(fmt string, args ...interface{}) {
+func DBGSTK(fmt string, args ...any) {
 	if skipLogging(INFO) {
 		return
 	}
@@ -58,7 +58,7 @@ func DBGSTK(fmt string, args ...interface{}) {
 
 var m sync.Mutex
 
-func DBGF(fmt string, args ...interface{}) {
+func DBGF(fmt string, args ...any) {
 	m.Lock()
 	f, err := os.OpenFile("/tmp/debug.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
 	if err == nil {

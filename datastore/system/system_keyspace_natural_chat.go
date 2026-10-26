@@ -412,7 +412,7 @@ func (b *naturalchatsKeyspace) Update(updates value.Pairs, context datastore.Que
 			if node == whoAmI {
 				err = natural.ProcessAlterChat(localKey, users, timeout)
 			} else {
-				data := map[string]interface{}{
+				data := map[string]any{
 					"inactivityTimeout": t.Actual(),
 				}
 				dt, derr := json.Marshal(data)
