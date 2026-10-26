@@ -78,9 +78,7 @@ func cumulateSets(part, cumulative value.Value) (value.AnnotatedValue, error) {
 		smaller, bigger = cset, pset
 	}
 
-	for _, v := range smaller.Values() {
-		bigger.Add(v)
-	}
+	bigger.Merge(smaller)
 
 	av, ok := cumulative.(value.AnnotatedValue)
 	if !ok {
