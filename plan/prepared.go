@@ -339,6 +339,16 @@ func (this *Prepared) SetEncodedPlan(encoded_plan string) {
 	this.encoded_plan = encoded_plan
 }
 
+// only valid once the plan has been verified
+func (this *Prepared) HasSeqScan() bool {
+	for _, idx := range this.indexers {
+		if idx.indexer.Name() == datastore.SEQ_SCAN {
+			return true
+		}
+	}
+	return false
+}
+
 func (this *Prepared) BuildEncodedPlan() (string, error) {
 	var b bytes.Buffer
 
