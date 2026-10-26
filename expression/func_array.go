@@ -691,8 +691,7 @@ func (this *ArrayDistinct) Evaluate(item value.Value, context Context) (value.Va
 	set := value.NewSet(len(aa), false, false)
 	for _, a := range aa {
 		av := value.NewValue(a)
-		if !set.Has(av) {
-			set.Add(av)
+		if set.PutIfAbsent(av, av) {
 			naa = append(naa, a)
 		}
 	}

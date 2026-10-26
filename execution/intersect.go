@@ -234,14 +234,13 @@ func (this *IntersectAll) beforeItems(context *Context, parent value.Value) bool
 }
 
 func (this *IntersectAll) processItem(item value.AnnotatedValue, context *Context) bool {
-	if !this.mset.Has(item) {
+	if !this.mset.RemoveIfPresent(item) {
 		if context.UseRequestQuota() {
 			context.ReleaseValueSize(item.Size())
 		}
 		item.Recycle()
 		return true
 	}
-	this.mset.Remove(item.(value.Value))
 	return this.sendItem(item)
 }
 

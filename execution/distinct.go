@@ -66,8 +66,7 @@ func (this *Distinct) processItem(item value.AnnotatedValue, context *Context) b
 		p = item
 	}
 
-	if !this.set.Has(p.(value.Value)) {
-		this.set.Put(p.(value.Value), item)
+	if this.set.PutIfAbsent(p.(value.Value), item) {
 		return this.collect || this.sendItem(item)
 	} else {
 		if context.UseRequestQuota() {
