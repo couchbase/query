@@ -134,6 +134,86 @@ func (this *Set) Put(key, item Value) {
 	}
 }
 
+/*
+PutIfAbsent adds item under key if key is not already present and reports
+whether it was added. Array and object keys are marshalled once, rather than
+once each for Has and Put.
+*/
+func (this *Set) PutIfAbsent(key, item Value) bool {
+	if key != nil && !this.numeric {
+		var m *map[string]Value
+		var mapCap int
+		switch key.Type() {
+		case ARRAY:
+			m, mapCap = &this.arrays, _MAP_CAP
+		case OBJECT:
+			m, mapCap = &this.objects, this.objectCap
+		}
+		if m != nil {
+			str := key.String()
+			if _, ok := (*m)[str]; ok {
+				return false
+			}
+			if *m == nil {
+				*m = make(map[string]Value, mapCap)
+			}
+			if this.collect {
+				(*m)[str] = item
+			} else {
+				(*m)[str] = nil
+			}
+			return true
+		}
+	}
+
+	if this.Has(key) {
+		return false
+	}
+	this.Put(key, item)
+	return true
+}
+
+/*
+Merge adds all items of other into the receiver. Map keys are copied as
+they are, so array and object items are not marshalled again. Both sets
+must have the same collect and numeric settings.
+*/
+func (this *Set) Merge(other *Set) {
+	if other == nil || other == this {
+		return
+	}
+
+	if other.nills {
+		this.nills = true
+	}
+	if other.missings != nil {
+		this.missings = other.missings
+	}
+	if other.nulls != nil {
+		this.nulls = other.nulls
+	}
+
+	mergeMap(&this.booleans, other.booleans, 2)
+	mergeMap(&this.floats, other.floats, this.mapCap())
+	mergeMap(&this.ints, other.ints, this.mapCap())
+	mergeMap(&this.strings, other.strings, this.mapCap())
+	mergeMap(&this.arrays, other.arrays, _MAP_CAP)
+	mergeMap(&this.objects, other.objects, this.objectCap)
+	mergeMap(&this.binaries, other.binaries, _MAP_CAP)
+}
+
+func mergeMap[K comparable](dst *map[K]Value, src map[K]Value, mapCap int) {
+	if len(src) == 0 {
+		return
+	}
+	if *dst == nil {
+		*dst = make(map[K]Value, util.MaxInt(mapCap, len(src)))
+	}
+	for k, v := range src {
+		(*dst)[k] = v
+	}
+}
+
 func (this *Set) Remove(key Value) {
 	if key == nil {
 		this.nills = false
