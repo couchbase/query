@@ -449,5 +449,107 @@
             "id": "vec_adidas_7_9464"
         }
         ]
+    },
+    {
+        "testcase": "MB-74861 part 1: L2 with rerank, include column predicates, vector distance not in index projection",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index_vector`.`square_root` = true AND v.`spans_include` IS NOT MISSING AND v.`index_projection` IS NOT MISSING AND NOT ARRAY_CONTAINS(v.`index_projection`.`entry_keys`, 0) END"
+        },
+        "queryParams": {"query_context": "product._default"},
+	"namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT meta().id FROM vectors WHERE size = 7 and brand = \"adidas\" ORDER BY approx_vector_distance(vec, $qvec, 'L2', 16, true) LIMIT 4",
+	"ordered": true,
+        "results": [
+        {
+            "id": "vec_adidas_7_5209"
+        },
+        {
+            "id": "vec_adidas_7_11855"
+        },
+        {
+            "id": "vec_adidas_7_74"
+        },
+        {
+            "id": "vec_adidas_7_9464"
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74861 part 2: L2 without rerank, ORDER/LIMIT pushed, vector distance not in index projection",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index_vector`.`square_root` = true AND v.`spans_include` IS NOT MISSING AND v.`index_projection` IS NOT MISSING AND NOT ARRAY_CONTAINS(v.`index_projection`.`entry_keys`, 0) END"
+        },
+        "queryParams": {"query_context": "product._default"},
+	"namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT RAW COUNT(1) FROM (SELECT meta().id FROM vectors WHERE size = 7 and brand = \"adidas\" ORDER BY approx_vector_distance(vec, $qvec, 'L2', 16) LIMIT 4) AS t",
+	"ordered": false,
+        "results": [
+        4
+        ]
+    },
+    {
+        "testcase": "MB-74861 part 3: non-covering, L2 with rerank, include column predicates, vector distance not in index projection",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index_vector`.`square_root` = true AND v.`spans_include` IS NOT MISSING AND v.`index_projection` IS NOT MISSING AND NOT ARRAY_CONTAINS(v.`index_projection`.`entry_keys`, 0) AND v.`index_order` IS NOT MISSING and v.`limit` IS NOT MISSING END AND ANY f WITHIN p.plan.`~children` SATISFIES f.`#operator` = 'Fetch' END"
+        },
+        "queryParams": {"query_context": "product._default"},
+	"namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT id FROM vectors WHERE size = 7 and brand = \"adidas\" ORDER BY approx_vector_distance(vec, $qvec, 'L2', 16, true) LIMIT 4",
+	"ordered": true,
+        "results": [
+        {
+            "id": 5209
+        },
+        {
+            "id": 11855
+        },
+        {
+            "id": 74
+        },
+        {
+            "id": 9464
+        }
+        ]
+    },
+    {
+        "testcase": "MB-74861 part 4: non-covering, L2 without rerank, ORDER/LIMIT pushed, vector distance not in index projection",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement":"SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS MISSING AND v.`index_vector`.`square_root` = true AND v.`spans_include` IS NOT MISSING AND v.`index_projection` IS NOT MISSING AND NOT ARRAY_CONTAINS(v.`index_projection`.`entry_keys`, 0) AND v.`index_order` IS NOT MISSING and v.`limit` IS NOT MISSING END AND ANY f WITHIN p.plan.`~children` SATISFIES f.`#operator` = 'Fetch' END"
+        },
+        "queryParams": {"query_context": "product._default"},
+	"namedArgs": {"qvec": [7.0, 9.0, 1.0, 4.0, 5.0, 0.0, 1.0, 3.0, 38.0, 117.0, 60.0, 2.0, 0.0, 0.0, 1.0, 11.0, 60.0, 109.0, 59.0, 32.0, 1.0, 1.0, 6.0, 26.0, 12.0, 22.0, 7.0, 69.0, 46.0, 20.0, 14.0, 21.0, 72.0, 41.0, 6.0, 25.0, 24.0, 0.0, 0.0, 4.0, 130.0, 130.0, 71.0, 7.0, 0.0, 0.0, 0.0, 45.0, 8.0, 32.0, 85.0, 130.0, 15.0, 3.0, 6.0, 12.0, 0.0, 8.0, 21.0, 78.0, 80.0, 28.0, 11.0, 9.0, 47.0, 11.0, 6.0, 11.0, 10.0, 4.0, 2.0, 14.0, 130.0, 5.0, 0.0, 0.0, 0.0, 9.0, 109.0, 130.0, 10.0, 0.0, 0.0, 22.0, 18.0, 56.0, 130.0, 25.0, 9.0, 8.0, 12.0, 39.0, 36.0, 25.0, 88.0, 19.0, 2.0, 0.0, 0.0, 0.0, 11.0, 18.0, 11.0, 8.0, 12.0, 0.0, 0.0, 0.0, 0.0, 7.0, 101.0, 57.0, 10.0, 0.0, 0.0, 0.0, 0.0, 10.0, 119.0, 32.0, 89.0, 19.0, 3.0, 0.0, 0.0, 0.0, 32.0, 25.0]},
+        "statements":"SELECT RAW COUNT(1) FROM (SELECT id FROM vectors WHERE size = 7 and brand = \"adidas\" ORDER BY approx_vector_distance(vec, $qvec, 'L2', 16) LIMIT 4) AS t",
+	"ordered": false,
+        "results": [
+        4
+        ]
     }
 ]
