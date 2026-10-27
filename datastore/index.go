@@ -44,7 +44,7 @@ const (
 	INDEX_API_MAX = INDEX_API_6
 )
 const (
-	INDEXER6_VERSION = "7.7.0"
+	INDEXER6_VERSION = "8.0.0"
 )
 
 type Indexer interface {

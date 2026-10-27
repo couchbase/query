@@ -257,12 +257,19 @@ func (this *IndexScan3) RunOnce(context *Context, parent value.Value) {
 							// Matches planner.builder.buildCoveringScan()
 							for i, ek := range entry.EntryKey {
 								if proj == nil || i < len(entryKeys) {
-									if fullCover && i < len(entryKeys) {
-										i = entryKeys[i]
+									// keyPos is the index key position; i is the position
+									// in covers, which for non-covering scans follows the
+									// order of entryKeys
+									keyPos := i
+									if i < len(entryKeys) {
+										keyPos = entryKeys[i]
+										if fullCover {
+											i = keyPos
+										}
 									}
 
 									if i < lcovers {
-										if squareRoot && i == vectorPos {
+										if squareRoot && keyPos == vectorPos {
 											var dv value.Value
 											if ek.Type() == value.NUMBER {
 												ef := value.AsNumberValue(ek).Float64()
