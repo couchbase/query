@@ -296,6 +296,7 @@ function repo_setup {
     repo_by_gomod go.mod bhive "" $cbranch $rbranch $defbranch2
     repo_by_gomod go.mod go-couchbase "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod gocbcrypto "" $cbranch $rbranch $defbranch2
+    repo_by_gomod go.mod logstats "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod gomemcached "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbauth "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod godbc "" $cbranch $rbranch $defbranch
