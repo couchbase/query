@@ -44,6 +44,8 @@ replace github.com/couchbase/regulator => ../regulator
 
 replace github.com/couchbase/gocbcrypto => ../gocbcrypto
 
+replace github.com/couchbase/logstats => ../logstats
+
 require (
 	cloud.google.com/go/storage v1.62.1
 	github.com/apache/arrow-go/v18 v18.6.0
