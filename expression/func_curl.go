@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,6 +26,7 @@ import (
 	"time"
 
 	"github.com/couchbase/cbauth"
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/accounting"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/errors"
@@ -685,6 +685,7 @@ func handleCurl(urlS string, options map[string]interface{}, allowlist map[strin
 
 	// The return type can either be and ARRAY or an OBJECT
 	if b.Len() != 0 {
+		// go_json, as for documents: integers decode into int64, not float64
 		var dat interface{}
 
 		if err := json.Unmarshal(b.Bytes(), &dat); err != nil {

@@ -9,10 +9,10 @@
 package expression
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
+	json "github.com/couchbase/go_json"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
 )
@@ -75,6 +75,7 @@ func (this *JSONDecode) Evaluate(item value.Value, context Context) (value.Value
 		return value.NULL_VALUE, nil
 	}
 
+	// go_json, as for documents: integers decode into int64, not float64
 	var p interface{}
 	err = json.Unmarshal([]byte(s), &p)
 	if err != nil {
