@@ -955,9 +955,35 @@ func (this *builder) CoverSubSelect(sub *algebra.Subselect, subqUnderJoin bool) 
 				return err
 			}
 		}
+	} else if subqUnderJoin && sub.From() != nil {
+		// no covering info for the subselect itself (no covering scans), however there may be
+		// nested SubqueryTerms that need cover transformation
+		subqTerms := getFromSubqueryTerms(sub.From(), nil)
+		if len(subqTerms) > 0 {
+			err = this.coverSubqTerms(subqTerms, subqUnderJoin)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
+}
+
+func getFromSubqueryTerms(from algebra.FromTerm, subqTerms []*algebra.SubqueryTerm) []*algebra.SubqueryTerm {
+	switch from := from.(type) {
+	case *algebra.SubqueryTerm:
+		subqTerms = append(subqTerms, from)
+	case *algebra.AnsiJoin:
+		subqTerms = getFromSubqueryTerms(from.Left(), subqTerms)
+		subqTerms = getFromSubqueryTerms(from.Right(), subqTerms)
+	case *algebra.AnsiNest:
+		subqTerms = getFromSubqueryTerms(from.Left(), subqTerms)
+		subqTerms = getFromSubqueryTerms(from.Right(), subqTerms)
+	case algebra.JoinTerm:
+		subqTerms = getFromSubqueryTerms(from.Left(), subqTerms)
+	}
+	return subqTerms
 }
 
 func (this *builder) coverSubqTerms(subqTerms []*algebra.SubqueryTerm, subqUnderJoin bool) (err error) {
