@@ -299,12 +299,7 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 				}
 			}
 
-			b, err := json.Marshal(n)
-			if err != nil {
-				return err
-			}
-
-			if _, err = w.Write(b); err != nil {
+			if err = json.MarshalStringToBuffer(n, stringWriter); err != nil {
 				return err
 			}
 			if _, err = stringWriter.WriteString(":"); err != nil {
