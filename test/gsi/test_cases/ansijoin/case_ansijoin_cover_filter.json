@@ -68,5 +68,33 @@
         "statements":"SELECT h.name, s.booking_id FROM shellTest h JOIN (SELECT b.booking_id, b.hotel_id FROM shellTest b JOIN shellTest h2 USE NL ON b.hotel_id = h2.hotel_id WHERE b.type = \"cfbooking\" AND h2.name = b.room_type) AS s USE NL ON s.hotel_id = h.hotel_id WHERE h.type = \"cfhotel\"",
         "results": [
 	]
+    },
+    {
+        "testcase": "Covering in nested subquery term, under subquery term (without covering scans) on inner of nested-loop join",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.`~subqueries` SATISFIES v.`#operator` = 'InitialProject' AND ANY t IN v.`result_terms` SATISFIES t.`expr` LIKE 'cover (%`d3`.`c11`%' END END"
+        },
+        "statements":"SELECT d1.c21, d1.c22 FROM shellTest d1 JOIN (SELECT d10.c11 FROM (SELECT d3.c11 FROM shellTest AS d3 WHERE d3.type = \"left\" AND d3.c11 < 3) AS d10) AS final USE NL ON d1.c21 = final.c11 WHERE d1.type = \"right\" AND d1.test_id = \"ansijoin\" ORDER BY d1.c21, d1.c22",
+        "ordered": true,
+        "results": [
+            {
+                "c21": 1,
+                "c22": 10
+            },
+            {
+                "c21": 2,
+                "c22": 20
+            },
+            {
+                "c21": 2,
+                "c22": 21
+            }
+        ]
     }
 ]
