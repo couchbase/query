@@ -29,13 +29,13 @@ func (dsu *NopStatUpdater) Name() datastore.StatUpdaterType {
 
 func (dsu *NopStatUpdater) UpdateStatistics(ks datastore.Keyspace, indexes []datastore.Index,
 	terms expression.Expressions, with value.Value, conn *datastore.ValueConnection,
-	exContext interface{}, internal bool, inAus bool) {
+	exContext any, internal bool, inAus bool) {
 	conn.Error(errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS. This is an Enterprise only feature."))
 	close(conn.ValueChannel())
 }
 
 func (dsu *NopStatUpdater) DeleteStatistics(ks datastore.Keyspace, terms expression.Expressions,
-	conn *datastore.ValueConnection, exContext interface{}) {
+	conn *datastore.ValueConnection, exContext any) {
 	conn.Error(errors.NewOtherNotImplementedError(nil, "UPDATE STATISTICS. This is an Enterprise only feature."))
 	close(conn.ValueChannel())
 }

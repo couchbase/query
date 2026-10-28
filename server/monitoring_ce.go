@@ -14,26 +14,26 @@ import (
 	"github.com/couchbase/query/errors"
 )
 
-func setProfileAdmin(s *Server, o interface{}) errors.Error {
+func setProfileAdmin(s *Server, o any) errors.Error {
 	return nil
 }
 
-func setControlsAdmin(s *Server, o interface{}) errors.Error {
+func setControlsAdmin(s *Server, o any) errors.Error {
 	return nil
 }
 
-func GetProfileAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+func GetProfileAdmin(settings map[string]any, srvr *Server) map[string]any {
 	return settings
 }
 
-func GetControlsAdmin(settings map[string]interface{}, srvr *Server) map[string]interface{} {
+func GetControlsAdmin(settings map[string]any, srvr *Server) map[string]any {
 	return settings
 }
 
-func checkProfileAdmin(val interface{}) (bool, errors.Error) {
+func checkProfileAdmin(val any) (bool, errors.Error) {
 	return false, errors.NewNotImplemented("Profiling is an EE only feature")
 }
 
-func checkControlsAdmin(val interface{}) (bool, errors.Error) {
+func checkControlsAdmin(val any) (bool, errors.Error) {
 	return false, errors.NewNotImplemented("Controls is an EE only feature")
 }

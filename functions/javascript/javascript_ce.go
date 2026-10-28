@@ -37,7 +37,7 @@ func (this *javascriptBody) Lang() functions.Language {
 }
 
 // this will never be called, just a placeholder
-func (this *javascriptBody) Body(object map[string]interface{}) {
+func (this *javascriptBody) Body(object map[string]any) {
 	object["functions_feature_disabled"] = true
 }
 

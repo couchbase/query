@@ -26,7 +26,7 @@ type collectQueryInfo struct {
 type saveQueryInfo struct {
 }
 
-func (this *builder) VisitAdvise(stmt *algebra.Advise) (interface{}, error) {
+func (this *builder) VisitAdvise(stmt *algebra.Advise) (any, error) {
 	return nil, fmt.Errorf("Not supported in CE version. Use https://index-advisor.couchbase.com")
 }
 

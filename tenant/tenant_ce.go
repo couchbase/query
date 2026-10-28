@@ -21,8 +21,8 @@ type Service int
 type Services [_SIZER]Unit
 type ResourceManager func(string)
 
-type Context interface{}
-type Endpoint interface{}
+type Context any
+type Endpoint any
 
 const (
 	QUERY_CU = Service(iota)
@@ -83,7 +83,7 @@ func RefundUnits(ctx Context, units Services) error {
 	return nil
 }
 
-func Units2Map(serv Services) map[string]interface{} {
+func Units2Map(serv Services) map[string]any {
 	return nil
 }
 

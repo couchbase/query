@@ -18,19 +18,19 @@ func PlanStabilityAvailable() bool {
 	return false
 }
 
-func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, errors.Error) {
+func validatePlanStabilitySetting(val any) (map[string]any, errors.Error) {
 	return nil, errors.NewSettingsEnterpriseOnly("Plan Stability")
 }
 
-func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error {
+func updatePlanStabilitySetting(requestId string, val any) errors.Error {
 	return errors.NewSettingsEnterpriseOnly("Plan Stability")
 }
 
-func UpdatePersistPlanStabilitySetting(requestId string, val interface{}) errors.Error {
+func UpdatePersistPlanStabilitySetting(requestId string, val any) errors.Error {
 	return errors.NewSettingsEnterpriseOnly("Plan Stability")
 }
 
-func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, errors.Error) {
+func remapPlanStabilitySetting(psSetting any) (map[string]any, errors.Error) {
 	return nil, errors.NewSettingsEnterpriseOnly("Plan Stability")
 }
 

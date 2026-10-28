@@ -213,7 +213,7 @@ func startQueryport(laddr string, callb qp.RequestHandler) *qp.Server {
 	return s
 }
 
-func sendResponse(count int, respch chan<- interface{}, quitch <-chan interface{}) {
+func sendResponse(count int, respch chan<- any, quitch <-chan any) {
 	i := 0
 loop:
 	for ; i < count; i++ {
@@ -226,7 +226,7 @@ loop:
 }
 
 func serverCallb(
-	req interface{}, respch chan<- interface{}, quitch <-chan interface{}) {
+	req any, respch chan<- any, quitch <-chan any) {
 
 	switch req.(type) {
 	case *protobuf.StatisticsRequest:

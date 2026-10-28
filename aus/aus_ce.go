@@ -37,11 +37,11 @@ func CountAus() (int64, errors.Error) {
 	return -1, errors.NewAusNotSupportedError()
 }
 
-func FetchAus() (map[string]interface{}, errors.Error) {
+func FetchAus() (map[string]any, errors.Error) {
 	return nil, errors.NewAusNotSupportedError()
 }
 
-func SetAus(settings interface{}, distribute bool, backup bool) (errors.Error, errors.Errors) {
+func SetAus(settings any, distribute bool, backup bool) (errors.Error, errors.Errors) {
 	return errors.NewAusNotSupportedError(), nil
 }
 
@@ -73,6 +73,6 @@ func DropCollection(namespace string, bucket string, scope string, scopeUid stri
 
 // Backup related functions
 
-func BackupAusSettings(namespace string, bucket string, filter func([]string) bool) ([]interface{}, errors.Error) {
+func BackupAusSettings(namespace string, bucket string, filter func([]string) bool) ([]any, errors.Error) {
 	return nil, nil
 }

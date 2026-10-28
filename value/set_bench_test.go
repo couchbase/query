@@ -20,7 +20,7 @@ const _BENCH_ROWS = 1024
 func benchDistinctRows(nFields int) []Value {
 	rows := make([]Value, 0, _BENCH_ROWS)
 	for i := 0; len(rows) < _BENCH_ROWS; i++ {
-		obj := make(map[string]interface{}, nFields)
+		obj := make(map[string]any, nFields)
 		for f := 0; f < nFields; f++ {
 			obj[fmt.Sprintf("f%02d", f)] = fmt.Sprintf("v%d_%d", i, f)
 		}
@@ -61,8 +61,8 @@ func BenchmarkDistinctPutIfAbsent40(b *testing.B) { benchDistinct(b, 40, true) }
 func TestSetPutIfAbsent(t *testing.T) {
 	for _, collect := range []bool{false, true} {
 		set := NewSet(4, collect, false)
-		obj := NewValue(map[string]interface{}{"a": "x", "b": 1})
-		arr := NewValue([]interface{}{"x", 1})
+		obj := NewValue(map[string]any{"a": "x", "b": 1})
+		arr := NewValue([]any{"x", 1})
 		for _, v := range []Value{obj, arr, NewValue("s"), NewValue(1), NULL_VALUE, MISSING_VALUE} {
 			if !set.PutIfAbsent(v, v) {
 				t.Errorf("collect=%v: first PutIfAbsent(%v) = false", collect, v)
@@ -83,11 +83,11 @@ func TestSetPutIfAbsent(t *testing.T) {
 func TestSetMerge(t *testing.T) {
 	a := NewSet(4, true, false)
 	b := NewSet(4, true, false)
-	shared := NewValue(map[string]interface{}{"a": "x"})
-	for _, v := range []Value{shared, NewValue([]interface{}{1}), NewValue("s"), NewValue(1), NULL_VALUE} {
+	shared := NewValue(map[string]any{"a": "x"})
+	for _, v := range []Value{shared, NewValue([]any{1}), NewValue("s"), NewValue(1), NULL_VALUE} {
 		a.Add(v)
 	}
-	for _, v := range []Value{shared, NewValue([]interface{}{2}), NewValue("t"), NewValue(1.5),
+	for _, v := range []Value{shared, NewValue([]any{2}), NewValue("t"), NewValue(1.5),
 		NewValue(true), MISSING_VALUE} {
 		b.Add(v)
 	}
@@ -109,8 +109,8 @@ func TestSetMerge(t *testing.T) {
 
 func TestMultiSetRemoveIfPresent(t *testing.T) {
 	ms := NewMultiSet(4, false, false)
-	obj := NewValue(map[string]interface{}{"a": "x"})
-	arr := NewValue([]interface{}{1, "x"})
+	obj := NewValue(map[string]any{"a": "x"})
+	arr := NewValue([]any{1, "x"})
 	for _, v := range []Value{obj, obj, arr, NewValue("s")} {
 		ms.Add(v)
 	}

@@ -27,19 +27,19 @@ const (
 
 // dummy
 type DictCacheEntry interface {
-	Target(map[string]interface{})
-	Dictionary(map[string]interface{})
+	Target(map[string]any)
+	Dictionary(map[string]any)
 }
 
 func CountDictCacheEntries() int {
 	return -1
 }
 
-func DictCacheEntriesForeach(nB func(string, interface{}) bool, b func() bool) {
+func DictCacheEntriesForeach(nB func(string, any) bool, b func() bool) {
 	// no-op
 }
 
-func DictCacheEntryDo(k string, f func(interface{})) {
+func DictCacheEntryDo(k string, f func(any)) {
 	// no-op
 }
 
@@ -73,7 +73,7 @@ func DropDictionaryEntry(keyspace string, isDropBucket bool, locked bool) {
 	// no-op
 }
 
-func DropDictEntryAndAllCache(keyspace string, context interface{}, locked bool) {
+func DropDictEntryAndAllCache(keyspace string, context any, locked bool) {
 	// no-op
 }
 
