@@ -93,7 +93,7 @@ func (this *Bag) Put(key, item Value) {
 
 		entry.Count++
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -129,7 +129,7 @@ func (this *Bag) Put(key, item Value) {
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
-		akey := key.Actual().(string)
+		akey := stringKey(key)
 		entry := this.strings[akey]
 		if entry == nil {
 			entry = &BagEntry{Value: item}
@@ -182,7 +182,7 @@ func (this *Bag) Entry(key Value) *BagEntry {
 	case BOOLEAN:
 		return this.booleans[key.Actual().(bool)]
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -197,7 +197,7 @@ func (this *Bag) Entry(key Value) *BagEntry {
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
-		return this.strings[key.Actual().(string)]
+		return this.strings[stringKey(key)]
 	case ARRAY:
 		return this.arrays[key.String()]
 	case OBJECT:

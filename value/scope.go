@@ -159,6 +159,14 @@ func (this *ScopeValue) ReadSpill(trackMem func(int64) error, r io.Reader, buf [
 	return err
 }
 
+/*
+Return the wrapped value as it is, rather than through its own unwrap(),
+which would box a scalar again.
+*/
+func (this *ScopeValue) unwrap() Value {
+	return unwrapValue(this.Value)
+}
+
 func (this *ScopeValue) Copy() Value {
 	rv := newScopeValue(false)
 	if this.Value != nil {

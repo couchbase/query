@@ -33,8 +33,8 @@ func NewNullValue() Value {
 	return NULL_VALUE
 }
 
-var _NULL_BYTES = []byte("null")
-var _NULL_XML = []byte("<null/>")
+var _NULL_BYTES = sharedBytes("null")
+var _NULL_XML = sharedBytes("<null/>")
 
 func (this *nullValue) String() string {
 	return "null"
@@ -97,7 +97,7 @@ func (this *nullValue) ActualForIndex() any {
 Returns MISSING or NULL.
 */
 func (this *nullValue) Equals(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other.Type() {
 	case MISSING:
 		return other
@@ -118,7 +118,7 @@ func (this *nullValue) Collate(other Value) int {
 }
 
 func (this *nullValue) Compare(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other

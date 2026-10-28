@@ -139,7 +139,7 @@ func (this *MultiSet) Put(key, item Value, cnt int64) {
 			this.booleans[k] = vc
 		}
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -169,7 +169,7 @@ func (this *MultiSet) Put(key, item Value, cnt int64) {
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
-		k := key.Actual().(string)
+		k := stringKey(key)
 		vc := addValueCnt(this.strings[k], mapItem, cnt)
 		if vc == nil {
 			delete(this.strings, k)
@@ -263,7 +263,7 @@ func (this *MultiSet) Has(key Value) bool {
 	case BOOLEAN:
 		_, ok = this.booleans[key.Actual().(bool)]
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -278,7 +278,7 @@ func (this *MultiSet) Has(key Value) bool {
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
-		_, ok = this.strings[key.Actual().(string)]
+		_, ok = this.strings[stringKey(key)]
 	case ARRAY:
 		_, ok = this.arrays[key.String()]
 	case OBJECT:
@@ -314,7 +314,7 @@ func (this *MultiSet) Count(key Value) int64 {
 	case BOOLEAN:
 		vc, ok = this.booleans[key.Actual().(bool)]
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -329,7 +329,7 @@ func (this *MultiSet) Count(key Value) int64 {
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
-		vc, ok = this.strings[key.Actual().(string)]
+		vc, ok = this.strings[stringKey(key)]
 	case ARRAY:
 		vc, ok = this.arrays[key.String()]
 	case OBJECT:

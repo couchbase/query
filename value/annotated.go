@@ -584,6 +584,14 @@ func (this *annotatedValue) CopyMeta(from AnnotatedValue) {
 	}
 }
 
+/*
+Return the wrapped value as it is, rather than through its own unwrap(),
+which would box a scalar again.
+*/
+func (this *annotatedValue) unwrap() Value {
+	return unwrapValue(this.Value)
+}
+
 func (this *annotatedValue) Copy() Value {
 	rv := newAnnotatedValue()
 	rv.Value = this.Value.Copy()
@@ -1413,6 +1421,8 @@ func (this *annotatedValueSelfReference) RecalculateSize() uint64 {
 	return 0
 }
 
+// String() and ToString() return "" rather than "null" as MarshalJSON()
+// does; callers may rely on the empty string, so this is left as it was
 func (this *annotatedValueSelfReference) String() string {
 	return ""
 }
@@ -1422,15 +1432,22 @@ func (this *annotatedValueSelfReference) ToString() string {
 }
 
 func (this *annotatedValueSelfReference) MarshalJSON() ([]byte, error) {
-	return []byte(nil), nil
+	// object fields skip a self reference (see skipJSONField); anywhere else
+	// it is null, so that the JSON stays valid
+	return _NULL_BYTES, nil
 }
 
 func (this *annotatedValueSelfReference) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
-	return nil
+	// object fields skip a self reference; anywhere else write null, so
+	// that the JSON stays valid
+	_, err := w.Write(_NULL_BYTES)
+	return err
 }
 
 func (this *annotatedValueSelfReference) WriteXML(order []string, w io.Writer, prefix, indent string, fast bool) error {
-	return nil
+	// object fields skip a self reference; anywhere else write null, as
+	// WriteJSON does
+	return NULL_VALUE.WriteXML(order, w, prefix, indent, fast)
 }
 
 func (this *annotatedValueSelfReference) Equals(other Value) Value {

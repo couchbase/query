@@ -176,7 +176,7 @@ func (this sliceValue) ActualForIndex() any {
 }
 
 func (this sliceValue) Equals(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -196,7 +196,7 @@ func (this sliceValue) Equals(other Value) Value {
 }
 
 func (this sliceValue) EquivalentTo(other Value) bool {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case sliceValue:
 		return arrayEquivalent(this, other)
@@ -212,7 +212,7 @@ func (this sliceValue) EquivalentTo(other Value) bool {
 }
 
 func (this sliceValue) Collate(other Value) int {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case sliceValue:
 		return arrayCollate(this, other)
@@ -228,7 +228,7 @@ func (this sliceValue) Collate(other Value) int {
 }
 
 func (this sliceValue) Compare(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -843,22 +843,31 @@ func marshalArray(slice []any) (b []byte, err error) {
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 256))
-	buf.WriteString("[")
+	if err = marshalArrayToBuffer(slice, buf); err != nil {
+		return nil, err
+	}
+	return trimMarshalled(buf.Bytes()), nil
+}
 
-	for i, e := range slice {
-		if i > 0 {
-			buf.WriteString(",")
-		}
-
-		v := NewValue(e)
-		b, err = v.MarshalJSON()
-		if err != nil {
-			return
-		}
-
-		buf.Write(b)
+/*
+Append the MarshalJSON() encoding of the array to buf.
+*/
+func marshalArrayToBuffer(slice []any, buf *bytes.Buffer) error {
+	if slice == nil {
+		buf.Write(_NULL_BYTES)
+		return nil
 	}
 
-	buf.WriteString("]")
-	return buf.Bytes(), nil
+	buf.WriteByte('[')
+	for i, e := range slice {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+
+		if _, err := marshalToBuffer(e, buf, false); err != nil {
+			return err
+		}
+	}
+	buf.WriteByte(']')
+	return nil
 }

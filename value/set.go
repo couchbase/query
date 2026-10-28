@@ -85,7 +85,7 @@ func (this *Set) Put(key, item Value) {
 		}
 		this.booleans[key.Actual().(bool)] = mapItem
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -112,7 +112,7 @@ func (this *Set) Put(key, item Value) {
 		if this.strings == nil {
 			this.strings = make(map[string]Value, this.mapCap())
 		}
-		this.strings[key.Actual().(string)] = mapItem
+		this.strings[stringKey(key)] = mapItem
 	case ARRAY:
 		if this.arrays == nil {
 			this.arrays = make(map[string]Value, _MAP_CAP)
@@ -233,7 +233,7 @@ func (this *Set) Remove(key Value) {
 	case BOOLEAN:
 		delete(this.booleans, key.Actual().(bool))
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -248,7 +248,7 @@ func (this *Set) Remove(key Value) {
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
-		delete(this.strings, key.Actual().(string))
+		delete(this.strings, stringKey(key))
 	case ARRAY:
 		delete(this.arrays, key.String())
 	case OBJECT:
@@ -280,7 +280,7 @@ func (this *Set) Has(key Value) bool {
 	case BOOLEAN:
 		_, ok = this.booleans[key.Actual().(bool)]
 	case NUMBER:
-		num := key.unwrap()
+		num := unwrapValue(key)
 		switch num := num.(type) {
 		case floatValue:
 			f := float64(num)
@@ -295,7 +295,7 @@ func (this *Set) Has(key Value) bool {
 			panic(fmt.Sprintf("Unsupported value type %T.", key))
 		}
 	case STRING:
-		_, ok = this.strings[key.Actual().(string)]
+		_, ok = this.strings[stringKey(key)]
 	case ARRAY:
 		_, ok = this.arrays[key.String()]
 	case OBJECT:

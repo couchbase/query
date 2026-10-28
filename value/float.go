@@ -9,6 +9,7 @@
 package value
 
 import (
+	"bytes"
 	"io"
 	"math"
 	"strconv"
@@ -18,9 +19,9 @@ import (
 
 type floatValue float64
 
-var _NAN_BYTES = []byte("\"NaN\"")
-var _POS_INF_BYTES = []byte("\"+Infinity\"")
-var _NEG_INF_BYTES = []byte("\"-Infinity\"")
+var _NAN_BYTES = sharedBytes("\"NaN\"")
+var _POS_INF_BYTES = sharedBytes("\"+Infinity\"")
+var _NEG_INF_BYTES = sharedBytes("\"-Infinity\"")
 
 func (this floatValue) String() string {
 	bytes, _ := this.MarshalJSON()
@@ -32,21 +33,49 @@ func (this floatValue) ToString() string {
 }
 
 func (this floatValue) MarshalJSON() ([]byte, error) {
+	// non-finite values return the shared constants without allocating
 	f := float64(this)
-
 	if math.IsNaN(f) {
 		return _NAN_BYTES, nil
 	} else if math.IsInf(f, 1) {
 		return _POS_INF_BYTES, nil
 	} else if math.IsInf(f, -1) {
 		return _NEG_INF_BYTES, nil
+	}
+	return this.appendJSON(nil), nil
+}
+
+/*
+Append the MarshalJSON() encoding of the value to b.
+*/
+func (this floatValue) appendJSON(b []byte) []byte {
+	f := float64(this)
+
+	if math.IsNaN(f) {
+		return append(b, _NAN_BYTES...)
+	} else if math.IsInf(f, 1) {
+		return append(b, _POS_INF_BYTES...)
+	} else if math.IsInf(f, -1) {
+		return append(b, _NEG_INF_BYTES...)
 	} else {
 		if f == -0 {
 			f = 0
 		}
-		s := strconv.FormatFloat(f, 'f', -1, 64)
-		return []byte(s), nil
+		return strconv.AppendFloat(b, f, 'f', -1, 64)
 	}
+}
+
+/*
+Write the MarshalJSON() encoding of the value into the buffer's spare
+capacity.
+*/
+func (this floatValue) writeJSON(buf *bytes.Buffer) {
+	// room for any int64 and most floats, so that appending does not
+	// allocate a slice of its own
+	if buf.Available() < _NUMBER_JSON_SIZE {
+		buf.Grow(_NUMBER_JSON_SIZE)
+	}
+	buf.Write(this.appendJSON(buf.AvailableBuffer()))
 }
 
 func (this floatValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
@@ -73,11 +102,11 @@ func (this floatValue) WriteXML(order []string, w io.Writer, prefix string, inde
 }
 
 func (this floatValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
-	b, err := this.MarshalJSON()
-	if err != nil {
-		return err
+	if buf, ok := w.(*bytes.Buffer); ok {
+		this.writeJSON(buf)
+		return nil
 	}
-	_, err = w.Write(b)
+	_, err := w.Write(this.appendJSON(nil))
 	return err
 }
 
@@ -116,7 +145,7 @@ func (this floatValue) ActualForIndex() any {
 }
 
 func (this floatValue) Equals(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -136,7 +165,7 @@ func (this floatValue) Equals(other Value) Value {
 }
 
 func (this floatValue) EquivalentTo(other Value) bool {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case floatValue:
 		return this == other
@@ -148,7 +177,7 @@ func (this floatValue) EquivalentTo(other Value) bool {
 }
 
 func (this floatValue) Collate(other Value) int {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case floatValue:
 		t := float64(this)
@@ -216,7 +245,7 @@ func collateFloat(t, o float64) int {
 }
 
 func (this floatValue) Compare(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other

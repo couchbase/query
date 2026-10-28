@@ -24,11 +24,11 @@ func NewBinaryValue(bytes []byte) Value {
 }
 
 func (this binaryValue) String() string {
-	return fmt.Sprintf("\"<binary (%d b)>\"", len(this))
+	return "\"<binary (" + strconv.Itoa(len(this)) + " b)>\""
 }
 
 func (this binaryValue) ToString() string {
-	return fmt.Sprintf("\"<binary (%d b)>\"", len(this))
+	return this.String()
 }
 
 func (this binaryValue) MarshalJSON() ([]byte, error) {
@@ -84,7 +84,7 @@ func (this binaryValue) ActualForIndex() any {
 }
 
 func (this binaryValue) Equals(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -100,7 +100,7 @@ func (this binaryValue) Equals(other Value) Value {
 }
 
 func (this binaryValue) EquivalentTo(other Value) bool {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case binaryValue:
 		return bytes.Equal(this, other)
@@ -110,7 +110,7 @@ func (this binaryValue) EquivalentTo(other Value) bool {
 }
 
 func (this binaryValue) Collate(other Value) int {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case binaryValue:
 		return bytes.Compare(this, other)
@@ -120,7 +120,7 @@ func (this binaryValue) Collate(other Value) int {
 }
 
 func (this binaryValue) Compare(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other

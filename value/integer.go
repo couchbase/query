@@ -9,6 +9,7 @@
 package value
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math"
@@ -36,9 +37,31 @@ func (this intValue) ToString() string {
 }
 
 func (this intValue) MarshalJSON() ([]byte, error) {
-	s := strconv.FormatInt(int64(this), 10)
-	return []byte(s), nil
+	return this.appendJSON(nil), nil
 }
+
+/*
+Append the MarshalJSON() encoding of the value to b.
+*/
+func (this intValue) appendJSON(b []byte) []byte {
+	return strconv.AppendInt(b, int64(this), 10)
+}
+
+/*
+Write the MarshalJSON() encoding of the value into the buffer's spare
+capacity.
+*/
+func (this intValue) writeJSON(buf *bytes.Buffer) {
+	// room for any int64 and most floats, so that appending does not
+	// allocate a slice of its own
+	if buf.Available() < _NUMBER_JSON_SIZE {
+		buf.Grow(_NUMBER_JSON_SIZE)
+	}
+	buf.Write(this.appendJSON(buf.AvailableBuffer()))
+}
+
+// space reserved in a buffer before a number is appended to it
+const _NUMBER_JSON_SIZE = 32
 
 func (this intValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
 	var err error
@@ -53,9 +76,11 @@ func (this intValue) WriteXML(order []string, w io.Writer, prefix string, indent
 }
 
 func (this intValue) WriteJSON(order []string, w io.Writer, prefix, indent string, fast bool) error {
-	s := strconv.FormatInt(int64(this), 10)
-	b := []byte(s)
-	_, err := w.Write(b)
+	if buf, ok := w.(*bytes.Buffer); ok {
+		this.writeJSON(buf)
+		return nil
+	}
+	_, err := w.Write(this.appendJSON(nil))
 	return err
 }
 
@@ -101,7 +126,7 @@ func (this intValue) ActualForIndex() any {
 }
 
 func (this intValue) Equals(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -121,7 +146,7 @@ func (this intValue) Equals(other Value) Value {
 }
 
 func (this intValue) EquivalentTo(other Value) bool {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case intValue:
 		return this == other
@@ -133,7 +158,7 @@ func (this intValue) EquivalentTo(other Value) bool {
 }
 
 func (this intValue) Collate(other Value) int {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case intValue:
 		switch {
@@ -145,7 +170,7 @@ func (this intValue) Collate(other Value) int {
 			return 0
 		}
 	case floatValue:
-		return -other.Collate(this)
+		return collateFloat(float64(this), float64(other))
 	default:
 		return int(NUMBER - other.Type())
 	}
@@ -153,7 +178,7 @@ func (this intValue) Collate(other Value) int {
 }
 
 func (this intValue) Compare(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other

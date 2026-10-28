@@ -28,8 +28,8 @@ var TRUE_VALUE Value = boolValue(true)
 _FALSE _BYTES / _TRUE _BYTES that are slices of bytes
 representing false and true.
 */
-var _FALSE_BYTES = []byte("false")
-var _TRUE_BYTES = []byte("true")
+var _FALSE_BYTES = sharedBytes("false")
+var _TRUE_BYTES = sharedBytes("true")
 
 func (this boolValue) String() string {
 	if this {
@@ -44,10 +44,17 @@ func (this boolValue) ToString() string {
 }
 
 func (this boolValue) MarshalJSON() ([]byte, error) {
+	return this.jsonBytes(), nil
+}
+
+/*
+The shared MarshalJSON() encoding of the value.
+*/
+func (this boolValue) jsonBytes() []byte {
 	if this {
-		return _TRUE_BYTES, nil
+		return _TRUE_BYTES
 	} else {
-		return _FALSE_BYTES, nil
+		return _FALSE_BYTES
 	}
 }
 
@@ -119,7 +126,7 @@ func (this boolValue) ActualForIndex() any {
 }
 
 func (this boolValue) Equals(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -135,7 +142,7 @@ func (this boolValue) Equals(other Value) Value {
 }
 
 func (this boolValue) EquivalentTo(other Value) bool {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case boolValue:
 		return this == other
@@ -145,7 +152,7 @@ func (this boolValue) EquivalentTo(other Value) bool {
 }
 
 func (this boolValue) Collate(other Value) int {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case boolValue:
 		if this == other {
@@ -161,7 +168,7 @@ func (this boolValue) Collate(other Value) int {
 }
 
 func (this boolValue) Compare(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other

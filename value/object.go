@@ -12,7 +12,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io"
-	"sort"
+	"slices"
 	"strconv"
 
 	json "github.com/couchbase/go_json"
@@ -39,67 +39,80 @@ func (this objectValue) MarshalJSON() ([]byte, error) {
 		return _NULL_BYTES, nil
 	}
 
+	if len(this) == 0 {
+		return _EMPTY_OBJECT_BYTES, nil
+	}
+
+	buf := bytes.NewBuffer(make([]byte, 0, len(this)*_MARSHAL_FIELD_SIZE+2))
+	if err := this.marshalToBuffer(buf); err != nil {
+		return nil, err
+	}
+	return trimMarshalled(buf.Bytes()), nil
+}
+
+/*
+Copy b to an exact-size slice when it carries a lot of spare capacity, so
+that callers that keep the bytes don't keep the slack too.
+*/
+func trimMarshalled(b []byte) []byte {
+	if cap(b) > 2*len(b) && cap(b)-len(b) > _MARSHAL_TRIM_SLACK {
+		return append([]byte(nil), b...)
+	}
+	return b
+}
+
+// spare capacity worth an extra copy to release
+const _MARSHAL_TRIM_SLACK = 1024
+
+// shared, like _NULL_BYTES (see sharedBytes)
+var _EMPTY_OBJECT_BYTES = sharedBytes("{}")
+
+// estimated encoded size of a field, used to size the MarshalJSON buffer
+const _MARSHAL_FIELD_SIZE = 32
+
+/*
+Append the MarshalJSON() encoding of the object to buf. Nested values are
+written into the same buffer rather than marshalled into slices of their own.
+*/
+func (this objectValue) marshalToBuffer(buf *bytes.Buffer) error {
+	if this == nil {
+		buf.Write(_NULL_BYTES)
+		return nil
+	}
+
 	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(this) <= len(nameBuf) {
-		names = nameBuf[0:len(this)]
-	} else {
-		names = _NAME_POOL.GetCapped(len(this))
-		defer _NAME_POOL.Put(names)
-		names = names[0:len(this)]
+	names, pooled := sortedNamesIn(this, &nameBuf)
+	if pooled != nil {
+		defer _NAME_POOL.Put(pooled)
 	}
 
-	names = sortedNames(this, names)
-
-	if len(names) == 0 {
-		return []byte("{}"), nil
-	}
-
-	var err error
-	sz := 0
-	marshalledValues := make([][]byte, len(names))
-	for i, n := range names {
-		v := NewValue(this[n])
-		if v.Type() == MISSING {
-			continue
-		}
-		marshalledValues[i], err = v.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
-		// allow for per-line overhead:
-		// 2 - name quotes
-		// 1 - comma separator
-		// 5 - possible HTML escaping in name (to minimise chances of buffer reallocation)
-		sz += len(marshalledValues[i]) + len(n) + 8
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, sz+2)) // overhead: {}
-	buf.WriteRune('{')
+	buf.WriteByte('{')
 	subsequent := false
-	for i, n := range names {
-		if marshalledValues[i] == nil {
+	for _, n := range names {
+		mark := buf.Len()
+		if subsequent {
+			buf.WriteByte(',')
+		}
+
+		err := json.MarshalStringToBuffer(n, buf)
+		if err != nil {
+			return err
+		}
+		buf.WriteByte(':')
+
+		written, err := marshalToBuffer(this[n], buf, true)
+		if err != nil {
+			return err
+		}
+		if !written {
+			// MISSING field: drop the name
+			buf.Truncate(mark)
 			continue
 		}
-		if subsequent {
-			buf.WriteRune(',')
-		} else {
-			subsequent = true
-		}
-
-		err = json.MarshalStringToBuffer(n, buf)
-		if err != nil {
-			return nil, err
-		}
-
-		buf.WriteRune(':')
-		buf.Write(marshalledValues[i])
-		marshalledValues[i] = nil
+		subsequent = true
 	}
-	marshalledValues = nil
-
-	buf.WriteRune('}')
-	return buf.Bytes(), nil
+	buf.WriteByte('}')
+	return nil
 }
 
 func (this objectValue) WriteXML(order []string, w io.Writer, prefix string, indent string, fast bool) error {
@@ -133,17 +146,12 @@ func (this objectValue) WriteXML(order []string, w io.Writer, prefix string, ind
 	}
 
 	if order == nil {
-		var remaining []string
-		if l <= _NAME_CAP {
-			var nameBuf [_NAME_CAP]string
-			remaining = nameBuf[:0]
-		} else {
-			remaining = _NAME_POOL.GetCapped(l)
-			defer _NAME_POOL.Put(remaining)
-			remaining = remaining[:0]
+		var nameBuf [_NAME_CAP]string
+		var pooled []string
+		order, pooled = sortedNamesIn(this, &nameBuf)
+		if pooled != nil {
+			defer _NAME_POOL.Put(pooled)
 		}
-		remaining = remaining[:l]
-		order = sortedNames(this, remaining)
 	}
 
 	if _, err = stringWriter.WriteString("<object>"); err != nil {
@@ -156,7 +164,7 @@ func (this objectValue) WriteXML(order []string, w io.Writer, prefix string, ind
 			continue
 		}
 		v := NewValue(thisv)
-		if v.Type() == MISSING {
+		if skipJSONField(v) {
 			continue
 		}
 
@@ -232,7 +240,7 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 		// so we still need a range
 		for n, _ := range this {
 			v := NewValue(this[n])
-			if v.Type() == MISSING {
+			if skipJSONField(v) {
 				continue
 			}
 			written++
@@ -263,17 +271,12 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 	} else if l > 0 {
 
 		if order == nil {
-			var remaining []string
-			if l <= _NAME_CAP {
-				var nameBuf [_NAME_CAP]string
-				remaining = nameBuf[:0]
-			} else {
-				remaining = _NAME_POOL.GetCapped(l)
-				defer _NAME_POOL.Put(remaining)
-				remaining = remaining[:0]
+			var nameBuf [_NAME_CAP]string
+			var pooled []string
+			order, pooled = sortedNamesIn(this, &nameBuf)
+			if pooled != nil {
+				defer _NAME_POOL.Put(pooled)
 			}
-			remaining = remaining[:l]
-			order = sortedNames(this, remaining)
 		}
 
 		for _, n := range order {
@@ -282,7 +285,7 @@ func (this objectValue) WriteJSON(order []string, w io.Writer, prefix, indent st
 				continue
 			}
 			v := NewValue(thisv)
-			if v.Type() == MISSING {
+			if skipJSONField(v) {
 				continue
 			}
 
@@ -366,7 +369,7 @@ func (this objectValue) ActualForIndex() any {
 }
 
 func (this objectValue) Equals(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -384,7 +387,7 @@ func (this objectValue) Equals(other Value) Value {
 }
 
 func (this objectValue) EquivalentTo(other Value) bool {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case objectValue:
 		return objectEquivalent(this, other)
@@ -398,7 +401,7 @@ func (this objectValue) EquivalentTo(other Value) bool {
 }
 
 func (this objectValue) Collate(other Value) int {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case objectValue:
 		return objectCollate(this, other)
@@ -412,7 +415,7 @@ func (this objectValue) Collate(other Value) int {
 }
 
 func (this objectValue) Compare(other Value) Value {
-	other = other.unwrap()
+	other = unwrapValue(other)
 	switch other := other.(type) {
 	case missingValue:
 		return other
@@ -538,16 +541,10 @@ func (this objectValue) Append(elems []any) (Value, bool) {
 
 func (this objectValue) Descendants(buffer []any) []any {
 	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(this) <= len(nameBuf) {
-		names = nameBuf[0:len(this)]
-	} else {
-		names = _NAME_POOL.GetCapped(len(this))
-		defer _NAME_POOL.Put(names)
-		names = names[0:len(this)]
+	names, pooled := sortedNamesIn(this, &nameBuf)
+	if pooled != nil {
+		defer _NAME_POOL.Put(pooled)
 	}
-
-	names = sortedNames(this, names)
 
 	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]any, len(buffer), (len(buffer)+len(this)+1)<<1)
@@ -580,16 +577,10 @@ func (this objectValue) FieldNames(buffer []string) []string {
 
 func (this objectValue) DescendantPairs(buffer []util.IPair) []util.IPair {
 	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(this) <= len(nameBuf) {
-		names = nameBuf[0:len(this)]
-	} else {
-		names = _NAME_POOL.GetCapped(len(this))
-		defer _NAME_POOL.Put(names)
-		names = names[0:len(this)]
+	names, pooled := sortedNamesIn(this, &nameBuf)
+	if pooled != nil {
+		defer _NAME_POOL.Put(pooled)
 	}
-
-	names = sortedNames(this, names)
 
 	if cap(buffer) < len(buffer)+len(this) {
 		buf2 := make([]util.IPair, len(buffer), (len(buffer)+len(this)+1)<<1)
@@ -617,16 +608,10 @@ func (this objectValue) Successor() Value {
 	s := copyMap(this, self)
 
 	var nameBuf [_NAME_CAP]string
-	var names []string
-	if len(this) <= len(nameBuf) {
-		names = nameBuf[0:len(this)]
-	} else {
-		names = _NAME_POOL.GetCapped(len(this))
-		defer _NAME_POOL.Put(names)
-		names = names[0:len(this)]
+	names, pooled := sortedNamesIn(this, &nameBuf)
+	if pooled != nil {
+		defer _NAME_POOL.Put(pooled)
 	}
-
-	names = sortedNames(this, names)
 
 	n := names[len(names)-1]
 	s[n] = NewValue(this[n]).Successor()
@@ -705,6 +690,18 @@ func (this objectValue) unwrap() Value {
 }
 
 var _SMALL_OBJECT_VALUE = objectValue(map[string]any{"": nil})
+
+/*
+Object fields that are MISSING or a self reference are left out of the JSON,
+as in MarshalJSON().
+*/
+func skipJSONField(v Value) bool {
+	if v.Type() == MISSING {
+		return true
+	}
+	_, ok := v.(*annotatedValueSelfReference)
+	return ok
+}
 
 // trackedObjectValue is just like objectValue, except it does extra Track()/Recycle() for its subelements
 type trackedObjectValue struct {
@@ -824,43 +821,14 @@ func objectCollate(obj1, obj2 map[string]any) int {
 	}
 
 	// if not, proceed to do name by name comparision
-	combined := combineNames(obj1, obj2)
-
-	var nameBuf [_NAME_CAP]string
-	var allNames []string
-	if len(combined) <= len(nameBuf) {
-		allNames = nameBuf[0:len(combined)]
-	} else {
-		allNames = _NAME_POOL.GetCapped(len(combined))
-		defer _NAME_POOL.Put(allNames)
-		allNames = allNames[0:len(combined)]
+	cmp := 0
+	if diff := objectWalk(obj1, obj2, func(val1, val2 any) bool {
+		cmp = NewValue(val1).Collate(NewValue(val2))
+		return cmp == 0
+	}); diff != 0 {
+		return diff
 	}
-
-	allNames = sortedNames(combined, allNames)
-
-	// now compare the values associated with each name
-	for _, name := range allNames {
-		val1, ok := obj1[name]
-		if !ok {
-			// obj1 did not have this name, so it is larger
-			return 1
-		}
-
-		val2, ok := obj2[name]
-		if !ok {
-			// ojb2 did not have this name, so it is larger
-			return -1
-		}
-
-		// name was in both objects, so compare the corresponding values
-		cmp := NewValue(val1).Collate(NewValue(val2))
-		if cmp != 0 {
-			return cmp
-		}
-	}
-
-	// all names and values are equal
-	return 0
+	return cmp
 }
 
 func objectCompare(obj1, obj2 map[string]any) Value {
@@ -871,43 +839,71 @@ func objectCompare(obj1, obj2 map[string]any) Value {
 	}
 
 	// if not, proceed to do name by name comparision
-	combined := combineNames(obj1, obj2)
+	cmp := ZERO_VALUE
+	switch objectWalk(obj1, obj2, func(val1, val2 any) bool {
+		c := NewValue(val1).Compare(NewValue(val2))
+		// built-in types return intValue; anything else uses Equals
+		if i, ok := c.(intValue); ok {
+			if i == 0 {
+				return true
+			}
+		} else if c.Equals(ZERO_VALUE).Truth() {
+			return true
+		}
+		// only a difference is returned; equal objects return ZERO_VALUE
+		cmp = c
+		return false
+	}) {
+	case -1:
+		return NEG_ONE_VALUE
+	case 1:
+		return ONE_VALUE
+	}
+	return cmp
+}
 
-	var nameBuf [_NAME_CAP]string
-	var allNames []string
-	if len(combined) <= len(nameBuf) {
-		allNames = nameBuf[0:len(combined)]
-	} else {
-		allNames = _NAME_POOL.GetCapped(len(combined))
-		defer _NAME_POOL.Put(allNames)
-		allNames = allNames[0:len(combined)]
+/*
+Walk the names of two objects in sorted order, calling equal with the values
+of each name, until it returns false. An object with fewer names is smaller.
+Otherwise the first name that is only in one object ends the walk: the result
+is -1 if obj2 does not have it, 1 if obj1 does not, and 0 otherwise.
+*/
+func objectWalk(obj1, obj2 map[string]any, equal func(val1, val2 any) bool) int {
+	// the current callers check the lengths first, but the walk below
+	// depends on them being equal
+	if len(obj1) < len(obj2) {
+		return -1
+	} else if len(obj1) > len(obj2) {
+		return 1
 	}
 
-	allNames = sortedNames(combined, allNames)
+	var nameBuf1, nameBuf2 [_NAME_CAP]string
+	names1, pooled1 := sortedNamesIn(obj1, &nameBuf1)
+	if pooled1 != nil {
+		defer _NAME_POOL.Put(pooled1)
+	}
+	names2, pooled2 := sortedNamesIn(obj2, &nameBuf2)
+	if pooled2 != nil {
+		defer _NAME_POOL.Put(pooled2)
+	}
 
-	// now compare the values associated with each name
-	for _, name := range allNames {
-		val1, ok := obj1[name]
-		if !ok {
+	// as the objects are the same length, the first name that is only in one
+	// object sorts before the other object's name at the same position
+	for i, name := range names1 {
+		if name < names2[i] {
+			// obj2 did not have this name, so it is larger
+			return -1
+		} else if name > names2[i] {
 			// obj1 did not have this name, so it is larger
-			return ONE_VALUE
-		}
-
-		val2, ok := obj2[name]
-		if !ok {
-			// ojb2 did not have this name, so it is larger
-			return NEG_ONE_VALUE
+			return 1
 		}
 
 		// name was in both objects, so compare the corresponding values
-		cmp := NewValue(val1).Compare(NewValue(val2))
-		if !cmp.Equals(ZERO_VALUE).Truth() {
-			return cmp
+		if !equal(obj1[name], obj2[name]) {
+			break
 		}
 	}
-
-	// all names and values are equal
-	return ZERO_VALUE
+	return 0
 }
 
 func copyMap(source map[string]any, copier copyFunc) map[string]any {
@@ -923,6 +919,21 @@ func copyMap(source map[string]any, copier copyFunc) map[string]any {
 	return result
 }
 
+/*
+Return the names of obj in sorted order: in nameBuf if they fit, otherwise in
+a slice from the pool, which is also returned for the caller to put back.
+*/
+func sortedNamesIn(obj map[string]any, nameBuf *[_NAME_CAP]string) (names, pooled []string) {
+	if len(obj) <= len(nameBuf) {
+		names = nameBuf[0:len(obj)]
+	} else {
+		// full length, so that Put clears the names
+		pooled = _NAME_POOL.GetSized(len(obj))
+		names = pooled
+	}
+	return sortedNames(obj, names), pooled
+}
+
 func sortedNames(obj map[string]any, buffer []string) []string {
 	i := 0
 	for name, _ := range obj {
@@ -930,25 +941,8 @@ func sortedNames(obj map[string]any, buffer []string) []string {
 		i++
 	}
 
-	sort.Strings(buffer)
+	slices.Sort(buffer)
 	return buffer
-}
-
-func combineNames(objs ...map[string]any) map[string]any {
-	n := 0
-	for _, obj := range objs {
-		n += len(obj)
-	}
-
-	all := make(map[string]any, n)
-
-	for _, obj := range objs {
-		for k, _ := range obj {
-			all[k] = nil
-		}
-	}
-
-	return all
 }
 
 const _NAME_CAP = 16

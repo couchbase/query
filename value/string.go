@@ -123,7 +123,7 @@ return true.
 func (this stringValue) Equals(other Value) Value {
 	switch other.Type() {
 	case MISSING, NULL:
-		return other.unwrap()
+		return unwrapValue(other)
 	case STRING:
 		if string(this) == other.ToString() {
 			return TRUE_VALUE
@@ -170,7 +170,7 @@ func (this stringValue) Collate(other Value) int {
 func (this stringValue) Compare(other Value) Value {
 	switch other.Type() {
 	case MISSING, NULL:
-		return other.unwrap()
+		return unwrapValue(other)
 	default:
 		return intValue(this.Collate(other))
 	}

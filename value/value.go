@@ -14,6 +14,7 @@ for JSON data values, with delayed parsing.
 package value
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"reflect"
@@ -418,7 +419,43 @@ var _CONVERSIONS = []reflect.Type{
 }
 
 /*
+Return the value under any wrapper (annotated, parsed etc.). Plain values are
+returned as they are: calling their unwrap() through the Value interface boxes
+them again, which allocates for numbers, strings, arrays and binaries.
+*/
+func unwrapValue(v Value) Value {
+	switch v.(type) {
+	case intValue, floatValue, stringValue, sliceValue, binaryValue, missingValue:
+		return v
+	}
+	return v.unwrap()
+}
+
+/*
+Return the string of a STRING key without boxing it again through Actual().
+*/
+func stringKey(key Value) string {
+	if s, ok := unwrapValue(key).(stringValue); ok {
+		return string(s)
+	}
+	return key.Actual().(string)
+}
+
+/*
+Return f as an integer if it is integral: NewValue() makes such floats NUMBER
+values held as integers.
+*/
+func floatToInt(f float64) (int64, bool) {
+	if !IsInt(f) {
+		return 0, false
+	}
+	return int64(f), true
+}
+
+/*
 Bring a data object into the Value type system from a Go Type.
+appendMarshal encodes some types without calling NewValue, so a change to
+how a type is converted here must be made there too.
 */
 func NewValue(val any) Value {
 	if val == nil {
@@ -431,14 +468,14 @@ func NewValue(val any) Value {
 	case int64:
 		return intValue(val)
 	case float32:
-		if IsInt(float64(val)) {
-			return intValue(int64(val))
+		if i, ok := floatToInt(float64(val)); ok {
+			return intValue(i)
 		} else {
 			return floatValue(float64(val))
 		}
 	case float64:
-		if IsInt(val) {
-			return intValue(int64(val))
+		if i, ok := floatToInt(val); ok {
+			return intValue(i)
 		} else {
 			return floatValue(val)
 		}
@@ -639,6 +676,17 @@ func copyForUpdate(val any) any {
 	return NewValue(val).CopyForUpdate()
 }
 
+/*
+Return the bytes of s for a package-level constant that MarshalJSON() and
+others hand out without copying. The capacity is limited to the length, so
+that a caller appending to the result gets a copy instead of writing into the
+shared array. The bytes must still not be modified in place.
+*/
+func sharedBytes(s string) []byte {
+	b := []byte(s)
+	return b[:len(b):len(b)]
+}
+
 func marshalString(v Value) string {
 	bytes, err := v.MarshalJSON()
 	if err != nil {
@@ -646,6 +694,83 @@ func marshalString(v Value) string {
 		panic(fmt.Sprintf("Error marshaling Value %v: %v", v, err))
 	}
 	return string(bytes)
+}
+
+/*
+Append the MarshalJSON() encoding of NewValue(val) to buf. Common types are
+written directly into buf; others fall back to their MarshalJSON(). If
+skipMissing is set and val is MISSING, nothing is written and false is
+returned. On an error, buf is left as it was.
+
+The Go types are written as NewValue() converts them; TestMarshalJSONEquivalent
+checks that the result is the same as NewValue(val).MarshalJSON().
+*/
+func marshalToBuffer(val any, buf *bytes.Buffer, skipMissing bool) (bool, error) {
+	mark := buf.Len()
+	written, err := appendMarshal(val, buf, skipMissing)
+	if err != nil {
+		buf.Truncate(mark)
+	}
+	return written, err
+}
+
+/*
+Encode val as NewValue(val).MarshalJSON() would, without creating the Value
+for common types. It must follow NewValue's conversion rules.
+*/
+func appendMarshal(val any, buf *bytes.Buffer, skipMissing bool) (bool, error) {
+	// Go types are converted to their Value type, as in NewValue(), and
+	// written as that type's MarshalJSON() would
+	switch val := val.(type) {
+	case nil:
+		buf.Write(_NULL_BYTES)
+	case string:
+		return true, json.MarshalStringNoEscapeToBuffer(val, buf)
+	case stringValue:
+		return true, json.MarshalStringNoEscapeToBuffer(string(val), buf)
+	case int64:
+		intValue(val).writeJSON(buf)
+	case int:
+		intValue(val).writeJSON(buf)
+	case intValue:
+		val.writeJSON(buf)
+	case float64:
+		if i, ok := floatToInt(val); ok {
+			intValue(i).writeJSON(buf)
+		} else {
+			floatValue(val).writeJSON(buf)
+		}
+	case floatValue:
+		val.writeJSON(buf)
+	case bool:
+		buf.Write(boolValue(val).jsonBytes())
+	case boolValue:
+		buf.Write(val.jsonBytes())
+	case map[string]any:
+		return true, objectValue(val).marshalToBuffer(buf)
+	case objectValue:
+		return true, val.marshalToBuffer(buf)
+	case []any:
+		return true, marshalArrayToBuffer(val, buf)
+	case sliceValue:
+		return true, marshalArrayToBuffer(val, buf)
+	default:
+		v := NewValue(val)
+		if skipMissing && skipJSONField(v) {
+			return false, nil
+		}
+		b, err := v.MarshalJSON()
+		if err != nil {
+			return false, err
+		}
+		// defensive: a value that marshals to nothing is written as null,
+		// so that the JSON stays valid
+		if b == nil {
+			b = _NULL_BYTES
+		}
+		buf.Write(b)
+	}
+	return true, nil
 }
 
 // Used in WriteJSON functions to avoid heap contention
