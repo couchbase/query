@@ -240,8 +240,6 @@ github.com/couchbase/gocbcoreps v0.1.5-0.20260107140814-1c3a03f888f8 h1:WwGhY3TY
 github.com/couchbase/gocbcoreps v0.1.5-0.20260107140814-1c3a03f888f8/go.mod h1:AUR8DPPmvM+uMkb+Q01Y0mMXINdEY/jUL/qE+kPJ67s=
 github.com/couchbase/goprotostellar v1.0.6-0.20260407143512-d7af25156dcc h1:wQfvYGOutMCo9be0xnHtM1FqnwKcmPVGRPx6xXw5wOo=
 github.com/couchbase/goprotostellar v1.0.6-0.20260407143512-d7af25156dcc/go.mod h1:X58ot5FRqlBTBkwG/oI4klunpu4MApjGktheqeRWQw0=
-github.com/couchbase/logstats v1.1.1 h1:mI0yMYud42CwJdTdkxRHk0NwobMHNAGv5s2azEMnCG0=
-github.com/couchbase/logstats v1.1.1/go.mod h1:S+drFV9YF6dSqFaj54vmsNqe3xvelFwz7EVw0vPSfR4=
 github.com/couchbase/moss v0.3.0 h1:7NCCtyk6iGCr0egU6mxnx5wLqDSlRKkJJXOJp3seHMI=
 github.com/couchbase/moss v0.3.0/go.mod h1:9MaHIaRuy9pvLPUJxB8sh8OrLfyDczECVL37grCIubs=
 github.com/couchbase/tools-common/cloud/v8 v8.1.4 h1:+TzKykVvCtXNOiPZKwvWcVas4bBSbTGQwVLu8GerR5w=
