@@ -9,6 +9,7 @@
 package expression
 
 import (
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/auth"
@@ -23,7 +24,9 @@ now that is of type Time which represents an instant in
 time.
 */
 type IndexContext struct {
-	now time.Time
+	now            time.Time
+	inlistHashLock sync.RWMutex
+	inlistHashMap  map[*In]*InlistHash
 }
 
 /*
@@ -45,6 +48,43 @@ value from the receiver.
 */
 func (this *IndexContext) Now() time.Time {
 	return this.now
+}
+
+// IN-list hash tables, used when the indexer evaluates an expression
+// (e.g. inline filter) for every index entry. Enabled via EnableInlistHash().
+func (this *IndexContext) GetInlistHash(in *In) *InlistHash {
+	this.inlistHashLock.RLock()
+	defer this.inlistHashLock.RUnlock()
+	if this.inlistHashMap != nil {
+		return this.inlistHashMap[in]
+	}
+	return nil
+}
+
+func (this *IndexContext) EnableInlistHash(in *In) {
+	this.inlistHashLock.Lock()
+	if this.inlistHashMap == nil {
+		this.inlistHashMap = make(map[*In]*InlistHash, 4)
+	}
+	ih := this.inlistHashMap[in]
+	if ih == nil {
+		ih = NewInlistHash()
+		this.inlistHashMap[in] = ih
+	}
+	this.inlistHashLock.Unlock()
+	ih.EnableHash()
+}
+
+func (this *IndexContext) RemoveInlistHash(in *In) {
+	this.inlistHashLock.Lock()
+	if this.inlistHashMap != nil {
+		ih := this.inlistHashMap[in]
+		if ih != nil {
+			ih.DropHashTab()
+			delete(this.inlistHashMap, in)
+		}
+	}
+	this.inlistHashLock.Unlock()
 }
 
 // next methods are unused and only for expression Context compatibility
