@@ -12,6 +12,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"os"
 	"reflect"
 	"regexp"
@@ -895,5 +896,27 @@ func TestSpillingUnsortedArray(t *testing.T) {
 
 	if tracking != 0 {
 		t.Errorf("memory accounting error, found %v (should be 0)", tracking)
+	}
+}
+
+func TestIsIntRange(t *testing.T) {
+	for _, c := range []struct {
+		f    float64
+		want bool
+	}{
+		{-0x1p63, true},
+		{0x1p63 - 1024, true},
+		{0x1p63, false},
+		{-0x1p64, false},
+		{1e19, false},
+		{math.Inf(1), false},
+		{math.NaN(), false},
+	} {
+		if got := IsInt(c.f); got != c.want {
+			t.Errorf("IsInt(%g) = %v, want %v", c.f, got, c.want)
+		}
+	}
+	if s := NewValue(0x1p63).String(); s != "9223372036854776000" { // a float, not MaxInt64
+		t.Errorf("NewValue(2^63) = %s", s)
 	}
 }
