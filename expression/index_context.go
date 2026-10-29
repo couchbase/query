@@ -10,6 +10,7 @@ package expression
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/query/auth"
@@ -25,6 +26,7 @@ time.
 */
 type IndexContext struct {
 	now            time.Time
+	inlistHashOn   atomic.Bool
 	inlistHashLock sync.RWMutex
 	inlistHashMap  map[*In]*InlistHash
 }
@@ -52,13 +54,16 @@ func (this *IndexContext) Now() time.Time {
 
 // IN-list hash tables, used when the indexer evaluates an expression
 // (e.g. inline filter) for every index entry. Enabled via EnableInlistHash().
+// inlistHashOn avoids taking the lock when no IN-list hash is enabled, which
+// is the common case (index key evaluation, partial index WHERE clause).
 func (this *IndexContext) GetInlistHash(in *In) *InlistHash {
-	this.inlistHashLock.RLock()
-	defer this.inlistHashLock.RUnlock()
-	if this.inlistHashMap != nil {
-		return this.inlistHashMap[in]
+	if !this.inlistHashOn.Load() {
+		return nil
 	}
-	return nil
+	this.inlistHashLock.RLock()
+	ih := this.inlistHashMap[in]
+	this.inlistHashLock.RUnlock()
+	return ih
 }
 
 func (this *IndexContext) EnableInlistHash(in *In) {
@@ -71,17 +76,18 @@ func (this *IndexContext) EnableInlistHash(in *In) {
 		ih = NewInlistHash()
 		this.inlistHashMap[in] = ih
 	}
+	this.inlistHashOn.Store(true)
 	this.inlistHashLock.Unlock()
 	ih.EnableHash()
 }
 
 func (this *IndexContext) RemoveInlistHash(in *In) {
 	this.inlistHashLock.Lock()
-	if this.inlistHashMap != nil {
-		ih := this.inlistHashMap[in]
-		if ih != nil {
-			ih.DropHashTab()
-			delete(this.inlistHashMap, in)
+	if ih := this.inlistHashMap[in]; ih != nil {
+		ih.DropHashTab()
+		delete(this.inlistHashMap, in)
+		if len(this.inlistHashMap) == 0 {
+			this.inlistHashOn.Store(false)
 		}
 	}
 	this.inlistHashLock.Unlock()

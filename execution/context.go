@@ -334,6 +334,7 @@ type Context struct {
 	allowlist                 map[string]interface{}
 	inlistHashMap             map[*expression.In]*expression.InlistHash
 	inlistHashLock            sync.RWMutex
+	inlistHashOn              atomic.Bool
 	memoryQuota               uint64
 	reqTimeout                time.Duration
 	deltaKeyspaces            map[string]bool
@@ -1914,44 +1915,38 @@ should have the same expression for the IN-list and we should have already check
 the elements of the IN-list are "static".
 */
 func (this *Context) GetInlistHash(in *expression.In) *expression.InlistHash {
-	this.inlistHashLock.RLock()
-	defer this.inlistHashLock.RUnlock()
-	if this.inlistHashMap != nil {
-		return this.inlistHashMap[in]
-	}
-	return nil
-}
-
-func (this *Context) EnableInlistHash(in *expression.In) {
-	if this.inlistHashMap == nil {
-		this.inlistHashLock.Lock()
-		if this.inlistHashMap == nil {
-			this.inlistHashMap = make(map[*expression.In]*expression.InlistHash, 4)
-		}
-		this.inlistHashLock.Unlock()
+	// avoid taking the lock if no IN-list hash is enabled
+	if !this.inlistHashOn.Load() {
+		return nil
 	}
 	this.inlistHashLock.RLock()
 	ih := this.inlistHashMap[in]
 	this.inlistHashLock.RUnlock()
-	if ih == nil {
-		this.inlistHashLock.Lock()
-		ih = this.inlistHashMap[in]
-		if ih == nil {
-			ih = expression.NewInlistHash()
-			this.inlistHashMap[in] = ih
-		}
-		this.inlistHashLock.Unlock()
+	return ih
+}
+
+func (this *Context) EnableInlistHash(in *expression.In) {
+	this.inlistHashLock.Lock()
+	if this.inlistHashMap == nil {
+		this.inlistHashMap = make(map[*expression.In]*expression.InlistHash, 4)
 	}
+	ih := this.inlistHashMap[in]
+	if ih == nil {
+		ih = expression.NewInlistHash()
+		this.inlistHashMap[in] = ih
+	}
+	this.inlistHashOn.Store(true)
+	this.inlistHashLock.Unlock()
 	ih.EnableHash()
 }
 
 func (this *Context) RemoveInlistHash(in *expression.In) {
 	this.inlistHashLock.Lock()
-	if this.inlistHashMap != nil {
-		ih := this.inlistHashMap[in]
-		if ih != nil {
-			ih.DropHashTab()
-			delete(this.inlistHashMap, in)
+	if ih := this.inlistHashMap[in]; ih != nil {
+		ih.DropHashTab()
+		delete(this.inlistHashMap, in)
+		if len(this.inlistHashMap) == 0 {
+			this.inlistHashOn.Store(false)
 		}
 	}
 	this.inlistHashLock.Unlock()
