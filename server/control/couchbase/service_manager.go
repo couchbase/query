@@ -23,7 +23,7 @@ import (
 	"github.com/couchbase/query/util"
 )
 
-type Manager any
+type Manager = any
 
 type ServiceMgr struct {
 	sync.Mutex

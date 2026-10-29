@@ -21,8 +21,8 @@ type Service int
 type Services [_SIZER]Unit
 type ResourceManager func(string)
 
-type Context any
-type Endpoint any
+type Context = any
+type Endpoint = any
 
 const (
 	QUERY_CU = Service(iota)

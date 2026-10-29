@@ -40,7 +40,10 @@ Integration tests need Couchbase Server running at `127.0.0.1:8091` with credent
 
 For CGO-dependent tests (enterprise features):
 ```bash
-export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/openssl-3.5.5/include $CGO_FLAGS"
+# the newest couchbasedeps openssl that has its headers (generated ones such as core_names.h)
+OPENSSL_HDR=$(ls $GOPATH/src/couchbasedeps/openssl/openssl-*/include/openssl/core_names.h | sort -V | tail -1)
+[ -n "$OPENSSL_HDR" ] || echo "no couchbasedeps openssl headers found" >&2
+export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I${OPENSSL_HDR%/openssl/core_names.h} $CGO_CFLAGS"
 export CGO_LDFLAGS="-L$GOPATH/lib -Wl,-rpath,$GOPATH/lib"  # rpath lets go test binaries find @rpath/libsigar.dylib on macOS
 export DYLD_LIBRARY_PATH=$GOPATH/lib:${DYLD_LIBRARY_PATH}  # macOS
 ```

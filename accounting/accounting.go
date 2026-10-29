@@ -35,7 +35,7 @@ type AccountingStore interface {
 // Metric types
 
 // A Metric is a property that can be measured repeatedly and/or periodically
-type Metric any
+type Metric = any
 
 // Counter is an incrementing/decrementing count (#requests in a queue, #garbage collections)
 type Counter interface {
