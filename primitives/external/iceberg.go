@@ -11,7 +11,6 @@ package external
 import (
 	go_context "context"
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -674,7 +673,7 @@ func n1qlValueToLiteral(val interface{}) iceberg.Literal {
 	case bool:
 		return iceberg.BoolLiteral(v)
 	case float64:
-		if v == float64(int64(v)) && v >= math.MinInt64 && v <= math.MaxInt64 {
+		if value.IsInt(v) {
 			return iceberg.Int64Literal(int64(v))
 		}
 		return iceberg.Float64Literal(v)

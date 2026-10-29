@@ -2023,3 +2023,21 @@ func TestMetadataFormatVersionTransportRewritesBody(t *testing.T) {
 		t.Errorf("format-version = %s, want 3", got)
 	}
 }
+
+func TestN1qlValueToLiteralIntRange(t *testing.T) {
+	for _, c := range []struct {
+		f     float64
+		isInt bool
+	}{
+		{5, true},
+		{-0x1p63, true},
+		{0x1p63, false}, // arm64 saturates int64(2^63) to MaxInt64
+		{1e19, false},
+		{1.5, false},
+	} {
+		lit := n1qlValueToLiteral(value.NewValue(c.f))
+		if _, ok := lit.(iceberg.TypedLiteral[int64]); ok != c.isInt {
+			t.Errorf("n1qlValueToLiteral(%g) = %T, want int64 literal %v", c.f, lit, c.isInt)
+		}
+	}
+}
