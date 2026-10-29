@@ -77,15 +77,19 @@ func (this *IndexContext) EnableInlistHash(in *In) {
 		ih = NewInlistHash()
 		this.inlistHashMap[in] = ih
 	}
+	// increment the instance count while holding the lock, such that it's
+	// consistent with RemoveInlistHash(), which removes the entry when the
+	// count drops to 0
+	ih.EnableHash()
 	this.inlistHashOn.Store(true)
 	this.inlistHashLock.Unlock()
-	ih.EnableHash()
 }
 
 func (this *IndexContext) RemoveInlistHash(in *In) {
 	this.inlistHashLock.Lock()
-	if ih := this.inlistHashMap[in]; ih != nil {
-		ih.DropHashTab()
+	// the hash table is shared among parallel instances of an operator,
+	// only remove it when the last instance is done
+	if ih := this.inlistHashMap[in]; ih != nil && ih.DropHashTab() {
 		delete(this.inlistHashMap, in)
 		if len(this.inlistHashMap) == 0 {
 			this.inlistHashOn.Store(false)

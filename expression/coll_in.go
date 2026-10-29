@@ -70,94 +70,68 @@ func (this *In) Evaluate(item value.Value, context Context) (value.Value, error)
 		return value.NULL_VALUE, nil
 	}
 
-	var hashTab *util.HashTable
-	var missing, null bool
-	buildHT := false
-	var inlistHash *InlistHash
 	if context != nil {
 		if inlistContext, ok := context.(InlistContext); ok {
-			inlistHash = inlistContext.GetInlistHash(this)
-		}
-	}
-
-	if inlistHash != nil {
-		inlistHash.hashLock.Lock()
-		if !inlistHash.HashChecked() {
-			inlistHash.SetHashChecked()
-			if inlistHash.IsHashEnabled() && len(sa) >= _INLIST_HASH_THRESHOLD {
-				right := this.Second()
-				if right.Static() != nil {
-					ident, ok := right.(*Identifier)
-					if !ok || !ident.IsCorrelated() {
-						buildHT = true
-					}
-				} else if sq, ok := right.(Subquery); ok && !sq.IsCorrelated() {
-					buildHT = true
+			if inlistHash := inlistContext.GetInlistHash(this); inlistHash != nil {
+				hashTab, flags, err := inlistHash.getHashTab(this, sa)
+				if err != nil {
+					return nil, err
 				}
-			}
-		}
-		if buildHT {
-			hashTab = util.NewHashTable(util.HASH_TABLE_FOR_INLIST, float64(len(sa)), 1)
-			inlistHash.hashTab = hashTab
-			// lock is not released until hash table is built
-		} else {
-			hashTab = inlistHash.hashTab
-			inlistHash.hashLock.Unlock()
-		}
-	}
-
-	if hashTab == nil || buildHT {
-		for _, s := range sa {
-			v := value.NewValue(s)
-			if v.Type() > value.NULL {
-				if buildHT {
-					err := hashTab.Put(v, true, value.MarshalValue, value.EqualValue, 0)
+				if hashTab != nil {
+					found, err := hashTab.Contains(first, value.MarshalValue, value.EqualValue)
 					if err != nil {
-						inlistHash.hashLock.Unlock()
-						return nil, errors.NewHashTablePutError(err)
+						return nil, errors.NewHashTableGetError(err)
 					}
-				} else {
-					if first.Equals(v).Truth() {
+					if found {
 						return value.TRUE_VALUE, nil
+					} else if (flags & INEXPR_HAS_NULL) != 0 {
+						return value.NULL_VALUE, nil
+					} else if (flags & INEXPR_HAS_MISSING) != 0 {
+						return value.MISSING_VALUE, nil
 					}
-				}
-			} else if v.Type() == value.MISSING {
-				if buildHT {
-					inlistHash.SetMissing()
-				} else {
-					missing = true
-				}
-			} else {
-				// v.Type() == value.NULL
-				if buildHT {
-					inlistHash.SetNull()
-				} else {
-					null = true
+					return value.FALSE_VALUE, nil
 				}
 			}
 		}
-		if buildHT {
-			inlistHash.hashLock.Unlock()
+	}
+
+	var missing, null bool
+	for _, s := range sa {
+		v := value.NewValue(s)
+		if v.Type() > value.NULL {
+			if first.Equals(v).Truth() {
+				return value.TRUE_VALUE, nil
+			}
+		} else if v.Type() == value.MISSING {
+			missing = true
+		} else {
+			// v.Type() == value.NULL
+			null = true
 		}
 	}
 
-	if hashTab != nil {
-		outVal, err := hashTab.Get(first, value.MarshalValue, value.EqualValue)
-		if err != nil {
-			return nil, errors.NewHashTableGetError(err)
-		}
-		if outVal != nil {
-			return value.TRUE_VALUE, nil
-		}
-	}
-
-	if null || (inlistHash != nil && inlistHash.HasNull()) {
+	if null {
 		return value.NULL_VALUE, nil
-	} else if missing || (inlistHash != nil && inlistHash.HasMissing()) {
+	} else if missing {
 		return value.MISSING_VALUE, nil
 	} else {
 		return value.FALSE_VALUE, nil
 	}
+}
+
+/*
+Whether a hash table can be built for the IN-list, i.e. the IN-list does not
+change from one evaluation to the next.
+*/
+func (this *In) inlistHashable() bool {
+	right := this.Second()
+	if right.Static() != nil {
+		ident, ok := right.(*Identifier)
+		return !ok || !ident.IsCorrelated()
+	} else if sq, ok := right.(Subquery); ok && !sq.IsCorrelated() {
+		return true
+	}
+	return false
 }
 
 /*
@@ -227,6 +201,14 @@ const (
 	INEXPR_HAS_MISSING
 )
 
+/*
+The hash table is built once, by the first evaluation, while holding hashLock.
+hashTab is set before INEXPR_HASHTAB_CHECKED is (atomically) set in hashFlags,
+so once INEXPR_HASHTAB_CHECKED is set subsequent evaluations can read hashTab
+and the other flags without taking hashLock. The hash table is not modified
+after it's built, and lookups use HashTable.Contains(), which is read-only, so
+the hash table can be shared among parallel instances of an operator.
+*/
 type InlistHash struct {
 	hashTab   *util.HashTable
 	hashFlags uint32
@@ -238,16 +220,8 @@ func NewInlistHash() *InlistHash {
 	return &InlistHash{}
 }
 
-func (this *InlistHash) HashChecked() bool {
-	return (this.hashFlags & INEXPR_HASHTAB_CHECKED) != 0
-}
-
-func (this *InlistHash) SetHashChecked() {
-	this.hashFlags |= INEXPR_HASHTAB_CHECKED
-}
-
 func (this *InlistHash) IsHashEnabled() bool {
-	return this.hashCnt > 0
+	return atomic.LoadInt32(&this.hashCnt) > 0
 }
 
 func (this *InlistHash) EnableHash() {
@@ -256,30 +230,87 @@ func (this *InlistHash) EnableHash() {
 }
 
 func (this *InlistHash) HasMissing() bool {
-	return (this.hashFlags & INEXPR_HAS_MISSING) != 0
+	return (atomic.LoadUint32(&this.hashFlags) & INEXPR_HAS_MISSING) != 0
 }
 
 func (this *InlistHash) SetMissing() {
-	this.hashFlags |= INEXPR_HAS_MISSING
+	atomic.OrUint32(&this.hashFlags, INEXPR_HAS_MISSING)
 }
 
 func (this *InlistHash) HasNull() bool {
-	return (this.hashFlags & INEXPR_HAS_NULL) != 0
+	return (atomic.LoadUint32(&this.hashFlags) & INEXPR_HAS_NULL) != 0
 }
 
 func (this *InlistHash) SetNull() {
-	this.hashFlags |= INEXPR_HAS_NULL
+	atomic.OrUint32(&this.hashFlags, INEXPR_HAS_NULL)
 }
 
-func (this *InlistHash) DropHashTab() {
+/*
+Returns the hash table for the IN-list (nil if no hash table is used) and the hash flags.
+The hash table is built on first call.
+*/
+func (this *InlistHash) getHashTab(in *In, sa []any) (*util.HashTable, uint32, error) {
+	flags := atomic.LoadUint32(&this.hashFlags)
+	if (flags & INEXPR_HASHTAB_CHECKED) == 0 {
+		this.hashLock.Lock()
+		flags = atomic.LoadUint32(&this.hashFlags)
+		if (flags & INEXPR_HASHTAB_CHECKED) == 0 {
+			var err error
+			if this.IsHashEnabled() && len(sa) >= _INLIST_HASH_THRESHOLD && in.inlistHashable() {
+				err = this.buildHashTab(sa)
+			}
+			// INEXPR_HAS_NULL/INEXPR_HAS_MISSING set during build are not looked at
+			// until INEXPR_HASHTAB_CHECKED is set, which must be set last
+			// if hash table build fails, the error is returned for this evaluation,
+			// and subsequent evaluations do a linear scan of the IN-list
+			flags = atomic.OrUint32(&this.hashFlags, INEXPR_HASHTAB_CHECKED) | INEXPR_HASHTAB_CHECKED
+			if err != nil {
+				this.hashLock.Unlock()
+				return nil, flags, err
+			}
+		}
+		this.hashLock.Unlock()
+	}
+	return this.hashTab, flags, nil
+}
+
+// caller must hold hashLock; hashTab is only set if the build is successful
+func (this *InlistHash) buildHashTab(sa []any) error {
+	hashTab := util.NewHashTable(util.HASH_TABLE_FOR_INLIST, float64(len(sa)), 1)
+	for _, s := range sa {
+		v := value.NewValue(s)
+		if v.Type() > value.NULL {
+			err := hashTab.Put(v, true, value.MarshalValue, value.EqualValue, 0)
+			if err != nil {
+				hashTab.Drop()
+				atomic.StoreUint32(&this.hashFlags, 0)
+				return errors.NewHashTablePutError(err)
+			}
+		} else if v.Type() == value.MISSING {
+			this.SetMissing()
+		} else {
+			// v.Type() == value.NULL
+			this.SetNull()
+		}
+	}
+	this.hashTab = hashTab
+	return nil
+}
+
+// returns true if this is the last instance, i.e. the hash table is dropped
+func (this *InlistHash) DropHashTab() bool {
 	// let the last instance drop the hash table
 	if atomic.AddInt32(&(this.hashCnt), -1) == 0 {
+		this.hashLock.Lock()
 		if this.hashTab != nil {
 			this.hashTab.Drop()
 			this.hashTab = nil
 		}
-		this.hashFlags = 0
+		atomic.StoreUint32(&this.hashFlags, 0)
+		this.hashLock.Unlock()
+		return true
 	}
+	return false
 }
 
 /*

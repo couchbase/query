@@ -12,6 +12,7 @@ package expression
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/couchbase/query/value"
@@ -131,6 +132,81 @@ func TestIndexContextInlistHashNested(t *testing.T) {
 	}
 }
 
+// concurrent evaluations sharing one context (and thus one hash table),
+// run with -race to check the hash table is built once and read without races
+func TestIndexContextInlistHashConcurrent(t *testing.T) {
+	list := inlistConstant(99, nil)
+	in := NewIn(NewIdentifier("c1"), list).(*In)
+	notIn := NewNot(NewIn(NewIdentifier("c1"), list))
+	items := inlistItems()
+
+	expected := make([][]value.Value, len(items))
+	for i, item := range items {
+		for _, expr := range []Expression{in, notIn} {
+			v, err := expr.Evaluate(item, NewIndexContext())
+			if err != nil {
+				t.Fatal(err)
+			}
+			expected[i] = append(expected[i], v)
+		}
+	}
+
+	context := NewIndexContext().(*IndexContext)
+	const workers = 8
+	for w := 0; w < workers; w++ {
+		in.EnableInlistHash(context)
+		notIn.EnableInlistHash(context)
+	}
+
+	var wg sync.WaitGroup
+	errs := make(chan error, workers)
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for r := 0; r < 100; r++ {
+				for i, item := range items {
+					for j, expr := range []Expression{in, notIn} {
+						actual, _, err := expr.EvaluateForIndex(item, context)
+						if err != nil {
+							errs <- err
+							return
+						}
+						if !expected[i][j].EquivalentTo(actual) {
+							errs <- fmt.Errorf("%v on %v: expected %v, got %v", expr, item, expected[i][j], actual)
+							return
+						}
+					}
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Error(err)
+	}
+
+	ih := context.GetInlistHash(in)
+	if ih == nil || ih.hashTab == nil {
+		t.Fatalf("expected hash table to be built")
+	}
+	// the hash table is kept until the last instance is done
+	for w := 0; w < workers; w++ {
+		if context.GetInlistHash(in) != ih || ih.hashTab == nil {
+			t.Fatalf("in-list hash released with %d instances remaining", workers-w)
+		}
+		in.ResetMemory(context)
+		notIn.ResetMemory(context)
+	}
+	if context.GetInlistHash(in) != nil || ih.hashTab != nil {
+		t.Errorf("in-list hash not released")
+	}
+	if context.inlistHashOn.Load() {
+		t.Errorf("in-list hash flag not cleared")
+	}
+}
+
 func BenchmarkIndexContextInlist(b *testing.B) {
 	item := value.NewValue(map[string]any{"c1": 5})
 	for _, n := range []int{100, 1000} {
@@ -148,6 +224,31 @@ func BenchmarkIndexContextInlist(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				in.EvaluateForIndex(item, context)
 			}
+		})
+	}
+}
+
+func BenchmarkIndexContextInlistParallel(b *testing.B) {
+	item := value.NewValue(map[string]any{"c1": 5})
+	for _, n := range []int{_INLIST_HASH_THRESHOLD - 1, 100} {
+		in := NewIn(NewIdentifier("c1"), inlistConstant(n))
+		b.Run(fmt.Sprintf("disabled/%d", n), func(b *testing.B) {
+			context := NewIndexContext()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					in.EvaluateForIndex(item, context)
+				}
+			})
+		})
+		b.Run(fmt.Sprintf("enabled/%d", n), func(b *testing.B) {
+			context := NewIndexContext()
+			in.EnableInlistHash(context)
+			defer in.ResetMemory(context)
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					in.EvaluateForIndex(item, context)
+				}
+			})
 		})
 	}
 }

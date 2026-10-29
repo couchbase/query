@@ -207,9 +207,36 @@ func (this *HashTable) Get(hashVal any, marshal func(any) ([]byte, error),
 
 	this.mode = HASH_TABLE_GET
 
+	idx, err := this.find(hashVal, marshal, equal)
+	if err != nil || idx < 0 {
+		return nil, err
+	}
+
+	e := this.entries[idx]
+	if len(e.inputVals) > 1 {
+		this.bucket = idx
+		this.vector = 1
+	}
+	return e.inputVals[0], nil
+}
+
+// check whether a hash value (hashVal) is in the hash table
+// unlike Get(), this does not modify the hash table, and thus is safe for concurrent
+// use once the hash table is built
+func (this *HashTable) Contains(hashVal any, marshal func(any) ([]byte, error),
+	equal func(val1, val2 any) bool) (bool, error) {
+
+	idx, err := this.find(hashVal, marshal, equal)
+	return idx >= 0, err
+}
+
+// find the hash entry for a hash value (hashVal), returns -1 if not found
+func (this *HashTable) find(hashVal any, marshal func(any) ([]byte, error),
+	equal func(val1, val2 any) bool) (int, error) {
+
 	hashKey, err := this.getHashKey(hashVal, marshal)
 	if err != nil {
-		return nil, err
+		return -1, err
 	}
 
 	size_minus_one := uint64(len(this.entries) - 1)
@@ -218,21 +245,17 @@ func (this *HashTable) Get(hashVal any, marshal func(any) ([]byte, error),
 		e := this.entries[idx]
 		if e != nil {
 			if e.hashKey == hashKey && equal(e.hashVal, hashVal) {
-				if len(e.inputVals) > 1 {
-					this.bucket = idx
-					this.vector = 1
-				}
-				return e.inputVals[0], nil
+				return idx, nil
 			} else {
 				idx = int(uint64(idx+i+1) & size_minus_one)
 			}
 		} else {
-			return nil, nil
+			return -1, nil
 		}
 	}
 
 	// should have either found the entry or stopped looking (finding nil)
-	return nil, fmt.Errorf("HashTable.Get: unexpected traversal of hash table")
+	return -1, fmt.Errorf("HashTable: unexpected traversal of hash table")
 }
 
 // after initial Get() call, return any additional values associated with the same hash value
