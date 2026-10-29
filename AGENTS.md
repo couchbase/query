@@ -36,7 +36,7 @@ cd test/
 ./bucket_delete.sh          # Cleanup
 ```
 
-Integration tests need Couchbase Server running at `127.0.0.1:8091` with credentials `Administrator:password`. Edit `test/gsi/json.go` (and `test/gsi/runtest.sh`) to change these.
+Integration tests need Couchbase Server running at `127.0.0.1:8091` with credentials `Administrator:password`. Edit `test/multistore/json.go` to change these.
 
 For CGO-dependent tests (enterprise features):
 ```bash
