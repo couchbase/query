@@ -400,7 +400,9 @@ func (this intValue) Float64() float64 {
 }
 
 func IsInt(x float64) bool {
-	return x == float64(int64(x))
+	// out-of-range conversions are platform dependent: arm64 saturates 2^63
+	// to MaxInt64, which converts back to 2^63
+	return x >= -0x1p63 && x < 0x1p63 && x == float64(int64(x))
 }
 
 func IsIntValue(val Value) (int64, bool) {

@@ -15,6 +15,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/couchbase/query/value"
 )
 
 type ExternalParamsError struct {
@@ -290,7 +292,7 @@ func GetCatalogEntry(params map[string]any) (*CatalogEntry, error) {
 func getValType(v any) string {
 	switch v.(type) {
 	case float64:
-		if vsf, ok := v.(float64); ok && vsf == float64(int64(vsf)) {
+		if vsf, ok := v.(float64); ok && value.IsInt(vsf) {
 			return "int"
 		}
 	case string:
