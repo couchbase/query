@@ -11,6 +11,19 @@
 #
 # To build the enterprise version, launch this  AS './build.sh -tags enterprise'
 # To build the enterprise version with latest updates, launch this  AS './build.sh -u -tags enterprise'
+# Add -cover to build with Go code coverage (go_coverage build tag + go build -cover):
+#   1. Build: './build.sh -cover -tags enterprise'
+#      needs github.com/couchbase/gocoverage at ../../../../../gocoverage (-s clones and links it)
+#   2. Run: export GOCOVERDIR=/tmp/qcov before starting cbq-engine (or cluster_run, so the
+#      cbq-engine it spawns inherits it). Counters are flushed every 2 minutes and on
+#      SIGTERM/SIGINT; anything since the last flush is lost on SIGKILL.
+#   3. Report:
+#        go tool covdata percent -i=$GOCOVERDIR [-pkg=github.com/couchbase/query/planner]
+#        go tool covdata textfmt -i=$GOCOVERDIR -o /tmp/qcov.out
+#        grep -vE '/yaccpar:|\.y:' /tmp/qcov.out > /tmp/qcov1.out   # drop goyacc line directives
+#        go tool cover -func=/tmp/qcov1.out
+#        go tool cover -html=/tmp/qcov1.out -o /tmp/qcov.html
+#   4. Rebuild without -cover ('./build.sh -tags enterprise') to go back to normal binaries
 # Add -vuln to run govulncheck on cbq-engine (requires govulncheck in PATH)
 #   go install golang.org/x/vuln/cmd/govulncheck@latest
 # Add -s to fix standalone build issues. Keep indexer generated files in ~/devbld
@@ -39,12 +52,14 @@ sflag=0
 fflag=1
 vflag=0
 vulnflag=0
+coverflag=0
+tags=
 while [ $# -gt 0 ]; do
   case $1 in
     -tags)
       shift
       [[ "$1" == "enterprise" ]] && enterprise=1
-      args="$args -tags $1,udf_query"
+      tags="$1,udf_query"
       ;;
     -u) uflag=-u ;;
     -s) sflag=1 ;;
@@ -52,10 +67,18 @@ while [ $# -gt 0 ]; do
     -nofmt) fflag=0 ;;
     -vet) vflag=1 ;;
     -vuln) vulnflag=1 ;;
+    -cover) coverflag=1 ;;
     *) args="$args $1" ;;
   esac
   shift
 done
+
+if [[ $coverflag != 0 ]]; then
+  tags="${tags:+$tags,}go_coverage"
+  # via GOFLAGS so that go vet (which rejects -cover) ignores it
+  export GOFLAGS="$GOFLAGS -cover"
+fi
+[[ -n $tags ]] && args="$args -tags $tags"
 
 set -- $args
 
@@ -266,6 +289,7 @@ function repo_setup {
     repo_by_gomod go.mod bhive "" $cbranch $rbranch $defbranch2
     repo_by_gomod go.mod go-couchbase "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod gocbcrypto "" $cbranch $rbranch $defbranch2
+    repo_by_gomod go.mod gocoverage "" $cbranch $rbranch $defbranch2
     repo_by_gomod go.mod logstats "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod gomemcached "" $cbranch $rbranch $defbranch
     repo_by_gomod go.mod cbauth "" $cbranch $rbranch $defbranch
@@ -293,6 +317,7 @@ function DevStandaloneSetup {
       ln -s -f $dir/cbft cbft;
       ln -s -f $dir/cbftx cbftx;
       ln -s -f $dir/hebrew hebrew;
+      ln -s -f $dir/gocoverage gocoverage;
       cd $cwd1)
 
     # OpenSSL setup
