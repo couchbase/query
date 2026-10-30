@@ -654,6 +654,8 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 	// do not generate filter in case of primary scan used on inner of nested-loop join or
 	// in correlated subquery (cache used in IndexScan3)
 	var filter expression.Expression
+	inlineAll := entry.HasFlag(IE_INLINE_FILTER_ALL)
+	inlineAllKept := false
 	if indexGroupAggs == nil && (len(this.baseKeyspaces) > 1 || implicitAny || len(entry.includes) > 0) &&
 		!(index.IsPrimary() && (this.hasBuilderFlag(BUILDER_JOIN_ON_PRIMARY) || node.IsInCorrSubq())) {
 
@@ -667,9 +669,27 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		if err != nil {
 			return nil, 0, err
 		}
+		inlineAllKept = entry.HasFlag(IE_INLINE_FILTER_ALL)
 		if useCBO {
 			entry.cardinality, entry.cost, entry.frCost, entry.size = cardinality, cost, frCost, size
 		}
+	}
+
+	// ORDER/LIMIT pushdown based on inline filter (see indexPushDownProperty()) requires
+	// the inline filter generated above to contain all filters on the keyspace, i.e.
+	// getFilterForIndex() did not unset IE_INLINE_FILTER_ALL
+	// Note this relies on getIndexFilter() being called and not returning early above:
+	//   - for a Bhive index, entry.includes always contains meta().id (getIndexIncludes())
+	//   - indexGroupAggs is nil since group pushdown requires exact spans
+	//   - outer keyspace is rejected by inlineFilterHasAllFilters()
+	// _PUSHDOWN_PARTIAL_ORDER does not need to be checked: partial order implies LIMIT is
+	// not pushed down (IE_VECTOR_KEY_SKIP_ORDER is set if LIMIT is present), in which case
+	// useIndexOrder() does not use topK regardless of IE_INLINE_FILTER_ALL
+	if inlineAll && !inlineAllKept &&
+		!entry.IsPushDownProperty(_PUSHDOWN_EXACTSPANS) &&
+		entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_LIMIT) {
+		return nil, 0, errors.NewPlanInternalError("buildCreateCoveringScan: inline filter does not " +
+			"contain all filters for ORDER/LIMIT pushdown")
 	}
 
 	var indexKeyNames []string

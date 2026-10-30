@@ -31,6 +31,18 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 		pushDownProperty |= _PUSHDOWN_EXACTSPANS
 	}
 
+	// for a covering Bhive index scan, the inline filter is evaluated by the indexer, if the
+	// inline filter (plus filters evaluated as exact include spans) contains all filters on
+	// the keyspace, ORDER/LIMIT can be pushed down even if the spans are not exact
+	inlineAll := !exact && covering && allKeyspaces && !unnest && len(unnestAliases) == 0 &&
+		len(unnestFiletrs) == 0 && !implicitAny && this.aggConstraint == nil &&
+		!this.hasBuilderFlag(BUILDER_HAS_EXTRA_FLTR) && this.inlineFilterPushDown(entry, alias)
+	if inlineAll {
+		entry.SetFlags(IE_INLINE_FILTER_ALL, true)
+	} else {
+		entry.UnsetFlags(IE_INLINE_FILTER_ALL)
+	}
+
 	// Covering index check for other pushdowns
 	if covering && exact {
 		pushDownProperty |= this.indexCoveringPushDownProperty(entry, keys, alias,
@@ -43,10 +55,10 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 	rerank := false
 
 	// Check Query Order By matches with index key order.
-	exactLimitOffset := exact
+	exactLimitOffset := exact || inlineAll
 	if this.order != nil {
 		if this.group == nil || isPushDownProperty(pushDownProperty, _PUSHDOWN_FULLGROUPAGGS) {
-			if exact && vector {
+			if (exact || inlineAll) && vector {
 				idxKeys, vecExpr, _ = replaceVectorKey(idxKeys, entry, false)
 				allowRerank := false
 				if index6, ok := entry.index.(datastore.Index6); ok && index6.AllowRerank() {
@@ -110,7 +122,8 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 	}
 
 	// Check all predicates are part of spans, exact and no false positives possible
-	if isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) {
+	// (or all predicates are evaluated by the indexer as inline filter, see above)
+	if exact || inlineAll {
 
 		// LIMIT Pushdown is possible when
 		//        *  Query Order By not present
@@ -147,7 +160,7 @@ func (this *builder) indexPushDownProperty(entry *indexEntry, keys,
 		//        *  Query Order By not present
 		//        *  Query Order By matches with Index key order
 
-		if this.offset != nil && exactLimitOffset && !rerank &&
+		if this.offset != nil && exact && exactLimitOffset && !rerank &&
 			useIndex2API(entry.index, this.context.IndexApiVersion()) &&
 			entry.spans.CanPushDownOffset(entry.index, overlapSpans(pred),
 				!unnest && indexHasArrayIndexKey(entry.index)) {
@@ -449,8 +462,38 @@ func (this *builder) checkExactSpans(entry *indexEntry, pred, origPred expressio
 		}
 	}
 
+	// for a Bhive index, include columns are part of exprs above, i.e. filters on include
+	// columns that are not evaluated as include spans are evaluated by the indexer as inline
+	// filter, which cannot contain certain filters (see getFilterForIndex())
+	if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() &&
+		!inlineFilterNoExclusion(entry, this.baseKeyspaces[alias]) {
+		return false
+	}
+
 	// all predicates are part of spans, exact and no false positives possible
 	return true
+}
+
+// whether all predicates are evaluated by the indexer for a Bhive index scan with vector
+// key order (inline filter is only sent to the indexer for such scans, see IndexScan3):
+//   - index key spans are exact
+//   - the indexer evaluates the inline filter: older indexers ignore the inline filter
+//     when include spans are present
+//   - the inline filter (plus filters evaluated as exact include spans) contains all
+//     filters on the keyspace
+func (this *builder) inlineFilterPushDown(entry *indexEntry, alias string) bool {
+	if !entry.HasFlag(IE_VECTOR_KEY_SARGABLE) || !entry.exactSpans ||
+		hasUnknownsInSargableArrayKey(entry) || entry.HasFlag(IE_OR_NON_SARG_EXPR) {
+		return false
+	}
+	index6, ok := entry.index.(datastore.Index6)
+	if !ok || !index6.IsBhive() {
+		return false
+	}
+	if !includeSpansWithoutFilter(entry.index) && len(getIncludeSpans(entry.index, entry.includeSpans)) > 0 {
+		return false
+	}
+	return this.inlineFilterHasAllFilters(entry, alias)
 }
 
 func (this *builder) canPushDownCount(entry *indexEntry, op expression.Expression,
@@ -615,7 +658,8 @@ func (this *builder) useIndexOrder(entry *indexEntry, keys datastore.IndexKeys, 
 		totalLen += includeLen
 	}
 
-	topK := vector && vectorOrder && isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS)
+	topK := vector && vectorOrder &&
+		(isPushDownProperty(pushDownProperty, _PUSHDOWN_EXACTSPANS) || entry.HasFlag(IE_INLINE_FILTER_ALL))
 
 	// if there are include columns, check and put meta().id key separately
 	var idKey *datastore.IndexKey

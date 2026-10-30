@@ -1678,14 +1678,15 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
 		chkUnnest := entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && len(entry.unnestAliases) > 0
 		// for Bhive indexes the index filters are pushed to the indexer as inline filter,
-		// do not include filters with volatile expressions or UDF references
+		// do not include filters with volatile expressions, UDF references, or expressions
+		// that cannot be evaluated by the indexer (see inlineFilterEvaluable())
 		inline := false
 		if index6, ok := index.(datastore.Index6); ok && index6.IsBhive() {
 			inline = true
 		}
 	filterloop:
 		for _, fl := range filters {
-			if fl.HasSubq() || (inline && (fl.HasVolatileExpr() || fl.HasUdf())) {
+			if fl.HasSubq() || (inline && (fl.HasVolatileExpr() || fl.HasUdf() || !inlineFilterEvaluable(fl))) {
 				continue
 			} else if fl.IsUnnest() {
 				if !chkUnnest {

@@ -629,6 +629,15 @@ func includesId(index datastore.Index) bool {
 	return ok && index6.IsBhive()
 }
 
+// for Bhive index, indexer (8.5 and up) evaluates include spans on their own, i.e. include
+// spans can be sent without inline filter; older indexers only evaluate include columns
+// referenced by inline filter, thus inline filter is always needed with include spans
+func includeSpansWithoutFilter(index datastore.Index) bool {
+	index6, ok := index.(datastore.Index6)
+	return ok && index6.IsBhive() &&
+		index6.ClusterVersionGECheck(datastore.INDEX_RELEASE_85_MAJOR, datastore.INDEX_RELEASE_85_MINOR)
+}
+
 // for Bhive index meta().id is treated as the last include column during planning,
 // but it is not an actual include column in the index; remove any range on meta().id
 // from include spans before sending to the indexer (the predicate on meta().id is still
