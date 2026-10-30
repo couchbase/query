@@ -670,12 +670,20 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 		}
 	}
 
+	includeSpans := getIncludeSpans(index, entry.includeSpans)
 	var indexKeyNames []string
 	var indexPartitionSets plan.IndexPartitionSets
 	if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() && entry.HasFlag(IE_VECTOR_KEY_SARGABLE) {
 		var err error
+		// the indexer only decodes include columns that are named in index key names
+		// (needed for include spans, see getIndexKeyNames()), which must go together
+		// with an inline filter; when include spans are present the indexer applies
+		// the include spans only and the filter is evaluated after the index scan
+		if filter == nil && indexGroupAggs == nil && len(includeSpans) > 0 {
+			filter = expression.TRUE_EXPR
+		}
 		if filter != nil {
-			indexKeyNames, err = getIndexKeyNames(node.Alias(), index, indexProjection, true)
+			indexKeyNames, err = getIndexKeyNames(node.Alias(), index, indexProjection, includeSpans, true)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -693,8 +701,6 @@ func (this *builder) buildCreateCoveringScan(entry *indexEntry, node *algebra.Ke
 			this.mustSkipKeys = true
 		}
 	}
-
-	includeSpans := getIncludeSpans(index, entry.includeSpans)
 
 	if indexGroupAggs != nil {
 		indexKeyCovers := make(expression.Covers, len(covers))

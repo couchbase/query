@@ -216,6 +216,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		vector := entry.HasFlag(IE_VECTOR_KEY_SARGABLE)
 		hasVector = hasVector || vector
 
+		includeSpans := getIncludeSpans(index, entry.includeSpans)
 		var indexKeyNames []string
 		var indexPartitionSets plan.IndexPartitionSets
 		if vector {
@@ -223,8 +224,15 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 				hasRerank = true
 			}
 			if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() {
+				// the indexer only decodes include columns that are named in index key names
+				// (needed for include spans, see getIndexKeyNames()), which must go together
+				// with an inline filter; when include spans are present the indexer applies
+				// the include spans only and the filter is evaluated after the index scan
+				if filter == nil && len(includeSpans) > 0 {
+					filter = expression.TRUE_EXPR
+				}
 				if filter != nil {
-					indexKeyNames, err = getIndexKeyNames(node.Alias(), index, idxProj, false)
+					indexKeyNames, err = getIndexKeyNames(node.Alias(), index, idxProj, includeSpans, false)
 					if err != nil {
 						return nil, 0, err
 					}
@@ -244,7 +252,6 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 			}
 		}
 
-		includeSpans := getIncludeSpans(index, entry.includeSpans)
 		scan = entry.spans.CreateScan(index, node, this.context.IndexApiVersion(), false, false,
 			overlapSpans(pred), false, offset, limit, idxProj, indexKeyOrders, nil,
 			covers, filterCovers, filter, entry.cost, entry.cardinality,
@@ -1678,14 +1685,15 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 		chkOr := isOrPred && !entry.HasFlag(IE_OR_USE_FILTERS)
 		chkUnnest := entry.HasFlag(IE_ARRAYINDEXKEY_SARGABLE) && len(entry.unnestAliases) > 0
 		// for Bhive indexes the index filters are pushed to the indexer as inline filter,
-		// do not include filters with volatile expressions or UDF references
+		// do not include filters that cannot be evaluated by the indexer
+		// (see inlineFilterExcluded())
 		inline := false
 		if index6, ok := index.(datastore.Index6); ok && index6.IsBhive() {
 			inline = true
 		}
 	filterloop:
 		for _, fl := range filters {
-			if fl.HasSubq() || (inline && (fl.HasVolatileExpr() || fl.HasUdf())) {
+			if fl.HasSubq() || (inline && inlineFilterExcluded(fl)) {
 				continue
 			} else if fl.IsUnnest() {
 				if !chkUnnest {

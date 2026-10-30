@@ -269,7 +269,10 @@ func getIndexSize(index datastore.Index) int {
 	return size
 }
 
-func getIndexKeyNames(alias string, index datastore.Index, projection *plan.IndexProjection, cover bool) ([]string, error) {
+// include columns with ranges in include spans are always named (see below), the indexer
+// only decodes include columns that are named in index key names
+func getIndexKeyNames(alias string, index datastore.Index, projection *plan.IndexProjection,
+	includeSpans plan.Spans2, cover bool) ([]string, error) {
 	var keys datastore.IndexKeys
 	var includes expression.Expressions
 	var err error
@@ -283,16 +286,30 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 
 	formalizer := expression.NewSelfFormalizer(alias, nil)
 
+	// the indexer applies include spans on the decoded include columns, an include column
+	// with a range in include spans may not be projected (e.g. the filter on the include
+	// column is not part of the inline filter, see getFilterForIndex()), name such include
+	// columns such that they are decoded by the indexer
+	spanIncludes := 0
+	for _, span := range includeSpans {
+		if len(span.Ranges) > spanIncludes {
+			spanIncludes = len(span.Ranges)
+		}
+	}
+
 	nextKey := -1
 	entryPos := -1
 	if projection != nil && len(projection.EntryKeys) > 0 {
 		entryPos = 0
 		nextKey = projection.EntryKeys[entryPos]
 	}
+	projDone := false
 	for i := 0; i < len(keys)+len(includes); i++ {
 		useKey := true
-		done := false
-		if entryPos >= 0 {
+		if projDone {
+			// no more projected index keys
+			useKey = false
+		} else if entryPos >= 0 {
 			if i < nextKey {
 				// non-projected index key
 				useKey = false
@@ -300,7 +317,7 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 				// projected index key
 				entryPos++
 				if entryPos >= len(projection.EntryKeys) {
-					done = true
+					projDone = true
 				} else {
 					nextKey = projection.EntryKeys[entryPos]
 				}
@@ -313,6 +330,8 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 		// vector index key is in the index projection but no need to include it
 		if useKey && i < len(keys) && keys[i].HasAttribute(datastore.IK_VECTOR) {
 			useKey = false
+		} else if !useKey && i >= len(keys) && i-len(keys) < spanIncludes {
+			useKey = true
 		}
 
 		if useKey {
@@ -331,11 +350,6 @@ func getIndexKeyNames(alias string, index datastore.Index, projection *plan.Inde
 			indexKeyNames = append(indexKeyNames, key.String())
 		} else {
 			indexKeyNames = append(indexKeyNames, "")
-		}
-
-		if done {
-			indexKeyNames = indexKeyNames[:len(keys)+len(includes)]
-			break
 		}
 	}
 	if index.IsPrimary() || projection == nil || projection.PrimaryKey {

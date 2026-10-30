@@ -1375,7 +1375,7 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 		// derived IS NOT NULL filter for outer keyspace
 		if fl.IsUnnest() || fl.HasSubq() || (outer && fl.IsDerived()) ||
 			(!allowNow && fl.HasVolatileExpr()) || (allowNow && fl.HasNonNowVolatileExpr()) ||
-			(inline && fl.HasUdf()) {
+			(inline && inlineFilterExcluded(fl)) {
 			continue
 		}
 
@@ -1433,6 +1433,85 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 	}
 
 	return filter, selec, nil
+}
+
+// whether a filter is excluded from the inline filter of a Bhive index
+// (see getFilterForIndex() and getIndexFilters())
+func inlineFilterExcluded(fl *base.Filter) bool {
+	return fl.HasSubq() || fl.HasVolatileExpr() || fl.HasUdf() || !inlineFilterEvaluable(fl)
+}
+
+// whether filters excluded from the inline filter of a Bhive index (see inlineFilterExcluded())
+// are evaluated by the index scan, as needed for exact spans:
+//   - if include spans are sent to the indexer, the indexer only applies the include spans
+//     (not the inline filter), such a filter is evaluated if it only references include
+//     columns that have ranges in all include spans (exactness of the include spans
+//     themselves is checked separately)
+//   - otherwise the indexer applies the inline filter, which does not contain such a filter,
+//     thus it must not reference the keyspace (i.e. it is constant for the query)
+//
+// filters with volatile expressions or subqueries are never evaluated by the index scan
+func inlineFilterExclusionsCovered(entry *indexEntry, baseKeyspace *base.BaseKeyspace) bool {
+	if baseKeyspace == nil {
+		return false
+	}
+	var spanIncludes expression.Expressions
+	if includeSpans := getIncludeSpans(entry.index, entry.includeSpans); len(includeSpans) > 0 {
+		spanIncludes = includesWithRanges(entry, includeSpans)
+	}
+	alias := baseKeyspace.Name()
+	for _, fl := range baseKeyspace.Filters() {
+		if !inlineFilterExcluded(fl) {
+			continue
+		}
+		if fl.HasSubq() || fl.HasVolatileExpr() {
+			return false
+		}
+		if !expression.IsCovered(fl.FltrExpr(), alias, spanIncludes, false) &&
+			(fl.OrigExpr() == nil || !expression.IsCovered(fl.OrigExpr(), alias, spanIncludes, false)) {
+			return false
+		}
+	}
+	return true
+}
+
+// include columns that have (non-whole) ranges in all include spans
+func includesWithRanges(entry *indexEntry, includeSpans plan.Spans2) expression.Expressions {
+	var rv expression.Expressions
+	for i, include := range entry.includes {
+		hasRange := true
+		for _, span := range includeSpans {
+			if i >= len(span.Ranges) || span.Ranges[i].HasFlag(plan.RANGE_WHOLE_SPAN|plan.RANGE_FULL_SPAN) {
+				hasRange = false
+				break
+			}
+		}
+		if hasRange {
+			rv = append(rv, include)
+		}
+	}
+	return rv
+}
+
+// whether a filter can be evaluated by the indexer as part of the inline filter
+// the indexer evaluates the inline filter with its own (index) context, thus non-indexable
+// expressions, e.g. functions that depend on the query context such as CURRENT_USER(),
+// NODE_NAME(), DS_VERSION(), cannot be included in the inline filter
+// query parameters are replaced with values before the inline filter is sent to the
+// indexer (see IndexScan3), thus they are allowed
+func inlineFilterEvaluable(fl *base.Filter) bool {
+	expr := fl.OrigExpr()
+	if expr == nil {
+		expr = fl.FltrExpr()
+	}
+	if expr.Indexable() {
+		return true
+	}
+	// query parameters are not indexable, replace them with NULL constants before checking
+	// (on a copy since mapping is done in place)
+	paramReplacer := expression.NewParamReplacer()
+	expr, err := paramReplacer.Map(expr.Copy())
+	return err == nil && expr.Indexable()
 }
 
 func (this *builder) adjustForHashFilters(alias string, onclause expression.Expression,
