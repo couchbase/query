@@ -630,8 +630,10 @@ func includesId(index datastore.Index) bool {
 }
 
 // for Bhive index, indexer (8.5 and up) evaluates include spans on their own, i.e. include
-// spans can be sent without inline filter; older indexers only evaluate include columns
-// referenced by inline filter, thus inline filter is always needed with include spans
+// spans can be sent without inline filter; older indexers only decode include columns
+// that are named in index key names (which go together with an inline filter), thus
+// inline filter is always needed with include spans, and include columns with ranges
+// in include spans must be named in index key names (see getIndexKeyNames())
 func includeSpansWithoutFilter(index datastore.Index) bool {
 	index6, ok := index.(datastore.Index6)
 	return ok && index6.IsBhive() &&

@@ -464,9 +464,9 @@ func (this *builder) checkExactSpans(entry *indexEntry, pred, origPred expressio
 
 	// for a Bhive index, include columns are part of exprs above, i.e. filters on include
 	// columns that are not evaluated as include spans are evaluated by the indexer as inline
-	// filter, which cannot contain certain filters (see getFilterForIndex())
+	// filter, which cannot contain certain filters (see inlineFilterExclusionsCovered())
 	if index6, ok := entry.index.(datastore.Index6); ok && index6.IsBhive() &&
-		!inlineFilterNoExclusion(entry, this.baseKeyspaces[alias]) {
+		!inlineFilterExclusionsCovered(entry, this.baseKeyspaces[alias]) {
 		return false
 	}
 
