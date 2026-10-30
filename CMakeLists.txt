@@ -35,6 +35,11 @@ IF (BUILD_ENTERPRISE)
 ELSE (BUILD_ENTERPRISE)
     SET (_gotags "community")
 ENDIF(BUILD_ENTERPRISE)
+
+IF (CB_GO_CODE_COVERAGE)
+    MESSAGE(STATUS "Enabling Go code coverage instrumentation for Query")
+    SET (_gotags "${_gotags} go_coverage")
+ENDIF (CB_GO_CODE_COVERAGE)
 SET (_extra_deps)
 
 SET (GOVERSION SUPPORTED_NEWER)

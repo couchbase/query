@@ -46,6 +46,8 @@ replace github.com/couchbase/gocbcrypto => ../gocbcrypto
 
 replace github.com/couchbase/logstats => ../logstats
 
+replace github.com/couchbase/gocoverage => ../../../../../gocoverage
+
 require (
 	cloud.google.com/go/storage v1.62.1
 	github.com/apache/arrow-go/v18 v18.6.0
@@ -64,6 +66,7 @@ require (
 	github.com/couchbase/gocb/v2 v2.12.4
 	github.com/couchbase/gocbcore/v10 v10.10.0
 	github.com/couchbase/gocbcrypto v0.0.0-00010101000000-000000000000
+	github.com/couchbase/gocoverage v0.0.0
 	github.com/couchbase/godbc v0.0.0-20210615212222-79da1b49cb4d
 	github.com/couchbase/gomemcached v0.3.4
 	github.com/couchbase/goutils v0.3.0
