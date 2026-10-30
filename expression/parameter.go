@@ -38,8 +38,10 @@ parameters in an expression with the NULL constant. This can be used
 to check properties of an expression (e.g. Indexable()) that do not
 depend on the actual parameter values, since parameters are replaced
 with values before evaluation (in places such as inline filters sent
-to the indexer). Note the mapping is done in place, callers should
-pass in a copy of the expression if the original needs to be preserved.
+to the indexer). Note the children of the expression are mapped in
+place, callers should pass in a copy of the expression if the original
+needs to be preserved, and use the returned expression (a top-level
+parameter is replaced by a new expression).
 */
 type ParamReplacer struct {
 	MapperBase

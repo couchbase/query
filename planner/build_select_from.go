@@ -1570,7 +1570,7 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 		if skipExactIncludes && skipExactInclude(entry, fl, idInclude) {
 			continue
 		}
-		if inline && !inlineFilterEvaluable(fl) {
+		if inline && inlineFilterExcluded(fl) {
 			allFilters = false
 			continue
 		}
@@ -1688,30 +1688,69 @@ func (this *builder) inlineFilterHasAllFilters(entry *indexEntry, alias string) 
 		if skipExactIncludes && skipExactInclude(entry, fl, idInclude) {
 			continue
 		}
-		if !inlineFilterEvaluable(fl) || fl.IsJoin() || base.IgnoreFilter(fl) {
+		if inlineFilterExcluded(fl) || fl.IsJoin() || base.IgnoreFilter(fl) {
 			return false
 		}
 	}
 	return true
 }
 
-// whether no filter on the keyspace is excluded from the inline filter of a Bhive index for
-// not being evaluable by the indexer (see getFilterForIndex()), filters evaluated as exact
-// include spans are not included in the inline filter thus are not checked
-func inlineFilterNoExclusion(entry *indexEntry, baseKeyspace *base.BaseKeyspace) bool {
+// whether a filter is excluded from the inline filter of a Bhive index
+// (see getFilterForIndex() and getIndexFilters())
+func inlineFilterExcluded(fl *base.Filter) bool {
+	return fl.HasSubq() || fl.HasVolatileExpr() || fl.HasUdf() || !inlineFilterEvaluable(fl)
+}
+
+// whether filters excluded from the inline filter of a Bhive index (see inlineFilterExcluded())
+// are evaluated by the index scan, as needed for exact spans:
+//   - if include spans are sent to the indexer, such a filter can only be evaluated through
+//     the include spans (older indexers do not evaluate the inline filter when include spans
+//     are present), thus it must only reference include columns that have ranges in all
+//     include spans (exactness of the include spans themselves is checked separately)
+//   - otherwise the indexer applies the inline filter, which does not contain such a filter,
+//     thus it must not reference the keyspace (i.e. it is constant for the query)
+//
+// filters with volatile expressions or subqueries are never evaluated by the index scan
+func inlineFilterExclusionsCovered(entry *indexEntry, baseKeyspace *base.BaseKeyspace) bool {
 	if baseKeyspace == nil {
 		return false
 	}
-	skipExactIncludes, idInclude := getSkipExactIncludes(entry)
+	var spanIncludes expression.Expressions
+	if includeSpans := getIncludeSpans(entry.index, entry.includeSpans); len(includeSpans) > 0 {
+		spanIncludes = includesWithRanges(entry, includeSpans)
+	}
+	alias := baseKeyspace.Name()
 	for _, fl := range baseKeyspace.Filters() {
-		if skipExactIncludes && skipExactInclude(entry, fl, idInclude) {
+		if !inlineFilterExcluded(fl) {
 			continue
 		}
-		if !inlineFilterEvaluable(fl) {
+		if fl.HasSubq() || fl.HasVolatileExpr() {
+			return false
+		}
+		if !expression.IsCovered(fl.FltrExpr(), alias, spanIncludes, false) &&
+			(fl.OrigExpr() == nil || !expression.IsCovered(fl.OrigExpr(), alias, spanIncludes, false)) {
 			return false
 		}
 	}
 	return true
+}
+
+// include columns that have (non-whole) ranges in all include spans
+func includesWithRanges(entry *indexEntry, includeSpans plan.Spans2) expression.Expressions {
+	var rv expression.Expressions
+	for i, include := range entry.includes {
+		hasRange := true
+		for _, span := range includeSpans {
+			if i >= len(span.Ranges) || span.Ranges[i].HasFlag(plan.RANGE_WHOLE_SPAN|plan.RANGE_FULL_SPAN) {
+				hasRange = false
+				break
+			}
+		}
+		if hasRange {
+			rv = append(rv, include)
+		}
+	}
+	return rv
 }
 
 // whether a filter can be evaluated by the indexer as part of the inline filter
@@ -1725,10 +1764,6 @@ func inlineFilterEvaluable(fl *base.Filter) bool {
 	if expr == nil {
 		expr = fl.FltrExpr()
 	}
-	return inlineEvaluable(expr)
-}
-
-func inlineEvaluable(expr expression.Expression) bool {
 	if expr.Indexable() {
 		return true
 	}
