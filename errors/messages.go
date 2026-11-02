@@ -3166,9 +3166,11 @@ var errData = []ErrData{
 		Description: "Search() function with KNN has no search index",
 		Reason: []string{
 			"Query uses Search() as predicate with KNN, but there is no matching FTS index",
+			"The FTS index uses a dynamic mapping for the vector field. Dynamic mappings index numeric arrays as plain numbers, not vectors.",
 		},
 		Action: []string{
 			"Create appropriate FTS index",
+			"Explicitly map the vector field in the FTS index as type 'vector', specifying its dims and similarity metric.",
 		},
 		AppliesTo: []string{
 			"Server",
