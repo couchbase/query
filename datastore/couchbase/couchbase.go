@@ -286,6 +286,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 					// now that we have promoted the lock, did we get beaten by somebody else to it?
 					poolEntry, ok = _POOLMAP.poolServices[p.Name]
 					if ok && (poolEntry.rev == poolServices.Rev) {
+						pool.Close(true)
 						continue
 					}
 				}
@@ -375,7 +376,7 @@ func (info *infoImpl) refresh() (bool, []errors.Error) {
 			delete(_POOLMAP.poolServices, p.Name)
 		}
 		if err == nil {
-			pool.Close(false)
+			pool.Close(true)
 		}
 	}
 
@@ -1003,6 +1004,7 @@ func loadNamespace(s *store, name string) (*namespace, errors.Error) {
 
 			err = s.SetClientConnectionSecurityConfig()
 			if err != nil {
+				cbpool.Close(true)
 				return nil, errors.NewCbNamespaceNotFoundError(err, name)
 			}
 		} else {
@@ -1563,7 +1565,8 @@ func (p *namespace) reload1(err error) (cb.Pool, error) {
 		logging.Errorf(
 			"Retrying reloading namespace <ud>'%s'</ud> failed: Error applying connection security configuration to datastore: %v",
 			p.name, err)
-		return newpool, err
+		newpool.Close(true)
+		return cb.Pool{}, err
 	}
 
 	return newpool, nil
