@@ -605,15 +605,20 @@ func TestHandleCred_AWS_EndpointOverride(t *testing.T) {
 	}
 
 	// Verify RoundTrip rewrites the URL to the endpoint.
-	var capturedHost string
+	var capturedHost, capturedHostHeader string
 	tr.base = roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		capturedHost = r.URL.Host
+		capturedHostHeader = r.Host
 		return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(""))}, nil
 	})
 	req, _ := http.NewRequest("GET", "http://s3.amazonaws.com/bucket/key", nil)
 	client.Transport.(*awsSigV4Transport).RoundTrip(req) //nolint:errcheck
 	if capturedHost != "localhost:9000" {
 		t.Errorf("RoundTrip sent request to %q, want %q", capturedHost, "localhost:9000")
+	}
+	// Go sends the Host header from req.Host; it must match the signed host.
+	if capturedHostHeader != "localhost:9000" {
+		t.Errorf("Host header = %q, want %q", capturedHostHeader, "localhost:9000")
 	}
 }
 
@@ -981,6 +986,32 @@ func TestHandleCred_AzureSAS_EndpointOverride(t *testing.T) {
 	client.Transport.(*azureSASTransport).RoundTrip(req) //nolint:errcheck
 	if capturedHost != "127.0.0.1:10000" {
 		t.Errorf("RoundTrip sent request to %q, want %q", capturedHost, "127.0.0.1:10000")
+	}
+}
+
+// Azure tools often hand out the SAS token with a leading '?'.
+func TestHandleCred_AzureSAS_TrimsLeadingQuestionMark(t *testing.T) {
+	cred := allAccessCred("az-sas")
+	cred.AzureSAS = &cbauthimpl.AzureSASPayload{
+		AccountName:           "myaccount",
+		SharedAccessSignature: "?sv=2021-06-08&sig=abc",
+	}
+	ctx := &mockCredContext{cred: cred}
+	u := mustParseURL(t, "http://myaccount.blob.core.windows.net/?comp=list")
+
+	client, _, err := HandleCred(u, "az-sas", ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	capture := &captureTransport{}
+	tr := client.Transport.(*azureSASTransport)
+	tr.base = capture
+	req, _ := http.NewRequest("GET", u.String(), nil)
+	if _, err := tr.RoundTrip(req); err != nil {
+		t.Fatalf("RoundTrip failed: %v", err)
+	}
+	if want := "comp=list&sig=abc&sv=2021-06-08"; capture.last.URL.RawQuery != want {
+		t.Errorf("query sent = %q, want %q", capture.last.URL.RawQuery, want)
 	}
 }
 
@@ -1685,40 +1716,24 @@ func TestAWSServiceFromHost(t *testing.T) {
 	}
 }
 
-// ─── Pure helper: awsCanonicalURI ─────────────────────────────────────────────
+// ─── Pure helper: awsIsAWSHost ────────────────────────────────────────────────
 
-func TestAWSCanonicalURI(t *testing.T) {
+func TestAWSIsAWSHost(t *testing.T) {
 	cases := []struct {
-		rawURL string
-		want   string
+		host string
+		want bool
 	}{
-		{"http://example.com", "/"}, // empty path → "/"
-		{"http://example.com/foo/bar", "/foo/bar"},
-		{"http://example.com/foo%20bar", "/foo%20bar"},
+		{"bedrock-runtime.us-east-1.amazonaws.com", true},
+		{"bedrock-runtime.us-east-1.amazonaws.com:443", true},
+		{"s3.cn-north-1.amazonaws.com.cn", true},
+		{"localhost:9000", false},
+		{"storage.googleapis.com", false},
+		{"amazonaws.com.example.com", false},
 	}
 	for _, tc := range cases {
-		u, _ := url.Parse(tc.rawURL)
-		if got := awsCanonicalURI(u); got != tc.want {
-			t.Errorf("awsCanonicalURI(%q) = %q, want %q", tc.rawURL, got, tc.want)
+		if got := awsIsAWSHost(tc.host); got != tc.want {
+			t.Errorf("awsIsAWSHost(%q) = %v, want %v", tc.host, got, tc.want)
 		}
-	}
-}
-
-// ─── Pure helper: awsCanonicalQueryString ─────────────────────────────────────
-
-func TestAWSCanonicalQueryString_NoParams(t *testing.T) {
-	u, _ := url.Parse("http://example.com/path")
-	if got := awsCanonicalQueryString(u); got != "" {
-		t.Errorf("expected empty canonical query string, got %q", got)
-	}
-}
-
-func TestAWSCanonicalQueryString_Sorted(t *testing.T) {
-	u, _ := url.Parse("http://example.com/path?z=last&a=first&m=middle")
-	got := awsCanonicalQueryString(u)
-	// Keys must appear in lexicographic order.
-	if !strings.HasPrefix(got, "a=first&m=middle&z=last") {
-		t.Errorf("canonical query string not sorted: %q", got)
 	}
 }
 
@@ -1843,6 +1858,25 @@ func TestAWSSigV4Transport_ServiceFieldOverridesHostInference(t *testing.T) {
 	}
 }
 
+// The signer drops query parameters containing ';', so they must be refused.
+func TestAWSSigV4Transport_RoundTrip_RejectsSemicolonInQuery(t *testing.T) {
+	capture := &captureTransport{}
+	transport := &awsSigV4Transport{
+		base:            capture,
+		accessKeyID:     "AKID",
+		secretAccessKey: "SECRET",
+		region:          "us-east-1",
+	}
+	req, _ := http.NewRequest("GET",
+		"https://bedrock.us-east-1.amazonaws.com/foundation-models?byProvider=Amazon;x", nil)
+	if _, err := transport.RoundTrip(req); err == nil {
+		t.Fatal("expected an error for a query parameter containing ';'")
+	}
+	if capture.last != nil {
+		t.Error("request must not be sent when the query contains ';'")
+	}
+}
+
 // ─── azureSASTransport.RoundTrip ──────────────────────────────────────────────
 
 func TestAzureSASTransport_RoundTrip_ParamsAppended(t *testing.T) {
@@ -1883,6 +1917,24 @@ func TestAzureSASTransport_RoundTrip_MergesExistingParams(t *testing.T) {
 	}
 	if q.Get("sig") != "fromSAS" {
 		t.Errorf("SAS sig param not merged, got: %v", q)
+	}
+}
+
+// url.Query() drops a param containing ';', which would silently change the
+// request (e.g. a list prefix filter is lost); it must be refused instead.
+func TestAzureSASTransport_RoundTrip_RejectsSemicolonInQuery(t *testing.T) {
+	capture := &captureTransport{}
+	transport := &azureSASTransport{
+		base: capture,
+		sas:  "sv=1&sig=fromSAS",
+	}
+	req, _ := http.NewRequest("GET",
+		"http://myaccount.blob.core.windows.net/c?restype=container&comp=list&prefix=a;b", nil)
+	if _, err := transport.RoundTrip(req); err == nil {
+		t.Fatal("expected an error for a query parameter containing ';'")
+	}
+	if capture.last != nil {
+		t.Error("request must not be sent when the query contains ';'")
 	}
 }
 
@@ -2106,6 +2158,26 @@ func TestAzureSharedKeySignature_ContentLengthZero_OmittedFromSignature(t *testi
 
 	if sig != want {
 		t.Errorf("Content-Length=0 not omitted; signature mismatch:\n  got:  %s\n  want: %s", sig, want)
+	}
+}
+
+// http.NewRequest records the body length in req.ContentLength, not in the
+// header map. Azurite refused such a POST and accepted it once the length was
+// also in the header map; both forms must now sign identically.
+func TestAzureSharedKeySignature_SignsBodyLength(t *testing.T) {
+	key := []byte("testkey1234567890testkey12345678")
+	u := "http://myaccount.queue.core.windows.net/q/messages"
+	r1, _ := http.NewRequest("POST", u, strings.NewReader("hello"))
+	r2, _ := http.NewRequest("POST", u, strings.NewReader("hello"))
+	r2.Header.Set("Content-Length", "5")
+
+	s1, err1 := azureSharedKeySignature(key, "myaccount", r1)
+	s2, err2 := azureSharedKeySignature(key, "myaccount", r2)
+	if err1 != nil || err2 != nil {
+		t.Fatalf("unexpected errors: %v, %v", err1, err2)
+	}
+	if s1 != s2 {
+		t.Errorf("body length not signed:\n  from ContentLength: %s\n  from header:        %s", s1, s2)
 	}
 }
 

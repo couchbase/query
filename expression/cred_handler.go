@@ -42,9 +42,12 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/couchbase/cbauth"
 	"github.com/couchbase/query/util"
 	"github.com/youmark/pkcs8"
@@ -574,43 +577,32 @@ func (t *awsSigV4Transport) RoundTrip(req *http.Request) (*http.Response, error)
 		service = awsServiceFromHost(clone.URL.Host)
 	}
 
+	// S3 and S3-compatible servers (GCS HMAC, MinIO, ...) expect the path
+	// encoded once; other AWS services expect the signer to encode it again.
+	s3Style := service == "s3" || !awsIsAWSHost(clone.URL.Host)
+
 	// If an endpoint override is configured, rewrite scheme+host before signing
 	// so both the canonical request and the actual TCP connection use it.
 	if t.endpoint != nil {
 		clone.URL.Scheme = t.endpoint.Scheme
 		clone.URL.Host = t.endpoint.Host
+		// The signer signs req.Host when set, and Go sends it as the Host header.
+		clone.Host = t.endpoint.Host
 	}
 
-	now := time.Now().UTC()
-	dateISO := now.Format("20060102T150405Z")
-	dateShort := now.Format("20060102")
+	// The signer rebuilds the query string with url.Query(), which drops
+	// parameters containing ';'. Refuse them rather than send a different request.
+	if strings.Contains(clone.URL.RawQuery, ";") {
+		return nil, fmt.Errorf("AWS SigV4: query parameters containing ';' are not supported")
+	}
+
 	payloadHash := sha256HexBytes(bodyBytes)
-
-	clone.Header.Set("X-Amz-Date", dateISO)
 	clone.Header.Set("X-Amz-Content-Sha256", payloadHash)
-	if t.sessionToken != "" {
-		clone.Header.Set("X-Amz-Security-Token", t.sessionToken)
+	creds := aws.Credentials{AccessKeyID: t.accessKeyID, SecretAccessKey: t.secretAccessKey, SessionToken: t.sessionToken}
+	signer := v4.NewSigner(func(o *v4.SignerOptions) { o.DisableURIPathEscaping = s3Style })
+	if err := signer.SignHTTP(clone.Context(), creds, clone, payloadHash, service, t.region, time.Now()); err != nil {
+		return nil, fmt.Errorf("AWS SigV4: %v", err)
 	}
-
-	signedHdrs, canonicalHdrs := awsCanonicalSignedHeaders(clone.Header, clone.URL.Host)
-	canonicalReq := strings.Join([]string{
-		clone.Method,
-		awsCanonicalURI(clone.URL),
-		awsCanonicalQueryString(clone.URL),
-		canonicalHdrs,
-		signedHdrs,
-		payloadHash,
-	}, "\n")
-
-	credScope := strings.Join([]string{dateShort, t.region, service, "aws4_request"}, "/")
-	stringToSign := strings.Join([]string{"AWS4-HMAC-SHA256", dateISO, credScope, sha256HexString(canonicalReq)}, "\n")
-	signingKey := awsDeriveSigningKey(t.secretAccessKey, dateShort, t.region, service)
-	signature := hex.EncodeToString(hmacSHA256(signingKey, []byte(stringToSign)))
-
-	clone.Header.Set("Authorization", fmt.Sprintf(
-		"AWS4-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s",
-		t.accessKeyID, credScope, signedHdrs, signature,
-	))
 	return t.base.RoundTrip(clone)
 }
 
@@ -651,56 +643,14 @@ func awsServiceFromHost(host string) string {
 	return "execute-api"
 }
 
-func awsCanonicalURI(u *url.URL) string {
-	if u.EscapedPath() == "" {
-		return "/"
+// awsIsAWSHost reports whether host (optionally with a port) is a real AWS
+// endpoint. S3-style servers are signed with the path encoded once.
+func awsIsAWSHost(host string) bool {
+	if idx := strings.LastIndex(host, ":"); idx > strings.LastIndex(host, "]") {
+		host = host[:idx]
 	}
-	return u.EscapedPath()
-}
-
-func awsCanonicalQueryString(u *url.URL) string {
-	q := u.Query()
-	keys := make([]string, 0, len(q))
-	for k := range q {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var parts []string
-	for _, k := range keys {
-		vals := q[k]
-		sort.Strings(vals)
-		for _, v := range vals {
-			parts = append(parts, url.QueryEscape(k)+"="+url.QueryEscape(v))
-		}
-	}
-	return strings.Join(parts, "&")
-}
-
-func awsCanonicalSignedHeaders(h http.Header, host string) (signedHeaders, canonicalHeaders string) {
-	lower := map[string]string{"host": host}
-	for k, vals := range h {
-		lower[strings.ToLower(k)] = strings.TrimSpace(strings.Join(vals, ","))
-	}
-	names := make([]string, 0, len(lower))
-	for k := range lower {
-		names = append(names, k)
-	}
-	sort.Strings(names)
-	var hdr strings.Builder
-	for _, n := range names {
-		hdr.WriteString(n)
-		hdr.WriteString(":")
-		hdr.WriteString(lower[n])
-		hdr.WriteString("\n")
-	}
-	return strings.Join(names, ";"), hdr.String()
-}
-
-func awsDeriveSigningKey(secret, date, region, service string) []byte {
-	kDate := hmacSHA256([]byte("AWS4"+secret), []byte(date))
-	kRegion := hmacSHA256(kDate, []byte(region))
-	kService := hmacSHA256(kRegion, []byte(service))
-	return hmacSHA256(kService, []byte("aws4_request"))
+	host = strings.ToLower(host)
+	return strings.HasSuffix(host, ".amazonaws.com") || strings.HasSuffix(host, ".amazonaws.com.cn")
 }
 
 // ─── Azure Shared Key ─────────────────────────────────────────────────────────
@@ -786,6 +736,11 @@ func (t *azureSharedKeyTransport) RoundTrip(req *http.Request) (*http.Response, 
 
 func azureSharedKeySignature(key []byte, accountName string, req *http.Request) (string, error) {
 	contentLength := req.Header.Get("Content-Length")
+	// http.NewRequest records the body length in req.ContentLength, not in
+	// the header map; Go sends that value, so it must be signed.
+	if contentLength == "" && req.ContentLength > 0 {
+		contentLength = strconv.FormatInt(req.ContentLength, 10)
+	}
 	if contentLength == "0" {
 		contentLength = ""
 	}
@@ -1151,8 +1106,9 @@ func applyAzureSASPayload(cred *cbauth.Credential, context Context) (http.Client
 		return http.Client{}, http.Header{}, err
 	}
 	client.Transport = &azureSASTransport{
-		base:     client.Transport,
-		sas:      p.SharedAccessSignature,
+		base: client.Transport,
+		// Azure tools often hand out the token with a leading '?'.
+		sas:      strings.TrimPrefix(p.SharedAccessSignature, "?"),
 		endpoint: endpointURL,
 	}
 	return client, http.Header{}, nil
@@ -1171,6 +1127,11 @@ func (t *azureSASTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	if t.endpoint != nil {
 		clone.URL.Scheme = t.endpoint.Scheme
 		clone.URL.Host = t.endpoint.Host
+	}
+	// url.Query() below drops parameters containing ';'; refuse them rather
+	// than send a different request.
+	if strings.Contains(clone.URL.RawQuery, ";") {
+		return nil, fmt.Errorf("Azure SAS: query parameters containing ';' are not supported")
 	}
 	q := clone.URL.Query()
 
