@@ -737,12 +737,16 @@ func (this *builder) minimalIndexes(sargables map[datastore.Index]*indexEntry, s
 				!se.HasFlag(IE_LIMIT_OFFSET_COST) && (this.limit != nil || this.offset != nil)
 			if se.cost <= 0.0 || limit_cost {
 				var limit, offset int64
+				inlineSel := OPT_SELEC_NOT_AVAIL
 				if limit_cost {
 					limit, offset = this.getLimitOffset(se, this.limit, this.offset, true)
+					if limit > 0 {
+						inlineSel = this.inlineFilterSelec(se, alias)
+					}
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(se, se.sargKeys,
 					se.sargIncludes, this.context.RequestId(), se.spans, se.includeSpans,
-					alias, baseKeyspace.Keyspace(), limit, offset, advisorValidate, this.context)
+					alias, baseKeyspace.Keyspace(), limit, offset, inlineSel, advisorValidate, this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {
@@ -1492,12 +1496,16 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 			!entry.HasFlag(IE_LIMIT_OFFSET_COST) && (this.limit != nil || this.offset != nil)
 		if (entry.cost <= 0.0 || entry.cardinality <= 0.0 || entry.size <= 0 || entry.frCost <= 0.0) || limit_cost {
 			var limit, offset int64
+			inlineSel := OPT_SELEC_NOT_AVAIL
 			if limit_cost {
 				limit, offset = this.getLimitOffset(entry, this.limit, this.offset, true)
+				if limit > 0 {
+					inlineSel = this.inlineFilterSelec(entry, alias)
+				}
 			}
 			cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys, entry.sargIncludes,
 				requestId, entry.spans, entry.includeSpans, alias, baseKeyspace.Keyspace(),
-				limit, offset, advisorValidate, this.context)
+				limit, offset, inlineSel, advisorValidate, this.context)
 			if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 				useCBO = false
 			} else {
@@ -1796,6 +1804,14 @@ func (this *builder) getIndexFilters(entry *indexEntry, node *algebra.KeyspaceTe
 	if len(indexFilters) > 0 {
 		entry.indexFilters = indexFilters
 		entry.SetFlags(IE_HAS_FILTER, true)
+		if useCBO && entry.HasFlag(IE_INLINE_FILTER_COST) {
+			// selectivity of the inline filter is already accounted for in the index scan
+			// cost (with LIMIT pushed down, see inlineFilterSelec()), only add the evaluation cost
+			// (filters are excluded above by exact spans instead of plan flags as done in
+			// inlineFilterSelec(), the result is the same here since LIMIT pushdown for a
+			// non-covering scan requires exact spans, i.e. all span filters are exact filters)
+			selec = 1.0
+		}
 		if useCBO {
 			entry.cost, entry.cardinality, entry.size, entry.frCost = getSimpleFilterCost(alias,
 				entry.cost, entry.cardinality, selec, entry.size, entry.frCost)

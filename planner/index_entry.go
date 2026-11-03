@@ -47,7 +47,8 @@ const (
 	IE_NONEQ_COND
 	IE_VECTOR_RERANK
 	IE_HAS_REDUNDANT_SARG_KEY
-	IE_INLINE_FILTER_ALL // inline filter (plus exact include spans) contains all filters
+	IE_INLINE_FILTER_ALL  // inline filter (plus exact include spans) contains all filters
+	IE_INLINE_FILTER_COST // inline filter selectivity included in index scan cost (LIMIT pushdown)
 )
 
 type indexEntry struct {

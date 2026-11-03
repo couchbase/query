@@ -74,11 +74,17 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, cont
 	return optutil.CalcPrimaryIndexScanCost(primary, requestId, context)
 }
 
+// inlineSel: selectivity of the inline filter of a Bhive index scan (see inlineFilterSelec())
 func indexScanCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressions,
 	requestId string, spans, includeSpans SargSpans, alias, keyspace string, limit, offset int64,
-	advisorValidate bool, context *PrepareContext) (float64, float64, float64, int64, float64, error) {
+	inlineSel float64, advisorValidate bool, context *PrepareContext) (float64, float64, float64, int64, float64, error) {
 
 	index := entry.index
+	// IE_INLINE_FILTER_COST is only set below when inlineSel is used for the index scan cost,
+	// including inlineSel of 1.0 (no inline filter selectivity beyond the spans), such that
+	// getIndexFilter()/getIndexFilters() do not reduce the cardinality further (e.g. with
+	// selectivity of derived filters, which are not part of the inline filter)
+	entry.UnsetFlags(IE_INLINE_FILTER_COST)
 	switch spans := spans.(type) {
 	case *TermSpans:
 		var err error
@@ -90,8 +96,21 @@ func indexScanCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressi
 					OPT_COST_NOT_AVAIL, err
 			}
 		}
-		return optutil.CalcIndexScanCost(index, sargKeys, requestId, spans.spans, spans.vecExpr, alias, includeSel,
-			limit, offset, entry.HasFlag(IE_VECTOR_KEY_SARGABLE), advisorValidate, context)
+		// the inline filter is applied by the indexer together with include spans
+		if inlineSel > 0.0 && inlineSel < 1.0 {
+			if includeSel > 0.0 {
+				includeSel *= inlineSel
+			} else {
+				includeSel = inlineSel
+			}
+		}
+		cost, selec, card, size, frCost, err := optutil.CalcIndexScanCost(index, sargKeys, requestId,
+			spans.spans, spans.vecExpr, alias, includeSel, limit, offset, entry.HasFlag(IE_VECTOR_KEY_SARGABLE),
+			advisorValidate, context)
+		if inlineSel > 0.0 && err == nil && cost > 0.0 && card > 0.0 {
+			entry.SetFlags(IE_INLINE_FILTER_COST, true)
+		}
+		return cost, selec, card, size, frCost, err
 	case *IntersectSpans:
 		return intersectSpansCost(entry, sargKeys, sargIncludes, requestId, spans, includeSpans,
 			alias, keyspace, limit, offset, advisorValidate, context)
@@ -112,7 +131,7 @@ func unionSpansCost(entry *indexEntry, sargKeys, sargIncludes expression.Express
 	var size int64
 	for i, span := range unionSpan.spans {
 		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(entry, sargKeys, sargIncludes, requestId,
-			span, includeSpans, alias, keyspace, limit, offset, advisorValidate, context)
+			span, includeSpans, alias, keyspace, limit, offset, OPT_SELEC_NOT_AVAIL, advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}
@@ -145,7 +164,7 @@ func intersectSpansCost(entry *indexEntry, sargKeys, sargIncludes expression.Exp
 	for _, span := range intersectSpan.spans {
 		skipKeys := make([]bool, len(sargKeys))
 		tcost, tsel, tcard, tsize, tfrCost, e := indexScanCost(entry, sargKeys, sargIncludes, requestId,
-			span, includeSpans, alias, keyspace, limit, offset, advisorValidate, context)
+			span, includeSpans, alias, keyspace, limit, offset, OPT_SELEC_NOT_AVAIL, advisorValidate, context)
 		if e != nil {
 			return tcost, tsel, tcard, tsize, tfrCost, e
 		}

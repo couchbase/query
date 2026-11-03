@@ -234,12 +234,16 @@ func (this *builder) bestCoveringIndex(useCBO bool, alias, keyspace string,
 				!entry.HasFlag(IE_LIMIT_OFFSET_COST) && (this.limit != nil || this.offset != nil)
 			if entry.cost <= 0.0 || limit_cost {
 				var limit, offset int64
+				inlineSel := OPT_SELEC_NOT_AVAIL
 				if limit_cost {
 					limit, offset = this.getLimitOffset(entry, this.limit, this.offset, true)
+					if limit > 0 {
+						inlineSel = this.inlineFilterSelec(entry, alias)
+					}
 				}
 				cost, selec, card, size, frCost, e := indexScanCost(entry, entry.sargKeys,
 					entry.sargIncludes, this.context.RequestId(), entry.spans, entry.includeSpans,
-					alias, keyspace, limit, offset, this.advisorValidate(), this.context)
+					alias, keyspace, limit, offset, inlineSel, this.advisorValidate(), this.context)
 				if e != nil || (cost <= 0.0 || card <= 0.0 || size <= 0 || frCost <= 0.0) {
 					useCBO = false
 				} else {

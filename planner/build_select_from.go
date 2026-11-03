@@ -1451,6 +1451,11 @@ func (this *builder) getIndexFilter(entry *indexEntry, alias string, arrayKey *e
 	if err != nil {
 		return nil, OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL, err
 	}
+	if this.useCBO && entry.HasFlag(IE_INLINE_FILTER_COST) && selec > 0.0 {
+		// selectivity of the inline filter is already accounted for in the index scan cost
+		// (with LIMIT pushed down, see inlineFilterSelec()), only add the evaluation cost
+		selec = 1.0
+	}
 	for _, u := range unnestAliases {
 		unFltr, unSelec, unErr := this.getFilter(u, false, allowNow, inline, nil)
 		if unErr != nil {
@@ -1516,6 +1521,49 @@ func (this *builder) getFilter(alias string, join, allowNow, inline bool, onclau
 func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool, onclause expression.Expression,
 	entry *indexEntry) (expression.Expression, float64, error) {
 
+	filters, selec, allFilters, err := this.getFiltersForIndex(alias, join, allowNow, inline, onclause, entry)
+	if err != nil {
+		return nil, OPT_SELEC_NOT_AVAIL, err
+	}
+
+	if inline && entry != nil && !allFilters {
+		entry.UnsetFlags(IE_INLINE_FILTER_ALL)
+	}
+
+	terms := make(expression.Expressions, 0, len(filters))
+	for _, fl := range filters {
+		fltr := fl.FltrExpr()
+		origFltr := fl.OrigExpr()
+
+		if origFltr != nil {
+			terms = append(terms, origFltr.Copy())
+			if this.filter != nil {
+				this.filter, err = expression.RemoveExpr(this.filter, origFltr)
+				if err != nil {
+					return nil, OPT_SELEC_NOT_AVAIL, err
+				}
+			}
+		} else if !base.IsDerivedExpr(fltr) {
+			terms = append(terms, fltr.Copy())
+		}
+	}
+
+	var filter expression.Expression
+	if len(terms) == 1 {
+		filter = terms[0]
+	} else if len(terms) > 1 {
+		filter = expression.NewAnd(terms...)
+	}
+
+	return filter, selec, nil
+}
+
+// get the filters used by getFilterForIndex() without side effect, together with their
+// selectivity (filters marked by markIndexFlags() are not included in the selectivity),
+// and whether all filters on the keyspace are included (or not needed, see below)
+func (this *builder) getFiltersForIndex(alias string, join, allowNow, inline bool, onclause expression.Expression,
+	entry *indexEntry) (base.Filters, float64, bool, error) {
+
 	// for inline filters (pushed to the indexer), skip filters that are implied by the
 	// index condition of a partial index: these are already guaranteed by the index,
 	// and the index condition fields may not be available in the indexer
@@ -1524,19 +1572,18 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 		cond, origCond = entry.cond, entry.origCond
 	}
 
-	var err error
 	baseKeyspace, _ := this.baseKeyspaces[alias]
 	unnest := baseKeyspace.IsUnnest()
 
 	// cannot do early filtering on subservient side of outer join
 	outer := baseKeyspace.Outerlevel() > 0
 	if outer && !(join || unnest) {
-		return nil, OPT_SELEC_NOT_AVAIL, nil
+		return nil, OPT_SELEC_NOT_AVAIL, false, nil
 	}
 
 	external := baseKeyspace.IsExternalCollection()
 	filters := baseKeyspace.Filters()
-	terms := make(expression.Expressions, 0, len(filters))
+	rv := make(base.Filters, 0, len(filters))
 	selec := OPT_SELEC_NOT_AVAIL
 	doSelec := false
 	if this.useCBO && this.keyspaceUseCBO(alias) {
@@ -1595,29 +1642,16 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 			}
 		}
 
-		fltr := fl.FltrExpr()
-		origFltr := fl.OrigExpr()
-
 		if cond != nil {
-			implied, err := this.impliedByIndexCond(fltr, origFltr, cond, origCond)
+			implied, err := this.impliedByIndexCond(fl.FltrExpr(), fl.OrigExpr(), cond, origCond)
 			if err != nil {
-				return nil, OPT_SELEC_NOT_AVAIL, err
+				return nil, OPT_SELEC_NOT_AVAIL, false, err
 			} else if implied {
 				continue
 			}
 		}
 
-		if origFltr != nil {
-			terms = append(terms, origFltr.Copy())
-			if this.filter != nil {
-				this.filter, err = expression.RemoveExpr(this.filter, origFltr)
-				if err != nil {
-					return nil, OPT_SELEC_NOT_AVAIL, err
-				}
-			}
-		} else if !base.IsDerivedExpr(fltr) {
-			terms = append(terms, fltr.Copy())
-		}
+		rv = append(rv, fl)
 
 		if doSelec && !fl.HasPlanFlags() {
 			if fl.Selec() > 0.0 {
@@ -1629,18 +1663,59 @@ func (this *builder) getFilterForIndex(alias string, join, allowNow, inline bool
 		}
 	}
 
-	if inline && entry != nil && !allFilters {
-		entry.UnsetFlags(IE_INLINE_FILTER_ALL)
+	return rv, selec, allFilters, nil
+}
+
+// selectivity of the inline filter of a Bhive index scan, for costing the index scan with
+// LIMIT pushed down: the indexer applies the inline filter before LIMIT (similar to include
+// spans), thus more index entries need to be scanned to produce LIMIT entries; returns
+// OPT_SELEC_NOT_AVAIL if the indexer does not apply the inline filter (older indexers ignore
+// the inline filter when include spans are present)
+// same as getIndexFilter(), filters used in index spans or include spans (marked by
+// markIndexFlags()) are not included, since their selectivity is already accounted for
+// in the index scan cost; derived filters without original expression are not part of the
+// inline filter (see getFilterForIndex()), thus not included either
+func (this *builder) inlineFilterSelec(entry *indexEntry, alias string) float64 {
+	index6, ok := entry.index.(datastore.Index6)
+	if !ok || !index6.IsBhive() || !entry.HasFlag(IE_VECTOR_KEY_SARGABLE) ||
+		(!includeSpansWithoutFilter(entry.index) && len(getIncludeSpans(entry.index, entry.includeSpans)) > 0) {
+		return OPT_SELEC_NOT_AVAIL
+	}
+	baseKeyspace, ok := this.baseKeyspaces[alias]
+	if !ok || baseKeyspace.Outerlevel() > 0 {
+		return OPT_SELEC_NOT_AVAIL
+	}
+	termSpans, ok := entry.spans.(*TermSpans)
+	if !ok {
+		return OPT_SELEC_NOT_AVAIL
 	}
 
-	var filter expression.Expression
-	if len(terms) == 1 {
-		filter = terms[0]
-	} else if len(terms) > 1 {
-		filter = expression.NewAnd(terms...)
+	spans := termSpans.Spans()
+	var includeSpans plan.Spans2
+	if termIncludes, ok := entry.includeSpans.(*TermSpans); ok {
+		includeSpans = termIncludes.Spans()
+	}
+	if len(spans)+len(includeSpans) > 0 {
+		// mark index filters for seletivity calculation (temporary marking)
+		markIndexFlags(entry.index, spans, includeSpans, nil, baseKeyspace)
+		defer baseKeyspace.Filters().ClearIndexFlag()
 	}
 
-	return filter, selec, nil
+	filters, _, _, err := this.getFiltersForIndex(alias, false, false, true, nil, entry)
+	if err != nil {
+		return OPT_SELEC_NOT_AVAIL
+	}
+	selec := 1.0
+	for _, fl := range filters {
+		if fl.HasPlanFlags() || (fl.OrigExpr() == nil && base.IsDerivedExpr(fl.FltrExpr())) {
+			continue
+		}
+		if fl.Selec() <= 0.0 {
+			return OPT_SELEC_NOT_AVAIL
+		}
+		selec *= fl.Selec()
+	}
+	return selec
 }
 
 // filters used to generate exact include spans of a Bhive index are evaluated by the indexer
