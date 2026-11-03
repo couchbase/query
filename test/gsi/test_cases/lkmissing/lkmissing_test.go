@@ -32,6 +32,7 @@ func TestLkMissing(t *testing.T) {
 		"mix2",
 		"ix_city_state",
 		"",
+		"",
 	}
 	indexes := []string{
 		"CREATE PRIMARY INDEX %s ON %s;",
@@ -44,6 +45,7 @@ func TestLkMissing(t *testing.T) {
 			"FOR v IN contacts END)",
 		"CREATE INDEX %s ON %s(city, state)",
 		"CREATE INDEX %s ON %s(fname INCLUDE MISSING, lname, team) WHERE type = 'contacts'",
+		"CREATE INDEX %s ON %s(fname INCLUDE MISSING, lname, team)",
 	}
 
 	qc := start_cs()
@@ -69,9 +71,15 @@ func TestLkMissing(t *testing.T) {
 	run_test("case_unnest_missing.json", collname, "", "", qc, t)
 	run_drop_index("maix1", collname, qc, t)
 
+	// MB-75052: extra documents with missing fname (not in pix1, no type field)
+	runMatch("insert_mb75052.json", false, false, qc, t) // non-prepared, no-explain
+
 	run_drop_index("pix1", collname, qc, t)
 	run_create_index("pix1", collname, indexes[7], qc, t)
+	run_drop_index("mixasc1", collname, qc, t)
+	run_create_index("mixasc1", collname, indexes[8], qc, t) // MB-75052: ASC leading key (mix1 is DESC)
 	run_test("case_bugs.json", collname, "", "", qc, t)
+	run_drop_index("mixasc1", collname, qc, t)
 	run_drop_index("pix1", collname, qc, t)
 
 	runStmt(qc, fmt.Sprintf("DELETE FROM %s;", collname)) // Delete the test specific data
