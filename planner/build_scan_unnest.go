@@ -393,7 +393,7 @@ func (this *builder) matchUnnest(node *algebra.KeyspaceTerm, pred, subset expres
 		cost, selectivity, cardinality, size, frCost, _ =
 			indexScanCost(entry, origKeys, entry.sargIncludes, this.context.RequestId(),
 				spans, includeSpans, node.Alias(), baseKeyspace.Keyspace(),
-				-1, -1, this.advisorValidate(), this.context)
+				-1, -1, OPT_SELEC_NOT_AVAIL, this.advisorValidate(), this.context)
 		baseKeyspace.AddUnnestIndex(entry.index, unnest.Alias())
 	}
 

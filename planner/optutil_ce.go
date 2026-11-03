@@ -63,9 +63,10 @@ func primaryIndexScanCost(primary datastore.PrimaryIndex, requestId string, cont
 	return OPT_COST_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL
 }
 
+// inlineSel: selectivity of the inline filter of a Bhive index scan (see inlineFilterSelec())
 func indexScanCost(entry *indexEntry, sargKeys, sargIncludes expression.Expressions,
 	requestId string, spans, includeSpans SargSpans, alias, keyspace string, limit, offset int64,
-	advisorValidate bool, context *PrepareContext) (float64, float64, float64, int64, float64, error) {
+	inlineSel float64, advisorValidate bool, context *PrepareContext) (float64, float64, float64, int64, float64, error) {
 	return OPT_COST_NOT_AVAIL, OPT_SELEC_NOT_AVAIL, OPT_CARD_NOT_AVAIL, OPT_SIZE_NOT_AVAIL, OPT_COST_NOT_AVAIL,
 		errors.NewPlanInternalError("indexScanCost: unexpected in community edition")
 }
