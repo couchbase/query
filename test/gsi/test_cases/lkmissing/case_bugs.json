@@ -21,5 +21,151 @@
               "lname": "Draymond Green"
           }
         ]
+    },
+    {
+        "testcase": "MB-75052, part 1, IS MISSING on leading DESC key, GROUP BY next key, partial index aggregates",
+        "queryParams": {
+            "query_context": "orders._default"
+        },
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mix1' AND v.`index_group_aggs`.`partial` = true END"
+        },
+        "statements": "SELECT l.lname, COUNT(1) AS cnt FROM lkm AS l USE INDEX (mix1) WHERE l.fname IS MISSING GROUP BY l.lname",
+        "results": [
+            {
+                "cnt": 1,
+                "lname": "Klay Thompson"
+            },
+            {
+                "cnt": 2,
+                "lname": "Kevon Looney"
+            },
+            {
+                "cnt": 1,
+                "lname": "Gary Payton"
+            }
+        ]
+    },
+    {
+        "testcase": "MB-75052, part 2, IS MISSING on leading ASC key, GROUP BY next key, partial index aggregates",
+        "queryParams": {
+            "query_context": "orders._default"
+        },
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mixasc1' AND v.`index_group_aggs`.`partial` = true END"
+        },
+        "statements": "SELECT l.lname, COUNT(1) AS cnt FROM lkm AS l USE INDEX (mixasc1) WHERE l.fname IS MISSING GROUP BY l.lname",
+        "results": [
+            {
+                "cnt": 1,
+                "lname": "Klay Thompson"
+            },
+            {
+                "cnt": 2,
+                "lname": "Kevon Looney"
+            },
+            {
+                "cnt": 1,
+                "lname": "Gary Payton"
+            }
+        ]
+    },
+    {
+        "testcase": "MB-75052, part 3, IS MISSING on leading ASC key, GROUP BY next keys, multiple partial index aggregates",
+        "queryParams": {
+            "query_context": "orders._default"
+        },
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mixasc1' AND v.`index_group_aggs`.`partial` = true END"
+        },
+        "statements": "SELECT l.lname, l.team, COUNT(1) AS cnt, COUNT(l.team) AS tcnt, MIN(l.team) AS mteam FROM lkm AS l USE INDEX (mixasc1) WHERE l.fname IS MISSING GROUP BY l.lname, l.team",
+        "results": [
+            {
+                "cnt": 1,
+                "lname": "Klay Thompson",
+                "team": "gsw",
+                "tcnt": 1,
+                "mteam": "gsw"
+            },
+            {
+                "cnt": 2,
+                "lname": "Kevon Looney",
+                "team": "gsw",
+                "tcnt": 2,
+                "mteam": "gsw"
+            },
+            {
+                "cnt": 1,
+                "lname": "Gary Payton",
+                "team": "gsw",
+                "tcnt": 1,
+                "mteam": "gsw"
+            }
+        ]
+    },
+    {
+        "testcase": "MB-75052, part 4, IS MISSING on leading ASC key, MIN on next key, index aggregates",
+        "queryParams": {
+            "query_context": "orders._default"
+        },
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mixasc1' AND v.`index_group_aggs` IS NOT MISSING END"
+        },
+        "statements": "SELECT MIN(l.lname) AS mlname FROM lkm AS l USE INDEX (mixasc1) WHERE l.fname IS MISSING",
+        "results": [
+            {
+                "mlname": "Gary Payton"
+            }
+        ]
+    },
+    {
+        "testcase": "MB-75052, part 5, IS MISSING on leading ASC key, MAX on next key, index aggregates",
+        "queryParams": {
+            "query_context": "orders._default"
+        },
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` LIKE 'IndexScan%' AND v.`covers` IS NOT MISSING AND v.`index` = 'mixasc1' AND v.`index_group_aggs` IS NOT MISSING END"
+        },
+        "statements": "SELECT MAX(l.lname) AS mlname FROM lkm AS l USE INDEX (mixasc1) WHERE l.fname IS MISSING",
+        "results": [
+            {
+                "mlname": "Klay Thompson"
+            }
+        ]
     }
 ]

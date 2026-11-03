@@ -344,6 +344,25 @@ func isValidAggregateArrayIndex(entry *indexEntry, unnest bool) bool {
 	return true
 }
 
+/*
+valueEquivalenceRangeAt returns true if the spans at index key position pos are an equality
+range on a (non-MISSING) value.
+
+EquivalenceRangeAt() also treats an IS MISSING span (Low: nil, High: NULL, Inclusion: NEITHER)
+as an equivalence range (MB-37444). That is intentional and correct where only the planner
+relies on it: e.g. useIndexOrder() skips such a key for ORDER BY, since every entry in the
+range has the same (MISSING) value and index order is preserved. Do not change those callers.
+
+The indexer, however, only recognizes an equality filter when Low == High with inclusion
+BOTH (ScanRequest.hasAllEqualFilters()). Use this check whenever the decision depends on the
+indexer treating the index key as an equality filter, e.g. full GROUP BY/aggregate pushdown
+(MB-75052) or the MIN/MAX first-row optimization (ScanRequest.processFirstValidAggrOnly()).
+*/
+func valueEquivalenceRangeAt(spans SargSpans, pos int) bool {
+	eq, expr := spans.EquivalenceRangeAt(pos)
+	return eq && expr != nil
+}
+
 func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKeys expression.Expressions) (bool, int) {
 
 	// generate unique group keys.
@@ -376,7 +395,7 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 			if !ok {
 				return false, 0
 			}
-			if eq, _ := entry.spans.EquivalenceRangeAt(i); !eq {
+			if !valueEquivalenceRangeAt(entry.spans, i) {
 				return false, 0
 			}
 		}
@@ -398,8 +417,9 @@ func (this *builder) indexGroupLeadingIndexKeysMatch(entry *indexEntry, indexKey
 			if !duplicate {
 				nGroupMatched++
 			}
-		} else if eq, _ := entry.spans.EquivalenceRangeAt(nMatched); eq {
+		} else if valueEquivalenceRangeAt(entry.spans, nMatched) {
 			// index key is equality predicate, skip it
+			// (IS MISSING span is not considered equality here, see valueEquivalenceRangeAt())
 			nMatched++
 		} else {
 			// not matched break it

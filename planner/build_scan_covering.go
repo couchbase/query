@@ -867,7 +867,9 @@ func (this *builder) checkMinMaxOptimization(entry *indexEntry, alias, keyspace 
 						keyPos = i
 					}
 					break
-				} else if eq, _ := entry.spans.EquivalenceRangeAt(i); !eq {
+				} else if !valueEquivalenceRangeAt(entry.spans, i) {
+					// indexer requires equality on a value (not IS MISSING) on
+					// preceding index keys for the MIN/MAX first-row optimization
 					break
 				}
 			}
