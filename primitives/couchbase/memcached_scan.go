@@ -1853,7 +1853,9 @@ func (cqueue *rswCancelQueue) runWorker() {
 						b = cr[i].b
 						replica = false
 						vbucket = cr[i].vbucket
-						desc := &doDescriptor{useReplicas: true, version: b.Version, maxTries: b.backOffRetries(), retry: true}
+						// MB-75091: range scans are only created on the active vbucket (KV doesn't support range scans on
+						// replica vbuckets), so the cancel must also go to the active, never a replica
+						desc := &doDescriptor{useReplicas: false, version: b.Version, maxTries: b.backOffRetries(), retry: true}
 						for desc.attempts = 0; desc.attempts < desc.maxTries; {
 							conn, pool, err = b.getVbConnection(uint32(vbucket), desc, false)
 							if err != nil {
@@ -2028,7 +2030,9 @@ func (queue *rswQueue) runWorker() {
 					b = vbscan.b
 					vb = vbscan.vbucket()
 					replica = false
-					desc := &doDescriptor{useReplicas: vbscan.scan.useReplica, version: b.Version, maxTries: b.backOffRetries(),
+					// MB-75091: never use replicas; KV doesn't support range or random scans on replica vbuckets, so
+					// a replica connection (e.g. active node marked down after a read fallback) only gets NOT_MY_VBUCKET
+					desc := &doDescriptor{useReplicas: false, version: b.Version, maxTries: b.backOffRetries(),
 						retry: true}
 					for desc.attempts = 0; desc.attempts < desc.maxTries; {
 						conn, pool, err = b.getVbConnection(uint32(vb), desc, false)
