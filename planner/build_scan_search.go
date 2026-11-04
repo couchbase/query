@@ -378,7 +378,9 @@ func (this *builder) flexIndexPushDownProperty(resp *datastore.FTSFlexResponse) 
 func (this *builder) buildFTSFlexRequest(alias string, pred expression.Expression,
 	ubs expression.Bindings) (flexRequest *datastore.FTSFlexRequest) {
 
-	pageable := this.hasOrderOrOffsetOrLimit()
+	// ORDER/LIMIT/OFFSET kept for index group/aggregate pushdown apply to groups.
+	// FTS Flex index can't do group/aggregates, they are reset before the scan is built.
+	pageable := this.group == nil && this.hasOrderOrOffsetOrLimit()
 	var flexOrder []*datastore.SortTerm
 
 	// order request
