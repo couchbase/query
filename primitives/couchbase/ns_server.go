@@ -483,6 +483,17 @@ func (e *BucketNotFoundError) Error() string {
 	return fmt.Sprint("No bucket named " + e.bucket)
 }
 
+// BucketNotReadyError is returned by refresh() when the bucket exists but ns_server has not
+// yet published its vBucket map or server list, e.g. right after bucket creation (MB-75083)
+type BucketNotReadyError struct {
+	uri    string
+	reason string
+}
+
+func (e *BucketNotReadyError) Error() string {
+	return fmt.Sprintf("Invalid URL (%v) response: %s", e.uri, e.reason)
+}
+
 func (v *VBucketServerMap) IsDown(node int) bool {
 	return len(v.DownNodes) != 0 && v.DownNodes[node]
 }
@@ -1529,17 +1540,18 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		tmpb = &Bucket{}
 		err = pool.client.parseURLResponse(uri, nil, tmpb, nil)
 		if err == nil && len(tmpb.VBSMJson.VBucketMap) == 0 {
-			err = fmt.Errorf("Invalid URL (%v) response: empty vBucketMap", uri)
+			err = &BucketNotReadyError{uri: uri, reason: "empty vBucketMap"}
 			retry = true
 		} else if err == nil && len(tmpb.VBSMJson.ServerList) == 0 {
-			err = fmt.Errorf("Invalid URL (%v) response: empty serverList", uri)
+			err = &BucketNotReadyError{uri: uri, reason: "empty serverList"}
 			retry = true
 		}
 		if err == nil || !retry {
 			break
 		}
 		logging.Infof("Failed to refresh bucket %v (%s): %v (remaining retries: %v)", b.Name, b.getAbbreviatedUUID(), err, i-1)
-		if i > 0 {
+		if i > 1 {
+			// no need to sleep after the last attempt
 			retryInterval += _REFRESH_RETRY_INTERVAL
 			time.Sleep(retryInterval)
 		}
@@ -1547,6 +1559,10 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	if err != nil {
 		if strings.Contains(err.Error(), "HTTP error 404") || strings.Contains(err.Error(), "Object Not Found") {
 			logging.Infof("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
+		} else if _, ok := err.(*BucketNotReadyError); ok {
+			// expected while a newly created bucket's vBucket map is not yet published, e.g. while
+			// GetSystemBucket() waits for a system bucket it just created (MB-75083); not SEVERE
+			logging.Warnf("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
 		} else {
 			logging.Severef("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
 		}
@@ -1991,16 +2007,23 @@ func (p *Pool) Close(force bool) {
 	}
 }
 
+// isBucketTransientError returns true for errors that are expected to go away when waiting
+// for a bucket, e.g. one that is being created: bucket not found (not created yet), or found
+// but not ready yet, i.e. ns_server has not published the vBucket map yet, which can take
+// longer than refresh()'s own retries (MB-75083). Used by GetSystemBucket().
+func isBucketTransientError(err error) bool {
+	switch err.(type) {
+	case *BucketNotFoundError, *BucketNotReadyError:
+		return true
+	}
+	return strings.Contains(err.Error(), HTTP_404)
+}
+
 func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 	bucket, err := p.GetBucket(name)
 	if err != nil {
-		ignore := false
-		if _, ok := err.(*BucketNotFoundError); ok {
-			ignore = true
-		} else if strings.Contains(err.Error(), HTTP_404) {
-			ignore = true
-		}
-		if !ignore {
+		// bucket not found, or found but not ready yet (e.g. just created by another query node)
+		if !isBucketTransientError(err) {
 			return nil, err
 		}
 
@@ -2021,6 +2044,10 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 		}
 
 		// bucket created asynchronously, try to get the bucket
+		// keep waiting while the bucket is not found or not ready yet (no vBucket map published,
+		// MB-75083): worst case is ~25.5s of sleeps here (100ms doubling, 8 attempts) plus ~1s of
+		// refresh() retries per attempt (plus HTTP round trips), i.e. ~33.5s in total, which is the
+		// intended limit for a slow (magma) bucket creation
 		maxRetry := 8
 		interval := 100 * time.Millisecond
 		for i := 0; i < maxRetry; i++ {
@@ -2038,16 +2065,8 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 				if ok {
 					break
 				}
-			} else if err != nil {
-				ignore := false
-				if _, ok := err.(*BucketNotFoundError); ok {
-					ignore = true
-				} else if strings.Contains(err.Error(), HTTP_404) {
-					ignore = true
-				}
-				if !ignore {
-					break
-				}
+			} else if err != nil && !isBucketTransientError(err) {
+				break
 			}
 		}
 	}

@@ -11,6 +11,7 @@ package couchbase
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
 )
@@ -363,4 +364,32 @@ func TestBucketConnPoolConcurrent(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+// MB-75083: a newly created system bucket whose vBucket map / server list has not been
+// published yet must be waited for, not treated as a fatal error
+func TestBucketTransientError(t *testing.T) {
+	uri := "/pools/default/buckets/QUERY_METADATA?bucket_uuid=572180496b804fcda692c437a3e58faf"
+	tests := []struct {
+		err       error
+		transient bool
+	}{
+		{&BucketNotFoundError{bucket: "QUERY_METADATA"}, true},
+		{&BucketNotReadyError{uri: uri, reason: "empty vBucketMap"}, true},
+		{&BucketNotReadyError{uri: uri, reason: "empty serverList"}, true},
+		{fmt.Errorf("HTTP error 404 - bucket being deleted"), true},
+		{fmt.Errorf("HTTP error 401 Unauthorized"), false},
+		{fmt.Errorf("connection refused"), false},
+	}
+	for _, test := range tests {
+		if rv := isBucketTransientError(test.err); rv != test.transient {
+			t.Errorf("isBucketTransientError(%q) = %v, expected %v", test.err, rv, test.transient)
+		}
+	}
+
+	// the error message must not change
+	err := &BucketNotReadyError{uri: uri, reason: "empty vBucketMap"}
+	if exp := "Invalid URL (" + uri + ") response: empty vBucketMap"; err.Error() != exp {
+		t.Errorf("BucketNotReadyError.Error() = %q, expected %q", err.Error(), exp)
+	}
 }
