@@ -105,6 +105,19 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 		// Already done. need only for one index
 		// flex = this.minimalFTSFlexIndexes(flex, true)
 		searchSargables = this.minimalSearchIndexes(flex, searchSargables)
+
+		// FTS Flex index with ORDER/LIMIT/OFFSET pushdown has those already part of the
+		// search request (it is exact). Don't use it in an IntersectScan, where the
+		// pushdowns are not done.
+		if hasPagedFlexEntry(flex) && len(indexes)+len(flex)+len(searchSargables) > 1 {
+			if indexAll || searchHasKNN(searchSargables) {
+				// must use the other indexes, drop the FTS Flex index (predicate in Filter)
+				flex = nil
+			} else {
+				indexes = nil
+				searchSargables = nil
+			}
+		}
 	}
 
 	orderEntry, limit, searchOrders := this.buildSecondaryScanPushdowns(indexes, flex, searchSargables, pred, node)
@@ -151,8 +164,7 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 	for index, entry := range indexes {
 		// skip primary index with no sargable keys. Able to do PrimaryScan
 		// keep the entry with ORDER/LIMIT/OFFSET pushdown
-		if index.IsPrimary() && entry.minKeys == 0 &&
-			!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET) {
+		if skipPrimaryEntry(index, entry) {
 			continue
 		}
 		// If this is a join with primary key (meta().id), then it's
@@ -397,6 +409,33 @@ func (this *builder) buildCreateSecondaryScan(indexes, flex map[datastore.Index]
 	}
 }
 
+func hasPagedFlexEntry(flex map[datastore.Index]*indexEntry) bool {
+	for _, entry := range flex {
+		if entry.IsPushDownProperty(_PUSHDOWN_ORDER | _PUSHDOWN_LIMIT | _PUSHDOWN_OFFSET) {
+			return true
+		}
+	}
+	return false
+}
+
+func searchHasKNN(searchSargables []*indexEntry) bool {
+	for _, entry := range searchSargables {
+		if entry.HasFlag(IE_SEARCH_KNN) {
+			return true
+		}
+	}
+	return false
+}
+
+// primary index with no sargable keys and no ORDER/LIMIT/OFFSET pushdown is not used
+// as part of secondary scan (PrimaryScan is possible). buildSecondaryScanPushdowns()
+// must apply the same check, otherwise an entry that is never scanned changes the
+// pushdown decisions.
+func skipPrimaryEntry(index datastore.Index, entry *indexEntry) bool {
+	return index.IsPrimary() && entry.minKeys == 0 &&
+		!entry.IsPushDownProperty(_PUSHDOWN_ORDER|_PUSHDOWN_PARTIAL_ORDER|_PUSHDOWN_LIMIT|_PUSHDOWN_OFFSET)
+}
+
 func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Index]*indexEntry,
 	searchSargables []*indexEntry, pred expression.Expression, node *algebra.KeyspaceTerm) (
 	orderEntry *indexEntry, limit expression.Expression, searchOrders []string) {
@@ -410,7 +449,14 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 
 	// get ordered Index. If any index doesn't have Limit/Offset pushdown those must turned off
 	pushDown := this.hasOffsetOrLimit()
-	for _, entry := range indexes {
+	nIndexes := 0
+	for index, entry := range indexes {
+		// primary index entry skipped in buildCreateSecondaryScan must not turn off pushdowns
+		if skipPrimaryEntry(index, entry) {
+			continue
+		}
+		nIndexes++
+
 		if this.order != nil {
 			// prefer _PUSHDOWN_ORDER over _PUSHDOWN_PARTIAL_ORDER
 			if (orderEntry == nil || orderEntry.IsPushDownProperty(_PUSHDOWN_PARTIAL_ORDER)) &&
@@ -474,7 +520,7 @@ func (this *builder) buildSecondaryScanPushdowns(indexes, flex map[datastore.Ind
 	}
 
 	// if not single index turn off pushdowns and apply on IntersectScan
-	if pushDown && (len(indexes)+len(flex)+len(searchSargables)) > 1 {
+	if pushDown && (nIndexes+len(flex)+len(searchSargables)) > 1 {
 		limit = offsetPlusLimit(this.offset, this.limit)
 		this.resetOffsetLimit()
 	} else if !pushDown && !hasEarlyOrder && !hasRerank {
