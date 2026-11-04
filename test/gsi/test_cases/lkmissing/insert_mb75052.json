@@ -1,0 +1,11 @@
+[
+    {
+        "statements": "UPSERT INTO orders._default.lkm VALUES('looney01', { 'lname':'Kevon Looney', 'city':'Oakland', 'state':'California', 'team':'gsw'});"
+    },
+    {
+        "statements": "UPSERT INTO orders._default.lkm VALUES('looney02', { 'lname':'Kevon Looney', 'city':'San Francisco', 'state':'California', 'team':'gsw'});"
+    },
+    {
+        "statements": "UPSERT INTO orders._default.lkm VALUES('payton01', { 'lname':'Gary Payton', 'city':'Oakland', 'state':'California', 'team':'gsw'});"
+    }
+]

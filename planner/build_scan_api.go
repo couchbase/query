@@ -421,7 +421,8 @@ func (this *builder) getIndexPartitionSets(partitionKeys expression.Expressions,
 			}
 			indexPartitionSet := make(expression.Expressions, len(pspan.Ranges))
 			for j, rg := range pspan.Ranges {
-				if !rg.EqualRange() {
+				if !rg.EqualRange() || rg.IsMissingRange() {
+					// IS MISSING range has no value (Low is nil) for partition elimination
 					return nil, nil
 				}
 				indexPartitionSet[j] = rg.Low
