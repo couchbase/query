@@ -866,6 +866,9 @@ func (this *cbCluster) Settings() (map[string]any, errors.Error) {
 		"index":    pool.IndexMemoryQuota,
 	},
 	}
+
+	pool.Close(true)
+
 	return out, nil
 }
 

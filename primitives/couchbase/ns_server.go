@@ -1941,6 +1941,13 @@ func (p *Pool) BucketExists(name string) bool {
 // unused; otherwise, the bucket close and connection pool teardown is deferred until the bucket itself is no longer referenced.
 // force=true: closes the buckets and all the buckets' connection pools immediately. Pass force=true when the caller
 // already knows none of the buckets are in use.
+//
+// MB-74977: each bucket has a finalizer and points back to itself through bucket.pool -> Pool.BucketMap -> bucket.
+// The GC never finalizes or frees an object with a finalizer that can reach itself, so unless this cycle is broken,
+// the bucket objects are leaked for the life of the process. The cycle is broken by removing a bucket's entry from
+// the pool's BucketMap. Unless all of a pool's buckets have been removed from its BucketMap by other means, the pool
+// must be closed once it is no longer needed, even if its buckets were never used. Close() removes every bucket's
+// entry, allowing the GC to reclaim them.
 func (p *Pool) Close(force bool) {
 
 	p.Lock()
