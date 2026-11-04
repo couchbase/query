@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/bedrockruntime"
@@ -402,9 +403,12 @@ func TestSLMAuthorize_NoKeyNoHeader(t *testing.T) {
 
 // ─── Bedrock: Converse input mapping ──────────────────────────────────────────
 
+// testBedrockModel is the US cross-region inference profile for Claude Sonnet 4.5.
+const testBedrockModel = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
+
 func TestBuildBedrockConverseInput_SystemPromotionAndRoles(t *testing.T) {
 	req := &Request{
-		Model:        Claude45InferenceProfileID,
+		Model:        testBedrockModel,
 		InitMessages: []Message{{Role: "system", Content: "preamble"}},
 		Messages: []Message{
 			{Role: "system", Content: "embedded system turn"},
@@ -416,7 +420,7 @@ func TestBuildBedrockConverseInput_SystemPromotionAndRoles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if *input.ModelId != Claude45InferenceProfileID {
+	if *input.ModelId != testBedrockModel {
 		t.Fatalf("model id: got %q", *input.ModelId)
 	}
 	// Converse rejects system entries in Messages: both the init message and
@@ -518,17 +522,25 @@ func TestIsRetriableError(t *testing.T) {
 func TestMapBedrockError(t *testing.T) {
 	cases := []struct {
 		apiCode string
+		message string
 		want    errors.ErrorCode
 	}{
-		{"ThrottlingException", errors.E_NL_CHATCOMPLETIONS_REQ_FAILED},
-		{"AccessDeniedException", errors.E_NL_CRED_RESOLUTION_FAILED},
-		{"InvalidInputException", errors.E_NL_INVALID_NATURAL_CONFIG},
-		{"ResourceNotFoundException", errors.E_NL_INVALID_NATURAL_CONFIG},
-		{"ValidationException", errors.E_NL_INVALID_NATURAL_CONFIG},
+		{"ThrottlingException", "boom", errors.E_NL_CHATCOMPLETIONS_REQ_FAILED},
+		{"AccessDeniedException", "boom", errors.E_NL_CRED_RESOLUTION_FAILED},
+		{"InvalidInputException", "boom", errors.E_NL_INVALID_NATURAL_CONFIG},
+		// Not-found and validation errors relay AWS's message, which names the
+		// actual problem (an unavailable model or, e.g., a profile absent from
+		// the region): the exception code does not tell them apart.
+		{"ResourceNotFoundException", "This model version has reached the end of its life.", errors.E_NL_INVALID_NATURAL_CONFIG},
+		{"ResourceNotFoundException", "Inference profile not found in region.", errors.E_NL_INVALID_NATURAL_CONFIG},
+		{"ValidationException", "The provided model identifier is invalid.", errors.E_NL_INVALID_NATURAL_CONFIG},
 	}
 	for _, c := range cases {
-		err := mapBedrockError(&smithy.GenericAPIError{Code: c.apiCode, Message: "boom"})
+		err := mapBedrockError(&smithy.GenericAPIError{Code: c.apiCode, Message: c.message})
 		assertCode(t, err, c.want)
+		if c.want == errors.E_NL_INVALID_NATURAL_CONFIG && !strings.Contains(err.Error(), c.message) {
+			t.Errorf("%s: AWS message %q not relayed: %v", c.apiCode, c.message, err)
+		}
 	}
 	// Anything unrecognized maps to the generic completion-response error.
 	assertCode(t, mapBedrockError(fmt.Errorf("dial tcp: timeout")), errors.E_NL_ERR_CHATCOMPLETIONS_RESP)
@@ -605,26 +617,22 @@ func TestBedrockComplete_RequiresExecutionContext(t *testing.T) {
 	assertCode(t, err, errors.E_NL_CRED_RESOLUTION_FAILED)
 }
 
-// ─── Provider defaults / registry-facing surface ──────────────────────────────
+// ─── Provider registry-facing surface ─────────────────────────────────────────
 
-func TestProviderIDsAndDefaults(t *testing.T) {
+func TestProviderIDsAndAmbientAuth(t *testing.T) {
 	cases := []struct {
-		p            Provider
-		id           string
-		defaultModel string
-		ambient      bool
+		p       Provider
+		id      string
+		ambient bool
 	}{
-		{&openAIProvider{}, ProviderOpenAI, GPT4o_2024_05_13, false},
-		{&bedrockProvider{}, ProviderBedrock, Claude45InferenceProfileID, true},
-		{&geminiProvider{}, ProviderGemini, Gemini25Pro, false},
-		{&slmProvider{}, ProviderSLM, SLMDefaultModel, false},
+		{&openAIProvider{}, ProviderOpenAI, false},
+		{&bedrockProvider{}, ProviderBedrock, true},
+		{&geminiProvider{}, ProviderGemini, false},
+		{&slmProvider{}, ProviderSLM, false},
 	}
 	for _, c := range cases {
 		if c.p.ID() != c.id {
 			t.Fatalf("ID: got %q, want %q", c.p.ID(), c.id)
-		}
-		if c.p.DefaultModel() != c.defaultModel {
-			t.Fatalf("%s: default model got %q, want %q", c.id, c.p.DefaultModel(), c.defaultModel)
 		}
 		if c.p.AllowsAmbientAuth() != c.ambient {
 			t.Fatalf("%s: AllowsAmbientAuth got %v, want %v", c.id, c.p.AllowsAmbientAuth(), c.ambient)

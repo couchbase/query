@@ -31,6 +31,7 @@ import (
 	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/logging/resolver"
 	"github.com/couchbase/query/memory"
+	"github.com/couchbase/query/natural"
 	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/prepareds"
 	"github.com/couchbase/query/server"
@@ -176,21 +177,14 @@ func newHttpRequest(rv *httpRequest, resp http.ResponseWriter, req *http.Request
 					missingForNatural = append(missingForNatural, "\"natural_context\"")
 				}
 
-				hasCred := rv.NaturalCred() != ""
-				hasOrgId := rv.NaturalOrganizationId() != ""
-				if hasCred || hasOrgId {
+				if natural.IsCapellaPath(rv.NaturalCred(), rv.NaturalOrganizationId()) {
 					// Capella iQ path intended. Both credentials are mandatory;
 					// name whichever is missing so the caller gets a clear error
 					// here rather than a confusing failure deep inside iQ.
-					if !hasCred {
-						missingForNatural = append(missingForNatural, "\"natural_cred\"")
-					}
-					if !hasOrgId {
-						missingForNatural = append(missingForNatural, "\"natural_orgid\"")
-					}
-				} else if rv.NaturalConfig() == nil {
 					missingForNatural = append(missingForNatural,
-						"\"natural_cred\" and \"natural_orgid\", or \"natural_config\"")
+						natural.CapellaMissingCreds(rv.NaturalCred(), rv.NaturalOrganizationId())...)
+				} else if rv.NaturalConfig() == nil {
+					missingForNatural = append(missingForNatural, natural.MissingNaturalConfigParam)
 				}
 				if len(missingForNatural) > 0 {
 					missingParams := strings.Join(missingForNatural, ",")

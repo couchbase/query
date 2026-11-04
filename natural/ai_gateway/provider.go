@@ -44,17 +44,6 @@ const (
 	ProviderSLM    = "slm"
 )
 
-// Models.
-const (
-	GPT4o_2024_05_13 = "gpt-4o-2024-05-13"
-	Gemini25Pro      = "gemini-2.5-pro"
-
-	// SLMDefaultModel is the model used for the slm provider when natural_config
-	// does not name one. The slm provider targets a self-hosted, OpenAI-compatible
-	// server (e.g. vLLM), so this is the default served-model identifier.
-	SLMDefaultModel = "jastorj/couchmind-v5.7.8.1_arctic_stage_3-cw-24K-16bit"
-)
-
 func init() {
 	registerProvider(&openAIProvider{})
 	registerProvider(&bedrockProvider{})
@@ -110,8 +99,6 @@ type moderationResponse struct {
 }
 
 func (*openAIProvider) ID() string { return ProviderOpenAI }
-
-func (*openAIProvider) DefaultModel() string { return GPT4o_2024_05_13 }
 
 func (*openAIProvider) ChatEndpoint(cfg *Config) string {
 	if cfg.Endpoint != "" {
@@ -312,10 +299,6 @@ func (*openAIProvider) moderationsEndpoint(chatEndpoint string) string {
 const (
 	ProviderBedrock = "bedrock"
 
-	// Claude45InferenceProfileID is the geographic cross-region inference profile
-	// for Claude Sonnet 4.5 (US). Same identifier Capella uses.
-	Claude45InferenceProfileID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-
 	// defaultBedrockRegion is the source region used when natural_config does not set one.
 	defaultBedrockRegion = "us-east-1"
 )
@@ -352,8 +335,6 @@ type bedrockProvider struct {
 }
 
 func (*bedrockProvider) ID() string { return ProviderBedrock }
-
-func (*bedrockProvider) DefaultModel() string { return Claude45InferenceProfileID }
 
 // The HTTP-path methods below are never invoked: the orchestrator routes Bedrock
 // through Complete (DirectCompleter) before reaching the HTTP transport. They
@@ -672,6 +653,11 @@ func isRetriableError(err error) bool {
 
 // mapBedrockError classifies an AWS Bedrock SDK error into a typed gateway error.
 // Mirrors Capella's mapBedrockError categorisation, targeting E_NL_* codes.
+// ResourceNotFoundException and ValidationException cover both a model Bedrock
+// does not offer (misspelled, end-of-life) and a misconfiguration such as an
+// inference profile absent from the configured region. The exception code does
+// not tell them apart and AWS's English message text is not a stable contract,
+// so AWS's message, which names the actual problem, is relayed as is.
 func mapBedrockError(err error) errors.Error {
 	var apiErr smithy.APIError
 	if stderrors.As(err, &apiErr) {
@@ -850,8 +836,6 @@ type geminiProvider struct{}
 
 func (*geminiProvider) ID() string { return ProviderGemini }
 
-func (*geminiProvider) DefaultModel() string { return Gemini25Pro }
-
 func (*geminiProvider) ChatEndpoint(cfg *Config) string {
 	if cfg.Endpoint != "" {
 		return cfg.Endpoint
@@ -904,8 +888,6 @@ func (*geminiProvider) Moderate(*Request, *Config, Context) errors.Error { retur
 type slmProvider struct{}
 
 func (*slmProvider) ID() string { return ProviderSLM }
-
-func (*slmProvider) DefaultModel() string { return SLMDefaultModel }
 
 func (*slmProvider) ChatEndpoint(cfg *Config) string { return cfg.Endpoint }
 

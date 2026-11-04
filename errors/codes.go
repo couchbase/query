@@ -674,7 +674,7 @@ const (
 	E_NL_NO_VENDORS_ENABLED                      ErrorCode = 19230
 	E_NL_MODEL_PROVIDERS_REQ_FAILED              ErrorCode = 19231
 	E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL          ErrorCode = 19232
-	E_NL_NO_DEFAULT_MODEL_FOR_VENDOR             ErrorCode = 19233
+	_RETIRED_19233                               ErrorCode = 19233
 	E_NL_UNRECOGNIZED_STATEMENT                  ErrorCode = 19234
 	E_NL_MISSING_CHAT_ID                         ErrorCode = 19235
 	E_NL_NO_SUCH_CHAT                            ErrorCode = 19236
@@ -698,6 +698,8 @@ const (
 	E_NL_OPTION_NOT_ALLOWED                      ErrorCode = 19254
 	E_NL_CHAT_ALREADY_ACTIVE                     ErrorCode = 19255
 	E_NL_PROMPT_KNOWLEDGE                        ErrorCode = 19256
+	E_NL_VENDOR_MODEL_REQUIRED                   ErrorCode = 19257
+	E_NL_MODEL_NOT_AVAILABLE                     ErrorCode = 19258
 	E_ENCRYPTION_READER_CREATE                   ErrorCode = 19300
 	E_ENCRYPTION_WRITER_CREATE                   ErrorCode = 19301
 	E_NO_ENCRYPTION_MANAGER                      ErrorCode = 19302

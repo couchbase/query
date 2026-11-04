@@ -833,7 +833,14 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 			return true, false
 		}
 
+		// The chat's keyspaces are fixed here, so natural_context (or the
+		// "keyspaces" WITH option) must be set.
 		naturalcontext := request.NaturalContext()
+		if naturalcontext == "" {
+			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_context\""))
+			request.Failed(this)
+			return true, false
+		}
 		elems, err = algebra.ParseAndValidatePathList(naturalcontext, "default", request.QueryContext())
 		if err != nil {
 			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
@@ -881,6 +888,9 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 		if nc := request.NaturalConfig(); nc != nil {
 			var cfgErr errors.Error
 			cfg, cfgErr = natural.ParseNaturalConfig(nc)
+			if cfgErr == nil {
+				cfgErr = natural.DirectCheckNoVendorModel(request.NaturalVendor(), request.NaturalModel(), "PAUSE CHAT")
+			}
 			if cfgErr != nil {
 				request.Fail(cfgErr)
 				request.Failed(this)
@@ -938,6 +948,13 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	}
 
 	if chatId == "" {
+		// A one-shot request (Capella or direct) has no chat to take keyspaces
+		// from, so natural_context (or the "keyspaces" WITH option) must be set.
+		if request.NaturalContext() == "" {
+			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_context\""))
+			request.Failed(this)
+			return true, false
+		}
 		elems, err = algebra.ParseAndValidatePathList(request.NaturalContext(), "default", request.QueryContext())
 		if err != nil {
 			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_CONTEXT, err))
@@ -978,6 +995,11 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 	if natural.IsCapellaPath(request.NaturalCred(), request.NaturalOrganizationId()) {
 		// Capella (iQ) path. Vendor/model validation and provider
 		// resolution happen inside the natural package.
+		if credErr := natural.CapellaCheckCreds(request.NaturalCred(), request.NaturalOrganizationId()); credErr != nil {
+			request.Fail(credErr)
+			request.Failed(this)
+			return true, false
+		}
 		if request.NaturalModel() != "" && request.NaturalVendor() == "" {
 			request.Fail(errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR))
 			request.Failed(this)
@@ -997,8 +1019,12 @@ func (this *Server) serviceNaturalRequest(request Request) (bool, bool) {
 				request.ExecutionContext(), request.Output().AddPhaseTime)
 		}
 	} else {
-		// Direct ai_gateway path keyed on natural_config.
+		// Direct ai_gateway path keyed on natural_config. The provider and model
+		// are checked when the request resolves them, before throttling.
 		cfg, cfgErr := natural.ParseNaturalConfig(request.NaturalConfig())
+		if cfgErr == nil {
+			cfgErr = natural.DirectCheckNoVendorModel(request.NaturalVendor(), request.NaturalModel(), "USING AI")
+		}
 		if cfgErr != nil {
 			request.Fail(cfgErr)
 			request.Failed(this)

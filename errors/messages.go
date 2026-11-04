@@ -8611,20 +8611,6 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_NO_DEFAULT_MODEL_FOR_VENDOR, // 19233
-		symbol:      "E_NL_NO_DEFAULT_MODEL_FOR_VENDOR",
-		Description: "No default model configured and no models available for the selected vendor.",
-		Reason: []string{
-			"No hardcoded default model is configured for the vendor, and the model providers API returned an empty models list — there is no default to use and no fallback to pick from.",
-		},
-		Action: []string{
-			"Specify a model explicitly using the \"model\" option, or contact support.",
-		},
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
 		Code:        E_NL_UNRECOGNIZED_STATEMENT, // 19234
 		symbol:      "E_NL_UNRECOGNIZED_STATEMENT",
 		Description: "Unrecognized natural language statement received",
@@ -8952,6 +8938,38 @@ var errData = []ErrData{
 		},
 		Action: []string{
 			"Check the accompanying cause for the specific reason knowledge retrieval failed and address it.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_VENDOR_MODEL_REQUIRED, // 19257
+		symbol:      "E_NL_VENDOR_MODEL_REQUIRED",
+		Description: "Natural language request requires «parameters» to be set",
+		IsUser:      YES,
+		Reason: []string{
+			"A natural language request with \"natural_config\" did not specify the provider and/or the model to use. There is no default provider or model.",
+		},
+		Action: []string{
+			"Set both \"provider\" and \"model\" in \"natural_config\".",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
+		Code:        E_NL_MODEL_NOT_AVAILABLE, // 19258
+		symbol:      "E_NL_MODEL_NOT_AVAILABLE",
+		Description: "«model» is not available for vendor «vendor»",
+		IsUser:      YES,
+		Reason: []string{
+			"The requested model is not offered by the vendor: it may be misspelled, not enabled for the organization, or retired by the vendor.",
+			"On Capella, no model was specified and the vendor rejected the default model that Capella iQ applies for it.",
+		},
+		Action: []string{
+			"Specify a model that the vendor currently offers.",
+			"For Capella, list the models enabled for the organization with SELECT RAW model_providers(<natural_cred>, <natural_orgid>).",
 		},
 		AppliesTo: []string{
 			"Server",

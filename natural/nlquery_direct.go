@@ -217,26 +217,25 @@ func newDirectJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, su
 	return rv, nil
 }
 
-func newDirectSQLIterativePrompt(chat *prompt, naturalPrompt string, hint string, forfts bool, provider, model string) *prompt {
-	if provider != "" {
-		chat.Provider = provider
-	}
-	if model != "" {
-		chat.CompletionSettings.Model = model
-		chat.CompletionSettings.Temperature = directGetTemperatureForModel(provider, model)
-	}
+// directSetProviderModel applies a turn's provider and model (both required in
+// natural_config) to the chat's prompt, with the temperature following the
+// model. The Capella vendor is cleared, so the stored pair always reflects the
+// path of the last turn and a later Capella turn does not reuse a direct-path
+// model (see capellaChatTurnVendorModel).
+func directSetProviderModel(chat *prompt, provider, model string) {
+	chat.Provider = provider
+	chat.Vendor = ""
+	chat.CompletionSettings.Model = model
+	chat.CompletionSettings.Temperature = directGetTemperatureForModel(provider, model)
+}
 
+func newDirectSQLIterativePrompt(chat *prompt, naturalPrompt string, hint string, forfts bool, provider, model string) *prompt {
+	directSetProviderModel(chat, provider, model)
 	return appendSQLIterativeUserMessage(chat, naturalPrompt, hint, forfts)
 }
 
 func newDirectJSUDFIterativePrompt(chat *prompt, naturalPrompt string, hint string, provider, model string) *prompt {
-	if provider != "" {
-		chat.Provider = provider
-	}
-	if model != "" {
-		chat.CompletionSettings.Model = model
-		chat.CompletionSettings.Temperature = directGetTemperatureForModel(provider, model)
-	}
+	directSetProviderModel(chat, provider, model)
 	chat = appendJSUDFIterativeUserMessage(chat, naturalPrompt, hint)
 	return chat
 }
@@ -244,12 +243,7 @@ func newDirectJSUDFIterativePrompt(chat *prompt, naturalPrompt string, hint stri
 func directGetTemperatureForModel(provider, model string) float64 {
 	switch provider {
 	case ai_gateway.ProviderOpenAI:
-		// Model identifiers are passed to the provider verbatim, so compare
-		// case-insensitively here.
-		if strings.HasPrefix(strings.ToLower(model), "gpt-5") {
-			return 1
-		}
-		return 0
+		return ai_gateway.TemperatureForModel(model)
 	default:
 		return 0
 	}
@@ -260,17 +254,18 @@ func ProcessDirectRequest(cfg *NaturalConfig, nlquery, nlHint string, elems []*a
 	context NaturalContext, record func(execution.Phases, time.Duration),
 	tokens *LLMTokenUsage) (string, algebra.Statement, errors.Error) {
 
+	err := cfg.ResolveProviderAndModel()
+	if err != nil {
+		return "", nil, err
+	}
+	provider, model := cfg.Provider, cfg.Model
+
 	waitTime := util.Now()
-	err := throttleRequest()
+	err = throttleRequest()
 	record(execution.NLWAIT, util.Since(waitTime))
 	if err != nil {
 		return "", nil, err
 	}
-
-	if err = cfg.ResolveProviderAndModel(); err != nil {
-		return "", nil, err
-	}
-	provider, model := cfg.Provider, cfg.Model
 
 	keyspaceInfo := make(map[string]interface{}, len(elems))
 	var samples map[string]map[string]*sampleField
@@ -440,8 +435,14 @@ func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint stri
 	context NaturalContext, record func(execution.Phases, time.Duration),
 	tokens, chatTokens *LLMTokenUsage) (string, algebra.Statement, errors.Error) {
 
+	err := cfg.ResolveProviderAndModel()
+	if err != nil {
+		return "", nil, err
+	}
+	provider, model := cfg.Provider, cfg.Model
+
 	waitTime := util.Now()
-	err := throttleRequest()
+	err = throttleRequest()
 	record(execution.NLWAIT, util.Since(waitTime))
 	if err != nil {
 		return "", nil, err
@@ -482,11 +483,6 @@ func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint stri
 		return "", nil, err
 	}
 
-	if err = cfg.ResolveProviderAndModel(); err != nil {
-		return "", nil, err
-	}
-	provider, model := cfg.Provider, cfg.Model
-
 	var prompt *prompt
 	if ce.prompt == nil {
 		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
@@ -510,7 +506,6 @@ func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint stri
 		default:
 			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 		}
-		ce.Summary = ""
 		if err != nil {
 			return "", nil, err
 		}
@@ -620,6 +615,21 @@ func ProcessDirectConversationalRequest(cfg *NaturalConfig, nlquery, nlHint stri
 	return stmt, nlAlgebraStmt, err
 }
 
+// DirectCheckNoVendorModel rejects the Capella vendor/model options
+// (natural_vendor/natural_model, or the WITH "vendor"/"model" keys) on a
+// natural_config request, where they would otherwise be silently ignored in
+// favour of natural_config's "provider" and "model". stmt labels the statement.
+func DirectCheckNoVendorModel(vendor, model, stmt string) errors.Error {
+	where := stmt + " with \"natural_config\" (set \"provider\" and \"model\" in \"natural_config\")"
+	if vendor != "" {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_OPTION_NOT_ALLOWED, "vendor", where)
+	}
+	if model != "" {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_OPTION_NOT_ALLOWED, "model", where)
+	}
+	return nil
+}
+
 // caller should have already acquired lock on ce
 func ProcessDirectPauseChat(chatId, requestId string,
 	datastorecreds []string,
@@ -649,13 +659,29 @@ func ProcessDirectPauseChat(chatId, requestId string,
 			(summarize == value.NONE &&
 				(ce.prompt.Size >= summarizeThreshold || len(ce.prompt.Messages) >= summarizeMessageLen)))
 	if shouldSummarize {
+		// As on every direct turn, natural_config must name the provider and
+		// model; the conversation's are not reused. Automatic summarization
+		// (summarize not specified) runs only when the request carries them;
+		// otherwise the chat is paused unsummarized. With an explicit
+		// summarize=true their absence is reported as-is, matching the Capella
+		// path and USING AI.
+		var err errors.Error
 		if cfg == nil {
-			return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_config\"")
+			err = errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, MissingNaturalConfigParam)
+		} else {
+			err = cfg.ResolveProviderAndModel()
 		}
-		if err := cfg.ResolveProviderAndModel(); err != nil {
-			return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, "failed to resolve provider and model", err)
+		if err != nil {
+			if code := err.Code(); code != errors.E_NL_MISSING_NL_PARAM && code != errors.E_NL_VENDOR_MODEL_REQUIRED {
+				return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED,
+					"failed to resolve provider and model", err)
+			} else if summarize != value.NONE {
+				return err
+			}
+			shouldSummarize = false
 		}
-
+	}
+	if shouldSummarize {
 		// Fold the summarization completion's tokens into the conversation total so
 		// they are persisted with the chat document and reflected in the running
 		// total surfaced on the pause response below.
@@ -754,8 +780,7 @@ func directSummarizePrompt(ce *ChatEntry, cfg *NaturalConfig, context NaturalCon
 	if err != nil {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, "chat completions request failed", err)
 	}
-	ce.Summary = content
-	ce.prompt = nil
+	ce.summarized(content)
 	return nil
 }
 

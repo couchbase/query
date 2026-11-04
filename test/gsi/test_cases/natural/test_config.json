@@ -1,20 +1,43 @@
 [
     {
+        "testcase": "neither natural_config nor natural_cred/natural_orgid: the error names both ways to configure the request",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": null},
+        "errorCode": 19213
+    },
+    {
+        "testcase": "one-shot request without natural_context or the keyspaces option names the missing natural_context",
+        "statements": "USING AI Show few documents",
+        "queryParams": {"natural_config": {"provider": "openai", "model": "test-model", "api_key": "k"}},
+        "errorCode": 19213
+    },
+    {
+        "testcase": "BEGIN CHAT without natural_context or the keyspaces option names the missing natural_context",
+        "statements": "BEGIN CHAT",
+        "errorCode": 19213
+    },
+    {
+        "testcase": "natural_cred without natural_orgid routes to Capella and names the missing natural_orgid, before any iQ call",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": {"provider": "openai", "model": "test-model", "api_key": "k"}, "natural_cred": "user:pass"},
+        "errorCode": 19213
+    },
+    {
         "testcase": "unsupported provider specified in natural_config",
         "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
-        "queryParams": {"natural_config": {"provider": "not a real provider", "api_key": "k"}},
+        "queryParams": {"natural_config": {"provider": "not a real provider", "model": "test-model", "api_key": "k"}},
         "errorCode": 19228
     },
     {
         "testcase": "openai on its built-in host requires a credential: neither cred_id, api_key nor endpoint supplied",
         "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
-        "queryParams": {"natural_config": {"provider": "openai"}},
+        "queryParams": {"natural_config": {"provider": "openai", "model": "test-model"}},
         "errorCode": 19247
     },
     {
         "testcase": "slm has no built-in host, so an endpoint is required even when a credential is supplied",
         "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
-        "queryParams": {"natural_config": {"provider": "slm", "api_key": "k"}},
+        "queryParams": {"natural_config": {"provider": "slm", "model": "test-model", "api_key": "k"}},
         "errorCode": 19247
     },
     {
@@ -22,5 +45,29 @@
         "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
         "queryParams": {"natural_config": "not-an-object"},
         "errorCode": 19247
+    },
+    {
+        "testcase": "natural_config without provider or model: both are required, there is no default",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": {"api_key": "k"}},
+        "errorCode": 19257
+    },
+    {
+        "testcase": "natural_config with model but no provider",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": {"model": "test-model", "api_key": "k"}},
+        "errorCode": 19257
+    },
+    {
+        "testcase": "natural_config with provider but no model",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\"} Show few documents",
+        "queryParams": {"natural_config": {"provider": "openai", "api_key": "k"}},
+        "errorCode": 19257
+    },
+    {
+        "testcase": "Capella vendor/model options are rejected on a natural_config request instead of being ignored",
+        "statements": "USING AI WITH {\"keyspaces\":\"orders\", \"vendor\":\"openai\", \"model\":\"gpt-5\"} Show few documents",
+        "queryParams": {"natural_config": {"provider": "openai", "model": "test-model", "api_key": "k"}},
+        "errorCode": 19254
     }
 ]

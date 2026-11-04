@@ -32,6 +32,7 @@ import (
 	"github.com/couchbase/query/execution"
 	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/natural/ai_gateway"
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/util"
 	"github.com/couchbase/query/value"
@@ -72,30 +73,35 @@ var capellaClient = &http.Client{
 }
 
 const (
-	// Models
-	capellaGPT4o20240513         = "gpt-4o-2024-05-13"
-	capellaBedrockClaudeSonnet45 = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-)
-
-const (
 	// Providers
 	capellaProviderOpenAI  = "openai"
 	capellaProviderBedrock = "bedrock"
 )
 
-var capellaDefaultProviderModels = map[string]string{
-	capellaProviderOpenAI:  capellaGPT4o20240513,
-	capellaProviderBedrock: capellaBedrockClaudeSonnet45,
+// CapellaMissingCreds returns the Capella credentials missing from a request, as
+// E_NL_MISSING_NL_PARAM arguments: "natural_cred", then "natural_orgid". A
+// request is routed to the Capella path when either is set (IsCapellaPath), so a
+// missing one is a half-configured request; naming it beats the confusing iQ
+// failure (e.g. a modelProviders 404) it otherwise causes. Shared with the REST
+// "natural" parameter check so the names and their order cannot drift.
+func CapellaMissingCreds(nlCred, nlOrgId string) []string {
+	var missing []string
+	if nlCred == "" {
+		missing = append(missing, "\"natural_cred\"")
+	}
+	if nlOrgId == "" {
+		missing = append(missing, "\"natural_orgid\"")
+	}
+	return missing
 }
 
-func capellaResolveModel(provider string, availableModels []string) (string, errors.Error) {
-	if model := capellaDefaultProviderModels[provider]; model != "" {
-		return model, nil
+// CapellaCheckCreds enforces that a Capella request carries both natural_cred
+// and natural_orgid (see CapellaMissingCreds).
+func CapellaCheckCreds(nlCred, nlOrgId string) errors.Error {
+	if missing := CapellaMissingCreds(nlCred, nlOrgId); len(missing) > 0 {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, strings.Join(missing, ","))
 	}
-	if len(availableModels) > 0 {
-		return availableModels[0], nil
-	}
-	return "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_DEFAULT_MODEL_FOR_VENDOR, provider)
+	return nil
 }
 
 type capellaModelProvider struct {
@@ -227,77 +233,131 @@ func getCapellaModelProviders(nlOrganizationId, nlCred, jwt string, enabledOnly 
 	return providers, nil
 }
 
-// capellaResolveProviderAndModel determines the provider and model to use for the request.
-// It validates provider availability via the modelProviders API and enforces:
-//   - model without provider → error
-//   - unknown/disabled provider → error
-//   - no providers enabled → error
-//   - no provider specified → prefer openai; fall back to the only enabled provider
-//   - no model specified → use the default model if defined, else use the first model listed by the API for the provider
+// capellaResolveProviderAndModel determines the provider and model to use for
+// the request, validating the provider against the modelProviders API.
 
 func capellaResolveProviderAndModel(nlProvider, nlModel, nlOrganizationId, nlCred, jwt string) (provider, model string, err errors.Error) {
-	if nlModel != "" && nlProvider == "" {
-		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
+	key := capellaModelProvidersCacheKey(nlOrganizationId, nlCred)
+	allProviders := capellaCachedModelProviders(key, time.Now())
+	if allProviders == nil {
+		allProviders, err = getCapellaModelProviders(nlOrganizationId, nlCred, jwt, false)
+		if err != nil {
+			return "", "", err
+		}
+		capellaCacheModelProviders(key, allProviders, time.Now())
 	}
 
-	allProviders, err := getCapellaModelProviders(nlOrganizationId, nlCred, jwt, false)
-	if err != nil {
-		return "", "", err
+	return capellaPickProviderAndModel(nlProvider, nlModel, allProviders)
+}
+
+// Every request and chat turn resolves its vendor and model against the
+// modelProviders list, which changes only when an admin enables, disables or
+// adds a vendor. The list is reused for capellaModelProvidersTTL instead of being
+// fetched for each one, so a vendor change takes up to that long to be seen. It is
+// cached per organization and credential, so a credential never sees a list it
+// did not fetch itself. The explicit listing (GetCapellaModelProviders) is not
+// cached and always shows the current list.
+const capellaModelProvidersTTL = 5 * time.Minute
+
+var capellaModelProvidersCache = util.NewGenCache(capellaCacheLimit)
+
+type capellaModelProvidersCacheEntry struct {
+	providers []capellaModelProvider
+	fetchedAt time.Time
+}
+
+func capellaModelProvidersCacheKey(nlOrganizationId, nlCred string) string {
+	return nlOrganizationId + "\x00" + nlCred
+}
+
+// capellaCachedModelProviders returns the list cached under key if it was fetched
+// less than capellaModelProvidersTTL before now, else nil. The returned slice is
+// shared and must not be modified.
+func capellaCachedModelProviders(key string, now time.Time) []capellaModelProvider {
+	if e, ok := capellaModelProvidersCache.Get(key, nil).(*capellaModelProvidersCacheEntry); ok &&
+		now.Sub(e.fetchedAt) < capellaModelProvidersTTL {
+		return e.providers
+	}
+	return nil
+}
+
+// capellaCacheModelProviders caches a fetched list. An empty list is not cached:
+// it fails every request (E_NL_NO_VENDORS_AVAILABLE), so the first vendor an
+// admin adds is picked up by the next request.
+func capellaCacheModelProviders(key string, providers []capellaModelProvider, now time.Time) {
+	if len(providers) == 0 {
+		return
+	}
+	capellaModelProvidersCache.Add(&capellaModelProvidersCacheEntry{providers: providers, fetchedAt: now}, key, nil)
+}
+
+// capellaPickProviderAndModel picks the provider and model from the providers
+// listed by the modelProviders API:
+//   - no providers listed → error
+//   - provider given: unknown/disabled → error
+//   - no provider given: prefer openai, else the first enabled provider; none
+//     enabled → error
+//
+// Query does not choose a model. An empty model is sent as is and iQ applies its
+// own current default for the vendor, so no default goes stale in Query when a
+// vendor retires a model. A given model is matched case-insensitively against the
+// provider's listed models only to use the listed spelling; a model that is not
+// listed is still sent as given, since iQ forwards models it does not list, and
+// a retired one is rejected by the vendor (model_not_found → E_NL_MODEL_NOT_AVAILABLE).
+
+func capellaPickProviderAndModel(nlProvider, nlModel string, allProviders []capellaModelProvider) (
+	provider, model string, err errors.Error) {
+
+	if nlModel != "" && nlProvider == "" {
+		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
 	}
 
 	if len(allProviders) == 0 {
 		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_AVAILABLE)
 	}
 
+	var picked *capellaModelProvider
 	if nlProvider != "" {
 		for i := range allProviders {
 			// IDs are lowercase per the api.
 			if allProviders[i].ID == strings.ToLower(nlProvider) {
-				if allProviders[i].Enabled {
-					provider = allProviders[i].ID
-					if nlModel != "" {
-						model = strings.ToLower(nlModel)
-					} else {
-						var resolveErr errors.Error
-						model, resolveErr = capellaResolveModel(provider, allProviders[i].Models)
-						if resolveErr != nil {
-							return "", "", resolveErr
-						}
-					}
-					return provider, model, nil
-				} else {
+				if !allProviders[i].Enabled {
 					return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_ENABLED, nlProvider)
 				}
+				picked = &allProviders[i]
+				break
 			}
 		}
-		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_SUPPORTED, nlProvider)
-	}
-	// No provider specified: prefer openai, else use the first available provider.
-	var fallbackprovider, fallbackmodel string
-	var modelErr errors.Error
-	for i := range allProviders {
-		if allProviders[i].ID == capellaProviderOpenAI && allProviders[i].Enabled {
-			model, modelErr = capellaResolveModel(capellaProviderOpenAI, allProviders[i].Models)
-			if modelErr != nil {
-				return "", "", modelErr
-			}
-			return capellaProviderOpenAI, model, nil
+		if picked == nil {
+			return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_SUPPORTED, nlProvider)
 		}
-
-		if fallbackprovider == "" && allProviders[i].Enabled {
-			fallbackprovider = allProviders[i].ID
-			fallbackmodel, modelErr = capellaResolveModel(fallbackprovider, allProviders[i].Models)
-			if modelErr != nil {
-				return "", "", modelErr
+	} else {
+		// No provider specified: prefer openai, else use the first enabled provider.
+		for i := range allProviders {
+			if !allProviders[i].Enabled {
+				continue
+			}
+			if allProviders[i].ID == capellaProviderOpenAI {
+				picked = &allProviders[i]
+				break
+			}
+			if picked == nil {
+				picked = &allProviders[i]
 			}
 		}
+		if picked == nil {
+			return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_ENABLED)
+		}
 	}
 
-	if fallbackprovider == "" {
-		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_ENABLED)
+	model = nlModel
+	for _, m := range picked.Models {
+		if strings.EqualFold(m, nlModel) {
+			model = m
+			break
+		}
 	}
-
-	return fallbackprovider, fallbackmodel, nil
+	return picked.ID, model, nil
 }
 
 var capellaCacheEntryCreation sync.Mutex
@@ -474,27 +534,63 @@ func newCapellaJSUDFPrompt(keyspaceInfo map[string]interface{}, naturalPrompt, s
 	return rv, nil
 }
 
-func newCapellaSQLIterativePrompt(chat *prompt, naturalPrompt string, hint string, forfts bool, provider, model string) *prompt {
-	if provider != "" {
-		chat.Vendor = provider
+// capellaChatTurnVendorModel returns the vendor and model a chat turn resolves
+// from. A turn naming neither continues with the chat's own, as PAUSE CHAT does;
+// otherwise vendor resolution would fall back to the default (openai) while the
+// chat's model was kept. A partial pair is not mixed with the stored one. Only a
+// pair a Capella turn stored (Vendor set) is reused: after a direct turn the
+// stored model belongs to a natural_config provider, so the turn starts fresh.
+// The pair comes from the chat's prompt or, once the prompt was replaced by a
+// summary, from the pair kept with it. Caller holds the entry lock.
+func capellaChatTurnVendorModel(ce *ChatEntry, nlProvider, nlModel string) (string, string) {
+	if nlProvider != "" || nlModel != "" {
+		return nlProvider, nlModel
 	}
-	if model != "" {
-		chat.CompletionSettings.Model = model
-		chat.CompletionSettings.Temperature = capellaGetTemperatureForModel(provider, model)
+	if p := ce.prompt; p != nil {
+		if p.Vendor != "" {
+			return p.Vendor, p.CompletionSettings.Model
+		}
+	} else if ce.vendor != "" {
+		return ce.vendor, ce.model
 	}
+	return "", ""
+}
 
+// capellaSetVendorModel applies a turn's resolved vendor and model to the chat's
+// prompt. They are set together, even when the model is empty (iQ then applies
+// its default), so one vendor's model is never sent to another vendor; the
+// temperature follows the model (none is sent with an empty model). The direct
+// path's Provider is cleared: the whole prompt is sent to iQ, which must not
+// receive a natural_config provider left by an earlier direct turn.
+func capellaSetVendorModel(chat *prompt, provider, model string) {
+	chat.Provider = ""
+	chat.Vendor = provider
+	chat.CompletionSettings.Model = model
+	chat.CompletionSettings.Temperature = capellaGetTemperatureForModel(provider, model)
+}
+
+// capellaSaveVendorModel returns a function that puts chat's current vendor and
+// model (with the provider and temperature that go with them) back. An iterative
+// turn applies its pair to the chat's own prompt before the request is sent, so a
+// turn whose model the vendor rejects (E_NL_MODEL_NOT_AVAILABLE) restores the
+// previous pair; otherwise capellaChatTurnVendorModel would reuse the rejected
+// pair for every later turn naming neither, and each would fail the same way.
+func capellaSaveVendorModel(chat *prompt) func() {
+	provider, vendor, model, temperature := chat.Provider, chat.Vendor,
+		chat.CompletionSettings.Model, chat.CompletionSettings.Temperature
+	return func() {
+		chat.Provider, chat.Vendor = provider, vendor
+		chat.CompletionSettings.Model, chat.CompletionSettings.Temperature = model, temperature
+	}
+}
+
+func newCapellaSQLIterativePrompt(chat *prompt, naturalPrompt string, hint string, forfts bool, provider, model string) *prompt {
+	capellaSetVendorModel(chat, provider, model)
 	return appendSQLIterativeUserMessage(chat, naturalPrompt, hint, forfts)
 }
 
 func newCapellaJSUDFIterativePrompt(chat *prompt, naturalPrompt string, hint string, provider, model string) *prompt {
-
-	if provider != "" {
-		chat.Vendor = provider
-	}
-	if model != "" {
-		chat.CompletionSettings.Model = model
-		chat.CompletionSettings.Temperature = capellaGetTemperatureForModel(provider, model)
-	}
+	capellaSetVendorModel(chat, provider, model)
 	chat = appendJSUDFIterativeUserMessage(chat, naturalPrompt, hint)
 	return chat
 }
@@ -547,6 +643,14 @@ func doCapellaChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt st
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_CHATCOMPLETIONS_RESP_UNMARSHAL, perr)
 	}
 	if chatComplRes.Error != nil {
+		// The vendor rejected the model (e.g. retired). Capella reports this with
+		// HTTP 200 and the vendor's error object in the body. With no model in the
+		// request, iQ applied its default for the vendor, and the error says the
+		// default model is unavailable.
+		if code, _ := chatComplRes.Error["code"].(string); code == "model_not_found" {
+			return "", capellaModelNotAvailableError(prompt.CompletionSettings.Model, prompt.Vendor,
+				chatComplRes.Error)
+		}
 		return "", errors.NewNaturalLanguageRequestError(errors.E_NL_ERR_CHATCOMPLETIONS_RESP, chatComplRes.Error)
 	}
 	if len(chatComplRes.Choices) == 0 {
@@ -556,13 +660,22 @@ func doCapellaChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt st
 	return chatComplRes.Choices[0].Message.Content, nil
 }
 
+// capellaModelNotAvailableError reports that the vendor rejected model
+// (E_NL_MODEL_NOT_AVAILABLE), with the vendor's error object as the cause. An
+// empty model means the request named none and the vendor rejected the default
+// iQ applied; the message says so rather than naming an empty model.
+func capellaModelNotAvailableError(model, vendor string, cause map[string]interface{}) errors.Error {
+	what := "The default model"
+	if model != "" {
+		what = "Model \"" + model + "\""
+	}
+	return errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_NOT_AVAILABLE, what, vendor, cause)
+}
+
 func capellaGetTemperatureForModel(provider, model string) float64 {
 	switch provider {
 	case capellaProviderOpenAI:
-		if strings.HasPrefix(model, "gpt-5") {
-			return 1
-		}
-		return 0
+		return ai_gateway.TemperatureForModel(model)
 	case capellaProviderBedrock:
 		return 0
 	default:
@@ -789,12 +902,16 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 		return "", nil, err
 	}
 
+	nlProvider, nlModel = capellaChatTurnVendorModel(ce, nlProvider, nlModel)
 	provider, model, err := capellaResolveProviderAndModel(nlProvider, nlModel, nlOrgId, nlCred, jwt)
 	if err != nil {
 		return "", nil, err
 	}
 
 	var prompt *prompt
+	// Set when the turn iterates on the chat's prompt: a first turn builds a new
+	// prompt, which is stored only on success, so it has nothing to restore.
+	var restoreVendorModel func()
 	if ce.prompt == nil {
 		keyspaceInfo := make(map[string]interface{}, len(ce.Keyspaces))
 		inferschema := util.Now()
@@ -814,11 +931,11 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 		default:
 			err = errors.NewServiceErrorUnrecognizedValue("natural_output", nloutputOpt.String())
 		}
-		ce.Summary = ""
 		if err != nil {
 			return "", nil, err
 		}
 	} else {
+		restoreVendorModel = capellaSaveVendorModel(ce.prompt)
 		switch nloutputOpt {
 		case SQL:
 			prompt = newCapellaSQLIterativePrompt(ce.prompt, nlquery, nlHint, false, provider, model)
@@ -843,6 +960,9 @@ func ProcessCapellaConversationalRequest(nlCred, nlOrgId, nlProvider, nlModel, n
 	content, err := doCapellaChatCompletionsReq(prompt, nlOrgId, jwt, nlCred)
 	record(execution.CHATCOMPLETIONSREQ, util.Since(chatcompletionreq))
 	if err != nil {
+		if err.Code() == errors.E_NL_MODEL_NOT_AVAILABLE && restoreVendorModel != nil {
+			restoreVendorModel()
+		}
 		return "", nil, err
 	}
 	if err := CheckAndReturnErrorResponse(content); err != nil {
@@ -932,16 +1052,16 @@ func ProcessCapellaPauseChat(chatId, requestId string,
 			(summarize == value.NONE &&
 				(ce.prompt.Size >= summarizeThreshold || len(ce.prompt.Messages) >= summarizeMessageLen)))
 	if shouldSummarize {
-		missingnlparams := []string{}
-		if nlOrgId == "" {
-			missingnlparams = append(missingnlparams, "\"natural_orgid\"")
+		// Summarization needs both Capella credentials. The request was routed here
+		// because at least one is set, so a missing one is a half-configured request
+		// and is reported whether or not summarize was given explicitly.
+		if err := CapellaCheckCreds(nlCred, nlOrgId); err != nil {
+			return err
 		}
-		if nlCred == "" {
-			missingnlparams = append(missingnlparams, "\"natural_cred\"")
-		}
-		if len(missingnlparams) > 0 {
-			return errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, strings.Join(missingnlparams, ","))
-		}
+
+		// With neither given, summarize with the vendor and model the conversation
+		// was using.
+		nlprovider, nlmodel = capellaChatTurnVendorModel(ce, nlprovider, nlmodel)
 
 		getJwt := util.Now()
 		jwt, err := getCapellaJWTFromSessionsApi(nlCred, false)
@@ -1035,7 +1155,6 @@ func capellaSummarizePrompt(ce *ChatEntry, nlorgid, nlcred, provider, model, jwt
 	if err != nil {
 		return errors.NewNaturalLanguageRequestError(errors.E_NL_CHAT_SUMMARIZE_FAILED, "chat completions request failed", err)
 	}
-	ce.Summary = content
-	ce.prompt = nil
+	ce.summarized(content)
 	return nil
 }

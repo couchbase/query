@@ -27,6 +27,7 @@ package ai_gateway
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -614,6 +615,38 @@ func TestDoChatCompletion_UnknownProvider(t *testing.T) {
 	assertCode(t, err, errors.E_NL_VENDOR_NOT_SUPPORTED)
 }
 
+// A 404 is reported as the generic request-failed error with the vendor's body
+// as the cause, whether the vendor rejected the model or the endpoint path is
+// wrong: the status alone does not tell them apart, and the body names the
+// actual problem.
+func TestDoChatCompletion_NotFound(t *testing.T) {
+	const model = "gpt-4o-2024-05-13"
+	for _, body := range []string{
+		`{"error":{"code":"model_not_found","message":"The model ` + "`" + model + "`" + ` has been deprecated"}}`,
+		`404 page not found`,
+	} {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(body))
+		}))
+		off := false
+		cfg := &Config{
+			Provider:   ProviderOpenAI,
+			Model:      model,
+			APIKey:     "k",
+			Endpoint:   ts.URL + "/v1/chat/completions",
+			Moderation: &off,
+		}
+		req := &Request{Model: model, Messages: []Message{{Role: "user", Content: "list hotels"}}}
+		_, err := DoChatCompletion(req, cfg, allowAllContext())
+		ts.Close()
+		assertCode(t, err, errors.E_NL_CHATCOMPLETIONS_REQ_FAILED)
+		if cause := fmt.Sprint(err.Cause()); !strings.Contains(cause, "not found") && !strings.Contains(cause, "deprecated") {
+			t.Errorf("body %s: vendor error not relayed as the cause: %v", body, cause)
+		}
+	}
+}
+
 // ─── DirectCompleter dispatch ─────────────────────────────────────────────────
 
 // fakeDirectProvider records whether the orchestrator dispatched to Complete
@@ -622,8 +655,7 @@ type fakeDirectProvider struct {
 	called bool
 }
 
-func (p *fakeDirectProvider) ID() string           { return "testdirect" }
-func (p *fakeDirectProvider) DefaultModel() string { return "test-model" }
+func (p *fakeDirectProvider) ID() string { return "testdirect" }
 func (p *fakeDirectProvider) ChatEndpoint(*Config) string {
 	return ""
 }
