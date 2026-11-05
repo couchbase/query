@@ -1670,7 +1670,7 @@ type URLDecode struct {
 
 func NewURLDecode(operand Expression) Function {
 	rv := &URLDecode{
-		*NewUnaryFunctionBase("urlencode", operand),
+		*NewUnaryFunctionBase("urldecode", operand),
 	}
 
 	rv.expr = rv
