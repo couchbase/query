@@ -2045,14 +2045,14 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		if err1 != nil {
 			return nil, err1
 		}
-		if endpoint.actives.Delete(requestId, true, func(r server.Request) bool {
+		if !endpoint.actives.Delete(requestId, true, func(r server.Request) bool {
 			if impersonate != "" {
 				users := datastore.CredsArray(r.Credentials())
 				return len(users) > 0 && impersonate == users[0]
 			}
 			return true
 		}) {
-			return nil, errors.NewServiceErrorHttpReq(requestId)
+			return nil, errors.NewSystemStmtNotFoundError(nil, requestId)
 		}
 
 		return true, nil
