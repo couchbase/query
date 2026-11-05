@@ -131,5 +131,81 @@
                 "c2": 11
 	    }
         ]
+    },
+    {
+        "testcase": "MB-75122 part 1: predicate on LET variable with subquery is not used as index filter",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'ifloix1' END AND NOT ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND CONTAINS(IFMISSING(v.`filter`, ''), '`cv`') END"
+        },
+        "statements":"SELECT d.c2, d.c6 FROM orders AS d USE INDEX (ifloix1) LET cv = (SELECT RAW o.c4 FROM orders AS o WHERE o.test_id = \"idxfltr\" AND o.c1 = 1 AND o.c2 = 311)[0] WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND d.c4 < cv ORDER BY d.c2",
+        "ordered": true,
+        "results": [
+            {
+                "c2": 11,
+                "c6": 31
+            },
+            {
+                "c2": 211,
+                "c6": 231
+            }
+        ]
+    },
+    {
+        "testcase": "MB-75122 part 2: OR predicate and chained LET variable referencing LET variable with subquery",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'ifloix1' END AND NOT ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND CONTAINS(IFMISSING(v.`filter`, ''), '`cv`') END"
+        },
+        "statements":"SELECT d.c2, d.c6 FROM orders AS d USE INDEX (ifloix1) LET cv = (SELECT RAW o.c4 FROM orders AS o WHERE o.test_id = \"idxfltr\" AND o.c1 = 1 AND o.c2 = 311)[0], cv2 = cv + 100 WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND cv IS NOT NULL AND (d.c4 < cv OR (d.c4 < cv2 AND d.c2 <= 311)) ORDER BY d.c2",
+        "ordered": true,
+        "results": [
+            {
+                "c2": 11,
+                "c6": 31
+            },
+            {
+                "c2": 211,
+                "c6": 231
+            },
+            {
+                "c2": 311,
+                "c6": 331
+            }
+        ]
+    },
+    {
+        "testcase": "MB-75122 part 3: UPDATE with predicate on LET variable with subquery",
+        "ignore": "index_id",
+        "explain": {
+            "disabled": false,
+            "results": [
+                {
+                    "present": true
+                }
+            ],
+            "statement": "SELECT true AS present FROM $explan AS p WHERE ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND v.`index` = 'ifloix1' END AND NOT ANY v WITHIN p.plan.`~children` SATISFIES v.`#operator` = 'IndexScan3' AND CONTAINS(IFMISSING(v.`filter`, ''), '`cv`') END"
+        },
+        "statements":"UPDATE orders AS d USE INDEX (ifloix1) LET cv = (SELECT RAW o.c4 FROM orders AS o WHERE o.test_id = \"idxfltr\" AND o.c1 = 1 AND o.c2 = 311)[0] SET d.c4 = d.c4 WHERE d.test_id = \"idxfltr\" AND d.c1 = 1 AND d.c4 < cv RETURNING d.c2",
+        "results": [
+            {
+                "c2": 11
+            },
+            {
+                "c2": 211
+            }
+        ]
     }
 ]

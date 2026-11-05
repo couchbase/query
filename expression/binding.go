@@ -375,17 +375,25 @@ func (this Bindings) Mappings() map[string]Expression {
 	return mappings
 }
 
-func (this Bindings) MappingsNoSubq() map[string]Expression {
+// Returns mappings for bindings whose expression does not contain subqueries,
+// as well as the set of variables that are excluded from the mappings
+func (this Bindings) MappingsNoSubq() (map[string]Expression, map[string]bool) {
 	mappings := make(map[string]Expression, len(this))
+	var excluded map[string]bool
 
 	for _, b := range this {
 		subqs, err := ListSubqueries(Expressions{b.expr}, true)
 		if err == nil && len(subqs) == 0 {
 			mappings[b.variable] = b.expr
+		} else {
+			if excluded == nil {
+				excluded = make(map[string]bool, len(this))
+			}
+			excluded[b.variable] = true
 		}
 	}
 
-	return mappings
+	return mappings, excluded
 }
 
 func (this Bindings) Copy() Bindings {
