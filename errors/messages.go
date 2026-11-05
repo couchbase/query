@@ -5960,10 +5960,10 @@ var errData = []ErrData{
 		symbol:      "E_SYSTEM_STMT_NOT_FOUND",
 		Description: "System datastore : Statement not found «details»",
 		Reason: []string{
-			"An attempt was made to delete an unknown request from completed requests.",
+			"An attempt was made to delete an unknown request from active or completed requests, or the request belongs to another user.",
 		},
 		Action: []string{
-			"Contact support.",
+			"Check the request ID. The request may have already completed or been cancelled.",
 		},
 		AppliesTo: []string{
 			"Server",
