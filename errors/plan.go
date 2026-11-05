@@ -206,7 +206,8 @@ func NewPartitionIndexNotSupportedError() Error {
 
 func NewKnnNoSearchIndex() Error {
 	return &err{level: EXCEPTION, ICode: E_NO_KNN_SEARCH_INDEX, IKey: "plan.search.knn",
-		InternalMsg:    "Search() function using KNN and no search index",
+		InternalMsg: "Search() function using KNN and no search index. Dynamic mappings will not create a vector index, " +
+			"and will require an explicit 'vector' mapping",
 		InternalCaller: CallerN(1)}
 }
 

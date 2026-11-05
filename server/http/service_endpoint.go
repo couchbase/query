@@ -682,7 +682,7 @@ func (this *activeHttpRequests) Get(id string, f func(server.Request)) errors.Er
 }
 
 func (this *activeHttpRequests) Delete(id string, stop bool, f func(r server.Request) bool) bool {
-	this.cache.DeleteWithCheck(id, func(e interface{}) bool {
+	return this.cache.DeleteWithCheck(id, func(e interface{}) bool {
 		r := e.(server.Request)
 		if f != nil && !f(r) {
 			return false
@@ -693,8 +693,6 @@ func (this *activeHttpRequests) Delete(id string, stop bool, f func(r server.Req
 		}
 		return true
 	})
-
-	return true
 }
 
 func (this *activeHttpRequests) Count() (int, errors.Error) {
