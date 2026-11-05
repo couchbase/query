@@ -183,7 +183,6 @@ func (b *activeRequestsKeyspace) Fetch(keys []string, keysMap map[string]value.A
 func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.QueryContext, preserveMutations bool) (
 	int, value.Pairs, errors.Errors) {
 
-	var done bool
 	var creds distributed.Creds
 
 	userName := credsFromContext(context)
@@ -195,7 +194,7 @@ func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.Q
 
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
-	for i, pair := range deletes {
+	for _, pair := range deletes {
 		name := pair.Name
 		node, localKey := distributed.RemoteAccess().SplitKey(name)
 		nodeName := decodeNodeName(node)
@@ -211,28 +210,14 @@ func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.Q
 					}
 				},
 				creds, "", nil)
-			done = true
 
 			// local entry
 		} else {
-			done = server.ActiveRequestsDeleteFunc(localKey, func(request server.Request) bool {
+
+			// a request that completed after the scan is already gone: nothing to do
+			server.ActiveRequestsDeleteFunc(localKey, func(request server.Request) bool {
 				return userName == "" || checkRequest(request, userName)
 			})
-		}
-
-		if !done {
-			err := errors.Errors{errors.NewSystemStmtNotFoundError(nil, name)}
-			if preserveMutations {
-				// save memory allocations by making a new slice only on errors
-				deleted := make([]value.Pair, i)
-				if i > 0 {
-					copy(deleted, deletes[0:i-1])
-				}
-				return i, deleted, err
-			} else {
-				return i, nil, err
-			}
-
 		}
 	}
 

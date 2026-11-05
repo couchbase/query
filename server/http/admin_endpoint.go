@@ -141,6 +141,12 @@ func writeError(w http.ResponseWriter, err errors.Error) int {
 		return http.StatusInternalServerError
 	}
 	status := mapErrorToHttpResponse(err, http.StatusInternalServerError)
+
+	// unknown active/completed request id: report not found, as GET does
+	// (kept out of mapErrorToHttpResponse, which /query/service also uses)
+	if err.Code() == errors.E_SYSTEM_STMT_NOT_FOUND {
+		status = http.StatusNotFound
+	}
 	if err.Code() != errors.E_ADMIN_LOG {
 		w.WriteHeader(status)
 	}

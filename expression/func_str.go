@@ -1647,7 +1647,7 @@ type URLDecode struct {
 
 func NewURLDecode(operand Expression) Function {
 	rv := &URLDecode{}
-	rv.Init("urlencode", operand)
+	rv.Init("urldecode", operand)
 
 	rv.expr = rv
 	return rv
