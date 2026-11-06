@@ -18,7 +18,7 @@ package couchbase
 type AuditSpec struct {
 	Disabled       []uint32    `json:"disabled"`
 	Uid            string      `json:"uid"`
-	AuditdEnabled  bool        `json:"auditdEnabled`
+	AuditdEnabled  bool        `json:"auditdEnabled"`
 	DisabledUsers  []AuditUser `json:"disabledUsers"`
 	LogPath        string      `json:"logPath"`
 	RotateInterval int64       `json:"rotateInterval"`

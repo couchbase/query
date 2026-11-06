@@ -151,6 +151,21 @@ func rolesToParamFormat(roles []Role) string {
 	return buffer.String()
 }
 
+// comma separated list of the non-empty group names
+func groupsToParamFormat(groups []string) string {
+	var buffer bytes.Buffer
+	for _, g := range groups {
+		if g == "" {
+			continue
+		}
+		if buffer.Len() > 0 {
+			buffer.WriteString(",")
+		}
+		buffer.WriteString(g)
+	}
+	return buffer.String()
+}
+
 func (c *Client) PutUserInfo(cred cbauth.Creds, u *User, ctx context.Context) error {
 	params := make(map[string]any)
 	if u.Name != string([]byte{0}) {
@@ -163,18 +178,7 @@ func (c *Client) PutUserInfo(cred cbauth.Creds, u *User, ctx context.Context) er
 		params["password"] = u.Password
 	}
 	if len(u.Groups) > 0 {
-		first := false
-		var s string
-		for i := 0; i < len(u.Groups); i++ {
-			if u.Groups[i] != "" {
-				if !first {
-					s += ","
-				}
-				s += u.Groups[i]
-				first = false
-			}
-		}
-		params["groups"] = s
+		params["groups"] = groupsToParamFormat(u.Groups)
 	}
 	var target string
 	switch u.Domain {

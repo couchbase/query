@@ -295,6 +295,11 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			log = true
 		}
 		b.Unlock()
+		// the stream body is ours to close on every exit, including
+		// when streamingFn asks to stop
+		if updater != nil {
+			updater.Close()
+		}
 		if log {
 			logging.Debugf("%s Resetting b.updater (%p) on exit", msgPrefix, updater)
 		}
@@ -352,6 +357,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 		} else if res.StatusCode == http.StatusNotFound {
 			// bucket has been removed, shut down
 			logging.Infof("%s Streaming endpoint not found. Exiting.", msgPrefix)
+			res.Body.Close()
 			return errors.NewUpdaterEndpointNotFoundError(b.GetName())
 		} else if res.StatusCode != http.StatusOK {
 			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))
@@ -441,6 +447,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			}
 
 			newcps := make([]*connectionPool, len(tmpb.VBSMJson.ServerList))
+			fresh := make([]bool, len(newcps)) // pools in newcps not taken from b.connPools
 			for i := range newcps {
 				// get the old connection pool and check if it is still valid
 				pool := b.getConnPoolByHost(tmpb.VBSMJson.ServerList[i], true /* bucket already locked */)
@@ -454,9 +461,11 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 				hostport := tmpb.VBSMJson.ServerList[i]
 				newcps[i], err = b.mkConnPool(hostport, &poolServices, tlsConfig, disableNonSSLPorts)
 				if err != nil {
+					releaseNewConnPools(newcps[:i], fresh)
 					b.Unlock()
 					return errors.NewUpdaterMappingError(b.GetName(), err)
 				}
+				fresh[i] = true
 			}
 
 			b.replaceConnPools2(newcps, true /* bucket already locked */)
@@ -548,6 +557,11 @@ func (p *Pool) UpdatePool2(msgPrefix string, streamingFn PoolStreamingFn) errors
 			log = true
 		}
 		p.Unlock()
+		// the stream body is ours to close on every exit, including
+		// when streamingFn asks to stop
+		if updater != nil {
+			updater.Close()
+		}
 		if log {
 			logging.Debugf("%s Resetting p.updater (%p) on exit", msgPrefix, updater)
 		}
@@ -592,6 +606,7 @@ func (p *Pool) UpdatePool2(msgPrefix string, streamingFn PoolStreamingFn) errors
 			return errors.NewUpdaterStreamingError("pool", goErr)
 		} else if res.StatusCode == http.StatusNotFound {
 			logging.Infof("%s Streaming endpoint not found. Exiting.", msgPrefix)
+			res.Body.Close()
 			return errors.NewUpdaterEndpointNotFoundError("pool")
 		} else if res.StatusCode != http.StatusOK {
 			bod, _ := ioutil.ReadAll(io.LimitReader(res.Body, 512))

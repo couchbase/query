@@ -87,13 +87,15 @@ func (b *Bucket) DropExternalCollection(cred cbauth.Creds, scope, name string, c
 
 func (b *Bucket) GetExternalCollectionObj(scope, name string, ctx context.Context) (map[string]any, error) {
 	entry, err := b.GetExternalCollectionEntry(scope, name, ctx)
-	if err != nil || entry == nil {
-		return nil, nil
+	if err != nil {
+		return nil, err
+	} else if entry == nil {
+		return nil, fmt.Errorf("external collection %s.%s not found", scope, name)
 	}
 
 	data, err := json.Marshal(entry)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	var rv map[string]any
 	if err = json.Unmarshal(data, &rv); err != nil {

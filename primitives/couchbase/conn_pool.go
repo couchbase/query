@@ -368,6 +368,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 				if cp.initialAddr == "" {
 					cp.initialAddr = ip
 				} else if cp.initialAddr != ip {
+					rv.Close()
 					<-cp.createsem
 					return nil, errHostChanged
 				}

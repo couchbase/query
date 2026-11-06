@@ -644,6 +644,24 @@ func (b *Bucket) getConnPool(i int) *connectionPool {
 	return nil
 }
 
+/*
+Undo a partly built list of connection pools that is not going to be used:
+close the pools that were created for it (fresh) and mark the reused ones as
+free again.
+*/
+func releaseNewConnPools(newcps []*connectionPool, fresh []bool) {
+	for i, p := range newcps {
+		if p == nil {
+			continue
+		}
+		if fresh[i] {
+			p.Close()
+		} else {
+			p.inUse = false
+		}
+	}
+}
+
 func (b *Bucket) getConnPoolByHost(host string, bucketLocked bool) *connectionPool {
 	pools := b.getConnPools(bucketLocked)
 	for _, p := range pools {
@@ -1267,7 +1285,7 @@ func ConnectWithAuth(baseU string, ah AuthHandler, userAgent string) (c Client, 
 // with the KV engine encrypted.
 //
 // This method should be called immediately after a Connect*() method.
-func (c *Client) InitTLS(caFile, certFile, keyfile string, disableNonSSLPorts bool, passphrase []byte,
+func (c *Client) InitTLS(caFile, certFile, keyFile string, disableNonSSLPorts bool, passphrase []byte,
 	useInternalClientCert bool, internalClientCertFile string, internalClientKeyFile string,
 	internalClientPrivateKeyPassphrase []byte) error {
 	// Set the values for certs
@@ -1589,6 +1607,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	}
 
 	newcps := make([]*connectionPool, len(tmpb.VBSMJson.ServerList))
+	fresh := make([]bool, len(newcps)) // pools in newcps not taken from b.connPools
 	for i := range newcps {
 		hostport := tmpb.VBSMJson.ServerList[i]
 		if preserveConnections {
@@ -1602,26 +1621,36 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 
 			// if we find a temporary pool, save it
 			if len(b.tempServers) > i && b.tempServers[i] == hostport {
-				newcps[i] = b.tempConnPools[i]
+				tempPool := b.tempConnPools[i]
 				b.tempServers[i] = ""
 				b.tempConnPools[i] = nil
-				newcps[i].inUse = true
-				continue
+
+				// a failed attempt leaves the node name with no pool
+				if tempPool != nil {
+					newcps[i] = tempPool
+					tempPool.inUse = true
+					fresh[i] = true
+					continue
+				}
 			}
 		}
 
 		newcps[i], err = b.mkConnPool(hostport, &poolServices, tlsConfig, disableNonSSLPorts)
 		if err != nil {
+			releaseNewConnPools(newcps[:i], fresh)
 			b.Unlock()
 			return err
 		}
+		fresh[i] = true
 	}
 
 	// ditch any remaining temporary pool
 	for i, c := range b.tempConnPools {
 		b.tempServers[i] = ""
 		b.tempConnPools[i] = nil
-		c.Close()
+		if c != nil {
+			c.Close()
+		}
 	}
 	b.tempServers = nil
 	b.tempConnPools = nil
@@ -2112,10 +2141,10 @@ func InvokeEndpointWithRetry(url string, u string, p string, cmd string, ctype s
 		if err == nil && resp != nil {
 			if resp.StatusCode == 200 {
 				body, err := ioutil.ReadAll(resp.Body)
+				resp.Body.Close()
 				if err != nil {
 					return nil, err
 				}
-				resp.Body.Close()
 				return body, nil
 			}
 			delay := resp.Header.Get("Retry-After")

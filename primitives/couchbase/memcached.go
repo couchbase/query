@@ -50,6 +50,9 @@ const defThrottleRequeue = 500 * time.Millisecond
 const maxThrottleRequeue = 1000000 // incoming value is an int in microseconds
 const throttleAdjustment = 1000    // we wait 5% less than what KV says
 
+// GET_COLLECTION_ID response extras: 8-byte manifest uid and 4-byte collection id
+const collectionCIDExtrasLen = 12
+
 // Return true if error is KEY_EEXISTS
 func IsKeyEExistsError(err error) bool {
 
@@ -152,7 +155,7 @@ const HTTP_404 = "HTTP error 404"
 // The connection must be returned to its pool after use.
 func (b *Bucket) getConnectionToVBucket(vb uint32, desc *doDescriptor) (*memcached.Client, *connectionPool, error) {
 	vbm := b.VBServerMap()
-	if len(vbm.VBucketMap) < int(vb) {
+	if int(vb) >= len(vbm.VBucketMap) {
 		return nil, nil, fmt.Errorf("primitives/couchbase: vbmap smaller than vbucket list: %v vs. %v",
 			vb, vbm.VBucketMap)
 	}
@@ -711,8 +714,8 @@ func (b *Bucket) GatherStatsFunc(which string, fn func(key, val []byte)) map[str
 		if gs.Err != nil {
 			if errMap == nil {
 				errMap = make(map[string]error)
-				errMap[gs.Server] = gs.Err
 			}
+			errMap[gs.Server] = gs.Err
 		}
 	}
 	return errMap
@@ -1604,6 +1607,10 @@ func (b *Bucket) GetCollectionCID(scope string, collection string, reqDeadline t
 			return err1
 		}
 
+		if len(response.Extras) < collectionCIDExtrasLen {
+			return fmt.Errorf("invalid collection id response for %s.%s: extras length %d", scope, collection,
+				len(response.Extras))
+		}
 		manifestUid = binary.BigEndian.Uint32(response.Extras[4:8])
 		collUid = binary.BigEndian.Uint32(response.Extras[8:12])
 
@@ -1750,6 +1757,7 @@ func (b *Bucket) GetRandomDoc(xattrs bool, context ...*memcached.ClientContext) 
 	if conn.LastBucket() != b.Name {
 		_, err = conn.SelectBucket(b.Name)
 		if err != nil {
+			pool.Discard(conn)
 			return nil, err
 		}
 	}

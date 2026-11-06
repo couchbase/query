@@ -1434,7 +1434,7 @@ func (this *vbRangeScan) readCurrent() bool {
 	if l == -1 {
 		return false
 	}
-	if len(this.head) < l {
+	if cap(this.head) < l {
 		this.head = make([]byte, 0, l)
 	}
 	this.head = this.head[:l]
@@ -1571,7 +1571,8 @@ func (this *vbRangeScan) addKey(key []byte) bool {
 				end := start + this.keyLen(i)
 
 				// Record the file offset before writing this entry. This becomes the start offset for this entry's encrypted chunk
-				chunkStartOffset, err := this.spill.Seek(0, io.SeekCurrent)
+				var chunkStartOffset int64
+				chunkStartOffset, err = this.spill.Seek(0, io.SeekCurrent)
 				if err != nil {
 					break
 				}
@@ -1720,7 +1721,8 @@ func (this *vbRangeScan) addDocument(key []byte, doc []byte, meta []byte) bool {
 				end := start + this.keyLen(i)
 
 				// Record the file offset before writing this entry. This becomes the start offset for this entry's encrypted chunk
-				chunkStartOffset, err := this.spill.Seek(0, io.SeekCurrent)
+				var chunkStartOffset int64
+				chunkStartOffset, err = this.spill.Seek(0, io.SeekCurrent)
 				if err != nil {
 					break
 				}
@@ -2292,9 +2294,16 @@ type scanCancel struct {
 
 type scanCancelSlice []*scanCancel
 
-func (this scanCancelSlice) Len() int           { return len(this) }
-func (this scanCancelSlice) Less(i, j int) bool { return this[i].b.Name < this[i].b.Name }
-func (this scanCancelSlice) Swap(i, j int)      { this[i], this[j] = this[j], this[i] }
+func (this scanCancelSlice) Len() int { return len(this) }
+
+// sort by bucket then vbucket so that cancels for the same vbucket are adjacent
+func (this scanCancelSlice) Less(i, j int) bool {
+	if this[i].b.Name != this[j].b.Name {
+		return this[i].b.Name < this[j].b.Name
+	}
+	return this[i].vbucket < this[j].vbucket
+}
+func (this scanCancelSlice) Swap(i, j int) { this[i], this[j] = this[j], this[i] }
 
 type rswCancelQueue struct {
 	sync.RWMutex
@@ -2358,18 +2367,18 @@ func (cqueue *rswCancelQueue) runWorker() {
 			cqueueLocked = false
 			if cr != nil {
 				sort.Sort(cr)
-				var replica bool
 				var vbucket uint16
 			cancel:
 				for i := range cr {
-					if conn != nil && (b != cr[i].b || (replica && cr[i].vbucket != vbucket)) {
+					// the connection goes to the node holding the active copy of the vbucket it was opened for, so a
+					// cancel for another vbucket (possibly on a different node) needs a new connection
+					if conn != nil && (b != cr[i].b || cr[i].vbucket != vbucket) {
 						conn.SetReplica(false)
 						pool.Return(conn)
 						conn = nil
 					}
 					if conn == nil {
 						b = cr[i].b
-						replica = false
 						vbucket = cr[i].vbucket
 						// MB-75091: range scans are only created on the active vbucket (KV doesn't support range scans on
 						// replica vbuckets), so the cancel must also go to the active, never a replica
@@ -2401,7 +2410,6 @@ func (cqueue *rswCancelQueue) runWorker() {
 						}
 						if desc.replica > 0 {
 							conn.SetReplica(true)
-							replica = true
 						}
 					}
 					// always reset the deadline for each new piece of work
