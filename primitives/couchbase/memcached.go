@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -501,15 +502,25 @@ func (b *Bucket) handleNMVB(vb uint32, oldNode string, resp *gomemcached.MCRespo
 				nodes := b.VBServerMap().ServerList
 
 				// search the current map
-				if int(vb) < len(tmpVB.VBSMJson.VBucketMap) {
-					masterId = tmpVB.VBSMJson.VBucketMap[int(vb)][0]
-					node = tmpVB.VBSMJson.ServerList[masterId]
+				// an entry can be empty, or -1 when there's no active copy
+				activeNode := func(vbMap [][]int) (int, string, bool) {
+					if int(vb) < len(vbMap) && len(vbMap[vb]) > 0 {
+						id := vbMap[vb][0]
+						if id >= 0 && id < len(tmpVB.VBSMJson.ServerList) {
+							return id, tmpVB.VBSMJson.ServerList[id], true
+						}
+					}
+					return 0, "", false
+				}
+				if id, n, ok := activeNode(tmpVB.VBSMJson.VBucketMap); ok {
+					masterId, node = id, n
 				}
 
 				// if we haven't found a different node and there's a future map, search there
-				if node == oldNode && int(vb) < len(tmpVB.VBSMJson.VBucketMapForward) {
-					masterId = tmpVB.VBSMJson.VBucketMapForward[int(vb)][0]
-					node = tmpVB.VBSMJson.ServerList[masterId]
+				if node == oldNode {
+					if id, n, ok := activeNode(tmpVB.VBSMJson.VBucketMapForward); ok {
+						masterId, node = id, n
+					}
 				}
 				if node != oldNode {
 					if masterId < len(nodes) && nodes[masterId] == node {
@@ -938,7 +949,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 	retries := -1
 	desc := &doDescriptor{useReplicas: useReplica, version: b.Version, maxTries: b.backOffRetries()}
 	var lastError error
-	for ; desc.attempts < maxBulkRetries && !done && !eStatus.errStatus; desc.attempts++ {
+	for ; desc.attempts < maxBulkRetries && !done && !eStatus.errStatus.Load(); desc.attempts++ {
 		retries++
 		if !active() {
 			return rv, desc.delay, retries
@@ -973,6 +984,8 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 			// Accomodate this by setting the kvTimeout for a bulk get as kvTimeout*numKeys
 			dl, err := getDeadline(reqDeadline, time.Duration(int64(kvTimeout)*int64(len(keys))), DefaultTimeout)
 			if err != nil {
+				// the request deadline is the request timeout: the request's timer fails the request with a timeout
+				// error (1080) as it expires, so the expiry isn't reported again here as a bulk get error
 				logging.Debugf("Request deadline expired.")
 				pool.Return(conn)
 				return err
@@ -981,11 +994,13 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 			if desc.replica > 0 {
 				conn.SetReplica(true)
 			}
-			mark := util.Now()
-			err = conn.GetBulk(vb, keys, rv, subPaths, context...)
-			atomic.AddUint64(&b.bulkTime, uint64(util.Since(mark)))
-
+			// registered before GetBulk(), so that the connection is released on a panic too;
+			// it is discarded then, as it may still hold unread responses
 			defer func() {
+				if r := recover(); r != nil {
+					pool.Discard(conn)
+					panic(r)
+				}
 				if desc.discard {
 					pool.Discard(conn)
 				} else {
@@ -993,6 +1008,10 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 					pool.Return(conn)
 				}
 			}()
+
+			mark := util.Now()
+			err = conn.GetBulk(vb, keys, rv, subPaths, context...)
+			atomic.AddUint64(&b.bulkTime, uint64(util.Since(mark)))
 
 			b.processOpError(uint32(vb), err, pool.Node(), desc, pool)
 			if desc.errorString != "" {
@@ -1028,7 +1047,7 @@ func (b *Bucket) doBulkGet(vb uint16, keys []string, active func() bool, reqDead
 }
 
 type errorStatus struct {
-	errStatus bool
+	errStatus atomic.Bool // set by errorCollector, read by the workers
 }
 
 type vbBulkGet struct {
@@ -1107,8 +1126,15 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 		vbg.wg.Done()
 	}()
 	defer func() {
-		// Workers cannot panic and die
-		recover()
+		// Workers cannot panic and die, but the request must not succeed
+		// with this v-bucket's documents missing
+		r := recover()
+		if r != nil {
+			buf := make([]byte, 1<<16)
+			n := runtime.Stack(buf, false)
+			logging.Severef("Bulk get worker panic: <ud>%v</ud>\n%s", r, buf[:n])
+			vbg.ech <- fmt.Errorf("bulk get of v-bucket %d failed: worker panic (see the log)", vbg.k)
+		}
 	}()
 	rv, delay, retries = vbg.b.doBulkGet(vbg.k, vbg.keys, vbg.active, vbg.reqDeadline, vbg.kvTimeout, vbg.ech, vbg.subPaths,
 		vbg.useReplica, vbg.groupError, vbg.context...)
@@ -1128,10 +1154,9 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 			}
 			vbg.keys = newKeys
 		}
-		// free the worker and try again
-		if len(vbg.keys) > 0 {
-			vbg.wg.Add(1)
-		} else {
+		// free the worker and try again (counted for the requeue at the end, so that a panic before then can't leave
+		// the count raised)
+		if len(vbg.keys) == 0 {
 
 			// should never happen
 			delay = time.Duration(0)
@@ -1140,6 +1165,9 @@ func vbDoBulkGet(vbg *vbBulkGet) time.Duration {
 	if len(rv) > 0 {
 		atomic.AddUint64(&vbg.b.readCount, uint64(len(rv)))
 		vbg.ch <- rv
+	}
+	if delay != time.Duration(0) {
+		vbg.wg.Add(1)
 	}
 	return delay
 }
@@ -1158,7 +1186,7 @@ func (b *Bucket) processBulkGet(kdm map[uint16][]string, active func() bool, req
 	for k, keys := range kdm {
 
 		// GetBulk() group has error donot Queue items for this group
-		if eStatus.errStatus {
+		if eStatus.errStatus.Load() {
 			break
 		}
 
@@ -1208,6 +1236,47 @@ func (m multiError) Error() string {
 	return fmt.Sprintf("{%v errors, starting with %v}", len(m), m[0].Error())
 }
 
+// Unwrap lets callers (and errors.Is/As) look at every error, not only the first one, which Error() shows
+func (m multiError) Unwrap() []error {
+	return m
+}
+
+// IsNotFoundError reports a not found key, which fetch callers ignore. The error can be wrapped, so its text (and a
+// query error's cause) is matched too; a combined error is not found only if every error in it is. Bulk get uses the
+// same check to decide whether to stop, so that it can't stop on an error that its caller then ignores.
+func IsNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if IsKeyNoEntError(err) {
+		return true
+	}
+	if m, ok := err.(interface{ Unwrap() []error }); ok {
+		errs := m.Unwrap()
+		for _, e := range errs {
+			if !IsNotFoundError(e) {
+				return false
+			}
+		}
+		return len(errs) > 0
+	}
+	if ee, ok := err.(qerrors.Error); ok {
+		return ee.ContainsText("KEY_ENOENT")
+	}
+	return strings.Contains(err.Error(), "KEY_ENOENT")
+}
+
+// the order errors are kept in: a missing bucket (not retryable), another real error, then a not found key
+func errorRank(err error, notFound bool) int {
+	switch {
+	case notFound:
+		return 2
+	case IsBucketNotFound(err):
+		return 0
+	}
+	return 1
+}
+
 // Convert a stream of errors from ech into a multiError (or nil) and
 // send down eout.
 //
@@ -1216,12 +1285,24 @@ func (m multiError) Error() string {
 func errorCollector(ech <-chan error, eout chan<- error, eStatus *errorStatus) {
 	defer func() { eout <- nil }()
 	var errs multiError
+	var firstRank int
 	for e := range ech {
-		if !eStatus.errStatus && !IsKeyNoEntError(e) {
-			eStatus.errStatus = true
+		// stop the bulk get on the same errors that callers don't ignore as not found
+		notFound := IsNotFoundError(e)
+		if !notFound {
+			eStatus.errStatus.Store(true)
 		}
 
 		errs = append(errs, e)
+		// keep the most serious error first: checks on the combined error's text (bucket not found, read timeout)
+		// and its message see only the first one
+		rank := errorRank(e, notFound)
+		if len(errs) == 1 {
+			firstRank = rank
+		} else if rank < firstRank {
+			errs[0], errs[len(errs)-1] = errs[len(errs)-1], errs[0]
+			firstRank = rank
+		}
 	}
 
 	if len(errs) > 0 {
@@ -1373,11 +1454,9 @@ func (b *Bucket) WriteWithCAS(k string, flags, exp int, v any, xattrs map[string
 		if data != nil && !compressed && mc.IsFeatureEnabled(memcached.FeatureSnappyCompression) {
 			data = snappy.Encode(nil, data)
 			compressed = true
-			if len(context) > 0 {
-				context[0].Compressed = true
-			} else {
-				context = append(context, &memcached.ClientContext{Compressed: true})
-			}
+			var cc *memcached.ClientContext
+			context, cc = ownContext(context)
+			cc.Compressed = true
 		}
 		if len(xattrs) > 0 && data != nil {
 			ops = make([]memcached.SubDocOp, len(xattrs)+1)
@@ -1492,11 +1571,9 @@ func (b *Bucket) WriteCasWithMT(k string, flags, exp int, cas uint64, v any, xat
 		if data != nil && !compressed && mc.IsFeatureEnabled(memcached.FeatureSnappyCompression) {
 			data = snappy.Encode(nil, data)
 			compressed = true
-			if len(context) > 0 {
-				context[0].Compressed = true
-			} else {
-				context = append(context, &memcached.ClientContext{Compressed: true})
-			}
+			var cc *memcached.ClientContext
+			context, cc = ownContext(context)
+			cc.Compressed = true
 		}
 		if xattrs == nil {
 			mark := util.Now()
@@ -1737,6 +1814,23 @@ func (b *Bucket) getRandomConnection() (*memcached.Client, *connectionPool, erro
 	}
 }
 
+/*
+Return a copy of context whose first ClientContext is a private copy that the
+caller can change. The ClientContext passed in may be shared with other
+operations, possibly running in parallel, and must not be modified. The copy
+is shallow: its own fields can be set, but what they point to (DataTransferInfo,
+shared for RU/WU accounting, VbState and SeqScanSnapshotReqs) is still shared
+and must not be modified through it.
+*/
+func ownContext(context []*memcached.ClientContext) ([]*memcached.ClientContext, *memcached.ClientContext) {
+	cc := &memcached.ClientContext{}
+	if len(context) > 0 {
+		*cc = *context[0]
+		context = context[1:]
+	}
+	return append([]*memcached.ClientContext{cc}, context...), cc
+}
+
 // Get a random document from a bucket. Since the bucket may be distributed
 // across nodes, we must first select a random connection, and then use the
 // Client.GetRandomDoc() call to get a random document from that node.
@@ -1762,11 +1856,10 @@ func (b *Bucket) GetRandomDoc(xattrs bool, context ...*memcached.ClientContext) 
 		}
 	}
 
-	if len(context) == 0 {
-		context = append(context, &memcached.ClientContext{})
-	}
 	if xattrs {
-		context[0].IncludeXATTRs = xattrs
+		var cc *memcached.ClientContext
+		context, cc = ownContext(context)
+		cc.IncludeXATTRs = true
 	}
 
 	// get a randomm document from the connection

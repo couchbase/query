@@ -2862,7 +2862,7 @@ func doFetch(k string, fullName string, v *gomemcached.MCResponse, context datas
 			return nil
 		}
 	}
-	if xattrs && raw[0] != '{' {
+	if xattrs && v.DataType&gomemcached.DatatypeFlagXattrs != 0 {
 		var ok bool
 		raw, xattrVal, ok = cb.ExtractXattrs(raw)
 		if !ok {
@@ -3096,14 +3096,7 @@ func (k *keyspace) setNeedsManifest() {
 }
 
 func isNotFoundError(err error) bool {
-	if cb.IsKeyNoEntError(err) {
-		return true
-	}
-	// it may have been wrapped in another error so check the text...
-	if ee, ok := err.(errors.Error); ok {
-		return ee.ContainsText("KEY_ENOENT")
-	}
-	return strings.Contains(err.Error(), "KEY_ENOENT")
+	return cb.IsNotFoundError(err)
 }
 
 func isEExistError(err error) bool {

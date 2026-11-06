@@ -959,7 +959,7 @@ processing:
 								copy(ndoc, doc)
 								doc = ndoc
 								var xattrVal value.Value
-								if this.xattrs && doc[0] != '{' {
+								if this.xattrs && meta[24]&gomemcached.DatatypeFlagXattrs != 0 {
 									var ok bool
 									doc, xattrVal, ok = ExtractXattrs(doc)
 									if !ok {
@@ -2770,25 +2770,48 @@ func getXattrValLen(raw []byte) int {
 	return len(raw)
 }
 
+/*
+Split a document with the XATTR datatype bit into its body and XATTRs. The
+XATTR section is a 4-byte total length followed by pairs, each a 4-byte length
+(of the rest of the pair), the name, a 0 byte, the JSON value and a 0 byte. If
+the section is malformed, false is returned; if even its length is invalid, raw
+is returned unchanged.
+*/
 func ExtractXattrs(raw []byte) ([]byte, value.Value, bool) {
+	if len(raw) < 4 {
+		return raw, nil, false
+	}
 	lx := int(binary.BigEndian.Uint32(raw)) + 4
+	if lx > len(raw) {
+		return raw, nil, false
+	}
 	m := map[string]any{}
-	for i := 8; i < lx; { // start after lx and the first length field
-		var name string
+	for i := 4; i < lx; {
 		var val any
-		name = string(raw[i : i+getXattrValLen(raw[i:])])
+		if i+4 > lx { // too short for a pair's length field
+			return raw[lx:], nil, false
+		}
+		end := i + 4 + int(binary.BigEndian.Uint32(raw[i:]))
+		i += 4
+		if end > lx || end < i {
+			return raw[lx:], nil, false
+		}
+		name := string(raw[i : i+getXattrValLen(raw[i:end])])
 		if name == "" {
 			return raw[lx:], nil, false
 		}
 		i += len(name) + 1
-		v := raw[i : i+getXattrValLen(raw[i:])]
-		if len(v) == 0 {
+		if i >= end {
+			return raw[lx:], nil, false
+		}
+		v := raw[i : i+getXattrValLen(raw[i:end])]
+		if len(v) == 0 || i+len(v)+1 != end { // the value must end the pair, with its 0 byte
 			return raw[lx:], nil, false
 		}
 		if err := json.Unmarshal(v, &val); err != nil {
 			return raw[lx:], nil, false
 		}
-		i += len(v) + 5 // skip the next length field too
+		i = end
 		m[name] = val
 	}
 	if len(m) == 0 {
