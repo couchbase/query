@@ -71,11 +71,19 @@ func (this *builder) beginMutate(keyspace datastore.Keyspace, ksref *algebra.Key
 	// Process where clause
 	if this.where != nil {
 		if let != nil {
-			inliner := expression.NewInliner(let.Copy().MappingsNoSubq())
+			mappings, noInline := let.Copy().MappingsNoSubq()
+			inliner := expression.NewInliner(mappings)
 			inliner.SetSkipSubq()
 			level := getMaxLevelOfLetBindings(let)
 			var err error
 			this.where, err = dereferenceLet(this.where.Copy(), inliner, level)
+			if err != nil {
+				return nil, err
+			}
+			// LET variables not inlined are only available after the Let operator,
+			// mark them such that predicates referencing them are not pushed down
+			// to index scan/fetch (MB-75122)
+			err = expression.MarkLetSubqVariables(this.where, noInline)
 			if err != nil {
 				return nil, err
 			}

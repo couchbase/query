@@ -33,6 +33,7 @@ const (
 	IDENT_IS_WITH_ALIAS                 // CTE variable (WITH alias)
 	IDENT_IS_RECURSIVE_WITH             // Mark recursive withs
 	IDENT_IS_FUNC_VAR                   // inline function variable
+	IDENT_IS_LET_SUBQ_VAR               // LET variable not inlined (binding has subquery)
 )
 
 /*
@@ -406,6 +407,10 @@ func (this *Identifier) SetFuncVariable(funcVar bool) {
 	} else {
 		this.identFlags &^= IDENT_IS_FUNC_VAR
 	}
+}
+
+func (this *Identifier) IsLetSubqVariable() bool {
+	return (this.identFlags & IDENT_IS_LET_SUBQ_VAR) != 0
 }
 
 func (this *Identifier) SetIdentFlags(aliases map[string]bool, flags uint32) {

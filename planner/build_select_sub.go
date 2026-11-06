@@ -169,9 +169,17 @@ func (this *builder) VisitSubselect(node *algebra.Subselect) (interface{}, error
 		this.letLevel = getMaxLevelOfLetBindings(this.let)
 		this.where = nil
 		if node.Where() != nil {
-			inliner := expression.NewInliner(this.let.Copy().MappingsNoSubq())
+			mappings, noInline := this.let.Copy().MappingsNoSubq()
+			inliner := expression.NewInliner(mappings)
 			inliner.SetSkipSubq()
 			this.where, err = dereferenceLet(node.Where().Copy(), inliner, this.letLevel)
+			if err != nil {
+				return nil, err
+			}
+			// LET variables not inlined are only available after the Let operator,
+			// mark them such that predicates referencing them are not pushed down
+			// to index scan/fetch (MB-75122)
+			err = expression.MarkLetSubqVariables(this.where, noInline)
 			if err != nil {
 				return nil, err
 			}
