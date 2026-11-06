@@ -60,6 +60,7 @@ var ConnPoolAvailWaitTime = time.Millisecond
 
 type connectionPool struct {
 	host        string
+	server      string // the node as the bucket's server list names it (host is the TLS port when TLS is on)
 	initialAddr string
 	mkConn      func(host string, ah AuthHandler, tlsConfig *tls.Config, bucketName string) (*memcached.Client, string, error)
 	auth        AuthHandler

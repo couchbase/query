@@ -26,6 +26,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/couchbase/gomemcached"
 	memcached "github.com/couchbase/gomemcached/client"
@@ -1260,6 +1261,7 @@ type vbRangeScan struct {
 	continueExcluding bool
 
 	uuid       []byte
+	uuidNode   string // the node (server list name) holding the open scan uuid, which stays there if its vbucket moves
 	spill      *util.TempFile
 	buffer     []byte
 	offset     uint32
@@ -1283,6 +1285,14 @@ type vbRangeScan struct {
 	encryptedEntryOffsets []int64
 }
 
+// cancelOpenScan queues a cancel for the scan a throttled vbscan left open on KV to resume with, if any
+func (this *vbRangeScan) cancelOpenScan() {
+	if this.uuid != nil {
+		_RSW.queueCancel(this, this.uuid, this.uuidNode)
+		this.uuid = nil
+	}
+}
+
 func (this *vbRangeScan) String() string {
 	return fmt.Sprintf("[0x%08x,%p,%d]", this.scan.scanNum, this, this.vbucket())
 }
@@ -1304,6 +1314,20 @@ func (this *vbRangeScan) setContinueFrom(val []byte, excluding bool) {
 	this.continueFrom = make([]byte, len(val))
 	copy(this.continueFrom, val)
 	this.continueExcluding = excluding
+}
+
+// setResumePoint saves where a new scan for this vbscan has to start if the current one is lost: after the last key
+// received, or else where this run's scan started (start). start is nil when this run continued a scan created by an
+// earlier run, and then the position saved when that run was suspended still stands.
+func (this *vbRangeScan) setResumePoint(start []byte, excluding bool) {
+	if this.sampleSize != 0 {
+		return
+	}
+	if len(this.keys) > 0 {
+		this.setContinueFromLastKey()
+	} else if start != nil {
+		this.setContinueFrom(start, excluding)
+	}
 }
 
 func (this *vbRangeScan) setContinueFromLastKey() {
@@ -1491,7 +1515,11 @@ func (this *vbRangeScan) rangeNum() int {
 	return this.rng
 }
 
+// the caller must not hold a scan queue's lock or _RSW's (cancelOpenScan takes _RSW's)
 func (this *vbRangeScan) reportError(err qerrors.Error) {
+	// the vbscan is done with, so cancel any scan it left open on KV to resume with (e.g. throttled, then cancelled or
+	// failed to reconnect)
+	this.cancelOpenScan()
 	if this.state == _VBS_WORKING {
 		this.state = _VBS_WORKED
 	}
@@ -1892,9 +1920,13 @@ func (this *vbRangeScan) validateSingleKey(conn *memcached.Client) bool {
 	return true
 }
 
-func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
+// pool is the pool conn is from: its server list name identifies the node a scan is created on, for cancelling it, and
+// its host is the node throttling is reported for
+func (this *vbRangeScan) runScan(conn *memcached.Client, pool *connectionPool) bool {
+	node := pool.Node()
 	if this.state != _VBS_WORKING {
 		// cancelled whilst connection was being obtained
+		this.cancelOpenScan()
 		return true
 	}
 	defer func() {
@@ -1916,13 +1948,20 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 	var response *gomemcached.MCResponse
 	var uuid []byte
 	fetchLimit := this.fetchLimit
+	if this.sampleSize != 0 {
+		// random scans don't set fetchLimit; set it here rather than in createScan, so that a resumed scan's
+		// continues aren't sent with a limit of 0 (which drops every key)
+		fetchLimit = uint32(this.sampleSize)
+	}
 	var start []byte
 	var exclStart bool
 
 	opaque := uint32(0)
 
+	// the node the scan is on
+	scanNode := pool.server
 	cancelScan := func(keepConn bool) bool {
-		_RSW.queueCancel(this, uuid)
+		_RSW.queueCancel(this, uuid, scanNode)
 		return keepConn
 	}
 
@@ -1932,7 +1971,6 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 			cc.SeqScanSnapshotReqs = this.scan.snapshotReqs[this.vb]
 		}
 		if this.sampleSize != 0 {
-			fetchLimit = uint32(this.sampleSize)
 			if this.sampleSize == math.MaxInt {
 				logging.Debugf("%s creating random scan to sample all keys", this, this.scan.log)
 			} else {
@@ -1952,7 +1990,12 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				// success but no data
 				logging.Debugf("%s no data for scan: %v", this, resp)
 				this.kvOpsComplete = true
-				err = this.truncate()
+				err = nil
+				if this.sampleSize != 0 {
+					// a sample scan's keys were dropped by recreateScan; a recreated range scan's buffered keys (it
+					// started after the last of them) still belong in the result
+					err = this.truncate()
+				}
 				if err != nil {
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
 				} else {
@@ -1964,9 +2007,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 				logging.Debugf("%s throttling %v on scan creation", this, this.b.Name, this.scan.log)
 				// scan hasn't started so re-queue it so we can return and handle something else
 				Suspend(this.b.Name, getDelay(resp), node)
-				if this.sampleSize == 0 {
-					this.setContinueFrom(start, exclStart)
-				}
+				this.setResumePoint(start, exclStart)
 				if !_RSW.reQueueScan(this) {
 					this.reportError(qerrors.NewSSError(qerrors.E_SS_CREATE, err))
 				}
@@ -1978,6 +2019,8 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 			} else {
 				logging.Debugf("%s create failed, error: %v", this, err, this.scan.log)
 				if this.retries > 0 {
+					// startFrom() cleared the saved position: save it again, so the retry doesn't restart the range
+					this.setResumePoint(start, exclStart)
 					this.setupRetry()
 					logging.Errorf("Range scan %s creation failed with: %v. Remaining retries: %v", this, err, this.retries)
 					if !_RSW.reQueueScan(this) {
@@ -2001,6 +2044,19 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 		return true, false
 	}
 
+	// replaces the scan with a new one
+	recreateScan := func() (bool, bool) {
+		if this.sampleSize != 0 && len(this.keys) > 0 {
+			// a new random scan samples afresh: drop the keys sampled so far, so that none is repeated and the sample
+			// size isn't exceeded
+			if err := this.truncate(); err != nil {
+				this.reportError(qerrors.NewSSError(qerrors.E_SS_SPILL, err))
+				return false, false
+			}
+		}
+		return createScan()
+	}
+
 	cancelWorking := func() bool {
 		if response.Status == gomemcached.RANGE_SCAN_COMPLETE {
 			return true
@@ -2018,15 +2074,24 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 	}
 
 	retryable := false
-	if this.uuid != nil {
+	if this.uuid != nil && this.uuidNode != pool.server {
+		// the vbucket moved since the scan was throttled: the scan stays on the node it was created on, so cancel it
+		// there and create a new one here
+		this.cancelOpenScan()
+		uuid = make([]byte, 16)
+		cont, rv := recreateScan()
+		if !cont {
+			return rv
+		}
+	} else if this.uuid != nil {
 		// try continuing with a previous scan
 		uuid = this.uuid
 		this.uuid = nil
 		retryable = true
 	} else {
-		// create a new scan
+		// create a new scan (a retried sample scan samples afresh)
 		uuid = make([]byte, 16)
-		cont, rv := createScan()
+		cont, rv := recreateScan()
 		if !cont {
 			return rv
 		}
@@ -2043,26 +2108,25 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					logging.Debugf("%s throttling %v on continue of %s", this, this.b.Name, uuidAsString(uuid), this.scan.log)
 					Suspend(this.b.Name, getDelay(resp), node)
 					this.uuid = uuid // scan is open; we'll try to continue with it when re-run
-					if this.sampleSize == 0 {
-						this.setContinueFrom(start, exclStart) // in case we have to create a new scan
-					}
+					this.uuidNode = scanNode
+					this.setResumePoint(start, exclStart) // in case we have to create a new scan
 					if !_RSW.reQueueScan(this) {
 						this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 					}
 					return true
 				} else if resp.Status == gomemcached.KEY_EEXISTS && retryable {
-					cont, rv := createScan()
+					// replace the resumed scan: cancel it first (uuid is its id, which the queued cancel keeps), then give the
+					// new scan its own id
+					cancelScan(true)
+					uuid = make([]byte, 16)
+					cont, rv := recreateScan()
 					if !cont {
 						return rv
 					}
 					retryable = false
 					continue
 				} else if (resp.Status == gomemcached.NOT_MY_VBUCKET || resp.Status == gomemcached.KEY_ENOENT) && this.retries > 0 {
-					if this.sampleSize == 0 && len(this.keys) > 0 {
-						this.setContinueFromLastKey()
-					} else if this.sampleSize == 0 {
-						this.setContinueFrom(start, exclStart)
-					}
+					this.setResumePoint(start, exclStart)
 					this.setupRetry()
 					logging.Errorf("Range scan %s %v continue failed with: %v. Remaining retries: %v",
 						this, uuidAsString(uuid), resp.Status, this.retries, this.scan.log)
@@ -2104,12 +2168,9 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 						logging.Debugf("%s throttling %v on %v receive after %d keys",
 							this, this.b.Name, uuidAsString(uuid), len(this.keys), this.scan.log)
 						Suspend(this.b.Name, getDelay(resp), node)
-						if this.sampleSize == 0 && len(this.keys) > 0 {
-							this.setContinueFromLastKey()
-						} else if this.sampleSize == 0 {
-							this.setContinueFrom(start, exclStart)
-						}
+						this.setResumePoint(start, exclStart)
 						this.uuid = uuid // scan is open; we'll try to continue with it when re-run
+						this.uuidNode = scanNode
 						if !_RSW.reQueueScan(this) {
 							this.reportError(qerrors.NewSSError(qerrors.E_SS_CONTINUE, err))
 						}
@@ -2117,11 +2178,7 @@ func (this *vbRangeScan) runScan(conn *memcached.Client, node string) bool {
 					} else if (resp.Status == gomemcached.NOT_MY_VBUCKET || resp.Status == gomemcached.KEY_ENOENT) &&
 						this.retries > 0 {
 
-						if this.sampleSize == 0 && len(this.keys) > 0 {
-							this.setContinueFromLastKey()
-						} else if this.sampleSize == 0 {
-							this.setContinueFrom(start, exclStart)
-						}
+						this.setResumePoint(start, exclStart)
 						this.setupRetry()
 						logging.Errorf("Range scan %s %v continue failed with: %v. Remaining retries: %v",
 							this, uuidAsString(uuid), resp.Status, this.retries, this.scan.log)
@@ -2290,16 +2347,24 @@ type scanCancel struct {
 	vbucket uint16
 	uuid    []byte
 	b       *Bucket
+	node    string // the node (as the server list names it) of the connection pool the scan was created through
 }
 
 type scanCancelSlice []*scanCancel
 
 func (this scanCancelSlice) Len() int { return len(this) }
 
-// sort by bucket then vbucket so that cancels for the same vbucket are adjacent
+// sort by bucket, node then vbucket, so that the cancels sharing a connection are adjacent
 func (this scanCancelSlice) Less(i, j int) bool {
-	if this[i].b.Name != this[j].b.Name {
-		return this[i].b.Name < this[j].b.Name
+	if this[i].b != this[j].b {
+		if this[i].b.Name != this[j].b.Name {
+			return this[i].b.Name < this[j].b.Name
+		}
+		// a dropped and recreated bucket has the same name: keep each bucket object's cancels together
+		return uintptr(unsafe.Pointer(this[i].b)) < uintptr(unsafe.Pointer(this[j].b))
+	}
+	if this[i].node != this[j].node {
+		return this[i].node < this[j].node
 	}
 	return this[i].vbucket < this[j].vbucket
 }
@@ -2315,7 +2380,7 @@ type rswCancelQueue struct {
 
 func (cqueue *rswCancelQueue) runWorker() {
 	cqueueLocked := false
-	cqueueQLocked := false
+	canceller := &kvCanceller{}
 	defer func() {
 		r := recover()
 		if r != nil {
@@ -2323,42 +2388,28 @@ func (cqueue *rswCancelQueue) runWorker() {
 			n := runtime.Stack(buf, false)
 			s := util.ByteToString(buf[0:n])
 			logging.Severef("Range scan cancel worker {%p} panic: %v\n%v", cqueue, r, s)
+			// the held connection may be in any state: don't return it to the pool, but don't leak its pool slot either
+			canceller.discard()
 			// cannot panic and die
 			if cqueueLocked {
 				cqueue.Unlock()
 			}
-			if !cqueueQLocked {
-				cqueue.queue.Lock()
-			}
-			cqueue.queue.Unlock()
 			go cqueue.runWorker()
 		}
 	}()
 
-	var err error
-	var conn *memcached.Client
-	var pool *connectionPool
-	var b *Bucket
 	cqueue.Lock()
 	cqueueLocked = true
 	for {
 		if cqueue.abort {
 			cqueue.Unlock()
 			cqueueLocked = false
-			if conn != nil {
-				conn.SetReplica(false)
-				pool.Return(conn)
-				conn = nil
-			}
+			canceller.release()
 			// worker pool is shrinking so exit gracefully
 			return
 		} else if cqueue.scans == nil {
 			// relinquish any held connection before waiting for more work
-			if conn != nil {
-				conn.SetReplica(false)
-				pool.Return(conn)
-				conn = nil
-			}
+			canceller.release()
 			cqueue.cond.Wait()
 		} else {
 			cr := cqueue.scans
@@ -2367,73 +2418,310 @@ func (cqueue *rswCancelQueue) runWorker() {
 			cqueueLocked = false
 			if cr != nil {
 				sort.Sort(cr)
-				var vbucket uint16
-			cancel:
-				for i := range cr {
-					// the connection goes to the node holding the active copy of the vbucket it was opened for, so a
-					// cancel for another vbucket (possibly on a different node) needs a new connection
-					if conn != nil && (b != cr[i].b || cr[i].vbucket != vbucket) {
-						conn.SetReplica(false)
-						pool.Return(conn)
-						conn = nil
-					}
-					if conn == nil {
-						b = cr[i].b
-						vbucket = cr[i].vbucket
-						// MB-75091: range scans are only created on the active vbucket (KV doesn't support range scans on
-						// replica vbuckets), so the cancel must also go to the active, never a replica
-						desc := &doDescriptor{
-							useReplicas: false,
-							version:     b.Version,
-							maxTries:    b.backOffRetries(),
-							retry:       true,
-						}
-						for desc.attempts = 0; desc.attempts < desc.maxTries; {
-							conn, pool, err = b.getVbConnection(uint32(vbucket), desc, false)
-							if err != nil {
-								if desc.retry {
-									desc.attempts++
-									continue
-								}
-
-								if desc.errorString != "" {
-									logging.Infof("Range scan cancel failed - %v", fmt.Sprintf(desc.errorString, b.Name, err))
-								} else {
-									logging.Infof("Range scan cancel failed for bucket: %s - %v", b.Name, err)
-								}
-								conn = nil
-							}
-							break
-						}
-						if conn == nil {
-							break cancel
-						}
-						if desc.replica > 0 {
-							conn.SetReplica(true)
-						}
-					}
-					// always reset the deadline for each new piece of work
-					dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, DefaultTimeout)
-					conn.SetDeadline(dl)
-					_, err := conn.CancelRangeScan(cr[i].vbucket, cr[i].uuid, 0)
-					if err != nil {
-						resp, ok := err.(*gomemcached.MCResponse)
-						if !ok || resp.Status != gomemcached.KEY_ENOENT {
-							logging.Debugf("%s: vb %d cancel failed: %v", uuidAsString(cr[i].uuid), cr[i].vbucket, err)
-							pool.Discard(conn)
-							conn = nil
-						}
-					}
-					cqueue.queue.Lock()
-					cqueueQLocked = true
-					cr[i].uuid = cr[i].uuid[:0]
-					cqueueQLocked = false
-					cqueue.queue.Unlock()
+				notSent, failed, failures := sendCancels(cr, canceller)
+				if notSent > 0 || failed > 0 {
+					// these scans are left for KV to expire
+					logging.Infof("Range scan cancel: of %d cancels, %d not sent (node or bucket failed), %d failed; "+
+						"failed nodes and buckets: %v", len(cr), notSent, failed, failures)
 				}
 			}
 			cqueue.Lock()
 			cqueueLocked = true
 		}
+	}
+}
+
+// rsCanceller sends range scan cancels; it holds at most one connection, to the node of a bucket it was connected for
+type rsCanceller interface {
+	// connectedTo returns whether a connection to node for b is held
+	connectedTo(b *Bucket, node string) bool
+
+	// connect releases any held connection and connects to node for b; on failure the scope says what it applies to.
+	// It returns errScanGone when the node no longer holds the bucket, so that there is nothing to cancel.
+	connect(b *Bucket, node string) (scope cancelFailScope, err error)
+
+	// cancel sends a cancel on the held connection; on failure the scope says what the failure applies to
+	cancel(vb uint16, uuid []byte) (scope cancelFailScope, err error)
+
+	// release returns any held connection to its pool
+	release()
+}
+
+// the node isn't serving the bucket any more (removed or failed over): its scans went with it
+var errScanGone = fmt.Errorf("range scan cancel: the node no longer holds the bucket")
+
+type cancelFailScope int
+
+const (
+	_CANCEL_FAIL_ONE         cancelFailScope = iota // only this cancel
+	_CANCEL_FAIL_STALE                              // the connection was closed (e.g. by KV while idle): retry on a new one
+	_CANCEL_FAIL_BUCKET_NODE                        // the node, for this bucket
+	_CANCEL_FAIL_NODE                               // the node, for every bucket (unreachable or not responding)
+	_CANCEL_FAIL_BUCKET                             // the whole bucket (dropped or recreated)
+)
+
+// a cancel is a small request: don't let a node that doesn't respond hold the cancel worker for long
+const _RS_CANCEL_TIMEOUT = 10 * time.Second
+
+// connectFailScope returns what a failure to get a connection for a cancel applies to
+func connectFailScope(err error) cancelFailScope {
+	switch {
+	case IsBucketNotFound(err):
+		return _CANCEL_FAIL_BUCKET
+	case err == ErrTimeout:
+		// all the connections of the bucket's pool for the node are in use (e.g. by long scans): the node is fine, but
+		// waiting for a connection for each of its vbuckets would hold the cancel worker for long
+		return _CANCEL_FAIL_BUCKET_NODE
+	case isConnError(err) || isTimeoutError(err) || isSeveredConnectionError(err):
+		// a new connection can't be made, or is closed straight away
+		return _CANCEL_FAIL_NODE
+	default:
+		// e.g. the address doesn't match the one the bucket's pool for the node started with (each pool records its own),
+		// or authenticating or selecting the bucket was refused: that can be particular to the node (the bucket isn't on
+		// it yet or any more, or it hasn't picked up the credentials yet), so don't skip the bucket's other nodes
+		return _CANCEL_FAIL_BUCKET_NODE
+	}
+}
+
+// cancelResult returns what the failure of a cancel applies to, whether the connection can still be used and the
+// error; a nil error means there is nothing (left) to cancel
+func cancelResult(err error) (cancelFailScope, bool, error) {
+	if err == nil {
+		return _CANCEL_FAIL_ONE, true, nil
+	}
+	if resp, ok := err.(*gomemcached.MCResponse); ok {
+		switch resp.Status {
+		case gomemcached.KEY_ENOENT, gomemcached.NOT_MY_VBUCKET:
+			// the scan is already gone (completed, expired, or the node's memcached restarted), or the vbucket has left
+			// the node that created the scan, taking the scan with it (it can't be cancelled on another node)
+			return _CANCEL_FAIL_ONE, true, nil
+		case gomemcached.NO_BUCKET, gomemcached.CONFIG_ONLY:
+			// the bucket is gone from the node, or the node no longer serves it (failed over), taking its scans with
+			// it: like a node that no longer holds the bucket, there is nothing to cancel (don't keep the connection,
+			// so that the bucket's remaining cancels for the node are skipped)
+			return _CANCEL_FAIL_BUCKET_NODE, false, errScanGone
+		case gomemcached.EACCESS:
+			// access refused: like an auth refusal on connect, this can be particular to the node (it may not have
+			// picked up the credentials yet), so skip only the bucket's cancels for this node
+			return _CANCEL_FAIL_BUCKET_NODE, false, err
+		}
+		// KV answered, so the connection is fine
+		return _CANCEL_FAIL_ONE, true, err
+	}
+	switch {
+	case isTimeoutError(err):
+		// the node didn't respond in time
+		return _CANCEL_FAIL_NODE, false, err
+	case isSeveredConnectionError(err) || isConnError(err):
+		// a connection from the pool may have been closed while idle: that doesn't mean the node is down
+		return _CANCEL_FAIL_STALE, false, err
+	default:
+		return _CANCEL_FAIL_ONE, false, err
+	}
+}
+
+// sendCancels sends the cancels in cr, which must be sorted by bucket, node and vbucket. Each cancel goes to the node
+// its scan was created on: a scan stays there when its vbucket moves, as long as the node holds the bucket.
+// When a node fails (can't be connected to, or doesn't respond to a cancel), its remaining cancels are skipped, so that
+// the timeouts aren't repeated for each of its scans; a bucket-wide error skips the rest of the bucket. The cancels for
+// other nodes and buckets are still sent.
+// Returns the number of cancels not sent because their node or bucket had failed, the number that failed, and a
+// description of each node and bucket that failed.
+func sendCancels(cr scanCancelSlice, c rsCanceller) (notSent int, failed int, failures []string) {
+	type bucketNode struct {
+		b    *Bucket
+		node string
+	}
+	var failedNodes map[string]bool
+	var failedBucketNodes map[bucketNode]bool
+	var failedBuckets map[*Bucket]bool
+	var goneBucketNodes map[bucketNode]bool
+	var goneBuckets map[*Bucket]bool
+	oneFailed := false
+	markFailed := func(b *Bucket, node string, scope cancelFailScope, err error) {
+		switch scope {
+		case _CANCEL_FAIL_BUCKET:
+			if failedBuckets == nil {
+				failedBuckets = make(map[*Bucket]bool)
+			}
+			failedBuckets[b] = true
+			failures = append(failures, fmt.Sprintf("bucket %s: %v", b.Name, err))
+		case _CANCEL_FAIL_NODE:
+			if failedNodes == nil {
+				failedNodes = make(map[string]bool)
+			}
+			failedNodes[node] = true
+			failures = append(failures, fmt.Sprintf("node %s: %v", node, err))
+		case _CANCEL_FAIL_BUCKET_NODE:
+			if failedBucketNodes == nil {
+				failedBucketNodes = make(map[bucketNode]bool)
+			}
+			failedBucketNodes[bucketNode{b, node}] = true
+			failures = append(failures, fmt.Sprintf("bucket %s on node %s: %v", b.Name, node, err))
+		}
+	}
+	// the scans are gone with the bucket or the node: nothing to cancel
+	markGone := func(b *Bucket, node string, scope cancelFailScope) {
+		if scope == _CANCEL_FAIL_BUCKET {
+			// the bucket is closed: none of its scans are left
+			if goneBuckets == nil {
+				goneBuckets = make(map[*Bucket]bool)
+			}
+			goneBuckets[b] = true
+		} else {
+			if goneBucketNodes == nil {
+				goneBucketNodes = make(map[bucketNode]bool)
+			}
+			goneBucketNodes[bucketNode{b, node}] = true
+		}
+	}
+
+	// returns false if the cancel is done with: not sent (or, on a retry, failed), or nothing to cancel
+	connect := func(sc *scanCancel, retry bool) bool {
+		scope, err := c.connect(sc.b, sc.node)
+		if err == errScanGone {
+			markGone(sc.b, sc.node, scope)
+			return false
+		} else if err != nil {
+			markFailed(sc.b, sc.node, scope, err)
+			if retry {
+				// the cancel was sent once already
+				failed++
+			} else {
+				notSent++
+			}
+			return false
+		}
+		return true
+	}
+
+	for _, sc := range cr {
+		b, node := sc.b, sc.node
+		if !c.connectedTo(b, node) {
+			if goneBuckets[b] || goneBucketNodes[bucketNode{b, node}] {
+				continue
+			}
+			if failedBuckets[b] || failedNodes[node] || failedBucketNodes[bucketNode{b, node}] {
+				notSent++
+				continue
+			}
+			if !connect(sc, false) {
+				continue
+			}
+		}
+		scope, err := c.cancel(sc.vbucket, sc.uuid)
+		if scope == _CANCEL_FAIL_STALE {
+			// retry once on a new connection
+			if !connect(sc, true) {
+				continue
+			}
+			scope, err = c.cancel(sc.vbucket, sc.uuid)
+			// the pool may hold more connections closed while idle: that still doesn't mean the node is down (a node
+			// that is will fail the connect, or time out), so only this cancel fails
+			if scope == _CANCEL_FAIL_STALE {
+				scope = _CANCEL_FAIL_ONE
+			}
+		}
+		if err == errScanGone {
+			markGone(b, node, scope)
+		} else if err != nil {
+			markFailed(b, node, scope, err)
+			failed++
+			if scope == _CANCEL_FAIL_ONE && !oneFailed {
+				// a failure for this cancel only: record the first, so that the failed count has a reason
+				oneFailed = true
+				failures = append(failures, fmt.Sprintf("first cancel failure: bucket %s on node %s, vb %d: %v",
+					b.Name, node, sc.vbucket, err))
+			}
+		}
+	}
+	return
+}
+
+// kvCanceller is the rsCanceller for KV
+type kvCanceller struct {
+	b    *Bucket
+	node string
+	conn *memcached.Client
+	pool *connectionPool
+}
+
+func (this *kvCanceller) connectedTo(b *Bucket, node string) bool {
+	return this.conn != nil && this.b == b && this.node == node
+}
+
+func (this *kvCanceller) connect(b *Bucket, node string) (cancelFailScope, error) {
+	this.release()
+	this.b = b
+	this.node = node
+
+	b.RLock()
+	closed := b.closed
+	b.RUnlock()
+	if closed {
+		return _CANCEL_FAIL_BUCKET, errScanGone
+	}
+
+	// the scan was created through the bucket's pool for the node (MB-75091: on the active vbucket; KV doesn't support
+	// range scans on replica vbuckets), and stays on the node until it completes, is cancelled or expires
+	// (node is the server list name, so that the pool is found if TLS was turned on or off since)
+	var err error
+	for retry := 0; retry < 2; retry++ {
+		pool := b.getConnPoolByServer(node)
+		if pool == nil {
+			// the node no longer holds the bucket, so there is nothing to cancel
+			logging.Debugf("Range scan cancel: no pool for %s for bucket %s, nothing to cancel", node, b.Name)
+			return _CANCEL_FAIL_ONE, errScanGone
+		}
+		// don't wait for long scans to free up a connection from a busy pool
+		this.conn, err = pool.GetWithTimeout(_RS_CANCEL_TIMEOUT)
+		if err == nil {
+			this.pool = pool
+			return _CANCEL_FAIL_ONE, nil
+		}
+		this.conn = nil
+		if err != errClosedPool {
+			break
+		}
+		// the pool was replaced by a refresh: look it up again
+	}
+	logging.Debugf("Range scan cancel: no connection to %s for bucket %s - %v", node, b.Name, err)
+	if err == errClosedPool {
+		// the pool keeps being replaced: skip the node for this bucket rather than retry for each of its cancels
+		return _CANCEL_FAIL_BUCKET_NODE, err
+	}
+	return connectFailScope(err), err
+}
+
+func (this *kvCanceller) cancel(vb uint16, uuid []byte) (cancelFailScope, error) {
+	// always reset the deadline for each new piece of work
+	dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, _RS_CANCEL_TIMEOUT)
+	this.conn.SetDeadline(dl)
+	_, err := this.conn.CancelRangeScan(vb, uuid, 0)
+	scope, keep, err := cancelResult(err)
+	if err != nil {
+		logging.Debugf("%s: vb %d cancel failed: %v", uuidAsString(uuid), vb, err)
+	}
+	if !keep {
+		this.pool.Discard(this.conn)
+		this.conn = nil
+	}
+	return scope, err
+}
+
+func (this *kvCanceller) release() {
+	if this.conn != nil {
+		// don't leave the short cancel deadline for the connection's next user
+		this.conn.SetDeadline(noDeadline)
+		this.pool.Return(this.conn)
+		this.conn = nil
+	}
+}
+
+func (this *kvCanceller) discard() {
+	if this.conn != nil {
+		this.pool.Discard(this.conn)
+		this.conn = nil
 	}
 }
 
@@ -2467,17 +2755,24 @@ func (queue *rswQueue) addScan(vbscan *vbRangeScan) {
 	queue.cond.Signal()
 }
 
-func (queue *rswQueue) cancelSeqScan(ss *seqScan) {
+// cancelSeqScan removes ss's vbscans from the queue, and returns those a throttled scan left a scan open on KV for. The
+// caller must cancel those (cancelOpenScan) once it no longer holds _RSW's lock: queueCancel takes it again, and a
+// second read lock waits behind any pending write lock (monitorWorkers), which waits for the first.
+func (queue *rswQueue) cancelSeqScan(ss *seqScan, open []*vbRangeScan) []*vbRangeScan {
 	queue.Lock()
 	for e := queue.scans.Front(); e != nil; {
 		vbscan := e.Value.(*vbRangeScan)
 		en := e.Next()
 		if vbscan.scan == ss {
 			queue.scans.Remove(e)
+			if vbscan.uuid != nil {
+				open = append(open, vbscan)
+			}
 		}
 		e = en
 	}
 	queue.Unlock()
+	return open
 }
 
 func (queue *rswQueue) runWorker() {
@@ -2542,6 +2837,15 @@ func (queue *rswQueue) runWorker() {
 		} else {
 			vbscan = queue.nextScanLocked()
 			if vbscan != nil && !atomic.CompareAndSwapInt32((*int32)(&vbscan.state), int32(_VBS_SCHEDULED), int32(_VBS_WORKING)) {
+				// cancelled: it's off the queue, so the seq scan's cancel won't find it; cancel any scan it left open on KV,
+				// without the queue lock (queueCancel takes _RSW's lock, which monitorWorkers holds while taking queue locks)
+				if vbscan.uuid != nil {
+					queue.Unlock()
+					queueLocked = false
+					vbscan.cancelOpenScan()
+					queue.Lock()
+					queueLocked = true
+				}
 				vbscan = nil
 				continue
 			}
@@ -2606,7 +2910,7 @@ func (queue *rswQueue) runWorker() {
 					dl, _ := getDeadline(noDeadline, _NO_TIMEOUT, _SS_MAX_DURATION)
 
 					conn.SetDeadline(dl)
-					if !vbscan.runScan(conn, pool.Node()) {
+					if !vbscan.runScan(conn, pool) {
 						pool.Discard(conn)
 						conn = nil
 					}
@@ -2657,14 +2961,19 @@ func (this *rswControl) queueScan(vbscan *vbRangeScan) bool {
 }
 
 func (this *rswControl) cancelQueuedScans(ss *seqScan) {
+	var open []*vbRangeScan
 	this.RLock()
 	for _, q := range this.queues {
-		q.cancelSeqScan(ss)
+		open = q.cancelSeqScan(ss, open)
 	}
 	this.RUnlock()
+	// not holding the lock: queueCancel takes it
+	for _, vbscan := range open {
+		vbscan.cancelOpenScan()
+	}
 }
 
-func (this *rswControl) queueCancel(vbscan *vbRangeScan, uuid []byte) {
+func (this *rswControl) queueCancel(vbscan *vbRangeScan, uuid []byte, node string) {
 	this.RLock()
 	if vbscan.queue >= len(this.queues) {
 		l := len(this.queues)
@@ -2672,23 +2981,26 @@ func (this *rswControl) queueCancel(vbscan *vbRangeScan, uuid []byte) {
 		logging.Severef("Sequential scan: Invalid queue %v (# of queues: %v) for cancel", vbscan.queue, l)
 		return
 	}
-	queue := this.queues[vbscan.queue]
+	// read the cancel queue once, under the read lock: monitorWorkers sets it to nil (under the write lock) when it
+	// removes the queue as idle, and this is also called outside the scan worker (which recovers from panics); a
+	// cancel for a queue being removed is dropped
+	cq := this.queues[vbscan.queue].cqueue
 	this.RUnlock()
-	if queue.cqueue == nil {
+	if cq == nil {
 		return
 	}
-	queue.cqueue.Lock()
-	if queue.cqueue.scans == nil {
-		queue.cqueue.scans = make([]*scanCancel, 0, 256)
-	} else if len(queue.cqueue.scans) == cap(queue.cqueue.scans) {
-		n := make([]*scanCancel, len(queue.cqueue.scans), cap(queue.cqueue.scans)*2)
-		copy(n, queue.cqueue.scans)
-		queue.cqueue.scans = n
-		logging.Debugf("[%p] queueCancel: new cap: %v", queue.cqueue, cap(queue.cqueue.scans))
+	cq.Lock()
+	if cq.scans == nil {
+		cq.scans = make([]*scanCancel, 0, 256)
+	} else if len(cq.scans) == cap(cq.scans) {
+		n := make([]*scanCancel, len(cq.scans), cap(cq.scans)*2)
+		copy(n, cq.scans)
+		cq.scans = n
+		logging.Debugf("[%p] queueCancel: new cap: %v", cq, cap(cq.scans))
 	}
-	queue.cqueue.scans = append(queue.cqueue.scans, &scanCancel{vbucket: vbscan.vbucket(), uuid: uuid, b: vbscan.b})
-	queue.cqueue.cond.Broadcast()
-	queue.cqueue.Unlock()
+	cq.scans = append(cq.scans, &scanCancel{vbucket: vbscan.vbucket(), uuid: uuid, b: vbscan.b, node: node})
+	cq.cond.Broadcast()
+	cq.Unlock()
 }
 
 func (this *rswControl) initWorkers(servers int) {

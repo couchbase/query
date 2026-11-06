@@ -674,6 +674,25 @@ func (b *Bucket) getConnPoolByHost(host string, bucketLocked bool) *connectionPo
 	return nil
 }
 
+// getConnPoolByServer returns the bucket's pool for the node the server list names server, whether or not the pool
+// uses TLS (the pool's host is the TLS port when it does), including a temporary pool for a node the bucket's pools
+// don't have yet (see getTempConnPool)
+func (b *Bucket) getConnPoolByServer(server string) *connectionPool {
+	b.RLock()
+	defer b.RUnlock()
+	for _, p := range b.getConnPools(true) {
+		if p != nil && p.server == server {
+			return p
+		}
+	}
+	for _, p := range b.tempConnPools {
+		if p != nil && p.server == server {
+			return p
+		}
+	}
+	return nil
+}
+
 func (b *Bucket) getTempConnPool(i int, serverList []string, node string) *connectionPool {
 	if i < 0 || i >= len(serverList) || node == "" {
 		return nil
@@ -1739,6 +1758,7 @@ func (b *Bucket) mkConnPool(node string, cfg *kvPoolConfig) (*connectionPool, er
 	var pool *connectionPool
 	var err error
 
+	server := node
 	if cfg.tlsConfig != nil {
 		node, encrypted, err = MapKVtoSSLExt(node, &cfg.poolServices, cfg.disableNonSSLPorts)
 		if err != nil {
@@ -1755,6 +1775,7 @@ func (b *Bucket) mkConnPool(node string, cfg *kvPoolConfig) (*connectionPool, er
 			b.authHandler(true /* bucket already locked */),
 			AsynchronousCloser, PoolSize, PoolOverflow, cfg.tlsConfig, b.Name, encrypted)
 	}
+	pool.server = server
 	return pool, nil
 }
 
