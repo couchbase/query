@@ -382,7 +382,7 @@ func (this Bindings) MappingsNoSubq() (map[string]Expression, map[string]bool) {
 	var excluded map[string]bool
 
 	for _, b := range this {
-		subqs, err := ListSubqueries(Expressions{b.expr}, true)
+		subqs, err := ListSubqueries(Expressions{b.expr}, false)
 		if err == nil && len(subqs) == 0 {
 			mappings[b.variable] = b.expr
 		} else {
