@@ -284,7 +284,6 @@ func (b *Bucket) replaceConnPools2(with []*connectionPool, bucketLocked bool) {
 func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors.Error {
 	var failures int
 	var returnErr error
-	var poolServices PoolServices
 	var updater io.ReadCloser
 
 	defer func() {
@@ -424,16 +423,11 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			// if we got here, reset failure count
 			failures = 0
 
-			client := b.pool.client
-			tlsConfig := client.tlsConfig
-			disableNonSSLPorts := client.disableNonSSLPorts
-			if tlsConfig != nil {
-				poolServices, err = client.GetPoolServices("default")
-				if err != nil {
-					returnErr = err
-					res.Body.Close()
-					break
-				}
+			cfg, err := getKVPoolConfig(b.pool.client)
+			if err != nil {
+				returnErr = err
+				res.Body.Close()
+				break
 			}
 
 			b.Lock()
@@ -451,7 +445,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			for i := range newcps {
 				// get the old connection pool and check if it is still valid
 				pool := b.getConnPoolByHost(tmpb.VBSMJson.ServerList[i], true /* bucket already locked */)
-				if pool != nil && pool.inUse == false && pool.tlsConfig == tlsConfig {
+				if pool != nil && pool.inUse == false && pool.tlsConfig == cfg.tlsConfig {
 					// if the hostname and index is unchanged then reuse this pool
 					newcps[i] = pool
 					pool.inUse = true
@@ -459,7 +453,7 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 				}
 				// else create a new pool
 				hostport := tmpb.VBSMJson.ServerList[i]
-				newcps[i], err = b.mkConnPool(hostport, &poolServices, tlsConfig, disableNonSSLPorts)
+				newcps[i], err = b.mkConnPool(hostport, cfg)
 				if err != nil {
 					releaseNewConnPools(newcps[:i], fresh)
 					b.Unlock()

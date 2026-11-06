@@ -417,6 +417,7 @@ type Bucket struct {
 
 	tempServers   []string          // temporary connections for forward NMVB handling
 	tempConnPools []*connectionPool // will be folded on standard connection pools on refresh
+	tempPoolLock  sync.Mutex        // one temporary pool creation at a time (see getTempConnPool)
 	commonSufix   string
 	ah            AuthHandler // auth handler
 	closed        bool
@@ -674,12 +675,51 @@ func (b *Bucket) getConnPoolByHost(host string, bucketLocked bool) *connectionPo
 }
 
 func (b *Bucket) getTempConnPool(i int, serverList []string, node string) *connectionPool {
-	var connPool *connectionPool
-
 	if i < 0 || i >= len(serverList) || node == "" {
 		return nil
 	}
+
+	// the entry for this node may already be populated
+	b.RLock()
+	if connPool, found := b.lookupTempConnPool(i, serverList, node); found {
+		b.RUnlock()
+		return connPool
+	}
+	b.RUnlock()
+
+	// create one temporary pool at a time, so that callers for the same node (e.g. many hitting NOT_MY_VBUCKET on
+	// it during a rebalance) wait for the first one's pool instead of each making its own ns_server call
+	b.tempPoolLock.Lock()
+	defer b.tempPoolLock.Unlock()
+
+	b.RLock()
+	if connPool, found := b.lookupTempConnPool(i, serverList, node); found {
+		b.RUnlock()
+		return connPool
+	}
+	client := b.pool.client
+	refreshes := b.refreshes
+	b.RUnlock()
+
+	// getKVPoolConfig may issue a REST call: don't hold the bucket lock over it
+	cfg, err := getKVPoolConfig(client)
+
 	b.Lock()
+	defer b.Unlock()
+
+	// a refresh() while the bucket was unlocked has dropped the temporary pools, and the caller's server list (from
+	// KV's NOT_MY_VBUCKET reply) may be older than the bucket's map now: don't record a pool for it. (Streaming
+	// updates don't touch the temporary pools, and a refresh before the caller got here isn't seen: both as before.)
+	if b.refreshes != refreshes {
+		return nil
+	}
+
+	// nor if the bucket was closed meanwhile: nothing would close the pool. This includes a bucket whose pools are
+	// still open because Pool.Close defers closing them (MB-33208): a NOT_MY_VBUCKET for a new node then falls back to
+	// refresh and retry instead of a temporary pool, which is intended
+	if b.closed {
+		return nil
+	}
 
 	// if we have never seen nodes, allocate a new server list
 	if len(b.tempServers) == 0 {
@@ -687,36 +727,38 @@ func (b *Bucket) getTempConnPool(i int, serverList []string, node string) *conne
 		b.tempConnPools = make([]*connectionPool, len(serverList))
 	}
 
-	if len(serverList) == len(b.tempServers) {
+	// no need to look again: tempPoolLock keeps other callers out, and other than here temporary entries are only
+	// cleared (by refresh(), even one that fails and so doesn't count as a refresh), never filled, created or resized,
+	// so the entry the lookup above found empty is still empty
 
-		// if we have never seen this node, make a new connection pool
-		if b.tempServers[i] == "" {
-			var poolServices PoolServices
-			var err error
-
-			b.tempServers[i] = node
-			client := b.pool.client
-			tlsConfig := client.tlsConfig
-			disableNonSSLPorts := client.disableNonSSLPorts
-			if tlsConfig != nil {
-				poolServices, err = client.GetPoolServices("default")
-				if err != nil {
-					b.Unlock()
-					return nil
-				}
-			}
-
-			// if we get an error, we populate the node name, so that we don't try over and over again
-			b.tempConnPools[i], _ = b.mkConnPool(node, &poolServices, tlsConfig, disableNonSSLPorts)
-		}
-
-		// if the entry is populated but different, the vbmap has changed *again* and we ignore the node
-		if b.tempServers[i] == node {
-			connPool = b.tempConnPools[i]
-		}
+	// we have never seen this node, make a new connection pool
+	// if we get an error (fetching the node services or creating the pool), we populate the node name, so that we
+	// don't try over and over again: this is intentional, and the node isn't tried again until the next refresh drops
+	// the temporary pools
+	b.tempServers[i] = node
+	if err == nil {
+		b.tempConnPools[i], _ = b.mkConnPool(node, cfg)
 	}
-	b.Unlock()
-	return connPool
+	return b.tempConnPools[i]
+}
+
+// lookupTempConnPool returns the temporary pool for node at entry i, and whether that is the final answer.
+// The answer is final, with a nil pool, if the temporary server list has a different size (the vbmap has changed),
+// if the entry is for a different node (the vbmap has changed *again*), or if creating the pool failed earlier.
+// It is not final if the entry has not been populated yet. Called with the bucket locked.
+func (b *Bucket) lookupTempConnPool(i int, serverList []string, node string) (*connectionPool, bool) {
+	switch {
+	case len(b.tempServers) == 0:
+		return nil, false
+	case len(serverList) != len(b.tempServers):
+		return nil, true
+	case b.tempServers[i] == "":
+		return nil, false
+	case b.tempServers[i] == node:
+		return b.tempConnPools[i], true
+	default:
+		return nil, true
+	}
 }
 
 // Bucket DDL
@@ -1538,17 +1580,11 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	uri := b.URI
 	client := pool.client
 	refreshes := b.refreshes
-	tlsConfig := client.tlsConfig
-	disableNonSSLPorts := client.disableNonSSLPorts
 	b.RUnlock()
 
-	var poolServices PoolServices
-	var err error
-	if tlsConfig != nil {
-		poolServices, err = client.GetPoolServices("default")
-		if err != nil {
-			return err
-		}
+	cfg, err := getKVPoolConfig(client)
+	if err != nil {
+		return err
 	}
 
 	var tmpb *Bucket
@@ -1593,7 +1629,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	// of NMVb errors received during bulkGet do not end up over-writing
 	// pool.inUse.
 	b.Lock()
-	if refreshes < b.refreshes && preserveConnections && tlsConfig == client.tlsConfig {
+	if refreshes < b.refreshes && preserveConnections && cfg.tlsConfig == client.tlsConfig {
 		// MB-66085 Another routine has already refreshed the bucket.
 		// Don't optimize away the refresh if TLS has changed or if PreserveConnections is false.
 		b.Unlock()
@@ -1612,7 +1648,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 		hostport := tmpb.VBSMJson.ServerList[i]
 		if preserveConnections {
 			pool := b.getConnPoolByHost(hostport, true /* bucket already locked */)
-			if pool != nil && pool.inUse == false && pool.tlsConfig == tlsConfig {
+			if pool != nil && pool.inUse == false && pool.tlsConfig == cfg.tlsConfig {
 				// if the hostname and index is unchanged then reuse this pool
 				newcps[i] = pool
 				pool.inUse = true
@@ -1635,7 +1671,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 			}
 		}
 
-		newcps[i], err = b.mkConnPool(hostport, &poolServices, tlsConfig, disableNonSSLPorts)
+		newcps[i], err = b.mkConnPool(hostport, cfg)
 		if err != nil {
 			releaseNewConnPools(newcps[:i], fresh)
 			b.Unlock()
@@ -1675,17 +1711,36 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	return nil
 }
 
+// kvPoolConfig holds what is needed to create connection pools to KV
+type kvPoolConfig struct {
+	tlsConfig          *tls.Config  // the tls configuration to be used to create connections in the connection pool
+	disableNonSSLPorts bool         // whether non-SSL ports are disabled according to the cluster connection security config
+	poolServices       PoolServices // node services, used to map KV ports to SSL ports (only fetched if tlsConfig is set)
+}
+
+// getKVPoolConfig snapshots the client's connection security config and, if TLS is enabled, fetches the node
+// services. As it may issue a REST call to ns_server, it must not be called with a bucket locked.
+func getKVPoolConfig(client *Client) (*kvPoolConfig, error) {
+	cfg := &kvPoolConfig{tlsConfig: client.tlsConfig, disableNonSSLPorts: client.disableNonSSLPorts}
+	if cfg.tlsConfig != nil {
+		var err error
+		cfg.poolServices, err = client.GetPoolServices("default")
+		if err != nil {
+			return nil, err
+		}
+	}
+	return cfg, nil
+}
+
 // Initializes connection pools for connections to KV
-// tlsConfig: The tls configuration to be used to create connections in the connection pool
-// disableNonSSLPorts: Whether non-SSL ports are to be disabled according to the cluster connection security config
-func (b *Bucket) mkConnPool(node string, poolServices *PoolServices, tlsConfig *tls.Config, disableNonSSLPorts bool) (
-	*connectionPool, error) {
+// cfg: the connection security config, see getKVPoolConfig()
+func (b *Bucket) mkConnPool(node string, cfg *kvPoolConfig) (*connectionPool, error) {
 	var encrypted bool
 	var pool *connectionPool
 	var err error
 
-	if tlsConfig != nil {
-		node, encrypted, err = MapKVtoSSLExt(node, poolServices, disableNonSSLPorts)
+	if cfg.tlsConfig != nil {
+		node, encrypted, err = MapKVtoSSLExt(node, &cfg.poolServices, cfg.disableNonSSLPorts)
 		if err != nil {
 			return nil, err
 		}
@@ -1693,12 +1748,12 @@ func (b *Bucket) mkConnPool(node string, poolServices *PoolServices, tlsConfig *
 
 	if b.ah != nil {
 		pool = newConnectionPool(node,
-			b.ah, AsynchronousCloser, PoolSize, PoolOverflow, tlsConfig, b.Name, encrypted)
+			b.ah, AsynchronousCloser, PoolSize, PoolOverflow, cfg.tlsConfig, b.Name, encrypted)
 
 	} else {
 		pool = newConnectionPool(node,
 			b.authHandler(true /* bucket already locked */),
-			AsynchronousCloser, PoolSize, PoolOverflow, tlsConfig, b.Name, encrypted)
+			AsynchronousCloser, PoolSize, PoolOverflow, cfg.tlsConfig, b.Name, encrypted)
 	}
 	return pool, nil
 }

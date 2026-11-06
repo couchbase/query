@@ -99,3 +99,50 @@ func TestReadCurrentReusesHead(t *testing.T) {
 		t.Errorf("readCurrent past the last key succeeded")
 	}
 }
+
+func TestGetTempConnPool(t *testing.T) {
+	// no TLS: getKVPoolConfig does not need ns_server
+	b := &Bucket{Name: "default", ah: basicAuth{"u", "p"}, pool: &Pool{client: &Client{}}}
+	defer func() {
+		for _, p := range b.tempConnPools {
+			if p != nil {
+				p.Close()
+			}
+		}
+	}()
+	servers := []string{"n0:11210", "n1:11210", "n2:11210"}
+
+	if b.getTempConnPool(-1, servers, "n3:11210") != nil || b.getTempConnPool(3, servers, "n3:11210") != nil ||
+		b.getTempConnPool(1, servers, "") != nil {
+		t.Errorf("invalid arguments returned a pool")
+	}
+
+	p1 := b.getTempConnPool(1, servers, "n3:11210")
+	if p1 == nil || p1.host != "n3:11210" {
+		t.Fatalf("expected a new pool for n3, got %v", p1)
+	}
+	if len(b.tempServers) != len(servers) || b.tempServers[1] != "n3:11210" || b.tempConnPools[1] != p1 {
+		t.Errorf("temporary pool not recorded: %v %v", b.tempServers, b.tempConnPools)
+	}
+
+	// populated entry is reused
+	if p := b.getTempConnPool(1, servers, "n3:11210"); p != p1 {
+		t.Errorf("expected the existing pool to be reused, got %v", p)
+	}
+
+	// entry populated for a different node: the vbmap has changed again, ignore the node
+	if p := b.getTempConnPool(1, servers, "n4:11210"); p != nil {
+		t.Errorf("expected no pool for a node replacing a populated entry, got %v", p)
+	}
+
+	// a server list of a different size is ignored
+	if p := b.getTempConnPool(1, servers[:2], "n3:11210"); p != nil {
+		t.Errorf("expected no pool for a server list of a different size, got %v", p)
+	}
+
+	// a failed attempt (node recorded, no pool) is not retried
+	b.tempServers[2] = "n5:11210"
+	if p := b.getTempConnPool(2, servers, "n5:11210"); p != nil || b.tempConnPools[2] != nil {
+		t.Errorf("expected a failed entry not to be retried, got %v", p)
+	}
+}
