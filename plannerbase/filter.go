@@ -24,7 +24,7 @@ const (
 	FLTR_HAS_DEF_SELEC                    // has default selectivity
 	FLTR_IN_INDEX_SPAN                    // used in index span
 	FLTR_IN_HASH_JOIN                     // used as join filter for hash join
-	FLTR_HAS_SUBQ                         // has subquery
+	FLTR_HAS_SUBQ                         // has subquery (or reference to non-inlined LET variable)
 	FLTR_HAS_ADJ_ARR_SELEC                // has adjusted selectivity
 	FLTR_PRIMARY_JOIN                     // join on meta id
 	FLTR_DERIVED_EQJOIN                   // derived equi-join filter
@@ -190,6 +190,9 @@ func (this *Filter) SetSubq() {
 	this.fltrFlags |= FLTR_HAS_SUBQ
 }
 
+// Whether the filter contains a subquery, or references a LET variable whose binding
+// contains a subquery (such LET variables are not inlined, see Bindings.MappingsNoSubq()
+// and expression.MarkLetSubqVariables()).
 func (this *Filter) HasSubq() bool {
 	return (this.fltrFlags & FLTR_HAS_SUBQ) != 0
 }
