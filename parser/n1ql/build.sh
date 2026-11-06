@@ -41,6 +41,8 @@ EOF
     awk '/NEX_END_OF_LEXER_STRUCT/ { print "curOffset int\nreportError func(what string)" }
 	 { print }' n1ql.nn.go >> n1ql.nn.tmp
     mv n1ql.nn.tmp n1ql.nn.go
+    # nex emits interface{}; keep the generated file in line with the rest of the repo
+    gofmt -r 'interface{} -> any' -w n1ql.nn.go
     go fmt n1ql.nn.go
 fi
 go_tool $GOYACC n1ql.y
