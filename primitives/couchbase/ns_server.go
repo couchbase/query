@@ -1680,12 +1680,15 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 				b.tempServers[i] = ""
 				b.tempConnPools[i] = nil
 
-				// a failed attempt leaves the node name with no pool
-				if tempPool != nil {
+				// a failed attempt leaves the node name with no pool; a pool built with an older connection security
+				// config is closed and replaced
+				if tempPool != nil && cfg.matchesPool(hostport, tempPool) {
 					newcps[i] = tempPool
 					tempPool.inUse = true
 					fresh[i] = true
 					continue
+				} else if tempPool != nil {
+					tempPool.Close()
 				}
 			}
 		}
@@ -1749,6 +1752,29 @@ func getKVPoolConfig(client *Client) (*kvPoolConfig, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// matchesPool reports whether pool is what mkConnPool would build for node with this config: the same (mapped) host
+// and, for an encrypted pool, the same tls configuration (an unencrypted pool has none)
+func (cfg *kvPoolConfig) matchesPool(node string, pool *connectionPool) bool {
+	host, encrypted := node, false
+	if cfg.tlsConfig != nil {
+		var err error
+		host, encrypted, err = MapKVtoSSLExt(node, &cfg.poolServices, cfg.disableNonSSLPorts)
+		if err != nil {
+			// the node services this config has don't list the node yet (it's being added): mkConnPool would fail
+			// too, so keep a pool encrypted with this tls config (but not an unencrypted one, which may have been built
+			// before TLS was turned on)
+			return pool.tlsConfig == cfg.tlsConfig
+		}
+	}
+	if pool.host != host {
+		return false
+	}
+	if encrypted {
+		return pool.tlsConfig == cfg.tlsConfig
+	}
+	return pool.tlsConfig == nil
 }
 
 // Initializes connection pools for connections to KV
@@ -1866,6 +1892,14 @@ func (b *Bucket) Close() {
 		}
 		b.connPools = nil
 	}
+	// temporary pools too: their connCloser goroutine keeps them (and their connections) alive until closed
+	// (getTempConnPool checks closed under the lock, so none is added after this)
+	for _, c := range b.tempConnPools {
+		if c != nil {
+			c.Close()
+		}
+	}
+	b.tempServers, b.tempConnPools = nil, nil
 	if b.updater != nil {
 		b.updater.Close()
 		b.updater = nil
@@ -2009,7 +2043,7 @@ func (b *Bucket) GetIOStats(reset bool, all bool, prometheus bool, serverless bo
 }
 
 func bucketFinalizer(b *Bucket) {
-	if b.connPools != nil {
+	if b.connPools != nil || len(b.tempConnPools) > 0 {
 		if !b.closed {
 			logging.Warnf("Finalizing a bucket with active connections.")
 		}
