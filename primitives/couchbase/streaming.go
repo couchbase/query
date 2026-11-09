@@ -444,9 +444,9 @@ func (b *Bucket) UpdateBucket2(msgPrefix string, streamingFn StreamingFn) errors
 			fresh := make([]bool, len(newcps)) // pools in newcps not taken from b.connPools
 			for i := range newcps {
 				// get the old connection pool and check if it is still valid
-				pool := b.getConnPoolByHost(tmpb.VBSMJson.ServerList[i], true /* bucket already locked */)
-				if pool != nil && pool.inUse == false && pool.tlsConfig == cfg.tlsConfig {
-					// if the hostname and index is unchanged then reuse this pool
+				pool := b.connPoolForServer(tmpb.VBSMJson.ServerList[i], true /* bucket already locked */)
+				if pool != nil && pool.inUse == false && cfg.matchesPool(tmpb.VBSMJson.ServerList[i], pool) {
+					// the node still has a pool built the way mkConnPool would build it now: reuse it
 					newcps[i] = pool
 					pool.inUse = true
 					continue

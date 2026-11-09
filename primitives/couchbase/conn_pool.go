@@ -73,8 +73,11 @@ type connectionPool struct {
 	connClosed  uint64
 	inUse       bool
 	encrypted   bool
-	tlsConfig   *tls.Config
-	bucket      string
+	// the client's tls config when the pool was built, whether or not the pool is encrypted (the local node isn't,
+	// unless non-SSL ports are disabled), so that a new security config (a new tls config) can be detected; only an
+	// encrypted pool dials with it (see dialTLSConfig)
+	tlsConfig *tls.Config
+	bucket    string
 
 	// serverStart is the computed start time of the memcached process on this
 	// node, derived from its "uptime" stat; lastServerCheck is when we last
@@ -101,9 +104,7 @@ func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolO
 		encrypted:   encrypted,
 	}
 
-	if encrypted {
-		rv.tlsConfig = tlsConfig
-	}
+	rv.tlsConfig = tlsConfig
 
 	if closer {
 		rv.bailOut = make(chan bool, 1)
@@ -298,6 +299,14 @@ func (cp *connectionPool) Close() (err error) {
 	return
 }
 
+// the tls config to dial with: none for an unencrypted pool
+func (cp *connectionPool) dialTLSConfig() *tls.Config {
+	if !cp.encrypted {
+		return nil
+	}
+	return cp.tlsConfig
+}
+
 func (cp *connectionPool) Node() string {
 	return cp.host
 }
@@ -360,7 +369,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 			// Build a connection if we can't get a real one.
 			// This can potentially be an overflow connection, or
 			// a pooled connection.
-			rv, ip, err := cp.mkConn(cp.host, cp.auth, cp.tlsConfig, cp.bucket)
+			rv, ip, err := cp.mkConn(cp.host, cp.auth, cp.dialTLSConfig(), cp.bucket)
 			if err != nil {
 				// On error, release our create hold
 				<-cp.createsem
@@ -563,7 +572,7 @@ func (cp *connectionPool) probeUptime(now time.Time) (int64, bool) {
 	}
 
 	// we can still get uptime by creating connection to the node even when whole pool is stale
-	c, _, err := cp.mkConn(cp.host, cp.auth, cp.tlsConfig, cp.bucket)
+	c, _, err := cp.mkConn(cp.host, cp.auth, cp.dialTLSConfig(), cp.bucket)
 	if err != nil || c == nil {
 		// node still unreachable
 		return 0, false

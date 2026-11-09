@@ -663,14 +663,14 @@ func releaseNewConnPools(newcps []*connectionPool, fresh []bool) {
 	}
 }
 
-func (b *Bucket) getConnPoolByHost(host string, bucketLocked bool) *connectionPool {
-	pools := b.getConnPools(bucketLocked)
-	for _, p := range pools {
-		if p != nil && p.host == host {
+// connPoolForServer returns the bucket's (regular) pool for the node the server list names server, whether or not
+// the pool uses TLS (the pool's host is the TLS port when it does)
+func (b *Bucket) connPoolForServer(server string, bucketLocked bool) *connectionPool {
+	for _, p := range b.getConnPools(bucketLocked) {
+		if p != nil && p.server == server {
 			return p
 		}
 	}
-
 	return nil
 }
 
@@ -680,10 +680,8 @@ func (b *Bucket) getConnPoolByHost(host string, bucketLocked bool) *connectionPo
 func (b *Bucket) getConnPoolByServer(server string) *connectionPool {
 	b.RLock()
 	defer b.RUnlock()
-	for _, p := range b.getConnPools(true) {
-		if p != nil && p.server == server {
-			return p
-		}
+	if p := b.connPoolForServer(server, true); p != nil {
+		return p
 	}
 	for _, p := range b.tempConnPools {
 		if p != nil && p.server == server {
@@ -1666,9 +1664,9 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 	for i := range newcps {
 		hostport := tmpb.VBSMJson.ServerList[i]
 		if preserveConnections {
-			pool := b.getConnPoolByHost(hostport, true /* bucket already locked */)
-			if pool != nil && pool.inUse == false && pool.tlsConfig == cfg.tlsConfig {
-				// if the hostname and index is unchanged then reuse this pool
+			pool := b.connPoolForServer(hostport, true /* bucket already locked */)
+			if pool != nil && pool.inUse == false && cfg.matchesPool(hostport, pool) {
+				// the node still has a pool built the way mkConnPool would build it now: reuse it
 				newcps[i] = pool
 				pool.inUse = true
 				continue
@@ -1754,27 +1752,24 @@ func getKVPoolConfig(client *Client) (*kvPoolConfig, error) {
 	return cfg, nil
 }
 
-// matchesPool reports whether pool is what mkConnPool would build for node with this config: the same (mapped) host
-// and, for an encrypted pool, the same tls configuration (an unencrypted pool has none)
+// matchesPool reports whether pool is what mkConnPool would build for node with this config: built under the same
+// security config (tls config), with the same (mapped) host and encryption
 func (cfg *kvPoolConfig) matchesPool(node string, pool *connectionPool) bool {
+	if pool.tlsConfig != cfg.tlsConfig {
+		return false
+	}
 	host, encrypted := node, false
 	if cfg.tlsConfig != nil {
 		var err error
 		host, encrypted, err = MapKVtoSSLExt(node, &cfg.poolServices, cfg.disableNonSSLPorts)
 		if err != nil {
 			// the node services this config has don't list the node yet (it's being added): mkConnPool would fail
-			// too, so keep a pool encrypted with this tls config (but not an unencrypted one, which may have been built
-			// before TLS was turned on)
-			return pool.tlsConfig == cfg.tlsConfig
+			// too, so keep the pool, which was built under this security config (one built before TLS was turned on
+			// has no tls config, and failed the check above)
+			return true
 		}
 	}
-	if pool.host != host {
-		return false
-	}
-	if encrypted {
-		return pool.tlsConfig == cfg.tlsConfig
-	}
-	return pool.tlsConfig == nil
+	return pool.host == host && pool.encrypted == encrypted
 }
 
 // Initializes connection pools for connections to KV

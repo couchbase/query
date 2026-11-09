@@ -212,11 +212,13 @@ func TestKVPoolConfigMatchesPool(t *testing.T) {
 	withTLS := &kvPoolConfig{tlsConfig: newTLS, poolServices: ps}
 	forced := &kvPoolConfig{tlsConfig: newTLS, disableNonSSLPorts: true, poolServices: ps}
 
-	plain := &connectionPool{host: "n3:11210"}
-	local := &connectionPool{host: "127.0.0.1:11210"}
-	encNew := &connectionPool{host: "n3:11207", tlsConfig: newTLS}
-	encOld := &connectionPool{host: "n3:11207", tlsConfig: oldTLS}
-	localEnc := &connectionPool{host: "127.0.0.1:11207", tlsConfig: newTLS}
+	plainNoTLS := &connectionPool{host: "n3:11210"}
+	plain := &connectionPool{host: "n3:11210", tlsConfig: newTLS}
+	local := &connectionPool{host: "127.0.0.1:11210", tlsConfig: newTLS}
+	localOld := &connectionPool{host: "127.0.0.1:11210", tlsConfig: oldTLS}
+	encNew := &connectionPool{host: "n3:11207", tlsConfig: newTLS, encrypted: true}
+	encOld := &connectionPool{host: "n3:11207", tlsConfig: oldTLS, encrypted: true}
+	localEnc := &connectionPool{host: "127.0.0.1:11207", tlsConfig: newTLS, encrypted: true}
 
 	for _, c := range []struct {
 		name string
@@ -225,12 +227,14 @@ func TestKVPoolConfigMatchesPool(t *testing.T) {
 		pool *connectionPool
 		exp  bool
 	}{
-		{"no TLS, plain pool", noTLS, "n3:11210", plain, true},
+		{"no TLS, plain pool", noTLS, "n3:11210", plainNoTLS, true},
+		{"no TLS, pool built under TLS", noTLS, "n3:11210", plain, false},
 		{"no TLS, encrypted pool", noTLS, "n3:11210", encNew, false},
 		{"TLS, current encrypted pool", withTLS, "n3:11210", encNew, true},
 		{"TLS, encrypted pool with an old config", withTLS, "n3:11210", encOld, false},
 		{"TLS, plain pool", withTLS, "n3:11210", plain, false},
 		{"TLS, local node stays plain", withTLS, "127.0.0.1:11210", local, true},
+		{"TLS, local plain pool from an old config", withTLS, "127.0.0.1:11210", localOld, false},
 		{"non-SSL ports disabled, local plain pool", forced, "127.0.0.1:11210", local, false},
 		{"non-SSL ports disabled, local encrypted pool", forced, "127.0.0.1:11210", localEnc, true},
 		{"TLS, pool for another host", withTLS, "n9:11210", plain, false},

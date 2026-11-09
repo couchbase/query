@@ -233,6 +233,8 @@ func (b *Bucket) getVbConnection(vb uint32, desc *doDescriptor, random bool) (co
 		}
 	} else if isConnError(err) || isSeveredConnectionError(err) {
 		if backOff(desc.backOffAttempts, desc.maxTries, backOffDuration, true) {
+			// every pool, unencrypted ones (e.g. the local node's) too, keeps the client's tls config it was built under,
+			// so this and the checks below only see a mismatch after a security config change
 			securityCfgMismatch := pool.tlsConfig != b.pool.client.tlsConfig
 
 			// check for a new vbmap
