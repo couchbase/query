@@ -272,7 +272,6 @@ column int
 %token NTH_VALUE
 %token NULL
 %token NULLS
-%token NUMBER
 %token OBJECT
 %token OFFSET
 %token ON

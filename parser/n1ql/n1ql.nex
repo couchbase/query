@@ -298,7 +298,6 @@
 /[nN][tT][hH][_][vV][aA][lL][uU][eE]/ { lval.s = yylex.Text(); yylex.curOffset += 9; return NTH_VALUE }
 /[nN][uU][lL][lL]/             { lval.s = yylex.Text(); yylex.curOffset += 4; return NULL }
 /[nN][uU][lL][lL][sS]/         { lval.s = yylex.Text(); yylex.curOffset += 5; return NULLS }
-/[nN][uN][mM][bB][eE][rR]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return NUMBER }
 /[oO][bB][jJ][eE][cC][tT]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return OBJECT }
 /[oO][fF][fF][sS][eE][tT]/     { lval.s = yylex.Text(); yylex.curOffset += 6; return OFFSET }
 /[oO][nN]/                     { lval.s = yylex.Text(); yylex.curOffset += 2; return ON }
@@ -472,7 +471,7 @@ import "github.com/couchbase/query/logging"
 
 // curOffset, reporError inserted by build.sh via NEX_END_OF_LEXER_STRUCT tag
 
-func (yylex *Lexer) logToken(text string, format string, v ...interface{}) {
+func (yylex *Lexer) logToken(text string, format string, v ...any) {
     if logging.LogLevel() == logging.TRACE {
         s := fmt.Sprintf(format, v...)
         logging.Tracef("Token: >>%s<< - %s", text, s)
