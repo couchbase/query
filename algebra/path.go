@@ -166,6 +166,10 @@ func ParseAndValidatePathList(pathsStr string, defaultNamespace string, queryCon
 
 	var paths []*Path
 
+	// the inputs can be zero-copy slices of a request body, and the paths can outlive the request
+	pathsStr = strings.Clone(pathsStr)
+	queryContext = strings.Clone(queryContext)
+
 	qc := ParseQueryContext(queryContext)
 	if len(qc) == 1 && qc[0] == "" {
 		qc = nil

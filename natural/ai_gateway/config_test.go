@@ -16,6 +16,7 @@
 package ai_gateway
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/couchbase/query/errors"
@@ -35,9 +36,13 @@ func assertCode(t *testing.T, err errors.Error, want errors.ErrorCode) {
 
 // ─── ParseConfig ──────────────────────────────────────────────────────────────
 
+// A request without natural_config is told both ways to configure it.
 func TestParseConfig_NilValue(t *testing.T) {
 	_, err := ParseConfig(nil)
 	assertCode(t, err, errors.E_NL_MISSING_NL_PARAM)
+	if !strings.Contains(err.Error(), MissingConfigParam) {
+		t.Fatalf("expected error to name %s, got: %v", MissingConfigParam, err)
+	}
 }
 
 func TestParseConfig_NullValue(t *testing.T) {
@@ -163,21 +168,33 @@ func TestParseConfig_EmptyObject(t *testing.T) {
 
 // ─── ResolveProviderAndModel ──────────────────────────────────────────────────
 
-func TestResolveProviderAndModel_DefaultsToOpenAI(t *testing.T) {
-	cfg := &Config{APIKey: "sk-123"}
-	if err := cfg.ResolveProviderAndModel(); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+// testModel is an arbitrary model id: resolution passes it through unchecked.
+const testModel = "test-model"
+
+// Provider and model are both required; there are no defaults. The error must
+// name exactly the missing natural_config field(s).
+func TestResolveProviderAndModel_ProviderAndModelRequired(t *testing.T) {
+	cases := []struct {
+		cfg  *Config
+		want string
+	}{
+		{&Config{APIKey: "sk-123"}, `"provider" and "model" in "natural_config"`},
+		{&Config{Model: testModel, APIKey: "sk-123"}, `"provider" in "natural_config"`},
+		{&Config{Provider: ProviderOpenAI, APIKey: "sk-123"}, `"model" in "natural_config"`},
+		{&Config{Provider: ProviderSLM, Endpoint: "http://localhost:8000/v1/chat/completions"},
+			`"model" in "natural_config"`},
 	}
-	if cfg.Provider != ProviderOpenAI {
-		t.Fatalf("expected default provider %q, got %q", ProviderOpenAI, cfg.Provider)
-	}
-	if cfg.Model != GPT4o_2024_05_13 {
-		t.Fatalf("expected default model %q, got %q", GPT4o_2024_05_13, cfg.Model)
+	for _, c := range cases {
+		err := c.cfg.ResolveProviderAndModel()
+		assertCode(t, err, errors.E_NL_VENDOR_MODEL_REQUIRED)
+		if !strings.Contains(err.Error(), c.want) {
+			t.Fatalf("expected error to name %s, got: %v", c.want, err)
+		}
 	}
 }
 
 func TestResolveProviderAndModel_ProviderLowercased(t *testing.T) {
-	cfg := &Config{Provider: "OpenAI", APIKey: "sk-123"}
+	cfg := &Config{Provider: "OpenAI", Model: testModel, APIKey: "sk-123"}
 	if err := cfg.ResolveProviderAndModel(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -206,30 +223,8 @@ func TestResolveProviderAndModel_ModelCasePreserved(t *testing.T) {
 }
 
 func TestResolveProviderAndModel_UnknownProvider(t *testing.T) {
-	cfg := &Config{Provider: "nosuchvendor", APIKey: "sk-123"}
+	cfg := &Config{Provider: "nosuchvendor", Model: testModel, APIKey: "sk-123"}
 	assertCode(t, cfg.ResolveProviderAndModel(), errors.E_NL_VENDOR_NOT_SUPPORTED)
-}
-
-func TestResolveProviderAndModel_DefaultModelPerProvider(t *testing.T) {
-	cases := []struct {
-		provider string
-		endpoint string // slm has no built-in host, so its config needs one
-		want     string
-	}{
-		{ProviderOpenAI, "", GPT4o_2024_05_13},
-		{ProviderBedrock, "", Claude45InferenceProfileID},
-		{ProviderGemini, "", Gemini25Pro},
-		{ProviderSLM, "http://localhost:8000/v1/chat/completions", SLMDefaultModel},
-	}
-	for _, c := range cases {
-		cfg := &Config{Provider: c.provider, APIKey: "key", Endpoint: c.endpoint}
-		if err := cfg.ResolveProviderAndModel(); err != nil {
-			t.Fatalf("%s: unexpected error: %v", c.provider, err)
-		}
-		if cfg.Model != c.want {
-			t.Fatalf("%s: expected default model %q, got %q", c.provider, c.want, cfg.Model)
-		}
-	}
 }
 
 // Credential policy: on a provider's built-in host a credential is required
@@ -250,7 +245,7 @@ func TestResolveProviderAndModel_CredentialPolicy(t *testing.T) {
 		{ProviderSLM, "http://localhost:8000/v1/chat/completions", true},
 	}
 	for _, c := range cases {
-		cfg := &Config{Provider: c.provider, Endpoint: c.endpoint}
+		cfg := &Config{Provider: c.provider, Model: testModel, Endpoint: c.endpoint}
 		err := cfg.ResolveProviderAndModel()
 		if c.allowsNoCred {
 			if err != nil {
@@ -267,16 +262,16 @@ func TestResolveProviderAndModel_CredentialPolicy(t *testing.T) {
 // even when a credential is supplied.
 func TestResolveProviderAndModel_SLMRequiresEndpoint(t *testing.T) {
 	for _, cfg := range []*Config{
-		{Provider: ProviderSLM},
-		{Provider: ProviderSLM, APIKey: "key"},
-		{Provider: ProviderSLM, CredId: "my-cred"},
+		{Provider: ProviderSLM, Model: testModel},
+		{Provider: ProviderSLM, Model: testModel, APIKey: "key"},
+		{Provider: ProviderSLM, Model: testModel, CredId: "my-cred"},
 	} {
 		assertCode(t, cfg.ResolveProviderAndModel(), errors.E_NL_INVALID_NATURAL_CONFIG)
 	}
 }
 
 func TestResolveProviderAndModel_CredIdAloneSuffices(t *testing.T) {
-	cfg := &Config{Provider: ProviderOpenAI, CredId: "my-cred"}
+	cfg := &Config{Provider: ProviderOpenAI, Model: testModel, CredId: "my-cred"}
 	if err := cfg.ResolveProviderAndModel(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -59,7 +59,6 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_V2_SEND_REQ:                    {V2_API_REQUEST, "Failed to send v2 API request to %v"},
 	E_NL_MODEL_PROVIDERS_REQ_FAILED:     {MODEL_PROVIDERS_IKEY, "Model providers request failed with status %v"},
 	E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL: {MODEL_PROVIDERS_IKEY, "Error unmarshalling model providers response from %v"},
-	E_NL_NO_DEFAULT_MODEL_FOR_VENDOR:    {VENDOR_VALIDATION_IKEY, "No default model configured and no models available for vendor \"%v\""},
 	E_NL_NO_VENDORS_ENABLED:             {VENDOR_VALIDATION_IKEY, "No model providers are enabled for this organization"},
 	E_NL_UNRECOGNIZED_STATEMENT:         {SERVE_NATURAL, "Unrecognized natural language statement received"},
 	E_NL_MISSING_CHAT_ID:                {SERVE_NATURAL_CHAT, "missing \"natural_chatid\" parameter for further processing of the request."},
@@ -83,6 +82,8 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_DIRECT_SEND_REQ:                {CHATCOMPLTIONS_IKEY, "Failed to send direct LLM request to %v"},
 	E_NL_OPTION_NOT_ALLOWED:             {SERVE_NATURAL, "Option \"%s\" is not supported for %s"},
 	E_NL_CHAT_ALREADY_ACTIVE:            {SERVE_NATURAL_CHAT, "chat with id: %s is already active and cannot be resumed again"},
+	E_NL_VENDOR_MODEL_REQUIRED:          {VENDOR_VALIDATION_IKEY, "Natural language request requires %s to be set"},
+	E_NL_MODEL_NOT_AVAILABLE:            {VENDOR_VALIDATION_IKEY, "%v is not available for vendor \"%v\""},
 }
 
 func NewNaturalLanguageRequestError(code ErrorCode, args ...any) Error {

@@ -551,11 +551,14 @@ func newAwrData(sqlID string, text string, br *BaseRequest, plan []byte) *awrDat
 		w.Close()
 		e.Close()
 		text = b.String()
+	} else {
+		// can be a zero-copy slice of the request body, kept until the interval is flushed
+		text = strings.Clone(text)
 	}
 	rv := &awrData{
 		sqlID:       sqlID,
 		text:        text,
-		qc:          br.queryContext,
+		qc:          strings.Clone(br.queryContext),
 		plan:        plan,
 		totalTime:   uint64(br.totalDuration),
 		usedMemory:  uint64(br.usedMemory),

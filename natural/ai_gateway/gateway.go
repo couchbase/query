@@ -16,6 +16,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/couchbase/query/datastore"
@@ -78,9 +79,6 @@ type Provider interface {
 	// ID is the lowercase provider identifier used in natural_config.provider and the
 	// registry (e.g. "openai").
 	ID() string
-
-	// DefaultModel is used when natural_config does not name a model.
-	DefaultModel() string
 
 	// ChatEndpoint returns the URL to POST a completion to, honouring an
 	// optional caller-supplied override in cfg.Endpoint.
@@ -338,6 +336,17 @@ func requestContext(ctx Context) (context.Context, context.CancelFunc) {
 		}
 	}
 	return context.Background(), func() {}
+}
+
+// TemperatureForModel returns the sampling temperature for an OpenAI model:
+// gpt-5 models accept only 1, everything else uses 0 for deterministic output.
+// Model ids may carry any case, so the prefix check ignores it. Shared with the
+// Capella path.
+func TemperatureForModel(model string) float64 {
+	if strings.HasPrefix(strings.ToLower(model), "gpt-5") {
+		return 1
+	}
+	return 0
 }
 
 // llmErrCause turns a provider error body into a cause error: a JSON body is

@@ -93,10 +93,13 @@ func testPaths() []*algebra.Path {
 	return []*algebra.Path{algebra.NewPathLong("default", "travel-sample", "inventory", "hotel")}
 }
 
+// testSLMModel is the couchmind served-model id the slm templates were built for.
+const testSLMModel = "jastorj/couchmind-v5.7.8.1_arctic_stage_3-cw-24K-16bit"
+
 // newSQLPrompt must route the slm provider to the slm variant templates.
 func TestNewSQLPrompt_SLMVariant(t *testing.T) {
 	p, err := newDirectSQLPrompt(testKeyspaceInfo(), testPaths(), "list hotels", "", "", false,
-		ai_gateway.ProviderSLM, ai_gateway.SLMDefaultModel)
+		ai_gateway.ProviderSLM, testSLMModel)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -131,7 +134,7 @@ func TestNewSQLPrompt_SLMVariant(t *testing.T) {
 
 func TestNewSQLPrompt_SLMVariant_SummaryAndHintAndFTS(t *testing.T) {
 	p, err := newDirectSQLPrompt(testKeyspaceInfo(), testPaths(), "list hotels", "prior context", "use city", true,
-		ai_gateway.ProviderSLM, ai_gateway.SLMDefaultModel)
+		ai_gateway.ProviderSLM, testSLMModel)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -175,7 +178,7 @@ func TestNewSQLPrompt_NonSLM(t *testing.T) {
 // the prompt size.
 func TestNewJSUDFPrompt_SLMSystemTemplatePrepended(t *testing.T) {
 	slm, err := newDirectJSUDFPrompt(testKeyspaceInfo(), "add two numbers", "", "",
-		ai_gateway.ProviderSLM, ai_gateway.SLMDefaultModel)
+		ai_gateway.ProviderSLM, testSLMModel)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1373,5 +1376,358 @@ func TestCompleteChatClaim(t *testing.T) {
 				t.Errorf("Delete call count = %d, want %d", fake.attempt, tt.wantAttempts)
 			}
 		})
+	}
+}
+
+// capellaPickProviderAndModel never picks a model: an empty model is passed
+// through for iQ to apply its default, and a given model is matched against the
+// listed models only to use the listed spelling (an unlisted model is passed
+// through as given). The provider defaults to openai, else the first enabled one.
+func TestCapellaPickProviderAndModel(t *testing.T) {
+	providers := []capellaModelProvider{
+		{ID: "bedrock", Models: []string{"us.anthropic.claude-sonnet-4-5-20250929-v1:0"}, Enabled: true},
+		{ID: "openai", Models: []string{"gpt-3.5-turbo", "GPT-4o"}, Enabled: true},
+		{ID: "gemini", Enabled: false},
+	}
+	noOpenAI := []capellaModelProvider{
+		{ID: "openai", Enabled: false},
+		{ID: "bedrock", Enabled: true},
+	}
+	cases := []struct {
+		name         string
+		vendor       string
+		model        string
+		providers    []capellaModelProvider
+		wantCode     errors.ErrorCode
+		wantProvider string
+		wantModel    string
+	}{
+		{"model without vendor", "", "gpt-4o", providers, errors.E_NL_MODEL_WITHOUT_VENDOR, "", ""},
+		{"no providers", "openai", "", nil, errors.E_NL_NO_VENDORS_AVAILABLE, "", ""},
+		{"unknown vendor", "mistral", "", providers, errors.E_NL_VENDOR_NOT_SUPPORTED, "", ""},
+		{"disabled vendor", "gemini", "", providers, errors.E_NL_VENDOR_NOT_ENABLED, "", ""},
+		{"none enabled", "", "", []capellaModelProvider{{ID: "openai"}}, errors.E_NL_NO_VENDORS_ENABLED, "", ""},
+		{"neither given: openai preferred, no model", "", "", providers, 0, "openai", ""},
+		{"neither given: first enabled when openai is disabled", "", "", noOpenAI, 0, "bedrock", ""},
+		{"vendor only: no model", "Bedrock", "", providers, 0, "bedrock", ""},
+		{"listed model", "openai", "gpt-3.5-turbo", providers, 0, "openai", "gpt-3.5-turbo"},
+		{"case-insensitive match uses listed spelling", "openai", "gpt-4o", providers, 0, "openai", "GPT-4o"},
+		{"unlisted model passes through", "openai", "gpt-5.4-2026-03-05", providers, 0, "openai",
+			"gpt-5.4-2026-03-05"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			provider, model, err := capellaPickProviderAndModel(c.vendor, c.model, c.providers)
+			if c.wantCode != 0 {
+				if err == nil || err.Code() != c.wantCode {
+					t.Fatalf("expected error code %v, got %v", c.wantCode, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if provider != c.wantProvider || model != c.wantModel {
+				t.Fatalf("got (%q, %q), want (%q, %q)", provider, model, c.wantProvider, c.wantModel)
+			}
+		})
+	}
+}
+
+// A chat turn's vendor and model are always applied as a pair, so one vendor's
+// model is never sent to another vendor. Each case runs the turn as
+// ProcessCapellaConversationalRequest does: pick the pair to resolve, resolve it
+// against the listed providers, then build the iterative prompt.
+func TestCapellaChatTurnVendorModel(t *testing.T) {
+	providers := []capellaModelProvider{
+		{ID: "openai", Models: []string{"gpt-5.4", "gpt-4o"}, Enabled: true},
+		{ID: "bedrock", Models: []string{"us.anthropic.claude-sonnet-5"}, Enabled: true},
+	}
+	cases := []struct {
+		name                  string
+		prevProvider          string // set when the previous turn was on the direct path
+		prevVendor, prevModel string
+		vendor, model         string
+		wantVendor, wantModel string
+		wantTemperature       float64
+	}{
+		{"no vendor or model reuses the chat's pair",
+			"", "bedrock", "us.anthropic.claude-sonnet-5", "", "", "bedrock", "us.anthropic.claude-sonnet-5", 0},
+		{"no vendor or model reuses the chat's empty model",
+			"", "bedrock", "", "", "", "bedrock", "", 0},
+		{"vendor only drops the previous vendor's model and temperature",
+			"", "openai", "gpt-5.4", "bedrock", "", "bedrock", "", 0},
+		{"new pair replaces the chat's pair",
+			"", "bedrock", "us.anthropic.claude-sonnet-5", "openai", "GPT-5.4", "openai", "gpt-5.4", 1},
+		{"after a direct turn, no vendor or model starts fresh instead of reusing its model",
+			"gemini", "", "gemini-3.8-flash", "", "", "openai", "", 0},
+		{"after a direct turn, vendor only does not keep its model",
+			"openai", "", "gpt-5.4", "bedrock", "", "bedrock", "", 0},
+	}
+	for _, c := range cases {
+		for _, output := range []string{"sql", "jsudf"} {
+			chat := &prompt{
+				Provider: c.prevProvider,
+				Vendor:   c.prevVendor,
+				CompletionSettings: completionSettings{
+					Model:       c.prevModel,
+					Temperature: capellaGetTemperatureForModel(c.prevVendor, c.prevModel),
+				},
+			}
+			vendor, model := capellaChatTurnVendorModel(&ChatEntry{prompt: chat}, c.vendor, c.model)
+			provider, model, err := capellaPickProviderAndModel(vendor, model, providers)
+			if err != nil {
+				t.Fatalf("%s (%s): unexpected error: %v", c.name, output, err)
+			}
+			if output == "sql" {
+				chat = newCapellaSQLIterativePrompt(chat, "q", "", false, provider, model)
+			} else {
+				chat = newCapellaJSUDFIterativePrompt(chat, "q", "", provider, model)
+			}
+			// The whole prompt is sent to iQ, so no direct-path provider may remain.
+			if chat.Provider != "" || chat.Vendor != c.wantVendor || chat.CompletionSettings.Model != c.wantModel ||
+				chat.CompletionSettings.Temperature != c.wantTemperature {
+				t.Errorf("%s (%s): sent provider=%q vendor=%q model=%q temperature=%v, want no provider, vendor=%q model=%q temperature=%v",
+					c.name, output, chat.Provider, chat.Vendor, chat.CompletionSettings.Model,
+					chat.CompletionSettings.Temperature, c.wantVendor, c.wantModel, c.wantTemperature)
+			}
+		}
+	}
+}
+
+// The modelProviders list is reused within the TTL, per organization and
+// credential; an empty list is never cached.
+func TestCapellaModelProvidersCache(t *testing.T) {
+	providers := []capellaModelProvider{{ID: "openai", Enabled: true}}
+	now := time.Now()
+	key := capellaModelProvidersCacheKey("org-cache-test", "user:pass")
+	capellaCacheModelProviders(key, providers, now)
+
+	if got := capellaCachedModelProviders(key, now.Add(capellaModelProvidersTTL-time.Second)); len(got) != 1 {
+		t.Errorf("within the TTL: got %v, want the cached list", got)
+	}
+	if got := capellaCachedModelProviders(key, now.Add(capellaModelProvidersTTL)); got != nil {
+		t.Errorf("at the TTL: got %v, want nil (refetch)", got)
+	}
+	for _, other := range []string{
+		capellaModelProvidersCacheKey("org-cache-test", "other:pass"),
+		capellaModelProvidersCacheKey("org-cache-test-2", "user:pass"),
+	} {
+		if got := capellaCachedModelProviders(other, now); got != nil {
+			t.Errorf("key %q: got %v, want nil (another org or credential)", other, got)
+		}
+	}
+
+	emptyKey := capellaModelProvidersCacheKey("org-cache-test-empty", "user:pass")
+	capellaCacheModelProviders(emptyKey, []capellaModelProvider{}, now)
+	if got := capellaCachedModelProviders(emptyKey, now); got != nil {
+		t.Errorf("empty list: got %v, want nil (not cached)", got)
+	}
+}
+
+// A turn whose model the vendor rejects (19258) puts the chat's previous pair
+// back, so the next turn naming neither does not reuse the rejected pair.
+func TestCapellaSaveVendorModelRestoresAfterRejectedModel(t *testing.T) {
+	cases := []struct {
+		name string
+		prev prompt
+	}{
+		{"previous capella pair", prompt{Vendor: "bedrock",
+			CompletionSettings: completionSettings{Model: "us.anthropic.claude-sonnet-5"}}},
+		{"previous capella default model", prompt{Vendor: "openai"}},
+		{"previous direct turn", prompt{Provider: "gemini",
+			CompletionSettings: completionSettings{Model: "gemini-3.8-flash"}}},
+	}
+	for _, c := range cases {
+		chat := c.prev
+		chat.CompletionSettings.Temperature = capellaGetTemperatureForModel(chat.Vendor, chat.CompletionSettings.Model)
+		want := chat
+		wantVendor, wantModel := capellaChatTurnVendorModel(&ChatEntry{prompt: &chat}, "", "")
+
+		restore := capellaSaveVendorModel(&chat)
+		newCapellaSQLIterativePrompt(&chat, "q", "", false, "openai", "gpt-4o-2024-05-13")
+		restore()
+
+		if chat.Provider != want.Provider || chat.Vendor != want.Vendor ||
+			chat.CompletionSettings != want.CompletionSettings {
+			t.Errorf("%s: restored provider=%q vendor=%q settings=%+v, want provider=%q vendor=%q settings=%+v",
+				c.name, chat.Provider, chat.Vendor, chat.CompletionSettings,
+				want.Provider, want.Vendor, want.CompletionSettings)
+		}
+		if vendor, model := capellaChatTurnVendorModel(&ChatEntry{prompt: &chat}, "", ""); vendor != wantVendor ||
+			model != wantModel {
+			t.Errorf("%s: next turn resolves vendor=%q model=%q, want vendor=%q model=%q",
+				c.name, vendor, model, wantVendor, wantModel)
+		}
+	}
+}
+
+// Summarizing replaces the prompt with a summary. The Capella vendor and model of
+// the last turn are kept, persisted with a paused chat, and reused by the next
+// turn naming neither, until that turn rebuilds the prompt; a pair left by a
+// direct turn is not kept.
+func TestCapellaChatTurnVendorModelAfterSummary(t *testing.T) {
+	cases := []struct {
+		name                  string
+		prev                  prompt
+		wantVendor, wantModel string
+	}{
+		{"Capella turn", prompt{Vendor: "bedrock", CompletionSettings: completionSettings{Model: "us.anthropic.claude-sonnet-5"}},
+			"bedrock", "us.anthropic.claude-sonnet-5"},
+		{"Capella turn with iQ's default model", prompt{Vendor: "bedrock"}, "bedrock", ""},
+		{"direct turn", prompt{Provider: "gemini", CompletionSettings: completionSettings{Model: "gemini-3.8-flash"}}, "", ""},
+	}
+	for _, c := range cases {
+		prev := c.prev
+		ce := &ChatEntry{Keyspaces: testPaths(), prompt: &prev}
+		ce.summarized("prior context")
+		if ce.prompt != nil || ce.Summary != "prior context" {
+			t.Fatalf("%s: prompt not replaced by the summary: prompt=%v summary=%q", c.name, ce.prompt, ce.Summary)
+		}
+
+		b, err := json.Marshal(ce)
+		if err != nil {
+			t.Fatalf("%s: marshal: %v", c.name, err)
+		}
+		if c.wantVendor == "" && strings.Contains(string(b), `"vendor"`) {
+			t.Fatalf("%s: vendor persisted after a direct turn: %s", c.name, b)
+		}
+		var got ChatEntry
+		if err := json.Unmarshal(b, &got); err != nil {
+			t.Fatalf("%s: unmarshal: %v", c.name, err)
+		}
+
+		for _, entry := range []*ChatEntry{ce, &got} {
+			if vendor, model := capellaChatTurnVendorModel(entry, "", ""); vendor != c.wantVendor || model != c.wantModel {
+				t.Errorf("%s: reused vendor=%q model=%q, want vendor=%q model=%q",
+					c.name, vendor, model, c.wantVendor, c.wantModel)
+			}
+			// A turn naming either is not mixed with the kept pair.
+			if vendor, model := capellaChatTurnVendorModel(entry, "openai", ""); vendor != "openai" || model != "" {
+				t.Errorf("%s: vendor-only turn resolved vendor=%q model=%q, want openai and no model", c.name, vendor, model)
+			}
+		}
+
+		// A turn that fails stores no prompt (no content), so the summary and the
+		// kept pair stay for the next turn.
+		ce.Id = "summary-test-" + c.name
+		rebuilt := &prompt{Vendor: "openai"}
+		completeConversationPromptLocked("", ce, rebuilt)
+		if ce.prompt != nil || ce.Summary != "prior context" || ce.vendor != c.wantVendor || ce.model != c.wantModel {
+			t.Errorf("%s: failed turn changed the summary state: prompt=%v summary=%q vendor=%q model=%q",
+				c.name, ce.prompt, ce.Summary, ce.vendor, ce.model)
+		}
+
+		// Storing the rebuilt prompt drops them: the summary is now part of it.
+		completeConversationPromptLocked("SELECT 1", ce, rebuilt)
+		ce.stopInactivityTimer()
+		naturalchatHistory.Delete(ce.Id, nil)
+		if ce.prompt != rebuilt || ce.Summary != "" || ce.vendor != "" || ce.model != "" {
+			t.Errorf("%s: summary state left after the rebuilt prompt was stored: summary=%q vendor=%q model=%q",
+				c.name, ce.Summary, ce.vendor, ce.model)
+		}
+	}
+}
+
+// The 19258 message names the model, or says the default model when the request
+// named none (iQ applied its default).
+func TestCapellaModelNotAvailableError(t *testing.T) {
+	for model, want := range map[string]string{
+		"gpt-4o": `Model "gpt-4o" is not available for vendor "openai"`,
+		"":       `The default model is not available for vendor "openai"`,
+	} {
+		err := capellaModelNotAvailableError(model, "openai", map[string]any{"code": "model_not_found"})
+		if err.Code() != errors.E_NL_MODEL_NOT_AVAILABLE || !strings.Contains(err.Error(), want) {
+			t.Errorf("model %q: got %v, want 19258 containing %q", model, err, want)
+		}
+	}
+}
+
+// The REST "natural" parameter check and the Capella path name missing
+// credentials through the same helper, in the same order.
+func TestCapellaMissingCreds(t *testing.T) {
+	cases := []struct {
+		cred, orgId string
+		want        []string
+	}{
+		{"c", "o", nil},
+		{"", "o", []string{`"natural_cred"`}},
+		{"c", "", []string{`"natural_orgid"`}},
+		{"", "", []string{`"natural_cred"`, `"natural_orgid"`}},
+	}
+	for _, c := range cases {
+		if got := CapellaMissingCreds(c.cred, c.orgId); !slices.Equal(got, c.want) {
+			t.Errorf("CapellaMissingCreds(%q, %q) = %q, want %q", c.cred, c.orgId, got, c.want)
+		}
+		err := CapellaCheckCreds(c.cred, c.orgId)
+		if (err == nil) != (len(c.want) == 0) {
+			t.Fatalf("CapellaCheckCreds(%q, %q) = %v", c.cred, c.orgId, err)
+		}
+		if err != nil && (err.Code() != errors.E_NL_MISSING_NL_PARAM || !strings.Contains(err.Error(), strings.Join(c.want, ","))) {
+			t.Errorf("CapellaCheckCreds(%q, %q) = %v, want 19213 naming %s", c.cred, c.orgId, err, strings.Join(c.want, ","))
+		}
+	}
+}
+
+// A direct turn applies natural_config's provider and model as a pair and clears
+// any Capella vendor, so a later Capella turn does not reuse a direct-path model.
+func TestDirectChatTurnProviderModel(t *testing.T) {
+	for _, output := range []string{"sql", "jsudf"} {
+		// The previous turn was on the Capella path.
+		chat := &prompt{
+			Vendor: "openai",
+			CompletionSettings: completionSettings{
+				Model:       "gpt-5.4",
+				Temperature: capellaGetTemperatureForModel("openai", "gpt-5.4"),
+			},
+		}
+		if output == "sql" {
+			chat = newDirectSQLIterativePrompt(chat, "q", "", false, "gemini", "gemini-3.8-flash")
+		} else {
+			chat = newDirectJSUDFIterativePrompt(chat, "q", "", "gemini", "gemini-3.8-flash")
+		}
+		if chat.Provider != "gemini" || chat.Vendor != "" || chat.CompletionSettings.Model != "gemini-3.8-flash" ||
+			chat.CompletionSettings.Temperature != 0 {
+			t.Errorf("%s: got provider=%q vendor=%q model=%q temperature=%v, want provider=gemini, no vendor, "+
+				"model=gemini-3.8-flash temperature=0", output, chat.Provider, chat.Vendor,
+				chat.CompletionSettings.Model, chat.CompletionSettings.Temperature)
+		}
+		if vendor, model := capellaChatTurnVendorModel(&ChatEntry{prompt: chat}, "", ""); vendor != "" || model != "" {
+			t.Errorf("%s: a Capella turn after this would reuse vendor=%q model=%q, want nothing", output, vendor, model)
+		}
+	}
+}
+
+// With no model, no temperature is chosen, so none is sent (omitempty) and iQ's
+// default model cannot be given a temperature it rejects.
+func TestCapellaNoModelSendsNoTemperature(t *testing.T) {
+	if got := capellaGetTemperatureForModel("openai", ""); got != 0 {
+		t.Fatalf("got temperature %v for an empty model, want 0", got)
+	}
+	b, err := json.Marshal(completionSettings{Model: "", Temperature: capellaGetTemperatureForModel("openai", "")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "temperature") {
+		t.Fatalf("temperature sent with no model: %s", b)
+	}
+}
+
+// gpt-5 models only accept temperature 1; the model carries the listed spelling,
+// so the prefix check must not depend on case.
+func TestCapellaGetTemperatureForModel(t *testing.T) {
+	cases := []struct {
+		provider, model string
+		want            float64
+	}{
+		{"openai", "gpt-5.4", 1},
+		{"openai", "GPT-5.4", 1},
+		{"openai", "gpt-4o", 0},
+		{"bedrock", "us.anthropic.claude-sonnet-5", 0},
+	}
+	for _, c := range cases {
+		if got := capellaGetTemperatureForModel(c.provider, c.model); got != c.want {
+			t.Errorf("%s/%s: got %v, want %v", c.provider, c.model, got, c.want)
+		}
 	}
 }

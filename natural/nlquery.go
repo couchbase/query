@@ -136,6 +136,13 @@ type ChatEntry struct {
 	users     []string
 	Paused    bool
 	Summary   string
+	// vendor and model are the Capella vendor and model of the chat's last turn,
+	// kept while the prompt is replaced by Summary (it is rebuilt on the next
+	// turn), so a turn naming neither continues with them as it would with the
+	// prompt (see capellaChatTurnVendorModel). Empty after a direct turn, whose
+	// natural_config names its own provider and model.
+	vendor string
+	model  string
 	// useKnowledge is fixed at BEGIN CHAT: every prompt built for the conversation
 	// (the first turn, and the rebuild after a summarize or resume) gathers
 	// knowledge iff it is set. A "knowledge" option on a conversational turn is ignored.
@@ -279,6 +286,28 @@ func FormatChatEntry(ce *ChatEntry) map[string]any {
 	return item
 }
 
+// summarized replaces the chat's prompt with its summary; the prompt is rebuilt
+// from the summary on the next turn. The Capella vendor and model of the last
+// turn are kept (see vendor and model). Caller holds the entry lock.
+func (ce *ChatEntry) summarized(summary string) {
+	ce.Summary = summary
+	ce.vendor, ce.model = "", ""
+	if p := ce.prompt; p != nil && p.Vendor != "" {
+		ce.vendor, ce.model = p.Vendor, p.CompletionSettings.Model
+	}
+	ce.prompt = nil
+}
+
+// summaryUsed drops the summary and the vendor and model kept with it, once the
+// prompt rebuilt from them is stored (completeConversationPromptLocked): from then
+// on the summary is part of the prompt. A turn that fails before that keeps them,
+// so the next turn rebuilds the prompt from the summary again instead of starting
+// with no history on the default vendor. Caller holds the entry lock.
+func (ce *ChatEntry) summaryUsed() {
+	ce.Summary = ""
+	ce.vendor, ce.model = "", ""
+}
+
 type NaturalContext interface {
 	datastore.Context
 	datastore.QueryContext
@@ -366,6 +395,7 @@ func completeConversationPromptLocked(content string, ce *ChatEntry, prompt *pro
 		prompt.Messages = append(prompt.Messages, assistantmessage)
 		prompt.Size += len(content)
 		ce.prompt = prompt
+		ce.summaryUsed()
 		ce.resetInactivityTimerLocked()
 		naturalchatHistory.Add(ce, ce.Id, nil)
 	}
@@ -1785,6 +1815,10 @@ func (ce *ChatEntry) MarshalJSON() ([]byte, error) {
 	if summ := ce.Summary; summ != "" {
 		rv["summary"] = summ
 	}
+	if ce.vendor != "" {
+		rv["vendor"] = ce.vendor
+		rv["model"] = ce.model
+	}
 	if t := ce.Tokens; t.Prompt != 0 || t.Completion != 0 || t.Total != 0 {
 		rv["tokens"] = map[string]any{
 			"prompt":     t.Prompt,
@@ -1807,6 +1841,8 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 		Prompt    *prompt  `json:"prompt"`
 		Users     []string `json:"users"`
 		Summary   string   `json:"summary"`
+		Vendor    string   `json:"vendor"`
+		Model     string   `json:"model"`
 		Timeout   string   `json:"inactivity_timeout"`
 		Knowledge bool     `json:"knowledge"`
 		Tokens    struct {
@@ -1838,6 +1874,7 @@ func (ce *ChatEntry) UnmarshalJSON(body []byte) error {
 	if summary := unmarshalledStruct.Summary; summary != "" {
 		ce.Summary = summary
 	}
+	ce.vendor, ce.model = unmarshalledStruct.Vendor, unmarshalledStruct.Model
 	if t := unmarshalledStruct.Tokens; t.Prompt != 0 || t.Completion != 0 || t.Total != 0 {
 		ce.Tokens = LLMTokenUsage{Prompt: t.Prompt, Completion: t.Completion, Total: t.Total}
 	}
@@ -1859,6 +1896,7 @@ func (ce *ChatEntry) Reset() {
 	ce.prompt = nil
 	ce.Id = ""
 	ce.Summary = ""
+	ce.vendor, ce.model = "", ""
 	ce.Tokens = LLMTokenUsage{}
 	ce.Removed = false
 	ce.Paused = false
@@ -1920,6 +1958,10 @@ type NaturalConfig = ai_gateway.Config
 // response. It is an alias for ai_gateway.TokenUsage so the server can capture
 // the per-request total without importing the gateway package directly.
 type LLMTokenUsage = ai_gateway.TokenUsage
+
+// MissingNaturalConfigParam names both ways to configure a natural language
+// request (see ai_gateway.MissingConfigParam).
+const MissingNaturalConfigParam = ai_gateway.MissingConfigParam
 
 // ParseNaturalConfig reads and validates the natural_config request parameter,
 // delegating to the gateway.

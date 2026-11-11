@@ -19,9 +19,6 @@ import (
 // supplied configuration object into a Config and resolving the provider/model
 // against the provider registry.
 
-// defaultProvider is used when natural_config does not name a provider.
-const defaultProvider = ProviderOpenAI
-
 // Config is the parsed form of the natural_config request parameter.
 type Config struct {
 	Provider         string
@@ -40,14 +37,21 @@ type Config struct {
 	Moderation *bool
 }
 
+// MissingConfigParam names both ways to configure a natural language request,
+// for one that reaches the direct path without natural_config: the Capella
+// natural_cred and natural_orgid pair, or natural_config itself. It is the
+// E_NL_MISSING_NL_PARAM argument wherever natural_config is required, including
+// the REST "natural" parameter check, so the wording cannot drift.
+const MissingConfigParam = "\"natural_cred\" and \"natural_orgid\", or \"natural_config\""
+
 // ParseConfig reads and validates the shape of the natural_config object into a
 // Config. The value is expected to be an object carrying the provider, model
-// and credentials. The credential policy (whether a cred_id or api_key is
-// required) is provider-specific and enforced later in ResolveProviderAndModel,
-// once the provider is known.
+// and credentials. Whether provider and model are present, and the credential
+// policy (whether a cred_id or api_key is required, which is provider-specific),
+// are enforced later in ResolveProviderAndModel.
 func ParseConfig(v value.Value) (*Config, errors.Error) {
 	if v == nil || v.Type() == value.NULL || v.Type() == value.MISSING {
-		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, "\"natural_config\"")
+		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_MISSING_NL_PARAM, MissingConfigParam)
 	}
 	if v.Type() != value.OBJECT {
 		return nil, errors.NewNaturalLanguageRequestError(errors.E_NL_INVALID_NATURAL_CONFIG,
@@ -141,15 +145,26 @@ func boolField(v value.Value, name string) (*bool, errors.Error) {
 	return &b, nil
 }
 
-// ResolveProviderAndModel validates the configured provider against the registry
-// and fills in the provider's default model when one is not specified. An empty
-// provider defaults to defaultProvider.
+// ResolveProviderAndModel validates the configured provider against the registry.
+// Both provider and model are required; there are no defaults, since a
+// hard-coded default model goes stale as soon as the vendor retires it. The
+// E_NL_VENDOR_MODEL_REQUIRED error names whichever is missing. Only the direct
+// (natural_config) path requires them: on the Capella path iQ applies its own
+// default model. Resolution makes no network call, so callers run it before
+// throttling.
 func (c *Config) ResolveProviderAndModel() errors.Error {
+	var missing []string
 	if c.Provider == "" {
-		c.Provider = defaultProvider
-	} else {
-		c.Provider = strings.ToLower(c.Provider)
+		missing = append(missing, "\"provider\"")
 	}
+	if c.Model == "" {
+		missing = append(missing, "\"model\"")
+	}
+	if len(missing) > 0 {
+		return errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_MODEL_REQUIRED,
+			strings.Join(missing, " and ")+" in \"natural_config\"")
+	}
+	c.Provider = strings.ToLower(c.Provider)
 
 	prov, err := providerFor(c.Provider)
 	if err != nil {
@@ -160,9 +175,6 @@ func (c *Config) ResolveProviderAndModel() errors.Error {
 	// treat them as case-sensitive (self-hosted served-model names, Bedrock
 	// ARNs), and normalizing would corrupt those. A wrongly-cased id surfaces
 	// as the provider's own "model not found" error.
-	if c.Model == "" {
-		c.Model = prov.DefaultModel()
-	}
 
 	// The slm provider has no built-in host, so an endpoint is always required.
 	// Checked here so the caller gets the real problem (missing endpoint) rather
