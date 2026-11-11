@@ -606,8 +606,8 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		Tenant:          tenant.Bucket(request.TenantCtx()),
 		SessionMemory:   request.SessionMemory(),
 		SqlID:           sqlID,
-		NaturalChatId:   request.NaturalChatId(),
-		NaturalContext:  request.NaturalContext(),
+		NaturalChatId:   strings.Clone(request.NaturalChatId()),
+		NaturalContext:  strings.Clone(request.NaturalContext()),
 		LogContent:      request.GetLogContent(),
 	}
 	errs := request.Errors()
@@ -710,10 +710,10 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	}
 
 	if natural := request.Natural(); natural != "" {
-		re.NaturalPrompt = natural
-		re.NaturalOutput = request.NaturalOutput()
+		re.NaturalPrompt = strings.Clone(natural)
+		re.NaturalOutput = strings.Clone(request.NaturalOutput())
 		re.NaturalTime = request.NaturalTime()
-		re.NaturalHint = request.NaturalHint()
+		re.NaturalHint = strings.Clone(request.NaturalHint())
 	}
 
 	clientId := request.ClientID().String()
