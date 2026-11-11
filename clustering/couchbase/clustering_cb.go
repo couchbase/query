@@ -564,6 +564,8 @@ type cbCluster struct {
 	capabilities      map[string]bool               `json:"-"`
 	poolSrvRev        int                           `json:"-"`
 	lastCheck         util.Time                     `json:"-"`
+	lastFailure       util.Time                     `json:"-"`
+	lastErr           errors.Error                  `json:"-"`
 	refreshing        int32                         `json:"-"`
 }
 
@@ -624,14 +626,24 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 		return this.queryNodeNames, nil
 	}
 
+	// while the cluster REST calls are failing, don't repeat them on every call
+	this.RLock()
+	lastErr := this.lastErr
+	lastFailure := this.lastFailure
+	this.RUnlock()
+	if lastErr != nil && util.Since(lastFailure) <= _GRACE_PERIOD {
+		return nil, lastErr
+	}
+
 	poolServices, err := configStore.cbConn.GetPoolServices(this.ClusterName)
 	if err != nil {
-		return nil, errors.NewAdminConnectionError(err, this.ConfigurationStoreId())
+		return nil, this.setFailure(errors.NewAdminConnectionError(err, this.ConfigurationStoreId()))
 	}
 
 	if poolServices.Rev == this.poolSrvRev {
 		this.Lock()
 		this.lastCheck = util.Now()
+		this.lastErr = nil
 		this.Unlock()
 		return this.queryNodeNames, nil
 	}
@@ -645,7 +657,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 	// If pool services and cluster rev do not match, update the cluster's rev and query node data:
 	nodes, err := configStore.cbConn.GetPoolNodes(configStore.poolName)
 	if err != nil {
-		return nil, errors.NewAdminGetNodeError(err, configStore.poolName)
+		return nil, this.setFailure(errors.NewAdminGetNodeError(err, configStore.poolName))
 	}
 	queryNodeNames := []string{}
 	queryNodeServices := map[string]services{}
@@ -746,6 +758,7 @@ func (this *cbCluster) QueryNodeNames() ([]string, errors.Error) {
 
 	this.poolSrvRev = poolServices.Rev
 	this.lastCheck = util.Now()
+	this.lastErr = nil
 	logging.Infof("Refreshed cluster information (rev:%v)", poolServices.Rev)
 	return this.queryNodeNames, nil
 }
@@ -838,13 +851,21 @@ func (this *cbCluster) ClusterManager() clustering.ClusterManager {
 	return this
 }
 
+// record a failed refresh, so that QueryNodeNames() doesn't retry it for a grace period
+func (this *cbCluster) setFailure(err errors.Error) errors.Error {
+	this.Lock()
+	this.lastErr = err
+	this.lastFailure = util.Now()
+	this.Unlock()
+	return err
+}
+
 func (this *cbCluster) Capability(name string) bool {
 
 	// dirty trick to refresh the cluster and load the capabilities
-	_, err := this.QueryNodeNames()
-	if err != nil {
-		return false
-	}
+	// if the refresh fails, use the capabilities from the last successful refresh:
+	// a transient failure of the cluster REST calls doesn't mean that a capability is not available
+	_, _ = this.QueryNodeNames()
 
 	this.RLock()
 	rv := this.capabilities[name]

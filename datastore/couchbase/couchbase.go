@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/cbauth"
@@ -1706,6 +1707,45 @@ func (p *namespace) VirtualKeyspaceByName(path []string) (datastore.Keyspace, er
 	return virtual.NewVirtualKeyspace(p, path)
 }
 
+// how many times a request re-reads the manifests (after the first read) while they are older than the
+// announced ones, pausing before each re-read to allow for the manifest lagging the announced uid
+// (about 0.65s in all)
+const _MANIFEST_READ_RETRIES = 10
+const _MANIFEST_RETRY_DELAY = time.Millisecond
+const _MANIFEST_RETRY_MAX_DELAY = 200 * time.Millisecond
+
+// how often manifest read problems are logged for a bucket
+const _MANIFEST_LOG_INTERVAL = time.Minute
+
+// manifestRetryDelay returns the pause before the read following the given one: it doubles on each read, up to a cap
+func manifestRetryDelay(retries int) time.Duration {
+	return min(_MANIFEST_RETRY_DELAY<<min(retries, 16), _MANIFEST_RETRY_MAX_DELAY)
+}
+
+// logDue reports whether a message last logged at *last (unix nanoseconds) can be logged again at now,
+// and if so records now: only one of several concurrent callers gets true
+func logDue(last *atomic.Int64, now int64, interval time.Duration) bool {
+	l := last.Load()
+	return (l == 0 || now-l >= int64(interval)) && last.CompareAndSwap(l, now)
+}
+
+// manifestsBehind reports whether the manifests just read are older than the ones the bucket has announced,
+// so that the caller has to read them again.
+// Without an external manifest (external collections are not available, e.g. the capability check failed)
+// there is no newer external manifest to wait for: comparing its uid would retry forever.
+func manifestsBehind(maniUid, newManiUid uint64, haveExternal bool, externalManiUid, newExternalManiUid uint64) bool {
+	return maniUid < newManiUid || (haveExternal && externalManiUid < newExternalManiUid)
+}
+
+// externalManifestUnreadable reports whether the bucket has announced an external collections manifest
+// that could not be read (e.g. the capability check failed).
+// Refreshing the scopes without it would drop the external collections the keyspace already has, so the
+// caller must treat it as a failed read: keep the current scopes and try again on the next request.
+// An announced uid of 0 means that there is no external manifest, and nothing to wait for.
+func externalManifestUnreadable(haveExternal bool, newExternalManiUid uint64) bool {
+	return !haveExternal && newExternalManiUid != 0
+}
+
 func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 	var keyspace, oldCbKeyspace *keyspace
 
@@ -1724,9 +1764,17 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 			// shortcut if good, or only manifest needed
 			// avoid a race condition where we read a manifest while the uid is increased
 			// by the bucket update callback
-			for {
+			for retries := 0; ; retries++ {
 				mani, err := keyspace.cbbucket.GetCollectionsManifest()
 				externalMani, eErr := keyspace.cbbucket.GetExternalCollectionsManifest(nil)
+				if err == nil && eErr == nil && externalMani == nil {
+					keyspace.Lock()
+					newExternalManiUid := keyspace.newExternalCollectionsManifestUid
+					keyspace.Unlock()
+					if externalManifestUnreadable(false, newExternalManiUid) {
+						eErr = fmt.Errorf("external collections manifest %x not available", newExternalManiUid)
+					}
+				}
 				if err == nil && eErr == nil {
 
 					// see later: another case for shared optimistic locks.
@@ -1743,10 +1791,23 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 						if externalMani != nil {
 							externalManiUid = externalMani.Uid
 						}
-						if mani.Uid < keyspace.newCollectionsManifestUid ||
-							externalManiUid < keyspace.newExternalCollectionsManifestUid {
+						if manifestsBehind(mani.Uid, keyspace.newCollectionsManifestUid, externalMani != nil,
+							externalManiUid, keyspace.newExternalCollectionsManifestUid) {
+							newManiUid := keyspace.newCollectionsManifestUid
+							newExternalManiUid := keyspace.newExternalCollectionsManifestUid
 							keyspace.Unlock()
-							continue
+							if retries < _MANIFEST_READ_RETRIES {
+								time.Sleep(manifestRetryDelay(retries))
+								continue
+							}
+
+							// don't keep the request spinning: use the current scopes, and try again on the next request
+							if logDue(&keyspace.lastManifestLog, time.Now().UnixNano(), _MANIFEST_LOG_INTERVAL) {
+								logging.Warnf("Manifests for bucket %s still behind after %v reads: id %v (announced %v), "+
+									"external %v (announced %v)", name, retries+1, mani.Uid, newManiUid,
+									externalManiUid, newExternalManiUid)
+							}
+							break
 						}
 
 						// do not update if somebody has already done it
@@ -1759,6 +1820,9 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 							keyspace.externalCollectionsManifestUid = externalManiUid
 							keyspace.scopes = scopes
 							logging.Infof("Refreshed manifest for bucket %v id %v (external %v)", name, mani.Uid, externalManiUid)
+
+							// log the next manifest read problem straight away
+							keyspace.lastManifestLog.Store(0)
 
 							// if there's no scopes fall back to bucket access
 							if len(scopes) == 0 {
@@ -1773,7 +1837,7 @@ func (p *namespace) keyspaceByName(name string) (*keyspace, errors.Error) {
 					if keyspace.flags == 0 {
 						return keyspace, nil
 					}
-				} else {
+				} else if logDue(&keyspace.lastManifestLog, time.Now().UnixNano(), _MANIFEST_LOG_INTERVAL) {
 					logging.Infof("Unable to retrieve collections info for bucket %s: %v, external(%v)", name, err, eErr)
 				}
 				break
@@ -2195,7 +2259,8 @@ type keyspace struct {
 	newExternalCollectionsManifestUid uint64            // announced external manifest id
 	scopes                            map[string]*scope // scopes by id
 	defaultCollection                 datastore.Keyspace
-	last                              util.Time // last refresh
+	last                              util.Time    // last refresh
+	lastManifestLog                   atomic.Int64 // when a manifest read problem was last logged (unix nanoseconds)
 }
 
 var _NO_SCOPES map[string]*scope = map[string]*scope{}
