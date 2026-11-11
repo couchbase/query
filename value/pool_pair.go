@@ -37,9 +37,11 @@ func (this *PairPool) Put(s []Pair) {
 		return
 	}
 
-	for i := range s {
-		s[i] = Pair{}
-	}
+	// Clear the whole backing array, not just len(s): callers may hand back a
+	// shorter slice than the one they filled (e.g. a deferred Put evaluated
+	// while the slice was still empty), and any slot left set would keep its
+	// key and document reachable from the global pool.
+	clear(s[:cap(s)])
 	this.pool.Put(s[0:0])
 }
 
