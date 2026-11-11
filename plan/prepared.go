@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -308,6 +309,22 @@ func (this *Prepared) SetQueryContext(queryContext string) {
 		if len(path) > 1 {
 			this.tenant = path[1]
 		}
+	}
+}
+
+// OwnStrings makes the prepared statement keep its own copy of the strings that come from
+// the request. They can be zero-copy slices of the request body, and a cached plan would
+// otherwise keep the whole body (including every parameter sent with it) alive.
+func (this *Prepared) OwnStrings() {
+	this.name = strings.Clone(this.name)
+	this.text = strings.Clone(this.text)
+	this.namespace = strings.Clone(this.namespace)
+	this.queryContext = strings.Clone(this.queryContext)
+	this.tenant = strings.Clone(this.tenant)
+
+	// a client can send an encoded plan with the request only when encoded plans are enabled
+	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_ENCODED_PLAN) {
+		this.encoded_plan = strings.Clone(this.encoded_plan)
 	}
 }
 
