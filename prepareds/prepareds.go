@@ -417,6 +417,9 @@ func (this *preparedCache) get(fullName string, track bool) *CacheEntry {
 
 func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bool, process func(*CacheEntry) bool) {
 
+	// cached plans live long: don't let them keep the request that created them alive
+	prepared.OwnStrings()
+
 	// prepare a new entry, if statement does not exist
 	ce := &CacheEntry{
 		Prepared:       prepared,

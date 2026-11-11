@@ -85,8 +85,8 @@ type RequestLogEntry struct {
 	PhaseOperators           map[string]interface{}
 	timings                  []byte
 	optEstimates             map[string]interface{}
-	NamedArgs                map[string]value.Value
-	PositionalArgs           value.Values
+	namedArgs                []byte
+	positionalArgs           []byte
 	MemoryQuota              uint64
 	UsedMemory               uint64
 	Users                    string
@@ -601,8 +601,8 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		UseReplica:      request.UseReplica(),
 		FeatureControls: request.FeatureControls(),
 		Mutations:       request.MutationCount(),
-		QueryContext:    request.QueryContext(),
-		TxId:            request.TxId(),
+		QueryContext:    strings.Clone(request.QueryContext()),
+		TxId:            strings.Clone(request.TxId()),
 		Tenant:          tenant.Bucket(request.TenantCtx()),
 		SessionMemory:   request.SessionMemory(),
 		SqlID:           sqlID,
@@ -624,9 +624,12 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 			}
 		}
 	}
+	// Strings taken from the request (statement, query context, txid, client context id)
+	// are cloned: they can be zero-copy slices of the request body and would keep all of
+	// it alive for as long as the entry lives.
 	stmt := request.RedactedStatement()
 	if stmt != "" {
-		re.Statement = stmt
+		re.Statement = strings.Clone(stmt)
 	}
 	if stmtType := request.Type(); stmtType != "" {
 		re.StatementType = stmtType
@@ -686,8 +689,18 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		}
 	}
 
-	re.NamedArgs = request.FormattedRedactedNamedArgs()
-	re.PositionalArgs = request.RedactedPositionalArgs()
+	// Keep a detached, size-capped JSON copy of the parameters. The request's own
+	// values may point into the request body (zero-copy parsing) or cache a
+	// parsed form, so keeping them would pin all of that for as long as the
+	// entry lives.
+	re.namedArgs = namedArgsCopy(request.FormattedRedactedNamedArgs())
+	if positionalArgs := request.RedactedPositionalArgs(); len(positionalArgs) > 0 {
+		var size uint64
+		for _, v := range positionalArgs {
+			size += v.Size()
+		}
+		re.positionalArgs = marshalArgs(positionalArgs, size)
+	}
 
 	re.Users = datastore.CredsString(request.Credentials())
 	re.RemoteAddr = request.RemoteAddr()
@@ -705,7 +718,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 
 	clientId := request.ClientID().String()
 	if clientId != "" {
-		re.ClientId = clientId
+		re.ClientId = strings.Clone(clientId)
 	}
 	if tag != "" {
 		re.Tag = tag
@@ -727,6 +740,44 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 	for _, h := range requestLog.handlers {
 		h.handlerFunc(re) // Deliberately synchronous to limit the number of routines spawned
 	}
+}
+
+// maximum size of the named or positional parameters kept in a completed request entry
+const _MAX_ARGS_SIZE = 64 * 1024
+
+var _EMPTY_NAMED_ARGS = []byte("{}")
+var _UNSERIALIZABLE_ARGS = []byte("{\"WARNING\":\"Parameters could not be serialized.\"}")
+
+// namedArgsCopy returns a JSON copy of the named parameters.
+// No named parameters are kept as an empty object, as they were before the parameters were copied.
+func namedArgsCopy(namedArgs map[string]value.Value) []byte {
+	if namedArgs == nil {
+		return nil
+	} else if len(namedArgs) == 0 {
+		return _EMPTY_NAMED_ARGS
+	}
+	var size uint64
+	for k, v := range namedArgs {
+		size += uint64(len(k)) + v.Size()
+	}
+	return marshalArgs(namedArgs, size)
+}
+
+// marshalArgs returns a JSON copy of the parameters, or a warning if they are
+// too big to keep or can't be serialized. estSize is checked first so oversized
+// parameters are never serialized.
+func marshalArgs(args interface{}, estSize uint64) []byte {
+	if estSize <= _MAX_ARGS_SIZE {
+		b, err := json.Marshal(args)
+		if err != nil {
+			return _UNSERIALIZABLE_ARGS
+		} else if len(b) <= _MAX_ARGS_SIZE {
+			return b
+		}
+		estSize = uint64(len(b))
+	}
+	return []byte(fmt.Sprintf("{\"WARNING\":\"Parameters (%v) exceed maximum permitted (%v) size.\"}",
+		logging.HumanReadableSize(int64(estSize), false), logging.HumanReadableSize(int64(_MAX_ARGS_SIZE), false)))
 }
 
 func (this *RequestLogEntry) Timings() []byte {
@@ -859,11 +910,12 @@ func (request *RequestLogEntry) Format(profiling bool, redact bool, durStyle uti
 	}
 
 	if profiling {
-		if request.NamedArgs != nil {
-			reqMap["namedArgs"] = util.InterfaceRedacted(request.NamedArgs, redact)
+		// a new parsed value per call, so a parse is never cached in the entry
+		if request.namedArgs != nil {
+			reqMap["namedArgs"] = util.InterfaceRedacted(value.NewValue(request.namedArgs), redact)
 		}
-		if request.PositionalArgs != nil {
-			reqMap["positionalArgs"] = util.InterfaceRedacted(request.PositionalArgs, redact)
+		if request.positionalArgs != nil {
+			reqMap["positionalArgs"] = util.InterfaceRedacted(value.NewValue(request.positionalArgs), redact)
 		}
 		timings := request.Timings()
 		if timings != nil {
