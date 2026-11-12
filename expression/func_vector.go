@@ -36,10 +36,14 @@ const (
 	_DENSE  = "dense"
 	_SPARSE = "sparse"
 	_MULTI  = "multi"
+	_FP32   = "fp32"
+	_FP16   = "fp16"
+	_BF16   = "bf16"
 )
 
 const (
 	BASE_SIZE        = 4
+	HALF_BASE_SIZE   = 2
 	_DEF_SPARSE_SIZE = 128
 )
 
@@ -780,7 +784,7 @@ func (this *DecodeVector) EquivalentTo(other Expression) bool {
 
 func (this *DecodeVector) Type() value.Type { return value.ARRAY }
 func (this *DecodeVector) MinArgs() int     { return 1 }
-func (this *DecodeVector) MaxArgs() int     { return 3 }
+func (this *DecodeVector) MaxArgs() int     { return 4 }
 
 func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var decodeStr string
@@ -789,6 +793,7 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 	null := false
 	missing := false
 	vType := _DENSE
+	dType := _FP32
 
 	for i, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
@@ -811,7 +816,7 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 				} else if arg.Truth() {
 					byteOrder = binary.BigEndian
 				}
-			} else {
+			} else if i == 2 {
 				if arg.Type() != value.STRING {
 					null = true
 				} else {
@@ -820,6 +825,17 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 						vType = s
 					} else {
 						null = true
+					}
+				}
+			} else {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					s := strings.ToLower(arg.ToString())
+					if s != _FP32 && s != _FP16 && s != _BF16 {
+						null = true
+					} else {
+						dType = s
 					}
 				}
 			}
@@ -832,42 +848,49 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 		return value.NULL_VALUE, nil
 	}
 
-	// We first decode the encoded string into a byte array.
-	// The array is expected to be divisible by BASE_SIZE because each int32/float32
-	// should occupy 4 bytes
+	// decode base64 string into []byte (byte array)
 	decodedString, err := base64.StdEncoding.DecodeString(decodeStr)
-	if err != nil || len(decodedString)%BASE_SIZE != 0 {
-		return value.NULL_VALUE, nil
+	var decodedVector []any
+
+	entry, read := BASE_SIZE, func(b []byte) float32 { return math.Float32frombits(byteOrder.Uint32(b)) }
+	switch dType {
+	case _FP16:
+		entry, read = HALF_BASE_SIZE, func(b []byte) float32 { return FP16ToFP32(byteOrder.Uint16(b)) }
+	case _BF16:
+		entry, read = HALF_BASE_SIZE, func(b []byte) float32 { return BF16ToFP32(byteOrder.Uint16(b)) }
 	}
 
-	var decodedVector []any
-	dims := int(len(decodedString) / BASE_SIZE)
+	if vType == _SPARSE {
+		entry += 4 // uint32 index
+	}
+	if err != nil || len(decodedString)%entry != 0 {
+		return value.NULL_VALUE, nil
+	}
+	n := len(decodedString) / entry
+	// dense: n × read(); sparse: n × Uint32 indices, then n × read() starting at offset 4n
+
 	switch vType {
 	case _DENSE:
-		decodedVector = make([]any, dims)
+		decodedVector = make([]any, n)
 		offset := 0
-		// We iterate through the array 4 bytes at a time and convert each of
-		// them to a float32 value by reading them in a little endian notation
-		for i := 0; i < dims; i++ {
-			decodedVector[i] = math.Float32frombits(byteOrder.Uint32(decodedString[offset : offset+BASE_SIZE]))
-			offset += BASE_SIZE
+		for i := 0; i < n; i++ {
+			decodedVector[i] = read(decodedString[offset : offset+entry])
+			offset += entry
 		}
 
 	case _SPARSE:
-		if dims%2 != 0 {
-			return value.NULL_VALUE, nil
-		}
-		dims = dims / 2
-		indicesVector := make([]any, dims)
-		valueVector := make([]any, dims)
+		// n entries: n 4-byte indices, then n values of (entry - 4) bytes.
+		valueSize := entry - 4
+		indicesVector := make([]any, n)
+		valueVector := make([]any, n)
 		offset := 0
-		for i := 0; i < dims; i++ {
-			indicesVector[i] = byteOrder.Uint32(decodedString[offset : offset+BASE_SIZE])
-			offset += BASE_SIZE
+		for i := 0; i < n; i++ {
+			indicesVector[i] = byteOrder.Uint32(decodedString[offset : offset+4])
+			offset += 4
 		}
-		for i := 0; i < dims; i++ {
-			valueVector[i] = math.Float32frombits(byteOrder.Uint32(decodedString[offset : offset+BASE_SIZE]))
-			offset += BASE_SIZE
+		for i := 0; i < n; i++ {
+			valueVector[i] = read(decodedString[offset : offset+valueSize])
+			offset += valueSize
 		}
 		decodedVector = append(decodedVector, value.NewValue(indicesVector))
 		decodedVector = append(decodedVector, value.NewValue(valueVector))
@@ -912,7 +935,7 @@ func (this *EncodeVector) EquivalentTo(other Expression) bool {
 
 func (this *EncodeVector) Type() value.Type { return value.STRING }
 func (this *EncodeVector) MinArgs() int     { return 1 }
-func (this *EncodeVector) MaxArgs() int     { return 3 }
+func (this *EncodeVector) MaxArgs() int     { return 4 }
 
 func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Value, error) {
 	var vec value.Value
@@ -921,6 +944,7 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 	null := false
 	missing := false
 	vType := _DENSE
+	dType := _FP32
 
 	for i, op := range this.operands {
 		arg, err := op.Evaluate(item, context)
@@ -943,7 +967,7 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 				} else if arg.Truth() {
 					byteOrder = binary.BigEndian
 				}
-			} else {
+			} else if i == 2 {
 				if arg.Type() != value.STRING {
 					null = true
 				} else {
@@ -952,6 +976,17 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 						vType = s
 					} else {
 						null = true
+					}
+				}
+			} else {
+				if arg.Type() != value.STRING {
+					null = true
+				} else {
+					s := strings.ToLower(arg.ToString())
+					if s != _FP32 && s != _FP16 && s != _BF16 {
+						null = true
+					} else {
+						dType = s
 					}
 				}
 			}
@@ -968,9 +1003,9 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 
 	if vType == _SPARSE {
 		var ok bool
-		_, ok2 := vec.Index(2)
-		ivec, ok1 := vec.Index(0)
-		vec, ok = vec.Index(1)
+		_, ok2 := vec.Index(2)    // check if there's third array, if it is, return null
+		ivec, ok1 := vec.Index(0) // indices vector
+		vec, ok = vec.Index(1)    // value vector
 		if ok2 || !ok1 || ivec.Type() != value.ARRAY || !ok || vec.Type() != value.ARRAY {
 			return value.NULL_VALUE, nil
 		}
@@ -993,21 +1028,52 @@ func (this *EncodeVector) Evaluate(item value.Value, context Context) (value.Val
 		}
 	}
 
-	for i := 0; ; i++ {
-		v, ok := vec.Index(i)
-		if !ok {
-			break
-		} else {
-			if v.Type() != value.NUMBER {
-				return value.NULL_VALUE, nil
+	switch dType {
+	case _FP32:
+		for i := 0; ; i++ {
+			v, ok := vec.Index(i)
+			if !ok {
+				break
+			} else {
+				if v.Type() != value.NUMBER {
+					return value.NULL_VALUE, nil
+				}
+				f := value.AsNumberValue(v).Float64()
+				if f < -math.MaxFloat32 || f > math.MaxFloat32 {
+					return value.NULL_VALUE, nil
+				}
+				// Convert each float64 to float32 since we're working with 32-bit floating points.
+				if err := binary.Write(buf, byteOrder, float32(f)); err != nil {
+					return value.NULL_VALUE, nil
+				}
 			}
-			f := value.AsNumberValue(v).Float64()
-			if f < -math.MaxFloat32 || f > math.MaxFloat32 {
-				return value.NULL_VALUE, nil
-			}
-			// Convert each float64 to float32 since we're working with 32-bit floating points.
-			if err := binary.Write(buf, byteOrder, float32(f)); err != nil {
-				return value.NULL_VALUE, nil
+		}
+	case _FP16, _BF16:
+		for i := 0; ; i++ {
+			v, ok := vec.Index(i)
+			if !ok {
+				break
+			} else {
+				if v.Type() != value.NUMBER {
+					return value.NULL_VALUE, nil
+				}
+				f := value.AsNumberValue(v).Float64()
+
+				var newVal uint16
+
+				if dType == _FP16 {
+					newVal, ok = FP64ToFP16(f)
+				} else {
+					newVal, ok = FP64ToBF16(f)
+				}
+
+				if !ok {
+					return value.NULL_VALUE, nil
+				}
+
+				if err := binary.Write(buf, byteOrder, newVal); err != nil {
+					return value.NULL_VALUE, nil
+				}
 			}
 		}
 	}
@@ -1089,10 +1155,11 @@ func (this *NormalizeVector) Constructor() FunctionConstructor {
 Default values of the operands of vector functions that take optional
 arguments, used when comparing for equivalence. A nil entry means the operand
 is required (no default).
-Operands: (str/vec, isBigEndian = false, vector type = "dense").
+Operands: (str/vec, isBigEndian = false, vector type = "dense",
+element type = "fp32").
 */
-var _DECODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE, value.NewValue(_DENSE)}
-var _ENCODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE, value.NewValue(_DENSE)}
+var _DECODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE, value.NewValue(_DENSE), value.NewValue(_FP32)}
+var _ENCODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE, value.NewValue(_DENSE), value.NewValue(_FP32)}
 
 /*
 Compare two calls of the same vector function (this and that are of the same
