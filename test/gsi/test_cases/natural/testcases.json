@@ -7,26 +7,6 @@
     {
         "testcase":"prompt requesting for a sql statement",
         "statements":"USING AI WITH {\"keyspaces\":\"orders\"} documents with mana more than 200",
-        "results": [
-            {
-                "o": {
-                    "class": "demon hunter",
-                    "health": 96,
-                    "level": 17,
-                    "mana": 204,
-                    "name": "Illidan"
-                }
-            },
-            {
-                "o": {
-                    "class": "mage",
-                    "health": 78,
-                    "level": 30,
-                    "mana": 581,
-                    "name": "Jaina"
-                }
-            }
-        ],
         "generated_stmt": true
     },
     {

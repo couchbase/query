@@ -8113,20 +8113,6 @@ var errData = []ErrData{
 		},
 	},
 	{
-		Code:        E_NL_NO_DEFAULT_MODEL_FOR_VENDOR, // 19233
-		symbol:      "E_NL_NO_DEFAULT_MODEL_FOR_VENDOR",
-		Description: "No default model configured and no models available for the selected vendor.",
-		Reason: []string{
-			"No hardcoded default model is configured for the vendor, and the model providers API returned an empty models list — there is no default to use and no fallback to pick from.",
-		},
-		Action: []string{
-			"Specify a model explicitly using the \"model\" option, or contact support.",
-		},
-		AppliesTo: []string{
-			"Server",
-		},
-	},
-	{
 		Code:        E_AUS_NOT_SUPPORTED, // 20000
 		symbol:      "E_AUS_NOT_SUPPORTED",
 		Description: "Auto Update Statistics is not supported in Community Edition. It is an enterprise level feature.",

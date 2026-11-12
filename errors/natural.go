@@ -55,7 +55,6 @@ var naturalErrMap = map[ErrorCode][2]string{
 	E_NL_V2_SEND_REQ:                    {V2_API_REQUEST, "Failed to send v2 API request to %v"},
 	E_NL_MODEL_PROVIDERS_REQ_FAILED:     {MODEL_PROVIDERS_IKEY, "Model providers request failed with status %v"},
 	E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL: {MODEL_PROVIDERS_IKEY, "Error unmarshalling model providers response from %v"},
-	E_NL_NO_DEFAULT_MODEL_FOR_VENDOR:    {VENDOR_VALIDATION_IKEY, "No default model configured and no models available for vendor \"%v\""},
 	E_NL_NO_VENDORS_ENABLED:             {VENDOR_VALIDATION_IKEY, "No model providers are enabled for this organization"},
 }
 

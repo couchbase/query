@@ -640,7 +640,7 @@ const (
 	E_NL_NO_VENDORS_ENABLED                      ErrorCode = 19230
 	E_NL_MODEL_PROVIDERS_REQ_FAILED              ErrorCode = 19231
 	E_NL_MODEL_PROVIDERS_RESP_UNMARSHAL          ErrorCode = 19232
-	E_NL_NO_DEFAULT_MODEL_FOR_VENDOR             ErrorCode = 19233
+	_RETIRED_19233                               ErrorCode = 19233
 	E_AUS_NOT_SUPPORTED                          ErrorCode = 20000
 	E_AUS_NOT_INITIALIZED                        ErrorCode = 20001
 	E_AUS_STORAGE                                ErrorCode = 20002

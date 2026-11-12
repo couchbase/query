@@ -66,31 +66,10 @@ var naturalClient = &http.Client{
 }
 
 const (
-	// Models
-	GPT4o_2024_05_13          = "gpt-4o-2024-05-13"
-	BEDROCK_CLAUDE_SONNET_4_5 = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
-)
-
-const (
 	// Vendors
 	VENDOR_OPENAI  = "openai"
 	VENDOR_BEDROCK = "bedrock"
 )
-
-var defaultVendorModels = map[string]string{
-	VENDOR_OPENAI:  GPT4o_2024_05_13,
-	VENDOR_BEDROCK: BEDROCK_CLAUDE_SONNET_4_5,
-}
-
-func resolveModel(vendor string, availableModels []string) (string, errors.Error) {
-	if model := defaultVendorModels[vendor]; model != "" {
-		return model, nil
-	}
-	if len(availableModels) > 0 {
-		return availableModels[0], nil
-	}
-	return "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_DEFAULT_MODEL_FOR_VENDOR, vendor)
-}
 
 type modelProvider struct {
 	ID      string   `json:"id"`
@@ -218,76 +197,82 @@ func getModelProviders(nlOrganizationId, nlCred, jwt string, enabledOnly bool) (
 	return providers, nil
 }
 
-// resolveVendorAndModel determines the vendor and model to use for the request.
-// It validates vendor availability via the modelProviders API and enforces:
-//   - model without vendor → error
-//   - unknown/disabled vendor → error
-//   - no vendors enabled → error
-//   - no vendor specified → prefer openai; fall back to the only enabled vendor
-//   - no model specified → use the default model if defined, else use the first model listed by the API for the vendor
 func resolveVendorAndModel(nlVendor, nlModel, nlOrganizationId, nlCred, jwt string) (vendor, model string, err errors.Error) {
-	if nlModel != "" && nlVendor == "" {
-		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
-	}
-
 	allProviders, err := getModelProviders(nlOrganizationId, nlCred, jwt, false)
 	if err != nil {
 		return "", "", err
+	}
+
+	return pickVendorAndModel(nlVendor, nlModel, allProviders)
+}
+
+// pickVendorAndModel picks the vendor and model from the vendors listed by the
+// modelProviders API:
+//   - model without vendor → error
+//   - no vendors listed → error
+//   - vendor given: unknown/disabled → error
+//   - no vendor given: prefer openai, else the first enabled vendor; none
+//     enabled → error
+//
+// Query does not choose a model. An empty model is sent as is and iQ applies its
+// own current default for the vendor, so no default goes stale in Query when a
+// vendor retires a model. A given model is matched case-insensitively against the
+// vendor's listed models only to use the listed spelling; a model that is not
+// listed is still sent as given, since iQ forwards models it does not list, and
+// a retired one is rejected by the vendor.
+func pickVendorAndModel(nlVendor, nlModel string, allProviders []modelProvider) (
+	vendor, model string, err errors.Error) {
+
+	if nlModel != "" && nlVendor == "" {
+		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_MODEL_WITHOUT_VENDOR)
 	}
 
 	if len(allProviders) == 0 {
 		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_AVAILABLE)
 	}
 
+	var picked *modelProvider
 	if nlVendor != "" {
 		for i := range allProviders {
 			// IDs are lowercase per the api.
 			if allProviders[i].ID == strings.ToLower(nlVendor) {
-				if allProviders[i].Enabled {
-					vendor = allProviders[i].ID
-					if nlModel != "" {
-						model = strings.ToLower(nlModel)
-					} else {
-						var resolveErr errors.Error
-						model, resolveErr = resolveModel(vendor, allProviders[i].Models)
-						if resolveErr != nil {
-							return "", "", resolveErr
-						}
-					}
-					return vendor, model, nil
-				} else {
+				if !allProviders[i].Enabled {
 					return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_ENABLED, nlVendor)
 				}
+				picked = &allProviders[i]
+				break
 			}
 		}
-		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_SUPPORTED, nlVendor)
-	}
-	// No vendor specified: prefer openai, else use the first available vendor.
-	var fallbackvendor, fallbackmodel string
-	var modelErr errors.Error
-	for i := range allProviders {
-		if allProviders[i].ID == VENDOR_OPENAI && allProviders[i].Enabled {
-			model, modelErr = resolveModel(VENDOR_OPENAI, allProviders[i].Models)
-			if modelErr != nil {
-				return "", "", modelErr
-			}
-			return VENDOR_OPENAI, model, nil
+		if picked == nil {
+			return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_VENDOR_NOT_SUPPORTED, nlVendor)
 		}
-
-		if fallbackvendor == "" && allProviders[i].Enabled {
-			fallbackvendor = allProviders[i].ID
-			fallbackmodel, modelErr = resolveModel(fallbackvendor, allProviders[i].Models)
-			if modelErr != nil {
-				return "", "", modelErr
+	} else {
+		// No vendor specified: prefer openai, else use the first enabled vendor.
+		for i := range allProviders {
+			if !allProviders[i].Enabled {
+				continue
+			}
+			if allProviders[i].ID == VENDOR_OPENAI {
+				picked = &allProviders[i]
+				break
+			}
+			if picked == nil {
+				picked = &allProviders[i]
 			}
 		}
+		if picked == nil {
+			return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_ENABLED)
+		}
 	}
 
-	if fallbackvendor == "" {
-		return "", "", errors.NewNaturalLanguageRequestError(errors.E_NL_NO_VENDORS_ENABLED)
+	model = nlModel
+	for _, m := range picked.Models {
+		if strings.EqualFold(m, nlModel) {
+			model = m
+			break
+		}
 	}
-
-	return fallbackvendor, fallbackmodel, nil
+	return picked.ID, model, nil
 }
 
 const (
@@ -701,7 +686,7 @@ func doChatCompletionsReq(prompt *prompt, nlOrganizationId string, jwt string, n
 func getTemperatureForModel(vendor, model string) float64 {
 	switch vendor {
 	case VENDOR_OPENAI:
-		if strings.HasPrefix(model, "gpt-5") {
+		if strings.HasPrefix(strings.ToLower(model), "gpt-5") {
 			return 1
 		}
 		return 0
