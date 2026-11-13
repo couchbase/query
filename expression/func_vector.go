@@ -1086,9 +1086,10 @@ func (this *NormalizeVector) Constructor() FunctionConstructor {
 Default values of the operands of vector functions that take optional
 arguments, used when comparing for equivalence. A nil entry means the operand
 is required (no default).
+Operands: (str/vec, isBigEndian = false, vector type = "dense").
 */
-var _DECODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE}
-var _ENCODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE}
+var _DECODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE, value.NewValue(_DENSE)}
+var _ENCODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE, value.NewValue(_DENSE)}
 
 /*
 Compare two calls of the same vector function (this and that are of the same
