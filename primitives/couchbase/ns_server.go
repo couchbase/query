@@ -36,6 +36,7 @@ import (
 	ntls "github.com/couchbase/goutils/tls"
 	"github.com/couchbase/query/extparams"
 	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/util"
 )
 
 const USER_AGENT = "query"
@@ -1252,7 +1253,13 @@ func BasicAuthFromURL(us string) (ah AuthHandler) {
 
 // ConnectWithAuth connects to a couchbase cluster with the given
 // authentication handler.
+// The first call also starts the background util.Time resync (util.StartTimeResync()), which
+// keeps the KV deadlines computed from util.Now() current; later calls don't start another one.
 func ConnectWithAuth(baseU string, ah AuthHandler, userAgent string) (c Client, err error) {
+
+	// KV deadlines are computed from util.Now(): keep its wall clock time current
+	util.StartTimeResync()
+
 	c.BaseURL, err = ParseURL(baseU)
 	if err != nil {
 		return
