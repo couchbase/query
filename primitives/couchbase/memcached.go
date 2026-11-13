@@ -881,31 +881,38 @@ func isSeveredConnectionError(err error) bool {
 // Get the deadline for your connection
 func getDeadline(reqDeadline time.Time, kvTimeout time.Duration, duration time.Duration) (time.Time, error) {
 
-	var now util.Time
-
 	// if both are unset, return default
 	if reqDeadline.IsZero() && kvTimeout <= _NO_TIMEOUT {
 		if duration > 0 {
-			now = util.Now()
-			return time.Unix(0,
-					now.Add(duration+deadlineGranularity).Truncate(deadlineGranularity).UnixNano()),
-				nil
+			return time.Unix(0, util.Now().UnixNano()+int64(duration+deadlineGranularity)).Truncate(deadlineGranularity), nil
 		} else {
 			return noDeadline, nil
 		}
 	} else {
-		now = util.Now()
+		wallNow := util.Now().UnixNano()
 
 		// if request deadline has been exceeded
-		if !reqDeadline.IsZero() {
-			if now.UnixNano() > reqDeadline.UnixNano() {
+		if !reqDeadline.IsZero() && wallNow > reqDeadline.UnixNano() {
+
+			// The wall clock times of util.Now() and reqDeadline disagree if the system clock
+			// moved between the request start and the last util.Time resync.
+			// reqDeadline comes from time.Now(), so check it on the monotonic clock before
+			// failing the request, and compute all deadlines from the current wall clock time.
+			// (A reqDeadline without a monotonic clock reading is checked on the current wall
+			// clock instead.)
+			// Only requests that have expired, or have straddled a clock change, get here
+			n := time.Now()
+			left := reqDeadline.Sub(n)
+			if left <= 0 {
 				return reqDeadline, fmt.Errorf("Deadline expired")
 			}
+			reqDeadline = n.Add(left)
+			wallNow = n.UnixNano()
 		}
 
 		// if kvTimeout is set
 		if kvTimeout > _NO_TIMEOUT {
-			kvTimeoutDeadline := time.Unix(0, now.Add(kvTimeout+deadlineGranularity).Truncate(deadlineGranularity).UnixNano())
+			kvTimeoutDeadline := time.Unix(0, wallNow+int64(kvTimeout+deadlineGranularity)).Truncate(deadlineGranularity)
 
 			if !reqDeadline.IsZero() {
 				reqDeadlineTruncated := reqDeadline.Truncate(deadlineGranularity).Add(deadlineGranularity)

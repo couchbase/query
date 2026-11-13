@@ -246,7 +246,6 @@ func (c *statsCollector) runCollectStats() {
 			})
 		}
 
-		util.ResyncTime()
 		if util.Now().UnixNano()-int64(lastGC) > int64(_STATS_INTRVL) {
 			logging.Debugf("Running GC")
 			if system.GetMemActualFreePercent() >= _FREE_FLOOR {
