@@ -176,6 +176,9 @@ func main() {
 	defer HideConsole(false)
 	flag.Parse()
 
+	// keep util.Now() wall clock time, and the KV deadlines computed from it, current
+	util.StartTimeResync()
+
 	initialCfg, num_cpus := waitForInitialSettings()
 
 	// many Init() depend on this
@@ -479,6 +482,8 @@ func signalCatcher(server *server_package.Server, endpoint *http.HttpEndpoint) {
 			}
 		}
 		if s == util.SIGCONT {
+
+			// the clock has likely moved while stopped: don't wait for the next periodic resync
 			util.ResyncTime()
 			logging.Infof("Resuming cbq-engine process")
 		} else {
