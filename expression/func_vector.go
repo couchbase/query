@@ -397,6 +397,24 @@ func (this *IsVector) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+The 3rd argument (vector type, e.g. 'float32') is case-insensitive, so
+isvector(v, 128, 'FLOAT32') and isvector(v, 128, 'float32') are equivalent.
+*/
+func (this *IsVector) EquivalentTo(other Expression) bool {
+	if this.FunctionBase.EquivalentTo(other) {
+		return true
+	}
+	that, ok := other.(*IsVector)
+	if !ok || len(this.operands) != len(that.operands) || len(this.operands) != this.MinArgs() {
+		return false
+	}
+	return this.operands[0].EquivalentTo(that.operands[0]) &&
+		this.operands[1].EquivalentTo(that.operands[1]) &&
+		(this.operands[2].EquivalentTo(that.operands[2]) ||
+			constEqualIgnoreCase(this.operands[2].Value(), that.operands[2].Value()))
+}
+
 func (this *IsVector) Type() value.Type { return value.BOOLEAN }
 func (this *IsVector) MinArgs() int {
 	return 3
@@ -511,6 +529,19 @@ func (this *DecodeVector) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
 }
 
+/*
+Two DECODE_VECTOR() calls are equivalent if they only differ in optional
+arguments that are omitted in one and given their default value in the other
+(e.g. decode_vector(s) and decode_vector(s, false)).
+*/
+func (this *DecodeVector) EquivalentTo(other Expression) bool {
+	if this.FunctionBase.EquivalentTo(other) {
+		return true
+	}
+	that, ok := other.(*DecodeVector)
+	return ok && vectorFuncEquivalent(this, that, _DECODE_VECTOR_DEFAULTS)
+}
+
 func (this *DecodeVector) Type() value.Type { return value.ARRAY }
 func (this *DecodeVector) MinArgs() int     { return 1 }
 func (this *DecodeVector) MaxArgs() int     { return 2 }
@@ -595,6 +626,19 @@ func NewEncodeVector(operands ...Expression) Function {
 
 func (this *EncodeVector) Accept(visitor Visitor) (interface{}, error) {
 	return visitor.VisitFunction(this)
+}
+
+/*
+Two ENCODE_VECTOR() calls are equivalent if they only differ in optional
+arguments that are omitted in one and given their default value in the other
+(e.g. encode_vector(v) and encode_vector(v, false)).
+*/
+func (this *EncodeVector) EquivalentTo(other Expression) bool {
+	if this.FunctionBase.EquivalentTo(other) {
+		return true
+	}
+	that, ok := other.(*EncodeVector)
+	return ok && vectorFuncEquivalent(this, that, _ENCODE_VECTOR_DEFAULTS)
 }
 
 func (this *EncodeVector) Type() value.Type { return value.STRING }
@@ -730,4 +774,70 @@ func (this *NormalizeVector) Constructor() FunctionConstructor {
 	return func(operands ...Expression) Function {
 		return NewNormalizeVector(operands[0])
 	}
+}
+
+/*
+Default values of the operands of vector functions that take optional
+arguments, used when comparing for equivalence. A nil entry means the operand
+is required (no default).
+*/
+var _DECODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE}
+var _ENCODE_VECTOR_DEFAULTS = value.Values{nil, value.FALSE_VALUE}
+
+/*
+Compare two calls of the same vector function (this and that are of the same
+type), treating an omitted optional operand as its default value. An optional
+operand only matches a default (or a different but equal operand) when it is
+a constant; constant strings in optional positions are compared
+case-insensitively. Required operands must be equivalent.
+*/
+func vectorFuncEquivalent(this, that Function, defaults value.Values) bool {
+	ours, theirs := this.Operands(), that.Operands()
+	n := len(ours)
+	if len(theirs) > n {
+		n = len(theirs)
+	}
+
+	for i := 0; i < n; i++ {
+		var a, b Expression
+		if i < len(ours) {
+			a = ours[i]
+		}
+		if i < len(theirs) {
+			b = theirs[i]
+		}
+
+		required := i < this.MinArgs()
+		if a != nil && b != nil {
+			if a.EquivalentTo(b) {
+				continue
+			}
+			if required || !constEqualIgnoreCase(a.Value(), b.Value()) {
+				return false
+			}
+		} else if !required && i < len(defaults) && defaults[i] != nil {
+			e := a
+			if e == nil {
+				e = b
+			}
+			if !constEqualIgnoreCase(e.Value(), defaults[i]) {
+				return false
+			}
+		} else {
+			return false
+		}
+	}
+
+	return true
+}
+
+func constEqualIgnoreCase(a, b value.Value) bool {
+	// non-constant operand never matches
+	if a == nil || b == nil {
+		return false
+	}
+	if a.Type() == value.STRING && b.Type() == value.STRING {
+		return strings.EqualFold(a.ToString(), b.ToString())
+	}
+	return a.Equals(b).Truth()
 }
