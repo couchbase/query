@@ -32,6 +32,7 @@ func init() {
 
 func NewStream(plan *plan.Stream, context *Context) *Stream {
 	rv := _STREAM_OP_POOL.Get().(*Stream)
+	*rv = Stream{}
 	rv.plan = plan
 
 	// Stream does not run inside a parallel group and is not
@@ -53,6 +54,7 @@ func (this *Stream) Accept(visitor Visitor) (any, error) {
 
 func (this *Stream) Copy() Operator {
 	rv := _STREAM_OP_POOL.Get().(*Stream)
+	*rv = Stream{}
 	rv.plan = this.plan
 	rv.stopContext = this.stopContext
 	this.base.copy(&rv.base)

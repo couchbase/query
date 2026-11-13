@@ -106,7 +106,7 @@ func (this *DeltaKeyspaceMapPool) Put(s map[string]*DeltaKeyspace) {
 		delete(s, k)
 		if v != nil {
 			_MUTATIONVALUE_MAPPOOL.Put(v.values)
-			v.values = nil
+			*v = DeltaKeyspace{}
 			_DELTAKEYSPACE_POOL.Put(v)
 		}
 	}
@@ -215,6 +215,8 @@ func (this *TransactionLogValuesPool) Put(s TransactionLogValues) {
 		}
 	}
 
+	// the values are now pooled and may be reused: don't keep pointers to them
+	clear(s[:cap(s)])
 	this.pool.Put(s[0:0])
 }
 

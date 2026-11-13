@@ -36,6 +36,7 @@ type Unset struct {
 
 func NewUnset(plan *plan.Unset, context *Context) *Unset {
 	rv := _UNSET_OP_POOL.Get().(*Unset)
+	*rv = Unset{}
 	rv.plan = plan
 
 	newBase(&rv.base, context)
@@ -49,6 +50,7 @@ func (this *Unset) Accept(visitor Visitor) (any, error) {
 
 func (this *Unset) Copy() Operator {
 	rv := _UNSET_OP_POOL.Get().(*Unset)
+	*rv = Unset{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv

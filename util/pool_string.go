@@ -57,9 +57,10 @@ func (this *StringPool) Put(s []string) {
 		return
 	}
 
-	for i := range s {
-		s[i] = ""
-	}
+	// Clear the whole backing array, not just len(s): callers commonly do
+	// s := pool.Get(); defer pool.Put(s) and then append to s, so the
+	// deferred Put sees a len-0 header while the array is populated.
+	clear(s[:cap(s)])
 
 	this.pool.put(s[0:0])
 }

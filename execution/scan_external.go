@@ -54,6 +54,7 @@ func scanExternalFork(p any) {
 
 func NewExternalScan(plan *plan.ExternalScan, context *Context) *ExternalScan {
 	rv := _EXTERNALSCAN_OP_POOL.Get().(*ExternalScan)
+	*rv = ExternalScan{}
 	rv.plan = plan
 	newRedirectBase(&rv.base, context)
 	rv.phase = EXTERNAL_SCAN
@@ -68,6 +69,7 @@ func (this *ExternalScan) Accept(visitor Visitor) (any, error) {
 
 func (this *ExternalScan) Copy() Operator {
 	rv := _EXTERNALSCAN_OP_POOL.Get().(*ExternalScan)
+	*rv = ExternalScan{}
 	rv.plan = this.plan
 	rv.params = this.params
 	rv.scanReport = this.scanReport

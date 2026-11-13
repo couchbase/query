@@ -37,6 +37,7 @@ func init() {
 
 func NewInitialProject(plan *plan.InitialProject, context *Context) *InitialProject {
 	rv := _INITPROJ_OP_POOL.Get().(*InitialProject)
+	*rv = InitialProject{}
 	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.output = rv
@@ -50,6 +51,7 @@ func (this *InitialProject) Accept(visitor Visitor) (any, error) {
 
 func (this *InitialProject) Copy() Operator {
 	rv := _INITPROJ_OP_POOL.Get().(*InitialProject)
+	*rv = InitialProject{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv

@@ -34,6 +34,7 @@ func init() {
 
 func NewKeyScan(plan *plan.KeyScan, context *Context) *KeyScan {
 	rv := _KEYSCAN_OP_POOL.Get().(*KeyScan)
+	*rv = KeyScan{}
 	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.output = rv
@@ -46,6 +47,7 @@ func (this *KeyScan) Accept(visitor Visitor) (any, error) {
 
 func (this *KeyScan) Copy() Operator {
 	rv := _KEYSCAN_OP_POOL.Get().(*KeyScan)
+	*rv = KeyScan{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv

@@ -697,7 +697,7 @@ func (this *TransactionMutations) DeleteAll(delta bool, memSize *int64) {
 			if dk != nil {
 				dk.DeleteAll(memSize)
 				_MUTATIONVALUE_MAPPOOL.Put(dk.values)
-				dk.values = nil
+				*dk = DeltaKeyspace{}
 				_DELTAKEYSPACE_POOL.Put(dk)
 			}
 		}

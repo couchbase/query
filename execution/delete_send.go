@@ -37,6 +37,7 @@ type SendDelete struct {
 
 func NewSendDelete(plan *plan.SendDelete, context *Context) *SendDelete {
 	rv := _SENDDELETE_OP_POOL.Get().(*SendDelete)
+	*rv = SendDelete{}
 	rv.plan = plan
 	rv.limit = -1
 	rv.mk.validate = plan.ValidateKeys()
@@ -54,6 +55,7 @@ func (this *SendDelete) Accept(visitor Visitor) (any, error) {
 
 func (this *SendDelete) Copy() Operator {
 	rv := _SENDDELETE_OP_POOL.Get().(*SendDelete)
+	*rv = SendDelete{}
 	rv.plan = this.plan
 	rv.limit = this.limit
 	rv.mk.validate = this.mk.validate

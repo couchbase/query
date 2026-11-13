@@ -36,9 +36,8 @@ func (this *AnnotatedJoinPairPool) Put(s AnnotatedJoinPairs) {
 		return
 	}
 
-	for i := range s {
-		s[i] = AnnotatedJoinPair{}
-	}
+	// clear the whole backing array, not just len(s)
+	clear(s[:cap(s)])
 	this.pool.Put(s[0:0])
 }
 

@@ -33,6 +33,7 @@ type Parallel struct {
 
 func NewParallel(plan *plan.Parallel, context *Context, child Operator) *Parallel {
 	rv := _PARALLEL_OP_POOL.Get().(*Parallel)
+	*rv = Parallel{}
 	rv.plan = plan
 	rv.child = child
 
@@ -58,6 +59,7 @@ func (this *Parallel) Accept(visitor Visitor) (any, error) {
 
 func (this *Parallel) Copy() Operator {
 	rv := _PARALLEL_OP_POOL.Get().(*Parallel)
+	*rv = Parallel{}
 	rv.plan = this.plan
 	rv.child = this.child.Copy()
 	this.base.copy(&rv.base)

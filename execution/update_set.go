@@ -36,6 +36,7 @@ type Set struct {
 
 func NewSet(plan *plan.Set, context *Context) *Set {
 	rv := _SET_OP_POOL.Get().(*Set)
+	*rv = Set{}
 	rv.plan = plan
 
 	newBase(&rv.base, context)
@@ -49,6 +50,7 @@ func (this *Set) Accept(visitor Visitor) (any, error) {
 
 func (this *Set) Copy() Operator {
 	rv := _SET_OP_POOL.Get().(*Set)
+	*rv = Set{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv

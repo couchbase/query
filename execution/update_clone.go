@@ -32,6 +32,7 @@ type Clone struct {
 
 func NewClone(plan *plan.Clone, context *Context) *Clone {
 	rv := _CLONE_OP_POOL.Get().(*Clone)
+	*rv = Clone{}
 	rv.plan = plan
 
 	newBase(&rv.base, context)
@@ -45,6 +46,7 @@ func (this *Clone) Accept(visitor Visitor) (any, error) {
 
 func (this *Clone) Copy() Operator {
 	rv := _CLONE_OP_POOL.Get().(*Clone)
+	*rv = Clone{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv

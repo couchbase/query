@@ -49,10 +49,12 @@ func newScopeValue(nested bool) *ScopeValue {
 
 	if nested {
 		rv = (*ScopeValue)(nestedPool.Get())
+		// keep the pooled fields map, already cleared in recycle()
+		*rv = ScopeValue{Value: rv.Value, refCnt: 1, nested: true}
 	} else {
 		rv = (*ScopeValue)(scopePool.Get())
+		*rv = ScopeValue{refCnt: 1}
 	}
-	rv.refCnt = 1
 	return rv
 }
 

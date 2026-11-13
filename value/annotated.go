@@ -110,11 +110,8 @@ func AllocatedValuesCount() int64 {
 
 func newAnnotatedValue() *annotatedValue {
 	rv := (*annotatedValue)(annotatedPool.Get())
-	rv.refCnt = 1
-	rv.seenCnt = 0
-	rv.bit = 0
-	rv.flags = 0
-	rv.cachedSize = 0
+	// keep the pooled attachments map, already emptied in recycle()
+	*rv = annotatedValue{attachments: rv.attachments, refCnt: 1}
 	return rv
 }
 

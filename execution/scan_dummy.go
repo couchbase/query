@@ -32,6 +32,7 @@ func init() {
 
 func NewDummyScan(plan *plan.DummyScan, context *Context) *DummyScan {
 	rv := _DUMMYSCAN_OP_POOL.Get().(*DummyScan)
+	*rv = DummyScan{}
 	rv.plan = plan
 	newRedirectBase(&rv.base, context)
 	rv.output = rv
@@ -44,6 +45,7 @@ func (this *DummyScan) Accept(visitor Visitor) (any, error) {
 
 func (this *DummyScan) Copy() Operator {
 	rv := _DUMMYSCAN_OP_POOL.Get().(*DummyScan)
+	*rv = DummyScan{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv

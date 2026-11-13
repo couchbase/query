@@ -35,6 +35,7 @@ func init() {
 
 func NewFilter(plan *plan.Filter, context *Context, aliasMap map[string]string) *Filter {
 	rv := _FILTER_OP_POOL.Get().(*Filter)
+	*rv = Filter{}
 	rv.plan = plan
 	rv.aliasMap = aliasMap
 	newBase(&rv.base, context)
@@ -49,6 +50,7 @@ func (this *Filter) Accept(visitor Visitor) (any, error) {
 
 func (this *Filter) Copy() Operator {
 	rv := _FILTER_OP_POOL.Get().(*Filter)
+	*rv = Filter{}
 	rv.plan = this.plan
 	rv.aliasMap = this.aliasMap
 	this.base.copy(&rv.base)

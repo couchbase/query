@@ -36,9 +36,8 @@ func (this *AnnotatedPool) Put(s AnnotatedValues) {
 		return
 	}
 
-	for i := range s {
-		s[i] = nil
-	}
+	// clear the whole backing array: callers may Put a len-0 header (e.g. AnnotatedValues.Append)
+	clear(s[:cap(s)])
 	this.pool.Put(s[0:0])
 }
 

@@ -40,6 +40,7 @@ type SendInsert struct {
 
 func NewSendInsert(plan *plan.SendInsert, context *Context) *SendInsert {
 	rv := _SENDINSERT_OP_POOL.Get().(*SendInsert)
+	*rv = SendInsert{}
 	rv.plan = plan
 	rv.limit = -1
 	newBase(&rv.base, context)
@@ -55,6 +56,7 @@ func (this *SendInsert) Accept(visitor Visitor) (any, error) {
 
 func (this *SendInsert) Copy() Operator {
 	rv := _SENDINSERT_OP_POOL.Get().(*SendInsert)
+	*rv = SendInsert{}
 	rv.plan = this.plan
 	rv.limit = this.limit
 	rv.skipNewKeys = this.skipNewKeys

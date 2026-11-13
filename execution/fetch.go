@@ -48,16 +48,15 @@ type Fetch struct {
 
 func NewFetch(plan *plan.Fetch, context *Context) *Fetch {
 	rv := _FETCH_OP_POOL.Get().(*Fetch)
+	*rv = Fetch{}
 	rv.plan = plan
 	rv.batchSize = context.GetPipelineBatch()
-	rv.fetchCount = 0
 	newBase(&rv.base, context)
 	op := context.Type()
 	rv.deepCopy = op == "" || op == "MERGE" || op == "UPDATE"
 	rv.execPhase = FETCH
 	rv.output = rv
 	rv.mk.validate = plan.Term().ValidateKeys()
-	rv.parentVal = nil
 
 	return rv
 }
@@ -68,9 +67,9 @@ func (this *Fetch) Accept(visitor Visitor) (any, error) {
 
 func (this *Fetch) Copy() Operator {
 	rv := _FETCH_OP_POOL.Get().(*Fetch)
+	*rv = Fetch{}
 	rv.plan = this.plan
 	rv.batchSize = this.batchSize
-	rv.fetchCount = 0
 	rv.deepCopy = this.deepCopy
 	this.base.copy(&rv.base)
 	rv.mk.validate = rv.plan.Term().ValidateKeys()
@@ -410,6 +409,7 @@ type DummyFetch struct {
 
 func NewDummyFetch(plan *plan.DummyFetch, context *Context) *DummyFetch {
 	rv := _DUMMYFETCH_OP_POOL.Get().(*DummyFetch)
+	*rv = DummyFetch{}
 	rv.plan = plan
 	newBase(&rv.base, context)
 	rv.output = rv
@@ -422,6 +422,7 @@ func (this *DummyFetch) Accept(visitor Visitor) (any, error) {
 
 func (this *DummyFetch) Copy() Operator {
 	rv := _DUMMYFETCH_OP_POOL.Get().(*DummyFetch)
+	*rv = DummyFetch{}
 	rv.plan = this.plan
 	this.base.copy(&rv.base)
 	return rv

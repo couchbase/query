@@ -39,13 +39,13 @@ func init() {
 
 func NewAuthorize(plan *plan.Authorize, context *Context, child Operator, dynamicAuthorize bool) *Authorize {
 	rv := _AUTH_OP_POOL.Get().(*Authorize)
+	*rv = Authorize{}
 	rv.plan = plan
 	rv.child = child
 	rv.dynamicAuthorize = dynamicAuthorize
 	newRedirectBase(&rv.base, context)
 	rv.base.setInline()
 	rv.output = rv
-	rv.hasForkedChild = false
 	return rv
 }
 
@@ -55,9 +55,9 @@ func (this *Authorize) Accept(visitor Visitor) (any, error) {
 
 func (this *Authorize) Copy() Operator {
 	rv := _AUTH_OP_POOL.Get().(*Authorize)
+	*rv = Authorize{}
 	rv.plan = this.plan
 	rv.child = this.child.Copy()
-	rv.hasForkedChild = false
 	rv.dynamicAuthorize = this.dynamicAuthorize
 	this.base.copy(&rv.base)
 	return rv

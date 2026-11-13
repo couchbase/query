@@ -39,6 +39,7 @@ type SendUpdate struct {
 
 func NewSendUpdate(plan *plan.SendUpdate, context *Context) *SendUpdate {
 	rv := _SENDUPDATE_OP_POOL.Get().(*SendUpdate)
+	*rv = SendUpdate{}
 	rv.plan = plan
 	rv.limit = -1
 
@@ -55,6 +56,7 @@ func (this *SendUpdate) Accept(visitor Visitor) (any, error) {
 
 func (this *SendUpdate) Copy() Operator {
 	rv := _SENDUPDATE_OP_POOL.Get().(*SendUpdate)
+	*rv = SendUpdate{}
 	rv.plan = this.plan
 	rv.limit = this.limit
 	rv.batchSize = this.batchSize

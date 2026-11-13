@@ -37,6 +37,7 @@ func NewSequence(plan *plan.Sequence, context *Context, children ...Operator) *S
 
 func NewParallelSequence(plan *plan.Sequence, isParallel bool, context *Context, children ...Operator) *Sequence {
 	rv := _SEQUENCE_OP_POOL.Get().(*Sequence)
+	*rv = Sequence{}
 	rv.plan = plan
 	rv.isParallel = isParallel
 	rv.children = children
@@ -78,6 +79,7 @@ func (this *Sequence) Copy() Operator {
 // currently set during the accrual of execution trees for subquery timings
 func (this *Sequence) CustomizedCopy(forTimingAccrual bool) Operator {
 	rv := _SEQUENCE_OP_POOL.Get().(*Sequence)
+	*rv = Sequence{}
 	children := _SEQUENCE_POOL.Get()
 
 	for _, child := range this.children {
