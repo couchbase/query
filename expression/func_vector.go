@@ -1127,7 +1127,7 @@ func vectorFuncEquivalent(this, that Function, defaults value.Values) bool {
 			if e == nil {
 				e = b
 			}
-			if !constEqualIgnoreCase(e.Value(), defaults[i]) {
+			if e == nil || !constEqualIgnoreCase(e.Value(), defaults[i]) {
 				return false
 			}
 		} else {
