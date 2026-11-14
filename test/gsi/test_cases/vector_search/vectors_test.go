@@ -97,6 +97,33 @@ func TestVectors(t *testing.T) {
 
 	runStmt(qc, "DROP INDEX idx_vec5 on product._default.vectors")
 
+	// Vector functions with equivalent but differently written arguments
+	// (omitted vs. explicit default, different case) should match the index (MB-75328)
+
+	fmt.Println("Bhive vector index on decode_vector() with default optional args")
+
+	runStmt(qc, "CREATE VECTOR INDEX idx_vecfn on product._default.vectors(decode_vector(encode_vector(vec)) VECTOR) WITH {'dimension': 128, 'train_list': 10000, 'description': 'IVF32,SQ8', 'similarity': 'L2'}")
+
+	runMatch("case_vectorfunc_args.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_vecfn on product._default.vectors")
+
+	fmt.Println("Bhive vector index on decode_vector() with default optional args specified")
+
+	runStmt(qc, "CREATE VECTOR INDEX idx_vecfn2 on product._default.vectors(decode_vector(encode_vector(vec, false), false) VECTOR) WITH {'dimension': 128, 'train_list': 10000, 'description': 'IVF32,SQ8', 'similarity': 'L2'}")
+
+	runMatch("case_vectorfunc_args2.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_vecfn2 on product._default.vectors")
+
+	fmt.Println("Partial Bhive vector index with isvector() in index condition")
+
+	runStmt(qc, "CREATE VECTOR INDEX idx_vecfn3 on product._default.vectors(vec VECTOR) WHERE isvector(vec, 128, 'FLOAT32') WITH {'dimension': 128, 'train_list': 10000, 'description': 'IVF32,SQ8', 'similarity': 'L2'}")
+
+	runMatch("case_vectorfunc_args3.json", false, true, qc, t)
+
+	runStmt(qc, "DROP INDEX idx_vecfn3 on product._default.vectors")
+
 	fmt.Println("Dropping indexes")
 	runStmt(qc, "DROP INDEX ix_prod_id on product._default.vectors")
 
