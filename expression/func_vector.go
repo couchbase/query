@@ -854,6 +854,9 @@ func (this *DecodeVector) Evaluate(item value.Value, context Context) (value.Val
 		}
 
 	case _SPARSE:
+		if dims%2 != 0 {
+			return value.NULL_VALUE, nil
+		}
 		dims = dims / 2
 		indicesVector := make([]interface{}, dims)
 		valueVector := make([]interface{}, dims)
