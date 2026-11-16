@@ -581,6 +581,15 @@ components:
           If you don't specify all four parameters, the Query Service returns an error.
         x-has-example: true
         example: username:password
+      natural_hint:
+        type: string
+        x-desc-name: natural_hint
+        x-desc-status: Couchbase Server 8.5
+        description: |-
+          A hint to be passed to the Couchbase Capella iQ service along with the natural language prompt.
+          This is a free-form, natural language domain or ontology hint.
+        x-has-example: true
+        example: ICAO is a three-character airline designator in the airline collection
       natural_orgid:
         type: string
         format: uuid
