@@ -163,15 +163,61 @@ func findServer(loc string, bld int) (string, error) {
 	}
 	sort.Ints(blds)
 	for len(blds) > 0 {
-		refs, err = getRefs(loc+fmt.Sprintf("%d/", blds[len(blds)-1]), nil)
-		for i := range refs {
-			if m := serverPat.FindStringSubmatch(refs[i]); len(m) == 2 {
-				return refs[i], nil
+		b := blds[len(blds)-1]
+		refs, err = getRefs(loc+fmt.Sprintf("%d/", b), nil)
+		if err == nil && isRegularBuild(refs, b) {
+			for i := range refs {
+				if m := serverPat.FindStringSubmatch(refs[i]); len(m) == 2 {
+					return refs[i], nil
+				}
 			}
 		}
 		blds = blds[:len(blds)-1]
 	}
 	return "", os.ErrNotExist
+}
+
+// reports whether a build directory (its listing in refs) holds a regular build. When picking the latest build,
+// one-off builds (e.g. toy or code coverage builds) placed alongside the regular builds must be skipped as they
+// may not run as a normal server. A build is rejected if its .properties file marks it as a toy build or names a
+// different build number, or if the directory contains code coverage (gcno) files.
+func isRegularBuild(refs []string, bld int) bool {
+	for _, r := range refs {
+		if strings.Contains(path.Base(r), "-gcno.") {
+			logging.Infof("Skipping build %d: code coverage files present (%s)", bld, path.Base(r))
+			return false
+		}
+	}
+	for _, r := range refs {
+		if !strings.HasSuffix(r, ".properties") {
+			continue
+		}
+		resp, err := http.Get(r)
+		if err != nil {
+			logging.Errorf("Skipping build %d: failed to read %s: %v", bld, r, err)
+			return false
+		}
+		b, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil || resp.StatusCode != http.StatusOK {
+			logging.Errorf("Skipping build %d: failed to read %s (status %d): %v", bld, r, resp.StatusCode, err)
+			return false
+		}
+		for _, line := range strings.Split(string(b), "\n") {
+			k, v, _ := strings.Cut(strings.TrimSpace(line), "=")
+			switch k {
+			case "TOY_BLD_NUM":
+				logging.Infof("Skipping build %d: toy build (%s)", bld, strings.TrimSpace(line))
+				return false
+			case "BLD_NUM":
+				if n, err := strconv.Atoi(v); err != nil || n != bld {
+					logging.Infof("Skipping build %d: properties report BLD_NUM=%s", bld, v)
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 // interrogates a URL: if text/html, gathers contained HREF targets (as relative locations)
