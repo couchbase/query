@@ -140,3 +140,30 @@ func TestVectorFuncDefaultsComplete(t *testing.T) {
 		}
 	}
 }
+
+// MB-75348: a sparse vector is N uint32 indices followed by N float32 values,
+// so its length must be a multiple of 8 bytes. Any other length gives NULL
+// instead of a truncated vector.
+func TestDecodeSparseVectorLength(t *testing.T) {
+	tests := []struct {
+		name string
+		b64  string
+		want value.Value
+	}{
+		{"16 bytes: indices [1, 2], values [0.5, 1.5]", "AQAAAAIAAAAAAAA/AADAPw==",
+			value.NewValue([]any{[]any{1, 2}, []any{0.5, 1.5}})},
+		{"empty", "", value.NewValue([]any{[]any{}, []any{}})},
+		{"12 bytes", "AQAAAAIAAAAAAAA/", value.NULL_VALUE},
+		{"4 bytes", "BwAAAA==", value.NULL_VALUE},
+	}
+
+	for _, tt := range tests {
+		got, err := NewDecodeVector(NewConstant(tt.b64), NewConstant(false), NewConstant(_SPARSE)).Evaluate(nil, nil)
+		if err != nil {
+			t.Fatalf("%s: unexpected error %v", tt.name, err)
+		}
+		if got.Type() != tt.want.Type() || got.Collate(tt.want) != 0 {
+			t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}

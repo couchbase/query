@@ -45,13 +45,12 @@ fi
 source "$(dirname "$0")/../build_util.sh"
 OPENSSL_VERSION=$(get_openssl_version)
 
-export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include  -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_FLAGS"
+export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include  -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_CFLAGS"
 export CGO_LDFLAGS="-L$GOPATH/lib ${CGO_LDFLAGS}"
 export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
 
 go clean -testcache
 
-trap interrupt 2 15
 cd ../
 if [[ `uname` == "Darwin" ]] ; then
      go test -tags enterprise -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose $*

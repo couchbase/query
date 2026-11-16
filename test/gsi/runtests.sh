@@ -21,7 +21,7 @@ done
 
 set -- $args
 
-verbose=$1
+failed=""
 Site=http://127.0.0.1:8091/pools/nodes/
 Auth=Administrator:password
 
@@ -29,7 +29,7 @@ Auth=Administrator:password
 source "$(dirname "$0")/../../build_util.sh"
 OPENSSL_VERSION=$(get_openssl_version)
 
-export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_FLAGS"
+export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_CFLAGS"
 export CGO_LDFLAGS="-L$GOPATH/lib ${CGO_LDFLAGS}"
 export LD_LIBRARY_PATH=$GOPATH/lib:${LD_LIBRARY_PATH}
 
@@ -56,15 +56,30 @@ do
             /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/sparse_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport_sparse.out
         fi
         export JSEVALUATOR_PATH="/Applications/Couchbase Server.app/Contents/Resources/couchbase-core/bin"
-        (go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose -p 1 -tags enterprise,udf_query ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
+        (go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose -p 1 -tags enterprise,udf_query ./... $* 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
+        rc=${PIPESTATUS[0]}
     else
         if [[ $i == "test_cases/vector_search" ]] ; then
             /opt/couchbase/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/product_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport.out
             /opt/couchbase/bin/cbimport json -c couchbase://127.0.0.1 -u Administrator -p password -b product -g %docKey% -d file://${dir}/sparse_export.json -f list --scope-collection-exp %my_scope%.%my_collection% > ${dir}/cbimport_sparse.out
         fi
         export JSEVALUATOR_PATH="/opt/couchbase/bin"
-        (go test $verbose -p 1 -tags enterprise,udf_query ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
+        (go test $verbose -p 1 -tags enterprise,udf_query ./... $* 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
+        rc=${PIPESTATUS[0]}
+    fi
+    # rc is go test's status, not that of the grep filters
+    if [ $rc -ne 0 ] ; then
+        failed="$failed $i"
     fi
     cd ../..
     source ./resetval.sh $*
 done
+
+if [ -n "$failed" ] ; then
+    echo -e "\nFailed GSI test packages:"
+    for i in $failed
+    do
+        echo "    $i"
+    done
+    exit 1
+fi

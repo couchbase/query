@@ -728,12 +728,19 @@ components:
     type: object
     title: Requests
     properties:
+      chatId:
+        x-desc-status: Couchbase Server 8.5
+        type: string
+        format: uuid
+        description: |-
+          The chat ID, for requests that specified a natural language chat ID.
+          For example, a USING AI request that is part of a chat, or a PAUSE CHAT, END CHAT, or RESUME CHAT statement.
       clientContextID:
         type: string
         description: |-
           The opaque ID or context provided by the client.
         x-desc-more: |-
-          For more information, see the [request-level][client_context_id] `client_context_id` parameter..
+          For more information, see the [request-level][client_context_id] `client_context_id` parameter.
 
           [client_context_id]: ../n1ql-rest-query/index.html#client_context_id
         x-desc-refs: |-
@@ -770,6 +777,41 @@ components:
         description: |-
           The memory quota for the request, in MB.
           This property is only returned if a memory quota is set for the query.
+      naturalLanguageContext:
+        x-desc-status: Couchbase Server 8.5
+        type: string
+        description: |-
+          A comma-separated list of the keyspaces provided.
+          Only for one-shot USING AI requests or the BEGIN CHAT statement.
+        x-has-example: true
+        example: travel-sample.inventory.hotel,travel-sample.inventory.airport
+      naturalLanguageHint:
+        x-desc-status: Couchbase Server 8.5
+        type: string
+        description: A natural language domain or ontology hint provided with the USING AI statement.
+        x-has-example: true
+        example: ICAO codes represent airports
+      naturalLanguageProcessingTime:
+        x-desc-status: Couchbase Server 8.5
+        type: string
+        format: duration
+        description: The time spent processing the natural language request to generate a SQL++ statement.
+        x-has-example: true
+        example: 1.648338876s
+      naturalLanguagePrompt:
+        x-desc-status: Couchbase Server 8.5
+        type: string
+        description: The natural language prompt given via the USING AI command.
+        x-has-example: true
+        example: List the names of all hotels in the same city as an airport
+      naturalLanguageOutput:
+        x-desc-status: Couchbase Server 8.5
+        type: string
+        description: The type of output specified for the USING AI statement request.
+        enum:
+          - SQL
+          - JSUDF
+          - FTSSQL
       node:
         type: string
         description: IP address and port number of the node where the query is executed.
@@ -902,6 +944,11 @@ components:
                 "High IO time",
                 "High primary scan document count"
               ]
+      ~qualifier:
+        type: string
+        description: The qualifier that was met in order to log this request.
+        x-has-example: true
+        example: threshold
 
   Statements:
     type: object
@@ -1794,14 +1841,16 @@ components:
           [queryCompletedMaxPlanSize]: #queryCompletedMaxPlanSize
       completed-stream-size:
         type: integer
-        format: int32
+        format: int64
+        x-has-default: true
         default: 0
         x-desc-name: completed-stream-size
         description: |-
           A file size in MiB.
           When specified, completed requests are saved to the Couchbase Server `logs` directory.
           Completed requests are saved to GZIP archives with the prefix `local_request_log`.
-          The value of this property determines the size of the data to retain, per node.
+          The value of this property determines the approximate size of the data to retain, per node.
+          This limit is maintained by the automatic removal of (generally) the oldest retained data.
 
           Specify `0` (the default) to disable completed request streaming.
 
@@ -1810,8 +1859,14 @@ components:
           For more information and examples, see [Stream Completed Requests][sys-history].
 
           [sys-history]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
+        x-desc-more: |-
+          The [cluster-level][queryCompletedStreamSize] `queryCompletedStreamSize` setting specifies this property for the whole cluster.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [queryCompletedStreamSize]: ../n1ql-rest-settings/index.html#queryCompletedStreamSize
         x-desc-refs: |-
           [sys-history]: monitoring-n1ql-query.html#sys-history
+          [queryCompletedStreamSize]: #queryCompletedStreamSize
       completed-threshold:
         type: integer
         format: int32

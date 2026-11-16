@@ -289,6 +289,34 @@ components:
         x-desc-refs: |-
           [sys-completed-config]: monitoring-n1ql-query.html#sys-completed-config
           [completed-max-plan-size]: #completed-max-plan-size
+      queryCompletedStreamSize:
+        type: integer
+        format: int64
+        x-has-default: true
+        default: 0
+        x-desc-name: queryCompletedStreamSize
+        description: |-
+          A file size in MiB.
+          When specified, completed requests are saved to the Couchbase Server `logs` directory.
+          Completed requests are saved to GZIP archives with the prefix `local_request_log`.
+          The value of this property determines the approximate size of the data to retain, per node.
+          This limit is maintained by the automatic removal of (generally) the oldest retained data.
+
+          Specify `0` (the default) to disable completed request streaming.
+
+          Completed request streaming is available in Couchbase Server 7.6.4 and later.
+
+          For more information and examples, see [Stream Completed Requests][sys-history].
+
+          [sys-history]: ../n1ql/n1ql-manage/monitoring-n1ql-query.html#sys-history
+        x-desc-more: |-
+          The [node-level][completed-stream-size] `completed-stream-size` setting specifies this property for a single node.
+          When you change the cluster-level setting, the node-level setting is over-written for all nodes in the cluster.
+
+          [completed-stream-size]: ../n1ql-rest-admin/index.html#completed-stream-size
+        x-desc-refs: |-
+          [sys-history]: monitoring-n1ql-query.html#sys-history
+          [completed-stream-size]: #completed-stream-size
       queryCompletedThreshold:
         type: integer
         format: int32
