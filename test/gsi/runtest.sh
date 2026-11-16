@@ -18,6 +18,9 @@ then
   echo "This script allows you to speed up repeat testing when working on a specific issue."
   echo "You should have run [1;32;40mbucket_create.sh[0m before running this and once done with repeated runs, run [1;31;40mbucket_delete.sh[0m to clean up."
   echo
+  echo "Only the test cache is cleared. Run \"go clean -cache\" after updating C dependencies (eventing-ee, sigar),"
+  echo "as Go does not track changes to external headers and libraries."
+  echo
   exit 2
 else
   TEST=$1
@@ -29,8 +32,8 @@ Auth=Administrator:password
 source "$(dirname "$0")/../../build_util.sh"
 OPENSSL_VERSION=$(get_openssl_version)
 
-export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_FLAGS"
-export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDLAGS"
+export CGO_CFLAGS="-I$GOPATH/src/github.com/couchbase/eventing-ee/evaluator/worker/include -I$GOPATH/src/github.com/couchbase/sigar/include -I$GOPATH/src/couchbasedeps/openssl/$OPENSSL_VERSION/include $CGO_CFLAGS"
+export CGO_LDFLAGS="-L$GOPATH/lib $CGO_LDFLAGS"
 export LD_LIBRARY_PATH=$GOPATH/lib:$LD_LIBRARY_PATH
 if [[ `uname` == "Darwin" ]]
 then
@@ -41,7 +44,7 @@ then
   export JSEVALUATOR_PATH="/opt/couchbase/bin"
 fi
 
-go clean -cache -modcache -testcache -i -r
+go clean -testcache
 
 cd $GOPATH/src/github.com/couchbase/query/test/gsi
 i=test_cases/$TEST
@@ -67,5 +70,7 @@ then
 fi
 # strip indexer client info-level messages to retain some utility in the output
 (go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" -v -p 1 -tags enterprise,udf_query ./... 2>&1) | grep -v "\[Info\]" | grep -v "\[Warn\]" | grep -v "Index inst \: \[partitions\]"
+rc=${PIPESTATUS[0]}
 cd ../..
 source ./resetval.sh
+exit $rc
