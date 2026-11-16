@@ -471,7 +471,8 @@ components:
         description: |-
           Specifies the maximum parallelism for the query.
 
-          The default value is the same as the number of partitions of the index selected for the query.
+          If omitted, the default is `1` (serial).
+          For GSI scan concurrency with partitioned indexes, the default parallelism is the same as the number of partitions of the index selected for the query.
         x-desc-more: |-
           The [node-level][max-parallelism-srv] `max-parallelism` setting specifies the ceiling for this parameter for a single node.
           If the request-level parameter is zero or negative, the parallelism for the query is set to the node-level setting.
@@ -490,6 +491,8 @@ components:
           [queryMaxParallelism]: #queryMaxParallelism
         x-has-example: true
         example: 3
+        x-has-default: true
+        default: 1
       memory_quota:
         type: integer
         format: int32
@@ -784,16 +787,22 @@ components:
         type: boolean
         x-desc-name: readonly
         description: |-
-          Controls whether a query can change a resulting recordset.
+          Controls whether a query can write data, and create or modify database objects.
 
           If `readonly` is `true`, then the following statements are not allowed:
 
-          * CREATE INDEX
-          * DROP INDEX
-          * INSERT
-          * MERGE
-          * UPDATE
-          * UPSERT
+          * DML statements: DELETE, INSERT, MERGE, UPDATE, and UPSERT.
+          * DCL statements: GRANT and REVOKE.
+          * DDL statements.
+          * Transactions.
+          * EXECUTE FUNCTION: even if the function body only reads.
+          * Sequences: for example, the NEXTVAL and PREVVAL operators.
+          * EXECUTE: of a prepared statement whose plan falls into any of these categories.
+
+          Everything else is allowed: SELECT, EXPLAIN, PREPARE, ADVISE, INFER, and UDFs called from within a SELECT.
+          However, if a UDF definition contains a prohibited statement, the execution of the UDF is halted with an error.
+
+          UPDATE STATISTICS is also allowed, even though it writes optimizer statistics into the relevant bucket's `_system._query` collection.
 
           When using GET requests, it's best to set `readonly` to `true`.
         x-has-default: true
