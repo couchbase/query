@@ -54,14 +54,17 @@ func (s *store) createSysCollection(bucketName, scopeName, collectionName, index
 		}
 
 		// create bucket
-		_, err := cb.GetSystemBucket(&s.client, defaultPool.cbNamespace, bucketName)
+		err := cb.CreateSystemBucketIfNotExists(&s.client, defaultPool.cbNamespace, bucketName)
 		if err != nil {
 			return errors.NewCbCreateSystemBucketError(bucketName, err)
 		}
 
-		// no need for a retry loop, cb.GetSystemBucket() call above should
-		// have made sure that BucketMap is updated already
-		defaultPool.refresh()
+		// MB-74977: CreateSystemBucketIfNotExists() has waited for the bucket to be ready, but does not add
+		// it to the namespace's pool. Reload the namespace so it picks the bucket up: refreshFully(true) ignores
+		// the refresh threshold and reloads because the bucket list has changed.
+		// No retry loop is needed: the bucket is ready, and refreshFully() reloads synchronously. If it fails,
+		// newKeyspace() reloads the namespace itself on finding the bucket missing from the namespace's pool.
+		defaultPool.refreshFully(true)
 		sysBucket, er = defaultPool.keyspaceByName(bucketName)
 		if er != nil {
 			return er
