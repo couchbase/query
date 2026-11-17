@@ -48,13 +48,14 @@ type Query struct {
 	nextAliasNum  int
 
 	// runtime stats
-	executions    uint64
-	failed        uint64 // failed to execute, not executed with errors
-	lastFailure   error
-	elapsedMs     uint64
-	results       uint64
-	maxUsedMemory uint64
-	lastErrors    []int // keep the last 10 reported error numbers
+	executions     uint64
+	failed         uint64 // failed to execute, not executed with errors
+	lastFailure    error
+	elapsedMs      uint64
+	results        uint64
+	maxUsedMemory  uint64
+	lastErrorCodes []int    // keep the last 10 reported error numbers
+	lastErrors     []string // keep the last 10 reported error messages (first error of each response)
 }
 
 func LoadQuery(file string) (*Query, error) {
@@ -414,6 +415,8 @@ func (this *Query) Execute(requestParams map[string]any) error {
 	var elapsed time.Duration
 	var usedMemory uint64
 	var errs []int
+	var errMsg string
+	var haveErrMsg bool
 	// streams the result
 	processResults := func(respBody io.ReadCloser) error {
 		dec := json.NewDecoder(respBody)
@@ -448,6 +451,16 @@ func (this *Query) Execute(requestParams map[string]any) error {
 						if m, ok := ai[n].(map[string]any); ok {
 							if c, ok := m["code"].(float64); ok {
 								errs = append(errs, int(c))
+							}
+							if n == 0 {
+								if msg, ok := m["msg"].(string); ok {
+									errMsg = msg
+								} else {
+									// no "msg" field; fall back to the whole error object
+									b, _ := json.Marshal(m)
+									errMsg = string(b)
+								}
+								haveErrMsg = true
 							}
 						}
 					}
@@ -520,7 +533,13 @@ func (this *Query) Execute(requestParams map[string]any) error {
 	this.Lock()
 	this.maxUsedMemory = max(this.maxUsedMemory, usedMemory)
 	if len(errs) > 0 {
-		this.lastErrors = append(errs, this.lastErrors...)
+		this.lastErrorCodes = append(errs, this.lastErrorCodes...)
+		if len(this.lastErrorCodes) > 10 {
+			this.lastErrorCodes = this.lastErrorCodes[:10]
+		}
+	}
+	if haveErrMsg {
+		this.lastErrors = append([]string{errMsg}, this.lastErrors...)
 		if len(this.lastErrors) > 10 {
 			this.lastErrors = this.lastErrors[:10]
 		}
@@ -532,11 +551,12 @@ func (this *Query) Execute(requestParams map[string]any) error {
 func (this *Query) MarshalJSON() ([]byte, error) {
 	this.Lock()
 	m := map[string]any{
-		"statement":     this.doSQL("", false),
-		"executions":    this.executions,
-		"failed":        this.failed,
-		"lastErrors":    this.lastErrors,
-		"maxUsedMemory": this.maxUsedMemory,
+		"statement":      this.doSQL("", false),
+		"executions":     this.executions,
+		"failed":         this.failed,
+		"lastErrorCodes": this.lastErrorCodes,
+		"lastErrors":     this.lastErrors,
+		"maxUsedMemory":  this.maxUsedMemory,
 	}
 
 	if this.lastFailure != nil {
@@ -556,7 +576,7 @@ func (this *Query) reportAsFailed() bool {
 	if this.failed > 0 {
 		return true
 	}
-	for _, errCode := range this.lastErrors {
+	for _, errCode := range this.lastErrorCodes {
 		// check for any unexpected/not-tolerated SQL errors
 		if _, ok := IgnoredErrors[errCode]; !ok {
 			return true
