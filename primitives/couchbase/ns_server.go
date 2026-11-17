@@ -1639,7 +1639,7 @@ func (b *Bucket) refresh(preserveConnections bool) error {
 			logging.Infof("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
 		} else if _, ok := err.(*BucketNotReadyError); ok {
 			// expected while a newly created bucket's vBucket map is not yet published, e.g. while
-			// GetSystemBucket() waits for a system bucket it just created (MB-75083); not SEVERE
+			// CreateSystemBucketIfNotExists() waits for a system bucket it just created (MB-75083); not SEVERE
 			logging.Warnf("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
 		} else {
 			logging.Severef("Failed to refresh bucket %v (%s): %v", b.Name, b.getAbbreviatedUUID(), err)
@@ -2151,7 +2151,7 @@ func (p *Pool) Close(force bool) {
 // isBucketTransientError returns true for errors that are expected to go away when waiting
 // for a bucket, e.g. one that is being created: bucket not found (not created yet), or found
 // but not ready yet, i.e. ns_server has not published the vBucket map yet, which can take
-// longer than refresh()'s own retries (MB-75083). Used by GetSystemBucket().
+// longer than refresh()'s own retries (MB-75083). Used by CreateSystemBucketIfNotExists().
 func isBucketTransientError(err error) bool {
 	switch err.(type) {
 	case *BucketNotFoundError, *BucketNotReadyError:
@@ -2160,12 +2160,25 @@ func isBucketTransientError(err error) bool {
 	return strings.Contains(err.Error(), HTTP_404)
 }
 
-func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
-	bucket, err := p.GetBucket(name)
+// CreateSystemBucketIfNotExists checks if a system bucket by this name exists in the pool 'p' passed to the function.
+// If it does not, it creates it in the cluster, and waits for it to be ready. It does not add the bucket to the passed pool.
+// Callers are expected to refresh the pool to obtain the latest bucket information, and to retrieve the system bucket from the
+// refreshed pool.
+//
+// MB-74977: 'p' is only read by the function, never refreshed. A pool returned by GetPool() is a copy of the Pool that
+// GetPool() builds: its buckets point back to that original Pool, which shares its BucketMap. Refreshing such a pool
+// gives it a new BucketMap, and leaves the old one held only by the original Pool, in the cycle
+// bucket.pool -> original Pool -> old BucketMap -> bucket. Each bucket has a finalizer, and the GC never finalizes or
+// frees an object with a finalizer that is part of a cycle: the buckets can only be freed once Pool.Close() removes
+// them from the BucketMap. Closing the refreshed pool clears only its new BucketMap, so the old buckets and their
+// connection pools would leak for the life of the process. Instead, each check for whether the new bucket is ready
+// gets a temporary pool, looks the bucket up in it, and closes it straight away.
+func CreateSystemBucketIfNotExists(c *Client, p *Pool, name string) error {
+	_, err := p.GetBucket(name)
 	if err != nil {
 		// bucket not found, or found but not ready yet (e.g. just created by another query node)
 		if !isBucketTransientError(err) {
-			return nil, err
+			return err
 		}
 
 		// create the bucket if not found
@@ -2181,38 +2194,54 @@ func GetSystemBucket(c *Client, p *Pool, name string) (*Bucket, error) {
 		// (e.g. two query nodes starting at same time)
 		err = c.parsePostURLResponseTerse("/pools/default/buckets", nil, args, &ret, nil)
 		if err != nil && !AlreadyExistsError(err) {
-			return nil, err
+			return err
 		}
 
 		// bucket created asynchronously, try to get the bucket
 		// keep waiting while the bucket is not found or not ready yet (no vBucket map published,
 		// MB-75083): worst case is ~25.5s of sleeps here (100ms doubling, 8 attempts) plus ~1s of
-		// refresh() retries per attempt (plus HTTP round trips), i.e. ~33.5s in total, which is the
+		// Bucket.refresh() retries per attempt (plus HTTP round trips), i.e. ~33.5s in total, which is the
 		// intended limit for a slow (magma) bucket creation
 		maxRetry := 8
 		interval := 100 * time.Millisecond
 		for i := 0; i < maxRetry; i++ {
 			time.Sleep(interval)
 			interval *= 2
-			err = p.refresh()
+
+			// MB-74977: Use a temporary pool to check if the system bucket is ready. Do not refresh pool 'p'.
+			// Refreshing 'p' directly can cause a memory leak (see comment above function definition)
+			var tmp Pool
+			tmp, err = c.GetPool("default")
 			if err != nil {
-				return nil, err
+				return err
 			}
-			bucket, err = p.GetBucket(name)
-			if bucket != nil {
-				bucket.RLock()
-				ok := !bucket.closed && len(bucket.getConnPools(true /* already locked */)) > 0
-				bucket.RUnlock()
-				if ok {
-					break
-				}
-			} else if err != nil && !isBucketTransientError(err) {
+
+			var ready bool
+			ready, err = isBucketReady(&tmp, name)
+
+			// MB-74977: close the temporary pool to it break its bucket <-> pool cycle so its buckets can be freed by the GC.
+			tmp.Close(true)
+
+			if ready || (err != nil && !isBucketTransientError(err)) {
 				break
 			}
 		}
 	}
 
-	return bucket, err
+	return err
+}
+
+// isBucketReady reports whether the named bucket is in pool 'p' and ready to use, i.e. ns_server has published its
+// vBucket map and its connection pools are set up. The caller owns p and must close it.
+func isBucketReady(p *Pool, name string) (bool, error) {
+	bucket, err := p.GetBucket(name)
+	if err != nil {
+		return false, err
+	}
+	bucket.RLock()
+	ready := !bucket.closed && len(bucket.getConnPools(true /* already locked */)) > 0
+	bucket.RUnlock()
+	return ready, nil
 }
 
 func DropSystemBucket(c *Client, name string) error {
