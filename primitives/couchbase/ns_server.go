@@ -2219,7 +2219,7 @@ func CreateSystemBucketIfNotExists(c *Client, p *Pool, name string) error {
 			var ready bool
 			ready, err = isBucketReady(&tmp, name)
 
-			// MB-74977: close the temporary pool to it break its bucket <-> pool cycle so its buckets can be freed by the GC.
+			// MB-74977: close the temporary pool to break its bucket <-> pool cycle so its buckets can be freed by the GC
 			tmp.Close(true)
 
 			if ready || (err != nil && !isBucketTransientError(err)) {
