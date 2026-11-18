@@ -21,12 +21,13 @@ func hasQueryMetadata(create bool, requestId, createReason string, waitOnCreate 
 }
 
 func PreparedsFromPersisted() {
-	// no-op
+	endPriming()
 }
 
+// no saved plans
 func loadPrepared(name string, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) (*plan.Prepared, errors.Error) {
-	return nil, errors.NewEnterpriseFeature("Plan Stability", "prepareds.load_prepared")
+	return nil, nil
 }
 
 func deletePreparedPlans(adHocOnly bool) errors.Error {
