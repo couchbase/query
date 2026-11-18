@@ -1679,6 +1679,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 			}
 
 			purge := make(map[string]bool)
+			skipped := make(map[string]bool)
 
 			// restore the stats
 			index = 0
@@ -1693,7 +1694,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 					break
 				}
 				index++
-				err1 := doCBORestore(v, bucket, include, exclude, remap, systemCollection, purge)
+				err1 := doCBORestore(v, bucket, include, exclude, remap, systemCollection, purge, skipped)
 				if err1 != nil {
 					iState.Release()
 					return nil, err1
@@ -3278,7 +3279,7 @@ func getRestoreKeyValue(v []byte, doValue bool) (string, []byte, error) {
 }
 
 func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace,
-	purge map[string]bool) errors.Error {
+	purge, skipped map[string]bool) errors.Error {
 
 	key, bvalue, err := getRestoreKeyValue(v, true)
 	if err != nil {
@@ -3361,6 +3362,23 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	}
 
 	newPath := algebra.NewPathFromElements(p).SimpleString()
+
+	// MB-75410: statistics may have been backed up for a scope that no longer exists (e.g. it was
+	// dropped without its statistics being removed, or it is not part of the restore); skip them
+	// rather than failing the whole restore
+	uid, err := datastore.GetScopeUid(p[:3]...)
+	if err != nil {
+		if errors.IsScopeNotFoundError(err) {
+			// warn once per keyspace, not for each of its statistics documents
+			if !skipped[newPath] {
+				logging.Warnf("cbo restore: skipping statistics for %s: scope does not exist", newPath)
+				skipped[newPath] = true
+			}
+			return nil
+		}
+		return errors.NewServiceErrorBadValue(err, "cbo restore: error determining scope UID")
+	}
+
 	if _, ok := purge[newPath]; !ok {
 		// ensure we've cleared existing stats
 		dictionary.DropDictEntryAndAllCache(newPath, datastore.NULL_QUERY_CONTEXT, false)
@@ -3386,10 +3404,6 @@ func doCBORestore(v []byte, b string, include, exclude matcher, remap remapper, 
 	// re-generate document key in case UUID is needed (after remap)
 	newp := dictionary.GetCBOStatsPathElems(p)
 	key = strings.Replace(key, path, newp[2]+"."+newp[3], 1)
-	uid, err := datastore.GetScopeUid(p[:3]...)
-	if err != nil {
-		return errors.NewServiceErrorBadValue(err, "cbo restore: error determining scope UID")
-	}
 	key = strings.Replace(key, parts[1], uid, 1)
 
 	pairs := make([]value.Pair, 1)

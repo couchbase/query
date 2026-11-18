@@ -69,7 +69,7 @@ func Foreach(bucketName string, context datastore.QueryContext, check func(conte
 	return nil
 }
 
-func DropDictionaryEntry(keyspace string, isDropBucket bool, locked bool) {
+func DropDictionaryEntry(keyspace string, scopeUid string, isDropBucket bool, locked bool) {
 	// no-op
 }
 

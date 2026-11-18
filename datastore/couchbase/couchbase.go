@@ -170,6 +170,9 @@ func init() {
 
 	// start the fetch workers for servicing the BulkGet operations
 	cb.InitBulkGet()
+
+	// MB-75410 catch up on system collection clean-up skipped whilst migrating
+	datastore.RegisterMigrationDoneCallback(datastore.HAS_SYSTEM_COLLECTION, cleanupSystemCollectionsAfterMigration)
 	_POOLMAP.poolServices = make(map[string]*cbPoolServices, 1)
 
 	// Enable sync replication (durability)
@@ -4028,6 +4031,54 @@ func setMutateClientContext(context datastore.QueryContext, clientContext ...*me
 		}
 	}
 	return nil
+}
+
+// While UDF or CBO stats migration is in progress, the clean-up of a dropped scope's entries in the
+// system collection is skipped (MB-73270), as is the clean-up when a bucket is loaded. Nothing
+// retries either: the scope is no longer in the manifest, and the bucket is not loaded again.
+// Once migration completes on this node, sweep the system collection of every bucket loaded so far.
+// Buckets loaded from now on are swept on load. (MB-75410)
+func cleanupSystemCollectionsAfterMigration() {
+	s, ok := datastore.GetDatastore().(*store)
+	if !ok || s == nil {
+		return
+	}
+
+	type bucketName struct {
+		p    *namespace
+		name string
+	}
+	var buckets []bucketName
+	// as in ForeachBucket(), namespaceCache is not locked
+	for _, p := range s.namespaceCache {
+		p.lock.RLock()
+		for name, entry := range p.keyspaceCache {
+			if entry.cbKeyspace != nil {
+				buckets = append(buckets, bucketName{p, name})
+			}
+		}
+		p.lock.RUnlock()
+	}
+
+	for _, b := range buckets {
+		// the sweep deletes entries for scopes and collections that are not in the bucket's manifest,
+		// so make sure it is up to date: keyspaceByName() refreshes it if a newer one has been
+		// announced, and skip the bucket if it is still behind (MB-74835)
+		k, err := b.p.keyspaceByName(b.name)
+		if err != nil || k == nil {
+			continue
+		}
+		k.RLock()
+		current, announced := k.collectionsManifestUid, k.newCollectionsManifestUid
+		k.RUnlock()
+		if current == _INVALID_MANIFEST_UID || current < announced {
+			logging.Infof("Skipping `%s` system collection clean-up after migration: manifest %v is behind %v",
+				b.name, current, announced)
+			continue
+		}
+		logging.Infof("Cleaning up `%s` system collection after migration", b.name)
+		CleanupSystemCollection(b.p.name, b.name)
+	}
 }
 
 // Cleanup entries in the system collection that have been orphaned by activity outside of the query service
