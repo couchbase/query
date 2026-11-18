@@ -63,6 +63,3 @@ done
 
 
 curl --silent -X PUT $UsersSite/testAdmin -d name=QueryTestAdmin -d roles=admin -d password=testAdminpass -u $Auth > /dev/null
-
-
-

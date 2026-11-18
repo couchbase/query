@@ -86,7 +86,9 @@ func Foreach(bucketName string, context datastore.QueryContext, check func(conte
 	return dictionary.Foreach(bucketName, context, check, proc)
 }
 
-func DropDictionaryEntry(keyspace string, isDropBucket bool, locked bool) {
+// scopeUid is the UID of the keyspace's scope, needed to locate its CBO stats documents
+// in the _system scope when the scope itself is being dropped (MB-75410)
+func DropDictionaryEntry(keyspace string, scopeUid string, isDropBucket bool, locked bool) {
 	if isSysBucket(keyspace) || dictionary.IsSysCBOStats(keyspace) {
 		dictionary.DropDictionaryCache()
 	} else {
@@ -97,7 +99,7 @@ func DropDictionaryEntry(keyspace string, isDropBucket bool, locked bool) {
 			// of bucket drop and thus no need to remove entries from there
 			dictionary.DropDictCacheEntry(keyspace, false)
 		} else {
-			dictionary.DropDictionaryEntry(keyspace, sysStore, locked)
+			dictionary.DropDictionaryEntry(keyspace, scopeUid, sysStore, locked)
 		}
 	}
 }
