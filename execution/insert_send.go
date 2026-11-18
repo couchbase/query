@@ -58,6 +58,7 @@ func (this *SendInsert) Copy() Operator {
 	rv.plan = this.plan
 	rv.limit = this.limit
 	rv.skipNewKeys = this.skipNewKeys
+	rv.batchSize = this.batchSize
 	this.base.copy(&rv.base)
 	return rv
 }

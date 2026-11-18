@@ -45,7 +45,7 @@ func (this *SendUpsert) Accept(visitor Visitor) (any, error) {
 }
 
 func (this *SendUpsert) Copy() Operator {
-	rv := &SendUpsert{plan: this.plan}
+	rv := &SendUpsert{plan: this.plan, batchSize: this.batchSize}
 	this.base.copy(&rv.base)
 	return rv
 }

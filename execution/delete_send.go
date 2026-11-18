@@ -57,6 +57,7 @@ func (this *SendDelete) Copy() Operator {
 	rv.plan = this.plan
 	rv.limit = this.limit
 	rv.mk.validate = this.mk.validate
+	rv.batchSize = this.batchSize
 	this.base.copy(&rv.base)
 	return rv
 }

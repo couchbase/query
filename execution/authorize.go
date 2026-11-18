@@ -58,6 +58,7 @@ func (this *Authorize) Copy() Operator {
 	rv.plan = this.plan
 	rv.child = this.child.Copy()
 	rv.hasForkedChild = false
+	rv.dynamicAuthorize = this.dynamicAuthorize
 	this.base.copy(&rv.base)
 	return rv
 }

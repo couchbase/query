@@ -118,16 +118,22 @@ func arraysFor(bindings expression.Bindings, val value.Value, context *opContext
 
 					var nameBuf [_NAME_CAP]string
 					var names []string
+					pooled := false
 					if len(fields) <= len(nameBuf) {
 						names = nameBuf[0:0]
 					} else {
-						names := _NAME_POOL.GetCapped(len(fields))
-						defer _NAME_POOL.Put(names)
+						names = _NAME_POOL.GetCapped(len(fields))
+						pooled = true
 					}
 
-					for _, n := range bv.FieldNames(names) {
+					names = bv.FieldNames(names)
+					for _, n := range names {
 						v, _ := bv.Field(n)
 						bp = append(bp, util.IPair{n, v})
+					}
+
+					if pooled {
+						_NAME_POOL.Put(names)
 					}
 				case value.ARRAY:
 					for n, v := range bv.Actual().([]any) {
