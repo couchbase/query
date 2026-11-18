@@ -284,6 +284,10 @@ var _ALL_USERS = auth.Credentials{
 		"shellTestowner": "shellTestpass",
 	}, nil, nil, nil}
 
+var _TEST_ADMIN_USER = map[string]string{
+	"testAdmin": "testAdminpass",
+}
+
 /*
 This method is used to execute the N1QL query represented by
 the input argument (q) string using the NewBaseRequest method
@@ -1114,6 +1118,11 @@ func RunMatch(filename string, prepared, explain bool, qc *MockServer, t *testin
 
 func RunStmt(mockServer *MockServer, q string) *RunResult {
 	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, nil)
+}
+
+// Run a statement with Full Admin credentials
+func RunAdminStmt(mockServer *MockServer, q string) *RunResult {
+	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, _TEST_ADMIN_USER)
 }
 
 func getAdviseResults(subpath string, result []interface{}) []interface{} {

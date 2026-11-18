@@ -55,3 +55,4 @@ do
   curl --silent -X PUT $UsersSite$Id -d name=$Name -d roles=${Roles} -d password=$Password -u $Auth > /dev/null
 done
 
+curl --silent -X PUT $UsersSite/testAdmin -d name=QueryTestAdmin -d roles=admin -d password=testAdminpass -u $Auth > /dev/null
