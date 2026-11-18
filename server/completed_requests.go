@@ -517,6 +517,27 @@ func RequestsForeach(nonBlocking func(string, *RequestLogEntry) bool, blocking f
 	requestLog.cache.ForEach(dummyF, blocking)
 }
 
+// timingsForLog returns the plan to keep in a completed request entry. The plan size limit applies whether the
+// request already marshalled its timings (profile=timings) or not.
+func timingsForLog(parsed []byte, timings interface{}, maxPlanSize int) []byte {
+	if maxPlanSize == 0 {
+		return []byte("{\"WARNING\":\"Plan inclusion disabled.\"}")
+	}
+	v := parsed
+	if len(v) == 0 {
+		var err error
+		v, err = json.Marshal(timings)
+		if err != nil || len(v) == 0 {
+			return nil
+		}
+	}
+	if len(v) > maxPlanSize {
+		return []byte(fmt.Sprintf("{\"WARNING\":\"Plan (%v) exceeds maximum permitted (%v) size.\"}",
+			logging.HumanReadableSize(int64(len(v)), false), logging.HumanReadableSize(int64(maxPlanSize), false)))
+	}
+	return v
+}
+
 func LogRequest(request_time, service_time, transactionElapsedTime time.Duration,
 	result_count int, result_size int, error_count int, req *http.Request,
 	request *BaseRequest, server *Server, seq_scan_keys int64, forceCapture bool) {
@@ -644,19 +665,7 @@ func LogRequest(request_time, service_time, transactionElapsedTime time.Duration
 		if timings != nil {
 			start = timings
 			parsed := request.GetFmtTimings()
-			if len(parsed) > 0 {
-				re.timings = parsed
-			} else if maxPlanSize == 0 {
-				re.timings = []byte("{\"WARNING\":\"Plan inclusion disabled.\"}")
-			} else {
-				v, err := json.Marshal(timings)
-				if len(v) > 0 && err == nil && len(v) <= maxPlanSize {
-					re.timings = v
-				} else if len(v) > maxPlanSize {
-					re.timings = []byte(fmt.Sprintf("{\"WARNING\":\"Plan (%v) exceeds maximum permitted (%v) size.\"}",
-						logging.HumanReadableSize(int64(len(v)), false), logging.HumanReadableSize(int64(maxPlanSize), false)))
-				}
-			}
+			re.timings = timingsForLog(parsed, timings, maxPlanSize)
 			estimates := request.GetFmtOptimizerEstimates()
 			if len(parsed) > 0 {
 				re.optEstimates = estimates
