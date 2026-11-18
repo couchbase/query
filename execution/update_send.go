@@ -57,6 +57,7 @@ func (this *SendUpdate) Copy() Operator {
 	rv := _SENDUPDATE_OP_POOL.Get().(*SendUpdate)
 	rv.plan = this.plan
 	rv.limit = this.limit
+	rv.batchSize = this.batchSize
 	this.base.copy(&rv.base)
 	return rv
 }
