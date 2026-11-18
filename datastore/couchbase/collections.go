@@ -911,7 +911,7 @@ func refreshScopesAndCollections(mani *cb.Manifest, externalMani *cb.ExternalMan
 					// in waiting mode (mixed-mode cluster) it should be safe to
 					// clean up directly
 					if isCBOStatsMigrationWaiting() || !isMigratingCBOStats() {
-						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), false, true)
+						DropDictionaryEntry(oldScope.keyspaces[n].QualifiedName(), oldScope.Uid(), false, true)
 					}
 					if kerr := knowledge.DropCollection(bucket.namespace.name, bucket.name, oldScope.Name(), oldScope.Uid(),
 						c.Name(), c.Uid()); kerr != nil {
@@ -970,7 +970,7 @@ func clearOldScope(bucket *keyspace, s *scope, isDropBucket bool, cleanUp bool) 
 		// refreshScopesAndCollections whilst this clean-up is still taking place
 		for _, val := range s.keyspaces {
 			if val != nil {
-				DropDictionaryEntry(val.QualifiedName(), isDropBucket, true)
+				DropDictionaryEntry(val.QualifiedName(), s.Uid(), isDropBucket, true)
 				// invoke Release(..) on collection for any cleanup
 				val.Release(false)
 			}

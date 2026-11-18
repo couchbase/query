@@ -484,6 +484,22 @@ var migrationLock sync.RWMutex
 
 var migrations map[Migration]*migrationType
 
+// called once, each in its own go routine, when a migration completes on this node (MB-75410)
+var migrationDoneCallbacks map[Migration][]func()
+
+// Register a function to be called when migration t completes (successfully or not) on this node.
+// It is not called if the migration was already complete when this node started, nor if the
+// migration has already completed when it is registered, so register it before migrations start
+// (e.g. from an init() function)
+func RegisterMigrationDoneCallback(t Migration, f func()) {
+	migrationLock.Lock()
+	if migrationDoneCallbacks == nil {
+		migrationDoneCallbacks = make(map[Migration][]func())
+	}
+	migrationDoneCallbacks[t] = append(migrationDoneCallbacks[t], f)
+	migrationLock.Unlock()
+}
+
 type migrationType struct {
 	mtype Migration
 	done  bool
@@ -623,6 +639,7 @@ func MarkMigrationComplete(success bool, what string, t Migration) {
 }
 
 func checkMigrationDone(t Migration) {
+	var callbacks []func()
 	migrationLock.Lock()
 	mt := migrations[t]
 	if mt != nil && !mt.done {
@@ -642,9 +659,13 @@ func checkMigrationDone(t Migration) {
 		}
 		if done {
 			mt.done = true
+			callbacks = migrationDoneCallbacks[t]
 		}
 	}
 	migrationLock.Unlock()
+	for _, f := range callbacks {
+		go f()
+	}
 }
 
 func IsMigrationComplete(t Migration) bool {

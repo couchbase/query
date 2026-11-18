@@ -1274,6 +1274,53 @@ func RunAdminStmt(mockServer *MockServer, q string) *RunResult {
 	return Run(mockServer, nil, q, Namespace_CBS, nil, nil, _TEST_ADMIN_USER)
 }
 
+// Run a statement, failing the test if it returns an error
+func MustRunStmt(t *testing.T, mockServer *MockServer, q string) *RunResult {
+	return mustRunStmt(t, mockServer, q, RunStmt)
+}
+
+// Same as MustRunStmt, but with Full Admin credentials
+func MustRunAdminStmt(t *testing.T, mockServer *MockServer, q string) *RunResult {
+	return mustRunStmt(t, mockServer, q, RunAdminStmt)
+}
+
+// Run a statement, retrying up to retries times with interval between attempts while it
+// returns an error (e.g. a newly created collection not yet visible); fails the test if
+// it still returns an error after the last attempt
+func RetryRunStmt(t *testing.T, mockServer *MockServer, q string, retries int, interval time.Duration) *RunResult {
+	return retryRunStmt(t, mockServer, q, retries, interval, RunStmt)
+}
+
+// Same as RetryRunStmt, but with Full Admin credentials
+func RetryRunAdminStmt(t *testing.T, mockServer *MockServer, q string, retries int, interval time.Duration) *RunResult {
+	return retryRunStmt(t, mockServer, q, retries, interval, RunAdminStmt)
+}
+
+func mustRunStmt(t *testing.T, mockServer *MockServer, q string, run func(*MockServer, string) *RunResult) *RunResult {
+	rr := run(mockServer, q)
+	if rr.Err != nil {
+		t.Fatalf("%s: %v", q, rr.Err)
+	}
+	return rr
+}
+
+func retryRunStmt(t *testing.T, mockServer *MockServer, q string, retries int, interval time.Duration,
+	run func(*MockServer, string) *RunResult) *RunResult {
+
+	var rr *RunResult
+	for i := 0; i <= retries; i++ {
+		if i > 0 {
+			time.Sleep(interval)
+		}
+		rr = run(mockServer, q)
+		if rr.Err == nil {
+			return rr
+		}
+	}
+	t.Fatalf("%s: %v (after %d retries)", q, rr.Err, retries)
+	return rr
+}
+
 func getAdviseResults(subpath string, result []interface{}) []interface{} {
 	for _, v := range result {
 		v, ok := value.NewValue(v).Actual().(map[string]interface{})
