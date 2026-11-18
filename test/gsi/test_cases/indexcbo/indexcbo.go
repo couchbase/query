@@ -10,12 +10,29 @@ package indexcbo
 
 import (
 	"testing"
+	"time"
 
 	"github.com/couchbase/query/test/gsi"
 )
 
 func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
+}
+
+func mustRun(t *testing.T, mockServer *gsi.MockServer, q string) *gsi.RunResult {
+	return gsi.MustRunStmt(t, mockServer, q)
+}
+
+func retryRun(t *testing.T, mockServer *gsi.MockServer, q string, retries int, interval time.Duration) *gsi.RunResult {
+	return gsi.RetryRunStmt(t, mockServer, q, retries, interval)
+}
+
+func mustRunAdmin(t *testing.T, mockServer *gsi.MockServer, q string) *gsi.RunResult {
+	return gsi.MustRunAdminStmt(t, mockServer, q)
+}
+
+func retryRunAdmin(t *testing.T, mockServer *gsi.MockServer, q string, retries int, interval time.Duration) *gsi.RunResult {
+	return gsi.RetryRunAdminStmt(t, mockServer, q, retries, interval)
 }
 
 func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *testing.T) {
