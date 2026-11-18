@@ -432,7 +432,11 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 		ce.Uses = 1
 		ce.LastUse = when
 	}
-	prepareds.cache.Add(ce, encodeName(prepared.Name(), prepared.QueryContext()), func(entry interface{}) util.Operation {
+	fullName := encodeName(prepared.Name(), prepared.QueryContext())
+	// whether added or amended, or ignored because a different statement holds the name, the
+	// name is now in the cache
+	defer clearUnloaded(fullName)
+	prepareds.cache.Add(ce, fullName, func(entry interface{}) util.Operation {
 		var op util.Operation = util.AMEND
 		var cont bool = true
 
@@ -480,7 +484,11 @@ func GetAutoPrepareName(text string, context *planner.PrepareContext) string {
 	return name
 }
 
-func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareContext) *plan.Prepared {
+// With plan stability AD_HOC or AD_HOC_READ_ONLY, an error (e.g. a saved plan failed verification
+// under error policy STRICT) is returned, and the caller must fail the request: planning the
+// statement afresh would replace the saved plan. Otherwise errors are logged and a nil plan is
+// returned, for the caller to plan the statement.
+func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareContext) (*plan.Prepared, errors.Error) {
 
 	// for auto prepare, we don't verify or reprepare because that would mean
 	// accepting valid but possibly suboptimal statements
@@ -492,7 +500,8 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	// The new statement will have the latest change counters, so until we
 	// have a new index no other planning will be necessary
 	options := uint32(OPT_TRACK)
-	if context.IsPlanStabilityAdHoc() || context.IsPlanStabilityAdHocReadOnly() {
+	planStabilityAdHoc := context.IsPlanStabilityAdHoc() || context.IsPlanStabilityAdHocReadOnly()
+	if planStabilityAdHoc {
 		options |= OPT_VERIFY
 	} else {
 		options |= OPT_METACHECK
@@ -501,21 +510,24 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 		context.GetPlanStabilityErrorPolicy(), context.Context(), context.ScanConsistency())
 	if err != nil {
 		if err.Code() != errors.E_NO_SUCH_PREPARED {
+			if planStabilityAdHoc {
+				return nil, err
+			}
 			logging.Infof("Auto Prepare plan fetching failed with %v", err)
 		}
-		return nil
+		return nil, nil
 	}
 
 	// this should never happen
 	if text != prep.Text() {
 		logging.Infof("Auto Prepare found mismatching name and statement %v %v", name, text)
-		return nil
+		return nil, nil
 	}
 	if prep.IndexApiVersion() != context.IndexApiVersion() || prep.FeatureControls() != context.FeatureControls() ||
 		prep.Namespace() != namespace || prep.UseFts() != context.UseFts() || prep.UseCBO() != context.UseCBO() {
-		return nil
+		return nil, nil
 	}
-	return prep
+	return prep, nil
 }
 
 func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) (bool, errors.Error) {
@@ -960,11 +972,17 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		return nil, err
 	}
 	if prepared == nil {
-		// if the prepared cache is full, also try to load from disk
-		if prepareds.cache.Size() >= prepareds.cache.Limit() {
+		// look for a saved plan if the entry may have been evicted (cache full), the cache is
+		// still being primed, or the saved plan could not be put in the cache (see plan_load.go);
+		// loading applies the plan stability error policy to the saved plan
+		if checkSavedPlan(encodedName) {
 			prepared, err = loadPrepared(encodedName, planStabilityMode, planStabilityErrorPolicy)
 			if err != nil {
 				return nil, err
+			}
+			if prepared == nil {
+				// nothing saved under this name
+				clearUnloaded(encodedName)
 			}
 		}
 		if prepared == nil {
@@ -1026,9 +1044,14 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 
 	added := true
 
-	prepared, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, remap,
+	prepared, add, replanned, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, remap,
 		planStability, deferIndexerRace, planStabilityMode, planStabilityErrorPolicy, log)
 	if err != nil {
+		if persisted {
+			// the saved plan is not in the cache: a cache miss needs to load it again and apply
+			// the error policy (e.g. STRICT returns an error), instead of re-planning
+			markUnloaded(prepared_name)
+		}
 		return nil, err, nil
 	}
 
@@ -1057,10 +1080,11 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 	// reprepare if no good
 	// entries for inline UDF only has UDF subquery plans and thus no need to verify (verification
 	// for UDF subquery plans performed elsewhere, see VerifySubqueryPlans())
-	add := true
+	// a plan re-planned for this execution only (add == false, plan stability MODERATE) is not
+	// verified again (reprepare() takes care of that)
 	var verifyErr errors.Error
 	forceReprepare := false
-	if !prepared.IsInlineUdf() {
+	if add && !prepared.IsInlineUdf() {
 		verifyErr = prepared.Verify()
 
 		// a sequential scan may have been chosen by a node that could not see the indexes at the time:
@@ -1075,10 +1099,20 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 			if prepErr == nil {
 				prepared = newPrepared
 				add = replace
+				replanned = verifyErr != nil
 			} else {
+				if persisted {
+					markUnloaded(prepared_name)
+				}
 				return nil, prepErr, nil
 			}
 		}
+	}
+
+	if persisted && !add {
+		// MODERATE: the new plan is for this execution only, the saved plan stays as is and is
+		// not in the cache
+		markUnloaded(prepared_name)
 	}
 
 	if add {
@@ -1103,6 +1137,20 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 
 	// if add == false, added remains true even though it is not added to the cache
 	if added {
+		// error policy FLEXIBLE (MODERATE does not add, STRICT does not re-plan): the saved plan
+		// could not be used and has been replaced in the cache, replace the saved plan as well,
+		// same as when a cached plan is re-planned (see getPrepared()), except:
+		//   - a plan with a sequential scan stays local, same as in addPrepared()
+		//   - the saved plan could not be decoded because an index was not found: this node may
+		//     not see the index yet (GSI metadata not synced, MB-73680), so the new plan may lack
+		//     it (e.g. a primary scan); keep the saved plan, only cache the new plan
+		if persisted && add && replanned && planStability && !seqScanKeptLocal(prepared) &&
+			!isIndexerNotReady(unmarshallErr) {
+			if err1 := persistPrepared(prepared); err1 != nil {
+				logging.Errorf("Error saving re-prepared plan for prepared statement %s: %v", prepared_name, err1)
+			}
+		}
+
 		var reprepReason errors.Errors
 		if unmarshallErr != nil {
 			reprepReason = append(reprepReason, unmarshallErr)
@@ -1120,9 +1168,16 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 	}
 }
 
+// Returns:
+//   - add: whether the plan returned can be added to the cache (false for a plan re-planned for
+//     this execution only, plan stability error policy MODERATE)
+//   - replanned: whether the plan returned was re-planned because the encoded plan could not be
+//     used (not set when re-planned because of a newer plan version)
+//   - the error, and the unmarshalling error that caused a re-plan
 func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, planStability bool,
 	deferIndexerRace bool, planStabilityMode settings.PlanStabilityMode,
-	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (*plan.Prepared, errors.Error, errors.Error) {
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (
+	*plan.Prepared, bool, bool, errors.Error, errors.Error) {
 
 	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded, remap)
 	if err != nil {
@@ -1137,10 +1192,14 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 				err1 = json.Unmarshal(text, &stmt)
 				if err1 == nil {
 					prepared.SetText(stmt)
-					pl, replace, _ := reprepare(prepared, nil, phaseTime, planStability,
+					pl, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability,
 						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
-					if pl != nil && replace {
-						return pl, nil, err
+					if pl != nil {
+						return pl, replace, true, nil, err
+					} else if planStability && planStabilityErrorPolicy == settings.PS_ERROR_STRICT && prepErr != nil {
+						// error policy STRICT does not allow re-planning: return that, rather than
+						// the unmarshalling error
+						return nil, false, false, prepErr, nil
 					}
 				}
 			} else {
@@ -1154,19 +1213,19 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 				}
 			}
 		}
-		return nil, err, nil
+		return nil, false, false, err, nil
 	} else if reprep && (prepared.PlanVersion() > util.PLAN_VERSION) {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
 		pl, _, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 		if err != nil {
-			return nil, err, nil
+			return nil, false, false, err, nil
 		}
-		return pl, nil, errors.NewPlanVersionChange()
+		return pl, true, false, nil, errors.NewPlanVersionChange()
 	} else {
 		prepared.SetEncodedPlan(encoded)
 	}
-	return prepared, nil, nil
+	return prepared, true, false, nil, nil
 }
 
 func distributePrepared(name, plan string) {

@@ -2070,8 +2070,12 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 
 		name = prepareds.GetAutoPrepareName(request.Statement(), &prepContext)
 		if name != "" {
-			prepared = prepareds.GetAutoPreparePlan(name, request.Statement(),
+			var err errors.Error
+			prepared, err = prepareds.GetAutoPreparePlan(name, request.Statement(),
 				request.Namespace(), &prepContext)
+			if err != nil {
+				return nil, err
+			}
 			request.SetPrepared(prepared)
 		} else {
 			autoPrepare = false

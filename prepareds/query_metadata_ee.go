@@ -28,6 +28,9 @@ func hasQueryMetadata(create bool, requestId, createReason string, waitOnCreate 
 
 // initialize cache from persisted entries
 func PreparedsFromPersisted() {
+	// saved plans not loaded into the cache by now are tracked individually (see plan_load.go)
+	defer endPriming()
+
 	hasQueryMetadata, _ := dictionary.HasQueryMetadata(false, "", "", false)
 	if !hasQueryMetadata {
 		return

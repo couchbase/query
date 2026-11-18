@@ -378,6 +378,9 @@ func main() {
 		*PREPARED_LIMIT = _DEF_PREPARED_LIMIT
 	}
 	prepareds.PreparedsInit(*PREPARED_LIMIT)
+	// requests are accepted before the cache is primed from the saved plans (PreparedsFromPersisted()),
+	// until then a prepared cache miss looks for a saved plan
+	prepareds.PreparedsStartPriming()
 	functions.FunctionsInit(*FUNCTIONS_LIMIT, storage.UseSystemStorage)
 	scheduler.SchedulerSetLimit(*TASKS_LIMIT)
 
