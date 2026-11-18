@@ -394,6 +394,10 @@ func (this *base) baseDone() {
 		// execution context, so that it (and everything it holds) can be garbage collected
 		this.operatorCtx = opContext{}
 		this.stash = nil
+
+		// the index connection holds the request's execution context: if not cleared, a pooled
+		// operator keeps that context (and everything the context holds) alive until the operator is reused
+		this.conn = nil
 	}
 	this.activeCond.L.Unlock()
 	if release {
