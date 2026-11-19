@@ -520,7 +520,10 @@ func (this *systemRemoteHttp) getFullEndpoint(node clustering.QueryNode, endpoin
 		}
 
 		// impersonation is only for serverless environments
-		fullEndpoint += "impersonate=" + string(creds)
+		// and for system:natural_chats and system:active_requests
+		// the remote node restricts the results to the impersonated user;
+		// escape it so that a user name can't alter the query string
+		fullEndpoint += "impersonate=" + url.QueryEscape(string(creds))
 	}
 
 	// Here, I'm leveraging the fact that the node name is the host:port of the mgmt

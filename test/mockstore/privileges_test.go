@@ -353,6 +353,13 @@ func TestStatementPrivileges(t *testing.T) {
 			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{
 				auth.PrivilegePair{Target: "", Priv: auth.PRIV_SYSTEM_READ},
 			}}},
+		// open to all: users without system read only see and cancel their own requests
+		testCase{id: "select system:active_requests",
+			text:          "select * from system:active_requests",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{}}},
+		testCase{id: "delete system:active_requests",
+			text:          "delete from system:active_requests",
+			expectedPrivs: &auth.Privileges{List: []auth.PrivilegePair{}}},
 		//
 		// INDEX statements
 		//

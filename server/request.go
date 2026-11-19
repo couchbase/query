@@ -364,6 +364,16 @@ func ActiveRequestsGet(id string, f func(Request)) errors.Error {
 	return nil
 }
 
+// IsRequestOwner reports whether userName (as returned by datastore.SystemReadUser) may access request:
+// "" may access every request, any other user only requests whose first credential is theirs
+func IsRequestOwner(request Request, userName string) bool {
+	if userName == "" {
+		return true
+	}
+	users := datastore.CredsArray(request.Credentials())
+	return len(users) > 0 && userName == users[0]
+}
+
 func ActiveRequestsForEach(nonBlocking func(string, Request) bool, blocking func() bool) {
 	if actives != nil {
 		actives.ForEach(nonBlocking, blocking)

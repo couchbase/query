@@ -331,8 +331,7 @@ type Context struct {
 	namedArgs                 map[string]value.Value
 	positionalArgs            value.Values
 	credentials               *auth.Credentials
-	firstCreds                string
-	firstCredsSet             bool
+	firstCreds                atomic.Pointer[string] // set once, read by concurrent operators
 	consistency               datastore.ScanConsistency
 	originalConsistency       datastore.ScanConsistency
 	scanVectorSource          timestamp.ScanVectorSource
@@ -798,13 +797,17 @@ func (this *Context) IsAdmin() bool {
 	return datastore.IsAdmin(this.credentials)
 }
 
+// SetFirstCreds caches the user operators on system keyspaces restrict to, which they may set concurrently:
+// a single atomic store, so that no reader can see the cache set without the user
 func (this *Context) SetFirstCreds(creds string) {
-	this.firstCreds = creds
-	this.firstCredsSet = true
+	this.firstCreds.Store(&creds)
 }
 
 func (this *Context) FirstCreds() (string, bool) {
-	return this.firstCreds, this.firstCredsSet
+	if creds := this.firstCreds.Load(); creds != nil {
+		return *creds, true
+	}
+	return "", false
 }
 
 func (this *Context) UrlCredentials(urlS string) *auth.Credentials {

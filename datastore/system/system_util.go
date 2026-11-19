@@ -422,31 +422,32 @@ type SystemContext interface {
 	FirstCreds() (string, bool)
 }
 
-// Return the user to impersonate from the context credentials
+// Return the user to impersonate from the context credentials, in serverless only
 func credsFromContext(context SystemContext) string {
 	if !tenant.IsServerless() {
 		return ""
 	}
 
+	// on error, userName is restricted
+	userName, _ := userFromContext(context)
+	return userName
+}
+
+// Return the user to impersonate from the context credentials: "" if the user has PRIV_SYSTEM_READ
+// (no restrictions), otherwise the user whose entries alone are accessible.
+// If PRIV_SYSTEM_READ can't be checked, return the error with the restricted user, and don't cache it.
+func userFromContext(context SystemContext) (string, errors.Error) {
+
 	// do we have a cached full user name?
 	userName, isSet := context.FirstCreds()
 	if isSet {
-		return userName
+		return userName, nil
 	}
-	creds := context.Credentials()
-	privs := auth.NewPrivileges()
-	privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
-
-	// Since this is an internal action to check if the user is an admin
-	if datastore.GetDatastore().AuthorizeInternal(privs, creds) == nil {
-
-		// it's an admin, no restrictions
-		userName = ""
-	} else {
-		userName = datastore.EncodeName(datastore.FirstCred(creds))
+	userName, err := datastore.SystemReadUser(context.Credentials())
+	if err == nil {
+		context.SetFirstCreds(userName)
 	}
-	context.SetFirstCreds(userName)
-	return userName
+	return userName, err
 }
 
 // In serverless encodes Node Name to NodeUUID
