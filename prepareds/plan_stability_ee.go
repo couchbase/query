@@ -43,7 +43,6 @@ func planStabilityInit() {
 }
 
 func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
-	cacheFull := this.cache.Size() >= this.cache.Limit()
 	if oldMode == newMode {
 		return nil
 	} else if oldMode == settings.PS_MODE_OFF &&
@@ -61,7 +60,9 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	} else if newMode == settings.PS_MODE_PREPARED_ONLY &&
 		(oldMode == settings.PS_MODE_AD_HOC || oldMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
 		// switch to PREPARED_ONLY from AD_HOC or AD_HOC_READ_ONLY
-		return updatePreparedStmts(newMode, cacheFull)
+		// MB-75471: also delete the saved ad hoc plans of entries not in this node's prepared cache, e.g.
+		// the ones prepared on other nodes
+		return updatePreparedStmts(newMode, true)
 	}
 	// else, the following changes do not require changes to either prepared statements in
 	// prepared cache, or saved prepared statements on disk:
@@ -69,6 +70,55 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	//  - changing from either PREPARED_ONLY or AD_HOC to AD_HOC_READ_ONLY
 
 	return nil
+}
+
+// MB-75471: create QUERY_METADATA if it does not exist, and wait for it, before plan stability is turned on
+func (this *preparedCache) EnsureQueryMetadata(requestId string) errors.Error {
+	hasMetadata, err := hasQueryMetadata(true, requestId, "SAVE option of PREPARE or Plan Stability", true)
+	if err != nil {
+		return err
+	} else if !hasMetadata {
+		return errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
+	}
+	return nil
+}
+
+// MB-75471: the mode changes from which ad hoc and inline UDF entries are removed from the prepared cache
+// (see updatePreparedStmts())
+func removesAdHocEntries(oldMode, newMode settings.PlanStabilityMode) bool {
+	switch newMode {
+	case settings.PS_MODE_OFF:
+		return oldMode != settings.PS_MODE_OFF
+	case settings.PS_MODE_PREPARED_ONLY:
+		return oldMode == settings.PS_MODE_AD_HOC || oldMode == settings.PS_MODE_AD_HOC_READ_ONLY
+	}
+	return false
+}
+
+/*
+ * MB-75471: a plan stability mode change made on another node, which updates the saved plans: remove the
+ * entries the new mode does not keep from this node's prepared cache, same as updatePreparedStmts()
+ */
+func (this *preparedCache) ApplyPlanStabilityMode(oldMode, newMode settings.PlanStabilityMode) {
+	if !removesAdHocEntries(oldMode, newMode) {
+		return
+	}
+	names := make([]string, 0, 128)
+	PreparedsForeach(func(name string, ce *CacheEntry) bool {
+		prepared := ce.Prepared
+		if !prepared.Persist() && (prepared.AdHoc() || prepared.IsInlineUdf()) {
+			names = append(names, encodeName(prepared.Name(), prepared.QueryContext()))
+		}
+		return true
+	}, nil)
+	for i := range names {
+		// an entry may be gone by now
+		deletePreparedFromCache(names[i])
+	}
+	if len(names) > 0 {
+		logging.Infof("Plan stability mode changed from %v to %v: %d entries removed from the prepared cache",
+			oldMode, newMode, len(names))
+	}
 }
 
 /*

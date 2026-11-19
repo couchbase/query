@@ -113,7 +113,7 @@ func (b *settingsKeyspace) Update(updates value.Pairs, context datastore.QueryCo
 			continue
 		}
 
-		err, warnings := settings.UpdateSettings(b.namespace.store.enterprise, context.RequestId(), pair.Value)
+		err, warnings := settings.UpdatePersistSettings(b.namespace.store.enterprise, context.RequestId(), pair.Value)
 		if warnings != nil {
 			for _, w := range warnings {
 				context.Warning(w)
@@ -128,13 +128,6 @@ func (b *settingsKeyspace) Update(updates value.Pairs, context datastore.QueryCo
 		mCount++
 		if preserveMutations {
 			mPairs = append(mPairs, pair)
-		}
-	}
-
-	if mCount > 0 {
-		err := settings.PersistSettings()
-		if err != nil && len(errs) == 0 {
-			errs = append(errs, err)
 		}
 	}
 
