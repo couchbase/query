@@ -665,8 +665,9 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
 			return "", nil
 		}
-		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false, false,
-			planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+		// the plan stability error policy applies to a plan distributed by another node
+		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false,
+			planStabilityMode != settings.PS_MODE_OFF, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 		if err != nil {
 			return nil, err
 		}
