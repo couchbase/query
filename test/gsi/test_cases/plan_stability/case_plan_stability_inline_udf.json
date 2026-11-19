@@ -238,6 +238,132 @@
         ]
     },
     {
+	"testcase": "MB-75462: create scoped inline UDF (with query_context)",
+        "queryParams": {"query_context": "default:shellTest._default"},
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"CREATE FUNCTION UDF_PlanStability_inline3() { ( SELECT RAW r.c21 FROM default:shellTest._default._default AS r WHERE r.type = \"right\" AND r.c21 < 5 ORDER BY r.c21 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75462: execute scoped inline UDF with query_context (1)",
+        "queryParams": {"query_context": "default:shellTest._default"},
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline3()",
+        "results": [
+            [ 1, 2, 2, 3, 3, 3 ]
+        ]
+    },
+    {
+	"testcase": "MB-75462: execute scoped inline UDF with query_context (2)",
+        "queryParams": {"query_context": "default:shellTest._default"},
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline3()",
+        "results": [
+            [ 1, 2, 2, 3, 3, 3 ]
+        ]
+    },
+    {
+	"testcase": "MB-75462: execute scoped inline UDF with query_context (3)",
+        "queryParams": {"query_context": "default:shellTest._default"},
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline3()",
+        "results": [
+            [ 1, 2, 2, 3, 3, 3 ]
+        ]
+    },
+    {
+	"testcase": "MB-75462: execute scoped inline UDF without query_context",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"EXECUTE FUNCTION default:shellTest._default.UDF_PlanStability_inline3()",
+        "results": [
+            [ 1, 2, 2, 3, 3, 3 ]
+        ]
+    },
+    {
+	"testcase": "MB-75462: one in-memory UDF cache entry, without query context",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE inlineUDF = true AND name LIKE '%UDF_PlanStability_inline3%'",
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75462: in-memory UDF cache entry has no query context",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE inlineUDF = true AND name LIKE '%UDF_PlanStability_inline3%' AND IFMISSINGORNULL(queryContext, '') = ''",
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75462: one on-disk UDF entry",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%' AND inlineUDF = true AND name LIKE '%UDF_PlanStability_inline3%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75462: on-disk UDF entry is not named with the query context",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%' AND inlineUDF = true AND name LIKE '%UDF_PlanStability_inline3%' AND name NOT LIKE '%(%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75462: drop scoped inline UDF",
+        "queryParams": {"query_context": "default:shellTest._default"},
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"DROP FUNCTION UDF_PlanStability_inline3",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75462: in-memory UDF cache entry removed",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE inlineUDF = true AND name LIKE '%UDF_PlanStability_inline3%'",
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75462: on-disk UDF entry removed",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id LIKE 'ppn::%' AND inlineUDF = true AND name LIKE '%UDF_PlanStability_inline3%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
 	"testcase": "Set plan stability mode to OFF (via UNSET)",
         "statements":"UPDATE system:settings UNSET plan_stability.mode",
         "results": [
