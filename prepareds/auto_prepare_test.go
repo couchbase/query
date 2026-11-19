@@ -13,6 +13,7 @@ import (
 
 	"github.com/couchbase/query/parser/n1ql"
 	"github.com/couchbase/query/plan"
+	"github.com/couchbase/query/settings"
 )
 
 // MB-75435: an auto-prepared plan carries the statement type, which later executions of the statement
@@ -30,11 +31,11 @@ func TestAutoPreparePlanType(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: parse error: %v", tc.text, err)
 		}
-		prepared := plan.NewPrepared(nil, nil, nil, nil)
+		prepared := plan.NewPrepared(nil, nil, nil, nil, nil)
 		prepared.SetName(tc.name)
 		prepared.SetText(tc.text)
-		if !AddAutoPreparePlan(stmt, prepared) {
-			t.Fatalf("%s: not added", tc.text)
+		if added, err := AddAutoPreparePlan(stmt, prepared, settings.PS_MODE_OFF); err != nil || !added {
+			t.Fatalf("%s: not added (%v)", tc.text, err)
 		}
 		ce := prepareds.get(encodeName(tc.name, ""), false)
 		if ce == nil {
