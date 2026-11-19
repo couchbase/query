@@ -32,7 +32,7 @@ const (
 
 func InitSettings() {
 	globalSettings = new(querySettings)
-	globalSettings.settings = make(map[string]interface{}, 4)
+	globalSettings.settings = make(map[string]any, 4)
 
 	val, rev, err := metakv.Get(_SETTINGS_SETTINGS)
 	if err != nil {
@@ -77,7 +77,7 @@ var settingsUpdateLock sync.Mutex
 
 // initial: the settings read at startup
 func processSettings(val []byte, thisNode string, initial bool) {
-	var vmap map[string]interface{}
+	var vmap map[string]any
 	err := json.Unmarshal(val, &vmap)
 	if err != nil {
 		logging.Errorf("SETTINGS: Error unmarshalling new global settings: %v", err)
@@ -101,8 +101,8 @@ func processSettings(val []byte, thisNode string, initial bool) {
 	// a plan stability setting not present in the new settings is not changed
 	oldMode := GetPlanStabilityMode()
 
-	removed := make(map[string]interface{})
-	invalid := make(map[string]interface{})
+	removed := make(map[string]any)
+	invalid := make(map[string]any)
 	globalSettings.Lock()
 	for k, v := range globalSettings.settings {
 		if _, ok := vmap[k]; !ok {
@@ -142,8 +142,8 @@ func processSettings(val []byte, thisNode string, initial bool) {
 	logging.Infof("SETTINGS: Processing of new global settings completed.")
 }
 
-func defaultSettings() map[string]interface{} {
-	rv := map[string]interface{}{
+func defaultSettings() map[string]any {
+	rv := map[string]any{
 		PLAN_STABILITY: defaultPlanStabilitySettings(),
 	}
 	globalSettings.Lock()
@@ -152,13 +152,13 @@ func defaultSettings() map[string]interface{} {
 	return rv
 }
 
-func FetchSettings(remap bool) (map[string]interface{}, errors.Error) {
+func FetchSettings(remap bool) (map[string]any, errors.Error) {
 	val, _, err := metakv.Get(_SETTINGS_SETTINGS)
 	if err != nil {
 		return nil, errors.NewSettingsMetaKVError(err, "Error getting global settings from metakv")
 	}
 
-	var vmap map[string]interface{}
+	var vmap map[string]any
 	err = json.Unmarshal(val, &vmap)
 	if err != nil {
 		return nil, errors.NewSettingsMetaKVError(err, "Error unmarshalling global settings")
@@ -209,7 +209,7 @@ func updateSettings(enterprise bool, requestId string, settings any) (errors.Err
 	if actual, ok := settings.(value.Value); ok {
 		settings = actual.Actual()
 	}
-	settingsMap, ok := settings.(map[string]interface{})
+	settingsMap, ok := settings.(map[string]any)
 	if !ok {
 		return errors.NewSettingsInvalidType("settings", "", settings), nil
 	}
@@ -317,18 +317,18 @@ var globalSettings *querySettings
 
 type querySettings struct {
 	sync.RWMutex
-	settings map[string]interface{}
+	settings map[string]any
 }
 
-func (this *querySettings) getAllSettings() map[string]interface{} {
-	var allSettings map[string]interface{}
+func (this *querySettings) getAllSettings() map[string]any {
+	var allSettings map[string]any
 	this.RLock()
-	allSettings = make(map[string]interface{}, len(this.settings))
+	allSettings = make(map[string]any, len(this.settings))
 	for k, v := range this.settings {
 		// return a copy when appropriate
 		switch setting := v.(type) {
-		case map[string]interface{}:
-			vmap := make(map[string]interface{}, len(setting))
+		case map[string]any:
+			vmap := make(map[string]any, len(setting))
 			for kk, vv := range setting {
 				vmap[kk] = vv
 			}
@@ -344,21 +344,21 @@ func (this *querySettings) getAllSettings() map[string]interface{} {
 	return allSettings
 }
 
-func (this *querySettings) setSetting(name string, value interface{}) {
+func (this *querySettings) setSetting(name string, value any) {
 	this.Lock()
 	this.settings[name] = value
 	this.Unlock()
 }
 
-func (this *querySettings) getSetting(name string) interface{} {
-	var rv interface{}
+func (this *querySettings) getSetting(name string) any {
+	var rv any
 	this.RLock()
 	setting, ok := this.settings[name]
 	if ok {
 		// return a copy when appropriate
 		switch setting := setting.(type) {
-		case map[string]interface{}:
-			vmap := make(map[string]interface{}, len(setting))
+		case map[string]any:
+			vmap := make(map[string]any, len(setting))
 			for k, v := range setting {
 				vmap[k] = v
 			}
@@ -374,10 +374,10 @@ func (this *querySettings) getSetting(name string) interface{} {
 	return rv
 }
 
-func SetSetting(name string, value interface{}) {
+func SetSetting(name string, value any) {
 	globalSettings.setSetting(name, value)
 }
 
-func GetSetting(name string) interface{} {
+func GetSetting(name string) any {
 	return globalSettings.getSetting(name)
 }

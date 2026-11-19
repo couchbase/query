@@ -22,8 +22,8 @@ func PlanStabilityAvailable() bool {
 }
 
 // when settings come from metakv, validate the settings (including proper type conversion)
-func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, errors.Error) {
-	planStability, ok := val.(map[string]interface{})
+func validatePlanStabilitySetting(val any) (map[string]any, errors.Error) {
+	planStability, ok := val.(map[string]any)
 	if !ok {
 		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
 	}
@@ -72,7 +72,7 @@ func validatePlanStabilitySetting(val interface{}) (map[string]interface{}, erro
 	return planStability, nil
 }
 
-func UpdatePersistPlanStabilitySetting(requestId string, val interface{}) errors.Error {
+func UpdatePersistPlanStabilitySetting(requestId string, val any) errors.Error {
 	// MB-75471: the update and its write to metakv under the lock, so that updates are written in the
 	// order they are made
 	settingsUpdateLock.Lock()
@@ -92,7 +92,7 @@ func UpdatePersistPlanStabilitySetting(requestId string, val interface{}) errors
 }
 
 // the caller holds settingsUpdateLock
-func updatePlanStabilitySetting(requestId string, val interface{}) errors.Error {
+func updatePlanStabilitySetting(requestId string, val any) errors.Error {
 	// validate the new setting completely before changing anything
 	newSetting, err := parsePlanStabilitySetting(val)
 	if err != nil {
@@ -216,8 +216,8 @@ func parsePlanStabilitySetting(val any) (map[string]any, errors.Error) {
 
 // Given plan stability settings in integer form, remap to string form for easier understanding
 // (this function changes the input map and thus caller should use a copy when necessary)
-func remapPlanStabilitySetting(psSetting interface{}) (map[string]interface{}, errors.Error) {
-	planStability, ok := psSetting.(map[string]interface{})
+func remapPlanStabilitySetting(psSetting any) (map[string]any, errors.Error) {
+	planStability, ok := psSetting.(map[string]any)
 	if !ok {
 		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", psSetting)
 	}
