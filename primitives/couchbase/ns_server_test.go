@@ -13,7 +13,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
+	"unsafe"
 )
 
 var samplePools = `{
@@ -391,5 +394,164 @@ func TestBucketTransientError(t *testing.T) {
 	err := &BucketNotReadyError{uri: uri, reason: "empty vBucketMap"}
 	if exp := "Invalid URL (" + uri + ") response: empty vBucketMap"; err.Error() != exp {
 		t.Errorf("BucketNotReadyError.Error() = %q, expected %q", err.Error(), exp)
+	}
+}
+
+func newDownNodesTestMap() *VBucketServerMap {
+	return &VBucketServerMap{
+		NumReplicas: 2,
+		ServerList:  []string{"a:11210", "b:11210", "c:11210"},
+		VBucketMap:  [][]int{{0, 1, 2}, {1, 2, -1}, {-1, 0, 1}},
+	}
+}
+
+// like a real bucket, which has its own decoded copy of the map besides the live one that MarkDown() updates
+func newDownNodesTestBucket(vbm *VBucketServerMap) *Bucket {
+	return &Bucket{
+		VBSMJson:         VBucketServerMap{NumReplicas: vbm.NumReplicas, ServerList: vbm.ServerList, VBucketMap: vbm.VBucketMap},
+		vBucketServerMap: unsafe.Pointer(vbm),
+	}
+}
+
+func TestMarkDown(t *testing.T) {
+	vbm := newDownNodesTestMap()
+	for n := -1; n <= len(vbm.ServerList); n++ {
+		if vbm.IsDown(n) {
+			t.Errorf("node %d down before any MarkDown", n)
+		}
+	}
+
+	if marked := vbm.MarkDown(0, 1); len(marked) != 1 || marked[0] != "a:11210" {
+		t.Errorf("MarkDown(0, 1) marked %v, expected [a:11210]", marked)
+	}
+	if !vbm.IsDown(0) || vbm.IsDown(1) || vbm.IsDown(2) {
+		t.Errorf("after MarkDown(0, 1): down %v %v %v, expected true false false", vbm.IsDown(0), vbm.IsDown(1),
+			vbm.IsDown(2))
+	}
+
+	// already down: not reported again
+	if marked := vbm.MarkDown(0, 1); len(marked) != 0 {
+		t.Errorf("second MarkDown(0, 1) marked %v, expected none", marked)
+	}
+
+	// read from the second replica: both nodes ahead of it are down, only the new one is reported
+	if marked := vbm.MarkDown(0, 2); len(marked) != 1 || marked[0] != "b:11210" {
+		t.Errorf("MarkDown(0, 2) marked %v, expected [b:11210]", marked)
+	}
+
+	// no active copy
+	if marked := vbm.MarkDown(2, 1); len(marked) != 0 {
+		t.Errorf("MarkDown(2, 1) marked %v, expected none", marked)
+	}
+	if vbm.IsDown(-1) || vbm.IsDown(len(vbm.ServerList)) {
+		t.Errorf("out of range node reported down")
+	}
+}
+
+func TestMarkDownExpiry(t *testing.T) {
+	defer func(d time.Duration) { downNodeExpiry = d }(downNodeExpiry)
+	downNodeExpiry = 50 * time.Millisecond
+
+	vbm := newDownNodesTestMap()
+	vbm.MarkDown(1, 1)
+	if !vbm.IsDown(1) {
+		t.Fatalf("node 1 not down after MarkDown(1, 1)")
+	}
+	time.Sleep(2 * downNodeExpiry)
+	if vbm.IsDown(1) {
+		t.Errorf("node 1 still down after the mark expired")
+	}
+
+	// once expired, a new mark is reported again
+	if marked := vbm.MarkDown(1, 1); len(marked) != 1 || marked[0] != "b:11210" {
+		t.Errorf("MarkDown(1, 1) after expiry marked %v, expected [b:11210]", marked)
+	}
+	if !vbm.IsDown(1) {
+		t.Errorf("node 1 not down after it was marked again")
+	}
+}
+
+// meant to be run with the race detector: replica reads check the mark while others set it
+func TestMarkDownConcurrent(t *testing.T) {
+	vbm := newDownNodesTestMap()
+
+	var reported atomic.Int32
+	wg := sync.WaitGroup{}
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			for j := 0; j < 100; j++ {
+				reported.Add(int32(len(vbm.MarkDown(0, 1))))
+				vbm.IsDown(0)
+				vbm.IsDown(1)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	if r := reported.Load(); r != 1 {
+		t.Errorf("node 0 reported as newly down %d times, expected 1", r)
+	}
+}
+
+// the vitals debug output reports the nodes currently marked down
+// the debug output marshals the bucket, so the marks must show through Bucket.MarshalJSON(), i.e. from the live map
+func TestMarkDownMarshal(t *testing.T) {
+	vbm := newDownNodesTestMap()
+	b := newDownNodesTestBucket(vbm)
+	downNodes := func() string {
+		var m struct {
+			VBSMJson map[string]any
+		}
+		bytes, err := json.Marshal(b)
+		if err == nil {
+			err = json.Unmarshal(bytes, &m)
+		}
+		if err != nil {
+			t.Fatalf("marshalling the bucket: %v", err)
+		}
+		return fmt.Sprint(m.VBSMJson["DownNodes"])
+	}
+
+	if d := downNodes(); d != "<nil>" {
+		t.Errorf("DownNodes before any MarkDown: %v, expected <nil>", d)
+	}
+	vbm.MarkDown(1, 1)
+	if d := downNodes(); d != "[false true false]" {
+		t.Errorf("DownNodes after MarkDown(1, 1): %v, expected [false true false]", d)
+	}
+}
+
+// marshalling the live map while it's being marked down must not race (run with -race)
+func TestMarkDownMarshalConcurrent(t *testing.T) {
+	vbm := newDownNodesTestMap()
+	b := newDownNodesTestBucket(vbm)
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < 8; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			vbm.MarkDown(0, 2)
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			if _, err := json.Marshal(b); err != nil {
+				t.Errorf("marshalling the bucket: %v", err)
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+}
+
+// a streaming config update can install a map with no vbuckets yet, and the bucket may have no map at all
+func TestMarshalEmptyVBucketMap(t *testing.T) {
+	for _, b := range []*Bucket{{vBucketServerMap: unsafe.Pointer(&VBucketServerMap{})}, {}} {
+		if _, err := json.Marshal(b); err != nil {
+			t.Errorf("marshalling the bucket: %v", err)
+		}
 	}
 }

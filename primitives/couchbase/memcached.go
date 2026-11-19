@@ -474,11 +474,11 @@ func (b *Bucket) processOpError(vb uint32, lastError error, node string, desc *d
 		}
 	} else if desc.amendReplica {
 
-		// if we successfully used a replica, mark the node down, so that until the next refresh
+		// if we successfully used a replica, mark the node down, so that until the mark expires or the next refresh
 		// we start from the same place
-		b.VBServerMap().MarkDown(vb, desc.replica)
-		if logging.LogLevel() == logging.DEBUG {
-			logging.Debugf("[%p:%s:%s:%d] replica:%v", b, b.Name, b.getAbbreviatedUUID(), vb, desc.replica)
+		for _, node := range b.VBServerMap().MarkDown(vb, desc.replica) {
+			logging.Infof("Bucket %s (%s): read from replica %d of vbucket %d succeeded, marked node %s down for replica"+
+				" reads for %v", b.Name, b.getAbbreviatedUUID(), desc.replica, vb, node, downNodeExpiry)
 		}
 	}
 }

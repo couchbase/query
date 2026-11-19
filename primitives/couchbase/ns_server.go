@@ -321,16 +321,17 @@ type VBucketServerMap struct {
 	NumReplicas   int      `json:"numReplicas"`
 	ServerList    []string `json:"serverList"`
 	VBucketMap    [][]int  `json:"vBucketMap"`
-	DownNodes     []bool
-	sync.Mutex
+
+	// MB-75094 per node, the util.Time until which the node is marked down for replica reads
+	downUntil atomic.Pointer[[]atomic.Int64]
 }
 
-func (this VBucketServerMap) MarshalJSON() ([]byte, error) {
+func (this *VBucketServerMap) MarshalJSON() ([]byte, error) {
 	m := make(map[string]any)
 	m["HashAlgorithm"] = this.HashAlgorithm
 	m["NumReplicas"] = this.NumReplicas
 	m["ServerList"] = this.ServerList
-	m["DownNodes"] = this.DownNodes
+	m["DownNodes"] = this.downNodes()
 	var b strings.Builder
 	var last []int
 	lasti := -1
@@ -347,7 +348,7 @@ func (this VBucketServerMap) MarshalJSON() ([]byte, error) {
 	if lasti != len(this.VBucketMap)-1 {
 		b.WriteString(fmt.Sprintf("...(%d times)", len(this.VBucketMap)-lasti))
 	}
-	m["VBucketMap"] = b.String()[1:]
+	m["VBucketMap"] = strings.TrimPrefix(b.String(), ",") // the map may have no vbuckets yet
 	return json.Marshal(m)
 }
 
@@ -362,6 +363,10 @@ func sameSlice(a []int, b []int) bool {
 	}
 	return true
 }
+
+// MB-75094 how long a node stays marked down for replica reads after a read fell back to a replica;
+// a bucket refresh clears the marks sooner
+var downNodeExpiry = 60 * time.Second
 
 // Bucket is the primary entry point for most data operations.
 // Bucket is a locked data structure. All access to its fields should be done using read or write locking,
@@ -497,21 +502,42 @@ func (e *BucketNotReadyError) Error() string {
 }
 
 func (v *VBucketServerMap) IsDown(node int) bool {
-	return len(v.DownNodes) != 0 && v.DownNodes[node]
+	downUntil := v.downUntil.Load()
+	return downUntil != nil && node >= 0 && node < len(*downUntil) && util.Time((*downUntil)[node].Load()) > util.Now()
 }
 
-func (v *VBucketServerMap) MarkDown(vb uint32, replica int) {
-	v.Lock()
-	defer v.Unlock()
-	if v.DownNodes == nil {
-		v.DownNodes = make([]bool, len(v.ServerList))
+// for each node, whether it's currently marked down; nil if no node has been marked down
+func (v *VBucketServerMap) downNodes() []bool {
+	downUntil := v.downUntil.Load()
+	if downUntil == nil {
+		return nil
 	}
-	for i := 0; i < replica; i++ {
+	down := make([]bool, len(*downUntil))
+	for n := range down {
+		down[n] = v.IsDown(n)
+	}
+	return down
+}
+
+// MarkDown marks the nodes ahead of replica in the vbucket's chain down for downNodeExpiry, and returns the ones
+// that weren't already marked down
+func (v *VBucketServerMap) MarkDown(vb uint32, replica int) []string {
+	downUntil := v.downUntil.Load()
+	if downUntil == nil {
+		newDownUntil := make([]atomic.Int64, len(v.ServerList))
+		v.downUntil.CompareAndSwap(nil, &newDownUntil)
+		downUntil = v.downUntil.Load()
+	}
+	now := util.Now()
+	until := int64(now.Add(downNodeExpiry))
+	var marked []string
+	for i := 0; i < replica && i < len(v.VBucketMap[vb]); i++ {
 		n := v.VBucketMap[vb][i]
-		if n >= 0 {
-			v.DownNodes[n] = true
+		if n >= 0 && n < len(*downUntil) && util.Time((*downUntil)[n].Swap(until)) <= now {
+			marked = append(marked, v.ServerList[n])
 		}
 	}
+	return marked
 }
 
 // VBServerMap returns the current VBucketServerMap.
@@ -1945,7 +1971,7 @@ func (b *Bucket) MarshalJSON() ([]byte, error) {
 	m["DDocs"] = b.DDocs
 	m["BasicStats"] = b.BasicStats
 	m["Controllers"] = b.Controllers
-	m["VBSMJson"] = b.VBSMJson
+	m["VBSMJson"] = b.VBServerMap() // the live map, which carries the down marks
 	m["NodesJSON"] = b.NodesJSON
 	m["Version"] = b.Version
 	m["tempServers"] = b.tempServers
