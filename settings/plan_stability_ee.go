@@ -73,37 +73,75 @@ func validatePlanStabilitySetting(val any) (map[string]any, errors.Error) {
 }
 
 func UpdatePersistPlanStabilitySetting(requestId string, val any) errors.Error {
+	// MB-75471: the update and its write to metakv under the lock, so that updates are written in the
+	// order they are made
+	settingsUpdateLock.Lock()
+	defer settingsUpdateLock.Unlock()
+
+	old := globalSettings.getAllSettings()
 	err := updatePlanStabilitySetting(requestId, val)
 	if err != nil {
 		return err
 	}
-	return PersistSettings()
+	err = PersistSettings()
+	if err != nil {
+		// the other nodes do not get the new setting, keep the old one
+		restoreSettings(old)
+	}
+	return err
 }
 
+// the caller holds settingsUpdateLock
 func updatePlanStabilitySetting(requestId string, val any) errors.Error {
-	psMap, ok := val.(map[string]any)
-	if !ok {
-		return errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
+	// validate the new setting completely before changing anything
+	newSetting, err := parsePlanStabilitySetting(val)
+	if err != nil {
+		return err
 	}
-
-	// use default value if not present in the new settings (e.g. UNSET used)
-	if _, ok := psMap["mode"]; !ok {
-		psMap["mode"] = PS_MODE_OFF
-	}
-	if _, ok := psMap["error_policy"]; !ok {
-		psMap["error_policy"] = PS_ERROR_MODERATE
-	}
+	newMode := newSetting["mode"].(PlanStabilityMode)
 
 	// GetPlanStabilitySetting() returns a copy of the settings
-	planStability, err := GetPlanStabilitySetting()
+	oldSetting, err := GetPlanStabilitySetting()
 	if err != nil {
 		return err
 	}
 	var oldMode PlanStabilityMode
-	if oldModeVal, ok := planStability["mode"]; ok {
+	if oldModeVal, ok := oldSetting["mode"]; ok {
 		oldMode = getPlanStabilityModeValue(oldModeVal)
 	}
 
+	// when turning plan stability on, QUERY_METADATA must exist before the new mode is in effect: a plan
+	// saved while it is being created would find it missing, and reset plan stability (see
+	// prepareds.HandleMissingQueryMetadata())
+	if oldMode == PS_MODE_OFF && newMode != PS_MODE_OFF {
+		err = planCache.EnsureQueryMetadata(requestId)
+		if err != nil {
+			return err
+		}
+	}
+
+	// the new mode is in effect before the prepared cache and the saved plans are updated: when turning
+	// plan stability on, plans prepared in the meantime are saved; when turning it off, they are not
+	globalSettings.setSetting(PLAN_STABILITY, newSetting)
+	err = planCache.UpdatePlanStabilityMode(oldMode, newMode, requestId)
+	if err != nil {
+		// the setting is not saved (to metakv), keep the old one
+		globalSettings.setSetting(PLAN_STABILITY, oldSetting)
+		return err
+	}
+
+	return nil
+}
+
+// validate a new plan stability setting, set by the user or (UpdatePersistPlanStabilitySetting()) restored,
+// and return it in internal form; a field not present (e.g. UNSET used) gets its default value
+func parsePlanStabilitySetting(val any) (map[string]any, errors.Error) {
+	psMap, ok := val.(map[string]any)
+	if !ok {
+		return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY, "map[string]interface{}", val)
+	}
+
+	planStability := defaultPlanStabilitySettings()
 	for kk, vv := range psMap {
 		if actual, ok := vv.(value.Value); ok {
 			vv = actual.Actual()
@@ -116,39 +154,31 @@ func updatePlanStabilitySetting(requestId string, val any) errors.Error {
 
 		switch kk {
 		case "mode":
-			var newMode PlanStabilityMode
 			switch vv := vv.(type) {
 			case string:
 				// when user sets the setting
 				if mode, ok := _PS_MODE_MAP[strings.ToLower(vv)]; ok {
 					planStability[kk] = mode
-					newMode = mode
 				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "'off'/'prepared_only'/'ad_hoc'/'ad_hoc_read_only'", vv)
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "'off'/'prepared_only'/'ad_hoc'/'ad_hoc_read_only'", vv)
 				}
 			case int64:
 				// when setting comes from metakv
 				mode := PlanStabilityMode(vv)
 				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC_READ_ONLY {
 					planStability[kk] = mode
-					newMode = mode
 				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
 				}
 			case PlanStabilityMode:
 				mode := vv
 				if mode >= PS_MODE_OFF && mode <= PS_MODE_AD_HOC_READ_ONLY {
 					planStability[kk] = mode
-					newMode = mode
 				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".mode", "", vv)
 				}
 			default:
-				return errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
-			}
-			err := planCache.UpdatePlanStabilityMode(oldMode, newMode, requestId)
-			if err != nil {
-				return err
+				return nil, errors.NewSettingsInvalidType(PLAN_STABILITY+".mode", "string", vv)
 			}
 		case "error_policy":
 			switch vv := vv.(type) {
@@ -157,7 +187,7 @@ func updatePlanStabilitySetting(requestId string, val any) errors.Error {
 				if error_policy, ok := _PS_ERROR_POLICY_MAP[strings.ToLower(vv)]; ok {
 					planStability[kk] = error_policy
 				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "'strict'/'moderate'/'flexible'", vv)
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "'strict'/'moderate'/'flexible'", vv)
 				}
 			case int64:
 				// when setting comes from metakv
@@ -165,26 +195,23 @@ func updatePlanStabilitySetting(requestId string, val any) errors.Error {
 				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
 					planStability[kk] = error_policy
 				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
 				}
 			case PlanStabilityErrorPolicy:
 				error_policy := vv
 				if error_policy >= PS_ERROR_FLEXIBLE && error_policy <= PS_ERROR_STRICT {
 					planStability[kk] = error_policy
 				} else {
-					return errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
+					return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+".error_policy", "", vv)
 				}
 			default:
-				return errors.NewSettingsInvalidType(PLAN_STABILITY+".error_policy", "string", vv)
+				return nil, errors.NewSettingsInvalidType(PLAN_STABILITY+".error_policy", "string", vv)
 			}
 		default:
-			return errors.NewSettingsInvalidValue(PLAN_STABILITY+"."+kk, "", nil)
+			return nil, errors.NewSettingsInvalidValue(PLAN_STABILITY+"."+kk, "", nil)
 		}
 	}
-	// update settings once all processed for plan stability
-	globalSettings.setSetting(PLAN_STABILITY, planStability)
-
-	return nil
+	return planStability, nil
 }
 
 // Given plan stability settings in integer form, remap to string form for easier understanding

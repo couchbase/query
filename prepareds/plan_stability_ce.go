@@ -24,6 +24,14 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.update_plan_stability_mode")
 }
 
+func (this *preparedCache) ApplyPlanStabilityMode(oldMode, newMode settings.PlanStabilityMode) {
+	// no-op
+}
+
+func (this *preparedCache) EnsureQueryMetadata(requestId string) errors.Error {
+	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.ensure_query_metadata")
+}
+
 func persistPrepared(prepared *plan.Prepared) errors.Error {
 	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.persist_prepared")
 }

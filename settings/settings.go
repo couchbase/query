@@ -55,7 +55,7 @@ func InitSettings() {
 	} else {
 		// process initial settings
 		setSettingsRev(rev)
-		processSettings(val, "")
+		processSettings(val, "", true)
 	}
 
 	// monitor entry
@@ -66,12 +66,17 @@ func callback(kve metakv.KVEntry) error {
 	if kve.Path == _SETTINGS_SETTINGS {
 		// including the settings written by this node, which processSettings() skips
 		setSettingsRev(kve.Rev)
-		processSettings(kve.Value, distributed.RemoteAccess().WhoAmI())
+		processSettings(kve.Value, distributed.RemoteAccess().WhoAmI(), false)
 	}
 	return nil
 }
 
-func processSettings(val []byte, thisNode string) {
+// MB-75471: serializes changes to the settings on this node: updates (with their write to metakv), and
+// settings received from metakv
+var settingsUpdateLock sync.Mutex
+
+// initial: the settings read at startup
+func processSettings(val []byte, thisNode string, initial bool) {
 	var vmap map[string]any
 	err := json.Unmarshal(val, &vmap)
 	if err != nil {
@@ -88,6 +93,13 @@ func processSettings(val []byte, thisNode string) {
 	}
 
 	logging.Infof("SETTINGS: New global settings received: %v", vmap)
+
+	// not while an update on this node is in progress: an update that fails sets the old setting back
+	settingsUpdateLock.Lock()
+	defer settingsUpdateLock.Unlock()
+
+	// a plan stability setting not present in the new settings is not changed
+	oldMode := GetPlanStabilityMode()
 
 	removed := make(map[string]any)
 	invalid := make(map[string]any)
@@ -118,6 +130,13 @@ func processSettings(val []byte, thisNode string) {
 	}
 	if len(invalid) > 0 {
 		logging.Infof("SETTINGS: invalid settings: %v", invalid)
+	}
+
+	// MB-75471: a plan stability mode change made on another node: update this node's prepared cache (the
+	// node that made the change updates the saved plans); not for the initial settings, when the prepared
+	// cache is empty
+	if newMode := GetPlanStabilityMode(); !initial && newMode != oldMode && planCache != nil {
+		planCache.ApplyPlanStabilityMode(oldMode, newMode)
 	}
 
 	logging.Infof("SETTINGS: Processing of new global settings completed.")
@@ -159,7 +178,34 @@ func FetchSettings(remap bool) (map[string]any, errors.Error) {
 	return vmap, nil
 }
 
-func UpdateSettings(enterprise bool, requestId string, settings any) (errors.Error, errors.Errors) {
+// update the settings, and write them to metakv
+func UpdatePersistSettings(enterprise bool, requestId string, settings any) (errors.Error, errors.Errors) {
+	// MB-75471: the update and its write to metakv under the lock, so that updates are written in the
+	// order they are made
+	settingsUpdateLock.Lock()
+	defer settingsUpdateLock.Unlock()
+
+	old := globalSettings.getAllSettings()
+	err, warnings := updateSettings(enterprise, requestId, settings)
+	if err == nil {
+		err = PersistSettings()
+		if err != nil {
+			// the other nodes do not get the new settings, keep the old ones
+			restoreSettings(old)
+		}
+	}
+	return err, warnings
+}
+
+// set back settings returned by getAllSettings() (a copy), e.g. when writing new settings to metakv fails;
+// the prepared cache and the saved plans are not changed back
+func restoreSettings(old map[string]any) {
+	globalSettings.Lock()
+	globalSettings.settings = old
+	globalSettings.Unlock()
+}
+
+func updateSettings(enterprise bool, requestId string, settings any) (errors.Error, errors.Errors) {
 	if actual, ok := settings.(value.Value); ok {
 		settings = actual.Actual()
 	}
@@ -259,7 +305,7 @@ func PersistSettings() errors.Error {
 	if er != nil {
 		return er
 	}
-	err := metakv.Set(_SETTINGS_SETTINGS, bytes, nil)
+	err := setStoredSettings(bytes, nil)
 	if err != nil {
 		logging.Errorf("SETTINGS: Error updating global settings in metakv: %v", err)
 		return errors.NewSettingsMetaKVError(err, "Error updating global settings in metakv")

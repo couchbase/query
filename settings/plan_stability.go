@@ -310,7 +310,12 @@ func IsPlanStabilityErrorStrict() bool {
 // represents prepareds
 
 type PlanCache interface {
+	// update the prepared cache and the saved plans for a mode change made on this node
 	UpdatePlanStabilityMode(oldMode, newMode PlanStabilityMode, requestId string) errors.Error
+	// update the prepared cache only, for a mode change made on another node
+	ApplyPlanStabilityMode(oldMode, newMode PlanStabilityMode)
+	// create QUERY_METADATA if it does not exist, and wait for it
+	EnsureQueryMetadata(requestId string) errors.Error
 	DeleteUdfPrepared(udfName string, planStabilityMode PlanStabilityMode, planStabilityErrorPolicy PlanStabilityErrorPolicy) errors.Error
 }
 
