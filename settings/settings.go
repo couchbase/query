@@ -34,7 +34,7 @@ func InitSettings() {
 	globalSettings = new(querySettings)
 	globalSettings.settings = make(map[string]interface{}, 4)
 
-	val, _, err := metakv.Get(_SETTINGS_SETTINGS)
+	val, rev, err := metakv.Get(_SETTINGS_SETTINGS)
 	if err != nil {
 		logging.Errorf("SETTINGS: Error getting global settings from metakv: %v", err)
 	} else if len(val) == 0 {
@@ -54,6 +54,7 @@ func InitSettings() {
 		delete(defSettings, "node")
 	} else {
 		// process initial settings
+		setSettingsRev(rev)
 		processSettings(val, "")
 	}
 
@@ -63,6 +64,8 @@ func InitSettings() {
 
 func callback(kve metakv.KVEntry) error {
 	if kve.Path == _SETTINGS_SETTINGS {
+		// including the settings written by this node, which processSettings() skips
+		setSettingsRev(kve.Rev)
 		processSettings(kve.Value, distributed.RemoteAccess().WhoAmI())
 	}
 	return nil
@@ -210,15 +213,53 @@ func UpdateSettings(enterprise bool, requestId string, settings interface{}) (er
 	return nil, nil
 }
 
-func PersistSettings() errors.Error {
+// the metakv revision of the settings this node last saw
+var settingsRev struct {
+	sync.Mutex
+	rev any
+}
+
+func setSettingsRev(rev any) {
+	if b, ok := rev.([]byte); ok && len(b) == 0 {
+		rev = nil
+	}
+	settingsRev.Lock()
+	settingsRev.rev = rev
+	settingsRev.Unlock()
+}
+
+func getSettingsRev() any {
+	settingsRev.Lock()
+	rev := settingsRev.rev
+	settingsRev.Unlock()
+	return rev
+}
+
+func getMetakvSettings() ([]byte, any, error) {
+	return metakv.Get(_SETTINGS_SETTINGS)
+}
+
+func setMetakvSettings(val []byte, rev any) error {
+	return metakv.Set(_SETTINGS_SETTINGS, val, rev)
+}
+
+func marshalSettings() ([]byte, errors.Error) {
 	allSettings := globalSettings.getAllSettings()
 	allSettings["node"] = distributed.RemoteAccess().WhoAmI()
 	bytes, err := json.Marshal(allSettings)
 	if err != nil {
 		logging.Errorf("SETTINGS: Error marshalling global settings: %v", err)
-		return errors.NewSettingsError(err, "Error marshalling global settings")
+		return nil, errors.NewSettingsError(err, "Error marshalling global settings")
 	}
-	err = metakv.Set(_SETTINGS_SETTINGS, bytes, nil)
+	return bytes, nil
+}
+
+func PersistSettings() errors.Error {
+	bytes, er := marshalSettings()
+	if er != nil {
+		return er
+	}
+	err := metakv.Set(_SETTINGS_SETTINGS, bytes, nil)
 	if err != nil {
 		logging.Errorf("SETTINGS: Error updating global settings in metakv: %v", err)
 		return errors.NewSettingsMetaKVError(err, "Error updating global settings in metakv")
