@@ -13,6 +13,7 @@ package prepareds
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/errors"
@@ -228,11 +229,11 @@ func (this *preparedCache) HandleMissingQueryMetadata() {
 func doQueryMetadataCleanup() {
 
 	logging.Infof("QUERY_METADATA bucket is missing, reset plan_stability to DEFAULT setting")
-	err := settings.SetDefaultPlanStabilitySetting(true)
-	if err != nil {
-		logging.Severef("Setting plan_stability to DEFAULT setting failed with error %v", err)
-		panic(fmt.Sprintf("Error setting plan_stability to DEFAULT setting: %v", err))
-	}
+
+	// this node stops using plan stability right away; the setting is written to metakv below, unless it
+	// was the default setting already (e.g. only plans saved with PREPARE SAVE)
+	wasDefault := settings.IsDefaultPlanStabilitySetting()
+	settings.SetDefaultPlanStabilitySetting(false)
 
 	names := make([]string, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
@@ -255,7 +256,46 @@ func doQueryMetadataCleanup() {
 		}
 	}
 
+	// the cleanup stays active while retrying, so that further missing QUERY_METADATA errors don't start
+	// another one
+	if !wasDefault {
+		persistDefaultPlanStabilitySetting()
+	}
+
 	queryMetadataCleanupCtrl.Lock()
 	queryMetadataCleanupCtrl.state = _QUERY_METADATA_CLEANUP_INACTIVE
 	queryMetadataCleanupCtrl.Unlock()
+}
+
+// test hooks
+var persistDefaultSetting = settings.PersistDefaultPlanStabilitySetting
+var isDefaultSetting = settings.IsDefaultPlanStabilitySetting
+var resetRetryInterval = time.Second
+var resetMaxRetryInterval = 30 * time.Second
+
+/*
+ * Write the default plan stability setting to metakv. A failure (e.g. metakv not available) is retried with
+ * backoff until the write succeeds. The write does not replace settings changed in metakv since this node
+ * last saw them (see settings.PersistDefaultPlanStabilitySetting()); retrying also stops if this node's
+ * setting is no longer the default setting, i.e. this node already got such a change.
+ */
+func persistDefaultPlanStabilitySetting() {
+	interval := resetRetryInterval
+	for {
+		if !isDefaultSetting() {
+			logging.Infof("plan_stability setting changed since QUERY_METADATA bucket went missing, " +
+				"DEFAULT setting not written")
+			return
+		}
+		err := persistDefaultSetting()
+		if err == nil {
+			return
+		}
+		logging.Errorf("Writing plan_stability DEFAULT setting failed with error %v, retrying in %v", err, interval)
+		time.Sleep(interval)
+		interval *= 2
+		if interval > resetMaxRetryInterval {
+			interval = resetMaxRetryInterval
+		}
+	}
 }

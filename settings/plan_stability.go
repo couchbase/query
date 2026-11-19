@@ -9,9 +9,12 @@
 package settings
 
 import (
+	"encoding/json"
 	"fmt"
 
+	"github.com/couchbase/cbauth/metakv"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/value"
 )
 
@@ -141,6 +144,69 @@ func SetDefaultPlanStabilitySetting(persist bool) errors.Error {
 	globalSettings.setSetting(PLAN_STABILITY, defaultPlanStabilitySettings())
 	if persist {
 		return PersistSettings()
+	}
+	return nil
+}
+
+// whether this node's plan stability setting is the default setting
+func IsDefaultPlanStabilitySetting() bool {
+	return GetPlanStabilityMode() == PS_MODE_DEFAULT && GetPlanStabilityErrorPolicy() == PS_ERROR_DEFAULT
+}
+
+func isDefaultPlanStability(val any) bool {
+	ps_setting, ok := val.(map[string]any)
+	if !ok {
+		return false
+	}
+	mode, ok := ps_setting["mode"]
+	if !ok || getPlanStabilityModeValue(mode) != PS_MODE_DEFAULT {
+		return false
+	}
+	error_policy, ok := ps_setting["error_policy"]
+	return ok && getPlanStabilityErrorPolicyValue(error_policy) == PS_ERROR_DEFAULT
+}
+
+// test hooks
+var getStoredSettings = getMetakvSettings
+var setStoredSettings = setMetakvSettings
+
+/*
+ * Write the settings, after this node's plan stability setting was set to the default setting, to metakv.
+ * Every node that finds the QUERY_METADATA bucket missing resets plan stability, and the write only
+ * replaces the settings this node last saw (the metakv revision): if the settings in metakv changed since,
+ * another node already wrote the default setting, or the setting was changed deliberately (e.g. plan
+ * stability turned on again after QUERY_METADATA was created again) and must not be overwritten.
+ * Comparing the setting can not tell such a change from a setting not yet reset.
+ */
+func PersistDefaultPlanStabilitySetting() errors.Error {
+	rev := getSettingsRev()
+	if rev == nil {
+		// this node has not seen the settings in metakv (e.g. getting them at startup failed)
+		val, storedRev, err := getStoredSettings()
+		if err != nil {
+			return errors.NewSettingsMetaKVError(err, "Error getting global settings from metakv")
+		}
+		if len(val) > 0 {
+			var vmap map[string]any
+			if json.Unmarshal(val, &vmap) == nil && isDefaultPlanStability(vmap[PLAN_STABILITY]) {
+				return nil
+			}
+		}
+		rev = storedRev
+	}
+
+	bytes, er := marshalSettings()
+	if er != nil {
+		return er
+	}
+	err := setStoredSettings(bytes, rev)
+	if err == metakv.ErrRevMismatch {
+		logging.Infof("SETTINGS: global settings in metakv changed since this node last saw them, " +
+			"plan_stability DEFAULT setting not written")
+		return nil
+	} else if err != nil {
+		logging.Errorf("SETTINGS: Error updating global settings in metakv: %v", err)
+		return errors.NewSettingsMetaKVError(err, "Error updating global settings in metakv")
 	}
 	return nil
 }
