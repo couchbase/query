@@ -1539,7 +1539,10 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 		prepared.SetIndexApiVersion(this.indexApiVersion)
 		prepared.SetFeatureControls(this.featureControls)
 		prepared.SetNamespace(this.namespace)
-		prepared.SetQueryContext(this.queryContext)
+		// MB-75462: the entry is keyed by the UDF name only, which is fully qualified: the subquery plans
+		// are those of the UDF, whatever the query context of the request, and GetUdfPrepared() and
+		// DeleteUdfPrepared() look the entry up without a query context
+		prepared.SetQueryContext("")
 		prepared.SetUseFts(this.useFts)
 		prepared.SetUseCBO(this.useCBO)
 		prepared.SetUserAgent(this.userAgent)

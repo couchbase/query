@@ -41,6 +41,8 @@ func TestPlanStability(t *testing.T) {
 	// in case the functions are left over from previous runs
 	runStmt(qc, "DROP FUNCTION UDF_PlanStability_inline1 IF EXISTS")
 	runStmt(qc, "DROP FUNCTION UDF_PlanStability_inline2 IF EXISTS")
+	// scope functions need a role the default test users don't have
+	runStmtAsAdmin(qc, "DROP FUNCTION default:shellTest._default.UDF_PlanStability_inline3 IF EXISTS")
 
 	runMatch("case_plan_stability_inline_udf.json", false, true, qc, t)
 

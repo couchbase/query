@@ -18,6 +18,11 @@ func runStmt(mockServer *gsi.MockServer, q string) *gsi.RunResult {
 	return gsi.RunStmt(mockServer, q)
 }
 
+func runStmtAsAdmin(mockServer *gsi.MockServer, q string) *gsi.RunResult {
+	return gsi.Run(mockServer, map[string]interface{}{}, q, gsi.Namespace_CBS, nil, nil,
+		map[string]string{"testAdmin": "testAdminpass"})
+}
+
 func runMatch(filename string, prepared, explain bool, qc *gsi.MockServer, t *testing.T) {
 	gsi.RunMatch(filename, prepared, explain, qc, t)
 }
