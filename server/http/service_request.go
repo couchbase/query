@@ -318,7 +318,7 @@ func handleEncodedPlan(rv *httpRequest, httpArgs httpRequestArgs, parm string, v
 	return httpArgs.storeDirect(_ENCODED_PLAN, parm, val)
 }
 
-func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val interface{}) errors.Error {
+func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val any) errors.Error {
 	var phaseTime time.Duration
 
 	log := rv.logger
@@ -356,8 +356,10 @@ func handlePrepared(rv *httpRequest, httpArgs httpRequestArgs, parm string, val 
 
 			// Monitoring API: we only need to track the prepared
 			// statement if we couldn't do it in getPrepared()
+			// the plan stability error policy applies to a plan supplied by the client
 			decoded_plan, plan_err, _ = prepareds.DecodePreparedWithContext(prepared_name, rv.QueryContext(), encoded_plan,
-				(prepared == nil), &phaseTime, true, false, false, false, planStabilityMode, planStabilityErrorPolicy, log)
+				(prepared == nil), &phaseTime, true, false, planStabilityMode != settings.PS_MODE_OFF, false,
+				planStabilityMode, planStabilityErrorPolicy, log)
 			if plan_err != nil {
 				err = plan_err
 			} else if decoded_plan != nil {

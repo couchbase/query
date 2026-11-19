@@ -118,6 +118,12 @@ func PreparedsRemotePrime() {
 		return
 	}
 
+	// the plan stability error policy applies to the plans from other nodes as well (they are decoded
+	// after the saved plans are loaded, see PreparedsFromPersisted())
+	planStabilityMode := settings.GetPlanStabilityMode()
+	planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
+	planStability := planStabilityMode != settings.PS_MODE_OFF
+
 	nodeNames := distributed.RemoteAccess().GetNodeNames()
 	left := len(nodeNames)
 	s1 := rand.NewSource(time.Now().UnixNano())
@@ -161,15 +167,15 @@ func PreparedsRemotePrime() {
 
 				// and for each key get the prepared and add it
 				distributed.RemoteAccess().GetRemoteDoc(host, name, "prepareds", "GET",
-					func(doc map[string]interface{}) {
+					func(doc map[string]any) {
 						encoded_plan, ok := doc["encoded_plan"].(string)
 						if ok {
 							// deferIndexerRace=true: an indexer-not-ready failure is deferred (below)
 							// instead of repreparing against the same not-yet-synced state; anything
 							// else reprepares immediately, as this loop always has.
 							_, err, reprepareCause := DecodePreparedWithContext(name, "", encoded_plan, false, nil,
-								true, false, false, true, settings.GetPlanStabilityMode(),
-								settings.GetPlanStabilityErrorPolicy(), logging.NULL_LOG)
+								true, false, planStability, true, planStabilityMode, planStabilityErrorPolicy,
+								logging.NULL_LOG)
 							if err == nil {
 								count++
 								if reprepareCause != nil {
@@ -199,8 +205,8 @@ func PreparedsRemotePrime() {
 		if len(pendingRetry) > 0 {
 			time.Sleep(_PRIME_RETRY_DELAY)
 			for _, p := range pendingRetry {
-				_, err, reprepareCause := DecodePrepared(p.name, p.encoded_plan, true, false, false,
-					settings.GetPlanStabilityMode(), settings.GetPlanStabilityErrorPolicy(), logging.NULL_LOG)
+				_, err, reprepareCause := DecodePrepared(p.name, p.encoded_plan, true, false, planStability,
+					planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 				if err == nil {
 					retrySuccess++
 					if reprepareCause != nil {
@@ -595,6 +601,11 @@ func GetUdfPreparedName(udfName string) string {
 var persistPreparedFn = persistPrepared
 var deletePreparedFn = deletePrepared
 
+// test hooks for decodePrepared() and unmarshalPrepared(): a plan failing verification, and re-planning a
+// plan, need a datastore
+var verifyPreparedFn = func(prepared *plan.Prepared) errors.Error { return prepared.Verify() }
+var reprepareFn = reprepare
+
 // MB-75464: a plan that could not be saved is not kept in the cache, which would otherwise hold a plan that
 // is not saved, and never try to save it again; it is removed only if the cache entry still holds it. The
 // entry may have replaced the entry for a saved plan (e.g. PREPARE FORCE, a re-planned plan), so a cache
@@ -904,11 +915,13 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		}
 	}
 
+	// with plan stability off, the error policy does not apply, also not to a plan saved with PREPARE SAVE:
+	// it is a prepared statement that is also saved, re-planned (and saved again) when it can not be used
 	planStability := planStabilityMode != settings.PS_MODE_OFF
 
 	if prepared == nil && remote && host != "" && host != distributed.RemoteAccess().WhoAmI() {
 		distributed.RemoteAccess().GetRemoteDoc(host, encodedName, "prepareds", "GET",
-			func(doc map[string]interface{}) {
+			func(doc map[string]any) {
 				encoded_plan, ok := doc["encoded_plan"].(string)
 				if ok {
 					prepared, err, _ = DecodePreparedWithContext(name, queryContext, encoded_plan, track, phaseTime,
@@ -1090,20 +1103,30 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 
 	added := true
 
-	prepared, add, replanned, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, remap,
-		planStability, deferIndexerRace, planStabilityMode, planStabilityErrorPolicy, log)
-	if err != nil {
-		if persisted {
-			// the saved plan is not in the cache: a cache miss needs to load it again and apply
-			// the error policy (e.g. STRICT returns an error), instead of re-planning
-			markUnloaded(prepared_name)
-		}
-		return nil, err, nil
-	}
-
 	// MB-19509 we now have to check that the encoded plan matches
 	// the prepared statement named in the rest API
 	_, prepared_key := distributed.RemoteAccess().SplitKey(prepared_name)
+
+	// the name of the cache entry
+	cacheName := prepared_key
+	if queryContext != "" {
+		cacheName = encodeName(prepared_key, queryContext)
+	}
+
+	// a plan loaded from the saved plans, or under plan stability (e.g. a plan distributed by another
+	// node, or from another node at startup, which saved it), that is not put in the cache:
+	// a cache miss needs to load the saved plan and apply the error policy (e.g. STRICT returns an
+	// error), instead of re-planning or returning 4040
+	unloaded := persisted || planStability
+
+	prepared, add, replanned, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, remap,
+		planStability, deferIndexerRace, planStabilityMode, planStabilityErrorPolicy, log)
+	if err != nil {
+		if unloaded {
+			markUnloaded(cacheName)
+		}
+		return nil, err, nil
+	}
 
 	// if a query context is specified, name and query context have to match
 	// if it isn't, encoded name and query context before comparing to key
@@ -1131,7 +1154,7 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 	var verifyErr errors.Error
 	forceReprepare := false
 	if add && !prepared.IsInlineUdf() {
-		verifyErr = prepared.Verify()
+		verifyErr = verifyPreparedFn(prepared)
 
 		// a sequential scan may have been chosen by a node that could not see the indexes at the time:
 		// replan against the indexes this node sees (kept local, not persisted or distributed)
@@ -1143,7 +1166,7 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 			var newPrepared *plan.Prepared
 			replace, prepErr := reprepareAllowed(planStability, planStabilityErrorPolicy)
 			if prepErr == nil {
-				newPrepared, prepErr = reprepare(prepared, nil, phaseTime, planStability,
+				newPrepared, prepErr = reprepareFn(prepared, nil, phaseTime, planStability,
 					planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 			}
 			if prepErr == nil {
@@ -1151,18 +1174,18 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 				add = replace
 				replanned = verifyErr != nil
 			} else {
-				if persisted {
-					markUnloaded(prepared_name)
+				if unloaded {
+					markUnloaded(cacheName)
 				}
 				return nil, prepErr, nil
 			}
 		}
 	}
 
-	if persisted && !add {
+	if unloaded && !add {
 		// MODERATE: the new plan is for this execution only, the saved plan stays as is and is
 		// not in the cache
-		markUnloaded(prepared_name)
+		markUnloaded(cacheName)
 	}
 
 	if add {
@@ -1251,7 +1274,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 						// the unmarshalling error
 						return nil, false, false, prepErr, nil
 					}
-					pl, _ := reprepare(prepared, nil, phaseTime, planStability,
+					pl, _ := reprepareFn(prepared, nil, phaseTime, planStability,
 						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 					if pl != nil {
 						return pl, replace, true, nil, err

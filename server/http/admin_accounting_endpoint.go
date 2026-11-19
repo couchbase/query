@@ -621,7 +621,7 @@ func doRedact(req *http.Request) bool {
 }
 
 func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
-	interface{}, errors.Error) {
+	any, errors.Error) {
 
 	_, name := router.RequestValue(req, "name")
 
@@ -665,8 +665,9 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
 			return "", nil
 		}
-		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false, false,
-			planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+		// the plan stability error policy applies to a plan distributed by another node
+		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false,
+			planStabilityMode != settings.PS_MODE_OFF, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 		if err != nil {
 			return nil, err
 		}
@@ -685,7 +686,7 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
 		profiling := req.Method == "POST"
-		var res interface{}
+		var res any
 		prepareds.PreparedDo(name, func(entry *prepareds.CacheEntry) {
 			// for serverless user access, we treat entries not owned by the user as not existent
 			userName, tenantName, err1 := endpoint.getImpersonateBucket(req)
