@@ -20,6 +20,7 @@ import (
 	"github.com/couchbase/query/expression/parser"
 	"github.com/couchbase/query/functions"
 	functionsBridge "github.com/couchbase/query/functions/bridge"
+	"github.com/couchbase/query/logging"
 	"github.com/couchbase/query/settings"
 	"github.com/couchbase/query/value"
 )
@@ -222,7 +223,10 @@ func (this *inlineBody) Unload(name functions.FunctionName) {
 }
 
 func (this *inlineBody) DeleteUdfPrepared(name functions.FunctionName) {
-	settings.DeleteUdfPrepared(name.Key())
+	// MB-75464: the entry and its saved plan stay if this fails
+	if err := settings.DeleteUdfPrepared(name.Key()); err != nil {
+		logging.Errorf("Error removing prepared entry for inline UDF %s: %v", name.Key(), err)
+	}
 }
 
 func (this *inlineBody) Expressions() expression.Expressions {
