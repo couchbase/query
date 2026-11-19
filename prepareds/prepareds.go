@@ -551,6 +551,9 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planSta
 		featureName = "Plan Stability (AD_HOC)"
 	}
 
+	// MB-75435: later executions of the statement reuse the cached plan and take the statement type
+	// from it (transaction statement check, request accounting)
+	prepared.SetType(stmt.Type())
 	prepared.SetAutoPrepared(true)
 	added := true
 	prepareds.add(prepared, false, true, func(ce *CacheEntry) bool {
@@ -1285,6 +1288,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 		optimizer, deltaKeyspaces, nil, true, planStabilityMode, planStabilityErrorPolicy,
 		scanConsistency)
 
+	// the text of an auto-prepared statement is the statement itself, not a PREPARE (MB-65809)
 	statement := stmt
 	if prepStmt, ok := stmt.(*algebra.Prepare); ok {
 		statement = prepStmt.Statement()
