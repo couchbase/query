@@ -46,6 +46,12 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (any, error) {
 			return nil, gpErr
 		}
 
+		// PREPARE SAVE of a statement prepared (and cached) without SAVE: build and save a new plan, as for
+		// FORCE (the cached plan was not built to be saved) (MB-75477)
+		if prep != nil && persist && !prep.Persist() {
+			prep = nil
+		}
+
 		if prep != nil {
 			json_bytes, err := prep.MarshalJSON()
 			if err != nil {

@@ -163,3 +163,29 @@ func deletePreparedPlans(adHocOnly bool) errors.Error {
 
 	return dictionary.DeletePreparedPlans(adHocOnly)
 }
+
+// MB-75477: the plan saved under the (encoded) name, if any (found): its text, and whether it was saved with
+// PREPARE SAVE; a saved plan that can not be read at all (e.g. bad encoding) is not readable
+func savedPlanInfo(name string) (savedPlan, errors.Error) {
+	encoded, err := dictionary.LoadPreparedPlan(name)
+	if err != nil || encoded == "" {
+		return savedPlan{}, err
+	}
+	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded, false)
+	if err == nil {
+		return savedPlan{text: prepared.Text(), persist: prepared.Persist(), found: true, readable: true}, nil
+	} else if len(bytes) == 0 {
+		logging.Warnf("Saved plan for prepared statement %s can not be read: %v", name, err)
+		return savedPlan{found: true}, nil
+	}
+
+	// the plan can not be decoded (e.g. its index was dropped): get the fields from the document
+	rv := savedPlan{found: true, readable: true}
+	if val, er := json.FindKey(bytes, "text"); er == nil && val != nil {
+		json.Unmarshal(val, &rv.text)
+	}
+	if val, er := json.FindKey(bytes, "persist"); er == nil && val != nil {
+		json.Unmarshal(val, &rv.persist)
+	}
+	return rv, nil
+}

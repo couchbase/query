@@ -15,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	atomic "github.com/couchbase/go-couchbase/platform"
 	json "github.com/couchbase/go_json"
@@ -286,35 +287,36 @@ func (this *preparedCache) GetText(text string, offset int) string {
 	// one extra space, specifying the name of an already prepared anonymous
 	// statment, use of string vs identifier for the statement name...)s
 	// makes the text verification fails, while it should't
-	var i, length int
-	prepare := text[:offset]
-	uprepare := strings.ToUpper(prepare)
-	i1 := strings.Index(uprepare, " FORCE")
-	i2 := strings.Index(uprepare, " SAVE")
-	if i1 < 0 && i2 < 0 {
+	return removePrepareOptions(text, offset)
+}
+
+// text[:offset] ends with the PREPARE options, if any (FORCE, SAVE, in either order): remove them, and the
+// whitespace before them, whatever the case and the whitespace around them (e.g. two spaces or a tab between
+// the options); single spaced options are removed as before
+func removePrepareOptions(text string, offset int) string {
+	if offset <= 0 || offset > len(text) {
 		return text
-	} else if i1 < 0 {
-		// i2 >= 0
-		i = i2
-		length = 5
-	} else if i2 < 0 {
-		// i1 >= 0
-		i = i1
-		length = 6
-	} else {
-		// i1 >= 0 && i2 >= 0
-		if i1 < i2 {
-			i = i1
-		} else {
-			i = i2
+	}
+	prepare := text[:offset]
+	for {
+		trimmed := strings.TrimRightFunc(prepare, unicode.IsSpace)
+		removed := false
+		for _, option := range []string{"FORCE", "SAVE"} {
+			i := len(trimmed) - len(option) - 1
+			if i >= 0 && strings.EqualFold(trimmed[i+1:], option) && unicode.IsSpace(rune(trimmed[i])) {
+				prepare = trimmed[:i]
+				removed = true
+				break
+			}
 		}
-		length = 11
+		if !removed {
+			break
+		}
 	}
-	if i+length >= offset {
-		return prepare[:i] + text[offset:]
-	} else {
-		return prepare[:i] + prepare[i+length:] + text[offset:]
+	if len(prepare) == offset {
+		return text
 	}
+	return strings.TrimRightFunc(prepare, unicode.IsSpace) + text[offset:]
 }
 
 const _REALM_SIZE = 256
@@ -601,6 +603,17 @@ func GetUdfPreparedName(udfName string) string {
 var persistPreparedFn = persistPrepared
 var deletePreparedFn = deletePrepared
 
+// a plan saved in QUERY_METADATA (see savedPlanInfo())
+type savedPlan struct {
+	text     string
+	persist  bool // saved with PREPARE SAVE
+	found    bool
+	readable bool
+}
+
+// test hook
+var savedPlanInfoFn = savedPlanInfo
+
 // test hooks for decodePrepared() and unmarshalPrepared(): a plan failing verification, and re-planning a
 // plan, need a datastore
 var verifyPreparedFn = func(prepared *plan.Prepared) errors.Error { return prepared.Verify() }
@@ -715,6 +728,39 @@ func PreparedDo(name string, f func(*CacheEntry)) {
 }
 
 func AddPrepared(prepared *plan.Prepared, planStability bool) errors.Error {
+	return addPrepared(prepared, planStability, true)
+}
+
+// a new plan for a PREPARE statement (e.g. PREPARE FORCE): without SAVE and with plan stability off, it is not
+// saved, and replaces a plan saved with PREPARE SAVE, so the saved plan is removed as well (MB-75477);
+// otherwise it would be loaded again at the next startup
+func AddPreparedStatement(prepared *plan.Prepared, planStability bool) errors.Error {
+	if !prepared.Persist() && !planStability {
+		fullName := encodeName(prepared.Name(), prepared.QueryContext())
+		remove := false
+		if ce := prepareds.get(fullName, false); ce != nil {
+			// a different statement holding the name is not replaced (addPrepared() fails)
+			remove = ce.Prepared.Persist() && ce.Prepared.Text() == prepared.Text()
+		} else if checkSavedPlan(fullName) {
+			// a saved plan may not be in the cache: same as a cached one, a different statement holding the
+			// name is not replaced (no saved plan if QUERY_METADATA does not exist)
+			// a saved plan that can not be read is replaced (and removed): it can not be used
+			saved, err := savedPlanInfoFn(fullName)
+			if err != nil {
+				return err
+			}
+			if saved.found && saved.readable && saved.text != prepared.Text() {
+				return errors.NewPreparedNameError(fmt.Sprintf("duplicate name: %s", fullName))
+			}
+			remove = saved.found && (saved.persist || !saved.readable)
+		}
+		if remove {
+			// deleting a plan that is not saved succeeds; if it fails, nothing is replaced
+			if err := deletePreparedFn(fullName); err != nil {
+				return err
+			}
+		}
+	}
 	return addPrepared(prepared, planStability, true)
 }
 

@@ -1,0 +1,126 @@
+[
+    {
+	"testcase": "MB-75477: PREPARE without SAVE (plan stability off)",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "signature",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE ps8 FROM SELECT 8 AS eight",
+        "results": [
+            {
+                "name": "ps8",
+                "text": "PREPARE ps8 FROM SELECT 8 AS eight"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75477: PREPARE SAVE of the same statement saves it",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "signature",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE SAVE ps8 FROM SELECT 8 AS eight",
+        "results": [
+            {
+                "name": "ps8",
+                "text": "PREPARE ps8 FROM SELECT 8 AS eight",
+                "persist": true
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75477: saved in memory",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE name = 'ps8' AND persist = true",
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75477: saved on disk",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id = 'ppn::ps8' AND persist = true",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75477: PREPARE FORCE without SAVE (options spaced out)",
+        "ignore": [
+                "encoded_plan",
+                "indexApiVersion",
+                "indexScanKeyspaces",
+                "featureControls",
+                "namespace",
+                "operator",
+                "planPreparedTime",
+                "queryContext",
+                "remoteAddr",
+                "reqType",
+                "signature",
+                "userAgent",
+                "users"
+        ],
+        "statements":"PREPARE  force ps8 FROM SELECT 8 AS eight",
+        "results": [
+            {
+                "name": "ps8",
+                "text": "PREPARE ps8 FROM SELECT 8 AS eight"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75477: no longer saved in memory",
+        "statements":"SELECT COUNT(*) AS cnt FROM system:prepareds WHERE name = 'ps8' AND persist = true",
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75477: saved plan removed",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query WHERE meta().id = 'ppn::ps8' AND persist = true",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75477: remove prepared statement",
+        "statements":"DELETE FROM system:prepareds WHERE name = \"ps8\"",
+        "results": [
+        ]
+    }
+]
