@@ -105,6 +105,11 @@ func (this *MockServer) ShutdownHttpServer() {
 	this.httpServer.Close()
 }
 
+// node level auto-prepare (requests do not set it)
+func (this *MockServer) SetAutoPrepare(autoPrepare bool) {
+	this.server.SetAutoPrepare(autoPrepare)
+}
+
 func SetConsistencyParam(consistency_parameter datastore.ScanConsistency) {
 	Consistency_parameter = consistency_parameter
 }
