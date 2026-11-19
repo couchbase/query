@@ -569,11 +569,14 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planSta
 	}
 
 	if planStabilityAdHoc {
-		err := persistPrepared(prepared)
+		err := persistPreparedFn(prepared)
 		if err != nil {
+			// MB-75464: the statement runs with this plan, but the plan is not kept in the cache: the next
+			// execution plans the statement again and retries the save
 			logging.Errorf("Plan Stability (AD_HOC) encounters error while trying to persist plan (%v) for statement %v, error %v",
 				fullName, prepared.Text(), err)
-			return false, err
+			removeUnsaved(prepared)
+			return false, nil
 		}
 
 		distributePrepared(fullName, prepared.EncodedPlan())
@@ -586,6 +589,22 @@ const _INLINE_UDF_NAME_PREFIX = "__INLINE_UDF__"
 
 func GetUdfPreparedName(udfName string) string {
 	return _INLINE_UDF_NAME_PREFIX + udfName
+}
+
+// test hooks
+var persistPreparedFn = persistPrepared
+var deletePreparedFn = deletePrepared
+
+// MB-75464: a plan that could not be saved is not kept in the cache, which would otherwise hold a plan that
+// is not saved, and never try to save it again; it is removed only if the cache entry still holds it. The
+// entry may have replaced the entry for a saved plan (e.g. PREPARE FORCE, a re-planned plan), so a cache
+// miss looks for the saved plan again (see plan_load.go)
+func removeUnsaved(prepared *plan.Prepared) {
+	fullName := encodeName(prepared.Name(), prepared.QueryContext())
+	prepareds.cache.DeleteWithCheck(fullName, func(entry any) bool {
+		return entry.(*CacheEntry).Prepared == prepared
+	})
+	markUnloaded(fullName)
 }
 
 func AddUdfPrepared(prepared *plan.Prepared, lock bool) errors.Error {
@@ -602,11 +621,13 @@ func AddUdfPrepared(prepared *plan.Prepared, lock bool) errors.Error {
 		return errors.NewInlineUdfPreparedError(prepared.Name(), "adding to prepared cache failed", nil)
 	}
 
-	err := persistPrepared(prepared)
+	err := persistPreparedFn(prepared)
 	if err != nil {
+		// MB-75464: the UDF runs with its subquery plans, but the entry is not kept in the cache: the next
+		// execution adds it again and retries the save
 		logging.Errorf("Plan Stability encounters error while trying to persist plan (%v) for inline UDF, error %v",
 			prepared.Name(), err)
-		return errors.NewInlineUdfPreparedError(prepared.Name(), "persist of prepared entry", err)
+		removeUnsaved(prepared)
 	}
 
 	return nil
@@ -708,8 +729,10 @@ func addPrepared(prepared *plan.Prepared, planStability, distribute bool) errors
 	}
 
 	if prepared.Persist() || planStability {
-		err := persistPrepared(prepared)
+		err := persistPreparedFn(prepared)
 		if err != nil {
+			// MB-75464: a plan that is not saved is not kept in the cache
+			removeUnsaved(prepared)
 			return err
 		}
 	}
@@ -785,23 +808,27 @@ func deletePreparedFromCache(name string) errors.Error {
 }
 
 func DeletePreparedFunc(name string, f func(*CacheEntry) bool) errors.Error {
-	persist := false
-	process := func(entry any) bool {
-		ce := entry.(*CacheEntry)
-		persist = ce.Prepared.Persist()
-		if f != nil {
-			return f(ce)
-		}
-		return true
-	}
-	if !prepareds.cache.DeleteWithCheck(name, process) {
+	ce := prepareds.get(name, false)
+	if ce == nil || (f != nil && !f(ce)) {
 		return errors.NewNoSuchPreparedError(name)
 	}
+	// the cache amends an entry in place when it is replaced (e.g. PREPARE FORCE), so check the plan
+	prepared := ce.Prepared
 
-	if persist || settings.IsPlanStabilityEnabled() {
-		return deletePrepared(name)
+	// MB-75464: delete the saved plan before the cache entry: if deleting the saved plan fails, the entry
+	// stays in the cache (and the saved plan in QUERY_METADATA), and the delete can be retried; deleting
+	// a plan that is not saved succeeds
+	if prepared.Persist() || settings.IsPlanStabilityEnabled() {
+		if err := deletePreparedFn(name); err != nil {
+			return err
+		}
 	}
 
+	// not if the entry has been replaced in the meantime: the new plan is kept
+	prepareds.cache.DeleteWithCheck(name, func(entry any) bool {
+		e := entry.(*CacheEntry)
+		return e.Prepared == prepared && (f == nil || f(e))
+	})
 	return nil
 }
 
@@ -945,7 +972,12 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				ce.Unlock()
 
 				if persist {
-					err = persistPrepared(prepared)
+					// MB-75464: the restored plan is saved already, this only refreshes its encoded_plan; the
+					// plan is good, so a failure does not fail the request
+					if err1 := persistPreparedFn(prepared); err1 != nil {
+						logging.Errorf("Error saving rebuilt restored plan for prepared statement %s: %v",
+							encodedName, err1)
+					}
 				}
 			}
 
@@ -971,7 +1003,13 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				if err == nil && replace {
 					// if the reprepared plan has a sequential scan don't persist or distribute it: each node
 					// makes its own reprepare decision
-					err = addPrepared(prepared, planStability, !seqScanKeptLocal(prepared))
+					// MB-75464: if the new plan can not be saved, it is not kept in the cache (the next
+					// execution loads the saved plan again, and re-plans it), but this execution uses it
+					// (addPrepared() also fails if a different statement holds the name by now)
+					if err1 := addPrepared(prepared, planStability, !seqScanKeptLocal(prepared)); err1 != nil {
+						logging.Infof("Re-prepared plan for prepared statement %s used for this execution only, "+
+							"not kept in the cache: %v", encodedName, err1)
+					}
 				}
 			}
 		}
@@ -1158,8 +1196,11 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 		//     it (e.g. a primary scan); keep the saved plan, only cache the new plan
 		if persisted && add && replanned && planStability && !seqScanKeptLocal(prepared) &&
 			!isIndexerNotReady(unmarshallErr) {
-			if err1 := persistPrepared(prepared); err1 != nil {
+			if err1 := persistPreparedFn(prepared); err1 != nil {
+				// MB-75464: this execution uses the new plan, but it is not kept in the cache: the next
+				// execution loads the saved plan again, and re-plans it
 				logging.Errorf("Error saving re-prepared plan for prepared statement %s: %v", prepared_name, err1)
+				removeUnsaved(prepared)
 			}
 		}
 
