@@ -893,8 +893,10 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 	} else if prepared != nil {
 		if scanConsistency != datastore.UNBOUNDED && scanConsistency != datastore.NOT_SET &&
 			scanConsistency != "" && prepared.HasCountScan() {
+			// the plan for this scan consistency is for this execution only, and not saved: the plan
+			// stability error policy does not apply
 			var newPrepared *plan.Prepared
-			newPrepared, _, err = reprepare(prepared, nil, phaseTime, planStability,
+			newPrepared, err = reprepare(prepared, nil, phaseTime, planStability,
 				planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
 			if err == nil {
 				prepared = newPrepared
@@ -961,8 +963,11 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				// with N1QL_IGNORE_IDXR_META bit set reprepare() calls Verify() on the new plan, recording the indexer
 				// metadata versions so that a later index change is detected
 				var replace bool
-				prepared, replace, err = reprepare(prepared, nil, phaseTime, planStability,
-					planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
+				replace, err = reprepareAllowed(planStability, planStabilityErrorPolicy)
+				if err == nil {
+					prepared, err = reprepare(prepared, nil, phaseTime, planStability,
+						planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
+				}
 				if err == nil && replace {
 					// if the reprepared plan has a sequential scan don't persist or distribute it: each node
 					// makes its own reprepare decision
@@ -1097,8 +1102,12 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 		forceReprepare = verifyErr == nil && reprep && !persisted && seqScanKeptLocal(prepared) &&
 			(planStabilityMode == settings.PS_MODE_OFF || planStabilityErrorPolicy == settings.PS_ERROR_FLEXIBLE)
 		if verifyErr != nil || forceReprepare {
-			newPrepared, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability,
-				planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+			var newPrepared *plan.Prepared
+			replace, prepErr := reprepareAllowed(planStability, planStabilityErrorPolicy)
+			if prepErr == nil {
+				newPrepared, prepErr = reprepare(prepared, nil, phaseTime, planStability,
+					planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+			}
 			if prepErr == nil {
 				prepared = newPrepared
 				add = replace
@@ -1195,14 +1204,16 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 				err1 = json.Unmarshal(text, &stmt)
 				if err1 == nil {
 					prepared.SetText(stmt)
-					pl, replace, prepErr := reprepare(prepared, nil, phaseTime, planStability,
-						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
-					if pl != nil {
-						return pl, replace, true, nil, err
-					} else if planStability && planStabilityErrorPolicy == settings.PS_ERROR_STRICT && prepErr != nil {
+					replace, prepErr := reprepareAllowed(planStability, planStabilityErrorPolicy)
+					if prepErr != nil {
 						// error policy STRICT does not allow re-planning: return that, rather than
 						// the unmarshalling error
 						return nil, false, false, prepErr, nil
+					}
+					pl, _ := reprepare(prepared, nil, phaseTime, planStability,
+						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+					if pl != nil {
+						return pl, replace, true, nil, err
 					}
 				}
 			} else {
@@ -1220,7 +1231,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 	} else if reprep && (prepared.PlanVersion() > util.PLAN_VERSION) {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
-		pl, _, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+		pl, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 		if err != nil {
 			return nil, false, false, err, nil
 		}
@@ -1240,19 +1251,15 @@ func distributePrepared(name, plan string) {
 		}, distributed.NO_CREDS, "")
 }
 
+// Whether a plan is re-prepared because the existing plan can not be used, under the plan stability
+// error policy: the caller checks that first, see reprepareAllowed(). A plan built for a single
+// execution context (transaction delta keyspaces, scan consistency for a count scan) is not cached
+// as the statement's plan nor saved, and the error policy does not apply.
+// planStability is passed on to BuildPrepared() (generate subquery plans).
 func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
 	planStability bool, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log,
-	scanConsistency datastore.ScanConsistency) (*plan.Prepared, bool, errors.Error) {
-
-	replace := true
-	if planStability {
-		if planStabilityErrorPolicy == settings.PS_ERROR_STRICT {
-			return nil, false, errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
-		} else if planStabilityErrorPolicy == settings.PS_ERROR_MODERATE {
-			replace = false
-		}
-	}
+	scanConsistency datastore.ScanConsistency) (*plan.Prepared, errors.Error) {
 
 	parse := util.Now()
 
@@ -1263,18 +1270,18 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 
 	if err != nil {
 		// this should never happen: the statement parsed to start with
-		return nil, false, errors.NewReprepareError(err)
+		return nil, errors.NewReprepareError(err)
 	}
 
 	if _, err = stmt.Accept(rewrite.NewRewrite(rewrite.REWRITE_PHASE1)); err != nil {
-		return nil, false, errors.NewRewriteError(err, "")
+		return nil, errors.NewRewriteError(err, "")
 	}
 
 	// since this is a reprepare, no need to check semantics again after parsing.
 	prep := util.Now()
 	requestId, err := util.UUIDV4()
 	if err != nil {
-		return nil, false, errors.NewReprepareError(fmt.Errorf("Context is nil"))
+		return nil, errors.NewReprepareError(fmt.Errorf("Context is nil"))
 	}
 
 	var optimizer planner.Optimizer
@@ -1299,7 +1306,7 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 		*phaseTime += util.Now().Sub(prep)
 	}
 	if err != nil {
-		return nil, false, errors.NewReprepareError(err)
+		return nil, errors.NewReprepareError(err)
 	}
 
 	pl.SetName(prepared.Name())
@@ -1323,13 +1330,33 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 
 	_, err = pl.BuildEncodedPlan()
 	if err != nil {
-		return nil, false, errors.NewReprepareError(err)
+		return nil, errors.NewReprepareError(err)
 	}
 
 	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
 		pl.Verify() // this adds the indexers so we can immediately detect future changes
 	}
-	return pl, replace, nil
+	return pl, nil
+}
+
+// When the existing (possibly saved) plan can not be used, whether it can be re-prepared under the
+// plan stability error policy, and if so, whether the new plan replaces the existing plan (in the
+// cache, and the saved plan):
+//   - FLEXIBLE (or plan stability off): re-prepare and replace
+//   - MODERATE: re-prepare, use the new plan for this execution only
+//   - STRICT: do not re-prepare, return an error
+func reprepareAllowed(planStability bool, planStabilityErrorPolicy settings.PlanStabilityErrorPolicy) (
+	bool, errors.Error) {
+
+	if planStability {
+		switch planStabilityErrorPolicy {
+		case settings.PS_ERROR_STRICT:
+			return false, errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
+		case settings.PS_ERROR_MODERATE:
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func predefinedPrepareStatement(name, statement, queryContext, namespace string, log logging.Log) (
@@ -1410,7 +1437,9 @@ func getTxPrepared(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phas
 	if txPrepared != nil {
 		return
 	}
-	txPrepared, _, err = reprepare(prepared, deltaKeyspaces, phaseTime, (planStabilityMode != settings.PS_MODE_OFF),
+	// the transaction plan is kept with the prepared statement for these delta keyspaces only, and not
+	// saved: the plan stability error policy does not apply
+	txPrepared, err = reprepare(prepared, deltaKeyspaces, phaseTime, (planStabilityMode != settings.PS_MODE_OFF),
 		planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
 	if err == nil {
 		prepared.SetTxPrepared(txPrepared, hashCode)
