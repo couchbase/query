@@ -46,6 +46,9 @@ func TestPlanStability(t *testing.T) {
 
 	runMatch("case_plan_stability_inline_udf.json", false, true, qc, t)
 
+	// plan stability is off at this point (case_plan_stability_inline_udf.json), QUERY_METADATA exists
+	runMatch("case_plan_stability_save.json", false, false, qc, t)
+
 	runMatch("case_plan_stability_stop.json", false, false, qc, t)
 
 	fmt.Println("Dropping indexes")

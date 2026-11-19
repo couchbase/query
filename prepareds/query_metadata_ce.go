@@ -33,3 +33,7 @@ func loadPrepared(name string, planStabilityMode settings.PlanStabilityMode,
 func deletePreparedPlans(adHocOnly bool) errors.Error {
 	return errors.NewEnterpriseFeature("Plan Stability", "prepareds.delete_prepared_plans")
 }
+
+func savedPlanInfo(name string) (savedPlan, errors.Error) {
+	return savedPlan{}, nil
+}
