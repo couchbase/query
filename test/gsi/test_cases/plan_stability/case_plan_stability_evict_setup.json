@@ -1,0 +1,63 @@
+[
+    {
+	"testcase": "MB-75506: plan stability is off, PREPARE SAVE",
+        "statements":"PREPARE SAVE mb75506_p2 FROM SELECT c11 FROM shellTest WHERE type = \"left\" AND c11 > 3 ORDER BY c11"
+    },
+    {
+	"testcase": "MB-75506: plan stability PREPARED_ONLY",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"prepared only\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75506: prepared statement, saved",
+        "statements":"PREPARE mb75506_p1 FROM SELECT c11 FROM shellTest WHERE type = \"left\" AND c11 > 2 ORDER BY c11"
+    },
+    {
+	"testcase": "MB-75506: plan stability AD_HOC",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"ad_hoc\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75506: ad hoc statement, saved",
+        "statements":"SELECT c21, \"mb75506\" AS t FROM shellTest WHERE type = \"right\" AND c21 > 3 ORDER BY c21",
+        "results": [
+            {
+                "c21": 5,
+                "t": "mb75506"
+            },
+            {
+                "c21": 6,
+                "t": "mb75506"
+            },
+            {
+                "c21": 7,
+                "t": "mb75506"
+            },
+            {
+                "c21": 8,
+                "t": "mb75506"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75506: back up the saved plan of the ad hoc statement",
+        "statements":"INSERT INTO QUERY_METADATA._system._query (KEY k, VALUE v) SELECT \"mb75506_backup\" AS k, {\"origId\": meta(d).id, \"doc\": d} AS v FROM QUERY_METADATA._system._query d WHERE meta(d).id LIKE \"ppn::%\" AND d.ad_hoc = true AND d.text LIKE \"%mb75506%\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75506: saved plans",
+        "statements":"SELECT RAW COUNT(*) FROM QUERY_METADATA._system._query d WHERE meta(d).id IN [\"mb75506_backup\", \"ppn::mb75506_p1\", \"ppn::mb75506_p2\"]",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            3
+        ]
+    }
+]

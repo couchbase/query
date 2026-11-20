@@ -44,6 +44,10 @@ const (
 	OPT_REMOTE                // check with remote node, if available
 	OPT_VERIFY                // verify that the plan is still valid
 	OPT_METACHECK             // metadata check only
+	// MB-75506: what a cache miss is for, which decides whether it looks for a saved plan (see
+	// checkSavedPlan()); neither of them: a prepared statement, or an inline UDF entry
+	OPT_ADHOC      // an ad hoc (auto prepared) statement
+	OPT_CACHE_ONLY // the caller has the plan (e.g. distributed by another node)
 )
 
 type preparedCache struct {
@@ -444,6 +448,9 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 	// whether added or amended, or ignored because a different statement holds the name, the
 	// name is now in the cache
 	defer clearUnloaded(fullName)
+	if prepared.Persist() {
+		markSaved(fullName)
+	}
 	prepareds.cache.Add(ce, fullName, func(entry interface{}) util.Operation {
 		var op util.Operation = util.AMEND
 		var cont bool = true
@@ -507,7 +514,7 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	// we'll let the caller handle the planning.
 	// The new statement will have the latest change counters, so until we
 	// have a new index no other planning will be necessary
-	options := uint32(OPT_TRACK)
+	options := uint32(OPT_TRACK | OPT_ADHOC)
 	planStabilityAdHoc := context.IsPlanStabilityAdHoc() || context.IsPlanStabilityAdHocReadOnly()
 	if planStabilityAdHoc {
 		options |= OPT_VERIFY
@@ -607,14 +614,27 @@ func GetUdfPreparedName(udfName string) string {
 	return _INLINE_UDF_NAME_PREFIX + udfName
 }
 
+// what a cache miss is for, from the getPrepared() options
+func lookupKindOf(options uint32) lookupKind {
+	switch {
+	case (options & OPT_CACHE_ONLY) != 0:
+		return _LOOKUP_CACHE_ONLY
+	case (options & OPT_ADHOC) != 0:
+		return _LOOKUP_AD_HOC
+	}
+	return _LOOKUP_PREPARED
+}
+
 // test hooks
+var loadPreparedFn = loadPrepared
 var persistPreparedFn = persistPrepared
 var deletePreparedFn = deletePrepared
 
 // a plan saved in QUERY_METADATA (see savedPlanInfo())
 type savedPlan struct {
 	text     string
-	persist  bool // saved with PREPARE SAVE
+	encoded  string // MB-75506: the encoded plan saved
+	persist  bool   // saved with PREPARE SAVE
 	found    bool
 	readable bool
 }
@@ -679,12 +699,9 @@ func GetUdfPrepared(udfName string, track bool, planStabilityMode settings.PlanS
 	prepName := GetUdfPreparedName(udfName)
 	// the inline UDF entry only holds subquery plans (no statement text), so it can not be reprepared
 	// for transaction delta keyspaces; subquery plans for transactions are handled by the caller
+	// MB-75506: a cache miss looks for the saved entry (see checkSavedPlan()), once
 	prepared, err = getPrepared(prepName, "", nil, options, nil, planStabilityMode, planStabilityErrorPolicy, l,
 		datastore.UNBOUNDED)
-	if prepared == nil && err != nil && err.Code() == errors.E_NO_SUCH_PREPARED {
-		// if not in cache, check disk
-		prepared, err = loadPrepared(prepName, planStabilityMode, planStabilityErrorPolicy)
-	}
 
 	if prepared != nil {
 		return prepared, nil
@@ -749,9 +766,10 @@ func AddPreparedStatement(prepared *plan.Prepared, planStability bool) errors.Er
 		if ce := prepareds.get(fullName, false); ce != nil {
 			// a different statement holding the name is not replaced (addPrepared() fails)
 			remove = ce.Prepared.Persist() && ce.Prepared.Text() == prepared.Text()
-		} else if checkSavedPlan(fullName) {
-			// a saved plan may not be in the cache: same as a cached one, a different statement holding the
-			// name is not replaced (no saved plan if QUERY_METADATA does not exist)
+		} else if checkSavedPlan(fullName, _LOOKUP_PREPARED, settings.PS_MODE_OFF) {
+			// a saved plan may not be in the cache (MB-75506: e.g. evicted; plan stability is off here, so only
+			// a name known on this node to be saved with SAVE is looked for): same as a cached one, a different
+			// statement holding the name is not replaced (no saved plan if QUERY_METADATA does not exist)
 			// a saved plan that can not be read is replaced (and removed): it can not be used
 			saved, err := savedPlanInfoFn(fullName)
 			if err != nil {
@@ -761,12 +779,16 @@ func AddPreparedStatement(prepared *plan.Prepared, planStability bool) errors.Er
 				return errors.NewPreparedNameError(fmt.Sprintf("duplicate name: %s", fullName))
 			}
 			remove = saved.found && (saved.persist || !saved.readable)
+			if !saved.found {
+				clearSaved(fullName)
+			}
 		}
 		if remove {
 			// deleting a plan that is not saved succeeds; if it fails, nothing is replaced
 			if err := deletePreparedFn(fullName); err != nil {
 				return err
 			}
+			clearSaved(fullName)
 		}
 	}
 	return addPrepared(prepared, planStability, true)
@@ -893,6 +915,9 @@ func DeletePreparedFunc(name string, f func(*CacheEntry) bool) errors.Error {
 		if err := deletePreparedFn(name); err != nil {
 			return err
 		}
+		if prepared.Persist() {
+			clearSaved(name)
+		}
 	}
 
 	// not if the entry has been replaced in the meantime: the new plan is kept
@@ -910,7 +935,10 @@ func GetPrepared(fullName string, deltaKeyspaces map[string]bool, planStabilityM
 	if len(args) > 0 {
 		l = args[0]
 	}
-	return getPrepared(fullName, "", deltaKeyspaces, 0, nil, planStabilityMode, planStabilityErrorPolicy, l, datastore.UNBOUNDED)
+	// MB-75506: used for a plan distributed by another node, which the caller has: a cache miss does not look
+	// for the saved plan, other than while priming or for an unloaded name
+	return getPrepared(fullName, "", deltaKeyspaces, OPT_CACHE_ONLY, nil, planStabilityMode, planStabilityErrorPolicy,
+		l, datastore.UNBOUNDED)
 }
 
 func GetPreparedWithContext(preparedName string, queryContext string, deltaKeyspaces map[string]bool,
@@ -1094,17 +1122,18 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 		return nil, err
 	}
 	if prepared == nil {
-		// look for a saved plan if the entry may have been evicted (cache full), the cache is
-		// still being primed, or the saved plan could not be put in the cache (see plan_load.go);
+		// look for a saved plan if one can exist for the statement (MB-75506), the cache is still
+		// being primed, or the saved plan could not be put in the cache (see plan_load.go);
 		// loading applies the plan stability error policy to the saved plan
-		if checkSavedPlan(encodedName) {
-			prepared, err = loadPrepared(encodedName, planStabilityMode, planStabilityErrorPolicy)
+		if checkSavedPlan(encodedName, lookupKindOf(options), planStabilityMode) {
+			prepared, err = loadPreparedFn(encodedName, planStabilityMode, planStabilityErrorPolicy)
 			if err != nil {
 				return nil, err
 			}
 			if prepared == nil {
 				// nothing saved under this name
 				clearUnloaded(encodedName)
+				clearSaved(encodedName)
 			}
 		}
 		if prepared == nil {
@@ -1367,6 +1396,66 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 		prepared.SetEncodedPlan(encoded)
 	}
 	return prepared, true, false, nil, nil
+}
+
+// a plan distributed by another node (PUT /admin/prepareds/<name>), under the (encoded) name
+func AddDistributedPrepared(name, encoded string, planStabilityMode settings.PlanStabilityMode,
+	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) errors.Error {
+
+	cached, _ := GetPrepared(name, nil, planStabilityMode, planStabilityErrorPolicy, log)
+
+	// nothing to do if the prepared is there and the plan matches
+	if cached != nil && !cached.MismatchingEncodedPlan(encoded) {
+		return nil
+	}
+
+	// the plan stability error policy applies to a plan distributed by another node
+	prepared, err, _ := DecodePrepared(name, encoded, true, false, planStabilityMode != settings.PS_MODE_OFF,
+		planStabilityMode, planStabilityErrorPolicy, log)
+	if err != nil {
+		return err
+	}
+
+	// MB-75506: with plan stability off, a new plan without SAVE for a statement saved with PREPARE SAVE replaces
+	// the saved plan (see AddPreparedStatement()): the node that made it may not have removed the saved plan
+	// (it was not known there to be saved, e.g. its distribution did not reach that node), which would be loaded
+	// again at the next startup. The saved plan is removed once the new plan is in the cache: if decoding the new
+	// plan fails, the cached plan, and its saved plan, stay in use. If removing it fails, the new plan stays in the
+	// cache, as on the node that made it.
+	if planStabilityMode == settings.PS_MODE_OFF && cached != nil && cached.Persist() && !prepared.Persist() &&
+		cached.Text() == prepared.Text() {
+		removeReplacedSavedPlan(name, cached)
+	}
+	return nil
+}
+
+// MB-75506: remove the plan saved with PREPARE SAVE for the cached plan, replaced by a plan without SAVE from another
+// node, only if the saved plan is still the cached plan: a newer plan saved with PREPARE SAVE (e.g. distributed
+// before the plan without SAVE, or prepared on this node in the meantime) is kept
+// The cached plan is compared exactly with the saved plan: if this node re-planned the plan saved with PREPARE SAVE
+// that it received (e.g. a sequential scan plan re-planned locally), the saved plan is kept too, and is only removed
+// by the node that made the plan without SAVE. A looser comparison (e.g. the text) would remove a newer plan saved
+// with PREPARE SAVE for the same statement.
+func removeReplacedSavedPlan(name string, cached *plan.Prepared) {
+	saved, err := savedPlanInfoFn(name)
+	if err != nil {
+		logging.Errorf("Error reading the saved plan for prepared statement %s, replaced by a plan without SAVE "+
+			"from another node, not removed: %v", name, err)
+		return
+	} else if !saved.found {
+		clearSaved(name)
+		return
+	} else if !saved.persist || saved.encoded != cached.EncodedPlan() {
+		logging.Infof("Saved plan for prepared statement %s, replaced by a plan without SAVE from another node, "+
+			"is not the cached plan: not removed", name)
+		return
+	}
+	if err = deletePreparedFn(name); err != nil {
+		logging.Errorf("Error removing the saved plan for prepared statement %s, replaced by a plan without SAVE "+
+			"from another node: %v", name, err)
+	} else {
+		clearSaved(name)
+	}
 }
 
 func distributePrepared(name, plan string) {

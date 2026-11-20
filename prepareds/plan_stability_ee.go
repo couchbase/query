@@ -82,13 +82,49 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 
 // MB-75471: create QUERY_METADATA if it does not exist, and wait for it, before plan stability is turned on
 func (this *preparedCache) EnsureQueryMetadata(requestId string) errors.Error {
-	hasMetadata, err := hasQueryMetadata(true, requestId, "SAVE option of PREPARE or Plan Stability", true)
+	hasMetadata, err := hasQueryMetadataFn(true, requestId, "SAVE option of PREPARE or Plan Stability", true)
 	if err != nil {
 		return err
 	} else if !hasMetadata {
 		return errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
 	}
-	return nil
+	return waitQueryMetadataReads()
+}
+
+// test hooks
+var hasQueryMetadataFn = hasQueryMetadata
+var readQueryMetadataFn = readQueryMetadata
+var readRetryInterval = 100 * time.Millisecond
+var readMaxWait = 30 * time.Second
+
+// a saved plan that does not exist
+const _READ_CHECK_NAME = "__QUERY_METADATA_READ_CHECK__"
+
+func readQueryMetadata() errors.Error {
+	_, err := dictionary.LoadPreparedPlan(_READ_CHECK_NAME)
+	return err
+}
+
+// MB-75506: QUERY_METADATA just created may not serve reads yet (e.g. its vbuckets are not ready): with plan
+// stability on, a cache miss reads the saved plan, and fails the request if reading fails, rather than planning
+// (and saving a new plan over a saved plan that could not be read). Wait until it serves reads before plan
+// stability is turned on; if it does not in time, the mode change fails.
+func waitQueryMetadataReads() errors.Error {
+	interval := readRetryInterval
+	deadline := time.Now().Add(readMaxWait)
+	for {
+		err := readQueryMetadataFn()
+		if err == nil {
+			return nil
+		} else if !time.Now().Before(deadline) {
+			logging.Errorf("QUERY_METADATA does not serve reads: %v", err)
+			return err
+		}
+		time.Sleep(interval)
+		if interval < time.Second {
+			interval *= 2
+		}
+	}
 }
 
 // MB-75471: the mode changes from which ad hoc and inline UDF entries are removed from the prepared cache
@@ -350,6 +386,9 @@ func doQueryMetadataCleanup() {
 		}
 		return true
 	}, nil)
+
+	// MB-75506: no plans saved with PREPARE SAVE any more
+	clearAllSaved()
 
 	for i := range names {
 		logging.Warnf(fmt.Sprintf("QUERY_METADATA bucket is missing, removing prepared statement '%s'", names[i]))
