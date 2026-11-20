@@ -684,6 +684,8 @@ func (this *TransactionMutations) DeleteAll(delta bool, memSize *int64) {
 			_TRANSACTIONLOGVALUES_POOL.Put(tl.logValues)
 		}
 	}
+	// the logs' values are now pooled: don't keep pointers to the logs
+	clear(this.logs)
 	this.logs = this.logs[0:0]
 
 	if delta {
@@ -761,6 +763,8 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 					if cl == dcl {
 						pos = ci
 					} else {
+						// the dropped log's values are pooled below: don't keep a pointer to it
+						clear(this.logs[dcl:])
 						this.logs = this.logs[:dcl]
 					}
 					tl.DeleteAll(pos, &memSize)
@@ -794,6 +798,8 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 						_TRANSACTIONLOGVALUE_POOL.Put(tlv)
 					}
 				}
+				// the values are now pooled and may be reused: don't keep pointers to them
+				clear(tl.logValues[sci:])
 				tl.logValues = tl.logValues[:sci]
 				if cl != startLog {
 					_TRANSACTIONLOGVALUES_POOL.Put(tl.logValues)
@@ -801,6 +807,10 @@ func (this *TransactionMutations) UndoLog(sLog, sLogValIndex uint64) (err errors
 			}
 		}
 		this.curLog = startLog
+		// the later logs' values are now pooled: don't keep pointers to the logs
+		if n := this.curLog + 1; n < len(this.logs) {
+			clear(this.logs[n:])
+		}
 		this.logs = this.logs[:this.curLog+1]
 		this.curKeyspace = ""
 		this.curStartLogIndex = this.TotalMutations()

@@ -83,15 +83,9 @@ func (q *Queue) Size() int {
 }
 
 func (q *Queue) Clear() {
-	n := len(q.nodes)
-
-	if q.tail < q.head {
-		q.tail += n
-	}
-
-	for i := q.head; i <= q.tail; i++ {
-		q.nodes[i%n] = nil
-	}
+	// Clear the whole array: walking from head to tail misses a full queue,
+	// where head == tail, and the queue may then be pooled with its entries set.
+	clear(q.nodes)
 
 	q.head = 0
 	q.tail = 0
