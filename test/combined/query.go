@@ -455,8 +455,14 @@ func (this *Query) Execute(requestParams map[string]any) error {
 							if n == 0 {
 								if msg, ok := m["msg"].(string); ok {
 									errMsg = msg
+									// append the "message" of the "reason" object, if present
+									if r, ok := m["reason"].(map[string]any); ok {
+										if rmsg, ok := r["message"].(string); ok && rmsg != "" {
+											errMsg += " (reason: " + rmsg + ")"
+										}
+									}
 								} else {
-									// no "msg" field; fall back to the whole error object
+									// no "msg" field; fall back to the whole error object (which already includes any reason)
 									b, _ := json.Marshal(m)
 									errMsg = string(b)
 								}
