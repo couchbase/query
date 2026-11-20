@@ -1,0 +1,33 @@
+[
+    {
+	"testcase": "MB-75507: the saved plan, whose index was dropped, is loaded and re-planned",
+        "statements":"EXECUTE mb75507_p1",
+        "results": [
+            {
+                "c11": 3
+            },
+            {
+                "c11": 4
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75507: the new plan replaces the saved plan",
+        "statements":"SELECT RAW d.encoded_plan = b.doc.encoded_plan FROM QUERY_METADATA._system._query b JOIN QUERY_METADATA._system._query d ON KEYS b.origId WHERE meta(b).id = \"mb75507_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            false
+        ]
+    },
+    {
+	"testcase": "MB-75507: back up the new saved plan",
+        "statements":"UPSERT INTO QUERY_METADATA._system._query (KEY k, VALUE v) SELECT \"mb75507_backup\" AS k, {\"origId\": meta(d).id, \"doc\": d} AS v FROM QUERY_METADATA._system._query d USE KEYS \"ppn::mb75507_p1\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    }
+]

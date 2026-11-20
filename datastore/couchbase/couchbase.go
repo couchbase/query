@@ -2684,13 +2684,21 @@ func waitForIndexerSync(indexer datastore.Indexer) {
 	// (mock, file, system, virtual) returns a hardcoded 0 permanently, and FTS returns a fixed non-zero
 	// version constant unrelated to sync state - so guard on Name() too, not just the caller's context,
 	// in case this ever gets called on something other than a GSI indexer.
-	if indexer == nil || indexer.Name() != datastore.GSI || indexer.MetadataVersion() != 0 {
-		return // already synced (the overwhelmingly common case), or not a GSI indexer - effectively free
+	if indexer == nil || indexer.Name() != datastore.GSI {
+		return // not a GSI indexer - effectively free
+	}
+	if indexer.MetadataVersion() != 0 {
+		// already synced (the overwhelmingly common case) - effectively free
+		datastore.SetGsiSynced() // MB-75507
+		return
 	}
 	deadline := time.Now().Add(_INDEXER_SYNC_MAX_WAIT)
 	for indexer.MetadataVersion() == 0 && time.Now().Before(deadline) {
 		time.Sleep(_INDEXER_SYNC_POLL_INTERVAL)
 		indexer.Refresh()
+	}
+	if indexer.MetadataVersion() != 0 {
+		datastore.SetGsiSynced() // MB-75507
 	}
 }
 
