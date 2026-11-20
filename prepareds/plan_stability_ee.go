@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/couchbase/query-ee/dictionary"
 	"github.com/couchbase/query/errors"
@@ -212,6 +213,18 @@ func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) err
 
 const _TEXT_SIZE = 50
 
+// the first _TEXT_SIZE bytes of the text, followed by "..." if longer; MB-75478: not cutting a (UTF-8) character
+func textPrefix(text string) string {
+	if len(text) <= _TEXT_SIZE {
+		return text
+	}
+	n := _TEXT_SIZE
+	for n > 0 && !utf8.RuneStart(text[n]) {
+		n--
+	}
+	return text[:n] + "..."
+}
+
 func persistPrepared(prepared *plan.Prepared) errors.Error {
 	var err1 error
 	fullName := encodeName(prepared.Name(), prepared.QueryContext())
@@ -226,12 +239,7 @@ func persistPrepared(prepared *plan.Prepared) errors.Error {
 	// (the entire text is part of encoded_plan, the separate text here is just for recognition)
 	var text string
 	if prepared.AdHoc() {
-		fullText := prepared.Text()
-		if len(fullText) <= _TEXT_SIZE {
-			text = fullText
-		} else {
-			text = fullText[:_TEXT_SIZE] + "..."
-		}
+		text = textPrefix(prepared.Text())
 	}
 	err := dictionary.PersistPrepared(fullName, encoded_plan, text,
 		prepared.Persist(), prepared.AdHoc(), prepared.IsInlineUdf(), prepared.GetKeyspaceReferences())

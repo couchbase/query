@@ -122,5 +122,44 @@
         "statements":"DELETE FROM system:prepareds WHERE name = \"ps8\"",
         "results": [
         ]
+    },
+    {
+	"testcase": "MB-75478: plan stability AD_HOC",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"ad_hoc\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75478: a saved plan document without persist",
+        "statements":"INSERT INTO QUERY_METADATA._system._query VALUES (\"ppn::mb75478_bad\", {\"name\": \"mb75478_bad\", \"type\": \"prepared_plan\"})",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75478: turning plan stability off skips the document",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"off\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75478: plan stability is off",
+        "statements":"SELECT plan_stability.mode FROM system:settings",
+        "results": [
+            {
+                "mode": "off"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75478: remove the document",
+        "statements":"DELETE FROM QUERY_METADATA._system._query USE KEYS \"ppn::mb75478_bad\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
     }
 ]

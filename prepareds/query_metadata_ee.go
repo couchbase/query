@@ -47,6 +47,13 @@ func PreparedsFromPersisted() {
 	} else {
 		queryMetadata, err := store.GetQueryMetadata()
 		if queryMetadata == nil {
+			// MB-75478: report why the saved plans are not loaded
+			if err != nil {
+				preparedPrimeReport.Reason = err.Error()
+			} else {
+				preparedPrimeReport.Reason = "Could not get handle on QUERY_METADATA"
+			}
+			logPersistedPrimeReport(preparedPrimeReport)
 			return
 		}
 		planStability := settings.IsPlanStabilityEnabled()
@@ -107,6 +114,10 @@ func PreparedsFromPersisted() {
 		}
 	}
 
+	logPersistedPrimeReport(preparedPrimeReport)
+}
+
+func logPersistedPrimeReport(preparedPrimeReport *PrimeReport) {
 	preparedPrimeReport.EndTime = time.Now()
 
 	if buf, err := json.Marshal(preparedPrimeReport); err == nil {

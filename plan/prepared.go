@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/couchbase/query/algebra"
@@ -50,7 +51,7 @@ type Prepared struct {
 	tenant          string
 	useFts          bool
 	useCBO          bool
-	persist         bool
+	persist         atomic.Bool // MB-75478: changed on a cached plan (QUERY_METADATA cleanup)
 	adHoc           bool
 	inlineUdf       bool
 	restored        bool
@@ -66,8 +67,8 @@ type Prepared struct {
 	txPrepareds        map[string]*Prepared
 	udfSubqPlans       json.RawMessage
 	planVersion        int
-	errCount           int
-	fatalError         bool
+	errCount           atomic.Int32 // MB-75478: updated by concurrent executions (Verify())
+	fatalError         atomic.Bool
 
 	userAgent  string
 	users      string
@@ -179,8 +180,8 @@ func (this *Prepared) marshalInternal(r map[string]any) {
 	if this.useCBO {
 		r["useCBO"] = this.useCBO
 	}
-	if this.persist {
-		r["persist"] = this.persist
+	if this.persist.Load() {
+		r["persist"] = true
 	}
 	if this.adHoc {
 		r["adHocStatement"] = this.adHoc
@@ -202,12 +203,6 @@ func (this *Prepared) marshalInternal(r map[string]any) {
 	}
 	if this.optimHints != nil {
 		r["optimizer_hints"] = this.optimHints
-	}
-	if this.fatalError {
-		r["verificationFatalError"] = this.fatalError
-	}
-	if this.errCount != 0 {
-		r["verificationErrorCount"] = this.errCount
 	}
 	if len(this.keyspaceRefs) > 0 {
 		r["keyspaceReferences"] = this.keyspaceRefs
@@ -248,8 +243,6 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 		CreatingUserAgent  string          `json:"creatingUserAgent"`
 		Users              string          `json:"users"`
 		RemoteAddr         string          `json:"remoteAddr"`
-		FatalError         bool            `json:"verificationFatalError"`
-		ErrCount           int             `json:"verificationErrorCount"`
 		KeyspaceRefs       []string        `json:"keyspaceReferences"`
 		SubqPlans          map[string]struct {
 			PlanOp             json.RawMessage `json:"plan"`
@@ -281,14 +274,12 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 	this.queryContext = _unmarshalled.QueryContext
 	this.useFts = _unmarshalled.UseFts
 	this.useCBO = _unmarshalled.UseCBO
-	this.persist = _unmarshalled.Persist
+	this.persist.Store(_unmarshalled.Persist)
 	this.adHoc = _unmarshalled.AdHoc
 	this.inlineUdf = _unmarshalled.InlineUdf
 	this.restored = _unmarshalled.Restored
 	this.autoPrepared = _unmarshalled.AutoPrepared
 	this.planVersion = _unmarshalled.Version
-	this.fatalError = _unmarshalled.FatalError
-	this.errCount = _unmarshalled.ErrCount
 	this.keyspaceRefs = _unmarshalled.KeyspaceRefs
 	this.udfSubqPlans = _unmarshalled.UdfSubqPlans
 
@@ -518,11 +509,11 @@ func (this *Prepared) SetUseCBO(useCBO bool) {
 }
 
 func (this *Prepared) Persist() bool {
-	return this.persist
+	return this.persist.Load()
 }
 
 func (this *Prepared) SetPersist(persist bool) {
-	this.persist = persist
+	this.persist.Store(persist)
 }
 
 func (this *Prepared) AdHoc() bool {
@@ -695,11 +686,12 @@ func (this *Prepared) Verify() errors.Error {
 			err, _ = subqueryPlans.ForEach(nil, uint32(0), true, verifyF)
 		}
 	}
-	if err != nil && !this.fatalError {
+	// once set, the fatal error indicator stays set
+	if err != nil && !this.fatalError.Load() {
 		if isFatalVerificationError(err) {
-			this.fatalError = true
+			this.fatalError.Store(true)
 		} else {
-			this.errCount++
+			this.errCount.Add(1)
 		}
 	}
 	return err
@@ -815,23 +807,23 @@ func (this *Prepared) GetKeyspaceReferences() []string {
 }
 
 func (this *Prepared) ErrorCount() int {
-	return this.errCount
+	return int(this.errCount.Load())
 }
 
 func (this *Prepared) SetErrorCount(errCount int) {
-	this.errCount = errCount
+	this.errCount.Store(int32(errCount))
 }
 
 func (this *Prepared) HasFatalError() bool {
-	return this.fatalError
+	return this.fatalError.Load()
 }
 
 func (this *Prepared) SetFatalError(fatalError bool) {
-	this.fatalError = fatalError
+	this.fatalError.Store(fatalError)
 }
 
 func (this *Prepared) HasVerificationError() bool {
-	return this.fatalError || this.errCount > 0
+	return this.fatalError.Load() || this.errCount.Load() > 0
 }
 
 func (this *Prepared) PlanVersion() int {
