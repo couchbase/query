@@ -59,6 +59,14 @@ func TestPlanStability(t *testing.T) {
 	evictPrepareds(qc)
 	runMatch("case_plan_stability_evict_check.json", false, false, qc, t)
 
+	// MB-75507: under FLEXIBLE, a saved plan whose index was dropped is replaced, once
+	runStmt(qc, "DROP INDEX shellTest.mb75507_idx IF EXISTS")
+	runMatch("case_plan_stability_replan_setup.json", false, false, qc, t)
+	evictPrepareds(qc)
+	runMatch("case_plan_stability_replan_check1.json", false, false, qc, t)
+	evictPrepareds(qc)
+	runMatch("case_plan_stability_replan_check2.json", false, false, qc, t)
+
 	runMatch("case_plan_stability_stop.json", false, false, qc, t)
 
 	fmt.Println("Dropping indexes")
@@ -81,5 +89,5 @@ func evictPrepareds(qc *gsi.MockServer) {
 	limit := prepareds.PreparedsLimit()
 	defer prepareds.PreparedsSetLimit(limit)
 	prepareds.PreparedsSetLimit(1)
-	runStmt(qc, "PREPARE mb75506_evict FROM SELECT 1")
+	runStmt(qc, "PREPARE FORCE mb75506_evict FROM SELECT 1")
 }

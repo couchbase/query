@@ -1,0 +1,31 @@
+[
+    {
+	"testcase": "MB-75507: plan stability PREPARED_ONLY, error policy FLEXIBLE",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"prepared only\", plan_stability.error_policy = \"flexible\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75507: an index to be dropped",
+        "statements":"CREATE INDEX mb75507_idx ON shellTest(c11, c12, c21) WHERE type = \"left\""
+    },
+    {
+	"testcase": "MB-75507: prepared statement using the index, saved",
+        "statements":"PREPARE mb75507_p1 FROM SELECT c11 FROM shellTest USE INDEX (mb75507_idx) WHERE type = \"left\" AND c11 > 2 ORDER BY c11"
+    },
+    {
+	"testcase": "MB-75507: back up the saved plan",
+        "statements":"INSERT INTO QUERY_METADATA._system._query (KEY k, VALUE v) SELECT \"mb75507_backup\" AS k, {\"origId\": meta(d).id, \"doc\": d} AS v FROM QUERY_METADATA._system._query d USE KEYS \"ppn::mb75507_p1\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75507: drop the index",
+        "statements":"DROP INDEX shellTest.mb75507_idx",
+        "results": [
+        ]
+    }
+]

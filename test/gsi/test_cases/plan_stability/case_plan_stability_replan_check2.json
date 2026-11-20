@@ -1,0 +1,45 @@
+[
+    {
+	"testcase": "MB-75507: the new saved plan is loaded",
+        "statements":"EXECUTE mb75507_p1",
+        "results": [
+            {
+                "c11": 3
+            },
+            {
+                "c11": 4
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75507: and used, not replaced again",
+        "statements":"SELECT RAW d.encoded_plan = b.doc.encoded_plan FROM QUERY_METADATA._system._query b JOIN QUERY_METADATA._system._query d ON KEYS b.origId WHERE meta(b).id = \"mb75507_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            true
+        ]
+    },
+    {
+	"testcase": "MB-75507: remove the backup",
+        "statements":"DELETE FROM QUERY_METADATA._system._query USE KEYS \"mb75507_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75507: remove the prepared statement",
+        "statements":"DELETE FROM system:prepareds WHERE name LIKE \"mb75507%\" OR name LIKE \"mb75506%\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75507: plan stability off",
+        "statements":"UPDATE system:settings UNSET plan_stability",
+        "results": [
+        ]
+    }
+]

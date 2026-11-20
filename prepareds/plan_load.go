@@ -13,7 +13,13 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/datastore"
+	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/logging"
+	"github.com/couchbase/query/plan"
 	"github.com/couchbase/query/settings"
+	"github.com/couchbase/query/util"
 )
 
 // Tracks when a prepared cache miss has to look for a saved plan in QUERY_METADATA, on top of a
@@ -34,11 +40,99 @@ type planLoadState struct {
 	sync.RWMutex
 	unloaded map[string]bool
 	saved    map[string]bool
+	standIns map[string]*standIn // MB-75507: for unloaded names only
+}
+
+// MB-75507: under the MODERATE error policy, a plan that can not be used (e.g. its index was dropped) is
+// re-planned for each execution, and the new plan used for that execution only. The new plan is kept on this
+// node (it is not saved, distributed, or shown as the plan of the statement), and stands in for the plan that can
+// not be used, instead of re-planning, while it is usable (see usable()).
+type standIn struct {
+	prepared  *plan.Prepared
+	standsFor *plan.Prepared // the cached plan it stands in for, if any
+	encoded   string         // the saved plan it stands in for, if not cached (unloaded)
+
+	// the GSI indexers of the keyspaces of the statement, and their metadata versions when the plan was re-planned
+	indexers []indexerVersion
+}
+
+// something whose metadata version tells a change, e.g. a datastore.Indexer
+type versioned interface {
+	Refresh() errors.Error
+	MetadataVersion() uint64
+}
+
+type indexerVersion struct {
+	indexer versioned
+	version uint64
+}
+
+// prepared stands in for the cached plan standsFor, or for the saved plan encoded; nil if it can not be used as a
+// stand-in. indexers are the GSI indexers of the keyspaces of the statement, with their metadata versions taken
+// before the plan it stands in for was found not usable (see keyspaceIndexers()): a change while it was being
+// verified, or re-planned, then also drops the stand-in. If they were not taken (nil, e.g. no keyspace references
+// are known), they are taken now, from the keyspace references of prepared.
+func newStandIn(prepared, standsFor *plan.Prepared, encoded string, indexers []indexerVersion) *standIn {
+	if !standInUsable(prepared) {
+		return nil
+	}
+	if indexers == nil {
+		indexers = keyspaceIndexersFn(prepared.GetKeyspaceReferences())
+	}
+	// long lived, as a cached plan: don't let it keep the request that created it alive (see add())
+	prepared.OwnStrings()
+	return &standIn{prepared: prepared, standsFor: standsFor, encoded: strings.Clone(encoded),
+		indexers: indexers}
+}
+
+// The stand-in is usable while its metadata (its MetadataCheck()) and the GSI indexers of the keyspaces of the
+// statement do not change: the plan it stands in for can only become usable again through such a change (e.g. an
+// index created again). The MetadataCheck() of the stand-in alone does not tell: it covers only the indexers its
+// own operators use, e.g. not the GSI indexer for a sequential scan, which is what is left when the only index of
+// the keyspace is dropped.
+func (this *standIn) usable() bool {
+	if !metadataCheckFn(this.prepared) {
+		return false
+	}
+	for _, iv := range this.indexers {
+		iv.indexer.Refresh()
+		if iv.indexer.MetadataVersion() != iv.version {
+			return false
+		}
+	}
+	return true
+}
+
+// the GSI indexers of the keyspaces (refs, keyspace references of a plan), and their current metadata versions;
+// nil if there are no keyspace references
+func keyspaceIndexers(refs []string) []indexerVersion {
+	if len(refs) == 0 {
+		return nil
+	}
+	rv := make([]indexerVersion, 0, len(refs))
+	for _, ref := range refs {
+		keyspace, err := datastore.GetKeyspace(algebra.ParsePath(ref)...)
+		if err != nil || keyspace == nil {
+			logging.Debugf("Keyspace %s of a plan standing in for a plan that can not be used not found (%v): "+
+				"only the metadata of the plan is checked", ref, err)
+			continue
+		}
+		indexer, err := keyspace.Indexer(datastore.GSI)
+		if err != nil || indexer == nil {
+			logging.Debugf("GSI indexer of keyspace %s of a plan standing in for a plan that can not be used not "+
+				"found (%v): only the metadata of the plan is checked", ref, err)
+			continue
+		}
+		indexer.Refresh()
+		rv = append(rv, indexerVersion{indexer: indexer, version: indexer.MetadataVersion()})
+	}
+	return rv
 }
 
 var planLoad = &planLoadState{
 	unloaded: make(map[string]bool),
 	saved:    make(map[string]bool),
+	standIns: make(map[string]*standIn),
 }
 
 // called before the query service starts accepting requests; PreparedsFromPersisted() ends priming
@@ -74,9 +168,67 @@ func clearUnloaded(name string) {
 	planLoad.Lock()
 	if planLoad.unloaded[name] {
 		delete(planLoad.unloaded, name)
+		delete(planLoad.standIns, name)
 		atomic.StoreInt32(&planLoad.unloadedSize, int32(len(planLoad.unloaded)))
 	}
 	planLoad.Unlock()
+}
+
+// MB-75507: under the MODERATE error policy, a saved plan (encoded) that could not be used is re-planned for each
+// execution, and is not in the cache (it is unloaded): keep the new plan for the (encoded) name, to be used
+// instead of re-planning while the saved plan and the metadata of the new plan do not change
+func setUnloadedStandIn(name, encoded string, prepared *plan.Prepared, indexers []indexerVersion) {
+	standIn := newStandIn(prepared, nil, encoded, indexers)
+	if standIn == nil {
+		return
+	}
+	planLoad.Lock()
+	if planLoad.unloaded[name] {
+		// the key is long lived: do not share memory with the caller's string (see markUnloaded())
+		planLoad.standIns[strings.Clone(name)] = standIn
+	}
+	planLoad.Unlock()
+}
+
+// MB-75507: the plan kept for the (encoded) name of an unloaded saved plan (see setUnloadedStandIn()), if the
+// saved plan is still the one (encoded) it stands in for, and it is usable
+func getUnloadedStandIn(name, encoded string) *plan.Prepared {
+	if atomic.LoadInt32(&planLoad.unloadedSize) == 0 {
+		return nil
+	}
+	planLoad.RLock()
+	standIn, ok := planLoad.standIns[name]
+	planLoad.RUnlock()
+	if !ok {
+		return nil
+	} else if standIn.encoded == encoded && standIn.usable() {
+		return standIn.prepared
+	}
+	planLoad.Lock()
+	if cur, ok := planLoad.standIns[name]; ok && cur == standIn {
+		delete(planLoad.standIns, name)
+	}
+	planLoad.Unlock()
+	return nil
+}
+
+// MB-75507: a re-planned plan can stand in for a plan that could not be used only if the metadata versions it was
+// planned against are recorded, so that its MetadataCheck() notices a change: reprepare() records them (Verify())
+// only with the N1QL_IGNORE_IDXR_META bit set (the feature disabled, not the default), otherwise verify it here
+func standInUsable(prepared *plan.Prepared) bool {
+	if prepared == nil {
+		return false
+	}
+	if util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
+		return verifyPreparedFn(prepared) == nil
+	}
+	return true
+}
+
+// test hooks
+var keyspaceIndexersFn = keyspaceIndexers
+var metadataCheckFn = func(prepared *plan.Prepared) bool {
+	return prepared.MetadataCheck()
 }
 
 func isUnloaded(name string) bool {

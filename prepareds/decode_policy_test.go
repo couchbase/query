@@ -93,7 +93,7 @@ func (this splitKeyRemote) SplitKey(key string) (string, string) {
 func TestDecodeVerifyPolicy(t *testing.T) {
 	defer func(v func(*plan.Prepared) errors.Error, r func(*plan.Prepared, map[string]bool, *time.Duration, bool,
 		settings.PlanStabilityMode, settings.PlanStabilityErrorPolicy, logging.Log,
-		datastore.ScanConsistency) (*plan.Prepared, errors.Error), ra distributed.SystemRemoteAccess) {
+		datastore.ScanConsistency, bool) (*plan.Prepared, errors.Error), ra distributed.SystemRemoteAccess) {
 		verifyPreparedFn = v
 		reprepareFn = r
 		distributed.SetRemoteAccess(ra)
@@ -104,10 +104,12 @@ func TestDecodeVerifyPolicy(t *testing.T) {
 		return errors.NewPlanVerificationError("index not found", nil)
 	}
 	var replanned *plan.Prepared
+	var encodePlan bool
 	reprepareFn = func(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
 		planStability bool, planStabilityMode settings.PlanStabilityMode,
 		planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log,
-		scanConsistency datastore.ScanConsistency) (*plan.Prepared, errors.Error) {
+		scanConsistency datastore.ScanConsistency, encode bool) (*plan.Prepared, errors.Error) {
+		encodePlan = encode
 		replanned = plan.NewPrepared(nil, nil, nil, nil, nil)
 		replanned.SetName(prepared.Name())
 		replanned.SetText(prepared.Text())
@@ -161,6 +163,10 @@ func TestDecodeVerifyPolicy(t *testing.T) {
 		if tc.cached && ce.Prepared != replanned {
 			t.Errorf("%s (%v): the re-planned plan is not the cached plan", tc.name, tc.policy)
 		}
+		// MB-75507: the encoded plan is built only for a plan that replaces the existing plan
+		if !tc.err && encodePlan != tc.cached {
+			t.Errorf("%s (%v): encoded plan built %v, expected %v", tc.name, tc.policy, encodePlan, tc.cached)
+		}
 
 		// the unloaded names are package-global: leave none for other tests
 		clearUnloaded(tc.cacheName)
@@ -170,7 +176,7 @@ func TestDecodeVerifyPolicy(t *testing.T) {
 // MODERATE, a plan that can not be decoded: re-planned for this execution only, not cached, marked unloaded
 func TestDecodeModeratePolicy(t *testing.T) {
 	defer func(r func(*plan.Prepared, map[string]bool, *time.Duration, bool, settings.PlanStabilityMode,
-		settings.PlanStabilityErrorPolicy, logging.Log, datastore.ScanConsistency) (*plan.Prepared, errors.Error)) {
+		settings.PlanStabilityErrorPolicy, logging.Log, datastore.ScanConsistency, bool) (*plan.Prepared, errors.Error)) {
 		reprepareFn = r
 	}(reprepareFn)
 
@@ -178,7 +184,7 @@ func TestDecodeModeratePolicy(t *testing.T) {
 	reprepareFn = func(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
 		planStability bool, planStabilityMode settings.PlanStabilityMode,
 		planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log,
-		scanConsistency datastore.ScanConsistency) (*plan.Prepared, errors.Error) {
+		scanConsistency datastore.ScanConsistency, encode bool) (*plan.Prepared, errors.Error) {
 		replanned = plan.NewPrepared(nil, nil, nil, nil, nil)
 		replanned.SetName(prepared.Name())
 		replanned.SetText(prepared.Text())

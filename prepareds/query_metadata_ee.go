@@ -160,6 +160,15 @@ func loadPrepared(name string, planStabilityMode settings.PlanStabilityMode,
 		return nil, nil
 	}
 
+	// MB-75507: MODERATE, the saved plan could not be used and was re-planned: use the new plan again, if the
+	// saved plan has not changed, and the metadata of the new plan has not changed (not under another error
+	// policy, or with plan stability off: the saved plan is decoded and the error policy applied)
+	if planStabilityMode != settings.PS_MODE_OFF && planStabilityErrorPolicy == settings.PS_ERROR_MODERATE {
+		if standIn := getUnloadedStandIn(name, encoded_plan); standIn != nil {
+			return standIn, nil
+		}
+	}
+
 	prepared, err, _ := decodePrepared(name, "", encoded_plan, false, nil, true, false,
 		(planStabilityMode != settings.PS_MODE_OFF), false, true, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
 

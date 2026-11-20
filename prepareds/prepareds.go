@@ -14,6 +14,7 @@ import (
 	"math/rand"
 	"strings"
 	"sync"
+	stdatomic "sync/atomic"
 	"time"
 	"unicode"
 
@@ -69,6 +70,24 @@ type CacheEntry struct {
 
 	sync.Mutex // for concurrent checking
 	populated  bool
+
+	// MB-75507: under the MODERATE error policy, the plan re-planned for executions while the cached plan can
+	// not be used (see moderateStandIn())
+	standIn stdatomic.Pointer[standIn]
+}
+
+// MB-75507: under the MODERATE error policy, the plan kept with the cache entry that stands in for the cached
+// plan (see standIn), if it stands in for that plan (the cached plan may have been replaced since it was
+// re-planned), and is usable; otherwise it is dropped, and the cached plan is checked again
+func (this *CacheEntry) moderateStandIn(cached *plan.Prepared) *plan.Prepared {
+	standIn := this.standIn.Load()
+	if standIn == nil {
+		return nil
+	} else if standIn.standsFor == cached && standIn.usable() {
+		return standIn.prepared
+	}
+	this.standIn.CompareAndSwap(standIn, nil)
+	return nil
 }
 
 var prepareds = &preparedCache{}
@@ -100,14 +119,21 @@ const _DEF_MAP_SIZE = 8
 const _PRIME_RETRY_DELAY = 10 * time.Second
 
 // isIndexerNotReady reports whether a DecodePrepared failure's cause is an index-not-found error - see
-// errors.NewUnrecognizedPreparedError, which is what sets Cause() to it.
+// errors.NewUnrecognizedPreparedError, which is what sets Cause() to it - while the GSI metadata has not synced
+// yet: the index may exist (MB-73680).
+// MB-75507: once the GSI metadata has synced, an index that is not found does not exist (e.g. it was dropped): a
+// saved plan using it is re-planned right away, and under FLEXIBLE the new plan replaces the saved plan; it is not
+// kept, and re-planned on every node after every restart.
 func isIndexerNotReady(err errors.Error) bool {
-	if err == nil {
+	if err == nil || gsiSyncedFn() {
 		return false
 	}
 	cause, ok := err.Cause().(errors.Error)
 	return ok && errors.IsIndexNotFoundError(cause)
 }
+
+// test hook
+var gsiSyncedFn = datastore.GsiSynced
 
 // initialize the cache from a different node
 func PreparedsRemotePrime() {
@@ -259,14 +285,14 @@ func PreparedsRemotePrime() {
 }
 
 type PrimeReport struct {
-	Host             string      `json:"host,omitempty"`
-	StartTime        time.Time   `json:"startTime"`
-	EndTime          time.Time   `json:"endTime"`
-	Reason           interface{} `json:"reason,omitempty"`
-	Success          int         `json:"success"`
-	Failed           int         `json:"failed"`
-	Reprepared       int         `json:"reprepared"`
-	RepreparedReason interface{} `json:"repreparedReason,omitempty"`
+	Host             string    `json:"host,omitempty"`
+	StartTime        time.Time `json:"startTime"`
+	EndTime          time.Time `json:"endTime"`
+	Reason           any       `json:"reason,omitempty"`
+	Success          int       `json:"success"`
+	Failed           int       `json:"failed"`
+	Reprepared       int       `json:"reprepared"`
+	RepreparedReason any       `json:"repreparedReason,omitempty"`
 
 	// Retried: decodes that hit an index-not-found error and got a delayed retry. RetrySuccess: how
 	// many of those the retry fixed (not included in Success).
@@ -386,6 +412,13 @@ func (this *preparedCache) GetPlan(name, text, namespace string, context *planne
 		prep.UseFts() != context.UseFts() || prep.UseCBO() != context.UseCBO() {
 		return nil, nil
 	}
+	// MB-75507: the PREPARE returns the encoded plan of the plan; under MODERATE, a plan re-planned for a plan that
+	// can not be used (for this execution, or standing in for it) is built without it (see reprepare())
+	if prep.EncodedPlan() == "" {
+		if _, err1 := prep.BuildEncodedPlan(); err1 != nil {
+			return nil, errors.NewPreparedEncodedPlanError(name, err1)
+		}
+	}
 	return prep, nil
 }
 
@@ -405,7 +438,7 @@ func PreparedsSetLimit(limit int) {
 }
 
 func (this *preparedCache) get(fullName string, track bool) *CacheEntry {
-	var cv interface{}
+	var cv any
 
 	if track {
 		cv = prepareds.cache.Use(fullName, nil)
@@ -451,7 +484,7 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 	if prepared.Persist() {
 		markSaved(fullName)
 	}
-	prepareds.cache.Add(ce, fullName, func(entry interface{}) util.Operation {
+	prepareds.cache.Add(ce, fullName, func(entry any) util.Operation {
 		var op util.Operation = util.AMEND
 		var cont bool = true
 
@@ -463,6 +496,7 @@ func (this *preparedCache) add(prepared *plan.Prepared, populated bool, track bo
 		if cont {
 			oldEntry.Prepared = prepared
 			oldEntry.populated = false
+			oldEntry.standIn.Store(nil) // MB-75507: for the replaced plan
 			if track && !prepared.HasVerificationError() {
 				atomic.AddInt64(&oldEntry.Uses, 1)
 
@@ -653,7 +687,7 @@ var reprepareFn = reprepare
 // miss looks for the saved plan again (see plan_load.go)
 func removeUnsaved(prepared *plan.Prepared) {
 	fullName := encodeName(prepared.Name(), prepared.QueryContext())
-	prepareds.cache.DeleteWithCheck(fullName, func(entry interface{}) bool {
+	prepareds.cache.DeleteWithCheck(fullName, func(entry any) bool {
 		return entry.(*CacheEntry).Prepared == prepared
 	})
 	markUnloaded(fullName)
@@ -734,17 +768,17 @@ func NamePrepareds() []string {
 
 func PreparedsForeach(nonBlocking func(string, *CacheEntry) bool,
 	blocking func() bool) {
-	dummyF := func(id string, r interface{}) bool {
+	dummyF := func(id string, r any) bool {
 		return nonBlocking(id, r.(*CacheEntry))
 	}
 	prepareds.cache.ForEach(dummyF, blocking)
 }
 
 func PreparedDo(name string, f func(*CacheEntry)) {
-	var process func(interface{}) = nil
+	var process func(any) = nil
 
 	if f != nil {
-		process = func(entry interface{}) {
+		process = func(entry any) {
 			ce := entry.(*CacheEntry)
 			f(ce)
 		}
@@ -848,7 +882,7 @@ func PersistSubqueryPlan(prepared *plan.Prepared, planStabilityMode settings.Pla
 
 	// do not save a prepared statement that has been removed from (or replaced in) the cache
 	current := false
-	prepareds.cache.Get(fullName, func(entry interface{}) {
+	prepareds.cache.Get(fullName, func(entry any) {
 		current = entry.(*CacheEntry).Prepared == prepared
 	})
 	if !current {
@@ -921,7 +955,7 @@ func DeletePreparedFunc(name string, f func(*CacheEntry) bool) errors.Error {
 	}
 
 	// not if the entry has been replaced in the meantime: the new plan is kept
-	prepareds.cache.DeleteWithCheck(name, func(entry interface{}) bool {
+	prepareds.cache.DeleteWithCheck(name, func(entry any) bool {
 		e := entry.(*CacheEntry)
 		return e.Prepared == prepared && (f == nil || f(e))
 	})
@@ -1025,26 +1059,48 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			// stability error policy does not apply
 			var newPrepared *plan.Prepared
 			newPrepared, err = reprepare(prepared, nil, phaseTime, planStability,
-				planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
+				planStabilityMode, planStabilityErrorPolicy, log, scanConsistency, true)
 			if err == nil {
 				prepared = newPrepared
 			}
 		} else if verify {
 			var good bool
 
+			// MB-75507: under MODERATE, a plan re-planned for the executions while the cached plan can not be
+			// used, which is used while it is usable (see standIn)
+			moderate := planStability && planStabilityErrorPolicy == settings.PS_ERROR_MODERATE && !metaCheck
+			var standInPlan *plan.Prepared
+			cached := prepared // the cached plan, before it may be re-planned
+
 			// things have already been set up
 			// take the short way home
-			if ce.populated {
+			populated := ce.populated
+			if populated {
 
 				// note that it's fine to check and repopulate without a lock
 				// since the structure of the plan tree won't change, nor the
 				// keyspaces and indexers, the worse that is going to happen is
 				// two requests amending the same counter
-				good = prepared.MetadataCheck()
+				good = metadataCheckFn(prepared)
+			}
+			var indexers []indexerVersion
+			if !good && moderate {
+				// the cached plan failed verification, and nothing changed since that could make it usable
+				standInPlan = ce.moderateStandIn(cached)
+				if standInPlan == nil {
+					// the cached plan is verified, and may be re-planned: the GSI indexers of its keyspaces,
+					// before, for a plan that may stand in for it (see newStandIn())
+					indexers = keyspaceIndexersFn(cached.GetKeyspaceReferences())
+				}
+			}
+
+			if standInPlan != nil {
+				// MB-75507: neither verify the cached plan, nor re-plan
+			} else if populated {
 
 				// counters have changed. fetch new values
 				if !good && !metaCheck {
-					good = prepared.Verify() == nil
+					good = verifyPreparedFn(prepared) == nil
 				}
 			} else {
 				var persist bool
@@ -1059,7 +1115,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				} else {
 
 					// nada - have to go the long way
-					good = prepared.Verify() == nil
+					good = verifyPreparedFn(prepared) == nil
 					if good {
 						ce.populated = true
 						if prepared.IsRestored() {
@@ -1082,13 +1138,20 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				}
 			}
 
+			if good && ce.standIn.Load() != nil {
+				// MB-75507: the cached plan can be used again
+				ce.standIn.Store(nil)
+			}
+
 			// after all this, it did not work out!
 			// here we are going to accept multiple requests creating a new
 			// plan concurrently as we don't have a good way to serialize
 			// without blocking the whole prepared cacheline
 			// locking will occur at adding time: both requests will insert,
 			// the last wins
-			if metaCheck {
+			if standInPlan != nil {
+				prepared = standInPlan
+			} else if metaCheck {
 				if !good {
 					prepared = nil
 				}
@@ -1101,8 +1164,8 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 				var replace bool
 				replace, err = reprepareAllowed(planStability, planStabilityErrorPolicy)
 				if err == nil {
-					prepared, err = reprepare(prepared, nil, phaseTime, planStability,
-						planStabilityMode, planStabilityErrorPolicy, log, scanConsistency)
+					prepared, err = reprepareFn(prepared, nil, phaseTime, planStability,
+						planStabilityMode, planStabilityErrorPolicy, log, scanConsistency, replace)
 				}
 				if err == nil && replace {
 					// if the reprepared plan has a sequential scan don't persist or distribute it: each node
@@ -1113,6 +1176,12 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 					if err1 := addPrepared(prepared, planStability, !seqScanKeptLocal(prepared)); err1 != nil {
 						logging.Infof("Re-prepared plan for prepared statement %s used for this execution only, "+
 							"not kept in the cache: %v", encodedName, err1)
+					}
+				} else if err == nil && !good && moderate {
+					// MB-75507: MODERATE, used for the next executions too, while it is usable, and the cache
+					// entry still holds the plan it stands in for (it may have been replaced meanwhile)
+					if standIn := newStandIn(prepared, cached, "", indexers); standIn != nil {
+						ce.standIn.Store(standIn)
 					}
 				}
 			}
@@ -1154,7 +1223,7 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 
 	// cache get had already moved this entry to the top of the LRU
 	// no need to do it again
-	_ = prepareds.cache.Get(name, func(entry interface{}) {
+	_ = prepareds.cache.Get(name, func(entry any) {
 		ce := entry.(*CacheEntry)
 		atomic.AddUint64(&ce.ServiceTime, uint64(serviceTime))
 		util.TestAndSetUint64(&ce.MinServiceTime, uint64(serviceTime),
@@ -1211,8 +1280,8 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 	// error), instead of re-planning or returning 4040
 	unloaded := persisted || planStability
 
-	prepared, add, replanned, err, unmarshallErr := unmarshalPrepared(prepared_stmt, phaseTime, reprep, remap,
-		planStability, deferIndexerRace, planStabilityMode, planStabilityErrorPolicy, log)
+	prepared, add, replanned, err, unmarshallErr, indexers := unmarshalPrepared(prepared_stmt, phaseTime, reprep,
+		remap, planStability, deferIndexerRace, planStabilityMode, planStabilityErrorPolicy, log)
 	if err != nil {
 		if unloaded {
 			markUnloaded(cacheName)
@@ -1257,9 +1326,14 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 		if verifyErr != nil || forceReprepare {
 			var newPrepared *plan.Prepared
 			replace, prepErr := reprepareAllowed(planStability, planStabilityErrorPolicy)
+			if prepErr == nil && !replace && persisted {
+				// MB-75507: the GSI indexers of the keyspaces, before re-planning, for a plan that may stand in
+				// for the saved plan (see newStandIn())
+				indexers = keyspaceIndexersFn(prepared.GetKeyspaceReferences())
+			}
 			if prepErr == nil {
 				newPrepared, prepErr = reprepareFn(prepared, nil, phaseTime, planStability,
-					planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+					planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED, replace)
 			}
 			if prepErr == nil {
 				prepared = newPrepared
@@ -1278,6 +1352,11 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 		// MODERATE: the new plan is for this execution only, the saved plan stays as is and is
 		// not in the cache
 		markUnloaded(cacheName)
+		if persisted {
+			// MB-75507: the new plan is used for the next executions too, while the saved plan and the
+			// metadata do not change (see loadPrepared())
+			setUnloadedStandIn(cacheName, prepared_stmt, prepared, indexers)
+		}
 	}
 
 	if add {
@@ -1306,9 +1385,10 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 		// could not be used and has been replaced in the cache, replace the saved plan as well,
 		// same as when a cached plan is re-planned (see getPrepared()), except:
 		//   - a plan with a sequential scan stays local, same as in addPrepared()
-		//   - the saved plan could not be decoded because an index was not found: this node may
-		//     not see the index yet (GSI metadata not synced, MB-73680), so the new plan may lack
-		//     it (e.g. a primary scan); keep the saved plan, only cache the new plan
+		//   - the saved plan could not be decoded because an index was not found while the GSI
+		//     metadata has not synced yet: this node may not see the index yet (MB-73680), so the
+		//     new plan may lack it (e.g. a primary scan); keep the saved plan, only cache the new
+		//     plan (MB-75507: once synced, the index does not exist, the saved plan is replaced)
 		if persisted && add && replanned && planStability && !seqScanKeptLocal(prepared) &&
 			!isIndexerNotReady(unmarshallErr) {
 			if err1 := persistPreparedFn(prepared); err1 != nil {
@@ -1342,10 +1422,12 @@ func decodePrepared(prepared_name string, queryContext string, prepared_stmt str
 //   - replanned: whether the plan returned was re-planned because the encoded plan could not be
 //     used (not set when re-planned because of a newer plan version)
 //   - the error, and the unmarshalling error that caused a re-plan
+//   - MB-75507: for a plan re-planned for this execution only, the GSI indexers of the keyspaces of the statement,
+//     before re-planning (see newStandIn())
 func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, planStability bool,
 	deferIndexerRace bool, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (
-	*plan.Prepared, bool, bool, errors.Error, errors.Error) {
+	*plan.Prepared, bool, bool, errors.Error, errors.Error, []indexerVersion) {
 
 	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded, remap)
 	if err != nil {
@@ -1364,12 +1446,21 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 					if prepErr != nil {
 						// error policy STRICT does not allow re-planning: return that, rather than
 						// the unmarshalling error
-						return nil, false, false, prepErr, nil
+						return nil, false, false, prepErr, nil, nil
+					}
+					var indexers []indexerVersion
+					if !replace {
+						// the plan can not be decoded: its keyspaces from the encoded plan
+						var refs []string
+						if val, er := json.FindKey(bytes, "keyspaceReferences"); er == nil && val != nil {
+							json.Unmarshal(val, &refs)
+						}
+						indexers = keyspaceIndexersFn(refs)
 					}
 					pl, _ := reprepareFn(prepared, nil, phaseTime, planStability,
-						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+						planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED, replace)
 					if pl != nil {
-						return pl, replace, true, nil, err
+						return pl, replace, true, nil, err, indexers
 					}
 				}
 			} else {
@@ -1383,19 +1474,20 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 				}
 			}
 		}
-		return nil, false, false, err, nil
+		return nil, false, false, err, nil, nil
 	} else if reprep && (prepared.PlanVersion() > util.PLAN_VERSION) {
 
 		// we got the statement, but it was prepared by a newer engine, reprepare to produce a plan we understand
-		pl, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+		pl, err := reprepare(prepared, nil, phaseTime, false, planStabilityMode, planStabilityErrorPolicy, log,
+			datastore.UNBOUNDED, true)
 		if err != nil {
-			return nil, false, false, err, nil
+			return nil, false, false, err, nil, nil
 		}
-		return pl, true, false, nil, errors.NewPlanVersionChange()
+		return pl, true, false, nil, errors.NewPlanVersionChange(), nil
 	} else {
 		prepared.SetEncodedPlan(encoded)
 	}
-	return prepared, true, false, nil, nil
+	return prepared, true, false, nil, nil, nil
 }
 
 // a plan distributed by another node (PUT /admin/prepareds/<name>), under the (encoded) name
@@ -1472,10 +1564,13 @@ func distributePrepared(name, plan string) {
 // execution context (transaction delta keyspaces, scan consistency for a count scan) is not cached
 // as the statement's plan nor saved, and the error policy does not apply.
 // planStability is passed on to BuildPrepared() (generate subquery plans).
+// MB-75507: encode is false for a plan that does not replace the existing plan (error policy MODERATE, see
+// reprepareAllowed()): it is never saved, distributed, or shown as the statement's plan (it is used for this
+// execution, and may stand in for the existing plan, see standIn), so its encoded plan is not built.
 func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTime *time.Duration,
 	planStability bool, planStabilityMode settings.PlanStabilityMode,
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log,
-	scanConsistency datastore.ScanConsistency) (*plan.Prepared, errors.Error) {
+	scanConsistency datastore.ScanConsistency, encode bool) (*plan.Prepared, errors.Error) {
 
 	parse := util.Now()
 
@@ -1544,9 +1639,11 @@ func reprepare(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phaseTim
 	pl.SetAdHoc(prepared.AdHoc())
 	pl.KeyspaceReferences()
 
-	_, err = pl.BuildEncodedPlan()
-	if err != nil {
-		return nil, errors.NewReprepareError(err)
+	if encode {
+		_, err = pl.BuildEncodedPlan()
+		if err != nil {
+			return nil, errors.NewReprepareError(err)
+		}
 	}
 
 	if !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) {
@@ -1656,7 +1753,7 @@ func getTxPrepared(prepared *plan.Prepared, deltaKeyspaces map[string]bool, phas
 	// the transaction plan is kept with the prepared statement for these delta keyspaces only, and not
 	// saved: the plan stability error policy does not apply
 	txPrepared, err = reprepare(prepared, deltaKeyspaces, phaseTime, (planStabilityMode != settings.PS_MODE_OFF),
-		planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED)
+		planStabilityMode, planStabilityErrorPolicy, log, datastore.UNBOUNDED, true)
 	if err == nil {
 		prepared.SetTxPrepared(txPrepared, hashCode)
 	}
