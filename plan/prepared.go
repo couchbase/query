@@ -66,6 +66,7 @@ type Prepared struct {
 	subqueryPlans      *algebra.SubqueryPlans
 	txPrepareds        map[string]*Prepared
 	udfSubqPlans       json.RawMessage
+	udfText            string // MB-75480: the UDF body the subquery plans are for, before planning
 	planVersion        int
 	errCount           atomic.Int32 // MB-75478: updated by concurrent executions (Verify())
 	fatalError         atomic.Bool
@@ -1033,12 +1034,34 @@ func (this *Prepared) SetupUdfSubqPlans(expr expression.Expression, subqPlans *a
 		"planVersion":      util.PLAN_VERSION,
 		"udfSubqueryPlans": marshalSubqPlans,
 	}
+	if this.udfText != "" {
+		r["udfText"] = this.udfText
+	}
 	udfSubqPlans, err := json.Marshal(r)
 	if err != nil {
 		return err
 	}
 	this.udfSubqPlans = udfSubqPlans
 	return nil
+}
+
+// MB-75480: the UDF body (expression, before planning) the UDF subquery plans are for; udfExpr, the expression
+// after planning, differs from the body (e.g. covered expressions)
+func (this *Prepared) SetUdfText(udfText string) {
+	this.udfText = udfText
+}
+
+// MB-75480: whether the UDF subquery plans were generated for the given UDF expression (body, before planning):
+// an entry left from another body of the UDF (e.g. before CREATE OR REPLACE FUNCTION) must not be used
+func (this *Prepared) IsUdfExpr(expr expression.Expression) (bool, error) {
+	var _unmarshalled struct {
+		UdfText string `json:"udfText"`
+	}
+	err := json.Unmarshal(this.udfSubqPlans, &_unmarshalled)
+	if err != nil {
+		return false, err
+	}
+	return _unmarshalled.UdfText != "" && _unmarshalled.UdfText == expr.String(), nil
 }
 
 func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlans) error {

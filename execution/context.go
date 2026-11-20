@@ -1444,6 +1444,13 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 	var hasSubquery, hasPreparedPlans bool
 	planStability := this.IsPlanStabilityEnabled()
 	replace := true
+
+	// MB-75480: the UDF body before planning (which changes it, e.g. covered expressions), to recognize a
+	// prepared entry for it
+	var udfText string
+	if generate && planStability {
+		udfText = expr.String()
+	}
 	if planStability {
 		// look for subquery plans in prepareds cache
 		// SetupSubqueryPlans() is called with generate == false on every execution of the UDF,
@@ -1452,6 +1459,20 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 			this.planStabilityErrorPolicy, this)
 		if err1 != nil {
 			return err1
+		}
+		if prepared != nil && generate {
+			// MB-75480: an entry for another body of the UDF (e.g. left from before CREATE OR REPLACE FUNCTION,
+			// when removing it failed) would make the UDF run that body: remove it, and plan the current body
+			// (the error policy does not apply: it is not a plan of this UDF that failed verification)
+			if same, er := prepared.IsUdfExpr(expr); !same {
+				logging.Infof("Prepared entry for inline UDF %s is not for its current body (%v): replacing it",
+					udfName, er)
+				if er1 := settings.DeleteUdfPrepared(udfName); er1 != nil {
+					// the new entry replaces it
+					logging.Errorf("Error removing prepared entry for inline UDF %s: %v", udfName, er1)
+				}
+				prepared = nil
+			}
 		}
 		if prepared != nil {
 			if !generate {
@@ -1489,6 +1510,7 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 			if err == nil && hasSubquery {
 				prepared = plan.NewPrepared(nil, nil, nil, nil, nil)
 				prepared.SetDummyPlanVersion()
+				prepared.SetUdfText(udfText)
 				subqPlans.SetPrepared(prepared, lock)
 			}
 		} // else subqPlans should be populated already above (from GetUdfSubqPlans())
