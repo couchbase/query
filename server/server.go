@@ -2257,7 +2257,8 @@ func (this *Server) getPrepared(request Request, context *execution.Context) (*p
 						prepared.KeyspaceReferences()
 
 						// trigger prepare metrics recording
-						added, err1 := prepareds.AddAutoPreparePlan(stmt, prepared, context.GetPlanStabilityMode())
+						added, err1 := prepareds.AddAutoPreparePlan(stmt, prepared, context.GetPlanStabilityMode(),
+							context.DeltaKeyspaces())
 						if added {
 							request.SetPrepared(prepared)
 						} else if planStabilityAdHoc && err1 != nil {

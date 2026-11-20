@@ -455,7 +455,7 @@ func (this *Context) PrepareStatement(statement string, namedArgs map[string]val
 			prepared.SetPersist(persist)
 			prepared.SetAdHoc(!persist && this.IsPlanStabilityAdHoc())
 			prepared.KeyspaceReferences()
-			prepareds.AddAutoPreparePlan(stmt, prepared, this.planStabilityMode)
+			prepareds.AddAutoPreparePlan(stmt, prepared, this.planStabilityMode, this.deltaKeyspaces)
 		}
 
 	}

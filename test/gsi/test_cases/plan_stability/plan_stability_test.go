@@ -67,6 +67,9 @@ func TestPlanStability(t *testing.T) {
 	evictPrepareds(qc)
 	runMatch("case_plan_stability_replan_check2.json", false, false, qc, t)
 
+	// MB-75514: ad hoc statements with a query context, and in a transaction, under AD_HOC
+	runMatch("case_plan_stability_adhoc_context.json", false, false, qc, t)
+
 	runMatch("case_plan_stability_stop.json", false, false, qc, t)
 
 	fmt.Println("Dropping indexes")
