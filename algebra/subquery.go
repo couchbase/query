@@ -293,6 +293,21 @@ func (this *SubqueryPlans) Set(key *Select, expr expression.Expression, plan, is
 	}
 }
 
+// MB-75515: remove the plans, expression and prepared (e.g. plans loaded for an inline UDF that can not be used,
+// before the plans are generated)
+func (this *SubqueryPlans) Reset(lock bool) {
+	if lock {
+		this.mutex.Lock()
+	}
+	this.expr = nil
+	this.prepared = nil
+	this.plans = make(map[*Select]any)
+	this.isks = make(map[*Select]any)
+	if lock {
+		this.mutex.Unlock()
+	}
+}
+
 // Used in the context of UDF, Dummy entry to detect MetadataVersion change of collections/indexes,
 // Allows auto plan generation if the metadata change vs leave the unoptimized plan for ever until UDF changed
 

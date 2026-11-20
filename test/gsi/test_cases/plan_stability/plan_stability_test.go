@@ -70,6 +70,12 @@ func TestPlanStability(t *testing.T) {
 	// MB-75514: ad hoc statements with a query context, and in a transaction, under AD_HOC
 	runMatch("case_plan_stability_adhoc_context.json", false, false, qc, t)
 
+	// MB-75515: inline UDF entries loaded from QUERY_METADATA, removed, and UDFs without subquery
+	runStmt(qc, "DROP FUNCTION UDF_PlanStability_inline6 IF EXISTS")
+	runStmt(qc, "DROP FUNCTION UDF_PlanStability_inline7 IF EXISTS")
+	runStmt(qc, "DROP INDEX shellTest.mb75515_idx IF EXISTS")
+	runMatch("case_plan_stability_inline_udf_loaded.json", false, false, qc, t)
+
 	runMatch("case_plan_stability_stop.json", false, false, qc, t)
 
 	fmt.Println("Dropping indexes")

@@ -1,0 +1,170 @@
+[
+    {
+	"testcase": "MB-75515: plan stability PREPARED_ONLY, error policy STRICT",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"prepared only\", plan_stability.error_policy = \"strict\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: an index for the subquery of the UDF",
+        "statements":"CREATE INDEX mb75515_idx ON shellTest(c21) WHERE type = \"right\""
+    },
+    {
+	"testcase": "MB-75515: an inline UDF with a subquery",
+        "statements":"CREATE FUNCTION UDF_PlanStability_inline6(x) { ( SELECT RAW r.c21 FROM shellTest r USE INDEX (mb75515_idx) WHERE r.type = \"right\" AND r.c21 > x ORDER BY r.c21 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: execute it, its entry is saved",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline6(6)",
+        "results": [
+            [ 7, 8 ]
+        ]
+    },
+    {
+	"testcase": "MB-75515: back up its saved entry",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"INSERT INTO QUERY_METADATA._system._query (KEY \"mb75515_backup\", VALUE {\"origId\": origId, \"doc\": doc}) SELECT meta(d).id AS origId, d AS doc FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.inlineUDF = true AND d.name LIKE '%UDF_PlanStability_inline6'",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: replace the UDF (same body): its entry is removed, and the UDF reloaded",
+        "statements":"CREATE OR REPLACE FUNCTION UDF_PlanStability_inline6(x) { ( SELECT RAW r.c21 FROM shellTest r USE INDEX (mb75515_idx) WHERE r.type = \"right\" AND r.c21 > x ORDER BY r.c21 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: put the saved entry back",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"UPSERT INTO QUERY_METADATA._system._query (KEY origId, VALUE doc) SELECT b.origId, b.doc FROM QUERY_METADATA._system._query AS b USE KEYS \"mb75515_backup\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: execute the UDF with its saved entry",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline6(6)",
+        "results": [
+            [ 7, 8 ]
+        ]
+    },
+    {
+	"testcase": "MB-75515: remove the entry",
+        "statements":"DELETE FROM system:prepareds WHERE name LIKE \"__INLINE_UDF__%UDF_PlanStability_inline6\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: the UDF still executes",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline6(6)",
+        "results": [
+            [ 7, 8 ]
+        ]
+    },
+    {
+	"testcase": "MB-75515: and its entry is saved again",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"SELECT RAW COUNT(*) FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.inlineUDF = true AND d.name LIKE '%UDF_PlanStability_inline6'",
+        "results": [
+            1
+        ]
+    },
+    {
+	"testcase": "MB-75515: replace the UDF again",
+        "statements":"CREATE OR REPLACE FUNCTION UDF_PlanStability_inline6(x) { ( SELECT RAW r.c21 FROM shellTest r USE INDEX (mb75515_idx) WHERE r.type = \"right\" AND r.c21 > x ORDER BY r.c21 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: put the saved entry back again",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"UPSERT INTO QUERY_METADATA._system._query (KEY origId, VALUE doc) SELECT b.origId, b.doc FROM QUERY_METADATA._system._query AS b USE KEYS \"mb75515_backup\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: drop the index of the saved plan",
+        "statements":"DROP INDEX shellTest.mb75515_idx",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: the saved plan can not be used, STRICT: error (4001, in a function execution error)",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline6(6)",
+        "errorCode": 10109
+    },
+    {
+	"testcase": "MB-75515: drop the UDF",
+        "statements":"DROP FUNCTION UDF_PlanStability_inline6",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: its entry is removed",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"SELECT RAW COUNT(*) FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.inlineUDF = true AND d.name LIKE '%UDF_PlanStability_inline6'",
+        "results": [
+            0
+        ]
+    },
+    {
+	"testcase": "MB-75515: an inline UDF without subquery",
+        "statements":"CREATE FUNCTION UDF_PlanStability_inline7(x) { x + 1 }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: execute it",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline7(6)",
+        "results": [
+            7
+        ]
+    },
+    {
+	"testcase": "MB-75515: it has no entry",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"SELECT RAW COUNT(*) FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.name LIKE '%UDF_PlanStability_inline7'",
+        "results": [
+            0
+        ]
+    },
+    {
+	"testcase": "MB-75515: drop it",
+        "statements":"DROP FUNCTION UDF_PlanStability_inline7",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: a prepared statement can not take the name of an inline UDF entry",
+        "statements":"PREPARE `__INLINE_UDF__default:UDF_PlanStability_inline7` FROM SELECT 1",
+        "errorCode": 4092
+    },
+    {
+	"testcase": "MB-75515: remove the backup",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "statements":"DELETE FROM QUERY_METADATA._system._query USE KEYS \"mb75515_backup\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75515: plan stability off",
+        "statements":"UPDATE system:settings UNSET plan_stability",
+        "results": [
+        ]
+    }
+]

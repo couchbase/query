@@ -301,9 +301,11 @@ type PrimeReport struct {
 }
 
 // preparedCache implements planner.PlanCache
+// MB-75515: the names of inline UDF entries (plan stability) are reserved too: a prepared statement with such a
+// name would take the place of the entry of that UDF
 func (this *preparedCache) IsPredefinedPrepareName(name string) bool {
 	_, ok := predefinedPrepareStatements[name]
-	return ok
+	return ok || strings.HasPrefix(name, _INLINE_UDF_NAME_PREFIX)
 }
 
 func (this *preparedCache) GetText(text string, offset int) string {
@@ -1023,7 +1025,15 @@ func GetPreparedWithContext(preparedName string, queryContext string, deltaKeysp
 	if len(args) > 0 {
 		l = args[0]
 	}
-	return getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, planStabilityMode, planStabilityErrorPolicy, l, scanConsistency)
+	prepared, err := getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, planStabilityMode,
+		planStabilityErrorPolicy, l, scanConsistency)
+	// MB-75515: an inline UDF entry (plan stability) only holds the subquery plans of the UDF: it is not a prepared
+	// statement, and can not be executed
+	if err == nil && prepared != nil && prepared.IsInlineUdf() {
+		_, name := distributed.RemoteAccess().SplitKey(preparedName)
+		return nil, errors.NewNoSuchPreparedWithContextError(name, queryContext)
+	}
+	return prepared, err
 }
 
 func getPrepared(preparedName string, queryContext string, deltaKeyspaces map[string]bool, options uint32,

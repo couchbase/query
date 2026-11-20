@@ -208,3 +208,39 @@ func TestGetPreparedLookup(t *testing.T) {
 		}
 	}
 }
+
+// MB-75515: inline UDF entries are not prepared statements: their names are reserved, and they can not be executed
+func TestInlineUdfEntryNames(t *testing.T) {
+	defer func(l func(string, settings.PlanStabilityMode, settings.PlanStabilityErrorPolicy) (*plan.Prepared,
+		errors.Error)) {
+		loadPreparedFn = l
+	}(loadPreparedFn)
+	loadPreparedFn = func(string, settings.PlanStabilityMode, settings.PlanStabilityErrorPolicy) (*plan.Prepared,
+		errors.Error) {
+		return nil, nil
+	}
+	PreparedsInit(16)
+
+	name := GetUdfPreparedName("default:f1")
+	if !prepareds.IsPredefinedPrepareName(name) || prepareds.IsPredefinedPrepareName("p1") {
+		t.Errorf("expected the names of inline UDF entries, and only them, reserved")
+	}
+
+	entry := plan.NewPrepared(nil, nil, nil, nil, nil)
+	entry.SetName(name)
+	entry.SetInlineUdf()
+	prepareds.add(entry, true, false, nil)
+
+	// EXECUTE (and auto_execute, the prepared request parameter): no such prepared statement
+	prepared, err := GetPreparedWithContext(name, "", nil, OPT_TRACK, nil, settings.PS_MODE_PREPARED_ONLY,
+		settings.PS_ERROR_MODERATE, datastore.UNBOUNDED)
+	if prepared != nil || err == nil || err.Code() != errors.E_NO_SUCH_PREPARED {
+		t.Errorf("EXECUTE of an inline UDF entry: got %v, %v; expected no such prepared statement", prepared, err)
+	}
+
+	// the inline UDF still gets its entry
+	if prepared, err = GetUdfPrepared("default:f1", false, settings.PS_MODE_PREPARED_ONLY, settings.PS_ERROR_MODERATE,
+		nil); prepared != entry || err != nil {
+		t.Errorf("inline UDF: got %v, %v; expected its entry", prepared, err)
+	}
+}
