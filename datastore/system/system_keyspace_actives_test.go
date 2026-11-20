@@ -9,9 +9,11 @@
 package system
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
+	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/mock"
@@ -41,6 +43,10 @@ func (this *userContext) FirstCreds() (string, bool) {
 func (this *userContext) SetFirstCreds(userName string) {
 	this.firstCreds = userName
 	this.firstCredsSet = true
+}
+
+func (this *userContext) RequestId() string {
+	return "delete-request"
 }
 
 func newUserContext(user string) *userContext {
@@ -99,10 +105,12 @@ func (this testActives) ForEach(nonBlocking func(string, server.Request) bool, b
 	}
 }
 
-// twoNodes is a two node cluster, "local" and "remote", that records the keys sent to the remote node
+// twoNodes is a two node cluster, "local" and "remote", that records the keys sent to the remote node, whose
+// remote node cancels any request but "missing"; or, if standalone, a node that isn't part of a cluster yet
 type twoNodes struct {
 	distributed.SystemRemoteAccess
-	keys []string
+	keys       []string
+	standalone bool
 }
 
 // newTwoNodes makes the local node part of a twoNodes cluster until the test ends
@@ -115,6 +123,9 @@ func newTwoNodes(t *testing.T) *twoNodes {
 }
 
 func (this *twoNodes) WhoAmI() string {
+	if this.standalone {
+		return ""
+	}
 	return "local"
 }
 
@@ -129,6 +140,17 @@ func (this *twoNodes) GetRemoteDoc(node string, key string, endpoint string, com
 	docFn func(map[string]any), warnFn func(errors.Error), creds distributed.Creds, authToken string,
 	formData map[string]any) {
 	this.keys = append(this.keys, key)
+}
+
+func (this *twoNodes) DoRemoteOps(nodes []string, endpoint string, command string, key string, data string,
+	warnFn func(errors.Error, string), creds distributed.Creds, authToken string) {
+	if this.standalone {
+		return
+	}
+	this.keys = append(this.keys, key)
+	if key == "missing" {
+		warnFn(errors.NewSystemStmtNotFoundError(nil, key), nodes[0])
+	}
 }
 
 // newTestKeyspace sets up a mock datastore that authorizes users as mock.AuthStore does, and returns its system
@@ -248,4 +270,55 @@ func TestActiveRequestsUserCheck(t *testing.T) {
 	if _, ok := actives["bob-id"]; !ok {
 		t.Errorf("bob's request was cancelled although PRIV_SYSTEM_READ couldn't be checked")
 	}
+}
+
+// MB-74936: the requests a DELETE on system:active_requests cancels are audited together, with the user who
+// cancelled them
+func TestActiveRequestsCancelAudit(t *testing.T) {
+	cluster := newTwoNodes(t)
+
+	actives := testActives{}
+	for _, user := range []string{"alice", "bob"} {
+		actives[user+"-id"] = &testRequest{creds: auth.NewCredentials(user, "pw")}
+	}
+	ks := newTestKeyspace(t, KEYSPACE_NAME_ACTIVE, actives)
+
+	var audited []audit.RequestCancelFields
+	prevAudit := auditRequestCancel
+	auditRequestCancel = func(f *audit.RequestCancelFields) { audited = append(audited, *f) }
+	defer func() { auditRequestCancel = prevAudit }()
+
+	check := func(user string, keys []string, expected []audit.CancelledRequest) {
+		audited = nil
+		deletes := value.Pairs{}
+		for _, k := range keys {
+			deletes = append(deletes, value.Pair{Name: k})
+		}
+		if _, _, errs := ks.Delete(deletes, newUserContext(user), false); errs != nil {
+			t.Errorf("delete as %v: %v", user, errs)
+		}
+		if len(expected) == 0 {
+			if len(audited) != 0 {
+				t.Errorf("%v deleting %v audited %+v, expected nothing", user, keys, audited)
+			}
+			return
+		}
+		if len(audited) != 1 {
+			t.Fatalf("%v deleting %v audited %+v, expected a single audit of %v", user, keys, audited, expected)
+		}
+		a := audited[0]
+		if !slices.Equal(a.Cancelled, expected) || a.RequestId != "delete-request" ||
+			!slices.Equal(a.Users, []string{"local:" + user}) {
+			t.Errorf("%v deleting %v: audited %+v, expected %v", user, keys, a, expected)
+		}
+	}
+
+	// bob's request isn't alice's to cancel and "missing" isn't on the remote node: neither is audited
+	check("alice", []string{"alice-id", "bob-id", "[remote]r1", "[remote]missing"},
+		[]audit.CancelledRequest{{RequestId: "alice-id", Node: "local"}, {RequestId: "r1", Node: "remote"}})
+	check("admin", []string{"bob-id"}, []audit.CancelledRequest{{RequestId: "bob-id", Node: "local"}})
+
+	// not part of a cluster: a key naming a node cancels nothing, and audits nothing
+	cluster.standalone = true
+	check("alice", []string{"[remote]r2"}, nil)
 }

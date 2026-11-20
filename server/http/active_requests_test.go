@@ -19,7 +19,9 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/datastore/mock"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
+	"github.com/couchbase/query/primitives/couchbase"
 	"github.com/couchbase/query/server"
 )
 
@@ -165,5 +167,74 @@ func TestActiveRequestsOwnership(t *testing.T) {
 	}
 	if got, want := index("admin", ""), sorted("admin"); !slices.Equal(got, want) {
 		t.Errorf("after cancellations admin sees %v, expected %v", got, want)
+	}
+}
+
+// MB-74936: a cancel another node sends on behalf of a user is audited as that user, not as the internal user,
+// and a cancel sent directly, rather than by another node, is audited as a cancelled request too
+func TestActiveRequestsCancelAuditUser(t *testing.T) {
+	m, err := mock.NewDatastore("mock:")
+	if err != nil {
+		t.Fatalf("mock datastore: %v", err)
+	}
+	prev := datastore.GetDatastore()
+	datastore.SetDatastore(&mock.AuthStore{Datastore: m})
+	defer datastore.SetDatastore(prev)
+
+	var cancels []audit.RequestCancelFields
+	prevAudit := auditRequestCancel
+	auditRequestCancel = func(f *audit.RequestCancelFields) { cancels = append(cancels, *f) }
+	defer func() { auditRequestCancel = prevAudit }()
+
+	endpoint := &HttpEndpoint{actives: NewActiveRequests(nil)}
+	cancel := func(user, userAgent, query string) (string, []string) {
+		r := &httpRequest{}
+		newHttpRequest(r, httptest.NewRecorder(), httptest.NewRequest("GET", "/query/service?statement=select+1", nil),
+			NewSyncPool(1024), 1024, "default")
+		r.SetCredentials(auth.NewCredentials("alice", "pw"))
+		if err := endpoint.actives.Put(r); err != nil {
+			t.Fatalf("Put: %v", err)
+		}
+
+		req := httptest.NewRequest("DELETE", "/admin/active_requests/"+r.Id().String()+query, nil)
+		req.SetBasicAuth(user, "pw")
+		req.Header.Set("User-Agent", userAgent)
+		req = req.WithContext(context.WithValue(req.Context(), "request", r.Id().String()))
+		af := &audit.ApiAuditFields{RemoteAddress: "10.0.0.1:5000"}
+		cancels = nil
+		if _, err := doActiveRequest(endpoint, httptest.NewRecorder(), req, af); err != nil {
+			t.Fatalf("%v cancelling%v: %v", user, query, err)
+		}
+		return r.Id().String(), af.Users
+	}
+
+	if _, users := cancel("@cbq-engine", couchbase.USER_AGENT, "?impersonate=local:alice"); !slices.Equal(users,
+		[]string{"local:alice"}) {
+		t.Errorf("cancel fanned out for alice audited as %v", users)
+	}
+	if len(cancels) != 0 {
+		t.Errorf("cancel fanned out for alice audited as a cancelled request %+v: the node that sent it audits it",
+			cancels)
+	}
+
+	// an admin's cancel is sent without impersonate: the internal user is all the remote node knows
+	if _, users := cancel("@cbq-engine", couchbase.USER_AGENT, ""); !slices.Equal(users,
+		[]string{"local:@cbq-engine"}) {
+		t.Errorf("cancel fanned out for an admin audited as %v", users)
+	}
+	if len(cancels) != 0 {
+		t.Errorf("cancel fanned out for an admin audited as a cancelled request %+v", cancels)
+	}
+
+	// impersonate from a user who isn't the internal user doesn't change who is audited
+	id, users := cancel("alice", "curl", "?impersonate=local:bob")
+	if !slices.Equal(users, []string{"local:alice"}) {
+		t.Errorf("alice's own cancel audited as %v", users)
+	}
+	expected := []audit.CancelledRequest{{RequestId: id, Node: distributed.RemoteAccess().WhoAmI()}}
+	if len(cancels) != 1 || !slices.Equal(cancels[0].Users, []string{"local:alice"}) ||
+		!slices.Equal(cancels[0].Cancelled, expected) || cancels[0].RequestId != "" ||
+		cancels[0].UserAgent != "curl" || cancels[0].RemoteAddress != "10.0.0.1:5000" {
+		t.Errorf("alice's own cancel audited as cancelled requests %+v, expected %v", cancels, expected)
 	}
 }

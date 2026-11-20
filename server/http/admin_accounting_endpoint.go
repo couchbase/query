@@ -2386,9 +2386,14 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 		return processActiveRequest(endpoint, requestId, userName, (req.Method == "POST"), doRedact(req), durStyle), nil
 
 	} else if req.Method == "DELETE" {
-		userName, _, err := endpoint.activeRequestsUser(req, af)
+		userName, isInternal, err := endpoint.activeRequestsUser(req, af)
 		if err != nil {
 			return nil, err
+		}
+
+		// a cancel another node sends on behalf of a user is audited as that user, not the internal user
+		if isInternal && userName != "" {
+			af.Users = []string{userName}
 		}
 
 		// other users' requests are treated as non existent
@@ -2398,11 +2403,24 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			return nil, errors.NewSystemStmtNotFoundError(nil, requestId)
 		}
 
+		// a cancel from another node is audited by the node that ran the DELETE on system:active_requests
+		if !isInternal {
+			auditRequestCancel(&audit.RequestCancelFields{
+				Users:         af.Users,
+				RemoteAddress: af.RemoteAddress,
+				UserAgent:     req.UserAgent(),
+				Cancelled: []audit.CancelledRequest{{RequestId: requestId,
+					Node: distributed.RemoteAccess().WhoAmI()}},
+			})
+		}
 		return true, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
+
+// audits the requests cancelled by a DELETE on /admin/active_requests; a variable, for tests
+var auditRequestCancel = audit.SubmitRequestCancel
 
 func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool, redact bool,
 	durStyle util.DurationStyle) interface{} {
@@ -2443,7 +2461,7 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
 	interface{}, errors.Error) {
 
-	af.EventTypeId = audit.API_ADMIN_PREPAREDS
+	af.EventTypeId = audit.API_ADMIN_ACTIVE_REQUESTS
 	userName, _, err := endpoint.activeRequestsUser(req, af)
 	if err != nil {
 		return nil, err

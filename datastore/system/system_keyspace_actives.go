@@ -11,6 +11,7 @@ package system
 import (
 	"net/url"
 
+	"github.com/couchbase/query/audit"
 	"github.com/couchbase/query/datastore"
 	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
@@ -20,6 +21,9 @@ import (
 	"github.com/couchbase/query/timestamp"
 	"github.com/couchbase/query/value"
 )
+
+// audits the requests cancelled by a DELETE on system:active_requests; a variable, for tests
+var auditRequestCancel = audit.SubmitRequestCancel
 
 type activeRequestsKeyspace struct {
 	keyspaceBase
@@ -188,6 +192,9 @@ func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.Q
 	}
 	creds := distributed.Creds(userName)
 
+	// the requests cancelled, audited once all deletes are done
+	var cancelled []audit.CancelledRequest
+
 	// now that the node name can change in flight, use a consistent one across deletes
 	whoAmI := distributed.RemoteAccess().WhoAmI()
 	for _, pair := range deletes {
@@ -198,24 +205,49 @@ func (b *activeRequestsKeyspace) Delete(deletes value.Pairs, context datastore.Q
 		// remote entry
 		if len(nodeName) != 0 && nodeName != whoAmI {
 
+			// not part of a cluster: there is no remote node to cancel the request on
+			if len(whoAmI) == 0 {
+				continue
+			}
+
 			// escape the key as in Fetch
-			distributed.RemoteAccess().GetRemoteDoc(nodeName, url.PathEscape(localKey),
-				"active_requests", "DELETE", nil,
-				func(warn errors.Error) {
+			// the remote node fails the DELETE of a request it does not cancel, as finished or another user's:
+			// the request counts as cancelled only when the DELETE succeeds. If its response is lost, a request
+			// the remote node did cancel isn't audited here (the remote node still audits the REST DELETE).
+			ok := true
+			distributed.RemoteAccess().DoRemoteOps([]string{nodeName}, "active_requests", "DELETE",
+				url.PathEscape(localKey), "",
+				func(warn errors.Error, node string) {
+					ok = false
 					if !warn.HasCause(errors.W_SYSTEM_REMOTE_NODE_NOT_FOUND) {
 						context.Warning(warn)
 					}
 				},
-				creds, "", nil)
+				creds, "")
+			if ok {
+				cancelled = append(cancelled, audit.CancelledRequest{RequestId: localKey, Node: nodeName})
+			}
 
 			// local entry
 		} else {
 
 			// a request that completed after the scan is already gone: nothing to do
-			server.ActiveRequestsDeleteFunc(localKey, func(request server.Request) bool {
+			if server.ActiveRequestsDeleteFunc(localKey, func(request server.Request) bool {
 				return server.IsRequestOwner(request, userName)
-			})
+			}) {
+				cancelled = append(cancelled, audit.CancelledRequest{RequestId: localKey, Node: whoAmI})
+			}
 		}
+	}
+
+	if len(cancelled) > 0 {
+		auditRequestCancel(&audit.RequestCancelFields{
+			Users:         datastore.CredsArray(context.Credentials()),
+			RemoteAddress: context.RemoteAddr(),
+			UserAgent:     context.UserAgent(),
+			RequestId:     context.RequestId(),
+			Cancelled:     cancelled,
+		})
 	}
 
 	if preserveMutations {
