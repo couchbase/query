@@ -9,6 +9,7 @@
 package settings
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -84,19 +85,25 @@ func processSettings(val []byte, thisNode string, initial bool) {
 		return
 	}
 
+	// not while an update on this node is in progress: an update that fails sets the old setting back
+	// MB-75508: this includes checking for settings from this node: an update made since (e.g. while these settings
+	// waited for the lock) has replaced, or cleared, the settings this node is writing (see takeUnconfirmedWrite())
+	settingsUpdateLock.Lock()
+	defer settingsUpdateLock.Unlock()
+
 	if n, ok := vmap["node"]; ok {
 		if thisNode != "" && n == thisNode {
-			// no need to process settings from this node
-			return
+			// no need to process settings from this node, unless the write reported an error (MB-75508)
+			if !takeUnconfirmedWrite(val) {
+				return
+			}
+			logging.Infof("SETTINGS: global settings written by this node, which reported an error, were " +
+				"written: processing them")
 		}
 		delete(vmap, "node")
 	}
 
 	logging.Infof("SETTINGS: New global settings received: %v", vmap)
-
-	// not while an update on this node is in progress: an update that fails sets the old setting back
-	settingsUpdateLock.Lock()
-	defer settingsUpdateLock.Unlock()
 
 	// a plan stability setting not present in the new settings is not changed
 	oldMode := GetPlanStabilityMode()
@@ -305,12 +312,43 @@ func PersistSettings() errors.Error {
 	if er != nil {
 		return er
 	}
+	setUnconfirmedWrite(bytes)
 	err := setStoredSettings(bytes, nil)
 	if err != nil {
 		logging.Errorf("SETTINGS: Error updating global settings in metakv: %v", err)
 		return errors.NewSettingsMetaKVError(err, "Error updating global settings in metakv")
 	}
+	setUnconfirmedWrite(nil)
 	return nil
+}
+
+// MB-75508: the settings this node is writing to metakv, until the write succeeds: a write that reports an error
+// may have been written all the same (e.g. a timeout once written). The caller then sets the old settings back,
+// while the other nodes get the new settings; when they come back from metakv (see callback()), this node
+// processes them too, rather than skipping its own settings, so that it does not stay on the old settings. Only
+// the last write is kept: settings written before, which come back after (e.g. late), are skipped as usual.
+// Writes are made, and the settings coming back checked (processSettings()), under settingsUpdateLock: settings
+// that come back while their write is in progress are checked once it completes (and are skipped if it succeeded).
+var unconfirmedWrite struct {
+	sync.Mutex
+	val []byte
+}
+
+func setUnconfirmedWrite(val []byte) {
+	unconfirmedWrite.Lock()
+	unconfirmedWrite.val = val
+	unconfirmedWrite.Unlock()
+}
+
+// whether val is the settings this node is writing, or failed to write, to metakv; if so it is no longer kept
+func takeUnconfirmedWrite(val []byte) bool {
+	unconfirmedWrite.Lock()
+	rv := unconfirmedWrite.val != nil && bytes.Equal(unconfirmedWrite.val, val)
+	if rv {
+		unconfirmedWrite.val = nil
+	}
+	unconfirmedWrite.Unlock()
+	return rv
 }
 
 var globalSettings *querySettings

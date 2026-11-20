@@ -140,12 +140,16 @@ func SetPlanStabilitySetting(psSetting map[string]any) {
 	globalSettings.setSetting(PLAN_STABILITY, psSetting)
 }
 
-func SetDefaultPlanStabilitySetting(persist bool) errors.Error {
+// MB-75508: reset this node's plan stability setting to the default setting (e.g. QUERY_METADATA is missing), under
+// settingsUpdateLock, as other changes to the settings: an update in progress (with its write to metakv, and
+// setting the old settings back if the write fails) completes first, and does not undo the reset. Returns whether
+// the setting was the default setting already.
+func ResetPlanStabilitySetting() bool {
+	settingsUpdateLock.Lock()
+	defer settingsUpdateLock.Unlock()
+	wasDefault := IsDefaultPlanStabilitySetting()
 	globalSettings.setSetting(PLAN_STABILITY, defaultPlanStabilitySettings())
-	if persist {
-		return PersistSettings()
-	}
-	return nil
+	return wasDefault
 }
 
 // whether this node's plan stability setting is the default setting
@@ -179,6 +183,15 @@ var setStoredSettings = setMetakvSettings
  * Comparing the setting can not tell such a change from a setting not yet reset.
  */
 func PersistDefaultPlanStabilitySetting() errors.Error {
+	// MB-75508: under settingsUpdateLock, as other changes to the settings, and only if this node's setting is
+	// still the default setting: an update made since (e.g. plan stability turned on again) is not overwritten
+	settingsUpdateLock.Lock()
+	defer settingsUpdateLock.Unlock()
+	if !IsDefaultPlanStabilitySetting() {
+		logging.Infof("SETTINGS: plan_stability setting changed since it was reset, DEFAULT setting not written")
+		return nil
+	}
+
 	rev := getSettingsRev()
 	if rev == nil {
 		// this node has not seen the settings in metakv (e.g. getting them at startup failed)

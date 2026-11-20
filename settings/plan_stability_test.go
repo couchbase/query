@@ -91,4 +91,17 @@ func TestPersistDefaultPlanStabilitySetting(t *testing.T) {
 			t.Errorf("%s: written settings %s do not have the default plan stability setting", tc.name, written)
 		}
 	}
+
+	// MB-75508: this node's setting changed since the reset (e.g. plan stability turned on again): not written
+	globalSettings = &querySettings{settings: map[string]any{PLAN_STABILITY: map[string]any{
+		"mode": PS_MODE_PREPARED_ONLY, "error_policy": PS_ERROR_MODERATE}}}
+	setSettingsRev([]byte("5"))
+	writes := 0
+	setStoredSettings = func(val []byte, rev any) error {
+		writes++
+		return nil
+	}
+	if err := PersistDefaultPlanStabilitySetting(); err != nil || writes != 0 {
+		t.Errorf("setting changed since the reset: error %v, %d writes; expected none", err, writes)
+	}
 }
