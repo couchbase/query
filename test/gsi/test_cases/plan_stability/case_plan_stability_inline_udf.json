@@ -364,6 +364,165 @@
         ]
     },
     {
+	"testcase": "MB-75480: create inline UDF",
+        "statements":"CREATE FUNCTION UDF_PlanStability_inline4() { ( SELECT RAW r.c21 FROM shellTest r WHERE r.type = \"right\" AND r.c21 = 1 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: execute it, its prepared entry is saved",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline4()",
+        "results": [
+            [ 1 ]
+        ]
+    },
+    {
+	"testcase": "MB-75480: keep a copy of the saved entry",
+        "statements":"INSERT INTO QUERY_METADATA._system._query (KEY \"mb75480_backup\", VALUE {\"origId\": origId, \"doc\": doc}) SELECT meta(d).id AS origId, d AS doc FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.inlineUDF = true AND d.name LIKE '%UDF_PlanStability_inline4%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: replace the UDF, which removes its entry",
+        "statements":"CREATE OR REPLACE FUNCTION UDF_PlanStability_inline4() { ( SELECT RAW r.c21 FROM shellTest r WHERE r.type = \"right\" AND r.c21 = 2 ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: put the old entry back (as if removing it had failed)",
+        "statements":"UPSERT INTO QUERY_METADATA._system._query (KEY origId, VALUE doc) SELECT b.origId, b.doc FROM QUERY_METADATA._system._query AS b USE KEYS \"mb75480_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: the old entry is saved",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.inlineUDF = true AND d.name LIKE '%UDF_PlanStability_inline4%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 1
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75480: execute the replaced UDF (1): its current body is used",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline4()",
+        "results": [
+            [ 2, 2 ]
+        ]
+    },
+    {
+	"testcase": "MB-75480: execute the replaced UDF (2): its current body is used",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline4()",
+        "results": [
+            [ 2, 2 ]
+        ]
+    },
+    {
+	"testcase": "MB-75480: remove the copy",
+        "statements":"DELETE FROM QUERY_METADATA._system._query USE KEYS \"mb75480_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: drop the UDF",
+        "statements":"DROP FUNCTION UDF_PlanStability_inline4",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: its entry is removed",
+        "statements":"SELECT COUNT(*) AS cnt FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.inlineUDF = true AND d.name LIKE '%UDF_PlanStability_inline4%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            {
+                "cnt": 0
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75480: create inline UDF with a parameter, covered by an index",
+        "statements":"CREATE FUNCTION UDF_PlanStability_inline5(x) { ( SELECT RAW r.c21 FROM shellTest r WHERE r.type = \"right\" AND r.c21 = x ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: execute it, its prepared entry is saved",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline5(1)",
+        "results": [
+            [ 1 ]
+        ]
+    },
+    {
+	"testcase": "MB-75480: keep a copy of the saved entry",
+        "statements":"INSERT INTO QUERY_METADATA._system._query (KEY \"mb75480_backup2\", VALUE {\"origId\": origId, \"doc\": doc}) SELECT meta(d).id AS origId, d AS doc FROM QUERY_METADATA._system._query AS d WHERE meta(d).id LIKE 'ppn::%' AND d.inlineUDF = true AND d.name LIKE '%UDF_PlanStability_inline5%'",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: replace the UDF with the same body, which removes its entry",
+        "statements":"CREATE OR REPLACE FUNCTION UDF_PlanStability_inline5(x) { ( SELECT RAW r.c21 FROM shellTest r WHERE r.type = \"right\" AND r.c21 = x ) }",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: put the entry back (saved plan of the same body)",
+        "statements":"UPSERT INTO QUERY_METADATA._system._query (KEY origId, VALUE doc) SELECT b.origId, b.doc FROM QUERY_METADATA._system._query AS b USE KEYS \"mb75480_backup2\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: execute the UDF, with the saved entry",
+        "statements":"EXECUTE FUNCTION UDF_PlanStability_inline5(2)",
+        "results": [
+            [ 2, 2 ]
+        ]
+    },
+    {
+	"testcase": "MB-75480: the saved entry is used, not replaced",
+        "statements":"SELECT RAW d.encoded_plan = b.doc.encoded_plan FROM QUERY_METADATA._system._query AS b USE KEYS \"mb75480_backup2\" JOIN QUERY_METADATA._system._query AS d ON KEYS b.origId",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            true
+        ]
+    },
+    {
+	"testcase": "MB-75480: remove the copy",
+        "statements":"DELETE FROM QUERY_METADATA._system._query USE KEYS \"mb75480_backup2\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75480: drop the UDF",
+        "statements":"DROP FUNCTION UDF_PlanStability_inline5",
+        "results": [
+        ]
+    },
+    {
 	"testcase": "Set plan stability mode to OFF (via UNSET)",
         "statements":"UPDATE system:settings UNSET plan_stability.mode",
         "results": [

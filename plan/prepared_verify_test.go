@@ -11,6 +11,9 @@ package plan
 import (
 	"sync"
 	"testing"
+
+	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression/parser"
 )
 
 // MB-75478: the verification error indicators are not saved with the plan (encoded_plan); SAVE is
@@ -67,5 +70,59 @@ func TestPreparedConcurrentAccess(t *testing.T) {
 	wg.Wait()
 	if prepared.ErrorCount() != 8000 || !prepared.HasFatalError() {
 		t.Errorf("error count %d, fatal %v", prepared.ErrorCount(), prepared.HasFatalError())
+	}
+}
+
+// MB-75480: a UDF prepared entry is for the UDF body (before planning) it was generated for
+func TestIsUdfExpr(t *testing.T) {
+	body, err := parser.Parse("(SELECT RAW 1 FROM b AS d WHERE d.a = 1)")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	// planning changes the expression (e.g. covered expressions): the body before planning is recorded
+	planned, err := parser.Parse("(SELECT RAW 1 FROM b AS d WHERE d.a = 1 AND true)")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	prepared := NewPrepared(nil, nil, nil, nil, nil)
+	prepared.SetName("__INLINE_UDF__default:f1")
+	prepared.SetInlineUdf()
+	prepared.SetUdfText(body.String())
+	if err = prepared.SetupUdfSubqPlans(planned, algebra.NewSubqueryPlans(), false); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	for _, tc := range []struct {
+		body string
+		same bool
+	}{
+		{"(SELECT RAW 1 FROM b AS d WHERE d.a = 1)", true},
+		{"(select raw 1 from b as d where d.a=1)", true}, // same body, written differently
+		{"(SELECT RAW 2 FROM b AS d WHERE d.a = 1)", false},
+		{"(SELECT RAW 1 FROM b AS d WHERE d.a = 1 AND true)", false}, // the planned expression is not the body
+	} {
+		expr, err := parser.Parse(tc.body)
+		if err != nil {
+			t.Fatalf("%s: parse: %v", tc.body, err)
+		}
+		same, err := prepared.IsUdfExpr(expr)
+		if err != nil || same != tc.same {
+			t.Errorf("%s: same %v, error %v; expected same %v", tc.body, same, err, tc.same)
+		}
+	}
+
+	// an entry without the body (none saved) is not for the body
+	noText := NewPrepared(nil, nil, nil, nil, nil)
+	if err = noText.SetupUdfSubqPlans(body, algebra.NewSubqueryPlans(), false); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if same, err := noText.IsUdfExpr(body); same || err != nil {
+		t.Errorf("no body: same %v, error %v", same, err)
+	}
+
+	// an entry that can not be read is not for the body
+	bad := NewPrepared(nil, nil, nil, nil, nil)
+	if same, err := bad.IsUdfExpr(body); same || err == nil {
+		t.Errorf("no subquery plans: same %v, error %v", same, err)
 	}
 }
