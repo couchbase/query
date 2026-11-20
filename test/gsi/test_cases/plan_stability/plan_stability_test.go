@@ -26,6 +26,10 @@ func TestPlanStability(t *testing.T) {
 
 	qc := start_cs()
 
+	// MB-75516: the query engine was just started: an index not found is taken as not existing right away (the
+	// test cases drop indexes deliberately)
+	defer prepareds.SetGsiSettle(prepareds.SetGsiSettle(0))
+
 	fmt.Print("\n\nInserting values into Buckets for plan stability\n\n")
 	runMatch("insert.json", false, false, qc, t)
 
@@ -75,6 +79,12 @@ func TestPlanStability(t *testing.T) {
 	runStmt(qc, "DROP FUNCTION UDF_PlanStability_inline7 IF EXISTS")
 	runStmt(qc, "DROP INDEX shellTest.mb75515_idx IF EXISTS")
 	runMatch("case_plan_stability_inline_udf_loaded.json", false, false, qc, t)
+
+	// MB-75516: plan stability off, a plan saved with PREPARE SAVE whose index was dropped is saved again
+	runStmt(qc, "DROP INDEX shellTest.mb75516_idx IF EXISTS")
+	runMatch("case_plan_stability_replan_off_setup.json", false, false, qc, t)
+	evictPrepareds(qc)
+	runMatch("case_plan_stability_replan_off_check.json", false, false, qc, t)
 
 	runMatch("case_plan_stability_stop.json", false, false, qc, t)
 
