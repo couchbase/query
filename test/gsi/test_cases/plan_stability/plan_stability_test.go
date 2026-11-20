@@ -13,6 +13,9 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/couchbase/query/prepareds"
+	"github.com/couchbase/query/test/gsi"
 )
 
 // Basic test on plan stability
@@ -51,6 +54,11 @@ func TestPlanStability(t *testing.T) {
 	// plan stability is off at this point (case_plan_stability_inline_udf.json), QUERY_METADATA exists
 	runMatch("case_plan_stability_save.json", false, false, qc, t)
 
+	// MB-75506: saved plans evicted from the prepared cache, which is no longer full
+	runMatch("case_plan_stability_evict_setup.json", false, false, qc, t)
+	evictPrepareds(qc)
+	runMatch("case_plan_stability_evict_check.json", false, false, qc, t)
+
 	runMatch("case_plan_stability_stop.json", false, false, qc, t)
 
 	fmt.Println("Dropping indexes")
@@ -65,4 +73,13 @@ func TestPlanStability(t *testing.T) {
 
 	// drop primary indexes
 	runStmt(qc, "DROP PRIMARY INDEX ON shellTest")
+}
+
+// evict every statement from the prepared cache: with a limit of 1, adding a statement evicts the others; the
+// cache is then left not full
+func evictPrepareds(qc *gsi.MockServer) {
+	limit := prepareds.PreparedsLimit()
+	defer prepareds.PreparedsSetLimit(limit)
+	prepareds.PreparedsSetLimit(1)
+	runStmt(qc, "PREPARE mb75506_evict FROM SELECT 1")
 }

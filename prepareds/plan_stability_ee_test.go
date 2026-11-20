@@ -69,3 +69,48 @@ func TestPersistDefaultPlanStabilitySetting(t *testing.T) {
 		}
 	}
 }
+
+// MB-75506: turning plan stability on waits until QUERY_METADATA serves reads, and fails if it does not in time
+func TestWaitQueryMetadataReads(t *testing.T) {
+	defer func(h func(bool, string, string, bool) (bool, errors.Error), r func() errors.Error, i, m time.Duration) {
+		hasQueryMetadataFn = h
+		readQueryMetadataFn = r
+		readRetryInterval = i
+		readMaxWait = m
+	}(hasQueryMetadataFn, readQueryMetadataFn, readRetryInterval, readMaxWait)
+
+	hasQueryMetadataFn = func(bool, string, string, bool) (bool, errors.Error) {
+		return true, nil
+	}
+
+	readRetryInterval = time.Millisecond
+	readMaxWait = 200 * time.Millisecond
+
+	for _, tc := range []struct {
+		name     string
+		failures int // reads that fail before reads succeed (-1: never)
+		err      bool
+	}{
+		{"ready", 0, false},
+		{"ready after retries", 3, false},
+		{"never ready", -1, true},
+	} {
+		reads := 0
+		failures := tc.failures
+		readQueryMetadataFn = func() errors.Error {
+			reads++
+			if failures < 0 || reads <= failures {
+				return errors.NewQueryMetadataError("Error performing bulk get operation", nil)
+			}
+			return nil
+		}
+		// turning plan stability on, QUERY_METADATA exists
+		err := prepareds.EnsureQueryMetadata("req1")
+		if (err != nil) != tc.err {
+			t.Errorf("%s: error %v, expected error %v", tc.name, err, tc.err)
+		}
+		if tc.failures >= 0 && reads != tc.failures+1 {
+			t.Errorf("%s: %d reads, expected %d", tc.name, reads, tc.failures+1)
+		}
+	}
+}

@@ -657,17 +657,8 @@ func doPrepared(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request
 			return nil, errors.NewAdminBodyError(err1)
 		}
 
-		planStabilityMode := settings.GetPlanStabilityMode()
-		planStabilityErrorPolicy := settings.GetPlanStabilityErrorPolicy()
-		prepared, _ := prepareds.GetPrepared(name, nil, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
-
-		// nothing to do if the prepared is there and the plan matches
-		if prepared != nil && !prepared.MismatchingEncodedPlan(string(body)) {
-			return "", nil
-		}
-		// the plan stability error policy applies to a plan distributed by another node
-		_, err, _ = prepareds.DecodePrepared(name, string(body), true, false,
-			planStabilityMode != settings.PS_MODE_OFF, planStabilityMode, planStabilityErrorPolicy, logging.NULL_LOG)
+		err = prepareds.AddDistributedPrepared(name, string(body), settings.GetPlanStabilityMode(),
+			settings.GetPlanStabilityErrorPolicy(), logging.NULL_LOG)
 		if err != nil {
 			return nil, err
 		}

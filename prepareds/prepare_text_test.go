@@ -56,10 +56,12 @@ func TestGetText(t *testing.T) {
 // a new plan for a PREPARE without SAVE, plan stability off, replacing a plan saved with PREPARE SAVE: the saved
 // plan is removed
 func TestAddPreparedStatement(t *testing.T) {
-	defer func(d func(string) errors.Error, p func(*plan.Prepared) errors.Error) {
+	defer func(d func(string) errors.Error, p func(*plan.Prepared) errors.Error,
+		i func(string) (savedPlan, errors.Error)) {
 		deletePreparedFn = d
 		persistPreparedFn = p
-	}(deletePreparedFn, persistPreparedFn)
+		savedPlanInfoFn = i
+	}(deletePreparedFn, persistPreparedFn, savedPlanInfoFn)
 
 	var deleteErr errors.Error
 	deletes := 0
@@ -69,6 +71,10 @@ func TestAddPreparedStatement(t *testing.T) {
 	}
 	persistPreparedFn = func(*plan.Prepared) errors.Error {
 		return nil
+	}
+	// MB-75506: a name not cached is looked for in QUERY_METADATA: nothing saved
+	savedPlanInfoFn = func(string) (savedPlan, errors.Error) {
+		return savedPlan{}, nil
 	}
 
 	const text = "PREPARE ps1 FROM SELECT 1"
@@ -121,12 +127,11 @@ func TestAddPreparedStatement(t *testing.T) {
 	}
 }
 
-// the name is not cached (e.g. evicted, cache full): the saved plan is checked the same way as a cached one
+// the name is not cached (e.g. evicted): the saved plan is checked the same way as a cached one
 func TestAddPreparedStatementNotCached(t *testing.T) {
 	defer func(d func(string) errors.Error, i func(string) (savedPlan, errors.Error)) {
 		deletePreparedFn = d
 		savedPlanInfoFn = i
-		clearUnloaded("ps2")
 	}(deletePreparedFn, savedPlanInfoFn)
 
 	deletes := 0
@@ -166,8 +171,9 @@ func TestAddPreparedStatementNotCached(t *testing.T) {
 			return savedPlan{text: savedText, persist: savedSave, found: savedText != "", readable: true}, nil
 		}
 
-		// a cache miss looks for a saved plan
-		markUnloaded("ps2")
+		// MB-75506: with plan stability off, a name known on this node to be saved with PREPARE SAVE (e.g.
+		// evicted) is looked for, whatever the cache state
+		markSaved("ps2")
 		prepared := plan.NewPrepared(nil, nil, nil, nil, nil)
 		prepared.SetName("ps2")
 		prepared.SetText(text)
@@ -178,5 +184,22 @@ func TestAddPreparedStatementNotCached(t *testing.T) {
 			t.Errorf("%s: %d deletes, error %v, replaced %v; expected %d deletes, error %v, replaced %v", tc.name,
 				deletes, err, replaced, tc.deletes, tc.err, tc.replaced)
 		}
+		clearAllSaved()
+	}
+
+	// MB-75506: with plan stability off, a name not known on this node to be saved with PREPARE SAVE is not
+	// looked for (e.g. saved on another node, whose distribution did not reach this node)
+	PreparedsInit(16)
+	deletes = 0
+	reads := 0
+	savedPlanInfoFn = func(string) (savedPlan, errors.Error) {
+		reads++
+		return savedPlan{text: text, persist: true, found: true, readable: true}, nil
+	}
+	prepared := plan.NewPrepared(nil, nil, nil, nil, nil)
+	prepared.SetName("ps2")
+	prepared.SetText(text)
+	if err := AddPreparedStatement(prepared, false); err != nil || reads != 0 || deletes != 0 {
+		t.Errorf("not known as saved: error %v, %d reads, %d deletes; expected none", err, reads, deletes)
 	}
 }
