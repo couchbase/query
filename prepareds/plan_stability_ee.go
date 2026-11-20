@@ -46,7 +46,14 @@ func planStabilityInit() {
 func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	if oldMode == newMode {
 		return nil
-	} else if oldMode == settings.PS_MODE_OFF &&
+	}
+
+	// MB-75479: ad hoc statements cached before AD_HOC are planned again, and saved, by their next execution
+	if adoptsAdHocEntries(oldMode, newMode) {
+		removeAutoPreparedEntries(oldMode, newMode)
+	}
+
+	if oldMode == settings.PS_MODE_OFF &&
 		(newMode == settings.PS_MODE_PREPARED_ONLY || newMode == settings.PS_MODE_AD_HOC || newMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
 		// just turned on
 		return persistPreparedStmts(newMode, requestId)
@@ -65,9 +72,9 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 		// the ones prepared on other nodes
 		return updatePreparedStmts(newMode, true)
 	}
-	// else, the following changes do not require changes to either prepared statements in
-	// prepared cache, or saved prepared statements on disk:
-	//  - changing from either PREPARED_ONLY or AD_HOC_READ_ONLY to AD_HOC
+	// else, the following changes do not require changes to saved prepared statements on disk:
+	//  - changing from either PREPARED_ONLY or AD_HOC_READ_ONLY to AD_HOC (ad hoc statements in the prepared
+	//    cache were removed above)
 	//  - changing from either PREPARED_ONLY or AD_HOC to AD_HOC_READ_ONLY
 
 	return nil
@@ -96,11 +103,42 @@ func removesAdHocEntries(oldMode, newMode settings.PlanStabilityMode) bool {
 	return false
 }
 
+// MB-75479: the mode changes to AD_HOC: ad hoc statements cached before (auto prepared under another mode, and
+// thus not marked as ad hoc) are not saved, and would keep being used as is
+func adoptsAdHocEntries(oldMode, newMode settings.PlanStabilityMode) bool {
+	return newMode == settings.PS_MODE_AD_HOC && oldMode != settings.PS_MODE_AD_HOC
+}
+
+// MB-75479: remove the ad hoc statements cached before the mode changed to AD_HOC (auto prepared, not marked as
+// ad hoc, not saved with PREPARE SAVE) from the prepared cache: the next execution plans, and saves, them under
+// AD_HOC
+func removeAutoPreparedEntries(oldMode, newMode settings.PlanStabilityMode) {
+	names := make([]string, 0, 128)
+	PreparedsForeach(func(name string, ce *CacheEntry) bool {
+		prepared := ce.Prepared
+		if prepared.AutoPrepared() && !prepared.AdHoc() && !prepared.Persist() {
+			names = append(names, encodeName(prepared.Name(), prepared.QueryContext()))
+		}
+		return true
+	}, nil)
+	for i := range names {
+		// an entry may be gone by now
+		deletePreparedFromCache(names[i])
+	}
+	if len(names) > 0 {
+		logging.Infof("Plan stability mode changed from %v to %v: %d ad hoc statements removed from the prepared cache",
+			oldMode, newMode, len(names))
+	}
+}
+
 /*
  * MB-75471: a plan stability mode change made on another node, which updates the saved plans: remove the
  * entries the new mode does not keep from this node's prepared cache, same as updatePreparedStmts()
  */
 func (this *preparedCache) ApplyPlanStabilityMode(oldMode, newMode settings.PlanStabilityMode) {
+	if adoptsAdHocEntries(oldMode, newMode) {
+		removeAutoPreparedEntries(oldMode, newMode)
+	}
 	if !removesAdHocEntries(oldMode, newMode) {
 		return
 	}
@@ -122,6 +160,13 @@ func (this *preparedCache) ApplyPlanStabilityMode(oldMode, newMode settings.Plan
 	}
 }
 
+// MB-75479: whether a cached plan is saved when plan stability is turned on: as when it is first added to the
+// cache under the new mode (shouldPersist(); ad hoc statements are cached under OFF without being marked as ad
+// hoc, and are not saved), and not a plan with a sequential scan kept local; not one saved already
+func persistOnTurnOn(prepared *plan.Prepared, newMode settings.PlanStabilityMode) bool {
+	return !prepared.Persist() && shouldPersist(prepared, newMode) && !seqScanKeptLocal(prepared)
+}
+
 /*
  * When plan stability mode changes from OFF to PREPARED_ONLY or AD_HOC or AD_HOC_READ_ONLY, need to
  * go through prepared cache and persist any prepared statement that's not already saved on disk.
@@ -137,7 +182,7 @@ func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) 
 
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
-		if !prepared.Persist() {
+		if persistOnTurnOn(prepared, newMode) {
 			err1 := persistPrepared(prepared)
 			if err1 != nil {
 				err = err1

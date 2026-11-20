@@ -559,6 +559,14 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planSta
 		featureName = "Plan Stability (AD_HOC)"
 	}
 
+	// MB-75479: the mode changed to AD_HOC while this request ran under another mode: the plan is not marked as
+	// ad hoc (and would not be saved), and the cached ad hoc statements have been removed (see
+	// removeAutoPreparedEntries()); do not cache it, the next execution plans and saves it under AD_HOC
+	if planStabilityMode != settings.PS_MODE_AD_HOC && !prepared.AdHoc() && !prepared.Persist() &&
+		planStabilityModeFn() == settings.PS_MODE_AD_HOC {
+		return false, nil
+	}
+
 	// MB-75435: later executions of the statement reuse the cached plan and take the statement type
 	// from it (transaction statement check, request accounting)
 	prepared.SetType(stmt.Type())
@@ -853,8 +861,14 @@ func shouldPersist(prepared *plan.Prepared, planStabilityMode settings.PlanStabi
 // the feature bit check is needed: HasSeqScan() is accurate on any verified plan, but reprepare() only verifies
 // the new plan with the bit set
 func seqScanKeptLocal(prepared *plan.Prepared) bool {
-	return !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) && prepared.HasSeqScan()
+	return !util.IsFeatureEnabled(util.GetN1qlFeatureControl(), util.N1QL_IGNORE_IDXR_META) && hasSeqScanFn(prepared)
 }
+
+// test hook: the current plan stability mode
+var planStabilityModeFn = settings.GetPlanStabilityMode
+
+// test hook: HasSeqScan() needs the indexers of a verified plan
+var hasSeqScanFn = func(prepared *plan.Prepared) bool { return prepared.HasSeqScan() }
 
 // this function does not check whether the prepared has any saved query plans on disk
 func deletePreparedFromCache(name string) errors.Error {
@@ -1053,6 +1067,9 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 			} else if !good || prepared.PreparedTime().IsZero() {
 				// with N1QL_IGNORE_IDXR_META bit set reprepare() calls Verify() on the new plan, recording the indexer
 				// metadata versions so that a later index change is detected
+				// MB-75479: under AD_HOC_READ_ONLY, an ad hoc statement in the cache already (e.g. its saved plan)
+				// is handled as a prepared statement, i.e. follows the error policy (FLEXIBLE replaces the saved
+				// plan); the mode only keeps new ad hoc statements from being saved
 				var replace bool
 				replace, err = reprepareAllowed(planStability, planStabilityErrorPolicy)
 				if err == nil {

@@ -19,6 +19,11 @@ import (
 // MB-75435: an auto-prepared plan carries the statement type, which later executions of the statement
 // take from the cached plan
 func TestAutoPreparePlanType(t *testing.T) {
+	defer func(m func() settings.PlanStabilityMode) {
+		planStabilityModeFn = m
+	}(planStabilityModeFn)
+	planStabilityModeFn = func() settings.PlanStabilityMode { return settings.PS_MODE_OFF }
+
 	// replaces the package-global prepared cache: fine for tests in this package, which run in sequence
 	PreparedsInit(16)
 
