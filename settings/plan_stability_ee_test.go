@@ -13,7 +13,9 @@ package settings
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/errors"
 )
 
@@ -177,6 +179,7 @@ func TestUpdatePersistSettings(t *testing.T) {
 		globalSettings = gs
 		planCache = pc
 		setStoredSettings = s
+		setUnconfirmedWrite(nil)
 	}(globalSettings, planCache, setStoredSettings)
 
 	planCache = &fakePlanCache{}
@@ -215,5 +218,234 @@ func TestUpdatePersistSettings(t *testing.T) {
 					persistPS, err, written, GetPlanStabilityMode(), GetPlanStabilityErrorPolicy())
 			}
 		}
+	}
+}
+
+// a node of a cluster
+type namedNodeRemote struct {
+	distributed.SystemRemoteAccess
+}
+
+func (this namedNodeRemote) WhoAmI() string {
+	return "n1"
+}
+
+// MB-75508: resetting plan stability to the default setting (QUERY_METADATA missing) waits for a settings update
+// in progress, which does not undo the reset when its write to metakv fails
+func TestResetPlanStabilitySetting(t *testing.T) {
+	defer func(gs *querySettings, pc PlanCache, s func([]byte, any) error) {
+		globalSettings = gs
+		planCache = pc
+		setStoredSettings = s
+		setUnconfirmedWrite(nil)
+	}(globalSettings, planCache, setStoredSettings)
+
+	planCache = &fakePlanCache{}
+	for _, fail := range []bool{true, false} {
+		setPlanStability(PS_MODE_PREPARED_ONLY, PS_ERROR_MODERATE)
+		entered := make(chan bool)
+		release := make(chan bool)
+		setStoredSettings = func(val []byte, rev any) error {
+			entered <- true
+			<-release
+			if fail {
+				return fmt.Errorf("metakv not available")
+			}
+			return nil
+		}
+
+		// an update, writing its settings
+		updated := make(chan errors.Error)
+		go func() {
+			err, _ := UpdatePersistSettings(true, "r1",
+				map[string]any{PLAN_STABILITY: map[string]any{"mode": "ad_hoc"}})
+			updated <- err
+		}()
+		<-entered
+
+		// the reset waits for the update
+		reset := make(chan bool)
+		go func() {
+			reset <- ResetPlanStabilitySetting()
+		}()
+		var wasDefault, resetEarly bool
+		select {
+		case wasDefault = <-reset:
+			// the update still holds the lock (if any): released below, so that later tests are not blocked
+			resetEarly = true
+			t.Errorf("write fails %v: the reset did not wait for the update", fail)
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		close(release)
+		if err := <-updated; (err != nil) != fail {
+			t.Errorf("write fails %v: update error %v", fail, err)
+		}
+		if !resetEarly {
+			wasDefault = <-reset
+		}
+		if wasDefault {
+			t.Errorf("write fails %v: expected the setting not the default setting before the reset", fail)
+		}
+		if !IsDefaultPlanStabilitySetting() {
+			t.Errorf("write fails %v: expected the default setting after the reset, got mode %v", fail,
+				GetPlanStabilityMode())
+		}
+	}
+}
+
+// MB-75508: settings written by this node, whose write to metakv reported an error, which come back from metakv
+// (they were written all the same) are processed, so that this node does not stay on the old settings
+func TestUnconfirmedSettingsWrite(t *testing.T) {
+	defer func(gs *querySettings, pc PlanCache, s func([]byte, any) error, ra distributed.SystemRemoteAccess) {
+		globalSettings = gs
+		planCache = pc
+		setStoredSettings = s
+		distributed.SetRemoteAccess(ra)
+		setUnconfirmedWrite(nil)
+	}(globalSettings, planCache, setStoredSettings, distributed.RemoteAccess())
+
+	distributed.SetRemoteAccess(namedNodeRemote{distributed.RemoteAccess()})
+	fake := &fakePlanCache{}
+	planCache = fake
+	var stored []byte
+	var setErr error
+	setStoredSettings = func(val []byte, rev any) error {
+		stored = val
+		return setErr
+	}
+	update := func(mode string) errors.Error {
+		err, _ := UpdatePersistSettings(true, "r1", map[string]any{PLAN_STABILITY: map[string]any{"mode": mode}})
+		return err
+	}
+
+	// the write is stored, but reports an error: this node keeps the old setting
+	setPlanStability(PS_MODE_OFF, PS_ERROR_MODERATE)
+	setErr = fmt.Errorf("timeout")
+	if err := update("prepared only"); err == nil || GetPlanStabilityMode() != PS_MODE_OFF {
+		t.Fatalf("expected the update to fail, and the old setting kept: %v, mode %v", err,
+			GetPlanStabilityMode())
+	}
+
+	// the stored settings come back from metakv: processed
+	fake.applied = nil
+	processSettings(stored, "n1", false)
+	if GetPlanStabilityMode() != PS_MODE_PREPARED_ONLY || len(fake.applied) != 1 ||
+		fake.applied[0] != [2]PlanStabilityMode{PS_MODE_OFF, PS_MODE_PREPARED_ONLY} {
+		t.Errorf("expected the stored setting applied: mode %v, applied %v", GetPlanStabilityMode(), fake.applied)
+	}
+
+	// again: skipped, as other settings of this node
+	setPlanStability(PS_MODE_OFF, PS_ERROR_MODERATE)
+	processSettings(stored, "n1", false)
+	if GetPlanStabilityMode() != PS_MODE_OFF {
+		t.Errorf("expected the stored setting skipped the second time, got mode %v", GetPlanStabilityMode())
+	}
+
+	// writes that succeed: the settings of an earlier write, which come back late, are skipped
+	setErr = nil
+	if err := update("ad_hoc"); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	earlier := stored
+	if err := update("prepared only"); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	fake.applied = nil
+	processSettings(earlier, "n1", false)
+	if GetPlanStabilityMode() != PS_MODE_PREPARED_ONLY || len(fake.applied) != 0 {
+		t.Errorf("expected earlier settings skipped: mode %v, applied %v", GetPlanStabilityMode(), fake.applied)
+	}
+
+	// a write that fails is followed by one that succeeds: the settings of the failed write are skipped
+	setErr = fmt.Errorf("timeout")
+	update("ad_hoc")
+	failed := stored
+	setErr = nil
+	if err := update("ad_hoc_read_only"); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	processSettings(failed, "n1", false)
+	if GetPlanStabilityMode() != PS_MODE_AD_HOC_READ_ONLY {
+		t.Errorf("expected the settings of the failed write skipped, got mode %v", GetPlanStabilityMode())
+	}
+}
+
+// MB-75508: settings of this node that come back from metakv while their write is in progress are checked once
+// the write completes: applied if the write reported an error, and not after a newer update on this node; and the
+// settings of a write that succeeded are not applied later (e.g. after a reset)
+func TestUnconfirmedSettingsWriteOrdering(t *testing.T) {
+	defer func(gs *querySettings, pc PlanCache, s func([]byte, any) error, ra distributed.SystemRemoteAccess) {
+		globalSettings = gs
+		planCache = pc
+		setStoredSettings = s
+		distributed.SetRemoteAccess(ra)
+		setUnconfirmedWrite(nil)
+	}(globalSettings, planCache, setStoredSettings, distributed.RemoteAccess())
+
+	distributed.SetRemoteAccess(namedNodeRemote{distributed.RemoteAccess()})
+	fake := &fakePlanCache{}
+	planCache = fake
+
+	// the settings come back from metakv while the write is in progress (callback), and the write reports an
+	// error (fail)
+	var stored []byte
+	var callback chan bool
+	var fail bool
+	setStoredSettings = func(val []byte, rev any) error {
+		stored = val
+		if callback != nil {
+			done := callback
+			go func() {
+				processSettings(val, "n1", false)
+				done <- true
+			}()
+			// let the settings coming back wait for the lock
+			time.Sleep(10 * time.Millisecond)
+		}
+		if fail {
+			return fmt.Errorf("timeout")
+		}
+		return nil
+	}
+	update := func(mode string, withCallback, writeFails bool) chan bool {
+		if withCallback {
+			callback = make(chan bool, 1)
+		} else {
+			callback = nil
+		}
+		fail = writeFails
+		UpdatePersistSettings(true, "r1", map[string]any{PLAN_STABILITY: map[string]any{"mode": mode}})
+		return callback
+	}
+
+	// the write reports an error: its settings, which came back during the write, are applied
+	setPlanStability(PS_MODE_OFF, PS_ERROR_MODERATE)
+	fake.applied = nil
+	<-update("prepared only", true, true)
+	if GetPlanStabilityMode() != PS_MODE_PREPARED_ONLY || len(fake.applied) != 1 {
+		t.Errorf("write reports an error: mode %v, applied %v; expected prepared_only applied",
+			GetPlanStabilityMode(), fake.applied)
+	}
+
+	// the write reports an error, and a newer update follows right away: the settings of the newer update stay
+	for i := 0; i < 20; i++ {
+		setPlanStability(PS_MODE_OFF, PS_ERROR_MODERATE)
+		done := update("prepared only", true, true)
+		update("ad_hoc", false, false)
+		<-done
+		if GetPlanStabilityMode() != PS_MODE_AD_HOC {
+			t.Fatalf("run %d: newer update: mode %v; expected ad_hoc", i, GetPlanStabilityMode())
+		}
+	}
+
+	// the write succeeds: its settings, coming back later (e.g. after a reset), are not applied
+	setPlanStability(PS_MODE_OFF, PS_ERROR_MODERATE)
+	update("ad_hoc", false, false)
+	written := stored
+	ResetPlanStabilitySetting()
+	processSettings(written, "n1", false)
+	if GetPlanStabilityMode() != PS_MODE_OFF {
+		t.Errorf("write succeeded, then reset: mode %v; expected off", GetPlanStabilityMode())
 	}
 }

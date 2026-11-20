@@ -371,8 +371,8 @@ func doQueryMetadataCleanup() {
 
 	// this node stops using plan stability right away; the setting is written to metakv below, unless it
 	// was the default setting already (e.g. only plans saved with PREPARE SAVE)
-	wasDefault := settings.IsDefaultPlanStabilitySetting()
-	settings.SetDefaultPlanStabilitySetting(false)
+	// MB-75508: not while a settings update on this node is in progress
+	wasDefault := settings.ResetPlanStabilitySetting()
 
 	names := make([]string, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
