@@ -1,0 +1,39 @@
+[
+    {
+	"testcase": "MB-75516: the saved plan, whose index was dropped, is loaded and re-planned",
+        "statements":"EXECUTE mb75516_p1",
+        "results": [
+            {
+                "c11": 3
+            },
+            {
+                "c11": 4
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75516: with plan stability off, the new plan replaces the saved plan (PREPARE SAVE)",
+        "statements":"SELECT RAW d.encoded_plan = b.doc.encoded_plan FROM QUERY_METADATA._system._query b JOIN QUERY_METADATA._system._query d ON KEYS b.origId WHERE meta(b).id = \"mb75516_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            false
+        ]
+    },
+    {
+	"testcase": "MB-75516: remove the backup",
+        "statements":"DELETE FROM QUERY_METADATA._system._query USE KEYS \"mb75516_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75516: remove the prepared statement, and its saved plan",
+        "statements":"DELETE FROM system:prepareds WHERE name = \"mb75516_p1\"",
+        "results": [
+        ]
+    }
+]

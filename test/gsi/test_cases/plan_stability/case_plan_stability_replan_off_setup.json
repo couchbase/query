@@ -1,0 +1,25 @@
+[
+    {
+	"testcase": "MB-75516: plan stability is off; an index to be dropped",
+        "statements":"CREATE INDEX mb75516_idx ON shellTest(c11, c12) WHERE type = \"left\""
+    },
+    {
+	"testcase": "MB-75516: PREPARE SAVE using the index",
+        "statements":"PREPARE SAVE mb75516_p1 FROM SELECT c11 FROM shellTest USE INDEX (mb75516_idx) WHERE type = \"left\" AND c11 > 2 ORDER BY c11"
+    },
+    {
+	"testcase": "MB-75516: back up the saved plan",
+        "statements":"INSERT INTO QUERY_METADATA._system._query (KEY k, VALUE v) SELECT \"mb75516_backup\" AS k, {\"origId\": meta(d).id, \"doc\": d} AS v FROM QUERY_METADATA._system._query d USE KEYS \"ppn::mb75516_p1\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75516: drop the index",
+        "statements":"DROP INDEX shellTest.mb75516_idx",
+        "results": [
+        ]
+    }
+]
