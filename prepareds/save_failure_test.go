@@ -65,7 +65,7 @@ func TestSaveFailure(t *testing.T) {
 		clearUnloaded("ap1")
 		prepared := newPrepared("ap1", adHocText)
 		prepared.SetAdHoc(true)
-		added, er := AddAutoPreparePlan(stmt, prepared, settings.PS_MODE_AD_HOC)
+		added, er := AddAutoPreparePlan(stmt, prepared, settings.PS_MODE_AD_HOC, nil)
 		if er != nil || added == fail || saves != 1 {
 			t.Errorf("ad hoc, save fails %v: added %v, error %v, %d saves", fail, added, er, saves)
 		}

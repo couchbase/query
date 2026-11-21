@@ -1451,7 +1451,18 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 	if generate && planStability {
 		udfText = expr.String()
 	}
-	if planStability {
+	// MB-75515: only an inline UDF with subqueries has a prepared entry: no need to look for one otherwise (it is
+	// looked for in QUERY_METADATA when it is not cached)
+	lookUp := planStability
+	if lookUp {
+		if generate {
+			subqueries, er := expression.ListSubqueries(expression.Expressions{expr}, true)
+			lookUp = er != nil || len(subqueries) > 0
+		} else {
+			lookUp = subqPlans.HasSubquery(lock)
+		}
+	}
+	if lookUp {
 		// look for subquery plans in prepareds cache
 		// SetupSubqueryPlans() is called with generate == false on every execution of the UDF,
 		// so track usage of the prepared entry only then
@@ -1484,12 +1495,33 @@ func (this *opContext) SetupSubqueryPlans(udfName string, expr expression.Expres
 				hasSubquery = true
 			} else {
 				// only an inline UDF with subqueries should have a prepared entry
-				err = prepared.GetUdfSubqPlans(lock, subqPlans)
-				if err != nil {
-					return err
+				// MB-75515: the plans are set for the subqueries of the expression of the entry (the expression to
+				// run, see GetUdfSubqPlans()), and verified for that expression; the entry is kept with them, as
+				// for plans generated, so that it is added again if it is removed
+				er := prepared.GetUdfSubqPlans(lock, subqPlans)
+				if er != nil && plan.IsUdfEntryMismatch(er) {
+					// as an entry for another body: remove it, and plan the expression (the error policy does
+					// not apply: it is not a plan of this UDF that failed verification)
+					logging.Infof("Prepared entry for inline UDF %s can not be used (%v): replacing it", udfName, er)
+					if er1 := settings.DeleteUdfPrepared(udfName); er1 != nil {
+						logging.Errorf("Error removing prepared entry for inline UDF %s: %v", udfName, er1)
+					}
+					prepared = nil
+					subqPlans.Reset(lock)
+				} else if er != nil {
+					// the plans can not be decoded (e.g. an index was dropped): they can not be used, as plans
+					// failing verification (the error policy applies)
+					err1 = errors.NewPlanVerificationError(fmt.Sprintf("Subquery plans of inline UDF %s can not "+
+						"be used", udfName), er)
+				} else {
+					subqPlans.SetPrepared(prepared, lock)
+					err1, _ = this.VerifySubqueryPlans(subqPlans.GetExpression(lock), subqPlans, lock)
 				}
-				err1, _ = this.VerifySubqueryPlans(expr, subqPlans, lock)
+			}
+			if prepared != nil && generate {
 				if err1 != nil {
+					// the plans are generated again, for the expression to run
+					subqPlans.Reset(lock)
 					if this.IsPlanStabilityErrorStrict() {
 						return errors.NewReprepareError(fmt.Errorf("Plan Stability error policy STRICT prevents reprepare"))
 					} else if this.IsPlanStabilityErrorModerate() {

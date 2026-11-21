@@ -13,6 +13,7 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
+	goerrors "errors"
 	"fmt"
 	"io/ioutil"
 	"sort"
@@ -1064,9 +1065,16 @@ func (this *Prepared) IsUdfExpr(expr expression.Expression) (bool, error) {
 	return _unmarshalled.UdfText != "" && _unmarshalled.UdfText == expr.String(), nil
 }
 
+// MB-75515: the subquery plans of an inline UDF entry (the plans saved, or cached, for the UDF), set in subqPlans
+// for the subqueries of the UDF expression they were generated for (udfExpr, the expression after planning), which
+// is set as the expression of subqPlans, and is the expression to run: SubqueryPlans are keyed by the *Select of
+// each subquery, so plans are only found for the subqueries of that very expression (not of another parse of
+// the UDF body). The plans are matched to the subqueries by their text (as saved, see marshalSubqueryPlan());
+// if a subquery of the expression has no plan, IsUdfEntryMismatch() holds for the error returned.
 func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlans) error {
 	var _unmarshalled struct {
 		UdfExpr      string `json:"udfExpr"`
+		UdfText      string `json:"udfText"`
 		PlanVersion  int    `json:"planVersion"`
 		UdfSubqPlans map[string]struct {
 			PlanOp             json.RawMessage `json:"plan"`
@@ -1080,22 +1088,24 @@ func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlan
 		return err
 	}
 
+	// plain Parse() is enough (not ParseUdf() and setting the UDF parameters as variables, as for the UDF body to
+	// plan): the expression is not planned, its subqueries run the plans of the entry (matched below), and the
+	// UDF parameters are bound when it is evaluated, as for the UDF body
 	udfExpr, err := parser.Parse(_unmarshalled.UdfExpr)
 	if err != nil {
 		return err
 	}
+	// the body the plans are for (MB-75480), kept if the entry is saved again (see SetupUdfSubqPlans())
+	if this.udfText == "" {
+		this.udfText = _unmarshalled.UdfText
+	}
 
+	type subqPlan struct {
+		plan *QueryPlan
+		isks map[string]bool
+	}
+	plans := make(map[string]subqPlan, len(_unmarshalled.UdfSubqPlans))
 	for _, subqPlanInfo := range _unmarshalled.UdfSubqPlans {
-		// get the *Subquery expression
-		expr, err := parser.Parse(subqPlanInfo.SubqText)
-		if err != nil {
-			return err
-		}
-		subquery, ok := expr.(*algebra.Subquery)
-		if !ok {
-			return errors.NewPlanInternalError(fmt.Sprintf("GetUdfSubqPlans: unexpected expr type %T", expr))
-		}
-
 		// get the plan
 		var op_type struct {
 			Operator string `json:"#operator"`
@@ -1112,10 +1122,50 @@ func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlan
 			return err
 		}
 
-		subqPlans.Set(subquery.Select(), udfExpr, NewQueryPlan(op), subqPlanInfo.IndexScanKeyspaces, lock)
+		// the text as printed once parsed, as for the subqueries of the expression (the saved text, printed
+		// before, may differ, e.g. in white space)
+		subq, err := parser.Parse(subqPlanInfo.SubqText)
+		if err != nil {
+			return err
+		}
+		if _, ok := subq.(*algebra.Subquery); !ok {
+			return errors.NewPlanInternalError(fmt.Sprintf("GetUdfSubqPlans: unexpected expr type %T", subq))
+		}
+		plans[subq.String()] = subqPlan{NewQueryPlan(op), subqPlanInfo.IndexScanKeyspaces}
+	}
+
+	// the subqueries of the expression, as listed when the plans are generated (see opContext.SubqueryPlans())
+	subqueries, err := expression.ListSubqueries(expression.Expressions{udfExpr}, true)
+	if err != nil {
+		return err
+	}
+	matched := 0
+	for _, sq := range subqueries {
+		subq, ok := sq.(*algebra.Subquery)
+		if !ok {
+			continue
+		}
+		p, ok := plans[subq.String()]
+		if !ok {
+			return fmt.Errorf("%w: no plan for subquery %s", errUdfEntryMismatch, subq.String())
+		}
+		// identical subqueries share a plan, as when the plans are saved
+		subqPlans.Set(subq.Select(), udfExpr, p.plan, p.isks, lock)
+		matched++
+	}
+	if matched == 0 {
+		return fmt.Errorf("%w: no subquery", errUdfEntryMismatch)
 	}
 
 	return nil
+}
+
+var errUdfEntryMismatch = goerrors.New("inline UDF entry does not match its expression")
+
+// MB-75515: the error returned by GetUdfSubqPlans() when the plans of the entry do not match the subqueries of its
+// expression: the entry can not be used, and is to be generated again
+func IsUdfEntryMismatch(err error) bool {
+	return goerrors.Is(err, errUdfEntryMismatch)
 }
 
 func marshalSubqueryPlan(r map[string]any, subselect *algebra.Select, planP, isksP any,

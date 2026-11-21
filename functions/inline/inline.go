@@ -288,6 +288,11 @@ func (this *inlineBody) GetPlans(udfName string, fcontext functions.Context) (ex
 				this.mutex.Unlock()
 				return nil, nil, err
 			}
+			// MB-75515: the plans are for the subqueries of their expression, e.g. that of a plan stability
+			// entry (see Prepared.GetUdfSubqPlans()): run that expression
+			if planned := subqueryPlans.GetExpression(true); planned != nil {
+				expr = planned
+			}
 			// reverify so that we can handle in transaction context
 			// verify in lock so that metadata update will not be done in parallel
 			_, trans = context.VerifySubqueryPlans(expr, subqueryPlans, true)

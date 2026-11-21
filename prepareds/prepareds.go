@@ -301,9 +301,11 @@ type PrimeReport struct {
 }
 
 // preparedCache implements planner.PlanCache
+// MB-75515: the names of inline UDF entries (plan stability) are reserved too: a prepared statement with such a
+// name would take the place of the entry of that UDF
 func (this *preparedCache) IsPredefinedPrepareName(name string) bool {
 	_, ok := predefinedPrepareStatements[name]
-	return ok
+	return ok || strings.HasPrefix(name, _INLINE_UDF_NAME_PREFIX)
 }
 
 func (this *preparedCache) GetText(text string, offset int) string {
@@ -555,8 +557,10 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	} else {
 		options |= OPT_METACHECK
 	}
-	prep, err := getPrepared(name, "", context.DeltaKeyspaces(), options, nil, context.GetPlanStabilityMode(),
-		context.GetPlanStabilityErrorPolicy(), context.Context(), context.ScanConsistency())
+	// MB-75514: the plan is cached, and saved, under the name and the query context (see AddAutoPreparePlan())
+	prep, err := getPrepared(name, context.QueryContext(), context.DeltaKeyspaces(), options, nil,
+		context.GetPlanStabilityMode(), context.GetPlanStabilityErrorPolicy(), context.Context(),
+		context.ScanConsistency())
 	if err != nil {
 		if err.Code() != errors.E_NO_SUCH_PREPARED {
 			if planStabilityAdHoc {
@@ -579,7 +583,9 @@ func GetAutoPreparePlan(name, text, namespace string, context *planner.PrepareCo
 	return prep, nil
 }
 
-func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode) (bool, errors.Error) {
+// deltaKeyspaces are those of the transaction the statement runs in, if any (the plan was built with them)
+func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planStabilityMode settings.PlanStabilityMode,
+	deltaKeyspaces map[string]bool) (bool, errors.Error) {
 
 	// certain statements we don't cache anyway
 	switch stmt.Type() {
@@ -591,6 +597,21 @@ func AddAutoPreparePlan(stmt algebra.Statement, prepared *plan.Prepared, planSta
 	// (you should be using prepared statements for that anyway!)
 	if stmt.ParamsCount() > 0 {
 		return false, nil
+	}
+
+	// MB-75514: a plan built in a transaction (with its delta keyspaces, e.g. without covering) is for this
+	// request only: it is not the plan of the statement, for requests outside the transaction (in a transaction,
+	// the plan of the statement is adapted to it, see getTxPrepared())
+	if deltaKeyspaces != nil {
+		return false, nil
+	}
+
+	// MB-75514: transaction statements (e.g. of implicit transactions, see ExecuteTranStatement()) are cached, but
+	// not saved as ad hoc statements
+	switch stmt.(type) {
+	case *algebra.StartTransaction, *algebra.CommitTransaction, *algebra.RollbackTransaction, *algebra.Savepoint,
+		*algebra.TransactionIsolation:
+		prepared.SetAdHoc(false)
 	}
 
 	fullName := encodeName(prepared.Name(), prepared.QueryContext())
@@ -828,6 +849,26 @@ func AddPreparedStatement(prepared *plan.Prepared, planStability bool) errors.Er
 	return addPrepared(prepared, planStability, true)
 }
 
+// MB-75514: a re-planned plan replacing the cached plan: an auto prepared statement that is not ad hoc (cached, but
+// neither saved nor distributed, e.g. with auto_prepare under AD_HOC_READ_ONLY, see AddAutoPreparePlan()) stays
+// that way; otherwise as addPrepared(), e.g. a saved ad hoc statement under AD_HOC_READ_ONLY is saved again (see
+// getPrepared())
+func addReplanned(prepared *plan.Prepared, planStability, distribute bool) errors.Error {
+	if prepared.AutoPrepared() && !prepared.AdHoc() && !prepared.Persist() {
+		added := true
+		prepareds.add(prepared, false, false, func(ce *CacheEntry) bool {
+			added = ce.Prepared.Text() == prepared.Text()
+			return added
+		})
+		if !added {
+			return errors.NewPreparedNameError(fmt.Sprintf("duplicate name: %s",
+				encodeName(prepared.Name(), prepared.QueryContext())))
+		}
+		return nil
+	}
+	return addPrepared(prepared, planStability, distribute)
+}
+
 func addPrepared(prepared *plan.Prepared, planStability, distribute bool) errors.Error {
 	added := true
 
@@ -984,7 +1025,15 @@ func GetPreparedWithContext(preparedName string, queryContext string, deltaKeysp
 	if len(args) > 0 {
 		l = args[0]
 	}
-	return getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, planStabilityMode, planStabilityErrorPolicy, l, scanConsistency)
+	prepared, err := getPrepared(preparedName, queryContext, deltaKeyspaces, options, phaseTime, planStabilityMode,
+		planStabilityErrorPolicy, l, scanConsistency)
+	// MB-75515: an inline UDF entry (plan stability) only holds the subquery plans of the UDF: it is not a prepared
+	// statement, and can not be executed
+	if err == nil && prepared != nil && prepared.IsInlineUdf() {
+		_, name := distributed.RemoteAccess().SplitKey(preparedName)
+		return nil, errors.NewNoSuchPreparedWithContextError(name, queryContext)
+	}
+	return prepared, err
 }
 
 func getPrepared(preparedName string, queryContext string, deltaKeyspaces map[string]bool, options uint32,
@@ -1173,7 +1222,7 @@ func (prepareds *preparedCache) getPrepared(preparedName string, queryContext st
 					// MB-75464: if the new plan can not be saved, it is not kept in the cache (the next
 					// execution loads the saved plan again, and re-plans it), but this execution uses it
 					// (addPrepared() also fails if a different statement holds the name by now)
-					if err1 := addPrepared(prepared, planStability, !seqScanKeptLocal(prepared)); err1 != nil {
+					if err1 := addReplanned(prepared, planStability, !seqScanKeptLocal(prepared)); err1 != nil {
 						logging.Infof("Re-prepared plan for prepared statement %s used for this execution only, "+
 							"not kept in the cache: %v", encodedName, err1)
 					}
@@ -1216,10 +1265,11 @@ func RecordPreparedMetrics(prepared *plan.Prepared, requestTime, serviceTime tim
 	if prepared == nil {
 		return
 	}
-	name := prepared.Name()
-	if name == "" {
+	if prepared.Name() == "" {
 		return
 	}
+	// MB-75514: the cache entry is named after the name and the query context
+	name := encodeName(prepared.Name(), prepared.QueryContext())
 
 	// cache get had already moved this entry to the top of the LRU
 	// no need to do it again

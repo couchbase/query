@@ -159,7 +159,7 @@ func TestAutoPrepareModeChange(t *testing.T) {
 		prepared := plan.NewPrepared(nil, nil, nil, nil, nil)
 		prepared.SetName("am1")
 		prepared.SetText(text)
-		added, er := AddAutoPreparePlan(stmt, prepared, tc.requestMode)
+		added, er := AddAutoPreparePlan(stmt, prepared, tc.requestMode, nil)
 		cached := prepareds.get("am1", false) != nil
 		if er != nil || added != tc.cached || cached != tc.cached {
 			t.Errorf("%s: added %v, cached %v, error %v; expected cached %v", tc.name, added, cached, er, tc.cached)

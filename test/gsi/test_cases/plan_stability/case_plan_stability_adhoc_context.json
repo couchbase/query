@@ -1,0 +1,100 @@
+[
+    {
+	"testcase": "MB-75514: plan stability AD_HOC",
+        "statements":"UPDATE system:settings SET plan_stability.mode = \"ad_hoc\"",
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75514: ad hoc statement with a query context, saved",
+        "queryParams": {"query_context": "default:shellTest._default"},
+        "statements":"SELECT c21, \"mb75514\" AS t FROM _default WHERE type = \"right\" AND c21 > 6 ORDER BY c21",
+        "results": [
+            {
+                "c21": 7,
+                "t": "mb75514"
+            },
+            {
+                "c21": 8,
+                "t": "mb75514"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75514: back up its saved plan",
+        "statements":"INSERT INTO QUERY_METADATA._system._query (KEY k, VALUE v) SELECT \"mb75514_backup\" AS k, {\"origId\": meta(d).id, \"doc\": d} AS v FROM QUERY_METADATA._system._query d WHERE meta(d).id LIKE \"ppn::%\" AND d.ad_hoc = true AND d.text LIKE \"SELECT c21, \\\"mb75514\\\" AS t%\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75514: the statement again",
+        "queryParams": {"query_context": "default:shellTest._default"},
+        "statements":"SELECT c21, \"mb75514\" AS t FROM _default WHERE type = \"right\" AND c21 > 6 ORDER BY c21",
+        "results": [
+            {
+                "c21": 7,
+                "t": "mb75514"
+            },
+            {
+                "c21": 8,
+                "t": "mb75514"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75514: it used its cached plan: the saved plan is not replaced",
+        "statements":"SELECT RAW d.encoded_plan = b.doc.encoded_plan FROM QUERY_METADATA._system._query b JOIN QUERY_METADATA._system._query d ON KEYS b.origId WHERE meta(b).id = \"mb75514_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            true
+        ]
+    },
+    {
+	"testcase": "MB-75514: and its cache entry was used twice",
+        "statements":"SELECT RAW uses FROM system:prepareds WHERE statement LIKE \"SELECT c21, \\\"mb75514\\\" AS t%\"",
+        "results": [
+            2
+        ]
+    },
+    {
+	"testcase": "MB-75514: ad hoc statement in an implicit transaction",
+        "queryParams": {"tximplicit": true, "durability_level": "none"},
+        "statements":"SELECT c21, \"mb75514tx\" AS t FROM shellTest WHERE type = \"right\" AND c21 = 8",
+        "results": [
+            {
+                "c21": 8,
+                "t": "mb75514tx"
+            }
+        ]
+    },
+    {
+	"testcase": "MB-75514: neither it nor the transaction statements are saved",
+        "statements":"SELECT RAW COUNT(*) FROM QUERY_METADATA._system._query d WHERE meta(d).id LIKE \"ppn::%\" AND (d.text LIKE \"START TRANSACTION%\" OR d.text LIKE \"COMMIT%\" OR d.text LIKE \"SELECT c21, \\\"mb75514tx\\\"%\")",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+            0
+        ]
+    },
+    {
+	"testcase": "MB-75514: remove the backup",
+        "statements":"DELETE FROM QUERY_METADATA._system._query USE KEYS \"mb75514_backup\"",
+        "userArgs": {
+                "testAdmin": "testAdminpass"
+        },
+        "results": [
+        ]
+    },
+    {
+	"testcase": "MB-75514: plan stability off",
+        "statements":"UPDATE system:settings UNSET plan_stability",
+        "results": [
+        ]
+    }
+]

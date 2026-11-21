@@ -9,10 +9,12 @@
 package plan
 
 import (
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/couchbase/query/algebra"
+	"github.com/couchbase/query/expression"
 	"github.com/couchbase/query/expression/parser"
 )
 
@@ -124,5 +126,82 @@ func TestIsUdfExpr(t *testing.T) {
 	bad := NewPrepared(nil, nil, nil, nil, nil)
 	if same, err := bad.IsUdfExpr(body); same || err == nil {
 		t.Errorf("no subquery plans: same %v, error %v", same, err)
+	}
+}
+
+// MB-75515: the subquery plans of an inline UDF entry are set for the subqueries of the expression of the entry
+// (the expression to run), not of another parse of the subqueries
+func TestGetUdfSubqPlans(t *testing.T) {
+	expr, err := parser.Parse("(SELECT RAW 1 FROM b AS d) + (SELECT RAW 1 FROM b AS d) + (SELECT RAW 2 FROM b AS e)")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	subqueries, err := expression.ListSubqueries(expression.Expressions{expr}, true)
+	if err != nil || len(subqueries) != 3 {
+		t.Fatalf("subqueries: %v, %v", subqueries, err)
+	}
+	// an entry with plans for the subqueries for which include holds, and for only one of identical subqueries
+	// if once
+	newEntry := func(include func(string) bool, once bool) *Prepared {
+		subqPlans := algebra.NewSubqueryPlans()
+		seen := make(map[string]bool)
+		for _, sq := range subqueries {
+			text := sq.String()
+			if !include(text) || (once && seen[text]) {
+				continue
+			}
+			seen[text] = true
+			subqPlans.Set(sq.(*algebra.Subquery).Select(), expr, NewQueryPlan(NewSequence(NewDummyScan(0, 0, 0, 0))),
+				nil, false)
+		}
+		prepared := NewPrepared(nil, nil, nil, nil, nil)
+		prepared.SetName("__INLINE_UDF__default:f1")
+		prepared.SetInlineUdf()
+		prepared.SetUdfText(expr.String())
+		if err := prepared.SetupUdfSubqPlans(expr, subqPlans, false); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+		return prepared
+	}
+
+	// plans for all the subqueries (two are identical, and share a plan)
+	all := func(string) bool { return true }
+	prepared := newEntry(all, false)
+	prepared.SetUdfText("")
+	loaded := algebra.NewSubqueryPlans()
+	if err = prepared.GetUdfSubqPlans(false, loaded); err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	loadedExpr := loaded.GetExpression(false)
+	if loadedExpr == nil || loadedExpr == expr || loadedExpr.String() != expr.String() {
+		t.Fatalf("expected the expression of the entry, parsed: %v", loadedExpr)
+	}
+	loadedSubqueries, err := expression.ListSubqueries(expression.Expressions{loadedExpr}, true)
+	if err != nil || len(loadedSubqueries) != 3 {
+		t.Fatalf("subqueries of the expression of the entry: %v, %v", loadedSubqueries, err)
+	}
+	for i, sq := range loadedSubqueries {
+		if _, plan, _, ok := loaded.Get(sq.(*algebra.Subquery).Select(), false); !ok || plan == nil {
+			t.Errorf("no plan for subquery %d of the expression of the entry: %s", i, sq)
+		}
+	}
+	for i, sq := range subqueries {
+		if _, _, _, ok := loaded.Get(sq.(*algebra.Subquery).Select(), false); ok {
+			t.Errorf("plan for subquery %d of another expression: %s", i, sq)
+		}
+	}
+	// the body the plans are for is kept, e.g. to save the entry again
+	if same, err := prepared.IsUdfExpr(expr); !same || err != nil {
+		t.Errorf("expected the body of the entry kept: %v, %v", same, err)
+	}
+
+	// a subquery of the expression without a plan: the entry does not match
+	prepared = newEntry(all, true)
+	if err = prepared.GetUdfSubqPlans(false, algebra.NewSubqueryPlans()); err != nil {
+		t.Errorf("identical subqueries share a plan: %v", err)
+	}
+	prepared = newEntry(func(text string) bool { return !strings.Contains(text, "raw 2") }, false)
+	if err = prepared.GetUdfSubqPlans(false, algebra.NewSubqueryPlans()); !IsUdfEntryMismatch(err) {
+		t.Errorf("expected the entry not to match its expression, got %v", err)
 	}
 }
