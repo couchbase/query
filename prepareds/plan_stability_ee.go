@@ -56,6 +56,9 @@ func (this *preparedCache) UpdatePlanStabilityMode(oldMode, newMode settings.Pla
 	if oldMode == settings.PS_MODE_OFF &&
 		(newMode == settings.PS_MODE_PREPARED_ONLY || newMode == settings.PS_MODE_AD_HOC || newMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
 		// just turned on
+		// MB-75517: deletes of saved plans for an earlier change to OFF, made on another node, that are in progress
+		// complete first (see deleteUnusedSavedPlans()), so that they do not delete the plans saved now
+		psModeBarrier()
 		return persistPreparedStmts(newMode, requestId)
 	} else if newMode == settings.PS_MODE_OFF &&
 		(oldMode == settings.PS_MODE_PREPARED_ONLY || oldMode == settings.PS_MODE_AD_HOC || oldMode == settings.PS_MODE_AD_HOC_READ_ONLY) {
@@ -170,19 +173,41 @@ func removeAutoPreparedEntries(oldMode, newMode settings.PlanStabilityMode) {
 /*
  * MB-75471: a plan stability mode change made on another node, which updates the saved plans: remove the
  * entries the new mode does not keep from this node's prepared cache, same as updatePreparedStmts()
+ *
+ * MB-75517: the other node updates the saved plans when it makes the change, and this node may save plans under the
+ * old mode until it gets the change (e.g. ad hoc plans under AD_HOC, or none under OFF). This node also updates the
+ * saved plans of the entries in its prepared cache: when the mode change deletes saved plans, it deletes those of
+ * the entries the new mode does not use; when plan stability is turned on, it saves the entries not saved yet (e.g.
+ * prepared on this node during the change, or not distributed to the other node). In the background: not to hold up
+ * the settings.
  */
 func (this *preparedCache) ApplyPlanStabilityMode(oldMode, newMode settings.PlanStabilityMode) {
 	if adoptsAdHocEntries(oldMode, newMode) {
 		removeAutoPreparedEntries(oldMode, newMode)
 	}
+	if oldMode == settings.PS_MODE_OFF && newMode != settings.PS_MODE_OFF {
+		inBackground(func() { saveUnsavedEntries(newMode) })
+		return
+	}
 	if !removesAdHocEntries(oldMode, newMode) {
 		return
 	}
+
+	// saves under the old mode in progress complete first, and their entries are found (see persistPrepared())
+	psModeBarrier()
 	names := make([]string, 0, 128)
+	unused := make([]savedPlanName, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
-		if !prepared.Persist() && (prepared.AdHoc() || prepared.IsInlineUdf()) {
-			names = append(names, encodeName(prepared.Name(), prepared.QueryContext()))
+		if prepared.Persist() {
+			return true
+		}
+		fullName := encodeName(prepared.Name(), prepared.QueryContext())
+		if !keepsSavedPlan(newMode, false, prepared.AdHoc()) {
+			unused = append(unused, savedPlanName{fullName, prepared.AdHoc()})
+		}
+		if prepared.AdHoc() || prepared.IsInlineUdf() {
+			names = append(names, fullName)
 		}
 		return true
 	}, nil)
@@ -190,9 +215,105 @@ func (this *preparedCache) ApplyPlanStabilityMode(oldMode, newMode settings.Plan
 		// an entry may be gone by now
 		deletePreparedFromCache(names[i])
 	}
+
 	if len(names) > 0 {
 		logging.Infof("Plan stability mode changed from %v to %v: %d entries removed from the prepared cache",
 			oldMode, newMode, len(names))
+	}
+	if len(unused) > 0 {
+		inBackground(func() { deleteUnusedSavedPlans(oldMode, newMode, unused) })
+	}
+}
+
+// the name of a saved plan, and whether it is the plan of an ad hoc statement
+type savedPlanName struct {
+	name  string
+	adHoc bool
+}
+
+// test hooks
+var inBackground = func(f func()) { go f() }
+var savePreparedFn = savePrepared
+var deleteSavedPlanFn = func(name string) errors.Error { return dictionary.DeletePrepared(name) }
+var deletePreparedPlansFn = deletePreparedPlans
+var hasSavedPlanFn = func(name string) (bool, errors.Error) {
+	encoded, err := dictionary.LoadPreparedPlan(name)
+	return encoded != "", err
+}
+
+/*
+ * MB-75517: delete the saved plans (if any) of this node's entries that the new mode does not use. Each delete
+ * checks the current mode, under psModeLock as saves do: a plan the current mode keeps (the mode changed again since,
+ * e.g. plan stability turned on again, and the plan saved again) is not deleted. A failure is logged; the saved plans
+ * left are not used under the new mode (see usesSavedPlan()).
+ */
+func deleteUnusedSavedPlans(oldMode, newMode settings.PlanStabilityMode, names []savedPlanName) {
+	var failed int
+	var lastErr errors.Error
+	for _, sp := range names {
+		err := deleteUnusedSavedPlan(sp)
+		if err != nil {
+			if err.Code() == errors.E_MISSING_QUERY_METADATA {
+				// nothing left to delete
+				return
+			}
+			failed++
+			lastErr = err
+		}
+	}
+	if failed > 0 {
+		logging.Errorf("Plan stability mode changed from %v to %v: deleting %d saved plans failed, e.g. %v",
+			oldMode, newMode, failed, lastErr)
+	}
+}
+
+// not if the current mode keeps the saved plan
+func deleteUnusedSavedPlan(sp savedPlanName) errors.Error {
+	psModeLock.RLock()
+	defer psModeLock.RUnlock()
+	if keepsSavedPlan(planStabilityModeFn(), false, sp.adHoc) {
+		return nil
+	}
+	// deleting a plan that is not saved succeeds
+	return deleteSavedPlanFn(sp.name)
+}
+
+// MB-75517: save the entries of this node's prepared cache that the new mode saves and are not saved yet (the node
+// that turned plan stability on saves those of its own prepared cache); persistPrepared() does not save them if the
+// mode changes again in the meantime
+func saveUnsavedEntries(newMode settings.PlanStabilityMode) {
+	// deletes in progress for an earlier change to OFF complete first, the ones after stop (see
+	// deleteUnusedSavedPlans())
+	psModeBarrier()
+	entries := make([]*plan.Prepared, 0, 128)
+	PreparedsForeach(func(name string, ce *CacheEntry) bool {
+		if persistOnTurnOn(ce.Prepared, newMode) {
+			entries = append(entries, ce.Prepared)
+		}
+		return true
+	}, nil)
+	var failed int
+	var lastErr errors.Error
+	for _, prepared := range entries {
+		if !stillCached(prepared) {
+			continue
+		}
+		fullName := encodeName(prepared.Name(), prepared.QueryContext())
+		saved, err := hasSavedPlanFn(fullName)
+		if err == nil && !saved {
+			err = persistPreparedFn(prepared)
+		}
+		if err != nil {
+			if err.Code() == errors.E_MISSING_QUERY_METADATA {
+				return
+			}
+			failed++
+			lastErr = err
+		}
+	}
+	if failed > 0 {
+		logging.Errorf("Plan stability turned on (%v): saving %d prepared statements failed, e.g. %v", newMode,
+			failed, lastErr)
 	}
 }
 
@@ -209,25 +330,42 @@ func persistOnTurnOn(prepared *plan.Prepared, newMode settings.PlanStabilityMode
  */
 func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) errors.Error {
 	// check and create (if not exists) QUERY_METADATA bucket
-	hasMetadata, err := hasQueryMetadata(true, requestId, "SAVE option of PREPARE or Plan Stability", true)
+	hasMetadata, err := hasQueryMetadataFn(true, requestId, "SAVE option of PREPARE or Plan Stability", true)
 	if err != nil {
 		return err
 	} else if !hasMetadata {
 		return errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
 	}
 
+	// MB-75517: the entries are saved after the cache scan, not while holding the cache locks (persistPrepared()
+	// takes psModeLock, and may remove the entry from the cache)
+	entries := make([]*plan.Prepared, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
-		prepared := ce.Prepared
-		if persistOnTurnOn(prepared, newMode) {
-			err1 := persistPrepared(prepared)
-			if err1 != nil {
-				err = err1
-				return false
-			}
+		if persistOnTurnOn(ce.Prepared, newMode) {
+			entries = append(entries, ce.Prepared)
 		}
 		return true
 	}, nil)
-	return err
+	for _, prepared := range entries {
+		if !stillCached(prepared) {
+			continue
+		}
+		err = persistPrepared(prepared)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// MB-75517: whether the cache entry still holds the plan, collected by a cache scan: a plan removed (e.g. deleted
+// from system:prepareds) or replaced (e.g. PREPARE FORCE, saved under the new mode) since is not saved
+func stillCached(prepared *plan.Prepared) bool {
+	current := false
+	prepareds.cache.Get(encodeName(prepared.Name(), prepared.QueryContext()), func(entry any) {
+		current = entry.(*CacheEntry).Prepared == prepared
+	})
+	return current
 }
 
 /*
@@ -238,55 +376,48 @@ func persistPreparedStmts(newMode settings.PlanStabilityMode, requestId string) 
  * prepared statement.
  */
 func updatePreparedStmts(newMode settings.PlanStabilityMode, cacheFull bool) errors.Error {
-	var err errors.Error
-	missingQueryMetadata := false
+	// MB-75517: saves under the old mode in progress complete first, and their entries are found (see
+	// persistPrepared()); the saved plans are deleted outside the cache scan
+	psModeBarrier()
+	unused := make([]string, 0, 128)
 	names := make([]string, 0, 128)
 	PreparedsForeach(func(name string, ce *CacheEntry) bool {
 		prepared := ce.Prepared
 		if !prepared.Persist() {
-			var err1 errors.Error
 			fullName := encodeName(prepared.Name(), prepared.QueryContext())
-			if newMode == settings.PS_MODE_OFF ||
-				(prepared.AdHoc() && newMode == settings.PS_MODE_PREPARED_ONLY) {
-				// delete the saved query plan
-				err1 = dictionary.DeletePrepared(fullName)
-				if err1 != nil {
-					if err1.Code() == errors.E_MISSING_QUERY_METADATA {
-						missingQueryMetadata = true
-					}
-					err = errors.NewPreparedDeletePlanError(fullName, err1)
-					return false
-				}
+			if !keepsSavedPlan(newMode, false, prepared.AdHoc()) {
+				unused = append(unused, fullName)
 			}
 			if (prepared.AdHoc() || prepared.IsInlineUdf()) &&
 				(newMode == settings.PS_MODE_OFF || newMode == settings.PS_MODE_PREPARED_ONLY) {
 				// newMode is OFF or PREPARED_ONLY, need to remove entry from cache
-				// (saved query plan should be deleted above already)
+				// (saved query plan should be deleted below)
 				names = append(names, fullName)
 			}
 		}
 		return true
 	}, nil)
-	if err != nil {
-		if missingQueryMetadata {
-			prepareds.HandleMissingQueryMetadata()
+
+	// the first failure stops the change: the old mode is set back (see settings.updatePlanStabilitySetting()), with
+	// the cache entries kept, but not the saved plans already deleted
+	for _, name := range unused {
+		err := deleteSavedPlanFn(name)
+		if err != nil {
+			if err.Code() == errors.E_MISSING_QUERY_METADATA {
+				prepareds.HandleMissingQueryMetadata()
+			}
+			return errors.NewPreparedDeletePlanError(name, err)
 		}
-		return err
 	}
 
 	for i := range names {
-		err = deletePreparedFromCache(names[i])
-		if err != nil {
-			return err
-		}
+		// an entry may be gone by now
+		deletePreparedFromCache(names[i])
 	}
 
 	if cacheFull {
 		// there may be entries on disk that's not currently in the prepareds cache
-		err = deletePreparedPlans(newMode == settings.PS_MODE_PREPARED_ONLY)
-		if err != nil {
-			return err
-		}
+		return deletePreparedPlansFn(newMode == settings.PS_MODE_PREPARED_ONLY)
 	}
 
 	return nil
@@ -306,7 +437,50 @@ func textPrefix(text string) string {
 	return text[:n] + "..."
 }
 
+// MB-75517: a save of a plan (persistPrepared()), or a delete of a saved plan for a mode change
+// (deleteUnusedSavedPlan()), checks the current mode and writes under the read lock; a mode change, once the new mode
+// is in effect, waits for those in progress (psModeBarrier()): a save decided under the old mode completes before
+// the cache scan of the change, which finds its entry; the ones after follow the new mode
+var psModeLock sync.RWMutex
+
+func psModeBarrier() {
+	psModeLock.Lock()
+	psModeLock.Unlock()
+}
+
+/*
+ * MB-75517: whether the plan stability mode keeps a saved plan: under OFF only plans saved with PREPARE SAVE, and
+ * under PREPARED_ONLY not the plans of ad hoc statements, i.e. not the saved plans a change to the mode deletes
+ * (see updatePreparedStmts()).
+ */
+func keepsSavedPlan(mode settings.PlanStabilityMode, persist, adHoc bool) bool {
+	switch mode {
+	case settings.PS_MODE_OFF:
+		return persist
+	case settings.PS_MODE_PREPARED_ONLY:
+		return persist || !adHoc
+	}
+	return true
+}
+
+/*
+ * Save the plan. MB-75517: by the current plan stability mode: a request keeps the mode it started with, and a plan
+ * that the mode no longer keeps (it changed since the request started) is not saved; an ad hoc or inline UDF entry
+ * is then removed from the prepared cache, as the mode change does.
+ */
 func persistPrepared(prepared *plan.Prepared) errors.Error {
+	psModeLock.RLock()
+	defer psModeLock.RUnlock()
+	if !keepsSavedPlan(planStabilityModeFn(), prepared.Persist(), prepared.AdHoc()) {
+		if prepared.AdHoc() || prepared.IsInlineUdf() {
+			removeUnsaved(prepared)
+		}
+		return nil
+	}
+	return savePreparedFn(prepared)
+}
+
+func savePrepared(prepared *plan.Prepared) errors.Error {
 	var err1 error
 	fullName := encodeName(prepared.Name(), prepared.QueryContext())
 	encoded_plan := prepared.EncodedPlan()

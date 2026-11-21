@@ -108,13 +108,22 @@ func (this *builder) VisitPrepare(stmt *algebra.Prepare) (any, error) {
 	prep.SetEncodedPlan(str)
 
 	if persist || planStability {
-		// check and create (if not exists) QUERY_METADATA bucket
-		hasMetadata, err1 := hasQueryMetadata(true, this.context.RequestId(), "SAVE option of PREPARE or Plan Stability", true)
+		// MB-75517: under plan stability, a missing QUERY_METADATA resets plan stability (MB-75459), whichever
+		// request finds it missing first: it is not created again here, with plan stability left on
+		hasMetadata, err1 := hasQueryMetadata(false, this.context.RequestId(), "SAVE option of PREPARE or Plan Stability", true)
 		if err1 != nil {
 			return nil, err1
 		} else if !hasMetadata {
-			planCache.HandleMissingQueryMetadata()
-			return nil, errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
+			if planStability {
+				planCache.HandleMissingQueryMetadata()
+				return nil, errors.NewMissingQueryMetadataError("SAVE option of PREPARE or Plan Stability")
+			}
+			// PREPARE SAVE with plan stability off: create QUERY_METADATA, and wait until it serves reads
+			// (MB-75506), as when plan stability is turned on
+			err1 = planCache.EnsureQueryMetadata(this.context.RequestId())
+			if err1 != nil {
+				return nil, err1
+			}
 		}
 	}
 

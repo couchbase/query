@@ -55,8 +55,7 @@ func InitSettings() {
 		delete(defSettings, "node")
 	} else {
 		// process initial settings
-		setSettingsRev(rev)
-		processSettings(val, "", true)
+		processSettings(val, rev, "", true)
 	}
 
 	// monitor entry
@@ -65,9 +64,7 @@ func InitSettings() {
 
 func callback(kve metakv.KVEntry) error {
 	if kve.Path == _SETTINGS_SETTINGS {
-		// including the settings written by this node, which processSettings() skips
-		setSettingsRev(kve.Rev)
-		processSettings(kve.Value, distributed.RemoteAccess().WhoAmI(), false)
+		processSettings(kve.Value, kve.Rev, distributed.RemoteAccess().WhoAmI(), false)
 	}
 	return nil
 }
@@ -76,20 +73,26 @@ func callback(kve metakv.KVEntry) error {
 // settings received from metakv
 var settingsUpdateLock sync.Mutex
 
-// initial: the settings read at startup
-func processSettings(val []byte, thisNode string, initial bool) {
+// rev: the metakv revision of the settings; initial: the settings read at startup
+func processSettings(val []byte, rev any, thisNode string, initial bool) {
+	// not while an update on this node is in progress: an update that fails sets the old setting back
+	// MB-75508: this includes checking for settings from this node: an update made since (e.g. while these settings
+	// waited for the lock) has replaced, or cleared, the settings this node is writing (see takeUnconfirmedWrite())
+	settingsUpdateLock.Lock()
+	defer settingsUpdateLock.Unlock()
+
+	// MB-75517: the revision is recorded under the lock, with the settings processed: the reset of plan stability
+	// (PersistDefaultPlanStabilitySetting(), under the lock) then writes over exactly the settings this node has
+	// applied, and not over newer settings it has not applied yet. Including the settings written by this node,
+	// which are skipped below.
+	setSettingsRev(rev)
+
 	var vmap map[string]any
 	err := json.Unmarshal(val, &vmap)
 	if err != nil {
 		logging.Errorf("SETTINGS: Error unmarshalling new global settings: %v", err)
 		return
 	}
-
-	// not while an update on this node is in progress: an update that fails sets the old setting back
-	// MB-75508: this includes checking for settings from this node: an update made since (e.g. while these settings
-	// waited for the lock) has replaced, or cleared, the settings this node is writing (see takeUnconfirmedWrite())
-	settingsUpdateLock.Lock()
-	defer settingsUpdateLock.Unlock()
 
 	if n, ok := vmap["node"]; ok {
 		if thisNode != "" && n == thisNode {
@@ -193,19 +196,33 @@ func UpdatePersistSettings(enterprise bool, requestId string, settings any) (err
 	defer settingsUpdateLock.Unlock()
 
 	old := globalSettings.getAllSettings()
+	oldMode := GetPlanStabilityMode()
 	err, warnings := updateSettings(enterprise, requestId, settings)
 	if err == nil {
 		err = PersistSettings()
 		if err != nil {
 			// the other nodes do not get the new settings, keep the old ones
+			newMode := GetPlanStabilityMode()
 			restoreSettings(old)
+			err = savedPlansChangedTo(err, oldMode, newMode)
 		}
 	}
 	return err, warnings
 }
 
+// MB-75517: a change of the plan stability mode that deleted saved plans, not written to metakv: the old mode is set
+// back, but not the saved plans: say so
+func savedPlansChangedTo(err errors.Error, oldMode, newMode PlanStabilityMode) errors.Error {
+	if deletesSavedPlans(oldMode, newMode) {
+		return errors.NewSettingsSavedPlansError(err, oldMode.String(), newMode.String())
+	}
+	return err
+}
+
 // set back settings returned by getAllSettings() (a copy), e.g. when writing new settings to metakv fails;
-// the prepared cache and the saved plans are not changed back
+// the prepared cache and the saved plans are not changed back. MB-75517: plans saved for plan stability turned on
+// are not used under OFF (see prepareds.usesSavedPlan()); plans deleted for plan stability turned off are not saved
+// again.
 func restoreSettings(old map[string]any) {
 	globalSettings.Lock()
 	globalSettings.settings = old
@@ -319,7 +336,28 @@ func PersistSettings() errors.Error {
 		return errors.NewSettingsMetaKVError(err, "Error updating global settings in metakv")
 	}
 	setUnconfirmedWrite(nil)
+	lastOwnWrite = bytes
 	return nil
+}
+
+// MB-75517: the settings this node last wrote to metakv. metakv does not return the revision of a write, and the
+// revision this node last saw (getSettingsRev()) is only updated when the settings come back from metakv: until
+// then, the settings in metakv are this node's own, not a change made by another node. Accessed under
+// settingsUpdateLock (writes are made under it).
+var lastOwnWrite []byte
+
+// whether the settings in metakv were written by this node: its last write, or a write that reported an error
+// (and may have been written all the same, see unconfirmedWrite)
+func isOwnWrite(val []byte) bool {
+	if len(val) == 0 {
+		return false
+	} else if lastOwnWrite != nil && bytes.Equal(lastOwnWrite, val) {
+		return true
+	}
+	unconfirmedWrite.Lock()
+	rv := unconfirmedWrite.val != nil && bytes.Equal(unconfirmedWrite.val, val)
+	unconfirmedWrite.Unlock()
+	return rv
 }
 
 // MB-75508: the settings this node is writing to metakv, until the write succeeds: a write that reports an error

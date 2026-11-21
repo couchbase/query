@@ -170,6 +170,18 @@ func isDefaultPlanStability(val any) bool {
 	return ok && getPlanStabilityErrorPolicyValue(error_policy) == PS_ERROR_DEFAULT
 }
 
+// MB-75517: the mode changes that delete the saved plans the new mode does not use: turning plan stability off,
+// and changing to PREPARED_ONLY from a mode that saves or uses ad hoc plans
+func deletesSavedPlans(oldMode, newMode PlanStabilityMode) bool {
+	switch newMode {
+	case PS_MODE_OFF:
+		return oldMode != PS_MODE_OFF
+	case PS_MODE_PREPARED_ONLY:
+		return oldMode == PS_MODE_AD_HOC || oldMode == PS_MODE_AD_HOC_READ_ONLY
+	}
+	return false
+}
+
 // test hooks
 var getStoredSettings = getMetakvSettings
 var setStoredSettings = setMetakvSettings
@@ -180,7 +192,8 @@ var setStoredSettings = setMetakvSettings
  * replaces the settings this node last saw (the metakv revision): if the settings in metakv changed since,
  * another node already wrote the default setting, or the setting was changed deliberately (e.g. plan
  * stability turned on again after QUERY_METADATA was created again) and must not be overwritten.
- * Comparing the setting can not tell such a change from a setting not yet reset.
+ * Comparing the setting can not tell such a change from a setting not yet reset. MB-75517: settings in metakv
+ * that this node wrote itself, and has not seen come back yet, are not such a change, and are written over.
  */
 func PersistDefaultPlanStabilitySetting() errors.Error {
 	// MB-75508: under settingsUpdateLock, as other changes to the settings, and only if this node's setting is
@@ -208,24 +221,45 @@ func PersistDefaultPlanStabilitySetting() errors.Error {
 		rev = storedRev
 	}
 
-	bytes, er := marshalSettings()
+	val, er := marshalSettings()
 	if er != nil {
 		return er
 	}
-	err := setStoredSettings(bytes, rev)
-	if err == metakv.ErrRevMismatch {
-		logging.Infof("SETTINGS: global settings in metakv changed since this node last saw them, " +
-			"plan_stability DEFAULT setting not written")
-		return nil
-	} else if err != nil {
-		logging.Errorf("SETTINGS: Error updating global settings in metakv: %v", err)
-		return errors.NewSettingsMetaKVError(err, "Error updating global settings in metakv")
+	// MB-75517: a revision mismatch may be this node's own write, whose revision this node has not seen yet (the
+	// settings have not come back from metakv): written over, unlike a change made by another node. Every retry
+	// follows a write by this node (which holds the lock) or by another node, which ends the retries.
+	for {
+		err := setStoredSettings(val, rev)
+		if err == nil {
+			// replaces a write that reported an error, if any: its settings, coming back, are not applied
+			setUnconfirmedWrite(nil)
+			lastOwnWrite = val
+			return nil
+		} else if err != metakv.ErrRevMismatch {
+			logging.Errorf("SETTINGS: Error updating global settings in metakv: %v", err)
+			return errors.NewSettingsMetaKVError(err, "Error updating global settings in metakv")
+		}
+
+		stored, storedRev, err := getStoredSettings()
+		if err != nil {
+			return errors.NewSettingsMetaKVError(err, "Error getting global settings from metakv")
+		} else if !isOwnWrite(stored) {
+			logging.Infof("SETTINGS: global settings in metakv changed since this node last saw them, " +
+				"plan_stability DEFAULT setting not written")
+			return nil
+		}
+		logging.Infof("SETTINGS: global settings in metakv are this node's last write, not seen yet: " +
+			"writing plan_stability DEFAULT setting over them")
+		rev = storedRev
 	}
-	return nil
 }
 
 func GetPlanStabilityMode() PlanStabilityMode {
 	mode := PS_MODE_DEFAULT
+	if globalSettings == nil {
+		// not initialized (e.g. unit tests)
+		return mode
+	}
 	globalSettings.RLock()
 	setting_val := globalSettings.settings[PLAN_STABILITY]
 	if ps_setting, ok := setting_val.(map[string]any); ok {

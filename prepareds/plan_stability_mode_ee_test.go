@@ -22,6 +22,9 @@ import (
 // MB-75471: a plan stability mode change made on another node removes the entries the new mode does not keep
 // from this node's prepared cache
 func TestApplyPlanStabilityMode(t *testing.T) {
+	// MB-75517: the saved plans are updated as well (see TestApplyPlanStabilityModeSavedPlans())
+	fake := stubSavedPlans(t, settings.PS_MODE_OFF)
+
 	type entry struct {
 		name                                 string
 		adHoc, inlineUdf, save, autoPrepared bool
@@ -64,6 +67,7 @@ func TestApplyPlanStabilityMode(t *testing.T) {
 			prepareds.add(prepared, false, false, nil)
 		}
 
+		fake.mode.Store(int32(tc.newMode))
 		prepareds.ApplyPlanStabilityMode(tc.oldMode, tc.newMode)
 
 		for _, e := range entries {
@@ -164,5 +168,44 @@ func TestAutoPrepareModeChange(t *testing.T) {
 		if er != nil || added != tc.cached || cached != tc.cached {
 			t.Errorf("%s: added %v, cached %v, error %v; expected cached %v", tc.name, added, cached, er, tc.cached)
 		}
+	}
+}
+
+// MB-75517: saved plans the plan stability mode does not use (e.g. left by a mode change) are not loaded
+func TestUsesSavedPlan(t *testing.T) {
+	encode := func(persist, adHoc bool) string {
+		prepared := plan.NewPrepared(plan.NewSequence(plan.NewDummyScan(0, 0, 0, 0)), nil, nil, nil, nil)
+		prepared.SetName("p1")
+		prepared.SetText("SELECT 1")
+		prepared.SetPersist(persist)
+		prepared.SetAdHoc(adHoc)
+		encoded, err := prepared.BuildEncodedPlan()
+		if err != nil {
+			t.Fatalf("encoding: %v", err)
+		}
+		return encoded
+	}
+	saved, prepared, adHoc := encode(true, false), encode(false, false), encode(false, true)
+
+	for _, tc := range []struct {
+		mode                   settings.PlanStabilityMode
+		saved, prepared, adHoc bool
+	}{
+		{settings.PS_MODE_OFF, true, false, false},
+		{settings.PS_MODE_PREPARED_ONLY, true, true, false},
+		{settings.PS_MODE_AD_HOC, true, true, true},
+		{settings.PS_MODE_AD_HOC_READ_ONLY, true, true, true},
+	} {
+		if usesSavedPlan(tc.mode, saved) != tc.saved || usesSavedPlan(tc.mode, prepared) != tc.prepared ||
+			usesSavedPlan(tc.mode, adHoc) != tc.adHoc {
+			t.Errorf("mode %v: PREPARE SAVE %v, prepared %v, ad hoc %v; expected %v, %v, %v", tc.mode,
+				usesSavedPlan(tc.mode, saved), usesSavedPlan(tc.mode, prepared), usesSavedPlan(tc.mode, adHoc),
+				tc.saved, tc.prepared, tc.adHoc)
+		}
+	}
+
+	// fields that can not be read: used, decoding reports the error
+	if !usesSavedPlan(settings.PS_MODE_OFF, "not encoded") {
+		t.Errorf("a plan that can not be read: expected used")
 	}
 }
