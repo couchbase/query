@@ -79,6 +79,7 @@ func UpdatePersistPlanStabilitySetting(requestId string, val any) errors.Error {
 	defer settingsUpdateLock.Unlock()
 
 	old := globalSettings.getAllSettings()
+	oldMode := GetPlanStabilityMode()
 	err := updatePlanStabilitySetting(requestId, val)
 	if err != nil {
 		return err
@@ -86,7 +87,9 @@ func UpdatePersistPlanStabilitySetting(requestId string, val any) errors.Error {
 	err = PersistSettings()
 	if err != nil {
 		// the other nodes do not get the new setting, keep the old one
+		newMode := GetPlanStabilityMode()
 		restoreSettings(old)
+		err = savedPlansChangedTo(err, oldMode, newMode)
 	}
 	return err
 }
@@ -120,13 +123,17 @@ func updatePlanStabilitySetting(requestId string, val any) errors.Error {
 		}
 	}
 
-	// the new mode is in effect before the prepared cache and the saved plans are updated: when turning
-	// plan stability on, plans prepared in the meantime are saved; when turning it off, they are not
+	// the new mode is in effect before the prepared cache and the saved plans are updated: plans saved from now
+	// on on this node follow it (MB-75517: including by requests that started before, see prepareds.persistPrepared())
 	globalSettings.setSetting(PLAN_STABILITY, newSetting)
 	err = planCache.UpdatePlanStabilityMode(oldMode, newMode, requestId)
 	if err != nil {
 		// the setting is not saved (to metakv), keep the old one
 		globalSettings.setSetting(PLAN_STABILITY, oldSetting)
+		if deletesSavedPlans(oldMode, newMode) {
+			// MB-75517: the saved plans already deleted are not saved again: say so
+			return errors.NewSettingsSavedPlansError(err, oldMode.String(), newMode.String())
+		}
 		return err
 	}
 

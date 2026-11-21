@@ -1733,6 +1733,20 @@ var errData = []ErrData{
 		},
 	},
 	{
+		Code:        E_SETTINGS_SAVED_PLANS, // 2605
+		symbol:      "E_SETTINGS_SAVED_PLANS",
+		Description: "Plan stability mode not changed from <<old mode>> to <<new mode>>: deleting the saved plans failed, some saved plans may have been deleted.",
+		Reason: []string{
+			"Deleting the saved plans that the new plan stability mode does not use failed partway (e.g. QUERY_METADATA or its primary index was not available). The old mode is kept, without the saved plans already deleted.",
+		},
+		Action: []string{
+			"Check the error message for the cause, and change the plan stability mode again once resolved. Until then, a prepared statement whose saved plan was deleted may need to be prepared again after a restart.",
+		},
+		AppliesTo: []string{
+			"Server",
+		},
+	},
+	{
 		Code:        E_PARSE_SYNTAX, // 3000
 		symbol:      "E_PARSE_SYNTAX",
 		Description: "Indicates a syntax error occurred during statement parsing.",

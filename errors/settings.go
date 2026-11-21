@@ -52,3 +52,12 @@ func NewSettingsEnterpriseOnly(feature string) Error {
 		InternalMsg:    fmt.Sprintf("%s is an enterprise-only feature", feature),
 		InternalCaller: CallerN(1)}
 }
+
+// MB-75517: a plan stability mode change that failed partway while deleting saved plans: the old mode is kept, the
+// saved plans already deleted are not
+func NewSettingsSavedPlansError(e error, oldMode, newMode string) Error {
+	return &err{level: EXCEPTION, ICode: E_SETTINGS_SAVED_PLANS, IKey: "settings_saved_plans",
+		ICause: e, InternalMsg: fmt.Sprintf("Plan stability mode not changed from %s to %s: deleting the saved "+
+			"plans failed, some saved plans may have been deleted", oldMode, newMode),
+		InternalCaller: CallerN(1)}
+}

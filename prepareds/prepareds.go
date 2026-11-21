@@ -325,6 +325,9 @@ type PrimeReport struct {
 	Reprepared       int       `json:"reprepared"`
 	RepreparedReason any       `json:"repreparedReason,omitempty"`
 
+	// Skipped: saved plans not loaded, the plan stability mode does not use them (MB-75517)
+	Skipped int `json:"skipped,omitempty"`
+
 	// Retried: decodes that hit an index-not-found error and got a delayed retry. RetrySuccess: how
 	// many of those the retry fixed (not included in Success).
 	Retried      int `json:"retried,omitempty"`
@@ -882,6 +885,9 @@ func AddPrepared(prepared *plan.Prepared, planStability bool) errors.Error {
 // saved, and replaces a plan saved with PREPARE SAVE, so the saved plan is removed as well (MB-75477);
 // otherwise it would be loaded again at the next startup
 func AddPreparedStatement(prepared *plan.Prepared, planStability bool) errors.Error {
+	// MB-75517: plan stability turned on since the request started: saved as well (persistPrepared() decides by the
+	// current mode); otherwise the mode change, which saves the cached plans, may have passed the entry already
+	planStability = planStability || planStabilityModeFn() != settings.PS_MODE_OFF
 	if !prepared.Persist() && !planStability {
 		fullName := encodeName(prepared.Name(), prepared.QueryContext())
 		remove := false

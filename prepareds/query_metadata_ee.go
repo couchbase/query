@@ -11,6 +11,10 @@
 package prepareds
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/base64"
+	"io"
 	"time"
 
 	json "github.com/couchbase/go_json"
@@ -66,7 +70,15 @@ func PreparedsFromPersisted() {
 		// yet, same race as PreparedsRemotePrime) get a delayed retry below instead of being counted as
 		// a genuine failure.
 		var pendingRetry []struct{ name, encoded_plan string }
+		skipped := 0
 		proc := func(name, encoded_plan string, persist bool) (bool, bool) {
+			// MB-75517: not a saved plan the mode does not use (e.g. left by a mode change); under OFF by the
+			// persist field of the document, without reading the plan
+			if (planStabilityMode == settings.PS_MODE_OFF && !persist) ||
+				(planStabilityMode == settings.PS_MODE_PREPARED_ONLY && !usesSavedPlan(planStabilityMode, encoded_plan)) {
+				skipped++
+				return true, false
+			}
 			return processPreparedPlan(name, encoded_plan, persist, planStability, planStabilityMode,
 				planStabilityErrorPolicy, decodeFailedReason, decodeReprepReason, &pendingRetry)
 		}
@@ -97,7 +109,9 @@ func PreparedsFromPersisted() {
 			}
 		}
 
-		preparedPrimeReport.Success = success
+		// skipped saved plans were returned as loaded (not failed)
+		preparedPrimeReport.Success = success - skipped
+		preparedPrimeReport.Skipped = skipped
 		preparedPrimeReport.Failed = fail
 		preparedPrimeReport.Reprepared = reprepare
 		preparedPrimeReport.Retried = retried
@@ -160,6 +174,11 @@ func loadPrepared(name string, planStabilityMode settings.PlanStabilityMode,
 		return nil, nil
 	}
 
+	// MB-75517: a saved plan the mode does not use (e.g. left by a mode change) is not found
+	if !usesSavedPlan(planStabilityMode, encoded_plan) {
+		return nil, nil
+	}
+
 	// MB-75507: MODERATE, the saved plan could not be used and was re-planned: use the new plan again, if the
 	// saved plan has not changed, and the metadata of the new plan has not changed (not under another error
 	// policy, or with plan stability off: the saved plan is decoded and the error policy applied)
@@ -209,4 +228,48 @@ func savedPlanInfo(name string) (savedPlan, errors.Error) {
 		json.Unmarshal(val, &rv.persist)
 	}
 	return rv, nil
+}
+
+/*
+ * MB-75517: whether the plan stability mode uses a saved plan (see keepsSavedPlan()). Saved plans it does not use
+ * can be left by a mode change: e.g. saved by a node that had not got the change yet, and evicted from its cache
+ * before it did (so not deleted, see ApplyPlanStabilityMode()), or saved by a turn-on that failed partway. They are
+ * ignored, so that they are not used under the mode. Under PREPARED_ONLY the plan is read for its ad hoc field; a
+ * saved plan whose fields can not be read is used: decoding it reports the error.
+ */
+func usesSavedPlan(mode settings.PlanStabilityMode, encoded string) bool {
+	if mode != settings.PS_MODE_OFF && mode != settings.PS_MODE_PREPARED_ONLY {
+		return true
+	}
+	persist, adHoc, ok := savedPlanFlags(encoded)
+	return !ok || keepsSavedPlan(mode, persist, adHoc)
+}
+
+// the persist and ad hoc fields of an encoded plan, without decoding the plan
+func savedPlanFlags(encoded string) (persist, adHoc, ok bool) {
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		return
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(decoded))
+	if err != nil {
+		return
+	}
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return
+	}
+	// the fields are present only when true
+	if val, er := json.FindKey(data, "persist"); er == nil && val != nil {
+		if json.Unmarshal(val, &persist) != nil {
+			return
+		}
+	}
+	if val, er := json.FindKey(data, "adHocStatement"); er == nil && val != nil {
+		if json.Unmarshal(val, &adHoc) != nil {
+			return
+		}
+	}
+	ok = true
+	return
 }

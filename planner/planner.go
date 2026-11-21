@@ -35,6 +35,9 @@ type PlanCache interface {
 
 	// handle missing QUERY_METADATA bucket
 	HandleMissingQueryMetadata()
+
+	// create QUERY_METADATA if it does not exist, and wait until it serves reads
+	EnsureQueryMetadata(requestId string) errors.Error
 }
 
 var planCache PlanCache
