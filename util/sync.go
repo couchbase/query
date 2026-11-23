@@ -265,7 +265,9 @@ func (p *FastPool) drainer() {
 	defer t.Stop()
 
 	for {
-		getNext := p.getNext
+		// Get, Put and the drain loop below update the counters atomically,
+		// so every read here must be atomic too
+		getNext := atomic.LoadUint32(&p.getNext)
 
 		// we don't exist anymore! bail out!
 		select {
@@ -276,12 +278,12 @@ func (p *FastPool) drainer() {
 		t.Reset(p.interval)
 
 		// demand for entries is there
-		if p.getNext != getNext || p.useCount <= p.high {
+		if atomic.LoadUint32(&p.getNext) != getNext || atomic.LoadInt32(&p.useCount) <= p.high {
 			continue
 		}
 
 		// remove excess free entries
-		for p.useCount > p.low {
+		for atomic.LoadInt32(&p.useCount) > p.low {
 			select {
 			case <-p.bailOut:
 				return
