@@ -50,10 +50,17 @@ go clean -testcache
 
 trap interrupt 2 15
 cd ../
+
+# query-ee is a separate module (go.mod replaces it with ../query-ee), so ./... does not include its packages
+ee_pkgs=
+if [ -d ../query-ee ]; then
+     ee_pkgs="github.com/couchbase/query-ee/..."
+fi
+
 if [[ `uname` == "Darwin" ]] ; then
-     go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose ./... $*
+     go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose ./... $ee_pkgs $*
 else
-     go test $verbose ./... $*
+     go test $verbose ./... $ee_pkgs $*
 fi
 
 #Run gsi
