@@ -476,8 +476,39 @@ func NewBucketActionError(e any, attempts int) Error {
 
 	c["attempts"] = attempts
 
+	msg := fmt.Sprintf("Unable to complete action after %v attempts", attempts)
+	if s := bucketActionCause(e); s != "" {
+		msg += ": " + s
+	}
+
 	return &err{level: EXCEPTION, ICode: E_BUCKET_ACTION, IKey: "datastore.couchbase.bucket.action",
-		InternalMsg: fmt.Sprintf("Unable to complete action after %v attempts", attempts), cause: c, InternalCaller: CallerN(1)}
+		InternalMsg: msg, cause: c, InternalCaller: CallerN(1)}
+}
+
+// bucketActionCause returns the KV status (and the KV error context, if any) of a bucket action error,
+// so that the status is part of the error text and not only of the cause object
+func bucketActionCause(e any) string {
+	switch e := e.(type) {
+	case nil:
+		return ""
+	case string:
+		return e
+	case map[string]any:
+		s, ok := e["error"]
+		if !ok {
+			s, ok = e["cause"]
+		}
+		if !ok || s == nil {
+			return ""
+		}
+		if ctx, ok := e["context"]; ok && ctx != nil {
+			return fmt.Sprintf("%v (%v)", s, ctx)
+		}
+		return fmt.Sprintf("%v", s)
+	case error:
+		return e.Error()
+	}
+	return fmt.Sprintf("%v", e)
 }
 
 // Generic "Access Denied" to an entity error

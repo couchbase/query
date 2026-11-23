@@ -712,8 +712,10 @@ func NewValueError(code ErrorCode, args ...any) Error {
 			fmtArgs = append(fmtArgs, a)
 		case Error:
 			e.cause = a
+			e.ICause = a
 		case error:
 			e.cause = a
+			e.ICause = a
 		default:
 			panic("invalid arguments to NewValueError")
 		}
