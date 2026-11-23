@@ -63,7 +63,6 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 		}
 
 		conn := datastore.NewValueConnection(context)
-		defer notifyConn(conn.StopChannel())
 
 		updstat, err := context.Datastore().StatUpdater()
 		if err != nil {
@@ -71,9 +70,29 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 			return
 		}
 
+		// The stat updater runs in its own goroutine and uses this operator's context, which is cleared when the
+		// operator is released after the request ends (e.g. on timeout, or when the memory quota is exceeded):
+		// tell it to stop, and wait for it to finish before this operator stops.
+		done := make(chan struct{})
+		started := false
+		runUpdateStats := func(statsUpdater func()) {
+			started = true
+			go func() {
+				defer close(done)
+				statsUpdater()
+			}()
+		}
+		defer func() {
+			if started {
+				notifyConn(conn.StopChannel())
+				<-done
+			}
+		}()
+
 		if this.plan.Node().Delete() {
-			go updstat.DeleteStatistics(this.plan.Keyspace(), this.plan.Node().Terms(),
-				conn, &this.operatorCtx)
+			runUpdateStats(func() {
+				updstat.DeleteStatistics(this.plan.Keyspace(), this.plan.Node().Terms(), conn, &this.operatorCtx)
+			})
 		} else {
 			var indexes []datastore.Index
 			var err1 errors.Error
@@ -85,8 +104,10 @@ func (this *UpdateStatistics) RunOnce(context *Context, parent value.Value) {
 					return
 				}
 			}
-			go updstat.UpdateStatistics(this.plan.Keyspace(), indexes,
-				this.plan.Node().Terms(), this.plan.Node().With(), conn, &this.operatorCtx, false, false)
+			runUpdateStats(func() {
+				updstat.UpdateStatistics(this.plan.Keyspace(), indexes,
+					this.plan.Node().Terms(), this.plan.Node().With(), conn, &this.operatorCtx, false, false)
+			})
 		}
 
 		var val value.Value
