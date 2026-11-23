@@ -444,8 +444,15 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					ok = this.sendItemOp(update.Input(), item1)
 				} else if limit < 0 || int64(this.updates.Length()) < limit {
 					// add to items to be updated, actual update happens later
-
-					this.updates.Append(item1)
+					if err := this.updates.Append(item1); err != nil {
+						// not added: Append fails while spilling, before the value is added
+						context.Error(err)
+						if item1 != item {
+							item1.Recycle()
+						}
+						item.Recycle()
+						return false
+					}
 				}
 				// else LIMIT is reached, we can technically recycle item1 and release
 				// its tracking memory, but since plan should be terminating in this
@@ -535,7 +542,12 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 							ok = this.sendItemOp(delete.Input(), item1)
 						} else if limit < 0 || int64(this.deletes.Length()) < limit {
 							// add to items to be deleted, actual delete happens later
-							this.deletes.Append(item1)
+							if err := this.deletes.Append(item1); err != nil {
+								// not added (item is item1 or already recycled)
+								context.Error(err)
+								item1.Recycle()
+								return false
+							}
 						}
 						// else LIMIT is reached, we can technically recycle item1 and release
 						// its tracking memory, but since plan should be terminating in this
@@ -602,7 +614,12 @@ func (this *Merge) processAction(item value.AnnotatedValue, context *Context,
 					ok = this.sendItemOp(insert.Input(), item)
 				} else if limit < 0 || int64(this.inserts.Length()) < limit {
 					// add item to be inserted, actual insert happens later
-					this.inserts.Append(item)
+					if err := this.inserts.Append(item); err != nil {
+						// not added
+						context.Error(err)
+						item.Recycle()
+						return false
+					}
 				}
 				// else LIMIT is reached, we can technically recycle item1 and release
 				// its tracking memory, but since plan should be terminating in this

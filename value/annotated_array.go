@@ -10,11 +10,13 @@ package value
 
 import (
 	"bufio"
+	"cmp"
 	"compress/zlib"
 	"container/heap"
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/couchbase/query/encryption"
@@ -26,10 +28,18 @@ import (
 
 const _SPILL_FILE_PATTERN = "av_spill_*"
 
-// All spill files of a sort are open together while merging (one _BUFFER_SIZE reader each), so this bounds the file
-// descriptors and the merge memory per sort. Values such as PAIRS(self) under UPDATE STATISTICS can need more than 500.
-// A var only so that tests can lower it.
-var _MAX_SPILL_FILES = 2000
+// All spill files of a sorted array are open together while reading it (one _BUFFER_SIZE reader each), so this bounds the
+// file descriptors and the read buffers per array. An unsorted array uses a single spill file. Vars only so that tests can
+// change them.
+var _MAX_SPILL_FILES = 500
+
+// When a sorted array reaches _MAX_SPILL_FILES spill files, its _SPILL_MERGE_FILES smallest spill files are merged into
+// one, so it never fails for the number of spill files. Arrays with fewer spills are not affected. The smallest files are
+// the cheapest to rewrite, and the large files written by earlier merges are rewritten only rarely.
+// Past the limit a merge follows every _SPILL_MERGE_FILES - 1 spills and rewrites those spills plus about the smallest
+// earlier merged file, so the data written grows slowly with the number of spills S (roughly 1 + S/100000 times the
+// data spilled): negligible for thousands of spills, about twice for a hundred thousand.
+var _SPILL_MERGE_FILES = 128
 
 const _MAX_PARENTS = 2000
 const _BUFFER_SIZE = 64 * util.KiB
@@ -57,6 +67,9 @@ type spillFile struct {
 	compress bool
 
 	encryptionKey *encryption.EaRKey
+
+	// memory tracked for current while merging
+	mergeTracked int64
 }
 
 func (this *spillFile) rewind() error {
@@ -157,6 +170,9 @@ type AnnotatedArray struct {
 	length   int
 	spill    spillFileHeap
 	iterator iterInfo
+
+	// unsorted arrays only: the writer of their single spill file, which each spill appends to
+	spillWriter writerFlusher
 
 	compress bool
 
@@ -395,30 +411,70 @@ func (this *AnnotatedArray) spillToDisk() error {
 		this.sortMem()
 	}
 	start := util.Now()
-	if len(this.spill) > _MAX_SPILL_FILES {
-		return errors.NewValueError(errors.E_VALUE_SPILL_MAX_FILES)
+	var spf *spillFile
+	var writer writerFlusher
+	var err error
+	if this.spillWriter != nil {
+		// unsorted: append to the spill file; reading it may have moved the file offset
+		spf, writer = this.spill[len(this.spill)-1], this.spillWriter
+		_, err = spf.f.Seek(0, io.SeekEnd)
+		if err != nil {
+			return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+		}
+	} else {
+		if len(this.spill) > _MAX_SPILL_FILES {
+			return errors.NewValueError(errors.E_VALUE_SPILL_MAX_FILES)
+		}
+		spf, writer, err = this.createSpillFile()
+		if err != nil {
+			return err
+		}
+		this.spill = append(this.spill, spf)
+		if this.less == nil {
+			this.spillWriter = writer
+		}
 	}
+	logging.Debugf("[%p] spilling to %s (#:%v, sz:%v)", this, spf.f.Name(), len(this.mem), this.memSize)
+
+	for i, v := range this.mem {
+		err = this.writeSpillValue(spf, writer, v, true)
+		if err != nil {
+			return err
+		}
+		this.mem[i] = nil
+	}
+	err = this.finishSpillFile(spf, writer)
+	if err != nil {
+		return err
+	}
+
+	logging.Debuga(func() string {
+		d := util.Since(start)
+		return fmt.Sprintf("[%p] spill took: %v memSize: %v spf.sz: %v", this, d, this.memSize, spf.sz)
+	})
+	this.mem = this.mem[:0]
+	return this.mergeSpillFiles()
+}
+
+func (this *AnnotatedArray) createSpillFile() (*spillFile, writerFlusher, error) {
 	sf, err := util.CreateTemp(_SPILL_FILE_PATTERN)
 	if err != nil {
-		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
+		return nil, nil, errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
 
 	encryptionKey, err := this.resolveEncryptionKey()
 	if err != nil {
-		return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
+		sf.Close()
+		return nil, nil, errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 	}
 
 	if encryptionKey == nil {
-		logging.Debugf("[%p] spilling to %s (#:%v, sz:%v, compr:%v)", this, sf.Name(), len(this.mem), this.memSize, this.compress)
+		logging.Debugf("[%p] created spill file %s (compr:%v)", this, sf.Name(), this.compress)
 	} else {
-		logging.Debugf("[%p] spilling to %s (#:%v, sz:%v, compr:%v) keyId: %+q: ", this, sf.Name(), len(this.mem), this.memSize,
-			this.compress, encryptionKey.Id)
+		logging.Debugf("[%p] created spill file %s (compr:%v) keyId: %+q", this, sf.Name(), this.compress, encryptionKey.Id)
 	}
 
-	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress, encryptionKey: encryptionKey}
-	this.spill = append(this.spill, spf)
 	var writer writerFlusher
-
 	if encryptionKey == nil {
 		if this.compress {
 			writer = zlib.NewWriter(sf)
@@ -433,35 +489,43 @@ func (this *AnnotatedArray) spillToDisk() error {
 
 		ew, err := encryption.NewCBEFWriterSize(sf, encryptionKey, compression, _BUFFER_SIZE)
 		if err != nil {
-			return errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
+			sf.Close()
+			return nil, nil, errors.NewValueError(errors.E_VALUE_SPILL_CREATE, err)
 		}
 		writer = ew
 	}
 
-	for i, v := range this.mem {
-		vv := v.GetValue()
-		if sv, ok := vv.(*ScopeValue); ok {
-			if parent := sv.Parent(); parent != nil {
-				ps := fmt.Sprintf("%p", parent)
-				_, ok := this.parentsMap[ps]
-				if !ok && len(this.parentsMap) < _MAX_PARENTS {
-					parent.Track()
-					this.parentsMap[ps] = parent
-					ok = true
-				}
-				if ok {
-					// avoid spilling the parent; spill the map key only
-					sv.ResetParent(nil)
-					v.SetAttachment(ATT_PARENT, ps)
-				}
+	spf := &spillFile{f: sf, lessFn: this.less, compress: this.compress, encryptionKey: encryptionKey}
+	return spf, writer, nil
+}
+
+// Writes the value to the spill file and recycles it. inMem is set for values held in this.mem, whose memory is released
+// here; the merge releases the memory of the values it reads back itself.
+func (this *AnnotatedArray) writeSpillValue(spf *spillFile, writer writerFlusher, v AnnotatedValue, inMem bool) error {
+	vv := v.GetValue()
+	if sv, ok := vv.(*ScopeValue); ok {
+		if parent := sv.Parent(); parent != nil {
+			ps := fmt.Sprintf("%p", parent)
+			_, ok := this.parentsMap[ps]
+			if !ok && len(this.parentsMap) < _MAX_PARENTS {
+				parent.Track()
+				this.parentsMap[ps] = parent
+				ok = true
+			}
+			if ok {
+				// avoid spilling the parent; spill the map key only
+				sv.ResetParent(nil)
+				v.SetAttachment(ATT_PARENT, ps)
 			}
 		}
-		s := time.Now()
-		err := v.WriteSpill(writer, nil)
-		spf.write += time.Now().Sub(s)
-		if err != nil {
-			return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
-		}
+	}
+	s := time.Now()
+	err := v.WriteSpill(writer, nil)
+	spf.write += time.Now().Sub(s)
+	if err != nil {
+		return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+	}
+	if inMem {
 		sz := v.Size()
 		if this.trackMemory != nil {
 			err := this.trackMemory(-int64(sz))
@@ -470,27 +534,157 @@ func (this *AnnotatedArray) spillToDisk() error {
 			}
 		}
 		this.memSize -= sz
-		this.mem[i].Recycle()
-		this.mem[i] = nil
 	}
-	writer.Flush()
-	spf.sz, err = sf.Seek(0, os.SEEK_END)
+	v.Recycle()
+	return nil
+}
+
+func (this *AnnotatedArray) finishSpillFile(spf *spillFile, writer writerFlusher) error {
+	// an unsorted array keeps appending to the same stream, so a failed flush must not be ignored
+	err := writer.Flush()
+	if err != nil {
+		this.Truncate(nil)
+		return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+	}
+	sz, err := spf.f.Seek(0, io.SeekEnd)
 	if err != nil {
 		this.Truncate(nil)
 		return errors.NewValueError(errors.E_VALUE_SPILL_SIZE, err)
 	}
-	if !util.UseTemp(spf.f.Name(), spf.sz) {
-		spf.sz = 0
+	// spf.sz is what has been accounted so far (non-zero when appending to the spill file of an unsorted array)
+	if !util.UseTemp(spf.f.Name(), sz-spf.sz) {
 		this.Truncate(nil)
 		return errors.NewTempFileQuotaExceededError()
 	}
+	spf.sz = sz
+	return nil
+}
+
+// Sorted arrays only: once there are _MAX_SPILL_FILES spill files, merges the _SPILL_MERGE_FILES smallest into one. The
+// spill files are read in sorted order, so their order in this.spill does not matter. As when reading the array, the read
+// buffers of the merged files (_BUFFER_SIZE each) are not tracked; the values held are.
+func (this *AnnotatedArray) mergeSpillFiles() error {
+	if this.less == nil || len(this.spill) < _MAX_SPILL_FILES {
+		return nil
+	}
+	n := min(_SPILL_MERGE_FILES, len(this.spill))
+	if n < 2 {
+		return nil
+	}
+
+	start := util.Now()
+	bySize := slices.Clone(this.spill)
+	slices.SortStableFunc(bySize, func(a, b *spillFile) int { return cmp.Compare(a.sz, b.sz) })
+	merge := bySize[:n]
+
+	spf, writer, err := this.createSpillFile()
+	if err != nil {
+		return err
+	}
+	this.spill = append(bySize[n:], spf)
+
+	// The files being merged are no longer in this.spill: close them however the merge ends; on failure the values of the
+	// array are discarded (as for any failed spill), as those of the merged files are lost. They are released
+	// before the merged file is charged, so the temp space quota is not checked against the peak of a merge, when
+	// both are on disk (up to twice the size of the merged files); charging first would fail queries that complete
+	// without merging.
+	closeMerged := func() {
+		for _, m := range merge {
+			util.ReleaseTemp(m.f.Name(), m.sz)
+			m.f.Close()
+			// only set when the merge failed
+			if m.current != nil {
+				this.releaseMerged(m)
+				m.current.Recycle()
+				m.current = nil
+			}
+		}
+	}
+
+	for _, m := range merge {
+		this.releaseCurrent(m)
+		err = m.rewind()
+		if err == nil {
+			err = this.readMerged(m)
+		}
+		if err != nil && err != io.EOF {
+			closeMerged()
+			this.Truncate(nil)
+			return spillError(errors.E_VALUE_SPILL_READ, err)
+		}
+	}
+
+	heap.Init(&merge)
+	for merge[0].current != nil {
+		m := merge[0]
+		err = this.writeSpillValue(spf, writer, m.current, false)
+		if err != nil {
+			closeMerged()
+			this.Truncate(nil)
+			return spillError(errors.E_VALUE_SPILL_WRITE, err)
+		}
+		m.current = nil
+		this.releaseMerged(m)
+		err = this.readMerged(m)
+		if err != nil && err != io.EOF {
+			closeMerged()
+			this.Truncate(nil)
+			return spillError(errors.E_VALUE_SPILL_READ, err)
+		}
+		heap.Fix(&merge, 0)
+	}
+	for _, m := range merge {
+		spf.write += m.write
+		spf.read += m.read
+	}
+	closeMerged()
+	err = this.finishSpillFile(spf, writer)
+	if err != nil {
+		return err
+	}
 
 	logging.Debuga(func() string {
-		d := util.Since(start)
-		return fmt.Sprintf("[%p] spill took: %v memSize: %v spf.sz: %v", this, d, this.memSize, spf.sz)
+		return fmt.Sprintf("[%p] merged %v spill files to %s (sz:%v) in %v", this, len(merge), spf.f.Name(), spf.sz,
+			util.Since(start))
 	})
-	this.mem = this.mem[:0]
 	return nil
+}
+
+// Reads the next value of a spill file being merged. The value is tracked by its Size() (like the values in this.mem, and
+// unlike the estimate a read tracks), so that releasing it after it is written balances exactly.
+func (this *AnnotatedArray) readMerged(m *spillFile) error {
+	err := m.nextValue(nil, this.valFunc)
+	if err != nil || this.trackMemory == nil {
+		return err
+	}
+	sz := int64(m.current.Size())
+	err = this.trackMemory(sz)
+	if err != nil {
+		return err
+	}
+	m.mergeTracked = sz
+	return nil
+}
+
+// A sorted array reads the next value of a spill file before returning the current one, so the value a spill file holds
+// when reading stopped early was never returned: release it before the file is reread or closed. An unsorted array returns
+// the value a spill file holds, which then belongs to the caller.
+func (this *AnnotatedArray) releaseCurrent(m *spillFile) {
+	if this.less == nil || m.current == nil {
+		return
+	}
+	if this.trackMemory != nil {
+		this.trackMemory(-int64(m.current.Size()))
+	}
+	m.current.Recycle()
+	m.current = nil
+}
+
+func (this *AnnotatedArray) releaseMerged(m *spillFile) {
+	if m.mergeTracked != 0 {
+		this.trackMemory(-m.mergeTracked)
+		m.mergeTracked = 0
+	}
 }
 
 func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
@@ -504,6 +698,7 @@ func (this *AnnotatedArray) Foreach(f func(AnnotatedValue) bool) errors.Error {
 	this.iterator.memIndex = 0
 
 	for i := range this.spill {
+		this.releaseCurrent(this.spill[i])
 		err := this.spill[i].rewind()
 		if err != nil {
 			logging.Debugf("[%p] rewind failed on [%d] %s: %v", this, i, this.spill[i].f.Name(), err)
@@ -646,6 +841,7 @@ func (this *AnnotatedArray) Truncate(onDiscard func(AnnotatedValue)) {
 		delete(this.parentsMap, k)
 	}
 	for i := range this.spill {
+		this.releaseCurrent(this.spill[i])
 		if this.spill[i].f != nil {
 			util.ReleaseTemp(this.spill[i].f.Name(), this.spill[i].sz)
 			this.spill[i].f.Close()
@@ -653,6 +849,7 @@ func (this *AnnotatedArray) Truncate(onDiscard func(AnnotatedValue)) {
 		this.spill[i].current = nil
 	}
 	this.spill = nil
+	this.spillWriter = nil
 	for i := range this.mem {
 		if onDiscard != nil {
 			onDiscard(this.mem[i])
