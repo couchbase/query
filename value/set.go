@@ -405,7 +405,13 @@ func (this *Set) Actuals() []interface{} {
 	}
 
 	for _, av := range this.ints {
-		rv = append(rv, av.Actual())
+		// intValue.Actual() returns float64, which rounds integers beyond 2^53;
+		// keep int64 so callers building spans/constants see the exact value
+		if av.Type() == NUMBER {
+			rv = append(rv, av.ActualForIndex())
+		} else {
+			rv = append(rv, av.Actual())
+		}
 	}
 
 	if !this.numeric {
