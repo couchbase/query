@@ -4708,7 +4708,7 @@ var errData = []ErrData{
 	{
 		Code:        E_BUCKET_ACTION, // 5502
 		symbol:      "E_BUCKET_ACTION",
-		Description: "Unable to complete action after «count» attempts",
+		Description: "Unable to complete action after «count» attempts[: «cause»]",
 		Reason: []string{
 			"The indicated action was attempted a number of times without success.",
 		},

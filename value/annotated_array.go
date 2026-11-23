@@ -25,7 +25,12 @@ import (
 )
 
 const _SPILL_FILE_PATTERN = "av_spill_*"
-const _MAX_SPILL_FILES = 500
+
+// All spill files of a sort are open together while merging (one _BUFFER_SIZE reader each), so this bounds the file
+// descriptors and the merge memory per sort. Values such as PAIRS(self) under UPDATE STATISTICS can need more than 500.
+// A var only so that tests can lower it.
+var _MAX_SPILL_FILES = 2000
+
 const _MAX_PARENTS = 2000
 const _BUFFER_SIZE = 64 * util.KiB
 
@@ -285,7 +290,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 		if this.memSize > 0 && this.shouldSpill(this.memSize, sz) {
 			encryptionKey, err := this.resolveEncryptionKey()
 			if err != nil {
-				return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+				return spillError(errors.E_VALUE_SPILL_CREATE, err)
 			}
 
 			if encryptionKey != nil {
@@ -296,7 +301,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 			}
 			err = this.spillToDisk()
 			if err != nil {
-				return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+				return spillError(errors.E_VALUE_SPILL_WRITE, err)
 			}
 		}
 	}
@@ -317,7 +322,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 				err := this.trackMemory(-int64(v.Size()))
 				if err != nil {
 					v.Recycle()
-					return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+					return spillError(errors.E_VALUE_SPILL_WRITE, err)
 				}
 			}
 			v.Recycle()
@@ -335,7 +340,7 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 			if this.trackMemory != nil {
 				err := this.trackMemory(-int64(sz))
 				if err != nil {
-					return errors.NewValueError(errors.E_VALUE_SPILL_WRITE, err)
+					return spillError(errors.E_VALUE_SPILL_WRITE, err)
 				}
 			}
 			ov.Recycle()
@@ -346,6 +351,15 @@ func (this *AnnotatedArray) Append(v AnnotatedValue) errors.Error {
 	}
 	this.memSize += sz
 	return nil
+}
+
+// spillError keeps an errors.Error (e.g. too many spill files, temp file quota exceeded, encryption key or file create
+// failure) as is, so the real reason is reported; only other errors are wrapped with the given code.
+func spillError(code errors.ErrorCode, err error) errors.Error {
+	if e, ok := err.(errors.Error); ok {
+		return e
+	}
+	return errors.NewValueError(code, err)
 }
 
 func (this *AnnotatedArray) spillToDisk() error {
