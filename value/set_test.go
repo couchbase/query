@@ -68,3 +68,36 @@ func TestMultiSetActualsLargeInt(t *testing.T) {
 		t.Errorf("value %d lost; actuals %v", big, mset.Actuals())
 	}
 }
+
+// MB-75538: ints and floats buckets together; an integer-valued float (3.0)
+// lands in the ints bucket and de-dups with 3, large ints keep int64
+func TestSetActualsMixedIntFloat(t *testing.T) {
+	big := int64(9007199254740993)
+	items := []interface{}{3.0, int64(3), 2.5, -big, -2.5, big, -big}
+	expected := []interface{}{3.0, 2.5, -big, -2.5, big}
+
+	set := NewSet(len(items), true, false)
+	set.AddAll(items)
+	actuals := set.Actuals()
+	if len(actuals) != len(expected) {
+		t.Fatalf("expected %d distinct values, got %d: %v", len(expected), len(actuals), actuals)
+	}
+
+	for _, e := range expected {
+		found := false
+		for _, a := range actuals {
+			if NewValue(a).Equals(NewValue(e)).Truth() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("value %v lost; actuals %v", e, actuals)
+		}
+	}
+	for _, a := range actuals {
+		if f, ok := a.(float64); ok && (f > 1e15 || f < -1e15) {
+			t.Errorf("large int returned as float64 %v; actuals %v", f, actuals)
+		}
+	}
+}
