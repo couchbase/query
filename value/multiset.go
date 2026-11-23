@@ -442,7 +442,12 @@ func (this *MultiSet) Actuals() []any {
 	}
 
 	for _, av := range this.ints {
-		rv = append(rv, av.getValue().Actual())
+		// intValue.Actual() returns float64, which rounds integers beyond 2^53
+		if v := av.getValue(); v.Type() == NUMBER {
+			rv = append(rv, v.ActualForIndex())
+		} else {
+			rv = append(rv, v.Actual())
+		}
 	}
 
 	if !this.numeric {
