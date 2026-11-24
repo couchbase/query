@@ -9,7 +9,8 @@
 
 function usage {
   echo -e "USAGE: $0 [-v] package [package...]"
-  echo -e "\ne.g. \"$0 value\" to run the go tests for query/value\n"
+  echo -e "\ne.g. \"$0 value\" to run the go tests for query/value"
+  echo -e "     \"$0 query-ee/updstat\" to run the go tests for query-ee/updstat (\"query-ee/...\" for all of query-ee)\n"
   echo -e "Don't use this script to launch tests requiring buckets.\n"
   return 2
 }
@@ -28,6 +29,10 @@ do
   if [ "X$1" == "X-v" ]
   then
     verbose="-v"
+  elif [[ "$1" == query-ee || "$1" == query-ee/* ]]
+  then
+    # query-ee is a separate module (go.mod replaces it with ../query-ee): use its import path
+    args="$args github.com/couchbase/$1"
   else
     args="$args ./$1"
   fi
