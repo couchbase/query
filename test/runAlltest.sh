@@ -64,10 +64,16 @@ if [ -z "$pkgs" ] ; then
      exit 1
 fi
 
+# query-ee is a separate module (go.mod replaces it with ../query-ee), so ./... does not include its packages
+ee_pkgs=
+if [ -d ../query-ee ]; then
+     ee_pkgs="github.com/couchbase/query-ee/..."
+fi
+
 if [[ `uname` == "Darwin" ]] ; then
-     go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose $pkgs $*
+     go test -exec "env LD_LIBRARY_PATH=${LD_LIBRARY_PATH} DYLD_LIBRARY_PATH=${LD_LIBRARY_PATH}" $verbose $pkgs $ee_pkgs $*
 else
-     go test $verbose $pkgs $*
+     go test $verbose $pkgs $ee_pkgs $*
 fi
 rc=$?
 
