@@ -227,9 +227,10 @@ func (this *IndexCountDistinctScan2) UnmarshalJSON(body []byte) error {
 		if planContext != nil && planContext.remap {
 			var err1 errors.Error
 			index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer,
-				_unmarshalled.IndexDefChecksum, planContext.planVersion)
-			if err1 != nil || index == nil {
-				// return the original err
+				_unmarshalled.IndexDefChecksum, planContext)
+			if err1 != nil {
+				return err1
+			} else if index == nil {
 				return err
 			}
 		} else {

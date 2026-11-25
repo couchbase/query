@@ -31,7 +31,7 @@ func TestVerificationErrorNotEncoded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding: %v", err)
 	}
-	decoded, _, er := NewPreparedFromEncodedPlan(encoded, false)
+	decoded, _, er := NewPreparedFromEncodedPlan(encoded, false, nil)
 	if er != nil {
 		t.Fatalf("decoding: %v", er)
 	}

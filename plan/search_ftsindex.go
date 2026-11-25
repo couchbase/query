@@ -289,9 +289,10 @@ func (this *IndexFtsSearch) UnmarshalJSON(body []byte) error {
 		if planContext != nil && planContext.remap {
 			var err1 errors.Error
 			this.index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer,
-				_unmarshalled.IndexDefChecksum, planContext.planVersion)
-			if err1 != nil || this.index == nil {
-				// return the original err
+				_unmarshalled.IndexDefChecksum, planContext)
+			if err1 != nil {
+				return err1
+			} else if this.index == nil {
 				return err
 			}
 		} else {

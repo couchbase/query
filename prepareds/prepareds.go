@@ -1590,7 +1590,7 @@ func unmarshalPrepared(encoded string, phaseTime *time.Duration, reprep, remap, 
 	planStabilityErrorPolicy settings.PlanStabilityErrorPolicy, log logging.Log) (
 	*plan.Prepared, bool, bool, errors.Error, errors.Error, []indexerVersion) {
 
-	prepared, bytes, err := newPreparedFromEncodedFn(encoded, remap)
+	prepared, bytes, err := newPreparedFromEncodedFn(encoded, remap, nil)
 	if err != nil {
 		if reprep && len(bytes) > 0 && !(deferIndexerRace && isIndexerNotReady(err)) {
 

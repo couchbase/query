@@ -150,7 +150,7 @@ func (this *PrimaryScan) UnmarshalJSON(body []byte) error {
 	var index datastore.Index
 	if planContext != nil && planContext.remap {
 		index, err = getRemapIndex(_unmarshalled.Index, this.indexer,
-			_unmarshalled.IndexDefChecksum, planContext.planVersion)
+			_unmarshalled.IndexDefChecksum, planContext)
 	} else {
 		index, err = this.indexer.IndexByName(_unmarshalled.Index)
 	}
