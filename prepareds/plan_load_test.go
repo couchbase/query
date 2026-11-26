@@ -97,11 +97,18 @@ func TestCheckSavedPlan(t *testing.T) {
 	saved.SetName("ps")
 	saved.SetPersist(true)
 	prepareds.add(saved, false, false, nil)
-	PreparedsSetLimit(1)
+
+	// evict "ps" directly: dropping the entry at the cache level, as the LRU does, bypasses the prepareds
+	// delete paths (which clear the saved mark). Shrinking the limit instead is not deterministic: which
+	// entry the cache evicts depends on how the names hash across its GOMAXPROCS shards
+	if !prepareds.cache.Delete("ps", nil) {
+		t.Fatalf("expected the plan saved with PREPARE SAVE in the cache")
+	}
+
+	// a plan not saved with PREPARE SAVE is not marked saved (added after the delete: the cache limit is 2)
 	other := plan.NewPrepared(nil, nil, nil, nil, nil)
 	other.SetName("pother")
 	prepareds.add(other, false, false, nil)
-	PreparedsSetLimit(2)
 	if prepareds.get("ps", false) != nil || !isSaved("ps") || isSaved("pother") {
 		t.Fatalf("expected the plan saved with PREPARE SAVE evicted, and known as saved")
 	}

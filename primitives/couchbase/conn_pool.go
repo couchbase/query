@@ -14,6 +14,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -84,6 +85,16 @@ type connectionPool struct {
 	// probed it. Both are touched only from connCloser, so no locking needed.
 	serverStart     time.Time
 	lastServerCheck time.Time
+
+	// connections parked in the pool, with when each was parked and whether its keepalive has
+	// been relaxed since (see park, unpark and relaxIdleKeepAlive)
+	parkLock sync.Mutex
+	parked   map[*memcached.Client]parkedConn
+}
+
+type parkedConn struct {
+	since   time.Time
+	relaxed bool
 }
 
 func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolOverflow int, tlsConfig *tls.Config, bucket string,
@@ -102,13 +113,14 @@ func newConnectionPool(host string, ah AuthHandler, closer bool, poolSize, poolO
 		poolSize:    poolSize,
 		bucket:      bucket,
 		encrypted:   encrypted,
+		parked:      make(map[*memcached.Client]parkedConn, connSize),
 	}
 
 	rv.tlsConfig = tlsConfig
 
 	if closer {
 		rv.bailOut = make(chan bool, 1)
-		go rv.connCloser()
+		go rv.connCloser(ConnCloserInterval)
 	}
 	return rv
 }
@@ -134,18 +146,96 @@ func keepAliveConfig(idleTime int) net.KeepAliveConfig {
 // caller's own (potentially long, statement-timeout-derived) read deadline.
 func applyActiveKeepAlive(c *memcached.Client) {
 	if TCPKeepalive {
-		c.SetKeepAliveConfig(keepAliveConfig(TCPKeepaliveActiveIdleTime))
+		setKeepAlive(c, TCPKeepaliveActiveIdleTime)
 	}
 }
 
-// applyPooledKeepAlive relaxes the idle time on a connection being returned to the pool, since
-// nothing is blocked on it until it is next checked out. The probe interval and count stay as
-// they are: a parked connection that does fail its probes simply dies quietly and the next
-// checkout takes the existing discard-and-retry path.
+// setKeepAlive applies the keepalive configuration for the given idle time to c; a variable so
+// that tests can see what is applied to connections that are not real sockets
+var setKeepAlive = func(c *memcached.Client, idleTime int) {
+	c.SetKeepAliveConfig(keepAliveConfig(idleTime))
+}
+
+// applyPooledKeepAlive relaxes the idle time on a connection parked in the pool, since nothing is
+// blocked on it until it is next checked out. With the asynchronous closer this is only done once
+// a connection has been parked for a whole ConnCloserInterval, so within about two intervals of
+// it being returned (see relaxIdleKeepAlive), so that a connection that is checked out again soon,
+// the common case under load, does not pay setsockopt calls on every Return and Get. The probe interval and count stay as they are: a parked
+// connection that does fail its probes simply dies quietly and the next checkout takes the
+// existing discard-and-retry path.
 func applyPooledKeepAlive(c *memcached.Client) {
 	if TCPKeepalive {
-		c.SetKeepAliveConfig(keepAliveConfig(TCPKeepalivePooledIdleTime))
+		setKeepAlive(c, TCPKeepalivePooledIdleTime)
 	}
+}
+
+// park records c as parked in the pool; it must be called before c is put in cp.connections.
+// Without the asynchronous closer nothing relaxes parked connections later, so their keepalive is
+// relaxed straight away.
+func (cp *connectionPool) park(c *memcached.Client) {
+	relaxed := false
+	if cp.bailOut == nil && TCPKeepalive {
+		applyPooledKeepAlive(c)
+		relaxed = true
+	}
+	cp.parkLock.Lock()
+	cp.parked[c] = parkedConn{since: time.Now(), relaxed: relaxed}
+	cp.parkLock.Unlock()
+}
+
+// unpark forgets c, just taken out of cp.connections (or never put in), and reports whether its
+// keepalive may have been relaxed while parked. A connection taken out to be used, and possibly
+// returned, must go through checkout instead, or a relaxed connection could be parked again as
+// not relaxed and later handed out without being tightened.
+func (cp *connectionPool) unpark(c *memcached.Client) bool {
+	cp.parkLock.Lock()
+	p, ok := cp.parked[c]
+	delete(cp.parked, c)
+	cp.parkLock.Unlock()
+	return !ok || p.relaxed
+}
+
+// checkout readies c, just taken out of cp.connections, for active use: its keepalive is
+// tightened again only if it was relaxed while parked.
+func (cp *connectionPool) checkout(c *memcached.Client) {
+	if cp.unpark(c) {
+		applyActiveKeepAlive(c)
+	}
+}
+
+// relaxIdleKeepAlive relaxes the keepalive of the connections that have been parked for at least
+// idle. They stay in the pool meanwhile. parkLock is held across each connection's setsockopt
+// calls, one connection at a time: whoever takes that connection out waits on it in unpark, so the
+// calls are over before the connection is used, and then sees it relaxed; other Gets and Returns
+// on the pool wait for at most one connection's calls.
+func (cp *connectionPool) relaxIdleKeepAlive(idle time.Duration) int {
+	if !TCPKeepalive {
+		return 0
+	}
+	now := time.Now()
+	var idleConns []*memcached.Client
+	cp.parkLock.Lock()
+	for c, p := range cp.parked {
+		if !p.relaxed && now.Sub(p.since) >= idle {
+			idleConns = append(idleConns, c)
+		}
+	}
+	cp.parkLock.Unlock()
+
+	relaxed := 0
+	for _, c := range idleConns {
+		cp.parkLock.Lock()
+
+		// skip connections taken out, or taken out and parked again, since the scan
+		if p, ok := cp.parked[c]; ok && !p.relaxed && now.Sub(p.since) >= idle {
+			applyPooledKeepAlive(c)
+			p.relaxed = true
+			cp.parked[c] = p
+			relaxed++
+		}
+		cp.parkLock.Unlock()
+	}
+	return relaxed
 }
 
 // Use regular in-the-clear connection if tlsConfig is nil.
@@ -296,6 +386,9 @@ func (cp *connectionPool) Close() (err error) {
 	for c := range cp.connections {
 		c.Close()
 	}
+	cp.parkLock.Lock()
+	clear(cp.parked)
+	cp.parkLock.Unlock()
 	return
 }
 
@@ -333,7 +426,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 			return nil, errClosedPool
 		}
 		atomic.AddUint64(&cp.connCount, 1)
-		applyActiveKeepAlive(rv)
+		cp.checkout(rv)
 		return rv, nil
 	default:
 	}
@@ -349,7 +442,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 			return nil, errClosedPool
 		}
 		atomic.AddUint64(&cp.connCount, 1)
-		applyActiveKeepAlive(rv)
+		cp.checkout(rv)
 		return rv, nil
 	case <-t.C:
 		// No connection came around in time, let's see
@@ -362,7 +455,7 @@ func (cp *connectionPool) GetWithTimeout(d time.Duration) (rv *memcached.Client,
 				return nil, errClosedPool
 			}
 			atomic.AddUint64(&cp.connCount, 1)
-			applyActiveKeepAlive(rv)
+			cp.checkout(rv)
 			return rv, nil
 		case cp.createsem <- true:
 			path = "create"
@@ -414,17 +507,20 @@ func (cp *connectionPool) Return(c *memcached.Client) {
 				// connection to it anyway.  Just close the
 				// connection.
 				if cp != nil {
+					cp.unpark(c)
 					atomic.AddUint64(&cp.connClosed, 1)
 				}
 				c.Close()
 			}
 		}()
 
-		applyPooledKeepAlive(c)
+		// keepalive is left as it is: see applyPooledKeepAlive
+		cp.park(c)
 
 		select {
 		case cp.connections <- c:
 		default:
+			cp.unpark(c)
 			<-cp.createsem
 			atomic.AddUint64(&cp.connClosed, 1)
 			c.Close()
@@ -445,15 +541,15 @@ func (cp *connectionPool) Discard(c *memcached.Client) {
 }
 
 // asynchronous connection closer
-func (cp *connectionPool) connCloser() {
+func (cp *connectionPool) connCloser(interval time.Duration) {
 	var connCount uint64
 	var logCount = _LOG_INTERVAL
 
-	t := time.NewTimer(ConnCloserInterval)
+	t := time.NewTimer(interval)
 	defer t.Stop()
 
 	for {
-		connCount = cp.connCount
+		connCount = atomic.LoadUint64(&cp.connCount)
 
 		// we don't exist anymore! bail out!
 		select {
@@ -461,40 +557,53 @@ func (cp *connectionPool) connCloser() {
 			return
 		case <-t.C:
 		}
-		t.Reset(ConnCloserInterval)
+		t.Reset(interval)
 		logCount--
 		if logCount == 0 {
+			opened, closed := atomic.LoadUint64(&cp.connOpen), atomic.LoadUint64(&cp.connClosed)
 			logging.Infof("bucket %s node %s connections opened %v closed %v open %v (re)used %v",
-				cp.bucket, cp.host, cp.connOpen, cp.connClosed, cp.connOpen-cp.connClosed, cp.connCount)
+				cp.bucket, cp.host, opened, closed, opened-closed, atomic.LoadUint64(&cp.connCount))
 			logCount = _LOG_INTERVAL
 		}
 
 		// drain idle connection if server has restarted
 		cp.refreshServerStart()
 
-		// no overflow connections open or sustained requests for connections
-		// nothing to do until the next cycle
-		if len(cp.connections) <= cp.poolSize ||
-			ConnCloserInterval/ConnPoolAvailWaitTime < time.Duration(cp.connCount-connCount) {
-			continue
+		// close overflow connections if there are any and they are not needed, that is
+		// unless there were sustained requests for connections
+		if len(cp.connections) > cp.poolSize &&
+			interval/ConnPoolAvailWaitTime >= time.Duration(atomic.LoadUint64(&cp.connCount)-connCount) {
+		overflow:
+			for len(cp.connections) > cp.poolSize {
+				select {
+				case <-cp.bailOut:
+					return
+				default:
+				}
+
+				// don't wait if the connections have been taken meanwhile: keepalive
+				// relaxing and restart detection depend on this loop terminating
+				var c *memcached.Client
+				select {
+				case conn, isOpen := <-cp.connections:
+					if !isOpen {
+						return
+					}
+					c = conn
+				default:
+					break overflow
+				}
+				cp.unpark(c)
+
+				// bail out if close did not work out
+				if !cp.connCleanup(c) {
+					return
+				}
+			}
 		}
 
-		// close overflow connections now that they are not needed
-		for c := range cp.connections {
-			select {
-			case <-cp.bailOut:
-				return
-			default:
-			}
-
-			// bail out if close did not work out
-			if !cp.connCleanup(c) {
-				return
-			}
-			if len(cp.connections) <= cp.poolSize {
-				break
-			}
-		}
+		// relax keepalive on what has been parked since the last cycle
+		cp.relaxIdleKeepAlive(interval)
 	}
 }
 
@@ -556,6 +665,9 @@ func (cp *connectionPool) probeUptime(now time.Time) (int64, bool) {
 			return 0, false
 		}
 
+		// it may be returned to the pool afterwards, so check it out properly
+		cp.checkout(c)
+
 		c.SetDeadline(now.Add(serverStartProbeTimeout)) // prevent hung node from stalling proveUptime
 		stats, err := c.StatsMap("")
 		if err == nil {
@@ -608,6 +720,7 @@ func (cp *connectionPool) drainIdleConns() int {
 			if !isPoolOpen {
 				return drained
 			}
+			cp.unpark(c)
 			if !cp.connCleanup(c) { // clean idle connection
 				return drained
 			}

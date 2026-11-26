@@ -98,15 +98,18 @@ var EnableTracing = false
 var EnableSnappyCompression = false
 
 // Quiet time in seconds (TCP_KEEPIDLE) before keepalive probing starts on a connection parked
-// in the pool. Applies only while the connection is pooled; see TCPKeepaliveActiveIdleTime for
-// the value used once it is checked out. Default 30 minutes.
+// in the pool. With the asynchronous closer it is applied once a connection has been parked for a
+// whole ConnCloserInterval, i.e. within about two intervals of it being returned, otherwise as
+// soon as it is returned to the pool; see
+// TCPKeepaliveActiveIdleTime for the value used once it is checked out. Default 30 minutes.
 var TCPKeepalivePooledIdleTime = 30 * 60
 
 // Quiet time in seconds (TCP_KEEPIDLE) before keepalive probing starts on a connection that is
 // checked out of the pool and actively in use. Kept much lower than
 // TCPKeepalivePooledIdleTime so a half-dead socket is detected quickly regardless of how long
-// the caller's own read deadline is (which may be as long as the statement timeout), without
-// paying the probe overhead on connections sitting in the pool. Default 5 seconds.
+// the caller's own read deadline is (which may be as long as the statement timeout). Connections
+// parked in the pool keep it until they are relaxed (see TCPKeepalivePooledIdleTime), so idle
+// connections don't pay its probe overhead for long. Default 5 seconds.
 var TCPKeepaliveActiveIdleTime = 5
 
 // Seconds between individual keepalive probes (TCP_KEEPINTVL) once the idle time above has
