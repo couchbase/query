@@ -19,6 +19,11 @@ import (
 )
 
 func TestCheckSavedPlan(t *testing.T) {
+	// start with no names tracked, whatever the tests run before left (the order of the tests is not fixed)
+	defer restorePlanLoadState(savePlanLoadState())
+	restorePlanLoadState(planLoadSnapshot{unloaded: map[string]bool{}, standIns: map[string]*standIn{},
+		saved: map[string]bool{}})
+
 	PreparedsInit(2)
 	defer endPriming()
 
