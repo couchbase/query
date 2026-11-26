@@ -111,7 +111,9 @@ func NewPrepared(operator Operator, signature value.Value, indexScanKeyspaces ma
 	return p
 }
 
-func NewPreparedFromEncodedPlan(prepared_stmt string, remap bool) (*Prepared, []byte, errors.Error) {
+// remapCache is only used when remap is true; it may be nil
+func NewPreparedFromEncodedPlan(prepared_stmt string, remap bool, remapCache *RemapCache) (*Prepared, []byte,
+	errors.Error) {
 	prepared := NewPrepared(nil, nil, nil, nil, nil)
 	decoded, err := base64.StdEncoding.DecodeString(prepared_stmt)
 	if err != nil {
@@ -127,7 +129,7 @@ func NewPreparedFromEncodedPlan(prepared_stmt string, remap bool) (*Prepared, []
 	if err != nil {
 		return prepared, nil, errors.NewPreparedDecodingError(err)
 	}
-	err = prepared.unmarshalInternal(prepared_bytes, remap)
+	err = prepared.unmarshalInternal(prepared_bytes, remap, remapCache)
 	if err != nil {
 		return prepared, prepared_bytes, errors.NewUnrecognizedPreparedError(err)
 	}
@@ -215,10 +217,10 @@ func (this *Prepared) marshalInternal(r map[string]any) {
 }
 
 func (this *Prepared) UnmarshalJSON(body []byte) error {
-	return this.unmarshalInternal(body, false)
+	return this.unmarshalInternal(body, false, nil)
 }
 
-func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
+func (this *Prepared) unmarshalInternal(body []byte, remap bool, remapCache *RemapCache) error {
 	var _unmarshalled struct {
 		Operator           json.RawMessage `json:"operator"`
 		Signature          json.RawMessage `json:"signature"`
@@ -348,7 +350,7 @@ func (this *Prepared) unmarshalInternal(body []byte, remap bool) error {
 			}
 		}
 
-		planContext := newPlanContext(subqMap, subqPlans, remap, this.planVersion)
+		planContext := newPlanContext(subqMap, subqPlans, remap, remapCache, this.planVersion)
 		this.Operator, err = MakeOperator(op_type.Operator, _unmarshalled.Operator, planContext)
 		if err != nil {
 			return err
@@ -1116,7 +1118,7 @@ func (this *Prepared) GetUdfSubqPlans(lock bool, subqPlans *algebra.SubqueryPlan
 			return err
 		}
 
-		planContext := newPlanContext(nil, nil, false, _unmarshalled.PlanVersion)
+		planContext := newPlanContext(nil, nil, false, nil, _unmarshalled.PlanVersion)
 		op, err := MakeOperator(op_type.Operator, subqPlanInfo.PlanOp, planContext)
 		if err != nil {
 			return err

@@ -29,12 +29,14 @@ type planContext struct {
 	subqPlans *algebra.SubqueryPlans
 
 	// for remapping (backup/restore)
-	remap bool
+	remap      bool
+	remapCache *RemapCache
 
 	planVersion int
 }
 
-func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.SubqueryPlans, remap bool, planVersion int) *planContext {
+func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.SubqueryPlans, remap bool, remapCache *RemapCache,
+	planVersion int) *planContext {
 	rv := &planContext{
 		withs:       value.NewScopeValue(make(map[string]any), nil),
 		vars:        value.NewScopeValue(make(map[string]any), nil),
@@ -42,6 +44,7 @@ func newPlanContext(subqMap map[string]*subqPlanInfo, subqPlans *algebra.Subquer
 		subqMap:     subqMap,
 		subqPlans:   subqPlans,
 		remap:       remap,
+		remapCache:  remapCache,
 		planVersion: planVersion,
 	}
 
@@ -65,6 +68,7 @@ func subqPlanContext(parent *planContext) *planContext {
 		subqMap:     parent.subqMap,
 		subqPlans:   parent.subqPlans,
 		remap:       parent.remap,
+		remapCache:  parent.remapCache,
 		planVersion: parent.planVersion,
 	}
 

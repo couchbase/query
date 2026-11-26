@@ -210,7 +210,7 @@ func savedPlanInfo(name string) (savedPlan, errors.Error) {
 	if err != nil || encoded == "" {
 		return savedPlan{}, err
 	}
-	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded, false)
+	prepared, bytes, err := plan.NewPreparedFromEncodedPlan(encoded, false, nil)
 	if err == nil {
 		return savedPlan{text: prepared.Text(), encoded: encoded, persist: prepared.Persist(), found: true,
 			readable: true}, nil

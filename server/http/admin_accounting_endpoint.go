@@ -1487,6 +1487,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		var planStability []any
 		if settings.PlanStabilityAvailable() && bucket != "" && bucket == dictionary.QUERY_METADATA_BUCKET {
 			planStability = make([]any, 0)
+			remapCache := plan.NewRemapCache()
 			err = datastore.ScanSystemCollection(bucket, "ppn::", nil,
 				func(key string, systemCollection datastore.Keyspace) errors.Error {
 					keys[0] = key
@@ -1530,7 +1531,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 							logging.Errorf("Plan Stability Backup: encoded_plan for key %s is not a string", key)
 							return nil
 						}
-						prepared, _, err1 := plan.NewPreparedFromEncodedPlan(encoded_plan, true)
+						prepared, _, err1 := plan.NewPreparedFromEncodedPlan(encoded_plan, true, remapCache)
 						if err1 == nil {
 							err1 = prepared.Verify()
 							if err1 == nil {
@@ -1753,6 +1754,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				// TODO: clear existing entries if any
 
 				// restore plan stability entries
+				remapCache := plan.NewRemapCache()
 				index = 0
 				json.SetIndexState(&iState, planStability)
 				for {
@@ -1765,7 +1767,7 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 						break
 					}
 					index++
-					err1 := doPlanStabilityRestore(v, bucket, include, exclude, remap, systemCollection)
+					err1 := doPlanStabilityRestore(v, bucket, include, exclude, remap, systemCollection, remapCache)
 					if err1 != nil {
 						iState.Release()
 						return nil, err1
@@ -3491,7 +3493,8 @@ func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, rem
 	return nil
 }
 
-func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace) errors.Error {
+func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace,
+	remapCache *plan.RemapCache) errors.Error {
 	key, bvalue, err := getRestoreKeyValue(v, true)
 	if err != nil {
 		if key == "" {
@@ -3563,14 +3566,14 @@ func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap 
 				return errors.NewServiceErrorBadValue(nil,
 					fmt.Sprintf("plan stability restore: encoded_plan is not a string for key %v", key))
 			}
-			prepared, _, err1 := plan.NewPreparedFromEncodedPlan(encoded_plan, true)
+			prepared, _, err1 := plan.NewPreparedFromEncodedPlan(encoded_plan, true, remapCache)
 			if err1 != nil {
-				logging.Errorf("Plan Stability restore: error from NewPreparedFromEncodedPlan: %v", err1)
-				return errors.NewServiceErrorBadValue(err1,
-					fmt.Sprintf("plan stability restore: error getting prepared from encoded_plan for key %v", key))
-			}
-			encoded_plan, err = prepared.BuildEncodedPlan()
-			if err == nil {
+				// e.g. an index is missing on the target or its definition has changed: restore the
+				// entry as is (unverified) such that plan stability error policy applies when it is used
+				logging.Warnf("Plan Stability restore: unable to decode saved plan %v, restoring it unverified: %v",
+					key, err1)
+				pValue.UnsetField("verified")
+			} else if encoded_plan, err = prepared.BuildEncodedPlan(); err == nil {
 				pValue.UnsetField("verified")
 				pValue.SetField("encoded_plan", encoded_plan)
 				// Add to prepared cache

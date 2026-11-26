@@ -631,9 +631,9 @@ func TestReplannedWhileSettling(t *testing.T) {
 		}
 		// decoding the saved plan: its index is not found (unless found)
 		var decoded *plan.Prepared
-		newPreparedFromEncodedFn = func(encoded string, remap bool) (*plan.Prepared, []byte, errors.Error) {
+		newPreparedFromEncodedFn = func(encoded string, remap bool, remapCache *plan.RemapCache) (*plan.Prepared, []byte, errors.Error) {
 			if indexFound {
-				decoded, _, err := d(encoded, remap)
+				decoded, _, err := d(encoded, remap, remapCache)
 				return decoded, nil, err
 			}
 			partial := plan.NewPrepared(nil, nil, nil, nil, nil)

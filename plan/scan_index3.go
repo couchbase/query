@@ -11,6 +11,7 @@ package plan
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/couchbase/query/algebra"
@@ -774,9 +775,10 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 		if planContext != nil && planContext.remap {
 			var err1 errors.Error
 			index, err1 = getRemapIndex(_unmarshalled.Index, this.indexer,
-				_unmarshalled.IndexDefChecksum, planContext.planVersion)
-			if err1 != nil || index == nil {
-				// return the original err
+				_unmarshalled.IndexDefChecksum, planContext)
+			if err1 != nil {
+				return err1
+			} else if index == nil {
 				return err
 			}
 		} else {
@@ -815,34 +817,110 @@ func (this *IndexScan3) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
+// retry settings for getRemapIndex(); variables such that unit tests can shorten them
+var remapMaxRetry = 6
+var remapRetryInterval = 100 * time.Millisecond
+
 // for restored query plan, get the index via IndexByName() instead of IndexById(); a retry loop is
 // included in case the new index is not yet created in the restore process
-func getRemapIndex(indexName string, indexer datastore.Indexer, indexDefChecksum string, planVersion int) (index datastore.Index, err errors.Error) {
-	maxRetry := 6
-	interval := 100 * time.Millisecond
+func getRemapIndex(indexName string, indexer datastore.Indexer, indexDefChecksum string,
+	planContext *planContext) (index datastore.Index, err errors.Error) {
+
+	// a failure seen earlier in the same backup/restore request is not retried (MB-75632): a
+	// definition checksum mismatch is final; for an index not found, look it up once more without
+	// waiting, in case the index has since been created by the restore process
+	cache := planContext.remapCache
+	nameKey := remapCacheKey(indexer, indexName)
+	checksumKey := nameKey + "\x00" + indexDefChecksum
+	if err = cache.get(checksumKey); err != nil {
+		return nil, err
+	}
+	maxRetry := remapMaxRetry
+	if cache.get(nameKey) != nil {
+		// IndexByName() only looks at the indexer's cached metadata
+		indexer.Refresh()
+		maxRetry = 1
+	}
+
+	interval := remapRetryInterval
 	for i := 0; i < maxRetry; i++ {
+		if i > 0 {
+			time.Sleep(interval)
+			interval *= 2
+			indexer.Refresh()
+		}
 		index, err = indexer.IndexByName(indexName)
-		if err != nil {
-			if errors.IsIndexNotFoundError(err) {
-				time.Sleep(interval)
-				interval *= 2
-				indexer.Refresh()
-			} else {
-				break
-			}
-		} else if indexDefChecksum != "" {
-			checksum, err1 := datastore.IndexInfoChecksum(index, planVersion)
-			if err1 != nil {
-				err = errors.NewIndexChecksumError(index.Name(), err1)
-				index = nil
-			} else if checksum != indexDefChecksum {
-				err = errors.NewIndexChecksumMismatch(index.Name(), indexDefChecksum, checksum)
-				index = nil
-			}
+		if err == nil {
+			break
+		} else if !errors.IsIndexNotFoundError(err) {
 			return
 		}
 	}
+	if err != nil {
+		cache.set(nameKey, err)
+		return
+	}
+	cache.delete(nameKey)
+
+	if indexDefChecksum != "" {
+		checksum, err1 := datastore.IndexInfoChecksum(index, planContext.planVersion)
+		if err1 != nil {
+			err = errors.NewIndexChecksumError(index.Name(), err1)
+		} else if checksum != indexDefChecksum {
+			err = errors.NewIndexChecksumMismatch(index.Name(), indexDefChecksum, checksum)
+		}
+		if err != nil {
+			cache.set(checksumKey, err)
+			index = nil
+		}
+	}
 	return
+}
+
+// RemapCache remembers index remap failures for the duration of a single backup or restore
+// request, such that only the first saved plan referencing a missing index (or an index whose
+// definition has changed) pays for the retry loop in getRemapIndex(). A nil *RemapCache is valid
+// and caches nothing. The cache is currently only used from a single goroutine per request; the
+// mutex is a cheap safeguard should that change.
+type RemapCache struct {
+	sync.Mutex
+	failures map[string]errors.Error
+}
+
+func NewRemapCache() *RemapCache {
+	return &RemapCache{failures: make(map[string]errors.Error)}
+}
+
+func remapCacheKey(indexer datastore.Indexer, indexName string) string {
+	return indexer.BucketId() + "\x00" + indexer.ScopeId() + "\x00" + indexer.KeyspaceId() + "\x00" +
+		string(indexer.Name()) + "\x00" + indexName
+}
+
+func (this *RemapCache) get(key string) errors.Error {
+	if this == nil {
+		return nil
+	}
+	this.Lock()
+	defer this.Unlock()
+	return this.failures[key]
+}
+
+func (this *RemapCache) set(key string, err errors.Error) {
+	if this == nil {
+		return
+	}
+	this.Lock()
+	this.failures[key] = err
+	this.Unlock()
+}
+
+func (this *RemapCache) delete(key string) {
+	if this == nil {
+		return
+	}
+	this.Lock()
+	delete(this.failures, key)
+	this.Unlock()
 }
 
 // index references in "restored" prepared statement may have an index state of CREATED; replace if
