@@ -317,3 +317,20 @@ func checkSavedPlan(name string, kind lookupKind, mode settings.PlanStabilityMod
 	}
 	return false
 }
+
+// MB-75645: saved plans restored into QUERY_METADATA (see doPlanStabilityRestore()) replace whatever plan this
+// node has cached under the same (encoded) names, including a plan for a different statement (which the cache
+// otherwise does not replace, MB-19509). The cache entries are removed, not the saved plans, and the names are
+// marked unloaded, so that the next use loads the restored plan whatever the plan stability mode (see
+// checkSavedPlan()) and applies the plan stability error policy to it. A stand-in for the replaced saved plan
+// (MB-75507) is dropped as well.
+// A restored name stays unloaded until it is used (bounded by the size of the restore): until then, a cache miss
+// for it reads QUERY_METADATA, and while any name is unloaded, adding to the cache takes the planLoad lock (see
+// clearUnloaded()).
+func EvictRestoredPlans(names []string) {
+	for _, name := range names {
+		prepareds.cache.Delete(name, nil)
+		clearUnloaded(name)
+		markUnloaded(name)
+	}
+}

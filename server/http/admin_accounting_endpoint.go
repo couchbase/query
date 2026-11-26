@@ -33,6 +33,7 @@ import (
 	"github.com/couchbase/query/auth"
 	"github.com/couchbase/query/datastore"
 	dictionary "github.com/couchbase/query/datastore/couchbase"
+	"github.com/couchbase/query/distributed"
 	"github.com/couchbase/query/encryption"
 	"github.com/couchbase/query/errors"
 	"github.com/couchbase/query/ffdc"
@@ -80,6 +81,9 @@ const (
 	encryptionKeysPrefix = adminPrefix + "/encryption_at_rest"
 )
 
+// MB-75645: internal, cached plans replaced by restored saved plans (see evictRestoredPlans())
+const preparedsRestoredPrefix = adminPrefix + "/prepareds_restored"
+
 func expvarsHandler(w http.ResponseWriter, req *http.Request) {
 	// Do not audit directly.
 	// Will be handled and audited by /admin/stats auditing.
@@ -104,6 +108,9 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 	}
 	preparedsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doPrepareds, false)
+	}
+	preparedsRestoredHandler := func(w http.ResponseWriter, req *http.Request) {
+		this.wrapAPI(w, req, doPreparedsRestored, false)
 	}
 	requestsHandler := func(w http.ResponseWriter, req *http.Request) {
 		this.wrapAPI(w, req, doActiveRequests, false)
@@ -221,6 +228,7 @@ func (this *HttpEndpoint) registerAccountingHandlers() {
 
 		preparedsPrefix:             {handler: preparedsHandler, methods: []string{"GET", "POST"}},
 		preparedsPrefix + "/{name}": {handler: preparedHandler, methods: []string{"GET", "POST", "DELETE", "PUT", "PATCH"}},
+		preparedsRestoredPrefix:     {handler: preparedsRestoredHandler, methods: []string{"POST"}},
 
 		requestsPrefix:                        {handler: requestsHandler, methods: []string{"GET", "POST"}},
 		requestsPrefix + "/{request}":         {handler: requestHandler, methods: []string{"GET", "POST", "DELETE"}},
@@ -1329,6 +1337,12 @@ func doGlobalBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 				}
 			}
 		}
+
+		// MB-75645: saved plans referencing keyspaces that this restore maps elsewhere or leaves out (the global
+		// restore comes after the QUERY_METADATA restore, and is the only one with full keyspace paths)
+		if settings.PlanStabilityAvailable() {
+			warnSavedPlanKeyspaces(req.FormValue("remap"), req.FormValue("include"), req.FormValue("exclude"))
+		}
 	default:
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
@@ -1511,8 +1525,9 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 						// filter evaluation, skip
 						for _, ksref := range ksrefs {
 							if keyspace, ok := ksref.(string); ok {
-								p := algebra.ParsePath(keyspace)
-								if !filterEval(p, include, exclude, false) {
+								if !filterEval(savedPlanFilterPath(keyspace), include, exclude, true) {
+									logging.Infof("Plan Stability Backup: saved plan %s references keyspace %s, "+
+										"which does not match the include/exclude filter; skipping it", key, keyspace)
 									return nil
 								}
 							} else {
@@ -1751,15 +1766,18 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 					return nil, errors.NewServiceErrorBadValue(err, "restore plan stability")
 				}
 
-				// TODO: clear existing entries if any
+				// restore merges: saved plans that are not in the backup are kept, same as CBO statistics and
+				// functions; a saved plan in the backup replaces the saved plan with the same name
 
 				// restore plan stability entries
 				remapCache := plan.NewRemapCache()
+				restoredNames := make([]string, 0, 32)
 				index = 0
 				json.SetIndexState(&iState, planStability)
 				for {
 					v, err := iState.FindIndex(index)
 					if err != nil {
+						evictRestoredPlans(restoredNames)
 						iState.Release()
 						return nil, errors.NewServiceErrorBadValue(err, "restore plan stability")
 					}
@@ -1767,12 +1785,18 @@ func doBucketBackup(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 						break
 					}
 					index++
-					err1 := doPlanStabilityRestore(v, bucket, include, exclude, remap, systemCollection, remapCache)
+					name, err1 := doPlanStabilityRestore(v, bucket, include, exclude, remap, systemCollection, remapCache)
 					if err1 != nil {
+						// the entries restored so far replace the cached plans as well
+						evictRestoredPlans(restoredNames)
 						iState.Release()
 						return nil, err1
 					}
+					if name != "" {
+						restoredNames = append(restoredNames, name)
+					}
 				}
+				evictRestoredPlans(restoredNames)
 				if index > 0 {
 					if bucket == "" || bucket != dictionary.QUERY_METADATA_BUCKET {
 						logging.Errorf("Plan Stablity Restore: unexpected entries (%d) in bucket %s", index, bucket)
@@ -3493,33 +3517,34 @@ func doAusSettingsRestore(v []byte, bucket string, include, exclude matcher, rem
 	return nil
 }
 
+// returns the (encoded) name of the restored saved plan, "" if the entry is skipped
 func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap remapper, systemCollection datastore.Keyspace,
-	remapCache *plan.RemapCache) errors.Error {
+	remapCache *plan.RemapCache) (string, errors.Error) {
 	key, bvalue, err := getRestoreKeyValue(v, true)
 	if err != nil {
 		if key == "" {
-			return errors.NewServiceErrorBadValue(err, "plan stability restore: missing key")
+			return "", errors.NewServiceErrorBadValue(err, "plan stability restore: missing key")
 		} else if bvalue == nil {
-			return errors.NewServiceErrorBadValue(err, fmt.Sprintf("plan stability restore: missing value for key %v", key))
+			return "", errors.NewServiceErrorBadValue(err, fmt.Sprintf("plan stability restore: missing value for key %v", key))
 		}
-		return errors.NewServiceErrorBadValue(err, "plan stability restore: invalid key or value")
+		return "", errors.NewServiceErrorBadValue(err, "plan stability restore: invalid key or value")
 	}
 
 	if key == "" {
-		return errors.NewServiceErrorBadValue(err, "plan stability restore: invalid key")
+		return "", errors.NewServiceErrorBadValue(err, "plan stability restore: invalid key")
 	}
 	if len(bvalue) < 3 || bvalue[0] != '"' || bvalue[len(bvalue)-1] != '"' {
-		return errors.NewServiceErrorBadValue(err, "plan stability restore: invalid value")
+		return "", errors.NewServiceErrorBadValue(err, "plan stability restore: invalid value")
 	}
 
 	data := make([]byte, base64.StdEncoding.DecodedLen(len(bvalue)-2))
 	n, err := base64.StdEncoding.Decode(data, []byte(bvalue[1:len(bvalue)-1]))
 	if err != nil {
-		return errors.NewServiceErrorBadValue(err, "plan stability restore: error decoding value"+":"+key)
+		return "", errors.NewServiceErrorBadValue(err, "plan stability restore: error decoding value"+":"+key)
 	}
 	raw, cerr := snappy.Decode(nil, data[:n])
 	if cerr != nil {
-		return errors.NewServiceErrorBadValue(cerr, "plan stability restore: error decoding value"+":"+key)
+		return "", errors.NewServiceErrorBadValue(cerr, "plan stability restore: error decoding value"+":"+key)
 	}
 
 	pValue := value.NewValue(raw)
@@ -3527,25 +3552,24 @@ func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap 
 	ksVal, ok := pValue.Field("keyspaceReferences")
 	if !ok || ksVal == nil {
 		logging.Errorf("Plan Stability Restore: missing keyspaceReferences for key %s", key)
-		return errors.NewServiceErrorBadValue(nil, "plan stability restore: missing keyspaceReferences")
+		return "", errors.NewServiceErrorBadValue(nil, "plan stability restore: missing keyspaceReferences")
 	}
 	ksrefs, ok := ksVal.Actual().([]interface{})
 	if !ok {
 		logging.Errorf("Plan Stability Restore: keyspacesReferences for key %s is not an array (%T)", key, ksVal)
-		return errors.NewServiceErrorBadValue(nil, "plan stability restore: invalid keyspaceReferences")
+		return "", errors.NewServiceErrorBadValue(nil, "plan stability restore: invalid keyspaceReferences")
 	}
 	// if any of the keyspace references does not pass filter evaluation, skip
 	for _, ksref := range ksrefs {
 		if keyspace, ok := ksref.(string); ok {
-			p := algebra.ParsePath(keyspace)
-			if !filterEval(p, include, exclude, false) {
-				logging.Infof("Plan Stability Restore: entry for key %v is missing keyspace reference %s in the backup. Skipping entry %v",
-					key, keyspace, key)
-				return nil
+			if !filterEval(savedPlanFilterPath(keyspace), include, exclude, true) {
+				logging.Infof("Plan Stability Restore: saved plan %s references keyspace %s, which does not match "+
+					"the include/exclude filter; skipping it", key, keyspace)
+				return "", nil
 			}
 		} else {
 			logging.Errorf("Plan Stability restore: keyspace %v is not a string (%T), skipping plan stability restore for key %v", ksref, ksref, key)
-			return errors.NewServiceErrorBadValue(nil,
+			return "", errors.NewServiceErrorBadValue(nil,
 				fmt.Sprintf("plan stability restore: keyspace reference %v is not a string (%T) for key %v", ksref, ksref, key))
 		}
 	}
@@ -3557,13 +3581,13 @@ func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap 
 			val, ok := pValue.Field("encoded_plan")
 			if !ok {
 				logging.Errorf("Plan Stability restore: missing encoded_plan for key %s", key)
-				return errors.NewServiceErrorBadValue(nil,
+				return "", errors.NewServiceErrorBadValue(nil,
 					fmt.Sprintf("plan stability restore: missing encoded_plan for key %v", key))
 			}
 			encoded_plan, ok := val.Actual().(string)
 			if !ok {
 				logging.Errorf("Plan Stability restore: encoded_plan for key %s is not a string (%T)", key, val)
-				return errors.NewServiceErrorBadValue(nil,
+				return "", errors.NewServiceErrorBadValue(nil,
 					fmt.Sprintf("plan stability restore: encoded_plan is not a string for key %v", key))
 			}
 			prepared, _, err1 := plan.NewPreparedFromEncodedPlan(encoded_plan, true, remapCache)
@@ -3574,16 +3598,15 @@ func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap 
 					key, err1)
 				pValue.UnsetField("verified")
 			} else if encoded_plan, err = prepared.BuildEncodedPlan(); err == nil {
+				// the restored plan is not put in the prepared cache here: the caller evicts the cached
+				// plans for the restored names on all query nodes, and the next use loads the restored
+				// plan (MB-75645)
 				pValue.UnsetField("verified")
 				pValue.SetField("encoded_plan", encoded_plan)
-				// Add to prepared cache
-				// (false for planStability since we don't need the call to persist to disk)
-				err1 = prepareds.AddPrepared(prepared, false)
-				if err1 != nil {
-					logging.Errorf("Plan Stability restore: error adding prepared statement %v to prepared cache", key)
-				}
 			} else {
-				logging.Errorf("Plan Stability restore: error building encoded_plan from prepared for key %v", key)
+				logging.Errorf("Plan Stability restore: error building encoded_plan from prepared for key %v, "+
+					"restoring it unverified: %v", key, err)
+				pValue.UnsetField("verified")
 			}
 		}
 	} else if verification_error, ok := pValue.Field("verification_error"); ok {
@@ -3599,9 +3622,70 @@ func doPlanStabilityRestore(v []byte, b string, include, exclude matcher, remap 
 	pairs[0].Value = pValue
 	_, _, errs := systemCollection.Upsert(pairs, datastore.NULL_QUERY_CONTEXT, true)
 	if errs != nil && len(errs) > 0 {
-		return errs[0]
+		return "", errs[0]
 	}
-	return nil
+
+	// the (encoded) name of the saved plan, which is also its prepared cache name; the key can not be used,
+	// since long names are stored under a UUID key
+	var name string
+	if nameVal, ok := pValue.Field("name"); ok {
+		name, _ = nameVal.Actual().(string)
+	}
+	if name == "" {
+		logging.Warnf("Plan Stability restore: missing name for key %v, cached plans for it are not replaced", key)
+	}
+	return name, nil
+}
+
+// MB-75645: the restored saved plans replace the plans cached under the same names, on this node and on the other
+// query nodes: the cached plans are removed, and the next use loads the restored plan (see
+// prepareds.EvictRestoredPlans()). A node that does not support it (older version) keeps its cached plans.
+// Not covered (narrow windows, no new failure mode): a request still running with an old plan on another node can
+// re-plan and save it over the restored saved plan; a node that has not evicted yet (e.g. an older node in a mixed
+// version cluster) can distribute its old plan (PUT prepareds/<name>, see distributePrepared()).
+func evictRestoredPlans(names []string) {
+	if len(names) == 0 {
+		return
+	}
+	prepareds.EvictRestoredPlans(names)
+	body, err := json.Marshal(names)
+	if err != nil {
+		logging.Errorf("Plan Stability restore: unable to encode the names of the restored saved plans: %v", err)
+		return
+	}
+	distributed.RemoteAccess().DoRemoteOps([]string{}, "prepareds_restored", "POST", "", string(body),
+		func(warn errors.Error, node string) {
+			if warn != nil {
+				logging.Warnf("Plan Stability restore: unable to replace the cached plans of the restored saved "+
+					"plans on node %v: %v", node, warn)
+			}
+		}, distributed.NO_CREDS, "")
+}
+
+// MB-75645: internal, sent by the node that restored saved plans (see evictRestoredPlans()); the body is the JSON
+// array of the (encoded) names of the restored saved plans
+func doPreparedsRestored(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
+	any, errors.Error) {
+
+	af.EventTypeId = audit.API_ADMIN_PREPAREDS
+
+	// http.BasicAuth eats the body, so verify credentials after getting the body.
+	body, err1 := ioutil.ReadAll(req.Body)
+	defer req.Body.Close()
+	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:prepareds", auth.PRIV_SYSTEM_READ), req, af)
+	if err != nil {
+		return nil, err
+	}
+	if err1 != nil {
+		return nil, errors.NewAdminBodyError(err1)
+	}
+
+	var names []string
+	if err1 = json.Unmarshal(body, &names); err1 != nil {
+		return nil, errors.NewAdminDecodingError(err1)
+	}
+	prepareds.EvictRestoredPlans(names)
+	return "", nil
 }
 
 // doKnowledgeRestore restores one keyspace's worth of knowledge entries (see natural/knowledge)
