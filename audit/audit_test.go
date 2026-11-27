@@ -11,6 +11,8 @@ licenses/APL2.txt.
 package audit
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -369,5 +371,93 @@ func TestAllowlistedUsers(t *testing.T) {
 		if expected != found {
 			t.Fatalf("Expected user %v but found user %v", expected, found)
 		}
+	}
+}
+
+// MB-74936: each request cancelled by a DELETE is audited once per user who cancelled it
+func TestRequestCancel(t *testing.T) {
+	mockAuditor := &mockAuditor{
+		info: &datastore.AuditInfo{
+			AuditEnabled:  true,
+			EventDisabled: make(map[uint32]bool),
+			UserAllowlisted: map[datastore.UserInfo]bool{
+				datastore.UserInfo{Name: "nina", Domain: "local"}: true},
+		},
+		metricRegStub: accounting_stub.MetricRegistryStub{},
+	}
+	_AUDITOR = mockAuditor
+
+	SubmitRequestCancel(&RequestCancelFields{
+		Users:         []string{"local:alice", "external:bob", "local:nina"},
+		RemoteAddress: "10.0.0.1:5000",
+		UserAgent:     "QueryWorkbench",
+		RequestId:     "delete-id",
+		Cancelled:     []CancelledRequest{{"cancelled-1", "node1:8091"}, {"cancelled-2", "node2:8091"}},
+	})
+
+	expected := []struct {
+		user    adt.RealUserId
+		request string
+		node    string
+	}{
+		{adt.RealUserId{Domain: "local", Username: "alice"}, "cancelled-1", "node1:8091"},
+		{adt.RealUserId{Domain: "local", Username: "alice"}, "cancelled-2", "node2:8091"},
+		{adt.RealUserId{Domain: "external", Username: "bob"}, "cancelled-1", "node1:8091"},
+		{adt.RealUserId{Domain: "external", Username: "bob"}, "cancelled-2", "node2:8091"},
+	}
+	if len(mockAuditor.recordedEvents) != len(expected) {
+		t.Fatalf("Expected %d events, found %d", len(expected), len(mockAuditor.recordedEvents))
+	}
+	for i, entry := range mockAuditor.recordedEvents {
+		record, ok := entry.record.(*n1qlCancelRequestEvent)
+		if entry.eventId != API_CANCEL_ACTIVE_REQUEST || !ok {
+			t.Fatalf("Expected a cancel event %d, found event %d with record %v", API_CANCEL_ACTIVE_REQUEST,
+				entry.eventId, entry.record)
+		}
+		if record.RealUserid != expected[i].user || record.CancelledRequestId != expected[i].request ||
+			record.Node != expected[i].node {
+			t.Errorf("Expected %+v, found %+v", expected[i], *record)
+		}
+		if record.RequestId != "delete-id" || record.UserAgent != "QueryWorkbench" || record.Timestamp == "" ||
+			record.Remote == nil || record.Remote.Ip != "10.0.0.1" || record.Remote.Port != 5000 {
+			t.Errorf("Unexpected record %+v", *record)
+		}
+	}
+
+	// a REST DELETE has no statement: requestId is left out
+	mockAuditor.recordedEvents = nil
+	SubmitRequestCancel(&RequestCancelFields{Users: []string{"local:alice"},
+		Cancelled: []CancelledRequest{{"cancelled-1", "node1:8091"}}})
+	if len(mockAuditor.recordedEvents) != 1 {
+		t.Fatalf("Expected 1 event for a REST cancel, found %d", len(mockAuditor.recordedEvents))
+	}
+	if b, err := json.Marshal(mockAuditor.recordedEvents[0].record); err != nil || strings.Contains(string(b), "requestId\"") {
+		t.Errorf("REST cancel record %s (%v) has a requestId", b, err)
+	}
+
+	// not part of a cluster: the mandatory node is "local_node", as for statement events
+	mockAuditor.recordedEvents = nil
+	SubmitRequestCancel(&RequestCancelFields{Users: []string{"local:alice"},
+		Cancelled: []CancelledRequest{{"cancelled-1", ""}}})
+	if len(mockAuditor.recordedEvents) != 1 {
+		t.Fatalf("Expected 1 event for a standalone cancel, found %d", len(mockAuditor.recordedEvents))
+	}
+	if record := mockAuditor.recordedEvents[0].record.(*n1qlCancelRequestEvent); record.Node != "local_node" {
+		t.Errorf("Standalone cancel record has node %q, expected local_node", record.Node)
+	}
+
+	// nothing cancelled: nothing audited
+	mockAuditor.recordedEvents = nil
+	SubmitRequestCancel(&RequestCancelFields{Users: []string{"local:alice"}, RequestId: "delete-id"})
+	if len(mockAuditor.recordedEvents) != 0 {
+		t.Errorf("Expected no events when nothing was cancelled, found %d", len(mockAuditor.recordedEvents))
+	}
+
+	// disabled event: nothing audited
+	mockAuditor.info.EventDisabled[API_CANCEL_ACTIVE_REQUEST] = true
+	SubmitRequestCancel(&RequestCancelFields{Users: []string{"local:alice"},
+		Cancelled: []CancelledRequest{{"cancelled-1", "node1:8091"}}})
+	if len(mockAuditor.recordedEvents) != 0 {
+		t.Errorf("Expected no events for a disabled event, found %d", len(mockAuditor.recordedEvents))
 	}
 }

@@ -3785,6 +3785,31 @@
         "errorCode": 1,
         "errorMessage": ""
       }
+    },
+    {
+      "id": 28753,
+      "name": "Active request cancelled",
+      "description": "An active request was cancelled by a N1QL DELETE on system:active_requests or a DELETE on /admin/active_requests",
+      "sync": false,
+      "enabled": false,
+      "filtering_permitted": true,
+      "mandatory_fields": {
+        "timestamp": "",
+        "real_userid": {
+          "domain": "",
+          "user": ""
+        },
+        "cancelledRequestId": "",
+        "node": ""
+      },
+      "optional_fields": {
+        "requestId": "",
+        "remote": {
+          "ip": "",
+          "port": 1
+        },
+        "userAgent": ""
+      }
     }
   ]
 }

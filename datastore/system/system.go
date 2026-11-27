@@ -83,7 +83,7 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		switch keyspace {
 
 		// currently these keyspaces require system read for delete if on prem and open (but limited to the user) for elixir
-		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
+		case KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
 			if !tenant.IsServerless() {
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 			}
@@ -138,8 +138,12 @@ func (s *store) PrivilegesFromPath(fullname string, keyspace string, privilege a
 		case KEYSPACE_NAME_NATURAL_CHAT:
 		case KEYSPACE_NAME_KNOWLEDGE:
 
+		// open for SELECT and DELETE, limited to the user, since 8.5.0: older nodes reprepare a plan with a
+		// newer plan version (PLAN_VERSION_85), rather than run it without the privileges they require
+		case KEYSPACE_NAME_ACTIVE:
+
 		// currently these keyspaces require system read for select if on prem and open (but limited to the user) for elixir
-		case KEYSPACE_NAME_ACTIVE, KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
+		case KEYSPACE_NAME_REQUESTS, KEYSPACE_NAME_PREPAREDS, KEYSPACE_NAME_REQUESTS_HISTORY:
 			if !tenant.IsServerless() {
 				privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
 			}

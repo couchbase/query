@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/couchbase/query/auth"
+	"github.com/couchbase/query/errors"
 )
 
 func CredsArray(creds *auth.Credentials) []string {
@@ -83,6 +84,38 @@ func NonAdminUsers(creds *auth.Credentials) []string {
 		users = []string{}
 	}
 	return users
+}
+
+// SystemReadUser returns "" if any of the credentials has PRIV_SYSTEM_READ, meaning the caller is
+// not restricted to their own system keyspace entries, otherwise the first authenticated user
+// (domain:name), built as the users that entries such as active requests are owned by are.
+// Like NonAdminUsers, but with PRIV_SYSTEM_READ rather than PRIV_ADMIN granting unrestricted access.
+// If the privilege can't be checked, it returns the error together with the restricted user, so that
+// callers that go on regardless don't grant unrestricted access.
+func SystemReadUser(creds *auth.Credentials) (string, errors.Error) {
+	ds := GetDatastore()
+	if ds != nil && creds != nil {
+		privs := auth.NewPrivileges()
+		privs.Add("", auth.PRIV_SYSTEM_READ, auth.PRIV_PROPS_NONE)
+
+		// avoid logging an audit for an internal authorization action
+		err := ds.AuthorizeInternal(privs, creds)
+		if err == nil {
+			return "", nil
+		}
+		if err.Code() != errors.E_DATASTORE_INSUFFICIENT_CREDENTIALS {
+			return restrictedUser(creds), err
+		}
+	}
+	return restrictedUser(creds), nil
+}
+
+// a user with no authenticated users owns no requests: return a name that matches none
+func restrictedUser(creds *auth.Credentials) string {
+	if users := CredsArray(creds); len(users) > 0 {
+		return users[0]
+	}
+	return EncodeName("", "")
 }
 
 func AdminCreds(node string) (*auth.Credentials, error) {

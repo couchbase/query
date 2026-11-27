@@ -554,6 +554,36 @@ func (endpoint *HttpEndpoint) getImpersonate(req *http.Request) (string, errors.
 	return req.FormValue("impersonate"), nil
 }
 
+// Authenticates a request to the active_requests endpoints and returns the user whose requests it can access
+// ("" for all requests), and whether it was sent from the internal Query service user.
+// Users with PRIV_SYSTEM_READ, including the internal user remote nodes use for system:active_requests,
+// are not restricted, and impersonate restricts them to the requests of the given user.
+// Any other authenticated user can only access their own requests, and impersonate is ignored.
+func (endpoint *HttpEndpoint) activeRequestsUser(req *http.Request, af *audit.ApiAuditFields) (string, bool, errors.Error) {
+
+	// no privileges to check: this only authenticates
+	creds, err, isInternal := endpoint.verifyCredsFromRequest(auth.NewPrivileges(), req, af)
+	if err == nil && len(creds.AuthenticatedUsers) == 0 {
+
+		// nobody was authenticated (no or wrong credentials): apply the check these endpoints made before.
+		// It fails on a cluster, and passes only on datastores that don't authenticate (file, mock, or cbauth
+		// not initialized), which were open before too. Without it, the caller would get an empty result
+		// rather than an authentication error.
+		err = datastore.GetDatastore().Authorize(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), creds)
+	}
+	if err != nil {
+		return "", false, err
+	}
+	userName, err := datastore.SystemReadUser(creds)
+	if err != nil {
+		return "", false, err
+	}
+	if userName == "" {
+		userName, err = endpoint.getImpersonate(req)
+	}
+	return userName, isInternal, err
+}
+
 // TODO this needs to be expanded when we support multiple tenants per each user
 func (endpoint *HttpEndpoint) getImpersonateBucket(req *http.Request) (string, string, errors.Error) {
 	impersonate := req.FormValue("impersonate")
@@ -2342,8 +2372,7 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 	af.Request = requestId
 
 	if req.Method == "GET" || req.Method == "POST" {
-		err, isInternal := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ),
-			req, af)
+		userName, isInternal, err := endpoint.activeRequestsUser(req, af)
 		if err != nil {
 			return nil, err
 		}
@@ -2353,37 +2382,45 @@ func doActiveRequest(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Re
 			// many log messages to be generated.
 			af.EventTypeId = audit.API_DO_NOT_AUDIT
 		}
-		impersonate, err1 := endpoint.getImpersonate(req)
-		if err1 != nil {
-			return nil, err1
-		}
 		durStyle, _ := util.IsDurationStyle(req.FormValue("duration_style"))
-		return processActiveRequest(endpoint, requestId, impersonate, (req.Method == "POST"), doRedact(req), durStyle), nil
+		return processActiveRequest(endpoint, requestId, userName, (req.Method == "POST"), doRedact(req), durStyle), nil
 
 	} else if req.Method == "DELETE" {
-		err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
+		userName, isInternal, err := endpoint.activeRequestsUser(req, af)
 		if err != nil {
 			return nil, err
 		}
-		impersonate, err1 := endpoint.getImpersonate(req)
-		if err1 != nil {
-			return nil, err1
+
+		// a cancel another node sends on behalf of a user is audited as that user, not the internal user
+		if isInternal && userName != "" {
+			af.Users = []string{userName}
 		}
+
+		// other users' requests are treated as non existent
 		if !endpoint.actives.Delete(requestId, true, func(r server.Request) bool {
-			if impersonate != "" {
-				users := datastore.CredsArray(r.Credentials())
-				return len(users) > 0 && impersonate == users[0]
-			}
-			return true
+			return server.IsRequestOwner(r, userName)
 		}) {
 			return nil, errors.NewSystemStmtNotFoundError(nil, requestId)
 		}
 
+		// a cancel from another node is audited by the node that ran the DELETE on system:active_requests
+		if !isInternal {
+			auditRequestCancel(&audit.RequestCancelFields{
+				Users:         af.Users,
+				RemoteAddress: af.RemoteAddress,
+				UserAgent:     req.UserAgent(),
+				Cancelled: []audit.CancelledRequest{{RequestId: requestId,
+					Node: distributed.RemoteAccess().WhoAmI()}},
+			})
+		}
 		return true, nil
 	} else {
 		return nil, errors.NewServiceErrorHttpMethod(req.Method)
 	}
 }
+
+// audits the requests cancelled by a DELETE on /admin/active_requests; a variable, for tests
+var auditRequestCancel = audit.SubmitRequestCancel
 
 func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName string, profiling bool, redact bool,
 	durStyle util.DurationStyle) any {
@@ -2391,11 +2428,8 @@ func processActiveRequest(endpoint *HttpEndpoint, requestId string, userName str
 	var res any
 
 	_ = endpoint.actives.Get(requestId, func(request server.Request) {
-		if userName != "" {
-			users := datastore.CredsArray(request.Credentials())
-			if len(users) == 0 || userName != users[0] {
-				return
-			}
+		if !server.IsRequestOwner(request, userName) {
+			return
 		}
 		res = activeRequestWorkHorse(endpoint, request, profiling, redact, durStyle)
 	})
@@ -2427,8 +2461,8 @@ func activeRequestWorkHorse(endpoint *HttpEndpoint, request server.Request, prof
 func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Request, af *audit.ApiAuditFields) (
 	any, errors.Error) {
 
-	af.EventTypeId = audit.API_ADMIN_PREPAREDS
-	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
+	af.EventTypeId = audit.API_ADMIN_ACTIVE_REQUESTS
+	userName, _, err := endpoint.activeRequestsUser(req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2444,8 +2478,10 @@ func doActiveRequests(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.R
 
 	redact := doRedact(req)
 	endpoint.actives.ForEach(func(requestId string, request server.Request) bool {
-		r := activeRequestWorkHorse(endpoint, request, profiling, redact, durStyle)
-		requests = append(requests, r)
+		if server.IsRequestOwner(request, userName) {
+			r := activeRequestWorkHorse(endpoint, request, profiling, redact, durStyle)
+			requests = append(requests, r)
+		}
 		return true
 	}, nil)
 	return requests, nil
@@ -2641,11 +2677,7 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 	any, errors.Error) {
 
 	af.EventTypeId = audit.API_DO_NOT_AUDIT
-	err, _ := endpoint.verifyCredentialsFromRequest(getPrivileges("system:active_requests", auth.PRIV_SYSTEM_READ), req, af)
-	if err != nil {
-		return nil, err
-	}
-	userName, err := endpoint.getImpersonate(req)
+	userName, _, err := endpoint.activeRequestsUser(req, af)
 	if err != nil {
 		return nil, err
 	}
@@ -2654,27 +2686,12 @@ func doRequestIndex(endpoint *HttpEndpoint, w http.ResponseWriter, req *http.Req
 		return nil, err
 	}
 	requests := make([]string, 0, numEntries)
-	var snapshot func(requestId string, request server.Request) bool
-
-	if userName == "" {
-		snapshot = func(requestId string, request server.Request) bool {
+	endpoint.actives.ForEach(func(requestId string, request server.Request) bool {
+		if server.IsRequestOwner(request, userName) {
 			requests = append(requests, requestId)
-			return true
 		}
-	} else {
-		snapshot = func(requestId string, request server.Request) bool {
-
-			// for ease of processing we ignore the tenant and
-			// we expect the request to only have the one user
-			// this could be expanded later
-			users := datastore.CredsArray(request.Credentials())
-			if len(users) > 0 && userName == users[0] {
-				requests = append(requests, requestId)
-			}
-			return true
-		}
-	}
-	endpoint.actives.ForEach(snapshot, nil)
+		return true
+	}, nil)
 	return requests, nil
 }
 

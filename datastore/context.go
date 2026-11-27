@@ -86,6 +86,8 @@ func (ci *contextImpl) TenantCtx() tenant.Context {
 func (ci *contextImpl) SetFirstCreds(string) {
 }
 
+// FirstCreds returns no user, which system keyspaces such as system:active_requests treat as unrestricted:
+// only internal callers, with no request user, use this context
 func (ci *contextImpl) FirstCreds() (string, bool) {
 	return "", true
 }
@@ -252,6 +254,9 @@ func (ci *queryContextImpl) TenantCtx() tenant.Context {
 func (ci *queryContextImpl) SetFirstCreds(string) {
 }
 
+// FirstCreds returns no user, which system keyspaces such as system:active_requests treat as unrestricted:
+// only internal callers, with no request user, use this context (e.g. NULL_QUERY_CONTEXT).
+// queryContextWithCredentials, which holds a user's credentials, overrides it.
 func (ci *queryContextImpl) FirstCreds() (string, bool) {
 	return "", true
 }
@@ -402,6 +407,11 @@ func (ci *queryContextWithCredentials) ExternalCredential(credId string) (*cbaut
 		return nil, fmt.Errorf("No Credentials found for the given Credential id '%s'", credId)
 	}
 	return cred.CbauthCredentialsList[0].GetCredential(credId)
+}
+
+// FirstCreds caches no user, so that system keyspaces restrict to the user of the credentials this context holds
+func (ci *queryContextWithCredentials) FirstCreds() (string, bool) {
+	return "", false
 }
 
 // NewQueryContextWithCredentials creates a QueryContext with the given credentials

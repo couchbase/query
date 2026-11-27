@@ -147,7 +147,12 @@ type auditQueueEntry struct {
 	eventId          uint32
 	isQueryType      bool
 	queryAuditRecord *n1qlAuditEvent
-	apiAuditRecord   *n1qlAuditApiRequestEvent
+	record           auditRecord // any other record
+}
+
+// an audit record other than a statement's, described in the log if it can't be sent
+type auditRecord interface {
+	describe() string
 }
 
 func (sa *standardAuditor) auditInfo() *datastore.AuditInfo {
@@ -352,11 +357,11 @@ func auditWorker(auditor *standardAuditor, num int) {
 					stringifyQueryAR(*entry.queryAuditRecord), err)
 			}
 		} else {
-			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, *entry.apiAuditRecord)
+			err = auditor.auditService.WriteUsingNonPoolClient(client, entry.eventId, entry.record)
 			if err != nil {
 				accounting.UpdateCounter(accounting.AUDIT_ACTIONS_FAILED)
 				logging.Errorf("Audit worker %d: unable to send audit record %+v to audit daemon: %v", num,
-					stringifyAPIAR(*entry.apiAuditRecord), err)
+					entry.record.describe(), err)
 			}
 		}
 	}
@@ -404,6 +409,21 @@ func stringifyAPIAR(entry n1qlAuditApiRequestEvent) string {
 	str += fmt.Sprintf("Body: <ud>%v</ud> ", entry.Body)
 
 	return str
+}
+
+func stringifyCancelAR(entry n1qlCancelRequestEvent) string {
+	str := fmt.Sprintf("RequestID: <ud>%v</ud> ", entry.RequestId)
+	str += fmt.Sprintf("CancelledRequestID: <ud>%v</ud> ", entry.CancelledRequestId)
+	str += fmt.Sprintf("Node: %v ", entry.Node)
+	return str
+}
+
+func (this *n1qlAuditApiRequestEvent) describe() string {
+	return stringifyAPIAR(*this)
+}
+
+func (this *n1qlCancelRequestEvent) describe() string {
+	return stringifyCancelAR(*this)
 }
 
 // the ...INDEX... events are there for completeness as they are used internally and not currently audited
@@ -488,6 +508,7 @@ const (
 	API_STMT_ALTER_CREDENTIALSTORE       = 28750
 	API_STMT_DROP_CREDENTIALSTORE        = 28751
 	API_ADMIN_CATALOGS                   = 28752
+	API_CANCEL_ACTIVE_REQUEST            = 28753
 )
 
 // Event types are described in /query/etc/audit_descriptor.json
@@ -587,9 +608,10 @@ func submitAuditEntries(entries []auditQueueEntry) {
 	}
 }
 
-func SubmitApiRequest(event *ApiAuditFields) {
+// Returns the audit specification if events of type eventTypeId are audited, otherwise nil
+func auditInfoFor(eventTypeId uint32) *datastore.AuditInfo {
 	if _AUDITOR == nil {
-		return // Nothing configured. Nothing to be done.
+		return nil // Nothing configured. Nothing to be done.
 	}
 	accounting.UpdateCounter(accounting.AUDIT_REQUESTS_TOTAL)
 
@@ -597,26 +619,55 @@ func SubmitApiRequest(event *ApiAuditFields) {
 	if auditInfo == nil {
 		logging.Errorf("Unable to audit. Audit specification is not available.")
 		accounting.UpdateCounter(accounting.AUDIT_REQUESTS_FILTERED)
-		return
+		return nil
 	}
 
-	if !auditInfo.AuditEnabled {
+	if !auditInfo.AuditEnabled || eventIsDisabled(auditInfo, eventTypeId) {
 		accounting.UpdateCounter(accounting.AUDIT_REQUESTS_FILTERED)
-		return
+		return nil
 	}
+	return auditInfo
+}
 
-	eventTypeId := event.EventTypeId
-
-	if eventIsDisabled(auditInfo, eventTypeId) {
-		accounting.UpdateCounter(accounting.AUDIT_REQUESTS_FILTERED)
+func SubmitApiRequest(event *ApiAuditFields) {
+	auditInfo := auditInfoFor(event.EventTypeId)
+	if auditInfo == nil {
 		return
 	}
 
 	// We build the audit entry from the request in the main thread
 	// because the request will be destroyed soon after the call to SubmitApiRequest(),
 	// and we don't want to cause a race condition.
-	auditEntries := buildApiRequestAuditEntries(eventTypeId, event, auditInfo)
+	auditEntries := buildApiRequestAuditEntries(event.EventTypeId, event, auditInfo)
 	submitAuditEntries(auditEntries)
+}
+
+// RequestCancelFields describes the active requests cancelled by a DELETE on system:active_requests, or by a
+// DELETE on /admin/active_requests
+type RequestCancelFields struct {
+	Users         []string           // the users who sent the DELETE, who cancelled the requests
+	RemoteAddress string             // the address the DELETE came from
+	UserAgent     string             // the User-Agent of the DELETE
+	RequestId     string             // the request id of the DELETE statement, none for a REST DELETE
+	Cancelled     []CancelledRequest // the requests cancelled
+}
+
+type CancelledRequest struct {
+	RequestId string // the request id of the cancelled request
+	Node      string // the node the cancelled request ran on, "" if not part of a cluster
+}
+
+// SubmitRequestCancel audits the active requests cancelled by a DELETE, with a record for each.
+// The statement or API event records the DELETE itself.
+func SubmitRequestCancel(event *RequestCancelFields) {
+	if len(event.Cancelled) == 0 {
+		return
+	}
+	auditInfo := auditInfoFor(API_CANCEL_ACTIVE_REQUEST)
+	if auditInfo == nil {
+		return
+	}
+	submitAuditEntries(buildRequestCancelAuditEntries(event, auditInfo))
 }
 
 func parseAddress(addr string) *addressFields {
@@ -809,9 +860,8 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 
 	remote := parseAddress(event.RemoteAddress)
 	local := parseAddress(event.LocalAddress)
-	// No credentials at all? Generate one record.
-	usernames := event.Users
-	if len(usernames) == 0 {
+	entries := make([]auditQueueEntry, 0, max(len(event.Users), 1))
+	forEachAuditedUser(event.Users, auditInfo, func(user *datastore.UserInfo) {
 		record := &n1qlAuditApiRequestEvent{
 			GenericFields:  event.GenericFields,
 			Remote:         remote,
@@ -828,51 +878,58 @@ func buildApiRequestAuditEntries(eventTypeId uint32, event *ApiAuditFields, audi
 			Node:           event.Node,
 			Body:           event.Body,
 		}
-		entry := auditQueueEntry{
-			eventId:        eventTypeId,
-			isQueryType:    false,
-			apiAuditRecord: record,
+		if user != nil {
+			record.GenericFields.RealUserid.Domain = user.Domain
+			record.GenericFields.RealUserid.Username = user.Name
 		}
-		return []auditQueueEntry{entry}
-	}
+		entries = append(entries, auditQueueEntry{eventId: eventTypeId, record: record})
+	})
+	return entries
+}
 
-	// Figure out which users to generate events for.
-	auditableUsers := make([]datastore.UserInfo, 0, len(usernames))
+// Calls f for each user an event is audited for: each of usernames that isn't allowlisted, or, with no
+// usernames at all, once with nil, for a record without a user
+func forEachAuditedUser(usernames []string, auditInfo *datastore.AuditInfo, f func(user *datastore.UserInfo)) {
+	if len(usernames) == 0 {
+		f(nil)
+		return
+	}
 	for _, username := range usernames {
 		user := userInfoFromUsername(username)
 		if !auditInfo.UserAllowlisted[user] {
-			auditableUsers = append(auditableUsers, user)
+			f(&user)
 		}
 	}
+}
 
-	// Generate one entry per user.
-	entries := make([]auditQueueEntry, len(auditableUsers))
-	for i, user := range auditableUsers {
-		record := &n1qlAuditApiRequestEvent{
-			GenericFields:  event.GenericFields,
-			Remote:         remote,
-			Local:          local,
-			HttpMethod:     event.HttpMethod,
-			HttpResultCode: event.HttpResultCode,
-			ErrorCode:      event.ErrorCode,
-			ErrorMessage:   event.ErrorMessage,
-			Stat:           event.Stat,
-			Name:           event.Name,
-			Request:        event.Request,
-			Values:         event.Values,
-			Cluster:        event.Cluster,
-			Node:           event.Node,
-			Body:           event.Body,
-		}
-		record.GenericFields.RealUserid.Domain = user.Domain
-		record.GenericFields.RealUserid.Username = user.Name
+// Returns a list of audit entries, one for each cancelled request and user who cancelled it
+func buildRequestCancelAuditEntries(event *RequestCancelFields, auditInfo *datastore.AuditInfo) []auditQueueEntry {
+	timestamp := time.Now().Format("2006-01-02T15:04:05.000Z07:00")
+	remote := parseAddress(event.RemoteAddress)
+	entries := make([]auditQueueEntry, 0, len(event.Cancelled)*max(len(event.Users), 1))
+	forEachAuditedUser(event.Users, auditInfo, func(user *datastore.UserInfo) {
+		for _, cancelled := range event.Cancelled {
 
-		entries[i] = auditQueueEntry{
-			eventId:        eventTypeId,
-			isQueryType:    false,
-			apiAuditRecord: record,
+			// node is mandatory: name a node that isn't part of a cluster as statement events do
+			node := cancelled.Node
+			if node == "" {
+				node = "local_node"
+			}
+			record := &n1qlCancelRequestEvent{
+				GenericFields:      adt.GenericFields{Timestamp: timestamp},
+				Remote:             remote,
+				RequestId:          event.RequestId,
+				CancelledRequestId: cancelled.RequestId,
+				Node:               node,
+				UserAgent:          event.UserAgent,
+			}
+			if user != nil {
+				record.GenericFields.RealUserid.Domain = user.Domain
+				record.GenericFields.RealUserid.Username = user.Name
+			}
+			entries = append(entries, auditQueueEntry{eventId: API_CANCEL_ACTIVE_REQUEST, record: record})
 		}
-	}
+	})
 	return entries
 }
 
@@ -938,6 +995,16 @@ type n1qlAuditApiRequestEvent struct {
 	Node    string `json:"node,omitempty"`
 	Values  any    `json:"values,omitempty"`
 	Body    any    `json:"body,omitempty"`
+}
+
+type n1qlCancelRequestEvent struct {
+	adt.GenericFields
+	Remote *addressFields `json:"remote,omitempty"`
+
+	RequestId          string `json:"requestId,omitempty"`
+	CancelledRequestId string `json:"cancelledRequestId"`
+	Node               string `json:"node"`
+	UserAgent          string `json:"userAgent,omitempty"`
 }
 
 type n1qlConfigurationChangeEvent struct {
